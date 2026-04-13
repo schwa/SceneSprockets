@@ -1,0 +1,49 @@
+import GeometryLite3D
+import Metal
+import MetalSprocketsAddOns
+import MetalSprocketsAddOnsShaders
+import SwiftMesh
+import Testing
+import simd
+@testable import MetalSprocketsSceneGraph
+
+private var material: BlinnPhongMaterial {
+    BlinnPhongMaterial(ambient: .color([1, 1, 1]), diffuse: .color([1, 1, 1]), specular: .color([1, 1, 1]), shininess: 1)
+}
+
+@Test
+func hiddenNodeHidesSubtree() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let box = MetalMesh(mesh: .box(), device: device)
+    let root = SceneGraph.Node()
+    let group = SceneGraph.Node(parent: root, label: "group")
+    _ = SceneGraph.Node(parent: group, label: "child", content: .mesh(box, material: material))
+    _ = SceneGraph.Node(parent: group, label: "light", content: .light(Light(type: .point)))
+    _ = SceneGraph.Node(parent: root, label: "other", content: .mesh(box, material: material))
+    let sceneGraph = SceneGraph(root: root)
+    #expect(sceneGraph.meshEntries().count == 2)
+
+    let before = sceneGraph.revision
+    group.isVisible = false
+    #expect(sceneGraph.revision.structure != before.structure)
+    #expect(sceneGraph.meshEntries().map(\.node.label) == ["other"])
+    #expect(sceneGraph.lightNodes().isEmpty)
+    #expect(sceneGraph.nodesWithWorldTransforms().map(\.node.label) == [nil, "other"])
+    #expect(sceneGraph.nodesWithWorldTransforms(includeHidden: true).count == 5)
+}
+
+@Test
+func hiddenNodesAreExcludedFromBounds() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let box = MetalMesh(mesh: .box(), device: device)
+    let root = SceneGraph.Node()
+    let far = SceneGraph.Node(parent: root, content: .mesh(box, material: material))
+    far.trs.translation = [10, 0, 0]
+    _ = SceneGraph.Node(parent: root, content: .mesh(box, material: material))
+    let sceneGraph = SceneGraph(root: root)
+    #expect(sceneGraph.bounds?.max.x == 10.5)
+
+    far.isVisible = false
+    #expect(sceneGraph.bounds?.max.x == 0.5)
+    #expect(sceneGraph.worldBounds(of: far) == nil)
+}

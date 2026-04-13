@@ -1,0 +1,346 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		45B171292E8447A7003BD63A /* MetalSprockets in Frameworks */ = {isa = PBXBuildFile; productRef = 45B171282E8447A7003BD63A /* MetalSprockets */; };
+		45B1712B2E8447A7003BD63A /* MetalSprocketsUI in Frameworks */ = {isa = PBXBuildFile; productRef = 45B1712A2E8447A7003BD63A /* MetalSprocketsUI */; };
+		45D5DFA22F8E049000CF7585 /* MetalSprocketsSceneGraph in Frameworks */ = {isa = PBXBuildFile; productRef = 45D5DFA12F8E049000CF7585 /* MetalSprocketsSceneGraph */; };
+		45E0644B2F8ED19C00E582A9 /* MetalSprocketsSceneGraphDemos in Frameworks */ = {isa = PBXBuildFile; productRef = 45E0644A2F8ED19C00E582A9 /* MetalSprocketsSceneGraphDemos */; };
+		45E0644D2F8ED19C00E582A9 /* MetalSprocketsSceneGraphRenderer in Frameworks */ = {isa = PBXBuildFile; productRef = 45E0644C2F8ED19C00E582A9 /* MetalSprocketsSceneGraphRenderer */; };
+		45FAC3DE2F8ECEC600352C52 /* Interaction3D in Frameworks */ = {isa = PBXBuildFile; productRef = 45FAC3DD2F8ECEC600352C52 /* Interaction3D */; };
+		45SGDEMO0001000000000001 /* MetalSprocketsAddOns in Frameworks */ = {isa = PBXBuildFile; productRef = 45SGDEMO0001000000000002 /* MetalSprocketsAddOns */; };
+		45SGDEMO0001000000000003 /* MetalSprocketsAddOnsShaders in Frameworks */ = {isa = PBXBuildFile; productRef = 45SGDEMO0001000000000004 /* MetalSprocketsAddOnsShaders */; };
+		45SGDEMO0001000000000005 /* MetalSprocketsSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 45SGDEMO0001000000000006 /* MetalSprocketsSupport */; };
+		45SGDEMO0001000000000007 /* GeometryLite3D in Frameworks */ = {isa = PBXBuildFile; productRef = 45SGDEMO0001000000000008 /* GeometryLite3D */; };
+		45SGUI00000100000000000B /* MetalSprocketsSceneGraphUI in Frameworks */ = {isa = PBXBuildFile; productRef = 45SGUI00000100000000000A /* MetalSprocketsSceneGraphUI */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		45C80D312E84475800136D6D /* MetalSprocketsSceneGraphDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MetalSprocketsSceneGraphDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		4528E8B42EF5FDDB00EC19C3 /* Exceptions for "MetalSprocketsSceneGraphDemo" folder in "MetalSprocketsSceneGraphDemo" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 45C80D302E84475800136D6D /* MetalSprocketsSceneGraphDemo */;
+		};
+		45CFGEXC2F64AAB2005F944D /* Exceptions for "Configuration" folder in "MetalSprocketsSceneGraphDemo" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"MetalSprocketsSceneGraphDemo-Debug.xcconfig",
+				"MetalSprocketsSceneGraphDemo-Release.xcconfig",
+				"MetalSprocketsSceneGraphDemo-Shared.xcconfig",
+				"Project-Debug.xcconfig",
+				"Project-Release.xcconfig",
+				"Project-Shared.xcconfig",
+			);
+			target = 45C80D302E84475800136D6D /* MetalSprocketsSceneGraphDemo */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		45C80D332E84475800136D6D /* MetalSprocketsSceneGraphDemo */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				4528E8B42EF5FDDB00EC19C3 /* Exceptions for "MetalSprocketsSceneGraphDemo" folder in "MetalSprocketsSceneGraphDemo" target */,
+			);
+			path = MetalSprocketsSceneGraphDemo;
+			sourceTree = "<group>";
+		};
+		45CFGGRP2F64AA9A005F944D /* Configuration */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				45CFGEXC2F64AAB2005F944D /* Exceptions for "Configuration" folder in "MetalSprocketsSceneGraphDemo" target */,
+			);
+			path = Configuration;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		45C80D2E2E84475800136D6D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				45D5DFA22F8E049000CF7585 /* MetalSprocketsSceneGraph in Frameworks */,
+				45B1712B2E8447A7003BD63A /* MetalSprocketsUI in Frameworks */,
+				45B171292E8447A7003BD63A /* MetalSprockets in Frameworks */,
+				45SGDEMO0001000000000001 /* MetalSprocketsAddOns in Frameworks */,
+				45E0644B2F8ED19C00E582A9 /* MetalSprocketsSceneGraphDemos in Frameworks */,
+				45SGUI00000100000000000B /* MetalSprocketsSceneGraphUI in Frameworks */,
+				45FAC3DE2F8ECEC600352C52 /* Interaction3D in Frameworks */,
+				45SGDEMO0001000000000003 /* MetalSprocketsAddOnsShaders in Frameworks */,
+				45SGDEMO0001000000000005 /* MetalSprocketsSupport in Frameworks */,
+				45E0644D2F8ED19C00E582A9 /* MetalSprocketsSceneGraphRenderer in Frameworks */,
+				45SGDEMO0001000000000007 /* GeometryLite3D in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		45C80D282E84475800136D6D = {
+			isa = PBXGroup;
+			children = (
+				45CFGGRP2F64AA9A005F944D /* Configuration */,
+				45C80D332E84475800136D6D /* MetalSprocketsSceneGraphDemo */,
+				45FAC3DF2F8ED0B300352C52 /* Frameworks */,
+				45C80D322E84475800136D6D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		45C80D322E84475800136D6D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				45C80D312E84475800136D6D /* MetalSprocketsSceneGraphDemo.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		45FAC3DF2F8ED0B300352C52 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		45C80D302E84475800136D6D /* MetalSprocketsSceneGraphDemo */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 45C80D3C2E84475800136D6D /* Build configuration list for PBXNativeTarget "MetalSprocketsSceneGraphDemo" */;
+			buildPhases = (
+				45C80D2D2E84475800136D6D /* Sources */,
+				45C80D2E2E84475800136D6D /* Frameworks */,
+				45C80D2F2E84475800136D6D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				45C80D332E84475800136D6D /* MetalSprocketsSceneGraphDemo */,
+				45CFGGRP2F64AA9A005F944D /* Configuration */,
+			);
+			name = MetalSprocketsSceneGraphDemo;
+			packageProductDependencies = (
+				45B171282E8447A7003BD63A /* MetalSprockets */,
+				45B1712A2E8447A7003BD63A /* MetalSprocketsUI */,
+				45D5DFA12F8E049000CF7585 /* MetalSprocketsSceneGraph */,
+				45SGDEMO0001000000000002 /* MetalSprocketsAddOns */,
+				45SGDEMO0001000000000004 /* MetalSprocketsAddOnsShaders */,
+				45SGDEMO0001000000000006 /* MetalSprocketsSupport */,
+				45SGDEMO0001000000000008 /* GeometryLite3D */,
+				45FAC3DD2F8ECEC600352C52 /* Interaction3D */,
+				45E0644A2F8ED19C00E582A9 /* MetalSprocketsSceneGraphDemos */,
+				45SGUI00000100000000000A /* MetalSprocketsSceneGraphUI */,
+				45E0644C2F8ED19C00E582A9 /* MetalSprocketsSceneGraphRenderer */,
+			);
+			productName = MetalSprocketsSceneGraphDemo;
+			productReference = 45C80D312E84475800136D6D /* MetalSprocketsSceneGraphDemo.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		45C80D292E84475800136D6D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					45C80D302E84475800136D6D = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
+				};
+			};
+			buildConfigurationList = 45C80D2C2E84475800136D6D /* Build configuration list for PBXProject "MetalSprocketsSceneGraphDemo" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 45C80D282E84475800136D6D;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				45D5DFA02F8E049000CF7585 /* XCLocalSwiftPackageReference "../../MetalSprocketsSceneGraph" */,
+				45FAC3DC2F8ECEC600352C52 /* XCRemoteSwiftPackageReference "Interaction3D" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 45C80D322E84475800136D6D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				45C80D302E84475800136D6D /* MetalSprocketsSceneGraphDemo */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		45C80D2F2E84475800136D6D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		45C80D2D2E84475800136D6D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		45C80D3A2E84475800136D6D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 45CFGGRP2F64AA9A005F944D /* Configuration */;
+			baseConfigurationReferenceRelativePath = "Project-Debug.xcconfig";
+			buildSettings = {
+				DEVELOPMENT_TEAM = XXXXXXXXXX;
+			};
+			name = Debug;
+		};
+		45C80D3B2E84475800136D6D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 45CFGGRP2F64AA9A005F944D /* Configuration */;
+			baseConfigurationReferenceRelativePath = "Project-Release.xcconfig";
+			buildSettings = {
+				DEVELOPMENT_TEAM = XXXXXXXXXX;
+			};
+			name = Release;
+		};
+		45C80D3D2E84475800136D6D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 45CFGGRP2F64AA9A005F944D /* Configuration */;
+			baseConfigurationReferenceRelativePath = "MetalSprocketsSceneGraphDemo-Debug.xcconfig";
+			buildSettings = {
+				INFOPLIST_KEY_NSCameraUsageDescription = "This app uses the camera for augmented reality.";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+			};
+			name = Debug;
+		};
+		45C80D3E2E84475800136D6D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 45CFGGRP2F64AA9A005F944D /* Configuration */;
+			baseConfigurationReferenceRelativePath = "MetalSprocketsSceneGraphDemo-Release.xcconfig";
+			buildSettings = {
+				INFOPLIST_KEY_NSCameraUsageDescription = "This app uses the camera for augmented reality.";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		45C80D2C2E84475800136D6D /* Build configuration list for PBXProject "MetalSprocketsSceneGraphDemo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				45C80D3A2E84475800136D6D /* Debug */,
+				45C80D3B2E84475800136D6D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		45C80D3C2E84475800136D6D /* Build configuration list for PBXNativeTarget "MetalSprocketsSceneGraphDemo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				45C80D3D2E84475800136D6D /* Debug */,
+				45C80D3E2E84475800136D6D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		45D5DFA02F8E049000CF7585 /* XCLocalSwiftPackageReference "../../MetalSprocketsSceneGraph" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../../MetalSprocketsSceneGraph;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		45FAC3DC2F8ECEC600352C52 /* XCRemoteSwiftPackageReference "Interaction3D" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/schwa/Interaction3D";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		45B171282E8447A7003BD63A /* MetalSprockets */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MetalSprockets;
+		};
+		45B1712A2E8447A7003BD63A /* MetalSprocketsUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MetalSprocketsUI;
+		};
+		45D5DFA12F8E049000CF7585 /* MetalSprocketsSceneGraph */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MetalSprocketsSceneGraph;
+		};
+		45E0644A2F8ED19C00E582A9 /* MetalSprocketsSceneGraphDemos */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 45D5DFA02F8E049000CF7585 /* XCLocalSwiftPackageReference "../../MetalSprocketsSceneGraph" */;
+			productName = MetalSprocketsSceneGraphDemos;
+		};
+		45E0644C2F8ED19C00E582A9 /* MetalSprocketsSceneGraphRenderer */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 45D5DFA02F8E049000CF7585 /* XCLocalSwiftPackageReference "../../MetalSprocketsSceneGraph" */;
+			productName = MetalSprocketsSceneGraphRenderer;
+		};
+		45FAC3DD2F8ECEC600352C52 /* Interaction3D */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 45FAC3DC2F8ECEC600352C52 /* XCRemoteSwiftPackageReference "Interaction3D" */;
+			productName = Interaction3D;
+		};
+		45SGDEMO0001000000000002 /* MetalSprocketsAddOns */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MetalSprocketsAddOns;
+		};
+		45SGDEMO0001000000000004 /* MetalSprocketsAddOnsShaders */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MetalSprocketsAddOnsShaders;
+		};
+		45SGDEMO0001000000000006 /* MetalSprocketsSupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MetalSprocketsSupport;
+		};
+		45SGDEMO0001000000000008 /* GeometryLite3D */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GeometryLite3D;
+		};
+		45SGUI00000100000000000A /* MetalSprocketsSceneGraphUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 45D5DFA02F8E049000CF7585 /* XCLocalSwiftPackageReference "../../MetalSprocketsSceneGraph" */;
+			productName = MetalSprocketsSceneGraphUI;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 45C80D292E84475800136D6D /* Project object */;
+}
