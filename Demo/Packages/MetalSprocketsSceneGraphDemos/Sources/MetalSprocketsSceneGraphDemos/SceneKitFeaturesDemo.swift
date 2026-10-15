@@ -18,6 +18,9 @@ import simd
 //   camera and limit picking to category 1; two translucent panes swap which is drawn last (renderingOrder).
 // - Fog (#44): a toggle adds distance fog.
 // - Custom shaders (#48): the capsule uses ShaderMaterial.normals().
+// - Node transform helpers (#79): yaw/pitch/roll sliders set the normal-mapped box's eulerAngles; "Look at Ball"
+//   turns the follower cube once with look(at:); "Snap to Ball" sets its worldPosition and worldOrientation from
+//   the ball, using convertPosition and convertVector.
 final class SceneKitFeaturesDemo: DemoScene {
     private static let easings: [(String, SceneGraph.Action.TimingMode)] = [
         ("Ease In Out", .easeInEaseOut), ("Ease In", .easeIn), ("Ease Out", .easeOut), ("Linear", .linear),
@@ -35,6 +38,9 @@ final class SceneKitFeaturesDemo: DemoScene {
     // Parent of the shape holders, so its opacity fades them all.
     private let shapesGroup: SceneGraph.Node
     private let cullSphere: SceneGraph.Node
+    private let bumpyBox: SceneGraph.Node
+    private let ball: SceneGraph.Node
+    private let follower: SceneGraph.Node
     private static let cullModes: [(String, MTLCullMode)] = [("None", .none), ("Back", .back), ("Front", .front)]
     private let homePositions: [SIMD3<Float>]
 
@@ -95,7 +101,7 @@ final class SceneKitFeaturesDemo: DemoScene {
         // An orbiting ball; a spotlight, a cone and a follower cube react to it through constraints.
         let pivot = SceneGraph.Node(parent: root, label: "Orbit Pivot", trs: .init(translation: [0, 1.6, -1]))
         pivot.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 8)), forKey: "orbit")
-        let ball = SceneGraph.Node(parent: pivot, label: "Ball", shape: .sphere(radius: 0.3), material: BlinnPhongSceneMaterial.plastic([1, 0.85, 0.2], shininess: 64), device: demoDevice, trs: .init(translation: [3, 0, 0]))
+        ball = SceneGraph.Node(parent: pivot, label: "Ball", shape: .sphere(radius: 0.3), material: BlinnPhongSceneMaterial.plastic([1, 0.85, 0.2], shininess: 64), device: demoDevice, trs: .init(translation: [3, 0, 0]))
         ball.run(.repeatForever(.sequence([
             .move(by: [0, 1, 0], duration: 1).timingMode(.easeInEaseOut),
             .move(by: [0, -1, 0], duration: 1).timingMode(.easeInEaseOut),
@@ -105,7 +111,7 @@ final class SceneKitFeaturesDemo: DemoScene {
         let pointer = SceneGraph.Node(parent: root, label: "Pointer (looks at ball)", shape: .cone(bottomRadius: 0.3, height: 1), material: BlinnPhongSceneMaterial.plastic([0.3, 0.9, 0.9]), device: demoDevice, trs: .init(translation: [5, 0.6, -2]))
         // The cone's tip is +Y.
         pointer.constraints = [.lookAt(target: ball, localFront: [0, 1, 0])]
-        let follower = SceneGraph.Node(parent: root, label: "Follower (stays 1-2 from ball)", shape: .box(width: 0.4, height: 0.4, length: 0.4), material: BlinnPhongSceneMaterial.plastic([0.9, 0.9, 0.3]), device: demoDevice, trs: .init(translation: [0, 0.2, -1]))
+        follower = SceneGraph.Node(parent: root, label: "Follower (stays 1-2 from ball)", shape: .box(width: 0.4, height: 0.4, length: 0.4), material: BlinnPhongSceneMaterial.plastic([0.9, 0.9, 0.3]), device: demoDevice, trs: .init(translation: [0, 0.2, -1]))
         follower.constraints = [.distance(target: ball, minimum: 1, maximum: 2)]
 
         // Blinn-Phong extras (#83), at the back: an emissive sphere, a box with a generated bump normal map (lit from
@@ -115,7 +121,7 @@ final class SceneKitFeaturesDemo: DemoScene {
         _ = SceneGraph.Node(parent: root, label: "Emissive Sphere", shape: .sphere(radius: 0.5), material: glow, device: demoDevice, trs: .init(translation: [-2.2, 0.5, -3.8]))
         var bumpy = BlinnPhongSceneMaterial.plastic([0.85, 0.75, 0.6], shininess: 24)
         bumpy.normalMap = Self.bumpNormalMap()
-        _ = SceneGraph.Node(parent: root, label: "Normal-Mapped Box", shape: .box(width: 1.4, height: 1.4, length: 0.3), material: bumpy, device: demoDevice, trs: .init(translation: [0, 0.75, -3.8]))
+        bumpyBox = SceneGraph.Node(parent: root, label: "Normal-Mapped Box", shape: .box(width: 1.4, height: 1.4, length: 0.3), material: bumpy, device: demoDevice, trs: .init(translation: [0, 0.75, -3.8]))
         cullSphere = SceneGraph.Node(parent: root, label: "Culled Sphere", shape: .sphere(radius: 0.5), material: BlinnPhongSceneMaterial.plastic([0.95, 0.55, 0.2]), device: demoDevice, trs: .init(translation: [2.2, 0.5, -3.8]))
 
         // Two overlapping translucent panes: transparent materials blend in renderingOrder, so the toggle swaps which
@@ -148,6 +154,9 @@ final class SceneKitFeaturesDemo: DemoScene {
                 .toggle("Orthographic", default: false),
                 .slider("Shapes Opacity", 0...1, default: 1),
                 .choice("Cull Mode", Self.cullModes.map(\.0)),
+                .slider("Box Yaw", -Float.pi...Float.pi, default: 0),
+                .slider("Box Pitch", -Float.pi...Float.pi, default: 0),
+                .slider("Box Roll", -Float.pi...Float.pi, default: 0),
             ]
         )
         actions = [
@@ -155,11 +164,16 @@ final class SceneKitFeaturesDemo: DemoScene {
             DemoAction("Reset Layout", systemImage: "arrow.uturn.backward") { [weak self] in self?.resetLayout() },
             DemoAction("Hop", systemImage: "arrow.up.circle") { [weak self] in self?.hop() },
             DemoAction("Fade", systemImage: "circle.lefthalf.filled") { [weak self] in self?.fade() },
+            DemoAction("Look at Ball", systemImage: "eye") { [weak self] in self?.lookAtBall() },
+            DemoAction("Snap to Ball", systemImage: "arrow.down.to.line") { [weak self] in self?.snapToBall() },
         ]
     }
 
     override func update(time: Float, deltaTime: Float) {
         torus.shape = .torus(ringRadius: self[value: "Torus Ring"], pipeRadius: self[value: "Torus Pipe"])
+        var angles = bumpyBox.eulerAngles
+        (angles.roll, angles.pitch, angles.yaw) = (self[value: "Box Roll"], self[value: "Box Pitch"], self[value: "Box Yaw"])
+        bumpyBox.eulerAngles = angles
         if shapesGroup.opacity != self[value: "Shapes Opacity"] {
             shapesGroup.opacity = self[value: "Shapes Opacity"]
         }
@@ -238,6 +252,18 @@ final class SceneKitFeaturesDemo: DemoScene {
         texture.label = "Bump Normal Map"
         texture.replace(region: MTLRegionMake2D(0, 0, size, size), mipmapLevel: 0, withBytes: bytes, bytesPerRow: size * 4)
         return texture
+    }
+
+    // A one-off turn, unlike the pointer's lookAt constraint. Up is the camera's up, converted to world space.
+    private func lookAtBall() {
+        follower.look(at: ball.worldPosition, up: cameraNode.convertVector([0, 1, 0], to: nil))
+    }
+
+    // Puts the follower just above the ball (a point in the ball's space, converted to world space), turned like it.
+    // Its distance constraint then pulls it back out to 1 from the ball.
+    private func snapToBall() {
+        follower.worldPosition = ball.convertPosition([0, 0.6, 0], to: nil)
+        follower.worldOrientation = ball.worldOrientation
     }
 
     private func fade() {

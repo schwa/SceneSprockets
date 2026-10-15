@@ -2257,12 +2257,13 @@ Orthographic cameras (#87) have no demo. Add a perspective/orthographic toggle t
 ## 113: SceneKit Features demo does not use the node transform helpers
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:demo, effort:s
 created: 2026-10-15T20:12:17Z
-updated: 2026-10-15T20:12:55Z
+updated: 2026-10-15T23:48:31Z
+closed: 2026-10-15T23:48:31Z
 +++
 
 eulerAngles, worldPosition/worldOrientation setters, convertPosition/convertVector/convertTransform and look(at:) (#79) have no demo. Use them in SceneKitFeaturesDemo where they fit, for example a "Look at Ball" action that calls look(at:) once on a node (beside the existing lookAt constraint), and yaw/pitch/roll sliders bound to eulerAngles on one shape.
