@@ -170,9 +170,9 @@ public extension simd_float4x4 {
     }
 }
 
-extension BlinnPhongMaterial {
-    static func plastic(_ color: SIMD3<Float>, shininess: Float = 32) -> BlinnPhongMaterial {
-        BlinnPhongMaterial(ambient: .color(color * 0.1), diffuse: .color(color), specular: .color(0.5), shininess: shininess)
+extension BlinnPhongSceneMaterial {
+    static func plastic(_ color: SIMD3<Float>, shininess: Float = 32) -> BlinnPhongSceneMaterial {
+        BlinnPhongSceneMaterial(ambient: .color(color * 0.1), diffuse: .color(color), specular: .color(0.5), shininess: shininess)
     }
 }
 

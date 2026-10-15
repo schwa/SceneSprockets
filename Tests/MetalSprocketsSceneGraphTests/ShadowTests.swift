@@ -18,8 +18,8 @@ private func pose(eye: SIMD3<Float>, target: SIMD3<Float>, up: SIMD3<Float> = [0
     return simd_float4x4(columns: (SIMD4(right, 0), SIMD4(trueUp, 0), SIMD4(forward, 0), SIMD4(eye, 1)))
 }
 
-private var material: BlinnPhongMaterial {
-    BlinnPhongMaterial(ambient: .color([0.5, 0.5, 0.5]), diffuse: .color([0.5, 0.5, 0.5]), specular: .color(0), shininess: 1)
+private var material: BlinnPhongSceneMaterial {
+    BlinnPhongSceneMaterial(ambient: .color([0.5, 0.5, 0.5]), diffuse: .color([0.5, 0.5, 0.5]), specular: .color(0), shininess: 1)
 }
 
 // A floor, a box floating above it, and a directional light shining down and towards -x, so the box's shadow

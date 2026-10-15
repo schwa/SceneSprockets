@@ -1,11 +1,38 @@
+import Foundation
 import Metal
 import MetalSprockets
-import MetalSprocketsAddOns
 import MetalSprocketsAddOnsShaders
+import MetalSprocketsSceneGraphShaders
+import MetalSupport
 import SwiftMesh
 import simd
 
-extension BlinnPhongMaterial: MetalSprocketsSceneGraph.Material {
+// A Blinn-Phong surface: ambient (lit by the renderer's ambient light), diffuse and specular, each a color or a
+// texture tinted by a color.
+public struct BlinnPhongSceneMaterial: MetalSprocketsSceneGraph.Material {
+    public enum Source {
+        // Linear RGB.
+        case color(SIMD3<Float>)
+        // Sampled at the mesh's first texture coordinates and multiplied by `tint`. A nil sampler uses linear
+        // filtering with repeat.
+        case texture(MTLTexture, sampler: MTLSamplerState? = nil, tint: SIMD3<Float> = .one)
+
+        public static func color(_ grey: Float) -> Self {
+            .color(SIMD3(repeating: grey))
+        }
+    }
+
+    public var ambient: Source
+    public var diffuse: Source
+    public var specular: Source
+    public var shininess: Float
+
+    public init(ambient: Source, diffuse: Source, specular: Source, shininess: Float) {
+        self.ambient = ambient
+        self.diffuse = diffuse
+        self.specular = specular
+        self.shininess = shininess
+    }
 }
 
 public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer {
@@ -16,15 +43,16 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer {
     }
 
     public var materialType: any MetalSprocketsSceneGraph.Material.Type {
-        BlinnPhongMaterial.self
+        BlinnPhongSceneMaterial.self
     }
 
     public func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement {
-        // Lighting needs at least one light; a black one leaves only the ambient term.
-        let lights = context.lights.isEmpty ? [(worldTransform: matrix_identity_float4x4, light: Light(type: .directional, color: .zero, intensity: 0))] : context.lights
-        let lighting = try Lighting(ambientLightColor: ambientLightColor, orientedLights: blinnPhongLights(lights))
         let viewProjection = context.projectionMatrix * context.viewMatrix
         let cameraPosition = SIMD3(context.cameraMatrix.columns.3.x, context.cameraMatrix.columns.3.y, context.cameraMatrix.columns.3.z)
+        let lights = blinnPhongLights(context.lights)
+        let frame = BlinnPhongFrame(viewProjection: viewProjection, cameraPosition: cameraPosition, ambientLightColor: ambientLightColor, lightCount: Int32(lights.count))
+        // An empty array cannot be bound; the shader reads none of it when lightCount is 0.
+        let lightValues = lights.isEmpty ? [BlinnPhongLight()] : lights
         // The shader has no morph or skin inputs, so those meshes are deformed on the CPU. They skip culling because
         // their node bounds do not cover the deformation.
         var plain: [SceneGraph.MeshEntry] = []
@@ -39,66 +67,127 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer {
         let visible = sortedFrontToBack(culledMeshEntries(plain, viewProjection: viewProjection), cameraPosition: cameraPosition)
             .map { (entry: $0, mesh: $0.mesh, modelMatrix: $0.worldTransform) } + deformed
         let items = visible.compactMap { item in
-            (item.entry.material as? BlinnPhongMaterial).map { (entry: item.entry, mesh: item.mesh, modelMatrix: item.modelMatrix, material: $0) }
+            (item.entry.material as? BlinnPhongSceneMaterial).map { (entry: item.entry, mesh: item.mesh, modelMatrix: item.modelMatrix, material: $0) }
         }
         // Each vertex layout needs its own pipelines; repeated mesh+material pairs draw as one instanced call.
         let groups = groupedByVertexDescriptor(items) { $0.mesh.vertexDescriptor }.map { group in
             let batches = instanceBatches(group.entries)
             return (vertexDescriptor: group.vertexDescriptor, single: batches.filter { $0.modelMatrices.count == 1 }, instanced: batches.filter { $0.modelMatrices.count > 1 })
         }
-        let viewTransforms = ViewTransforms(projectionMatrix: context.projectionMatrix, cameraMatrix: context.cameraMatrix)
+        let shaders = try BlinnPhongShaders.shared()
+        let placeholder = try BlinnPhongShaders.placeholderTexture()
+        let defaultSampler = try BlinnPhongShaders.defaultSampler()
 
-        return ForEach(Array(groups.enumerated()), id: \.offset) { _, group in
-            try BlinnPhongShader {
-                ForEach(Array(group.single.enumerated()), id: \.offset) { _, batch in
-                    try draw(batch, instanceCount: 1)
-                        .blinnPhongMatrices(
-                            projectionMatrix: context.projectionMatrix,
-                            viewMatrix: context.viewMatrix,
-                            modelMatrix: batch.modelMatrices[0],
-                            cameraMatrix: context.cameraMatrix
-                        )
-                        .blinnPhongMaterial(batch.material)
-                        .lighting(lighting)
-                }
+        func draw(_ batch: InstanceBatch, instanced: Bool) throws -> AnyElement {
+            let submesh = batch.mesh.submeshes[batch.submeshIndex]
+            let normalMatrices = batch.modelMatrices.map(normalMatrix)
+            var element = Draw(
+                primitiveType: submesh.primitiveType,
+                indexBuffer: submesh.indexBuffer,
+                indexType: submesh.indexType,
+                indexCount: submesh.indexCount,
+                indexBufferOffset: submesh.indexBufferOffset,
+                instanceCount: batch.modelMatrices.count
+            )
+            .vertexBuffers(batch.mesh.vertexBuffers)
+            .parameter("frame", functionType: .vertex, value: frame)
+            .eraseToAnyElement()
+            if instanced {
+                element = element
+                    .parameter("modelMatrices", functionType: .vertex, values: batch.modelMatrices)
+                    .parameter("normalMatrices", functionType: .vertex, values: normalMatrices)
+                    .eraseToAnyElement()
+            } else {
+                element = element
+                    .parameter("modelMatrix", functionType: .vertex, value: batch.modelMatrices[0])
+                    .parameter("normalMatrix", functionType: .vertex, value: normalMatrices[0])
+                    .eraseToAnyElement()
             }
-            .vertexDescriptor(group.vertexDescriptor.mtlVertexDescriptor)
-            try BlinnPhongShader(instanced: true) {
-                ForEach(Array(group.instanced.enumerated()), id: \.offset) { _, batch in
-                    try draw(batch, instanceCount: batch.modelMatrices.count)
-                        .blinnPhongInstancedMatrices(viewTransforms, modelMatrices: batch.modelMatrices)
-                        .blinnPhongMaterial(batch.material)
-                        .lighting(lighting)
+            let resolved = batch.material.resolved(placeholder: placeholder, defaultSampler: defaultSampler)
+            return element
+                .parameter("frame", functionType: .fragment, value: frame)
+                .parameter("lights", functionType: .fragment, values: lightValues)
+                .parameter("material", functionType: .fragment, value: resolved.uniforms)
+                .parameter("ambientTexture", texture: resolved.ambientTexture)
+                .parameter("diffuseTexture", texture: resolved.diffuseTexture)
+                .parameter("specularTexture", texture: resolved.specularTexture)
+                .parameter("textureSampler", samplerState: resolved.sampler)
+                .eraseToAnyElement()
+        }
+
+        return try ForEach(Array(groups.enumerated()), id: \.offset) { _, group in
+            if !group.single.isEmpty {
+                try RenderPipeline(label: "Blinn-Phong", vertexShader: shaders.vertex, fragmentShader: shaders.fragment) {
+                    try ForEach(Array(group.single.enumerated()), id: \.offset) { _, batch in
+                        try draw(batch, instanced: false)
+                    }
                 }
+                .vertexDescriptor(group.vertexDescriptor.mtlVertexDescriptor)
             }
-            .vertexDescriptor(group.vertexDescriptor.mtlVertexDescriptor)
+            if !group.instanced.isEmpty {
+                try RenderPipeline(label: "Blinn-Phong Instanced", vertexShader: shaders.instancedVertex, fragmentShader: shaders.fragment) {
+                    try ForEach(Array(group.instanced.enumerated()), id: \.offset) { _, batch in
+                        try draw(batch, instanced: true)
+                    }
+                }
+                .vertexDescriptor(group.vertexDescriptor.mtlVertexDescriptor)
+            }
         }
         .eraseToAnyElement()
     }
+}
 
-    private func draw(_ batch: InstanceBatch, instanceCount: Int) throws -> some Element {
-        let submesh = batch.mesh.submeshes[batch.submeshIndex]
-        return Draw(
-            primitiveType: submesh.primitiveType,
-            indexBuffer: submesh.indexBuffer,
-            indexType: submesh.indexType,
-            indexCount: submesh.indexCount,
-            indexBufferOffset: submesh.indexBufferOffset,
-            instanceCount: instanceCount
+private func normalMatrix(_ modelMatrix: simd_float4x4) -> simd_float3x3 {
+    let upper = simd_float3x3(SIMD3(modelMatrix.columns.0.x, modelMatrix.columns.0.y, modelMatrix.columns.0.z), SIMD3(modelMatrix.columns.1.x, modelMatrix.columns.1.y, modelMatrix.columns.1.z), SIMD3(modelMatrix.columns.2.x, modelMatrix.columns.2.y, modelMatrix.columns.2.z))
+    return upper.inverse.transpose
+}
+
+extension BlinnPhongSceneMaterial {
+    struct Resolved {
+        var uniforms: BlinnPhongMaterialUniforms
+        var ambientTexture: MTLTexture
+        var diffuseTexture: MTLTexture
+        var specularTexture: MTLTexture
+        var sampler: MTLSamplerState
+    }
+
+    // Textures missing from the material are bound as `placeholder`, and flagged off. The first texture's sampler
+    // is used for all three.
+    func resolved(placeholder: MTLTexture, defaultSampler: MTLSamplerState) -> Resolved {
+        func split(_ source: Source) -> (color: SIMD3<Float>, texture: MTLTexture?, sampler: MTLSamplerState?) {
+            switch source {
+            case .color(let color):
+                (color, nil, nil)
+            case let .texture(texture, sampler, tint):
+                (tint, texture, sampler)
+            }
+        }
+        let ambient = split(self.ambient)
+        let diffuse = split(self.diffuse)
+        let specular = split(self.specular)
+        let uniforms = BlinnPhongMaterialUniforms(
+            ambient: ambient.color,
+            diffuse: diffuse.color,
+            specular: specular.color,
+            shininess: shininess,
+            hasAmbientTexture: ambient.texture == nil ? 0 : 1,
+            hasDiffuseTexture: diffuse.texture == nil ? 0 : 1,
+            hasSpecularTexture: specular.texture == nil ? 0 : 1
         )
-        .vertexBuffers(batch.mesh.vertexBuffers)
+        let sampler = diffuse.sampler ?? ambient.sampler ?? specular.sampler ?? defaultSampler
+        return Resolved(uniforms: uniforms, ambientTexture: ambient.texture ?? placeholder, diffuseTexture: diffuse.texture ?? placeholder, specularTexture: specular.texture ?? placeholder, sampler: sampler)
     }
 }
 
 struct InstanceBatch {
     var mesh: MetalMesh
     var submeshIndex: Int
-    var material: BlinnPhongMaterial
+    var material: BlinnPhongSceneMaterial
     var modelMatrices: [simd_float4x4]
 }
 
 // Groups items that share vertex buffers, submesh and material, keeping first-seen order.
-func instanceBatches(_ items: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, modelMatrix: simd_float4x4, material: BlinnPhongMaterial)]) -> [InstanceBatch] {
+func instanceBatches(_ items: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, modelMatrix: simd_float4x4, material: BlinnPhongSceneMaterial)]) -> [InstanceBatch] {
     struct Key: Hashable {
         var vertexBuffers: [ObjectIdentifier]
         var submeshIndex: Int
@@ -119,45 +208,112 @@ func instanceBatches(_ items: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, mo
     return batches
 }
 
-// BlinnPhongMaterial is not Hashable (it holds textures); compare colors by value and textures by identity.
+// Materials hold textures, so they are not Hashable; compare colors by value and textures by identity.
 private struct MaterialKey: Hashable {
-    var sources: [ColorSourceKey]
+    var sources: [SourceKey]
     var shininess: Float
 
-    init(_ material: BlinnPhongMaterial) {
-        sources = [material.ambient, material.diffuse, material.specular].map(ColorSourceKey.init)
+    init(_ material: BlinnPhongSceneMaterial) {
+        sources = [material.ambient, material.diffuse, material.specular].map(SourceKey.init)
         shininess = material.shininess
     }
 
-    enum ColorSourceKey: Hashable {
+    enum SourceKey: Hashable {
         case color(SIMD3<Float>)
-        case texture(kind: Int, texture: ObjectIdentifier, sampler: ObjectIdentifier?, extra: Int)
+        case texture(ObjectIdentifier, sampler: ObjectIdentifier?, tint: SIMD3<Float>)
 
-        init(_ source: ColorSource) {
+        init(_ source: BlinnPhongSceneMaterial.Source) {
             switch source {
             case .color(let color):
                 self = .color(color)
-            case .texture2D(let texture, let sampler):
-                self = .texture(kind: 0, texture: ObjectIdentifier(texture), sampler: sampler.map { ObjectIdentifier($0) }, extra: 0)
-            case .textureCube(let texture, let sampler, let extra):
-                self = .texture(kind: 1, texture: ObjectIdentifier(texture), sampler: sampler.map { ObjectIdentifier($0) }, extra: extra)
-            case .depth2D(let texture, let sampler):
-                self = .texture(kind: 2, texture: ObjectIdentifier(texture), sampler: sampler.map { ObjectIdentifier($0) }, extra: 0)
+            case let .texture(texture, sampler, tint):
+                self = .texture(ObjectIdentifier(texture), sampler: sampler.map { ObjectIdentifier($0) }, tint: tint)
             }
         }
     }
 }
 
 // Lights point down their node's -Z axis.
-func blinnPhongLights(_ lights: [(worldTransform: simd_float4x4, light: Light)]) -> [(position: SIMD3<Float>, direction: SIMD3<Float>, light: Light)] {
+func blinnPhongLights(_ lights: [(worldTransform: simd_float4x4, light: Light)]) -> [BlinnPhongLight] {
     lights.map { entry in
         let transform = entry.worldTransform
         let forward = -SIMD3(transform.columns.2.x, transform.columns.2.y, transform.columns.2.z)
-        return (
+        let type: Int32 = switch entry.light.type {
+        case .directional: Int32(BLINN_PHONG_LIGHT_DIRECTIONAL)
+        case .spot: Int32(BLINN_PHONG_LIGHT_SPOT)
+        default: Int32(BLINN_PHONG_LIGHT_POINT)
+        }
+        return BlinnPhongLight(
             position: SIMD3(transform.columns.3.x, transform.columns.3.y, transform.columns.3.z),
-            direction: simd_length(forward) > 0 ? simd_normalize(forward) : Lighting.defaultLightDirection,
-            light: entry.light
+            direction: simd_length(forward) > 0 ? simd_normalize(forward) : [0, 0, -1],
+            color: entry.light.color * entry.light.intensity,
+            type: type,
+            range: entry.light.range,
+            innerConeCos: cos(entry.light.innerConeAngle),
+            outerConeCos: cos(entry.light.outerConeAngle)
         )
+    }
+}
+
+// From BlinnPhong.metal in MetalSprocketsSceneGraphShaders, loaded once.
+struct BlinnPhongShaders {
+    var vertex: VertexShader
+    var instancedVertex: VertexShader
+    var fragment: FragmentShader
+
+    nonisolated(unsafe) private static var cached: BlinnPhongShaders?
+    nonisolated(unsafe) private static var cachedPlaceholder: MTLTexture?
+    nonisolated(unsafe) private static var cachedSampler: MTLSamplerState?
+    private static let lock = NSLock()
+
+    static func shared() throws -> BlinnPhongShaders {
+        lock.lock()
+        defer { lock.unlock() }
+        if let cached {
+            return cached
+        }
+        let library = try ShaderLibrary(bundle: .metalSprocketsSceneGraphShaders()).namespaced("BlinnPhong")
+        let shaders = BlinnPhongShaders(vertex: try library.vertex_main, instancedVertex: try library.vertex_instanced, fragment: try library.fragment_main)
+        cached = shaders
+        return shaders
+    }
+
+    // 1x1 white, bound where a material has no texture.
+    static func placeholderTexture() throws -> MTLTexture {
+        lock.lock()
+        defer { lock.unlock() }
+        if let cachedPlaceholder {
+            return cachedPlaceholder
+        }
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba8Unorm, width: 1, height: 1, mipmapped: false)
+        descriptor.usage = .shaderRead
+        descriptor.storageMode = .shared
+        guard let texture = _MTLCreateSystemDefaultDevice().makeTexture(descriptor: descriptor) else {
+            throw MetalSupportError.resourceCreationFailure("Failed to create Blinn-Phong placeholder texture")
+        }
+        texture.label = "Blinn-Phong Placeholder"
+        texture.replace(region: MTLRegionMake2D(0, 0, 1, 1), mipmapLevel: 0, withBytes: [UInt8](repeating: 255, count: 4), bytesPerRow: 4)
+        cachedPlaceholder = texture
+        return texture
+    }
+
+    static func defaultSampler() throws -> MTLSamplerState {
+        lock.lock()
+        defer { lock.unlock() }
+        if let cachedSampler {
+            return cachedSampler
+        }
+        let descriptor = MTLSamplerDescriptor()
+        descriptor.minFilter = .linear
+        descriptor.magFilter = .linear
+        descriptor.mipFilter = .linear
+        descriptor.sAddressMode = .repeat
+        descriptor.tAddressMode = .repeat
+        guard let sampler = _MTLCreateSystemDefaultDevice().makeSamplerState(descriptor: descriptor) else {
+            throw MetalSupportError.resourceCreationFailure("Failed to create Blinn-Phong sampler")
+        }
+        cachedSampler = sampler
+        return sampler
     }
 }
 

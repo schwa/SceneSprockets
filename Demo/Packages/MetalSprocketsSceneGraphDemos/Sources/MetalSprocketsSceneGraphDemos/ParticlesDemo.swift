@@ -13,7 +13,7 @@ final class ParticlesDemo: DemoScene {
         let eye: SIMD3<Float> = [0, 3, 8]
         root.addChild(.camera(eye: eye, target: [0, 1.5, 0]))
         _ = SceneGraph.Node(parent: root, label: "Sun", transform: .camera(eye: [2, 6, 4], target: .zero), content: .light(Light(type: .directional, color: [1, 1, 1], intensity: 0.8)))
-        _ = SceneGraph.Node(parent: root, label: "Floor", shape: .box(width: 10, height: 0.1, length: 6), material: BlinnPhongMaterial.plastic([0.35, 0.35, 0.4], shininess: 8), device: demoDevice, trs: .init(translation: [0, -0.05, 0]))
+        _ = SceneGraph.Node(parent: root, label: "Floor", shape: .box(width: 10, height: 0.1, length: 6), material: BlinnPhongSceneMaterial.plastic([0.35, 0.35, 0.4], shininess: 8), device: demoDevice, trs: .init(translation: [0, -0.05, 0]))
 
         fountain.birthRate = 300
         fountain.lifetime = 2

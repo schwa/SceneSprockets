@@ -13,7 +13,7 @@ import simd
 @MainActor
 private func render(_ postProcessing: SceneGraph.PostProcessing?, color: SIMD3<Float> = [0.8, 0.8, 0.8]) throws -> (SceneGraph, MTLTexture) {
     let device = try #require(MTLCreateSystemDefaultDevice())
-    let material = BlinnPhongMaterial(ambient: .color(color), diffuse: .color(0), specular: .color(0), shininess: 1)
+    let material = BlinnPhongSceneMaterial(ambient: .color(color), diffuse: .color(0), specular: .color(0), shininess: 1)
     let root = SceneGraph.Node()
     let eye: SIMD3<Float> = [0, 3, 4]
     let forward = simd_normalize(-eye)

@@ -38,8 +38,8 @@ private func makeScene(meshMaterial: (MetalMesh) throws -> SceneGraph.Node.Conte
     return (SceneGraph(root: root), box)
 }
 
-private var blinnPhong: BlinnPhongMaterial {
-    BlinnPhongMaterial(ambient: .color([0.3, 0.1, 0.1]), diffuse: .color([0.9, 0.2, 0.2]), specular: .color([1, 1, 1]), shininess: 16)
+private var blinnPhong: BlinnPhongSceneMaterial {
+    BlinnPhongSceneMaterial(ambient: .color([0.3, 0.1, 0.1]), diffuse: .color([0.9, 0.2, 0.2]), specular: .color([1, 1, 1]), shininess: 16)
 }
 
 @Test

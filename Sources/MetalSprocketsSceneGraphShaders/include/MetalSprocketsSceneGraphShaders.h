@@ -1,5 +1,6 @@
 #pragma once
 
+#import "BlinnPhong.h"
 #import "Fog.h"
 #import "ShaderMaterial.h"
 #import "ShadowMask.h"

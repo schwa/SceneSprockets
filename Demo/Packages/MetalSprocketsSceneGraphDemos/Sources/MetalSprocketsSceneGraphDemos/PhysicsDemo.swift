@@ -125,7 +125,7 @@ final class PhysicsSimulation {
             transform: .translation(0, -0.5, 0) * .scale(15, 0.5, 15),
             content: .mesh(
                 boxMesh,
-                material: BlinnPhongMaterial(
+                material: BlinnPhongSceneMaterial(
                     ambient: .color(0.1),
                     diffuse: .color([0.45, 0.45, 0.5]),
                     specular: .color(0.2),
@@ -165,7 +165,7 @@ final class PhysicsSimulation {
                     label: "Box \(row)-\(col)",
                     content: .mesh(
                         boxMesh,
-                        material: BlinnPhongMaterial(
+                        material: BlinnPhongSceneMaterial(
                             ambient: .color(0.08),
                             diffuse: .color(color),
                             specular: .color(0.4),
@@ -228,7 +228,7 @@ final class PhysicsSimulation {
             label: "Ball",
             content: .mesh(
                 sphereMesh,
-                material: BlinnPhongMaterial(
+                material: BlinnPhongSceneMaterial(
                     ambient: .color(0.08),
                     diffuse: .color([0.9, 0.15, 0.15]),
                     specular: .color(0.8),

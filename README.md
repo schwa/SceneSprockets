@@ -28,7 +28,7 @@ let camera = SceneGraph.Node(parent: root, label: "Camera", content: .camera(Cam
 camera.trs.translation = [0, 1, 6]
 let light = SceneGraph.Node(parent: root, label: "Light", content: .light(Light(type: .point, color: [1, 1, 1], intensity: 20, range: 100)))
 light.trs.translation = [2, 3, 2]
-let crate = SceneGraph.Node(parent: root, label: "Crate", content: .mesh(box, material: BlinnPhongMaterial(
+let crate = SceneGraph.Node(parent: root, label: "Crate", content: .mesh(box, material: BlinnPhongSceneMaterial(
     ambient: .color(0.1), diffuse: .color([0.8, 0.5, 0.2]), specular: .color(0.3), shininess: 16
 )))
 

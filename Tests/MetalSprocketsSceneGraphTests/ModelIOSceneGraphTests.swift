@@ -91,7 +91,7 @@ func objLoadsWithPerSubmeshMaterials() throws {
 func objLoadsAsBlinnPhong() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let result = try ModelIOSceneGraph(url: try makeOBJ(), device: device, materials: .blinnPhong)
-    #expect(result.sceneGraph.meshEntries().allSatisfy { $0.material is BlinnPhongMaterial })
+    #expect(result.sceneGraph.meshEntries().allSatisfy { $0.material is BlinnPhongSceneMaterial })
 }
 
 @Test

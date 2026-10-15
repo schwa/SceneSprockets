@@ -9,8 +9,8 @@ import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
 
-private var material: BlinnPhongMaterial {
-    BlinnPhongMaterial(ambient: .color([0.5, 0.5, 0.5]), diffuse: .color([0.5, 0.5, 0.5]), specular: .color(0), shininess: 1)
+private var material: BlinnPhongSceneMaterial {
+    BlinnPhongSceneMaterial(ambient: .color([0.5, 0.5, 0.5]), diffuse: .color([0.5, 0.5, 0.5]), specular: .color(0), shininess: 1)
 }
 
 private func scene(cameraMask: UInt = .max) throws -> (SceneGraph, box: SceneGraph.Node) {

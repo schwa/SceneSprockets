@@ -5,8 +5,8 @@ import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
 
-private var material: BlinnPhongMaterial {
-    BlinnPhongMaterial(ambient: .color(0.1), diffuse: .color([1, 1, 1]), specular: .color(0), shininess: 1)
+private var material: BlinnPhongSceneMaterial {
+    BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color([1, 1, 1]), specular: .color(0), shininess: 1)
 }
 
 @Test(arguments: [
@@ -49,5 +49,5 @@ func settingShapeRebuildsMeshAndKeepsMaterial() throws {
         Issue.record("Expected mesh content")
         return
     }
-    #expect(materials.first is BlinnPhongMaterial)
+    #expect(materials.first is BlinnPhongSceneMaterial)
 }

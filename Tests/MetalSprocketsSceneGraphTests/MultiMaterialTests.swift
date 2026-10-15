@@ -21,7 +21,7 @@ private struct UnlitRenderer: SceneGraphMaterialRenderer {
 func mixedMaterialsArePartitionedPerRenderer() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
-    let blinnPhong = BlinnPhongMaterial(ambient: .color([1, 0, 0]), diffuse: .color([1, 0, 0]), specular: .color([1, 1, 1]), shininess: 1)
+    let blinnPhong = BlinnPhongSceneMaterial(ambient: .color([1, 0, 0]), diffuse: .color([1, 0, 0]), specular: .color([1, 1, 1]), shininess: 1)
 
     let root = SceneGraph.Node(children: [
         SceneGraph.Node(content: .mesh(box, material: blinnPhong)),

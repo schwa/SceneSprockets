@@ -30,7 +30,7 @@ final class PBRMaterialsDemo: DemoScene {
                 let position = SIMD3<Float>(Float(column - count / 2) * spacing + offset, y, 0)
                 _ = SceneGraph.Node(parent: grid, label: "M \(column) R \(row)", trs: .init(translation: position), content: .mesh(sphere, material: material))
             }
-            let blinnPhong = BlinnPhongMaterial.plastic([0.9, 0.35, 0.2], shininess: 4 + (1 - roughness) * 120)
+            let blinnPhong = BlinnPhongSceneMaterial.plastic([0.9, 0.35, 0.2], shininess: 4 + (1 - roughness) * 120)
             let position = SIMD3<Float>(Float(count - count / 2) * spacing + offset + 0.4, y, 0)
             _ = SceneGraph.Node(parent: grid, label: "Blinn-Phong R \(row)", trs: .init(translation: position), content: .mesh(sphere, material: blinnPhong))
         }

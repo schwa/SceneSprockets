@@ -23,7 +23,7 @@ func fogAmountFollowsStartEndAndExponent() {
 func fogTintsFarGeometryOnly() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
-    let material = BlinnPhongMaterial(ambient: .color([0.2, 0.2, 0.2]), diffuse: .color([0.2, 0.2, 0.2]), specular: .color(0), shininess: 1)
+    let material = BlinnPhongSceneMaterial(ambient: .color([0.2, 0.2, 0.2]), diffuse: .color([0.2, 0.2, 0.2]), specular: .color(0), shininess: 1)
     let root = SceneGraph.Node()
     _ = SceneGraph.Node(parent: root, content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(60), depthMode: .standard(zClip: 0.1 ... 200)))))
     _ = SceneGraph.Node(parent: root, content: .light(Light(type: .directional, color: [0.2, 0.2, 0.2], intensity: 1)))

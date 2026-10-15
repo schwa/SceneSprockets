@@ -1,6 +1,7 @@
 import MetalSprocketsAddOns
 import MetalSprocketsAddOnsShaders
 import MetalSprocketsPBR
+import MetalSprocketsSceneGraphShaders
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
@@ -16,7 +17,8 @@ func blinnPhongLightsUseNodeOrientation() {
     #expect(inputs.count == 1)
     #expect(inputs[0].position == [1, 2, 3])
     #expect(simd_distance(inputs[0].direction, [0, -1, 0]) < 0.0001)
-    #expect(inputs[0].light.type == .spot)
+    #expect(inputs[0].type == BLINN_PHONG_LIGHT_SPOT)
+    #expect(inputs[0].color == [2, 2, 2])
 }
 
 @Test

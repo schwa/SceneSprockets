@@ -18,8 +18,8 @@ private func makeBox(device: MTLDevice, layout: MetalMesh.BufferLayout = .interl
     MetalMesh(mesh: .box(), device: device, bufferLayout: layout)
 }
 
-private var material: BlinnPhongMaterial {
-    BlinnPhongMaterial(ambient: .color([1, 1, 1]), diffuse: .color([1, 1, 1]), specular: .color([1, 1, 1]), shininess: 1)
+private var material: BlinnPhongSceneMaterial {
+    BlinnPhongSceneMaterial(ambient: .color([1, 1, 1]), diffuse: .color([1, 1, 1]), specular: .color([1, 1, 1]), shininess: 1)
 }
 
 @Test

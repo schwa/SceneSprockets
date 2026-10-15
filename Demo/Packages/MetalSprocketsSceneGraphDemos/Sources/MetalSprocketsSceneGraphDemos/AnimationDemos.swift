@@ -17,9 +17,9 @@ final class AnimationBlendingDemo: DemoScene {
         let root = SceneGraph.Node(label: "Root")
         root.addChild(.camera(eye: [0, 2.5, 8], target: [0, 1.2, 0]))
         root.addChild(.pointLight("Key Light", at: [3, 5, 5], intensity: 50))
-        _ = SceneGraph.Node(parent: root, label: "Floor", transform: .translation(0, -0.05, 0) * .scale(10, 0.1, 10), content: .mesh(box, material: BlinnPhongMaterial.plastic([0.6, 0.6, 0.65], shininess: 8)))
-        let body = SceneGraph.Node(parent: root, label: "Body", trs: .init(translation: [0, 1, 0]), content: .mesh(box, material: BlinnPhongMaterial.plastic([0.9, 0.5, 0.2])))
-        let head = SceneGraph.Node(parent: body, label: "Head", trs: .init(translation: [0, 0.95, 0], scale: [0.7, 0.7, 0.7]), content: .mesh(sphere, material: BlinnPhongMaterial.plastic([0.95, 0.85, 0.7])))
+        _ = SceneGraph.Node(parent: root, label: "Floor", transform: .translation(0, -0.05, 0) * .scale(10, 0.1, 10), content: .mesh(box, material: BlinnPhongSceneMaterial.plastic([0.6, 0.6, 0.65], shininess: 8)))
+        let body = SceneGraph.Node(parent: root, label: "Body", trs: .init(translation: [0, 1, 0]), content: .mesh(box, material: BlinnPhongSceneMaterial.plastic([0.9, 0.5, 0.2])))
+        let head = SceneGraph.Node(parent: body, label: "Head", trs: .init(translation: [0, 0.95, 0], scale: [0.7, 0.7, 0.7]), content: .mesh(sphere, material: BlinnPhongSceneMaterial.plastic([0.95, 0.85, 0.7])))
 
         func vector(_ values: [SIMD3<Float>]) -> [Float] { values.flatMap { [$0.x, $0.y, $0.z] } }
         func quaternions(_ angles: [Float], axis: SIMD3<Float>) -> [Float] {
@@ -83,7 +83,7 @@ final class DeformationDemo: DemoScene {
         root.addChild(.camera(eye: [0, 2.5, 10], target: [0, 2, 0]))
         root.addChild(.pointLight("Key Light", at: [2, 6, 5], intensity: 50))
         root.addChild(.pointLight("Fill Light", at: [-3, 1, 3], color: [0.5, 0.6, 1], intensity: 15))
-        let left = SceneGraph.Node(parent: root, label: "Blinn-Phong Blob", trs: .init(translation: [-1.5, 4.3, 0]), content: .mesh(mesh, material: BlinnPhongMaterial.plastic([0.3, 0.8, 0.5], shininess: 48)))
+        let left = SceneGraph.Node(parent: root, label: "Blinn-Phong Blob", trs: .init(translation: [-1.5, 4.3, 0]), content: .mesh(mesh, material: BlinnPhongSceneMaterial.plastic([0.3, 0.8, 0.5], shininess: 48)))
         let right = SceneGraph.Node(parent: root, label: "PBR Blob", trs: .init(translation: [1.5, 4.3, 0]), content: .mesh(mesh, material: try! PBRSceneMaterial(device: demoDevice, baseColor: [0.3, 0.8, 0.5, 1], metallic: 0.1, roughness: 0.3)))
         morphed = [left, right]
         for node in morphed {
@@ -100,9 +100,9 @@ final class DeformationDemo: DemoScene {
             return SceneGraph.SkinVertex(joints: [UInt16(lower), UInt16(lower + 1), 0, 0], weights: [1 - fraction, fraction, 0, 0])
         }
         let box = MetalMesh(mesh: .box(), device: demoDevice)
-        _ = SceneGraph.Node(parent: root, label: "Floor", transform: .translation(0, -0.05, 0) * .scale(10, 0.1, 6), content: .mesh(box, material: BlinnPhongMaterial.plastic([0.6, 0.6, 0.6], shininess: 8)))
+        _ = SceneGraph.Node(parent: root, label: "Floor", transform: .translation(0, -0.05, 0) * .scale(10, 0.1, 6), content: .mesh(box, material: BlinnPhongSceneMaterial.plastic([0.6, 0.6, 0.6], shininess: 8)))
         let tubeMaterials: [(String, Float, any MetalSprocketsSceneGraph.Material)] = [
-            ("Blinn-Phong", -1.5, BlinnPhongMaterial.plastic([0.9, 0.6, 0.2])),
+            ("Blinn-Phong", -1.5, BlinnPhongSceneMaterial.plastic([0.9, 0.6, 0.2])),
             ("PBR", 1.5, try! PBRSceneMaterial(device: demoDevice, baseColor: [0.9, 0.6, 0.2, 1], metallic: 0, roughness: 0.4)),
         ]
         for (name, x, material) in tubeMaterials {

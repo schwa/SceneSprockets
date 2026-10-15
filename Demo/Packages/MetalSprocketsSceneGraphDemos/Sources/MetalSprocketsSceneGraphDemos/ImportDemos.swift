@@ -48,7 +48,7 @@ final class ImportedAssetsDemo: DemoScene {
         self.clips = clips
 
         let sphere = MetalMesh(mesh: .sphere(), device: demoDevice)
-        let markerMaterial = (try? PBRSceneMaterial(device: demoDevice, baseColor: [1, 0.8, 0.1, 1], metallic: 0, roughness: 0.3)).map { $0 as any MetalSprocketsSceneGraph.Material } ?? BlinnPhongMaterial.plastic([1, 0.8, 0.1])
+        let markerMaterial = (try? PBRSceneMaterial(device: demoDevice, baseColor: [1, 0.8, 0.1, 1], metallic: 0, roughness: 0.3)).map { $0 as any MetalSprocketsSceneGraph.Material } ?? BlinnPhongSceneMaterial.plastic([1, 0.8, 0.1])
         marker = SceneGraph.Node(parent: root, label: "Pick Marker", trs: .init(scale: [0.05, 0.05, 0.05]), content: .mesh(sphere, material: markerMaterial))
         marker.isVisible = false
 

@@ -197,10 +197,10 @@ private struct ModelIOConverter {
             }
             result = PBRSceneMaterial(try PBRMaterial(name: source?.name, uniforms: uniforms, textureBindings: bindings, device: device))
         case .blinnPhong:
-            let diffuse: ColorSource = baseColorTexture.map { .texture2D($0, sampler) } ?? .color(SIMD3(baseColor.x, baseColor.y, baseColor.z))
+            let diffuse: BlinnPhongSceneMaterial.Source = baseColorTexture.map { .texture($0, sampler: sampler) } ?? .color(SIMD3(baseColor.x, baseColor.y, baseColor.z))
             let specular = color(source?.property(with: .specular)).map { SIMD3($0.x, $0.y, $0.z) } ?? [0.2, 0.2, 0.2]
             let shininess = scalar(source?.property(with: .specularExponent)) ?? 32
-            result = BlinnPhongMaterial(ambient: .color(SIMD3(baseColor.x, baseColor.y, baseColor.z) * 0.1), diffuse: diffuse, specular: .color(specular), shininess: shininess)
+            result = BlinnPhongSceneMaterial(ambient: .color(SIMD3(baseColor.x, baseColor.y, baseColor.z) * 0.1), diffuse: diffuse, specular: .color(specular), shininess: shininess)
         }
         if let key {
             materialCache[key] = result

@@ -13,8 +13,8 @@ private func translation(_ x: Float, _ y: Float, _ z: Float) -> simd_float4x4 {
     simd_float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [x, y, z, 1]))
 }
 
-private func material(_ red: Float) -> BlinnPhongMaterial {
-    BlinnPhongMaterial(ambient: .color([0.2, 0.05, 0.05]), diffuse: .color([red, 0.1, 0.1]), specular: .color([0.2, 0.2, 0.2]), shininess: 8)
+private func material(_ red: Float) -> BlinnPhongSceneMaterial {
+    BlinnPhongSceneMaterial(ambient: .color([0.2, 0.05, 0.05]), diffuse: .color([red, 0.1, 0.1]), specular: .color([0.2, 0.2, 0.2]), shininess: 8)
 }
 
 @Test
@@ -29,7 +29,7 @@ func identicalMeshAndMaterialShareABatch() throws {
     _ = SceneGraph.Node(parent: root, content: .mesh(box, material: material(0.3)))
     _ = SceneGraph.Node(parent: root, content: .mesh(sphere, material: material(0.8)))
     let items = SceneGraph(root: root).meshEntries().map { entry in
-        (entry: entry, mesh: entry.mesh, modelMatrix: entry.worldTransform, material: entry.material as! BlinnPhongMaterial)
+        (entry: entry, mesh: entry.mesh, modelMatrix: entry.worldTransform, material: entry.material as! BlinnPhongSceneMaterial)
     }
 
     let batches = instanceBatches(items)

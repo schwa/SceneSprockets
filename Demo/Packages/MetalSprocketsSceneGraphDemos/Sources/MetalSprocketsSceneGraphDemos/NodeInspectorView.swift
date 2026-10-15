@@ -74,14 +74,14 @@ struct NodeInspectorView: View {
             LabeledContent("Casts Shadow", value: castsShadow ? "Yes" : "No")
             LabeledContent("Receives Shadow", value: receivesShadow ? "Yes" : "No")
             ForEach(materials.indices, id: \.self) { index in
-                if let blinnPhong = materials[index] as? BlinnPhongMaterial {
+                if let blinnPhong = materials[index] as? BlinnPhongSceneMaterial {
                     blinnPhongSection(blinnPhong)
                 }
             }
         }
     }
 
-    private func blinnPhongSection(_ material: BlinnPhongMaterial) -> some View {
+    private func blinnPhongSection(_ material: BlinnPhongSceneMaterial) -> some View {
         Group {
             Divider()
             Text("Blinn-Phong Material").font(.subheadline).foregroundStyle(.secondary)
@@ -113,7 +113,7 @@ struct NodeInspectorView: View {
     }
 
     @ViewBuilder
-    private func colorSourceRow(label: String, source: ColorSource) -> some View {
+    private func colorSourceRow(label: String, source: BlinnPhongSceneMaterial.Source) -> some View {
         switch source {
         case .color(let color):
             ColorRow(label: label, value: color)

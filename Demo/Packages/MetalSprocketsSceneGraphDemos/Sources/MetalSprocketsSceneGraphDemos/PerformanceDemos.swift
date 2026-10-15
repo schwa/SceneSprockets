@@ -49,7 +49,7 @@ final class InstancingDemo: DemoScene {
         crates.removeAll()
         let spacing: Float = 60 / Float(size)
         let palette: [SIMD3<Float>] = [[0.8, 0.5, 0.2], [0.6, 0.3, 0.15], [0.7, 0.6, 0.3]]
-        let materials = palette.map { BlinnPhongMaterial.plastic($0, shininess: 16) }
+        let materials = palette.map { BlinnPhongSceneMaterial.plastic($0, shininess: 16) }
         for row in 0..<size {
             for column in 0..<size {
                 let x = (Float(column) - Float(size - 1) / 2) * spacing

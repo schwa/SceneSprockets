@@ -11,7 +11,7 @@ import simd
 func queriesShareOneCachedTraversalUntilSomethingChanges() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
-    let material = BlinnPhongMaterial(ambient: .color([1, 1, 1]), diffuse: .color([1, 1, 1]), specular: .color([1, 1, 1]), shininess: 1)
+    let material = BlinnPhongSceneMaterial(ambient: .color([1, 1, 1]), diffuse: .color([1, 1, 1]), specular: .color([1, 1, 1]), shininess: 1)
     let root = SceneGraph.Node()
     let mesh = SceneGraph.Node(parent: root, content: .mesh(box, material: material))
     _ = SceneGraph.Node(parent: root, content: .light(Light(type: .point)))

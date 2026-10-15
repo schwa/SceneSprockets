@@ -1962,11 +1962,13 @@ When light category masks leave a Blinn-Phong batch with no lights (for example 
 ## 100: Own Blinn-Phong material, renderer and shaders (stop using AddOns')
 
 +++
-status: new
+status: closed
 priority: high
 kind: enhancement
 labels: area:renderer, effort:l
 created: 2026-10-15T12:02:03Z
+updated: 2026-10-15T12:18:52Z
+closed: 2026-10-15T12:18:52Z
 +++
 
 Decision on #36 (2026-10-14): bring Blinn-Phong into this repo and stop using BlinnPhongMaterial, BlinnPhongShader and Lighting from MetalSprocketsAddOns.
@@ -1978,5 +1980,19 @@ Scope:
 - Same output as today for existing scenes (golden images or pixel tests before and after).
 
 Unblocks: #36 (opacity and transparency), #71 (per-light shadows sampled in the fragment shader), #83 (normal maps, emission, cull mode), the Blinn-Phong half of #76 (node opacity), and GPU skinning/morphing for Blinn-Phong.
+
+---
+
+## 101: Extruded text meshes have zero-length normals
+
++++
+status: new
+priority: medium
+kind: bug
+labels: area:scenegraph, effort:s
+created: 2026-10-15T12:18:52Z
++++
+
+SceneGraph.Shape.text("SceneGraph", fontName: "Helvetica-Bold") from SwiftMesh's extrudedText has 296 of 6186 vertices with zero-length normals, all in glyphs with holes (e, a, p). The old AddOns Blinn-Phong shader normalized them to NaN and drew those glyphs white; the in-repo shader (#100) now falls back to the face normal, but PBR and ShaderMaterial still get zero normals. Other shapes are fine. Fix in SwiftMesh's text extrusion (or recompute missing normals in Shape.metalMesh).
 
 ---

@@ -33,7 +33,7 @@ func boxesInsideAndOutsideFrustum() {
 func cullingDropsEntriesOutsideFrustum() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
-    let material = BlinnPhongMaterial(ambient: .color([1, 1, 1]), diffuse: .color([1, 1, 1]), specular: .color([1, 1, 1]), shininess: 1)
+    let material = BlinnPhongSceneMaterial(ambient: .color([1, 1, 1]), diffuse: .color([1, 1, 1]), specular: .color([1, 1, 1]), shininess: 1)
     let root = SceneGraph.Node()
     _ = SceneGraph.Node(parent: root, label: "front", transform: .translation(0, 0, -5), content: .mesh(box, material: material))
     _ = SceneGraph.Node(parent: root, label: "behind", transform: .translation(0, 0, 5), content: .mesh(box, material: material))
@@ -46,7 +46,7 @@ func cullingDropsEntriesOutsideFrustum() throws {
 func entriesAreSortedFrontToBack() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
-    let material = BlinnPhongMaterial(ambient: .color([1, 1, 1]), diffuse: .color([1, 1, 1]), specular: .color([1, 1, 1]), shininess: 1)
+    let material = BlinnPhongSceneMaterial(ambient: .color([1, 1, 1]), diffuse: .color([1, 1, 1]), specular: .color([1, 1, 1]), shininess: 1)
     let root = SceneGraph.Node()
     for (label, z) in [("far", -20), ("near", -2), ("middle", -8)] {
         _ = SceneGraph.Node(parent: root, label: label, transform: .translation(0, 0, Float(z)), content: .mesh(box, material: material))
