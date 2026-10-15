@@ -179,10 +179,10 @@ Legend:
 | Shadow maps from directional and spot lights | `SceneGraphShadows` | ✅ | Directional: orthographic view fitted to the scene bounds. Spot: perspective view of the outer cone. |
 | Point light shadows | `SceneGraphShadows` | ✅ | Six 90° views per point light. |
 | `shadowMode` (forward, deferred, modulated) | Screen-space mask after the scene pass | 🟡 | One mode, like deferred: shadowed pixels are darkened by `intensity` after all renderers draw. |
-| `shadowColor` | `intensity` (0…1, darkens toward black) | 🟡 | No color. |
+| `shadowColor` | `color` and `intensity` | ✅ | Global, not per light. |
 | `shadowMapSize` | `resolution` (default 2048) | ✅ | Global, not per light. |
 | `shadowBias` | `depthBias`, `slopeScale` | ✅ | Global. Acne is still visible on some lit surfaces (#60). |
-| `shadowRadius`, `shadowSampleCount` (soft shadows) | — | ❌ | |
+| `shadowRadius`, `shadowSampleCount` (soft shadows) | `softness` (PCF half-size in texels) | 🟡 | Global; fixed-width filter, not contact-hardening. |
 | `orthographicScale`, `shadowCascadeCount`, `shadowCascadeSplittingFactor`, `automaticallyAdjustsShadowProjection` | Automatic fit to scene bounds | 🟡 | No cascades. |
 | `castsShadow` per node / light | `castsShadow` per mesh content | 🟡 | All lights cast (up to the slice limit). |
 | — | `receivesShadow` | ➕ | Honored through a receiver mask. |

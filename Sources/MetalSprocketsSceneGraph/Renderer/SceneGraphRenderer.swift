@@ -118,7 +118,9 @@ public struct SceneGraphElement: Element {
                         sceneDepthTexture: postTargets.depth,
                         outputTexture: postTargets.color,
                         viewProjection: context.projectionMatrix * context.viewMatrix,
-                        intensity: shadows.intensity
+                        intensity: shadows.intensity,
+                        color: shadows.color,
+                        radius: shadows.softness
                     )
                 }
                 if let fog {

@@ -1721,7 +1721,7 @@ GeometryLite3D only has PerspectiveProjection, so there is no orthographic camer
 
 ---
 
-## 88: Shadow gaps: color, soft shadows, cascades, per-light settings
+## 88: Shadow gaps: cascades, per-light settings
 
 +++
 status: open
@@ -1729,10 +1729,12 @@ priority: low
 kind: enhancement
 labels: effort:l, area:renderer
 created: 2026-10-15T02:28:07Z
-updated: 2026-10-15T02:31:15Z
+updated: 2026-10-15T03:04:56Z
 +++
 
 SceneGraphShadows is one global setting. Missing: shadowColor (today only intensity toward black), soft shadows (shadowRadius, shadowSampleCount), cascades, and per-light castsShadow, resolution and bias. See docs/SceneKitComparison.md.
+
+- `2026-10-15T03:04:56Z`: Done: SceneGraphShadows.color (shadow tint) and softness (PCF radius). Left: cascades and per-light castsShadow/resolution/bias (ties into the #71 decision).
 
 ---
 

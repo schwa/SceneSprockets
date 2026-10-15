@@ -20,8 +20,13 @@ import simd
 // The view's color texture needs `.shaderWrite` and its depth texture `.shaderRead` usage (see
 // `ShadowContext.requiredColorUsage`); otherwise no shadows are drawn.
 public final class SceneGraphShadows {
-    // 0 leaves shadowed pixels unchanged, 1 makes them black.
+    // 0 leaves shadowed pixels unchanged, 1 multiplies them by `color`.
     public var intensity: Float
+    // Linear RGB multiplied into shadowed pixels, like SCNLight.shadowColor; black darkens.
+    public var color: SIMD3<Float>
+    // Soft-shadow filter half-size in shadow map texels, like SCNLight.shadowRadius: 1 filters 3x3, 0 is hard.
+    // Cost grows with (2 * softness + 1)^2 per light.
+    public var softness: Int
     public var resolution: Int
     public var depthBias: Float
     public var slopeScale: Float
@@ -34,8 +39,10 @@ public final class SceneGraphShadows {
     // One per frame in flight, like the shadow map's depth textures.
     private var receiverMasks: [MTLTexture] = []
 
-    public init(intensity: Float = 0.6, resolution: Int = 2_048, depthBias: Float = 2, slopeScale: Float = 2) {
+    public init(intensity: Float = 0.6, color: SIMD3<Float> = .zero, softness: Int = 1, resolution: Int = 2_048, depthBias: Float = 2, slopeScale: Float = 2) {
         self.intensity = intensity
+        self.color = color
+        self.softness = softness
         self.resolution = resolution
         self.depthBias = depthBias
         self.slopeScale = slopeScale

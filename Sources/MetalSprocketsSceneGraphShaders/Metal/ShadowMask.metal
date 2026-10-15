@@ -8,8 +8,8 @@ namespace SceneShadowMask {
     // True when the receiver mask is bound; its nonzero pixels belong to meshes that do not receive shadows.
     constant bool HAS_RECEIVER_MASK [[function_constant(0)]];
 
-    // 3x3 PCF in one slice; 1 is lit. Positions outside the slice's view are lit.
-    static float sliceShadow(float3 world, float4x4 viewProjection, float mapSize, depth2d_array<float, access::sample> shadowMap, sampler shadowSampler, uint slice) {
+    // PCF over (2 * radius + 1)^2 texels in one slice; 1 is lit. Positions outside the slice's view are lit.
+    static float sliceShadow(float3 world, float4x4 viewProjection, float mapSize, int radius, depth2d_array<float, access::sample> shadowMap, sampler shadowSampler, uint slice) {
         float4 clip = viewProjection * float4(world, 1);
         float3 ndc = clip.xyz / clip.w;
         float2 uv = float2(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5);
@@ -18,12 +18,13 @@ namespace SceneShadowMask {
         }
         float shadow = 0;
         float texel = 1.0 / mapSize;
-        for (int x = -1; x <= 1; x++) {
-            for (int y = -1; y <= 1; y++) {
+        for (int x = -radius; x <= radius; x++) {
+            for (int y = -radius; y <= radius; y++) {
                 shadow += shadowMap.sample_compare(shadowSampler, uv + float2(x, y) * texel, slice, ndc.z, level(0));
             }
         }
-        return shadow / 9.0;
+        float side = float(2 * radius + 1);
+        return shadow / (side * side);
     }
 
     // Darkens shadowed pixels of already-drawn geometry. Shadow factors of all slices multiply.
@@ -55,13 +56,13 @@ namespace SceneShadowMask {
         world /= world.w;
         float lit = 1;
         for (int slice = 0; slice < uniforms.sliceCount; slice++) {
-            lit *= sliceShadow(world.xyz, uniforms.sliceViewProjections[slice], uniforms.mapSize, shadowMap, shadowSampler, uint(slice));
+            lit *= sliceShadow(world.xyz, uniforms.sliceViewProjections[slice], uniforms.mapSize, uniforms.radius, shadowMap, shadowSampler, uint(slice));
         }
         if (lit >= 1.0) {
             return;
         }
         float4 color = outputTexture.read(tid);
-        color.rgb *= 1.0 - uniforms.intensity * (1.0 - lit);
+        color.rgb = mix(color.rgb, color.rgb * uniforms.color, uniforms.intensity * (1.0 - lit));
         outputTexture.write(color, tid);
     }
 

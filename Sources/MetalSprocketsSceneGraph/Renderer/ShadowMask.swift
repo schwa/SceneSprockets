@@ -12,6 +12,8 @@ struct SceneShadowMaskPass: Element {
     var outputTexture: MTLTexture
     var viewProjection: simd_float4x4
     var intensity: Float
+    var color: SIMD3<Float>
+    var radius: Int
 
     @MSEnvironment(\.submissionIndex)
     private var submissionIndex
@@ -24,6 +26,8 @@ struct SceneShadowMaskPass: Element {
             uniforms.sliceCount = Int32(min(shadowMap.lightCount, Int(SCENE_SHADOW_MAX_SLICES)))
             uniforms.mapSize = Float(shadowMap.resolution)
             uniforms.intensity = intensity
+            uniforms.color = color
+            uniforms.radius = Int32(max(radius, 0))
             withUnsafeMutableBytes(of: &uniforms.sliceViewProjections) { buffer in
                 let slices = buffer.bindMemory(to: simd_float4x4.self)
                 for (index, matrix) in shadowMap.lightViewProjectionMatrices.prefix(slices.count).enumerated() {

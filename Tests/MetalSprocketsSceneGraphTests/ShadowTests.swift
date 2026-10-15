@@ -145,6 +145,44 @@ func nonReceiversAreNotDarkened() throws {
     #expect(frame.nonReceivers?.casters.count == 1)
 }
 
+@MainActor
+private func pixels(_ sceneGraph: SceneGraph, shadows: SceneGraphShadows?) throws -> [SIMD4<UInt8>] {
+    let renderer = try OffscreenRenderer(size: size, colorUsage: ShadowContext.requiredColorUsage, depthUsage: ShadowContext.requiredDepthUsage)
+    let texture = try renderer.render(SceneGraphElement(sceneGraph: sceneGraph, aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer()], shadows: shadows)).texture
+    var result = [SIMD4<UInt8>](repeating: .zero, count: texture.width * texture.height)
+    texture.getBytes(&result, bytesPerRow: texture.width * 4, from: MTLRegionMake2D(0, 0, texture.width, texture.height), mipmapLevel: 0)
+    return result
+}
+
+// #88: shadows tint towards `color`, and `softness` widens the penumbra.
+@Test
+@MainActor
+func shadowColorTintsShadowedPixels() throws {
+    let (sceneGraph, pixel) = try makeScene()
+    let index = pixel.y * Int(size.width) + pixel.x
+    let lit = try pixels(sceneGraph, shadows: nil)[index]
+    let tinted = try pixels(sceneGraph, shadows: SceneGraphShadows(intensity: 1, color: [1, 0, 0]))[index]
+    // BGRA: red kept, blue gone.
+    #expect(abs(Int(tinted.z) - Int(lit.z)) <= 3)
+    #expect(tinted.x < 5)
+}
+
+@Test
+@MainActor
+func softnessWidensPenumbra() throws {
+    let (sceneGraph, _) = try makeScene()
+    let lit = try pixels(sceneGraph, shadows: nil)
+    func penumbraCount(softness: Int) throws -> Int {
+        let shadowed = try pixels(sceneGraph, shadows: SceneGraphShadows(intensity: 1, softness: softness, resolution: 256))
+        // Partly darkened: between 10% and 90% of the lit brightness.
+        return zip(lit, shadowed).filter { lit, shadowed in
+            let ratio = (Float(shadowed.x) + Float(shadowed.y) + Float(shadowed.z) + 1) / (Float(lit.x) + Float(lit.y) + Float(lit.z) + 1)
+            return ratio > 0.1 && ratio < 0.9
+        }.count
+    }
+    #expect(try penumbraCount(softness: 4) > penumbraCount(softness: 0) + 10)
+}
+
 @Test
 @MainActor
 func nonCastersCastNoShadow() throws {

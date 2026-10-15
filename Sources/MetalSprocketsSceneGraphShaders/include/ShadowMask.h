@@ -12,7 +12,11 @@ struct SceneShadowMaskUniforms {
     simd_float4x4 sliceViewProjections[SCENE_SHADOW_MAX_SLICES];
     int sliceCount;
     float mapSize;
-    // 0 leaves shadowed pixels unchanged, 1 makes them black.
+    // 0 leaves shadowed pixels unchanged, 1 multiplies them by `color`.
     float intensity;
+    // Linear RGB multiplied into fully shadowed pixels; black darkens.
+    simd_float3 color;
+    // PCF kernel half-size in shadow map texels; 1 samples 3x3.
+    int radius;
 };
 typedef struct SceneShadowMaskUniforms SceneShadowMaskUniforms;
