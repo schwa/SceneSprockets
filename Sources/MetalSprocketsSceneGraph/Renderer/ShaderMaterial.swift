@@ -27,15 +27,22 @@ public struct ShaderMaterial: MetalSprocketsSceneGraph.Material {
     public var vertexShader: VertexShader
     public var fragmentShader: FragmentShader
     public var parameters: [String: Value]
-    // Alpha-blends over what is already drawn and does not write depth. Drawn after opaque meshes of the same
-    // Node.renderingOrder, farthest first.
-    public var isTransparent: Bool
+    public var renderState: MaterialRenderState
+    private var alphaBlends: Bool
 
-    public init(vertexShader: VertexShader, fragmentShader: FragmentShader, parameters: [String: Value] = [:], isTransparent: Bool = false) {
+    // Alpha-blends over what is already drawn and does not write depth. Drawn after opaque meshes of the same
+    // Node.renderingOrder, farthest first. Also true for blend modes that mix with what is behind (add, multiply...).
+    public var isTransparent: Bool {
+        get { alphaBlends || renderState.blendsWithBackground }
+        set { alphaBlends = newValue }
+    }
+
+    public init(vertexShader: VertexShader, fragmentShader: FragmentShader, parameters: [String: Value] = [:], isTransparent: Bool = false, renderState: MaterialRenderState = .init()) {
         self.vertexShader = vertexShader
         self.fragmentShader = fragmentShader
         self.parameters = parameters
-        self.isTransparent = isTransparent
+        self.alphaBlends = isTransparent
+        self.renderState = renderState
     }
 
     // The renderer blends below opacity 1 and passes it as transforms.opacity; the fragment shader must multiply
@@ -88,13 +95,7 @@ public struct ShaderMaterialRenderer: SceneGraphMaterialRenderer {
             )
             let submesh = item.mesh.submeshes[item.submeshIndex]
             try RenderPipeline(label: "ShaderMaterial", vertexShader: item.material.vertexShader, fragmentShader: item.material.fragmentShader) {
-                Draw(
-                    primitiveType: submesh.primitiveType,
-                    indexBuffer: submesh.indexBuffer,
-                    indexType: submesh.indexType,
-                    indexCount: submesh.indexCount,
-                    indexBufferOffset: submesh.indexBufferOffset
-                )
+                materialDraw(submesh, fillMode: item.material.renderState.fillMode)
                 .vertexBuffers(item.mesh.vertexBuffers)
                 .parameters { parameters in
                     parameters.set("transforms", value: transforms)
@@ -113,19 +114,7 @@ public struct ShaderMaterialRenderer: SceneGraphMaterialRenderer {
                 }
             }
             .vertexDescriptor(item.mesh.vertexDescriptor.mtlVertexDescriptor)
-            // Reversed depth, as in SceneGraphElement; transparent materials test depth but do not write it.
-            .depthCompare(function: .greater, enabled: !item.isTransparent)
-            .renderPipelineDescriptorTransformer { descriptor in
-                guard item.isTransparent else {
-                    return
-                }
-                let attachment = descriptor.colorAttachments[0]!
-                attachment.blendingState = .enabled
-                attachment.sourceRGBBlendFactor = .sourceAlpha
-                attachment.destinationRGBBlendFactor = .oneMinusSourceAlpha
-                attachment.sourceAlphaBlendFactor = .one
-                attachment.destinationAlphaBlendFactor = .oneMinusSourceAlpha
-            }
+            .materialRenderState(item.material.renderState, isTransparent: item.isTransparent)
         }
         .eraseToAnyElement()
     }

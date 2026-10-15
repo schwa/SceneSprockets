@@ -1696,15 +1696,18 @@ BlinnPhongMaterial has only ambient, diffuse and specular color sources and shin
 ## 84: Material settings: blend modes, depth read/write, color write mask, wireframe
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: effort:l, area:renderer
 created: 2026-10-15T02:28:07Z
-updated: 2026-10-15T02:31:14Z
+updated: 2026-10-15T20:22:03Z
+closed: 2026-10-15T20:22:03Z
 +++
 
 SceneKit materials have blendMode (alpha, add, subtract, multiply, screen, replace), writesToDepthBuffer/readsFromDepthBuffer, colorBufferWriteMask and fillMode .lines. Here only ShaderMaterial.isTransparent and PBR alphaMode exist. Want these settings to work across the material families. See docs/SceneKitComparison.md.
+
+- `2026-10-15T20:22:03Z`: Added MaterialRenderState (blendMode alpha/add/subtract/multiply/screen/replace, writes/readsFromDepthBuffer, colorWriteMask, fillMode) on BlinnPhongSceneMaterial and ShaderMaterial. Blend modes that mix with the background make the material transparent (draw order). PBR split out as #114 (needs MetalSprocketsPBR hooks).
 
 ---
 
@@ -2228,5 +2231,19 @@ updated: 2026-10-15T20:12:55Z
 +++
 
 eulerAngles, worldPosition/worldOrientation setters, convertPosition/convertVector/convertTransform and look(at:) (#79) have no demo. Use them in SceneKitFeaturesDemo where they fit, for example a "Look at Ball" action that calls look(at:) once on a node (beside the existing lookAt constraint), and yaw/pitch/roll sliders bound to eulerAngles on one shape.
+
+---
+
+## 114: PBR materials have no render state (blend mode, depth, color mask, fill mode)
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:renderer, effort:m
+created: 2026-10-15T20:21:37Z
++++
+
+MaterialRenderState (#84) works for Blinn-Phong and ShaderMaterial. PBRSceneMaterial has none: PBRRenderer sets its own depth/stencil, blending and fill state inside MetalSprocketsPBR with no per-material hook (only alphaMode and doubleSided). Needs MetalSprocketsPBR to accept per-material blend mode, depth read/write, color write mask and fill mode (or a pipeline/encoder hook), then PBRSceneMaterial.renderState wired through.
 
 ---

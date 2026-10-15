@@ -132,11 +132,11 @@ Legend:
 | `lightingModel = .lambert`, `.constant` | — | 🟡 | Use Blinn-Phong with no specular, PBR `unlit`, or a `ShaderMaterial`. |
 | `lightingModel = .shadowOnly` | — | ❌ | |
 | `SCNMaterialProperty` (contents, intensity, wrap, filter, mip, `contentsTransform`) | PBR texture slots with texture transforms; Blinn-Phong `BlinnPhongSceneMaterial.Source` | 🟡 | No uniform "property" type across materials. |
-| `transparency`, `transparencyMode`, `blendMode` | PBR `alphaMode` (opaque, mask, blend); `ShaderMaterial.isTransparent`; Blinn-Phong `opacity` | 🟡 | No additive, multiply or screen blend modes. Transparent entries draw after opaque ones, farthest first (`Material.isTransparent`). |
+| `transparency`, `transparencyMode`, `blendMode` | PBR `alphaMode` (opaque, mask, blend); `ShaderMaterial.isTransparent`; Blinn-Phong `opacity`; `MaterialRenderState.blendMode` (Blinn-Phong, `ShaderMaterial`) | 🟡 | Alpha, add, subtract, multiply, screen and replace; not for PBR (#114). Transparent entries draw after opaque ones, farthest first (`Material.isTransparent`). |
 | `isDoubleSided`, `cullMode` | PBR `doubleSided`; Blinn-Phong `cullMode` | 🟡 | `ShaderMaterial` has no cull mode setting. |
-| `writesToDepthBuffer`, `readsFromDepthBuffer` | `ShaderMaterial.isTransparent` (tests depth, does not write) | 🟡 | No general switch. |
-| `colorBufferWriteMask` | — | ❌ | |
-| `fillMode = .lines` (wireframe) | — | ❌ | MetalSprocketsPBR has a wireframe debug view, but MSSG does not expose it. |
+| `writesToDepthBuffer`, `readsFromDepthBuffer` | `MaterialRenderState` (Blinn-Phong, `ShaderMaterial`) | 🟡 | Transparent draws never write depth. Not for PBR (#114). |
+| `colorBufferWriteMask` | `MaterialRenderState.colorWriteMask` (Blinn-Phong, `ShaderMaterial`) | 🟡 | Not for PBR (#114). |
+| `fillMode = .lines` (wireframe) | `MaterialRenderState.fillMode` (Blinn-Phong, `ShaderMaterial`) | 🟡 | Not for PBR (#114); MetalSprocketsPBR has a wireframe debug view. |
 | `SCNProgram` | `ShaderMaterial` + `ShaderMaterialRenderer` | ✅ | Your own vertex and fragment functions. Gets `ShaderMaterialTransforms` (model, view, projection with reversed depth, MVP, normal matrix, camera position). Named parameters: float…float4, float4x4, texture, sampler, buffer. Built-ins: `.normals()` and `.rim(color:)`. Uses the mesh's vertex descriptor as is. |
 | Shader modifiers (`shaderModifiers`, geometry/surface/lighting/fragment entry points) | — | ❌ | |
 | `SCNTechnique` | — | ❌ | No multi-pass post-processing graph. |

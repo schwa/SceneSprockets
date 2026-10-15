@@ -1,0 +1,118 @@
+import Metal
+import MetalSprockets
+import SwiftMesh
+
+// How a material's draws blend, use depth, write color and fill, like SCNMaterial's blendMode,
+// readsFromDepthBuffer/writesToDepthBuffer, colorBufferWriteMask and fillMode. Used by Blinn-Phong and ShaderMaterial.
+public struct MaterialRenderState: Sendable, Hashable {
+    // Straight (not premultiplied) alpha.
+    public enum BlendMode: Sendable, Hashable {
+        // Over what is behind, by alpha. Blends only when the material is transparent.
+        case alpha
+        // Adds color times alpha.
+        case add
+        // Subtracts color times alpha from what is behind.
+        case subtract
+        // Multiplies what is behind by the color.
+        case multiply
+        // 1 - (1 - behind) * (1 - color): brightens.
+        case screen
+        // Writes the color with no blending, even when transparent.
+        case replace
+    }
+
+    public var blendMode: BlendMode
+    // Transparent draws never write depth.
+    public var writesToDepthBuffer: Bool
+    // False draws on top of what is already drawn.
+    public var readsFromDepthBuffer: Bool
+    public var colorWriteMask: MTLColorWriteMask
+    // `.lines` draws triangle edges.
+    public var fillMode: MTLTriangleFillMode
+
+    public init(blendMode: BlendMode = .alpha, writesToDepthBuffer: Bool = true, readsFromDepthBuffer: Bool = true, colorWriteMask: MTLColorWriteMask = .all, fillMode: MTLTriangleFillMode = .fill) {
+        self.blendMode = blendMode
+        self.writesToDepthBuffer = writesToDepthBuffer
+        self.readsFromDepthBuffer = readsFromDepthBuffer
+        self.colorWriteMask = colorWriteMask
+        self.fillMode = fillMode
+    }
+
+    // Add, subtract, multiply and screen blend with what is behind, so they draw with transparent meshes.
+    public var blendsWithBackground: Bool {
+        switch blendMode {
+        case .alpha, .replace: false
+        case .add, .subtract, .multiply, .screen: true
+        }
+    }
+
+    // MTLColorWriteMask is not Hashable.
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        (lhs.blendMode, lhs.writesToDepthBuffer, lhs.readsFromDepthBuffer, lhs.colorWriteMask.rawValue, lhs.fillMode) == (rhs.blendMode, rhs.writesToDepthBuffer, rhs.readsFromDepthBuffer, rhs.colorWriteMask.rawValue, rhs.fillMode)
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(blendMode)
+        hasher.combine(writesToDepthBuffer)
+        hasher.combine(readsFromDepthBuffer)
+        hasher.combine(colorWriteMask.rawValue)
+        hasher.combine(fillMode)
+    }
+}
+
+extension Element {
+    // Reversed depth. `isTransparent` draws do not write depth and blend by alpha unless the blend mode says otherwise.
+    func materialRenderState(_ state: MaterialRenderState, isTransparent: Bool) -> some Element {
+        depthCompare(function: state.readsFromDepthBuffer ? .greater : .always, enabled: state.writesToDepthBuffer && !isTransparent)
+            .renderPipelineDescriptorTransformer { descriptor in
+                let attachment = descriptor.colorAttachments[0]!
+                attachment.writeMask = state.colorWriteMask
+                let blendMode: MaterialRenderState.BlendMode = state.blendMode == .alpha && !isTransparent ? .replace : state.blendMode
+                guard blendMode != .replace else {
+                    return
+                }
+                attachment.blendingState = .enabled
+                attachment.rgbBlendOperation = .add
+                attachment.alphaBlendOperation = .add
+                attachment.sourceAlphaBlendFactor = .one
+                attachment.destinationAlphaBlendFactor = .oneMinusSourceAlpha
+                switch blendMode {
+                case .alpha, .replace:
+                    attachment.sourceRGBBlendFactor = .sourceAlpha
+                    attachment.destinationRGBBlendFactor = .oneMinusSourceAlpha
+                case .add:
+                    attachment.sourceRGBBlendFactor = .sourceAlpha
+                    attachment.destinationRGBBlendFactor = .one
+                case .subtract:
+                    attachment.rgbBlendOperation = .reverseSubtract
+                    attachment.sourceRGBBlendFactor = .sourceAlpha
+                    attachment.destinationRGBBlendFactor = .one
+                case .multiply:
+                    attachment.sourceRGBBlendFactor = .destinationColor
+                    attachment.destinationRGBBlendFactor = .zero
+                case .screen:
+                    attachment.sourceRGBBlendFactor = .one
+                    attachment.destinationRGBBlendFactor = .oneMinusSourceColor
+                }
+            }
+    }
+}
+
+// Draw resets cull and fill mode, so draws that need them set them in their own closure. Mirrored transforms flip the
+// winding.
+func materialDraw(_ submesh: MetalMesh.Submesh, instanceCount: Int = 1, cullMode: MTLCullMode = .none, isMirrored: Bool = false, fillMode: MTLTriangleFillMode = .fill) -> AnyElement {
+    guard cullMode != .none || fillMode != .fill else {
+        return Draw(primitiveType: submesh.primitiveType, indexBuffer: submesh.indexBuffer, indexType: submesh.indexType, indexCount: submesh.indexCount, indexBufferOffset: submesh.indexBufferOffset, instanceCount: instanceCount).eraseToAnyElement()
+    }
+    let indexBuffer = submesh.indexBuffer
+    let offset = submesh.indexBufferOffset
+    let (primitiveType, indexType, indexCount) = (submesh.primitiveType, submesh.indexType, submesh.indexCount)
+    return Draw { encoder in
+        encoder.setCullMode(cullMode)
+        encoder.setFrontFacing(isMirrored ? .clockwise : .counterClockwise)
+        encoder.setTriangleFillMode(fillMode)
+        encoder.drawIndexedPrimitives(primitiveType: primitiveType, indexCount: indexCount, indexType: indexType, indexBuffer: indexBuffer.gpuAddress + UInt64(offset), indexBufferLength: indexBuffer.length - offset, instanceCount: instanceCount)
+    }
+    .useResource(indexBuffer, usage: .read, stages: .vertex)
+    .eraseToAnyElement()
+}

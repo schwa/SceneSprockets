@@ -38,8 +38,9 @@ public struct BlinnPhongSceneMaterial: MetalSprocketsSceneGraph.Material, Sample
     public var normalMap: MTLTexture?
     // Counter-clockwise triangles are front faces. `.none` draws both sides.
     public var cullMode: MTLCullMode
+    public var renderState: MaterialRenderState
 
-    public init(ambient: Source, diffuse: Source, specular: Source, shininess: Float, opacity: Float = 1, usesDiffuseTextureAlpha: Bool = false, emission: Source = .color(0), normalMap: MTLTexture? = nil, cullMode: MTLCullMode = .none) {
+    public init(ambient: Source, diffuse: Source, specular: Source, shininess: Float, opacity: Float = 1, usesDiffuseTextureAlpha: Bool = false, emission: Source = .color(0), normalMap: MTLTexture? = nil, cullMode: MTLCullMode = .none, renderState: MaterialRenderState = .init()) {
         self.ambient = ambient
         self.diffuse = diffuse
         self.specular = specular
@@ -49,10 +50,11 @@ public struct BlinnPhongSceneMaterial: MetalSprocketsSceneGraph.Material, Sample
         self.emission = emission
         self.normalMap = normalMap
         self.cullMode = cullMode
+        self.renderState = renderState
     }
 
     public var isTransparent: Bool {
-        opacity < 1 || usesDiffuseTextureAlpha
+        opacity < 1 || usesDiffuseTextureAlpha || renderState.blendsWithBackground
     }
 
     public var appliesNodeOpacity: Bool {
@@ -103,24 +105,35 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer {
         let items = visible.compactMap { item in
             (item.entry.material as? BlinnPhongSceneMaterial).map { (entry: item.entry, mesh: item.mesh, modelMatrix: item.modelMatrix, material: $0) }
         }
-        let groups: [(vertexDescriptor: VertexDescriptor, single: [InstanceBatch], instanced: [InstanceBatch])]
+        let groups: [(key: PipelineKey, single: [InstanceBatch], instanced: [InstanceBatch])]
         if isTransparent {
             // Keep the order: consecutive runs of one vertex layout, with no instancing (it would reorder draws).
-            var runs: [(vertexDescriptor: VertexDescriptor, single: [InstanceBatch], instanced: [InstanceBatch])] = []
+            var runs: [(key: PipelineKey, single: [InstanceBatch], instanced: [InstanceBatch])] = []
             for item in items {
                 let batch = InstanceBatch(mesh: item.mesh, submeshIndex: item.entry.submeshIndex, material: item.material, receivesShadow: item.entry.receivesShadow, opacity: item.entry.opacity, modelMatrices: [item.modelMatrix])
-                if let last = runs.indices.last, runs[last].vertexDescriptor == item.mesh.vertexDescriptor {
+                let key = PipelineKey(vertexDescriptor: item.mesh.vertexDescriptor, renderState: item.material.renderState)
+                if let last = runs.indices.last, runs[last].key == key {
                     runs[last].single.append(batch)
                 } else {
-                    runs.append((item.mesh.vertexDescriptor, [batch], []))
+                    runs.append((key, [batch], []))
                 }
             }
             groups = runs
         } else {
-            // Each vertex layout needs its own pipelines; repeated mesh+material pairs draw as one instanced call.
-            groups = groupedByVertexDescriptor(items) { $0.mesh.vertexDescriptor }.map { group in
-                let batches = instanceBatches(group.entries)
-                return (vertexDescriptor: group.vertexDescriptor, single: batches.filter { $0.modelMatrices.count == 1 }, instanced: batches.filter { $0.modelMatrices.count > 1 })
+            // Each vertex layout and render state needs its own pipelines; repeated mesh+material pairs draw as one
+            // instanced call.
+            var grouped: [(key: PipelineKey, items: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, modelMatrix: simd_float4x4, material: BlinnPhongSceneMaterial)])] = []
+            for item in items {
+                let key = PipelineKey(vertexDescriptor: item.mesh.vertexDescriptor, renderState: item.material.renderState)
+                if let index = grouped.firstIndex(where: { $0.key == key }) {
+                    grouped[index].items.append(item)
+                } else {
+                    grouped.append((key, [item]))
+                }
+            }
+            groups = grouped.map { group in
+                let batches = instanceBatches(group.items)
+                return (key: group.key, single: batches.filter { $0.modelMatrices.count == 1 }, instanced: batches.filter { $0.modelMatrices.count > 1 })
             }
         }
         return BlinnPhongBatchesElement(groups: groups, frame: frame, lights: lightValues, shadow: context.shadow, isTransparent: isTransparent).eraseToAnyElement()
@@ -130,7 +143,7 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer {
 // Draws prepared batches; an element so it can read the submission index (the shadow map has one texture per frame
 // in flight).
 private struct BlinnPhongBatchesElement: Element {
-    var groups: [(vertexDescriptor: VertexDescriptor, single: [InstanceBatch], instanced: [InstanceBatch])]
+    var groups: [(key: PipelineKey, single: [InstanceBatch], instanced: [InstanceBatch])]
     var frame: BlinnPhongFrame
     var lights: [BlinnPhongLight]
     var shadow: SceneGraphShadows.Sampling?
@@ -166,7 +179,7 @@ private struct BlinnPhongBatchesElement: Element {
             func draw(_ batch: InstanceBatch, instanced: Bool) throws -> AnyElement {
                 let submesh = batch.mesh.submeshes[batch.submeshIndex]
                 let normalMatrices = batch.modelMatrices.map(\.normalMatrix)
-                var element = culledDraw(submesh, instanceCount: batch.modelMatrices.count, cullMode: batch.material.cullMode, isMirrored: batch.isMirrored)
+                var element = materialDraw(submesh, instanceCount: batch.modelMatrices.count, cullMode: batch.material.cullMode, isMirrored: batch.isMirrored, fillMode: batch.material.renderState.fillMode)
                 .vertexBuffers(batch.mesh.vertexBuffers)
                 .parameter("frame", functionType: .vertex, value: frame)
                 .eraseToAnyElement()
@@ -212,8 +225,8 @@ private struct BlinnPhongBatchesElement: Element {
                             try draw(batch, instanced: false)
                         }
                     }
-                    .vertexDescriptor(group.vertexDescriptor.mtlVertexDescriptor)
-                    .blinnPhongTransparency(isTransparent)
+                    .vertexDescriptor(group.key.vertexDescriptor.mtlVertexDescriptor)
+                    .materialRenderState(group.key.renderState, isTransparent: isTransparent)
                 }
                 if !group.instanced.isEmpty {
                     try RenderPipeline(label: "Blinn-Phong Instanced", vertexShader: shaders.instancedVertex, fragmentShader: fragmentShader) {
@@ -221,47 +234,17 @@ private struct BlinnPhongBatchesElement: Element {
                             try draw(batch, instanced: true)
                         }
                     }
-                    .vertexDescriptor(group.vertexDescriptor.mtlVertexDescriptor)
-                    .blinnPhongTransparency(isTransparent)
+                    .vertexDescriptor(group.key.vertexDescriptor.mtlVertexDescriptor)
+                    .materialRenderState(group.key.renderState, isTransparent: isTransparent)
                 }
             }
         }
     }
 }
 
-// Draw resets cull mode to none, so culling draws set it in their own closure. Mirrored transforms flip the winding.
-private func culledDraw(_ submesh: MetalMesh.Submesh, instanceCount: Int, cullMode: MTLCullMode, isMirrored: Bool) -> AnyElement {
-    guard cullMode != .none else {
-        return Draw(primitiveType: submesh.primitiveType, indexBuffer: submesh.indexBuffer, indexType: submesh.indexType, indexCount: submesh.indexCount, indexBufferOffset: submesh.indexBufferOffset, instanceCount: instanceCount).eraseToAnyElement()
-    }
-    let indexBuffer = submesh.indexBuffer
-    let offset = submesh.indexBufferOffset
-    let (primitiveType, indexType, indexCount) = (submesh.primitiveType, submesh.indexType, submesh.indexCount)
-    return Draw { encoder in
-        encoder.setCullMode(cullMode)
-        encoder.setFrontFacing(isMirrored ? .clockwise : .counterClockwise)
-        encoder.drawIndexedPrimitives(primitiveType: primitiveType, indexCount: indexCount, indexType: indexType, indexBuffer: indexBuffer.gpuAddress + UInt64(offset), indexBufferLength: indexBuffer.length - offset, instanceCount: instanceCount)
-    }
-    .useResource(indexBuffer, usage: .read, stages: .vertex)
-    .eraseToAnyElement()
-}
-
-private extension Element {
-    // Reversed depth. Transparent draws test depth but do not write it, and blend straight alpha over the target.
-    func blinnPhongTransparency(_ isTransparent: Bool) -> some Element {
-        depthCompare(function: .greater, enabled: !isTransparent)
-            .renderPipelineDescriptorTransformer { descriptor in
-                guard isTransparent else {
-                    return
-                }
-                let attachment = descriptor.colorAttachments[0]!
-                attachment.blendingState = .enabled
-                attachment.sourceRGBBlendFactor = .sourceAlpha
-                attachment.destinationRGBBlendFactor = .oneMinusSourceAlpha
-                attachment.sourceAlphaBlendFactor = .one
-                attachment.destinationAlphaBlendFactor = .oneMinusSourceAlpha
-            }
-    }
+struct PipelineKey: Equatable {
+    var vertexDescriptor: VertexDescriptor
+    var renderState: MaterialRenderState
 }
 
 extension BlinnPhongSceneMaterial {
@@ -358,6 +341,7 @@ private struct MaterialKey: Hashable {
     var usesDiffuseTextureAlpha: Bool
     var normalMap: ObjectIdentifier?
     var cullMode: UInt
+    var renderState: MaterialRenderState
 
     init(_ material: BlinnPhongSceneMaterial) {
         sources = [material.ambient, material.diffuse, material.specular, material.emission].map(SourceKey.init)
@@ -366,6 +350,7 @@ private struct MaterialKey: Hashable {
         usesDiffuseTextureAlpha = material.usesDiffuseTextureAlpha
         normalMap = material.normalMap.map { ObjectIdentifier($0) }
         cullMode = material.cullMode.rawValue
+        renderState = material.renderState
     }
 
     enum SourceKey: Hashable {
