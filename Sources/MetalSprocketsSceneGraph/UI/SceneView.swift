@@ -59,7 +59,7 @@ public struct SceneView: View {
     @State private var clock = SceneClock()
 
     // `pointOfView` defaults to the first camera node; with no camera node a camera framing the scene is used.
-    // `renderers` defaults to Blinn-Phong and PBR. `isPlaying` false freezes scene time (delegate time and actions).
+    // `renderers` defaults to Blinn-Phong; pass PBRMaterialRenderer (MetalSprocketsSceneGraphPBR) for PBR materials. `isPlaying` false freezes scene time (delegate time and actions).
     // `cameraMatrix` exposes the camera-control transform (nil: start from the point of view; set nil to reset).
     // `onTap` gets the nearest hit under a tap or click.
     public init(
@@ -93,11 +93,7 @@ public struct SceneView: View {
     }
 
     @MainActor static let defaultRenderers: [any SceneGraphMaterialRenderer] = {
-        var renderers: [any SceneGraphMaterialRenderer] = [BlinnPhongMaterialRenderer()]
-        if let device = MTLCreateSystemDefaultDevice() {
-            renderers.append(PBRMaterialRenderer(device: device))
-        }
-        return renderers
+        [BlinnPhongMaterialRenderer()]
     }()
 
     public var body: some View {

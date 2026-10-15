@@ -2,6 +2,7 @@ import Metal
 import MetalSprocketsPBR
 import MetalSprocketsPBRShaders
 import MetalSprocketsSceneGraph
+import MetalSprocketsSceneGraphPBR
 import SwiftMesh
 import simd
 

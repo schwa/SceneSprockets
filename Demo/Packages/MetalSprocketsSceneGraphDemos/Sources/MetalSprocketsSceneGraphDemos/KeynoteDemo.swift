@@ -1,6 +1,7 @@
 import GeometryLite3D
 import Metal
 import MetalSprocketsSceneGraph
+import MetalSprocketsSceneGraphPBR
 import SwiftMesh
 import SwiftUI
 import simd

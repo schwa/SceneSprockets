@@ -2,6 +2,7 @@ import GeometryLite3D
 import Metal
 import MetalKit
 import MetalSprocketsPBR
+import MetalSprocketsSceneGraph
 import ModelIO
 import simd
 import SwiftMesh

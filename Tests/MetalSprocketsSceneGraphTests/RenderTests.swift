@@ -6,6 +6,7 @@ import SwiftMesh
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
+@testable import MetalSprocketsSceneGraphPBR
 
 // Renders small scenes offscreen and checks pixels, so both renderers are exercised end to end.
 

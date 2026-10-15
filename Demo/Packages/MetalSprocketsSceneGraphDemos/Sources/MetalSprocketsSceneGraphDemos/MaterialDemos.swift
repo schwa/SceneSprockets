@@ -1,5 +1,6 @@
 import MetalSprocketsPBR
 import MetalSprocketsSceneGraph
+import MetalSprocketsSceneGraphPBR
 import SwiftMesh
 import simd
 

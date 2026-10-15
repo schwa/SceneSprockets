@@ -6,6 +6,7 @@ import MetalSprocketsPBR
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
+@testable import MetalSprocketsSceneGraphPBR
 
 // #76
 

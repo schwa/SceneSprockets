@@ -3,6 +3,7 @@ import MetalSprocketsSceneGraphShaders
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
+@testable import MetalSprocketsSceneGraphPBR
 
 // Rotate -90° about X: the node's -Z axis points down (-Y).
 private let pointingDown = simd_float4x4(simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])) * simd_float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]))

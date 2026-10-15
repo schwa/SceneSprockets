@@ -12,6 +12,7 @@ let package = Package(
     products: [
         .library(name: "MetalSprocketsSceneGraph", targets: ["MetalSprocketsSceneGraph"]),
         .library(name: "MetalSprocketsSceneGraphPhysics", targets: ["MetalSprocketsSceneGraphPhysics"]),
+        .library(name: "MetalSprocketsSceneGraphPBR", targets: ["MetalSprocketsSceneGraphPBR"]),
         .library(name: "MetalSprocketsParticles", targets: ["MetalSprocketsParticles"]),
         .library(name: "MetalSprocketsAudio", targets: ["MetalSprocketsAudio"]),
     ],
@@ -39,6 +40,17 @@ let package = Package(
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
                 .product(name: "MetalSprocketsSupport", package: "MetalSprockets"),
                 .product(name: "MetalSprocketsUI", package: "MetalSprockets"),
+                .product(name: "MetalSupport", package: "MetalSupport"),
+                .product(name: "SwiftMesh", package: "SwiftMesh"),
+            ]
+        ),
+        // PBR materials and the loaders that make them (glTF, Model I/O).
+        .target(
+            name: "MetalSprocketsSceneGraphPBR",
+            dependencies: [
+                "MetalSprocketsSceneGraph",
+                .product(name: "GeometryLite3D", package: "GeometryLite3D"),
+                .product(name: "MetalSprockets", package: "MetalSprockets"),
                 .product(name: "MetalSprocketsGLTF", package: "MetalSprocketsGLTF"),
                 .product(name: "MetalSprocketsPBR", package: "MetalSprocketsPBR"),
                 .product(name: "MetalSprocketsPBRShaders", package: "MetalSprocketsPBR"),
@@ -81,6 +93,7 @@ let package = Package(
                 "MetalSprocketsAudio",
                 "MetalSprocketsParticles",
                 "MetalSprocketsSceneGraph",
+                "MetalSprocketsSceneGraphPBR",
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
                 .product(name: "MetalSprocketsGLTF", package: "MetalSprocketsGLTF"),

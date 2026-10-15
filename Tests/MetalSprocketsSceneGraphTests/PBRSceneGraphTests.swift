@@ -4,6 +4,7 @@ import SwiftMesh
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
+@testable import MetalSprocketsSceneGraphPBR
 
 @Test
 func pbrModelIsBuiltFromSceneGraph() throws {

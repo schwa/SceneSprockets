@@ -2121,6 +2121,8 @@ The core keeps SceneGraph, SceneGraphElement, the SceneGraphMaterialRenderer and
 
 Needs public API that is internal today: SamplesShadowsInShader, SceneGraphShadows.Sampling fields, SceneGraphRenderContext.shadow/lightShadowSlices, MeshEntry.deformed, culledMeshEntries/sortedFrontToBack/groupedByVertexDescriptor, and per-target shader bundles. Loaders that pick materials (ModelIOSceneGraph .pbr/.blinnPhong, GLTFSceneGraph uses PBR) need to move with or depend on the right renderer target. SceneView's default renderers (Blinn-Phong + PBR) would move to the UI layer or be passed in. Note: this reverses part of the earlier single-target merge for the renderers only.
 
+- `2026-10-15T23:52:40Z`: Done: MetalSprocketsSceneGraphPBR target with PBRSceneMaterial, PBRMaterialRenderer, PBRNodeLayout, the glTF loader and the Model I/O loader. The core no longer depends on MetalSprocketsPBR, MetalSprocketsGLTF or SwiftGLTF. SceneView's default renderers are now Blinn-Phong only; pass PBRMaterialRenderer for PBR. Left: Blinn-Phong and ShaderMaterial targets. They need SceneView's default renderer, Shadows.swift, MaterialRenderState and Node.swift untangled, many internal render helpers made public, and a decision on shaders: keep BlinnPhong.metal and ShaderMaterialSamples.metal in the shared MetalSprocketsSceneGraphShaders bundle, or give each target its own bundle.
+
 ---
 
 ## 106: Make API more SceneKit-like
