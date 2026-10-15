@@ -1,4 +1,5 @@
 import GeometryLite3D
+import Metal
 import MetalSprocketsAddOns
 import MetalSprocketsAddOnsShaders
 import MetalSprocketsSceneGraph
@@ -7,6 +8,7 @@ import simd
 
 // SceneKit-style features in one scene:
 // - Orthographic camera (#87): a toggle swaps the camera's projection.
+// - Blinn-Phong emission, normal map and cull mode (#83): three objects at the back; a choice sets the cull mode.
 // - Opacity and fades (#76): a slider sets the shapes group's opacity, which every shape inherits; "Fade" runs
 //   fadeOut then fadeIn on the text.
 // - Shapes (#61): a row of parametric shapes and 3D text; sliders reshape the torus live.
@@ -34,6 +36,8 @@ final class SceneKitFeaturesDemo: DemoScene {
     private var holders: [SceneGraph.Node] = []
     // Parent of the shape holders, so its opacity fades them all.
     private let shapesGroup: SceneGraph.Node
+    private let cullSphere: SceneGraph.Node
+    private static let cullModes: [(String, MTLCullMode)] = [("None", .none), ("Back", .back), ("Front", .front)]
     private let homePositions: [SIMD3<Float>]
 
     init() {
@@ -106,6 +110,16 @@ final class SceneKitFeaturesDemo: DemoScene {
         let follower = SceneGraph.Node(parent: root, label: "Follower (stays 1-2 from ball)", shape: .box(width: 0.4, height: 0.4, length: 0.4), material: BlinnPhongSceneMaterial.plastic([0.9, 0.9, 0.3]), device: demoDevice, trs: .init(translation: [0, 0.2, -1]))
         follower.constraints = [.distance(target: ball, minimum: 1, maximum: 2)]
 
+        // Blinn-Phong extras (#83), at the back: an emissive sphere, a box with a generated bump normal map (lit from
+        // above, so each bump's upper side is brighter when the map's +Y is up), and a sphere whose cull mode the
+        // "Cull Mode" choice sets (Front shows its inside).
+        let glow = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0.1), specular: .color(0.2), shininess: 32, emission: .color([0.2, 1, 0.6]))
+        _ = SceneGraph.Node(parent: root, label: "Emissive Sphere", shape: .sphere(radius: 0.5), material: glow, device: demoDevice, trs: .init(translation: [-2.2, 0.5, -3.8]))
+        var bumpy = BlinnPhongSceneMaterial.plastic([0.85, 0.75, 0.6], shininess: 24)
+        bumpy.normalMap = Self.bumpNormalMap()
+        _ = SceneGraph.Node(parent: root, label: "Normal-Mapped Box", shape: .box(width: 1.4, height: 1.4, length: 0.3), material: bumpy, device: demoDevice, trs: .init(translation: [0, 0.75, -3.8]))
+        cullSphere = SceneGraph.Node(parent: root, label: "Culled Sphere", shape: .sphere(radius: 0.5), material: BlinnPhongSceneMaterial.plastic([0.95, 0.55, 0.2]), device: demoDevice, trs: .init(translation: [2.2, 0.5, -3.8]))
+
         // Two overlapping translucent panes: transparent materials blend in renderingOrder, so the toggle swaps which
         // one looks in front.
         let paneMaterial = { (color: SIMD4<Float>) -> any MetalSprocketsSceneGraph.Material in
@@ -135,6 +149,7 @@ final class SceneKitFeaturesDemo: DemoScene {
                 .toggle("Shadows", default: true),
                 .toggle("Orthographic", default: false),
                 .slider("Shapes Opacity", 0...1, default: 1),
+                .choice("Cull Mode", Self.cullModes.map(\.0)),
             ]
         )
         actions = [
@@ -149,6 +164,11 @@ final class SceneKitFeaturesDemo: DemoScene {
         torus.shape = .torus(ringRadius: self[value: "Torus Ring"], pipeRadius: self[value: "Torus Pipe"])
         if shapesGroup.opacity != self[value: "Shapes Opacity"] {
             shapesGroup.opacity = self[value: "Shapes Opacity"]
+        }
+        let cullMode = Self.cullModes[min(Int(self[value: "Cull Mode"]), Self.cullModes.count - 1)].1
+        if case .mesh(let mesh, let materials, let castsShadow, let receivesShadow) = cullSphere.content, var material = materials.first as? BlinnPhongSceneMaterial, material.cullMode != cullMode {
+            material.cullMode = cullMode
+            cullSphere.content = .mesh(mesh, materials: [material], castsShadow: castsShadow, receivesShadow: receivesShadow)
         }
         let blueLast = self[flag: "Blue Pane Drawn Last"]
         redPane.renderingOrder = blueLast ? 1 : 2
@@ -188,6 +208,38 @@ final class SceneKitFeaturesDemo: DemoScene {
                 holder.trs.translation = position
             }
         }
+    }
+
+    // 4 x 4 round bumps, as a tangent-space normal map (+Y up, as BlinnPhongSceneMaterial.normalMap expects).
+    static func bumpNormalMap(size: Int = 128) -> MTLTexture? {
+        let cells = 4
+        let cellSize = Float(size) / Float(cells)
+        var bytes = [UInt8](repeating: 0, count: size * size * 4)
+        for row in 0..<size {
+            for column in 0..<size {
+                // -1...1 within the cell; image rows run down, so up is -row.
+                let x = (Float(column).truncatingRemainder(dividingBy: cellSize) + 0.5) / cellSize * 2 - 1
+                let y = -((Float(row).truncatingRemainder(dividingBy: cellSize) + 0.5) / cellSize * 2 - 1)
+                let radius: Float = 0.8
+                let distanceSquared = x * x + y * y
+                // A dome of `radius`: its normal points away from the center, flat outside.
+                let normal = distanceSquared < radius * radius ? simd_normalize(SIMD3(x, y, sqrt(radius * radius - distanceSquared))) : SIMD3<Float>(0, 0, 1)
+                let encoded = (normal * 0.5 + 0.5) * 255
+                let index = (row * size + column) * 4
+                bytes[index] = UInt8(encoded.x)
+                bytes[index + 1] = UInt8(encoded.y)
+                bytes[index + 2] = UInt8(encoded.z)
+                bytes[index + 3] = 255
+            }
+        }
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba8Unorm, width: size, height: size, mipmapped: false)
+        descriptor.usage = .shaderRead
+        guard let texture = demoDevice.makeTexture(descriptor: descriptor) else {
+            return nil
+        }
+        texture.label = "Bump Normal Map"
+        texture.replace(region: MTLRegionMake2D(0, 0, size, size), mipmapLevel: 0, withBytes: bytes, bytesPerRow: size * 4)
+        return texture
     }
 
     private func fade() {

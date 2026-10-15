@@ -118,6 +118,41 @@ func sceneKitFeaturesOpacityAndFade() throws {
     #expect(text.opacity == 1)
 }
 
+// #111: the Blinn-Phong extras are in the scene, and the Cull Mode choice reaches the sphere's material.
+@Test
+@MainActor
+func sceneKitFeaturesBlinnPhongExtras() throws {
+    let scene = SceneKitFeaturesDemo()
+    func material(_ label: String) throws -> BlinnPhongSceneMaterial {
+        try #require(scene.sceneGraph.meshEntries().first { $0.node.label == label }?.material as? BlinnPhongSceneMaterial)
+    }
+    guard case .color(let emission) = try material("Emissive Sphere").emission else {
+        Issue.record("Expected a color emission")
+        return
+    }
+    #expect(emission != .zero)
+    #expect(try material("Normal-Mapped Box").normalMap != nil)
+    #expect(try material("Culled Sphere").cullMode == .none)
+    scene[value: "Cull Mode"] = 2
+    scene.update(time: 0, deltaTime: 0)
+    #expect(try material("Culled Sphere").cullMode == .front)
+}
+
+// The bump map's normals tilt up (+Y, green above 0.5) on the upper half of each bump and down on the lower half.
+@Test
+@MainActor
+func bumpNormalMapPointsUpOnTop() throws {
+    let texture = try #require(SceneKitFeaturesDemo.bumpNormalMap(size: 128))
+    func green(row: Int) -> UInt8 {
+        var value = SIMD4<UInt8>.zero
+        texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(16, row, 1, 1), mipmapLevel: 0)
+        return value.y
+    }
+    // The first cell spans rows 0..<32 and is centered on row 16.
+    #expect(green(row: 8) > 160)
+    #expect(green(row: 24) < 96)
+}
+
 @Test
 @MainActor
 func demoParametersHaveDefaults() {

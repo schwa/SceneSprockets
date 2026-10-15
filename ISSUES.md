@@ -2198,15 +2198,18 @@ Node.opacity and the fade actions (#76) have no demo. Add them to SceneKitFeatur
 ## 111: SceneKit Features demo does not show Blinn-Phong emission, normal maps or cull mode
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: area:demo, effort:s
 created: 2026-10-15T20:12:17Z
-updated: 2026-10-15T20:12:55Z
+updated: 2026-10-15T20:36:11Z
+closed: 2026-10-15T20:36:11Z
 +++
 
 BlinnPhongSceneMaterial.emission, normalMap and cullMode (#83) have no demo. Add them to SceneKitFeaturesDemo: a glowing (emissive) shape, a shape with a procedural normal map (bumps or tiles, so no asset is needed), and a toggle that sets a shape's cullMode to .back or .front so the hidden side is visible. A normal map with a clear up direction would also check the +Y green convention, which no test covers.
+
+- `2026-10-15T20:36:11Z`: SceneKitFeaturesDemo now has an emissive sphere, a box with a generated bump normal map (+Y up), and a sphere whose cull mode a Cull Mode choice sets. Tests check the materials, the choice, and that the generated map's green channel points up on the top of each bump. Goldens scenekit-features and scenekit-features-shadows re-recorded (only the three new objects differ). Not checked: whether the shader's +Y handling makes the bumps' upper sides brighter on screen; the goldens are too small to tell.
 
 ---
 
