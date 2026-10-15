@@ -28,7 +28,7 @@ func chosenCameraNodeIsUsed() throws {
     let context = try #require(makeRenderContext(sceneGraph: sceneGraph, camera: second, cameraMatrix: nil, aspectRatio: 1))
     #expect(context.cameraMatrix.columns.3 == SIMD4<Float>(3, 1, 0, 1))
     let expected = PerspectiveProjection(verticalAngleOfView: .degrees(90)).projectionMatrix(aspectRatio: 1)
-    #expect(context.projectionMatrix == reversedDepth * expected)
+    #expect(context.projectionMatrix == .reversedDepth * expected)
 }
 
 @Test

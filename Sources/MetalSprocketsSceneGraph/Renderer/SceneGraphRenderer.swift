@@ -205,7 +205,7 @@ func makeRenderContext(sceneGraph: SceneGraph, camera: SceneGraph.Node?, cameraM
     }
     return SceneGraphRenderContext(
         viewMatrix: cameraMatrix.inverse,
-        projectionMatrix: reversedDepth * resolved.camera.projection.projectionMatrix(aspectRatio: aspectRatio),
+        projectionMatrix: .reversedDepth * resolved.camera.projection.projectionMatrix(aspectRatio: aspectRatio),
         cameraMatrix: cameraMatrix,
         lights: lights,
         revision: sceneGraph.revision,
@@ -258,9 +258,6 @@ func renderBatches(_ entries: [SceneGraph.MeshEntry], context: SceneGraphRenderC
         return (groups[key] ?? [], batchContext)
     }
 }
-
-// Maps clip-space z to w - z, so depth runs from 1 (near) to 0 (far).
-let reversedDepth = simd_float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 1, 1]))
 
 // Returns one array per renderer, in renderer order.
 func partitionMeshEntries(_ entries: [SceneGraph.MeshEntry], renderers: [any SceneGraphMaterialRenderer]) -> [[SceneGraph.MeshEntry]] {

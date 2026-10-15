@@ -193,21 +193,24 @@ public final class SceneGraphShadows {
         for (transform, light) in lights {
             var lightViews: [simd_float4x4] = []
             let position = transform.columns.3.xyz
-            let forward = simd_normalize(-SIMD3(transform.columns.2.x, transform.columns.2.y, transform.columns.2.z))
+            let forward = simd_normalize(-transform.columns.2.xyz)
             // Far enough to reach the whole scene from the light.
             let far = max(simd_distance(position, center) + radius, 0.1)
             let near = max(far * 0.001, 0.01)
             switch light.type {
             case .directional:
                 let eye = center - forward * radius * 2
-                lightViews.append(orthographic(halfSize: radius, near: radius * 0.5, far: radius * 3.5) * viewMatrix(eye: eye, forward: forward))
+                let projection = OrthographicProjection(halfHeight: radius, depthMode: .reversed(zClip: radius * 0.5 ... radius * 3.5))
+                lightViews.append(projection.projectionMatrix(aspectRatio: 1) * .viewMatrix(eye: eye, forward: forward))
             case .spot:
                 let fieldOfView = min(max(light.outerConeAngle * 2, 0.01), .pi * 0.95)
-                lightViews.append(perspective(fieldOfView: fieldOfView, near: near, far: far) * viewMatrix(eye: position, forward: forward))
+                let projection = PerspectiveProjection(verticalAngleOfView: .radians(fieldOfView), depthMode: .reversed(zClip: near ... far))
+                lightViews.append(projection.projectionMatrix(aspectRatio: 1) * .viewMatrix(eye: position, forward: forward))
             case .point:
                 let faces: [SIMD3<Float>] = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]
+                let projection = PerspectiveProjection(verticalAngleOfView: .degrees(90), depthMode: .reversed(zClip: near ... far))
                 for face in faces {
-                    lightViews.append(perspective(fieldOfView: .pi / 2, near: near, far: far) * viewMatrix(eye: position, forward: face))
+                    lightViews.append(projection.projectionMatrix(aspectRatio: 1) * .viewMatrix(eye: position, forward: face))
                 }
             default:
                 slices.append(0..<0)
@@ -259,28 +262,6 @@ public final class SceneGraphShadows {
         influenceBuffers[key] = buffer
         return buffer
     }
-}
-
-// World to view space for a viewer at `eye` looking along `forward` (view -Z).
-func viewMatrix(eye: SIMD3<Float>, forward: SIMD3<Float>) -> simd_float4x4 {
-    let up: SIMD3<Float> = abs(forward.y) > 0.99 ? [0, 0, 1] : [0, 1, 0]
-    let back = -simd_normalize(forward)
-    let right = simd_normalize(simd_cross(up, back))
-    let trueUp = simd_cross(back, right)
-    return simd_float4x4(columns: (SIMD4(right, 0), SIMD4(trueUp, 0), SIMD4(back, 0), SIMD4(eye, 1))).inverse
-}
-
-// Reversed depth: near maps to 1, far to 0.
-func perspective(fieldOfView: Float, near: Float, far: Float) -> simd_float4x4 {
-    let scale = 1 / tan(fieldOfView / 2)
-    let a = near / (far - near)
-    return simd_float4x4(columns: ([scale, 0, 0, 0], [0, scale, 0, 0], [0, 0, a, -1], [0, 0, a * far, 0]))
-}
-
-// Reversed depth: near maps to 1, far to 0.
-func orthographic(halfSize: Float, near: Float, far: Float) -> simd_float4x4 {
-    let depth = far - near
-    return simd_float4x4(columns: ([1 / halfSize, 0, 0, 0], [0, 1 / halfSize, 0, 0], [0, 0, 1 / depth, 0], [0, 0, far / depth, 1]))
 }
 
 private struct Packed3 {
