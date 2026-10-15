@@ -163,7 +163,7 @@ Legend:
 |---|---|---|---|
 | `SCNCamera` | `Camera` as `Content.camera` | 🟡 | `projection: any ProjectionProtocol` and `categoryBitMask`. |
 | Perspective (`fieldOfView`, `zNear`, `zFar`, `projectionDirection`) | `PerspectiveProjection` (GeometryLite3D) | ✅ | Vertical angle of view. Standard or reversed depth mode; MSSG always renders with reversed depth. |
-| `usesOrthographicProjection`, `orthographicScale` | — | ❌ | Not in GeometryLite3D. glTF and Model I/O orthographic cameras are skipped with a warning. |
+| `usesOrthographicProjection`, `orthographicScale` | `OrthographicProjection` (GeometryLite3D) | ✅ | `halfHeight` is half the view height; the width follows the aspect ratio. glTF orthographic cameras load from `ymag`. Model I/O orthographic cameras are skipped with a warning. |
 | `projectionTransform` (custom) | A custom `ProjectionProtocol` | ✅ | |
 | `categoryBitMask` | `Camera.categoryBitMask` | ✅ | Draws only matching nodes; also limits `SceneView` tap hits. |
 | `pointOfView` | `SceneGraphElement(camera:)`, `SceneView(pointOfView:)` | ✅ | Defaults to the first camera node. `cameraMatrix` overrides the world transform. With no camera node, `defaultCamera` is used. |
@@ -335,7 +335,7 @@ SceneKit animates with `CAAnimation`/`SCNAnimation` and `SCNAnimationPlayer`, ke
 | OBJ, PLY, STL, ABC | Via Model I/O | `ModelIOSceneGraph` | ✅ | Choose PBR or Blinn-Phong materials. Vertices repacked to position, normal and texture coordinates. |
 | Model I/O textures | ✅ | Base color, emission, normal, occlusion, metallic and roughness | ✅ | Metallic and roughness maps are packed into one texture for PBR. Blinn-Phong uses base color only. |
 | `.dae` (Collada) | ✅ (macOS) | Model I/O if it can read it | 🟡 | |
-| glTF / GLB | ❌ | `GLTFAsset.makeSceneGraph(device:)` | ➕ | Hierarchy, meshes (one submesh per primitive), PBR materials with variants, perspective cameras, punctual lights, skins, morph targets, node animations, `EXT_mesh_gpu_instancing` (as child nodes), `KHR_node_visibility`. Not supported: orthographic cameras, `KHR_animation_pointer` (#54). Returns `nodes` indexed like the document, and `warnings`. |
+| glTF / GLB | ❌ | `GLTFAsset.makeSceneGraph(device:)` | ➕ | Hierarchy, meshes (one submesh per primitive), PBR materials with variants, perspective and orthographic cameras, punctual lights, skins, morph targets, node animations, `EXT_mesh_gpu_instancing` (as child nodes), `KHR_node_visibility`. Not supported: `KHR_animation_pointer` (#54). Returns `nodes` indexed like the document, and `warnings`. |
 
 ## Asset export
 

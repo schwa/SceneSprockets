@@ -8,7 +8,7 @@ import SwiftGLTF
 import SwiftMesh
 
 // A glTF scene as a scene graph. EXT_mesh_gpu_instancing copies become child nodes; KHR_node_visibility sets
-// isVisible. Not supported: orthographic cameras, and animation channels that target materials, lights, cameras or
+// isVisible. Not supported: animation channels that target materials, lights, cameras or
 // visibility.
 public struct GLTFSceneGraph {
     public var sceneGraph: SceneGraph
@@ -110,7 +110,7 @@ private struct GLTFSceneGraphBuilder {
                 if let camera = camera(cameraIndex) {
                     extras.append(.camera(camera))
                 } else {
-                    warnings.append("Camera \(cameraIndex) skipped: only perspective cameras are supported")
+                    warnings.append("Camera \(cameraIndex) skipped: it has no perspective or orthographic settings")
                 }
             }
             if let light = source.punctualLight(in: document) {
@@ -290,12 +290,21 @@ private struct GLTFSceneGraphBuilder {
         }
     }
 
+    // Orthographic cameras keep ymag as the half height; the width follows the view's aspect ratio, so xmag is
+    // ignored, as in SceneKit.
     func camera(_ index: Int) -> MetalSprocketsSceneGraph.Camera? {
-        guard document.cameras.indices.contains(index), let perspective = document.cameras[index].perspective else {
+        guard document.cameras.indices.contains(index) else {
             return nil
         }
-        let far = perspective.zfar ?? 1000
-        return MetalSprocketsSceneGraph.Camera(projection: PerspectiveProjection(verticalAngleOfView: .radians(perspective.yfov), depthMode: .standard(zClip: perspective.znear ... max(far, perspective.znear))))
+        let source = document.cameras[index]
+        if let perspective = source.perspective {
+            let far = perspective.zfar ?? 1000
+            return MetalSprocketsSceneGraph.Camera(projection: PerspectiveProjection(verticalAngleOfView: .radians(perspective.yfov), depthMode: .standard(zClip: perspective.znear ... max(far, perspective.znear))))
+        }
+        if let orthographic = source.orthographic {
+            return MetalSprocketsSceneGraph.Camera(projection: OrthographicProjection(halfHeight: orthographic.ymag, depthMode: .standard(zClip: orthographic.znear ... max(orthographic.zfar, orthographic.znear))))
+        }
+        return nil
     }
 }
 

@@ -1068,7 +1068,7 @@ Want: a ready-made SwiftUI view that has a camera, a frame clock and update hook
 
 ---
 
-## 54: glTF scene graph loader: orthographic cameras, pointer animations
+## 54: glTF scene graph loader: pointer animations
 
 +++
 status: open
@@ -1076,7 +1076,7 @@ priority: low
 kind: enhancement
 labels: area:assets, effort:m
 created: 2026-10-13T20:37:21Z
-updated: 2026-10-15T02:59:59Z
+updated: 2026-10-15T19:48:51Z
 +++
 
 MetalSprocketsSceneGraphGLTF (#16) does not map these glTF features into the scene graph:
@@ -1090,6 +1090,7 @@ The loader adds a warning for skipped cameras and channels.
 
 - `2026-10-15T02:31:16Z`: Related: #87.
 - `2026-10-15T02:59:59Z`: Done: EXT_mesh_gpu_instancing copies become child nodes (skinned meshes keep one), KHR_node_visibility sets isVisible. Left: orthographic cameras (needs #87) and KHR_animation_pointer channels (needs key-path animation targets, #89).
+- `2026-10-15T19:48:51Z`: Orthographic cameras now load (done in #87); only KHR_animation_pointer remains.
 
 ---
 
@@ -1736,12 +1737,13 @@ Missing SceneKit equivalents: an ambient light type as a node (today it is per r
 ## 87: Orthographic cameras
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: effort:s, area:renderer
 created: 2026-10-15T02:28:07Z
-updated: 2026-10-15T19:22:45Z
+updated: 2026-10-15T19:48:51Z
+closed: 2026-10-15T19:48:51Z
 +++
 
 GeometryLite3D only has PerspectiveProjection, so there is no orthographic camera. The glTF and Model I/O loaders skip orthographic cameras with a warning. Needs a projection type in GeometryLite3D first. Also unblocks part of #54. See docs/SceneKitComparison.md.
@@ -1749,6 +1751,7 @@ GeometryLite3D only has PerspectiveProjection, so there is no orthographic camer
 - `2026-10-15T02:31:16Z`: Related: #97 (orthographic projection belongs in GeometryLite3D), #54.
 - `2026-10-15T13:29:45Z`: Blocked on GeometryLite3D #1 (OrthographicProjection).
 - `2026-10-15T19:22:45Z`: Unblocked: GeometryLite3D now has OrthographicProjection (used for directional shadows since #97).
+- `2026-10-15T19:48:52Z`: Camera already took any ProjectionProtocol, so OrthographicProjection rendered; added a render test. glTF orthographic cameras now load (ymag as halfHeight, xmag ignored like SceneKit). Model I/O orthographic cameras are still skipped: MDLCamera has no orthographic size.
 
 ---
 
