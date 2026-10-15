@@ -900,9 +900,9 @@ Want: fog settings on the scene, used by Blinn-Phong and PBR.
 status: open
 priority: low
 kind: feature
-labels: area:renderer, effort:l
+labels: area:renderer, effort:l, deferred
 created: 2026-10-13T20:20:23Z
-updated: 2026-10-15T03:32:22Z
+updated: 2026-10-15T21:19:52Z
 +++
 
 Cameras have only a projection. SceneKit cameras have HDR, exposure, bloom, depth of field, motion blur, SSAO, vignette and color grading.
@@ -1577,9 +1577,9 @@ SceneKit has SCNNode.opacity (inherited by children) and fadeIn/fadeOut/fadeOpac
 status: open
 priority: low
 kind: feature
-labels: effort:s, area:scenegraph
+labels: effort:s, area:scenegraph, deferred
 created: 2026-10-15T02:28:06Z
-updated: 2026-10-15T03:10:47Z
+updated: 2026-10-15T21:19:11Z
 +++
 
 Missing SceneKit equivalents: clone()/flattenedClone(), childNode(withName:recursively:), replaceChildNode(_:with:), and enumerateHierarchy's stop flag. Want them on SceneGraph.Node and SceneGraph.visit. See docs/SceneKitComparison.md.
@@ -1631,9 +1631,9 @@ Missing SceneKit equivalents: eulerAngles; settable worldPosition/worldOrientati
 status: open
 priority: low
 kind: enhancement
-labels: effort:m, area:scenegraph
+labels: effort:m, area:scenegraph, deferred
 created: 2026-10-15T02:28:07Z
-updated: 2026-10-15T02:31:14Z
+updated: 2026-10-15T21:19:11Z
 +++
 
 SceneGraph.Shape has no segment counts, no box chamferRadius, no sphere isGeodesic, and no plane corner radius. SCNText's chamfer, flatness, container frame and wrapping are missing too. Needs SwiftMesh support for some of these. See docs/SceneKitComparison.md.
@@ -1646,9 +1646,9 @@ SceneGraph.Shape has no segment counts, no box chamferRadius, no sphere isGeodes
 status: open
 priority: low
 kind: feature
-labels: effort:m, area:scenegraph
+labels: effort:m, area:scenegraph, deferred
 created: 2026-10-15T02:28:07Z
-updated: 2026-10-15T02:31:14Z
+updated: 2026-10-15T21:19:11Z
 +++
 
 SceneKit has SCNTube, SCNPyramid, SCNFloor (infinite, with optional reflections) and SCNShape (an extruded Bézier path). Shape has none of them. See docs/SceneKitComparison.md.
@@ -1661,9 +1661,9 @@ SceneKit has SCNTube, SCNPyramid, SCNFloor (infinite, with optional reflections)
 status: open
 priority: low
 kind: feature
-labels: effort:l, area:renderer
+labels: effort:l, area:renderer, deferred
 created: 2026-10-15T02:28:07Z
-updated: 2026-10-15T03:24:47Z
+updated: 2026-10-15T21:19:11Z
 +++
 
 SceneKit has subdivisionLevel, wantsAdaptiveSubdivision, the SCNGeometryTessellator and edge creases. There is no equivalent here. See docs/SceneKitComparison.md.
@@ -1717,9 +1717,9 @@ SceneKit materials have blendMode (alpha, add, subtract, multiply, screen, repla
 status: open
 priority: low
 kind: feature
-labels: effort:xl, area:renderer
+labels: effort:xl, area:renderer, deferred
 created: 2026-10-15T02:28:07Z
-updated: 2026-10-15T02:31:14Z
+updated: 2026-10-15T21:19:12Z
 +++
 
 SceneKit shader modifiers inject code at geometry, surface, lighting and fragment entry points of the built-in materials. ShaderMaterial (like SCNProgram) replaces the whole shader. Want a way to tweak the built-in Blinn-Phong/PBR shading without rewriting it. See docs/SceneKitComparison.md.
@@ -1732,9 +1732,9 @@ SceneKit shader modifiers inject code at geometry, surface, lighting and fragmen
 status: open
 priority: low
 kind: feature
-labels: effort:l, area:renderer
+labels: effort:l, area:renderer, deferred
 created: 2026-10-15T02:28:07Z
-updated: 2026-10-15T02:31:14Z
+updated: 2026-10-15T21:19:12Z
 +++
 
 Missing SceneKit equivalents: an ambient light type as a node (today it is per renderer: BlinnPhongMaterialRenderer.ambientLightColor), attenuationStartDistance and attenuationFalloffExponent, color temperature, and IES, area and probe lights. See docs/SceneKitComparison.md.
@@ -1768,9 +1768,9 @@ GeometryLite3D only has PerspectiveProjection, so there is no orthographic camer
 status: open
 priority: low
 kind: enhancement
-labels: effort:l, area:renderer
+labels: effort:l, area:renderer, deferred
 created: 2026-10-15T02:28:07Z
-updated: 2026-10-15T03:04:56Z
+updated: 2026-10-15T21:19:41Z
 +++
 
 SceneGraphShadows is one global setting. Missing: shadowColor (today only intensity toward black), soft shadows (shadowRadius, shadowSampleCount), cascades, and per-light castsShadow, resolution and bias. See docs/SceneKitComparison.md.
@@ -1885,9 +1885,9 @@ Missing SceneKit renderer APIs: projectPoint, unprojectPoint (Ray(viewPoint:) co
 status: open
 priority: low
 kind: enhancement
-labels: effort:l, area:renderer
+labels: effort:l, area:renderer, deferred
 created: 2026-10-15T02:28:08Z
-updated: 2026-10-15T03:09:12Z
+updated: 2026-10-15T21:19:12Z
 +++
 
 SceneView/SceneGraphElement have no multisampling, no debug overlays or statistics, and no way to build pipelines/PBR models ahead of time (like SCNSceneRenderer.prepare). SceneViewDelegate has only two callbacks: there are none for constraints applied or will/did render. See docs/SceneKitComparison.md.
@@ -1962,9 +1962,9 @@ Candidates to add to GeometryLite3D, then use here:
 status: open
 priority: medium
 kind: feature
-labels: area:demo, effort:l
+labels: area:demo, effort:l, deferred
 created: 2026-10-15T02:37:51Z
-updated: 2026-10-15T21:10:39Z
+updated: 2026-10-15T21:19:12Z
 +++
 
 A demo that presents MSSG like an Apple WWDC keynote, built entirely with MSSG. Slides and transitions are scenes, not SwiftUI views.
@@ -2112,9 +2112,9 @@ Needs public API that is internal today: SamplesShadowsInShader, SceneGraphShado
 status: open
 priority: medium
 kind: enhancement
-labels: effort:xl, area:scenegraph
+labels: effort:xl, area:scenegraph, deferred
 created: 2026-10-15T13:24:33Z
-updated: 2026-10-15T19:23:06Z
+updated: 2026-10-15T21:19:41Z
 +++
 
 Move the public API closer to SceneKit's model so it is simple and easy to use. Goal: a newcomer who knows SceneKit can build and render a scene with little boilerplate. This is an ongoing direction, not a single change.
@@ -2268,8 +2268,9 @@ MaterialRenderState (#84) works for Blinn-Phong and ShaderMaterial. PBRSceneMate
 status: new
 priority: low
 kind: task
-labels: area:demo, effort:m
+labels: area:demo, effort:m, deferred
 created: 2026-10-15T20:27:29Z
+updated: 2026-10-15T21:19:12Z
 +++
 
 The keynote demo (#98, KeynoteDemo.swift) has slides for the scene graph, shapes, materials, lights, actions, constraints, opacity/fades and blend modes. Features #98 listed with no slide yet: shadows, fog and environment, Transaction (used only for the camera flights), animation blending, morphing and skinning, glTF and Model I/O import, hit testing, SceneView, and physics. Lights are range-limited per slide; scene-wide settings (fog, shadows, environment) need a way to switch on per slide.
@@ -2293,11 +2294,12 @@ Each demo must be added in two places: DemoCatalog.demos (used by the CLI, DemoS
 ## 117: Candy demo gummies don't look subsurface-scattered
 
 +++
-status: new
-priority: medium
-kind: none
-labels: demo
+status: open
+priority: low
+kind: enhancement
+labels: demo, effort:s, area:demo
 created: 2026-10-15T21:15:13Z
+updated: 2026-10-15T21:23:01Z
 +++
 
 The gummies in CandyDemo read as tinted plastic, not soft translucent candy. Light does not seem to bleed through thin edges or glow deeper in thick parts.
@@ -2334,5 +2336,50 @@ CandyDemo avoids this by building its meshes directly with [.smoothNormals, .tex
 The shapes also use SwiftMesh's default segment counts (torus 32x16, capsule 8 latitude segments), so silhouettes can still look polygonal.
 
 Expected: curved shapes shade smoothly; box and plane stay flat.
+
+---
+
+## 119: No 2D text rendering
+
++++
+status: new
+priority: medium
+kind: feature
+labels: text, deferred
+created: 2026-10-15T21:21:02Z
+updated: 2026-10-15T21:21:03Z
++++
+
+SceneGraph can only show text as extruded 3D meshes (Shape.text, SwiftMesh extrusion). There is no flat, resolution-independent 2D text for labels, HUDs or slide copy.
+
+MetalSprocketsAddOns has a Slug text renderer (Sources/MetalSprocketsAddOns/Slug: SlugFontAtlas, SlugTextMeshBuilder, SlugTextRenderPipeline) that renders glyph outlines on the GPU.
+
+Want: 2D text in the scene graph using Slug from MetalSprocketsAddOns.
+
+---
+
+## 120: Keynote Materials slide: horizontal banding on spheres while animating
+
++++
+status: new
+priority: medium
+kind: bug
+labels: rendering, deferred
+created: 2026-10-15T21:22:03Z
+updated: 2026-10-15T21:22:23Z
++++
+
+In KeynoteDemo, on the Materials slide during animation, the top row of red spheres shows horizontal stripes across their upper half. The stripes stop at a hard line near each sphere's equator. The bottom row of gold spheres looks fine.
+
+Screenshot: /Users/schwa/Library/Application Support/CleanShot/media/media_uuSjrobEUn/Screenshot 2026-10-15 at 17.21.37@2x.png
+
+Repro:
+1. Run the demo app, open the Keynote demo.
+2. Let it advance to the Materials slide.
+
+Expected: smooth shading on all spheres.
+Actual: striped, torn-looking upper hemispheres on the red spheres.
+
+Unknown whether it is tied to the slide transition, the sphere mesh, or the material on that row.
 
 ---
