@@ -299,10 +299,10 @@ SceneKit animates with `CAAnimation`/`SCNAnimation` and `SCNAnimationPlayer`, ke
 | `antialiasingMode` (multisampling) | — | ❌ | Not exposed by `SceneView`. |
 | `isJitteringEnabled`, temporal antialiasing | — | ❌ | |
 | `debugOptions` (bounding boxes, wireframe, physics shapes, light extents, skeletons, cameras) | — | ❌ | The demos have a scene outline and node inspector instead. |
-| `showsStatistics` | — | ❌ | |
+| `showsStatistics` | `SceneView.Options.showsStatistics`, `SceneGraph.statistics` | 🟡 | Frame rate, meshes, triangles, lights. No GPU timings. |
 | `snapshot()` | Offscreen rendering via MetalSprockets `OffscreenRenderer` | 🟡 | The demo package's `scenegraph-demos --render` writes PNGs. |
 | `prepare(_:shouldAbortBlock:)` | — | ❌ | Pipelines and PBR models build on first use. |
-| `SCNSceneRendererDelegate` (`update`, `didApplyAnimations`, `didSimulatePhysics`, `didApplyConstraints`, `willRender`, `didRender`) | `SceneViewDelegate` (`sceneView(updateAtTime:deltaTime:)`, `sceneView(didApplyActionsAtTime:)`) | 🟡 | Two callbacks. No physics, constraint or render callbacks. |
+| `SCNSceneRendererDelegate` (`update`, `didApplyAnimations`, `didSimulatePhysics`, `didApplyConstraints`, `willRender`, `didRender`) | `SceneViewDelegate` (`sceneView(updateAtTime:deltaTime:)`, `sceneView(didApplyActionsAtTime:)`, `sceneView(didApplyConstraintsAtTime:)`) | 🟡 | No physics or did-render callbacks. |
 | `SCNNodeRendererDelegate` | A custom `SceneGraphMaterialRenderer` | 🟡 | Per material type, not per node. |
 | Frustum culling | Blinn-Phong: CPU AABB culling, front-to-back sort | 🟡 | PBR culling is up to MetalSprocketsPBR. `ShaderMaterial` does not cull. |
 | Transparency sorting | Within each `renderingOrder`: opaque first, then transparent entries farthest first | 🟡 | Sorted by bounds center, per renderer: transparent entries of different renderers do not interleave. |

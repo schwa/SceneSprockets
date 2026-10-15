@@ -1837,7 +1837,7 @@ Missing SceneKit renderer APIs: projectPoint, unprojectPoint (Ray(viewPoint:) co
 
 ---
 
-## 95: Renderer and view gaps: MSAA, more delegate callbacks, statistics, prepare
+## 95: Renderer and view gaps: MSAA, prepare
 
 +++
 status: open
@@ -1845,10 +1845,12 @@ priority: low
 kind: enhancement
 labels: effort:l, area:renderer
 created: 2026-10-15T02:28:08Z
-updated: 2026-10-15T02:31:15Z
+updated: 2026-10-15T03:09:12Z
 +++
 
 SceneView/SceneGraphElement have no multisampling, no debug overlays or statistics, and no way to build pipelines/PBR models ahead of time (like SCNSceneRenderer.prepare). SceneViewDelegate has only two callbacks: there are none for constraints applied or will/did render. See docs/SceneKitComparison.md.
+
+- `2026-10-15T03:09:12Z`: Done: SceneViewDelegate.sceneView(didApplyConstraintsAtTime:), SceneView.Options.showsStatistics overlay, SceneGraph.statistics. Not verified on screen (did not run the app). Left: MSAA (the shadow and fog passes read depth, so they would need resolved or multisample-aware depth) and a prepare step.
 
 ---
 

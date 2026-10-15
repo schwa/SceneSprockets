@@ -5,6 +5,33 @@ import simd
 // isNode(_:insideFrustumOf:). `projectionMatrix` must map to Metal clip space (z in 0...w); view points have their
 // origin top-left.
 extension SceneGraph {
+    // Counts for visible content, like SCNView's statistics overlay. Uses the cached flattening, so it is cheap
+    // between changes.
+    public struct Statistics: Sendable, Equatable {
+        public var nodeCount: Int
+        // One per submesh.
+        public var meshCount: Int
+        public var triangleCount: Int
+        public var lightCount: Int
+        public var cameraCount: Int
+    }
+
+    public var statistics: Statistics {
+        var nodeCount = 0
+        visit { _, _ in nodeCount += 1 }
+        let flattened = flattened()
+        let triangleCount = flattened.meshes.reduce(0) { total, entry in
+            let submesh = entry.mesh.submeshes[entry.submeshIndex]
+            let triangles = switch submesh.primitiveType {
+            case .triangle: submesh.indexCount / 3
+            case .triangleStrip: max(submesh.indexCount - 2, 0)
+            default: 0
+            }
+            return total + triangles
+        }
+        return Statistics(nodeCount: nodeCount, meshCount: flattened.meshes.count, triangleCount: triangleCount, lightCount: flattened.lights.count, cameraCount: flattened.cameras.count)
+    }
+
     // x and y in view coordinates; z is the clip-space depth (0...1, reversed for reversed-depth projections).
     public static func projectPoint(_ point: SIMD3<Float>, viewSize: SIMD2<Float>, cameraMatrix: simd_float4x4, projectionMatrix: simd_float4x4) -> SIMD3<Float> {
         let clip = projectionMatrix * cameraMatrix.inverse * SIMD4(point, 1)

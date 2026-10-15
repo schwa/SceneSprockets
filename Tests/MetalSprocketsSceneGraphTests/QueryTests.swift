@@ -1,5 +1,6 @@
 import GeometryLite3D
 import Metal
+import MetalSprocketsAddOnsShaders
 import SwiftMesh
 import Testing
 import simd
@@ -19,6 +20,23 @@ func projectPointMapsCenterAndRoundTrips() {
     let projected = SceneGraph.projectPoint(point, viewSize: viewSize, cameraMatrix: camera, projectionMatrix: projection)
     let back = SceneGraph.unprojectPoint(projected, viewSize: viewSize, cameraMatrix: camera, projectionMatrix: projection)
     #expect(simd_distance(back, point) < 1e-3)
+}
+
+// #95
+@Test
+func statisticsCountVisibleContent() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let root = SceneGraph.Node()
+    _ = SceneGraph.Node(parent: root, content: .mesh(MetalMesh(mesh: .box(), device: device), material: try ShaderMaterial.normals()))
+    let hidden = SceneGraph.Node(parent: root, content: .mesh(MetalMesh(mesh: .box(), device: device), material: try ShaderMaterial.normals()))
+    hidden.isVisible = false
+    _ = SceneGraph.Node(parent: root, content: .light(Light(type: .point)))
+    let statistics = SceneGraph(root: root).statistics
+    #expect(statistics.nodeCount == 3)
+    #expect(statistics.meshCount == 1)
+    #expect(statistics.triangleCount == 12)
+    #expect(statistics.lightCount == 1)
+    #expect(statistics.cameraCount == 0)
 }
 
 @Test
