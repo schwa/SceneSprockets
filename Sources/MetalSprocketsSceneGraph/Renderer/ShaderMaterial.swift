@@ -38,6 +38,12 @@ public struct ShaderMaterial: MetalSprocketsSceneGraph.Material {
         self.isTransparent = isTransparent
     }
 
+    // The renderer blends below opacity 1 and passes it as transforms.opacity; the fragment shader must multiply
+    // its alpha by it (the samples do).
+    public var appliesNodeOpacity: Bool {
+        true
+    }
+
     // World-space normals as color.
     public static func normals() throws -> Self {
         let library = try ShaderMaterialSampleLibrary.shared()
@@ -63,12 +69,12 @@ public struct ShaderMaterialRenderer: SceneGraphMaterialRenderer {
     public func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement {
         let cameraPosition = context.cameraMatrix.columns.3.xyz
         // Skinned and morphed meshes are deformed on the CPU, as for Blinn-Phong.
-        let items: [(mesh: MetalMesh, submeshIndex: Int, modelMatrix: simd_float4x4, material: ShaderMaterial)] = entries.compactMap { entry in
+        let items: [(mesh: MetalMesh, submeshIndex: Int, modelMatrix: simd_float4x4, material: ShaderMaterial, opacity: Float, isTransparent: Bool)] = entries.compactMap { entry in
             guard let material = entry.material as? ShaderMaterial else {
                 return nil
             }
             let deformed = entry.deformed(revision: context.revision)
-            return (deformed?.mesh ?? entry.mesh, entry.submeshIndex, deformed?.modelMatrix ?? entry.worldTransform, material)
+            return (deformed?.mesh ?? entry.mesh, entry.submeshIndex, deformed?.modelMatrix ?? entry.worldTransform, material, entry.opacity, entry.isTransparent)
         }
         return ForEach(Array(items.enumerated()), id: \.offset) { _, item in
             let transforms = ShaderMaterialTransforms(
@@ -77,7 +83,8 @@ public struct ShaderMaterialRenderer: SceneGraphMaterialRenderer {
                 projectionMatrix: context.projectionMatrix,
                 modelViewProjectionMatrix: context.projectionMatrix * context.viewMatrix * item.modelMatrix,
                 normalMatrix: item.modelMatrix.inverse.transpose,
-                cameraPosition: cameraPosition
+                cameraPosition: cameraPosition,
+                opacity: item.opacity
             )
             let submesh = item.mesh.submeshes[item.submeshIndex]
             try RenderPipeline(label: "ShaderMaterial", vertexShader: item.material.vertexShader, fragmentShader: item.material.fragmentShader) {
@@ -107,9 +114,9 @@ public struct ShaderMaterialRenderer: SceneGraphMaterialRenderer {
             }
             .vertexDescriptor(item.mesh.vertexDescriptor.mtlVertexDescriptor)
             // Reversed depth, as in SceneGraphElement; transparent materials test depth but do not write it.
-            .depthCompare(function: .greater, enabled: !item.material.isTransparent)
+            .depthCompare(function: .greater, enabled: !item.isTransparent)
             .renderPipelineDescriptorTransformer { descriptor in
-                guard item.material.isTransparent else {
+                guard item.isTransparent else {
                     return
                 }
                 let attachment = descriptor.colorAttachments[0]!

@@ -1552,18 +1552,20 @@ Plan: measure each demo (CPU and GPU, Instruments time profile), list the top co
 ## 76: Node opacity and fade actions
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: effort:m, area:scenegraph
 depends: 100
 created: 2026-10-15T02:28:06Z
-updated: 2026-10-15T12:02:24Z
+updated: 2026-10-15T19:52:16Z
+closed: 2026-10-15T19:52:16Z
 +++
 
 SceneKit has SCNNode.opacity (inherited by children) and fadeIn/fadeOut/fadeOpacity actions. Nodes here have no opacity, so there are no fade actions either. Want: Node.opacity applied by every renderer, plus the fade actions. See docs/SceneKitComparison.md.
 
 - `2026-10-15T12:02:24Z`: Depends on #100 (own Blinn-Phong).
+- `2026-10-15T19:52:16Z`: Added Node.opacity (inherited), MeshEntry.opacity/isTransparent, Material.appliesNodeOpacity, fade actions, Blinn-Phong support, and ShaderMaterialTransforms.opacity (samples use it). PBR split out as #108.
 
 ---
 
@@ -2128,5 +2130,19 @@ closed: 2026-10-15T19:21:21Z
 HitTest.swift has SceneGraph.Ray and private Möller–Trumbore, slab and box-entry tests. GeometryLite3D has Ray3D with intersect(triangle:) and intersect(box:), but they cannot replace ours until GeometryLite3D #33 (nil when the ray starts inside the box), #34 (NaN for axis-parallel rays on a face plane) and #35 (fixed epsilon misses small triangles) are fixed. SceneGraph.Ray(viewPoint:viewSize:cameraMatrix:projectionMatrix:) is public and works out reversed depth by itself; Ray3D needs a reversedDepth flag or a ViewProjection. Split out of #97.
 
 - `2026-10-15T19:21:21Z`: Done with GeometryLite3D 0.2.3.
+
+---
+
+## 108: PBR meshes ignore node opacity
+
++++
+status: new
+priority: medium
+kind: enhancement
+labels: area:renderer, effort:m
+created: 2026-10-15T19:51:39Z
++++
+
+Node.opacity (#76) fades Blinn-Phong and ShaderMaterial meshes, but PBRSceneMaterial has appliesNodeOpacity false, so PBR meshes stay opaque during fades. PBRMaterial is a class with a resource buffer built once, and PBRModel draws blended materials in different passes, so applying opacity means a per-node material copy with a scaled baseColorFactor alpha and alphaMode blend, and a model rebuild when an entry crosses opacity 1. A per-instance opacity input in MetalSprocketsPBR would avoid both.
 
 ---

@@ -27,15 +27,15 @@ namespace ShaderMaterialSamples {
     }
 
     // World-space normal as color.
-    [[fragment]] float4 fragment_normals(VertexOut in [[stage_in]]) {
-        return float4(normalize(in.worldNormal) * 0.5 + 0.5, 1);
+    [[fragment]] float4 fragment_normals(VertexOut in [[stage_in]], constant ShaderMaterialTransforms &transforms [[buffer(10)]]) {
+        return float4(normalize(in.worldNormal) * 0.5 + 0.5, transforms.opacity);
     }
 
     // `color`, darkened where the surface turns away from the camera; uses no lights.
     [[fragment]] float4 fragment_rim(VertexOut in [[stage_in]], constant float4 &color [[buffer(0)]], constant ShaderMaterialTransforms &transforms [[buffer(10)]]) {
         float3 toCamera = normalize(transforms.cameraPosition - in.worldPosition);
         float facing = saturate(dot(normalize(in.worldNormal), toCamera));
-        return float4(color.rgb * (0.25 + 0.75 * facing), color.a);
+        return float4(color.rgb * (0.25 + 0.75 * facing), color.a * transforms.opacity);
     }
 
 }

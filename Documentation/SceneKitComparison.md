@@ -13,7 +13,7 @@ Legend:
 
 | Area | Status | Main gaps |
 |---|---|---|
-| Scene and nodes | 🟡 | No opacity, no `flattenedClone`, no `presentation` node, no serialization |
+| Scene and nodes | 🟡 | No `flattenedClone`, no `presentation` node, no serialization |
 | Transforms | ✅ | TRS or matrix, pivot, Euler angles, world-space setters, space conversion, `look(at:)` |
 | Geometry | 🟡 | No geometry sources/elements API (uses `MetalMesh`), no GPU tessellation, no `SCNShape` (Bézier extrusion), no tube or pyramid, no segment counts |
 | Materials | 🟡 | No `SCNMaterial` with lighting models; no shader modifiers |
@@ -21,7 +21,7 @@ Legend:
 | Cameras | 🟡 | Perspective only; SSAO, vignette, exposure, contrast and saturation, but no HDR, bloom, depth of field or motion blur (#45) |
 | Shadows | 🟡 | Shadow maps for all three light types, but one global setting, max 8 slices |
 | Animation | ✅ (different design) | Keyframe clips, blending, layers, state machine, events; no `CAAnimation` interop |
-| Actions | 🟡 | No fade, no `follow(path:)`, no sound actions, no JavaScript actions |
+| Actions | 🟡 | No `follow(path:)`, no sound actions, no JavaScript actions |
 | Implicit animation | 🟡 | Transform and morph weights only |
 | Constraints | 🟡 | Look-at, billboard, distance, IK, replicator, avoid-occluder and transform; no acceleration or slider constraints, no influence factor |
 | Morphing and skinning | ✅ | Four influences per vertex; CPU fallback for Blinn-Phong |
@@ -65,7 +65,7 @@ Legend:
 | `addChildNode`, `insertChildNode(_:at:)`, `removeFromParentNode`, `replaceChildNode` | `addChild`, `insertChild(_:at:)`, `removeChild`, `removeFromParent`, `removeAllChildren`, `replaceChild(_:with:)` | ✅ | Cycle-safe (`canAddChild`, precondition). |
 | `parent`, `childNodes` | `parent` (weak), `children` | ✅ | Both read-only. |
 | `isHidden` | `isVisible` | ✅ | Inverted sense. Hides the subtree from traversal, rendering, bounds and hit testing. |
-| `opacity` | — | ❌ | No per-node opacity, so no fade actions. |
+| `opacity` | `Node.opacity` | 🟡 | Inherited by children. Applied by Blinn-Phong and `ShaderMaterial` (`transforms.opacity`); not yet PBR (#108). |
 | `categoryBitMask` | `categoryBitMask` | ✅ | Default `1`. Matched against camera, light and hit-test masks. Not inherited by children (same as SceneKit). |
 | `renderingOrder` | `renderingOrder` | ✅ | Lower draws first. Within one value, each renderer keeps its own order (for example PBR draws opaque before blended). |
 | `castsShadow` | `Content.mesh(…, castsShadow:)` | 🟡 | Per mesh content, not per node. |
@@ -221,7 +221,7 @@ SceneKit animates with `CAAnimation`/`SCNAnimation` and `SCNAnimationPlayer`, ke
 | `move(by:)`, `move(to:)` | Same | ✅ | |
 | `rotate(by:around:)`, `rotate(toAxisAngle:)`, `rotateBy(x:y:z:)`, `rotateTo(x:y:z:)` | `rotate(by:around:)`, `rotate(to: simd_quatf)`, `rotateBy(x:y:z:)`, `rotateTo(x:y:z:)` | ✅ | Euler order: X, then Y, then Z about fixed axes. |
 | `scale(by:)`, `scale(to:)` | `scale(by: Float)`, `scale(to: SIMD3)` | ✅ | `scale(by:)` is multiplicative so the total is exact. |
-| `fadeIn`, `fadeOut`, `fadeOpacity` | — | ❌ | No node opacity. |
+| `fadeIn`, `fadeOut`, `fadeOpacity` | `Action.fadeIn`, `fadeOut`, `fadeOpacity(to:)`, `fadeOpacity(by:)` | ✅ | PBR meshes do not fade yet (#108). |
 | `hide`, `unhide`, `removeFromParentNode` | `hide()`, `unhide()`, `removeFromParent()` | ✅ | |
 | `wait(duration:)`, `wait(duration:withRange:)` | Same | ✅ | |
 | `run(_:)`, `customAction(duration:action:)` | `run(_:)`, `custom(duration:_:)` | ✅ | |

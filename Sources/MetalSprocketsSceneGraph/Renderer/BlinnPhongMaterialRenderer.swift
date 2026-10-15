@@ -54,6 +54,10 @@ public struct BlinnPhongSceneMaterial: MetalSprocketsSceneGraph.Material, Sample
     public var isTransparent: Bool {
         opacity < 1 || usesDiffuseTextureAlpha
     }
+
+    public var appliesNodeOpacity: Bool {
+        true
+    }
 }
 
 public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer {
@@ -77,7 +81,7 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer {
         // The shader has no morph or skin inputs, so those meshes are deformed on the CPU. They skip culling because
         // their node bounds do not cover the deformation.
         // SceneGraphElement batches opaque and transparent entries apart, transparent ones sorted farthest first.
-        let isTransparent = entries.first?.material.isTransparent ?? false
+        let isTransparent = entries.first?.isTransparent ?? false
         let culled = Set(culledMeshEntries(entries, viewProjection: viewProjection).map { ObjectIdentifier($0.node) })
         var visible: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, modelMatrix: simd_float4x4)] = []
         var deformed: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, modelMatrix: simd_float4x4)] = []
@@ -104,7 +108,7 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer {
             // Keep the order: consecutive runs of one vertex layout, with no instancing (it would reorder draws).
             var runs: [(vertexDescriptor: VertexDescriptor, single: [InstanceBatch], instanced: [InstanceBatch])] = []
             for item in items {
-                let batch = InstanceBatch(mesh: item.mesh, submeshIndex: item.entry.submeshIndex, material: item.material, receivesShadow: item.entry.receivesShadow, modelMatrices: [item.modelMatrix])
+                let batch = InstanceBatch(mesh: item.mesh, submeshIndex: item.entry.submeshIndex, material: item.material, receivesShadow: item.entry.receivesShadow, opacity: item.entry.opacity, modelMatrices: [item.modelMatrix])
                 if let last = runs.indices.last, runs[last].vertexDescriptor == item.mesh.vertexDescriptor {
                     runs[last].single.append(batch)
                 } else {
@@ -179,6 +183,7 @@ private struct BlinnPhongBatchesElement: Element {
                 }
                 var resolved = batch.material.resolved(placeholder: placeholder, defaultSampler: defaultSampler)
                 resolved.uniforms.receivesShadow = batch.receivesShadow ? 1 : 0
+                resolved.uniforms.opacity *= batch.opacity
                 element = element
                     .parameter("frame", functionType: .fragment, value: frame)
                     .parameter("lights", functionType: .fragment, values: lightValues)
@@ -310,6 +315,8 @@ struct InstanceBatch {
     var submeshIndex: Int
     var material: BlinnPhongSceneMaterial
     var receivesShadow: Bool
+    // The node's inherited opacity; multiplies the material's.
+    var opacity: Float = 1
     var modelMatrices: [simd_float4x4]
 
     // Batches never mix mirrored and unmirrored transforms, so the first one decides the winding.
@@ -326,17 +333,18 @@ func instanceBatches(_ items: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, mo
         var material: MaterialKey
         var receivesShadow: Bool
         var isMirrored: Bool
+        var opacity: Float
     }
     var batches: [InstanceBatch] = []
     var indexByKey: [Key: Int] = [:]
     for item in items {
         let buffers = item.mesh.vertexBuffers.sorted { $0.key < $1.key }.map { ObjectIdentifier($0.value) }
-        let key = Key(vertexBuffers: buffers, submeshIndex: item.entry.submeshIndex, material: MaterialKey(item.material), receivesShadow: item.entry.receivesShadow, isMirrored: item.modelMatrix.isMirroring)
+        let key = Key(vertexBuffers: buffers, submeshIndex: item.entry.submeshIndex, material: MaterialKey(item.material), receivesShadow: item.entry.receivesShadow, isMirrored: item.modelMatrix.isMirroring, opacity: item.entry.opacity)
         if let index = indexByKey[key] {
             batches[index].modelMatrices.append(item.modelMatrix)
         } else {
             indexByKey[key] = batches.count
-            batches.append(InstanceBatch(mesh: item.mesh, submeshIndex: item.entry.submeshIndex, material: item.material, receivesShadow: item.entry.receivesShadow, modelMatrices: [item.modelMatrix]))
+            batches.append(InstanceBatch(mesh: item.mesh, submeshIndex: item.entry.submeshIndex, material: item.material, receivesShadow: item.entry.receivesShadow, opacity: item.entry.opacity, modelMatrices: [item.modelMatrix]))
         }
     }
     return batches

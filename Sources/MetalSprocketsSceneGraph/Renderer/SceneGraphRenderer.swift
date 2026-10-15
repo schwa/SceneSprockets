@@ -232,7 +232,7 @@ func renderBatches(_ entries: [SceneGraph.MeshEntry], context: SceneGraphRenderC
             let mask = index < context.lightCategoryBitMasks.count ? context.lightCategoryBitMasks[index] : .max
             return mask & entry.node.categoryBitMask != 0
         }
-        let key = Key(order: entry.node.renderingOrder, isTransparent: entry.material.isTransparent, lights: lights)
+        let key = Key(order: entry.node.renderingOrder, isTransparent: entry.isTransparent, lights: lights)
         if groups[key] == nil {
             keys.append(key)
         }

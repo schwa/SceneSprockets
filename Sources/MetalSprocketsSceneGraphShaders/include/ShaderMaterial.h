@@ -13,5 +13,8 @@ struct ShaderMaterialTransforms {
     // Inverse transpose of the model matrix, for normals.
     simd_float4x4 normalMatrix;
     simd_float3 cameraPosition;
+    // The node's inherited opacity. Multiply the output alpha by it to support fading; the renderer already blends
+    // when it is below 1.
+    float opacity;
 };
 typedef struct ShaderMaterialTransforms ShaderMaterialTransforms;

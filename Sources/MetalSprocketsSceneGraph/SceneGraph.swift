@@ -94,6 +94,13 @@ public class SceneGraph {
         public var material: any Material
         public var castsShadow: Bool
         public var receivesShadow: Bool
+        // The node's opacity times its ancestors'.
+        public var opacity: Float = 1
+
+        // Blends: the material is transparent, or it applies node opacity and that is below 1.
+        public var isTransparent: Bool {
+            material.isTransparent || (material.appliesNodeOpacity && opacity < 1)
+        }
     }
 
     struct Flattened {
@@ -121,9 +128,10 @@ public class SceneGraph {
                 guard let lastMaterial = materials.last else {
                     return
                 }
+                let opacity = node.inheritedOpacity
                 for submeshIndex in mesh.submeshes.indices {
                     let material = submeshIndex < materials.count ? materials[submeshIndex] : lastMaterial
-                    result.meshes.append(MeshEntry(node: node, worldTransform: worldTransform, mesh: mesh, submeshIndex: submeshIndex, material: material, castsShadow: castsShadow, receivesShadow: receivesShadow))
+                    result.meshes.append(MeshEntry(node: node, worldTransform: worldTransform, mesh: mesh, submeshIndex: submeshIndex, material: material, castsShadow: castsShadow, receivesShadow: receivesShadow, opacity: opacity))
                 }
             case let .light(light):
                 result.lights.append((node, worldTransform, light))

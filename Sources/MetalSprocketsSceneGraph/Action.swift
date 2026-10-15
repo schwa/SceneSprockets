@@ -3,7 +3,6 @@ import simd
 extension SceneGraph {
     // A reusable description of a change over time, like SceneKit's SCNAction. Run it with `Node.run(_:forKey:)`
     // and advance all running actions with `SceneGraph.advanceActions(by:)`.
-    // Not supported: fade actions (nodes have no opacity).
     public struct Action {
         public enum TimingMode: Sendable {
             case linear
@@ -138,6 +137,28 @@ extension SceneGraph {
             interval(duration, reversed: { .scale(by: 1 / factor, duration: duration) }) { node, from, to in
                 // Multiplicative, so the total over the duration is exactly `factor`.
                 node.trs.scale *= pow(factor, to - from)
+            }
+        }
+
+        public static func fadeIn(duration: Float) -> Self {
+            fadeOpacity(to: 1, duration: duration)
+        }
+
+        public static func fadeOut(duration: Float) -> Self {
+            fadeOpacity(to: 0, duration: duration)
+        }
+
+        public static func fadeOpacity(to target: Float, duration: Float) -> Self {
+            let start = Box<Float>()
+            return interval(duration, start: { start.value = $0.opacity }) { node, _, to in
+                let from = start.value ?? target
+                node.opacity = from + (target - from) * to
+            }
+        }
+
+        public static func fadeOpacity(by delta: Float, duration: Float) -> Self {
+            interval(duration, reversed: { .fadeOpacity(by: -delta, duration: duration) }) { node, from, to in
+                node.opacity += delta * (to - from)
             }
         }
 

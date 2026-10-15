@@ -43,6 +43,21 @@ extension SceneGraph {
         public var isVisible = true {
             didSet { bump(structure: true) }
         }
+        // 0 is invisible, 1 opaque; multiplies with the ancestors' opacity, like SCNNode.opacity. Applied by materials
+        // with appliesNodeOpacity (Blinn-Phong, ShaderMaterial).
+        public var opacity: Float = 1 {
+            didSet { bump(structure: true) }
+        }
+
+        var inheritedOpacity: Float {
+            var result = opacity
+            var node = parent
+            while let current = node {
+                result *= current.opacity
+                node = current.parent
+            }
+            return result
+        }
         // Skinned meshes are placed by their joints, not by this node's transform.
         public var skin: Skin? {
             didSet { bump(structure: true) }
@@ -278,6 +293,7 @@ extension SceneGraph {
             copy.skin = skin
             copy.skinVertices = skinVertices
             copy.isVisible = isVisible
+            copy.opacity = opacity
             copy.constraints = constraints
             copy.categoryBitMask = categoryBitMask
             copy.lightCategoryBitMask = lightCategoryBitMask
