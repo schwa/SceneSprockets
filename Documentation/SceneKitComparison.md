@@ -19,7 +19,7 @@ Legend:
 | Materials | 🟡 | No `SCNMaterial` with lighting models; Blinn-Phong has no transparency (#36); no shader modifiers |
 | Lights | 🟡 | Directional, point and spot only; no ambient light node, no IES, no area or probe lights |
 | Cameras | 🟡 | Perspective only; no HDR, bloom, DOF, motion blur, SSAO or color grading (#45) |
-| Shadows | 🟡 | Shadow maps for all three light types, but one global setting, `receivesShadow` ignored (#66), max 8 slices |
+| Shadows | 🟡 | Shadow maps for all three light types, but one global setting, max 8 slices |
 | Animation | ✅ (different design) | Keyframe clips, blending, layers, state machine; no `CAAnimation` interop, no animation events |
 | Actions | 🟡 | No fade, no `follow(path:)`, no sound actions, no JavaScript actions, no speed per action |
 | Implicit animation | 🟡 | Transform and morph weights only |
@@ -69,7 +69,7 @@ Legend:
 | `categoryBitMask` | `categoryBitMask` | ✅ | Default `1`. Matched against camera, light and hit-test masks. Not inherited by children (same as SceneKit). |
 | `renderingOrder` | `renderingOrder` | ✅ | Lower draws first. Within one value, each renderer keeps its own order (for example PBR draws opaque before blended). |
 | `castsShadow` | `Content.mesh(…, castsShadow:)` | 🟡 | Per mesh content, not per node. |
-| — (no SceneKit equivalent) | `Content.mesh(…, receivesShadow:)` | 🟡 | Stored, but the shadow mask does not honor it yet (#66). |
+| — (no SceneKit equivalent) | `Content.mesh(…, receivesShadow:)` | ➕ | Non-receivers are drawn into a mask that the shadow pass skips. |
 | `clone()`, `flattenedClone()` | — | ❌ | |
 | `presentation` | — | ❌ | No separate presentation tree. Actions and animations write to the model values directly. |
 | `pivot` | — | ❌ | Use an extra parent node. |
@@ -185,7 +185,7 @@ Legend:
 | `shadowRadius`, `shadowSampleCount` (soft shadows) | — | ❌ | |
 | `orthographicScale`, `shadowCascadeCount`, `shadowCascadeSplittingFactor`, `automaticallyAdjustsShadowProjection` | Automatic fit to scene bounds | 🟡 | No cascades. |
 | `castsShadow` per node / light | `castsShadow` per mesh content | 🟡 | All lights cast (up to the slice limit). |
-| — | `receivesShadow` | 🟡 | Not honored yet (#66). |
+| — | `receivesShadow` | ➕ | Honored through a receiver mask. |
 | Number of shadowing lights | 8 shadow map slices | 🟡 | Directional or spot uses 1, point uses 6. Lights past the limit cast none, silently (#68). |
 | Skinned casters | GPU skinning in the caster pass | ✅ | Morphed meshes use CPU-deformed positions. |
 | Requirements | Color texture `.shaderWrite`, depth `.shaderRead`, depth not memoryless | — | `SceneView` sets these when shadows or fog are on. Otherwise shadows are silently skipped. |

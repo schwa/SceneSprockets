@@ -1311,12 +1311,13 @@ Category masks and rendering order (#47) have no demo. Add one where a light lig
 ## 66: Honor receivesShadow in the shadow mask
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: area:renderer, effort:m
 created: 2026-10-14T13:39:33Z
-updated: 2026-10-14T13:55:09Z
+updated: 2026-10-15T02:49:25Z
+closed: 2026-10-15T02:49:25Z
 +++
 
 Split from #58. The screen-space ShadowMaskPass (MetalSprocketsAddOns) darkens every pixel behind a caster, so `receivesShadow: false` has no effect.

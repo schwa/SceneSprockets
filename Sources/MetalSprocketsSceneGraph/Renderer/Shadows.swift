@@ -5,6 +5,7 @@ import MetalSprockets
 import MetalSprocketsAddOns
 import MetalSprocketsAddOnsShaders
 import MetalSprocketsSceneGraphShaders
+import MetalSupport
 import ModelIO
 import SwiftMesh
 import simd
@@ -14,8 +15,8 @@ import simd
 // (it holds the shadow map and caster buffers) and pass it to SceneGraphElement or SceneView.
 //
 // The shadow map has 8 slices: a directional or spot light uses one, a point light six; lights past that cast
-// none. Meshes with `castsShadow: false` cast none. `receivesShadow` is not
-// honored: the screen-space mask darkens every surface behind a caster.
+// none. Meshes with `castsShadow: false` cast none. Meshes with `receivesShadow: false` are drawn into a mask that
+// the screen-space pass skips.
 // The view's color texture needs `.shaderWrite` and its depth texture `.shaderRead` usage (see
 // `ShadowContext.requiredColorUsage`); otherwise no shadows are drawn.
 public final class SceneGraphShadows {
@@ -28,6 +29,8 @@ public final class SceneGraphShadows {
     private var shadowMap: ShadowMap?
     private var positionBuffers: [PositionKey: MTLBuffer] = [:]
     private var influenceBuffers: [InfluenceKey: MTLBuffer] = [:]
+    // One per frame in flight, like the shadow map's depth textures.
+    private var receiverMasks: [MTLTexture] = []
 
     public init(intensity: Float = 0.6, resolution: Int = 2_048, depthBias: Float = 2, slopeScale: Float = 2) {
         self.intensity = intensity
@@ -51,10 +54,12 @@ public final class SceneGraphShadows {
     struct Frame {
         var shadowMap: ShadowMap
         var casters: [Caster]
+        // Meshes with `receivesShadow: false`; nil when there are none.
+        var nonReceivers: (casters: [Caster], masks: [MTLTexture])?
     }
 
     // Nil when nothing casts or there is no light.
-    func prepare(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, bounds: BoundingBox?) throws -> Frame? {
+    func prepare(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, bounds: BoundingBox?, viewSize: (width: Int, height: Int)? = nil) throws -> Frame? {
         guard let bounds else {
             return nil
         }
@@ -65,29 +70,38 @@ public final class SceneGraphShadows {
         var usedKeys = Set<PositionKey>()
         var usedInfluences = Set<InfluenceKey>()
         var casters: [Caster] = []
-        for entry in entries where entry.castsShadow {
+        var nonReceivers: [Caster] = []
+        // Position-only geometry for `entry`, as drawn this frame.
+        func caster(for entry: SceneGraph.MeshEntry) -> Caster? {
             // Skin on the GPU when there is a valid skin and no active morph; otherwise use CPU-deformed positions.
             let skin = gpuSkin(of: entry)
             let deformed = skin == nil ? entry.deformed(revision: context.revision) : nil
             let mesh = deformed?.mesh ?? entry.mesh
             let submesh = mesh.submeshes[entry.submeshIndex]
             guard submesh.primitiveType == .triangle || submesh.primitiveType == .triangleStrip else {
-                continue
+                return nil
             }
             let key = PositionKey(mesh)
             usedKeys.insert(key)
             guard let positions = positionBuffer(for: mesh, key: key) else {
-                continue
+                return nil
             }
-            if let skin {
-                let influenceKey = InfluenceKey(node: ObjectIdentifier(entry.node), revision: entry.node.revision.structure)
-                usedInfluences.insert(influenceKey)
-                guard let influences = influenceBuffer(for: entry.node, key: influenceKey, device: mesh.vertexBuffer.device) else {
-                    continue
-                }
-                casters.append(Caster(positions: positions, submesh: submesh, placement: .skinned(influences: influences, jointMatrices: skin.jointMatrices())))
-            } else {
-                casters.append(Caster(positions: positions, submesh: submesh, placement: .model(deformed?.modelMatrix ?? entry.worldTransform)))
+            guard let skin else {
+                return Caster(positions: positions, submesh: submesh, placement: .model(deformed?.modelMatrix ?? entry.worldTransform))
+            }
+            let influenceKey = InfluenceKey(node: ObjectIdentifier(entry.node), revision: entry.node.revision.structure)
+            usedInfluences.insert(influenceKey)
+            guard let influences = influenceBuffer(for: entry.node, key: influenceKey, device: mesh.vertexBuffer.device) else {
+                return nil
+            }
+            return Caster(positions: positions, submesh: submesh, placement: .skinned(influences: influences, jointMatrices: skin.jointMatrices()))
+        }
+        for entry in entries {
+            if entry.castsShadow, let caster = caster(for: entry) {
+                casters.append(caster)
+            }
+            if !entry.receivesShadow, let caster = caster(for: entry) {
+                nonReceivers.append(caster)
             }
         }
         positionBuffers = positionBuffers.filter { usedKeys.contains($0.key) }
@@ -106,7 +120,28 @@ public final class SceneGraphShadows {
         shadowMap.slopeScale = slopeScale
         shadowMap.lightViewProjectionMatrices = views
         self.shadowMap = shadowMap
-        return Frame(shadowMap: shadowMap, casters: casters)
+        guard !nonReceivers.isEmpty, let viewSize else {
+            return Frame(shadowMap: shadowMap, casters: casters)
+        }
+        return Frame(shadowMap: shadowMap, casters: casters, nonReceivers: (nonReceivers, try receiverMasks(width: viewSize.width, height: viewSize.height, count: shadowMap.depthTextures.count)))
+    }
+
+    private func receiverMasks(width: Int, height: Int, count: Int) throws -> [MTLTexture] {
+        if receiverMasks.count == count, receiverMasks.allSatisfy({ $0.width == width && $0.height == height }) {
+            return receiverMasks
+        }
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .r8Unorm, width: width, height: height, mipmapped: false)
+        descriptor.usage = [.renderTarget, .shaderRead]
+        descriptor.storageMode = .private
+        let device = _MTLCreateSystemDefaultDevice()
+        receiverMasks = try (0..<count).map { index in
+            guard let texture = device.makeTexture(descriptor: descriptor) else {
+                throw MetalSupportError.resourceCreationFailure("Failed to create shadow receiver mask")
+            }
+            texture.label = "Shadow Receiver Mask \(index)"
+            return texture
+        }
+        return receiverMasks
     }
 
     // One view-projection per shadow map slice, up to MAX_SHADOW_LIGHTS: directional lights get an orthographic view
@@ -279,37 +314,42 @@ struct ShadowCasterDepthPass: Element {
     }
 
     private func pipeline(_ label: String, vertexShader: VertexShader, fragmentShader: FragmentShader, vertexDescriptor: MTLVertexDescriptor, casters: [SceneGraphShadows.Caster], lightViewProjection: simd_float4x4) throws -> some Element {
-        try RenderPipeline(label: label, vertexShader: vertexShader, fragmentShader: fragmentShader) {
-            ForEach(Array(casters.enumerated()), id: \.offset) { _, caster in
-                try draw(caster)
-            }
-            .parameter("lightViewProjection", functionType: .vertex, value: lightViewProjection)
-        }
-        .vertexDescriptor(vertexDescriptor)
-        .renderPipelineDescriptorTransformer { descriptor in
-            descriptor.colorAttachments[0].pixelFormat = .invalid
-            descriptor.inputPrimitiveTopology = .triangle
-        }
+        try casterPipeline(label, vertexShader: vertexShader, fragmentShader: fragmentShader, vertexDescriptor: vertexDescriptor, casters: casters, viewProjection: lightViewProjection, colorPixelFormat: .invalid)
     }
+}
 
-    private func draw(_ caster: SceneGraphShadows.Caster) throws -> AnyElement {
-        let draw = Draw(
-            primitiveType: caster.submesh.primitiveType,
-            indexBuffer: caster.submesh.indexBuffer,
-            indexType: caster.submesh.indexType,
-            indexCount: caster.submesh.indexCount,
-            indexBufferOffset: caster.submesh.indexBufferOffset
-        )
-        .vertexBuffer(caster.positions, index: 0)
-        switch caster.placement {
-        case .model(let modelMatrix):
-            return draw.parameter("modelMatrix", functionType: .vertex, value: modelMatrix).eraseToAnyElement()
-        case let .skinned(influences, jointMatrices):
-            return draw
-                .vertexBuffer(influences, index: 1)
-                .parameter("jointMatrices", functionType: .vertex, values: jointMatrices)
-                .eraseToAnyElement()
+// Draws position-only geometry with `viewProjection`; shared by the shadow map and the receiver mask.
+func casterPipeline(_ label: String, vertexShader: VertexShader, fragmentShader: FragmentShader, vertexDescriptor: MTLVertexDescriptor, casters: [SceneGraphShadows.Caster], viewProjection: simd_float4x4, colorPixelFormat: MTLPixelFormat) throws -> some Element {
+    try RenderPipeline(label: label, vertexShader: vertexShader, fragmentShader: fragmentShader) {
+        ForEach(Array(casters.enumerated()), id: \.offset) { _, caster in
+            try drawCaster(caster)
         }
+        .parameter("lightViewProjection", functionType: .vertex, value: viewProjection)
+    }
+    .vertexDescriptor(vertexDescriptor)
+    .renderPipelineDescriptorTransformer { descriptor in
+        descriptor.colorAttachments[0].pixelFormat = colorPixelFormat
+        descriptor.inputPrimitiveTopology = .triangle
+    }
+}
+
+private func drawCaster(_ caster: SceneGraphShadows.Caster) throws -> AnyElement {
+    let draw = Draw(
+        primitiveType: caster.submesh.primitiveType,
+        indexBuffer: caster.submesh.indexBuffer,
+        indexType: caster.submesh.indexType,
+        indexCount: caster.submesh.indexCount,
+        indexBufferOffset: caster.submesh.indexBufferOffset
+    )
+    .vertexBuffer(caster.positions, index: 0)
+    switch caster.placement {
+    case .model(let modelMatrix):
+        return draw.parameter("modelMatrix", functionType: .vertex, value: modelMatrix).eraseToAnyElement()
+    case let .skinned(influences, jointMatrices):
+        return draw
+            .vertexBuffer(influences, index: 1)
+            .parameter("jointMatrices", functionType: .vertex, values: jointMatrices)
+            .eraseToAnyElement()
     }
 }
 
@@ -318,6 +358,7 @@ struct ShadowCasterShaders {
     var staticVertex: VertexShader
     var skinnedVertex: VertexShader
     var fragment: FragmentShader
+    var mark: FragmentShader
     var staticDescriptor: MTLVertexDescriptor
     var skinnedDescriptor: MTLVertexDescriptor
 
@@ -347,6 +388,7 @@ struct ShadowCasterShaders {
             staticVertex: try library.vertex_static,
             skinnedVertex: try library.vertex_skinned,
             fragment: try library.fragment_depth,
+            mark: try library.fragment_mark,
             staticDescriptor: staticDescriptor,
             skinnedDescriptor: skinnedDescriptor
         )

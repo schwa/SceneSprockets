@@ -97,7 +97,9 @@ public struct SceneGraphElement: Element {
                 }
                 return (color, depth)
             }()
-            let shadowFrame = try postTargets == nil ? nil : shadows?.prepare(entries: entries, context: context, bounds: sceneGraph.bounds)
+            let shadowFrame = try postTargets.flatMap { targets in
+                try shadows?.prepare(entries: entries, context: context, bounds: sceneGraph.bounds, viewSize: (targets.color.width, targets.color.height))
+            }
             let fog = postTargets == nil ? nil : sceneGraph.fog
             let scenePass = try makeScenePass(elements: elements, clearColor: clearColor, storesDepth: shadowFrame != nil || fog != nil)
             guard let postTargets, shadowFrame != nil || fog != nil else {
@@ -111,12 +113,12 @@ public struct SceneGraphElement: Element {
                 }
                 scenePass
                 if let shadows, let shadowFrame {
-                    try ShadowMaskPass(
+                    SceneShadowMaskPass(
+                        frame: shadowFrame,
                         sceneDepthTexture: postTargets.depth,
                         outputTexture: postTargets.color,
-                        shadowMap: shadowFrame.shadowMap,
-                        inverseViewProjection: inverseViewProjection,
-                        shadowIntensity: shadows.intensity
+                        viewProjection: context.projectionMatrix * context.viewMatrix,
+                        intensity: shadows.intensity
                     )
                 }
                 if let fog {

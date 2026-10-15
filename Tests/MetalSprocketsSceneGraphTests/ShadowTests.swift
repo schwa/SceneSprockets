@@ -112,6 +112,25 @@ func pointLightUsesSixViews() throws {
     #expect(shadows.shadowViews(lights: Array(repeating: (matrix_identity_float4x4, Light(type: .point)), count: 2), bounds: bounds).count == 8)
 }
 
+// #66: a floor that does not receive shadows stays lit under the box's shadow; the box itself still darkens
+// where it is in shadow of nothing (so the mask pass still runs).
+@Test
+@MainActor
+func nonReceiversAreNotDarkened() throws {
+    let (sceneGraph, pixel) = try makeScene()
+    let floor = try #require(sceneGraph.nodesWithWorldTransforms().first { $0.node.label == "Floor" }?.node)
+    if case let .mesh(mesh, materials, castsShadow, _) = floor.content {
+        floor.content = .mesh(mesh, materials: materials, castsShadow: castsShadow, receivesShadow: false)
+    }
+    let lit = try brightness(sceneGraph, at: pixel, shadows: nil)
+    let shadows = SceneGraphShadows(intensity: 0.8)
+    let withShadows = try brightness(sceneGraph, at: pixel, shadows: shadows)
+    #expect(abs(withShadows - lit) <= 3)
+    let context = try #require(makeRenderContext(sceneGraph: sceneGraph, camera: nil, cameraMatrix: nil, aspectRatio: 1))
+    let frame = try #require(try shadows.prepare(entries: sceneGraph.meshEntries(), context: context, bounds: sceneGraph.bounds, viewSize: (128, 128)))
+    #expect(frame.nonReceivers?.casters.count == 1)
+}
+
 @Test
 @MainActor
 func nonCastersCastNoShadow() throws {

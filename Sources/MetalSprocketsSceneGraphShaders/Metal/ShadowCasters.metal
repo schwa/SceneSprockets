@@ -44,4 +44,9 @@ namespace ShadowCasters {
     [[fragment]] void fragment_depth() {
     }
 
+    // Marks pixels in the receiver mask.
+    [[fragment]] float4 fragment_mark() {
+        return 1;
+    }
+
 }
