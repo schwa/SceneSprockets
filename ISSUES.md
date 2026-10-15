@@ -1568,12 +1568,13 @@ Missing SceneKit equivalents: clone()/flattenedClone(), childNode(withName:recur
 ## 78: Node pivot
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: effort:s, area:scenegraph
 created: 2026-10-15T02:28:07Z
-updated: 2026-10-15T02:31:14Z
+updated: 2026-10-15T03:12:20Z
+closed: 2026-10-15T03:12:20Z
 +++
 
 SCNNode.pivot offsets the node's rotation and scale origin. Nodes here have no pivot, so you have to add an extra parent node. Want a pivot transform applied before the local transform. See docs/SceneKitComparison.md.

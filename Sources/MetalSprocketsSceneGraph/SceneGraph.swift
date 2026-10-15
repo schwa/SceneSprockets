@@ -57,7 +57,7 @@ public class SceneGraph {
         guard includeHidden || node.isVisible else {
             return true
         }
-        let worldTransform = parentTransform * node.transform
+        let worldTransform = parentTransform * node.composedTransform
         switch try visitor(node, worldTransform) {
         case .stop:
             return false
@@ -75,7 +75,7 @@ public class SceneGraph {
         guard includeHidden || node.isVisible else {
             return
         }
-        let worldTransform = parentTransform * node.transform
+        let worldTransform = parentTransform * node.composedTransform
         try visitor(node, worldTransform)
         for child in node.children {
             try visit(node: child, parentTransform: worldTransform, includeHidden: includeHidden, visitor)

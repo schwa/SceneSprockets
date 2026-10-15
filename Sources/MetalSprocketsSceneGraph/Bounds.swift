@@ -66,16 +66,16 @@ extension SceneGraph.Node {
                 local = local.map { $0.union(childBounds) } ?? childBounds
             }
         }
-        let bounds = local?.transformed(by: transform)
+        let bounds = local?.transformed(by: composedTransform)
         boundsCache.subtree = (revision, bounds)
         return bounds
     }
 
     public var worldTransform: float4x4 {
-        var result = transform
+        var result = composedTransform
         var node = parent
         while let current = node {
-            result = current.transform * result
+            result = current.composedTransform * result
             node = current.parent
         }
         return result

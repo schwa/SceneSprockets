@@ -1,9 +1,28 @@
+import GeometryLite3D
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
 
 private func isClose(_ lhs: simd_float4x4, _ rhs: simd_float4x4) -> Bool {
     (0..<4).allSatisfy { simd_distance(lhs[$0], rhs[$0]) < 0.0001 }
+}
+
+// #78: rotation applies about the pivot; the pivot point stays at the node's position.
+@Test
+func pivotMovesTheRotationCenter() {
+    let root = SceneGraph.Node()
+    let node = SceneGraph.Node(parent: root, trs: .init(translation: [5, 0, 0], rotation: simd_quatf(angle: .pi / 2, axis: [0, 0, 1])))
+    node.pivot = simd_float4x4(translation: [1, 0, 0])
+    let child = SceneGraph.Node(parent: node, trs: .init(translation: [1, 0, 0]))
+    // The child sits on the pivot point, so it lands on the node's position.
+    #expect(simd_distance(child.worldTransform.columns.3, [5, 0, 0, 1]) < 1e-5)
+    let origin = SceneGraph.Node(parent: node)
+    // Content origin is 1 unit from the pivot, rotated 90 degrees: (5, -1).
+    #expect(simd_distance(origin.worldTransform.columns.3, [5, -1, 0, 1]) < 1e-5)
+    let sceneGraph = SceneGraph(root: root)
+    #expect(sceneGraph.nodesWithWorldTransforms().contains { $0.node === origin && simd_distance($0.worldTransform.columns.3, [5, -1, 0, 1]) < 1e-5 })
+    // The stored transform does not include the pivot.
+    #expect(node.trs.translation == [5, 0, 0])
 }
 
 @Test

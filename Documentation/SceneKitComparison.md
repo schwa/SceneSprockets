@@ -13,8 +13,8 @@ Legend:
 
 | Area | Status | Main gaps |
 |---|---|---|
-| Scene and nodes | 🟡 | No opacity, no pivot, no `flattenedClone`, no `presentation` node, no serialization |
-| Transforms | 🟡 | No Euler angles, no pivot, no `look(at:)` method (use a constraint), no world-space setters |
+| Scene and nodes | 🟡 | No opacity, no `flattenedClone`, no `presentation` node, no serialization |
+| Transforms | 🟡 | No Euler angles, no `look(at:)` method (use a constraint), no world-space setters |
 | Geometry | 🟡 | No geometry sources/elements API (uses `MetalMesh`), no subdivision, no tessellation, no LOD, no `SCNShape` (Bézier extrusion), no tube or pyramid, no segment counts |
 | Materials | 🟡 | No `SCNMaterial` with lighting models; Blinn-Phong has no transparency (#36); no shader modifiers |
 | Lights | 🟡 | Directional, point and spot only; no ambient light node, no IES, no area or probe lights |
@@ -72,7 +72,7 @@ Legend:
 | — (no SceneKit equivalent) | `Content.mesh(…, receivesShadow:)` | ➕ | Non-receivers are drawn into a mask that the shadow pass skips. |
 | `clone()`, `flattenedClone()` | `clone()` | 🟡 | Shares meshes, materials, skins and constraints, like SceneKit. No `flattenedClone`. |
 | `presentation` | — | ❌ | No separate presentation tree. Actions and animations write to the model values directly. |
-| `pivot` | — | ❌ | Use an extra parent node. |
+| `pivot` | `pivot` | ✅ | `composedTransform` is the local transform with the pivot applied. |
 | `movabilityHint` | — | ❌ | |
 | `entity` (GameplayKit) | — | ❌ | |
 | `morpher` (`SCNMorpher`) | `morphTargets`, `morphWeights` | ✅ | See [Morphing and skinning](#morphing-and-skinning). |

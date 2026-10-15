@@ -103,7 +103,22 @@ extension SceneGraph {
             }
         }
 
-        // Setting this stores a matrix.
+        // The point position, rotation and scale apply around, like SCNNode.pivot: content and children are drawn
+        // at transform * pivot.inverse. Identity by default.
+        public var pivot: float4x4 = .identity {
+            didSet {
+                pivotInverse = pivot.inverse
+                bump(structure: false)
+            }
+        }
+        private var pivotInverse: float4x4 = .identity
+
+        // The local transform with the pivot applied; what world transforms and bounds are built from.
+        public var composedTransform: float4x4 {
+            pivot == .identity ? transform : transform * pivotInverse
+        }
+
+        // Setting this stores a matrix. Does not include `pivot`.
         public var transform: float4x4 {
             get { localTransform.matrix }
             set { localTransform = .matrix(newValue) }
@@ -234,6 +249,7 @@ extension SceneGraph {
         public func clone() -> Node {
             let copy = Node(label: label, content: content)
             copy.localTransform = localTransform
+            copy.pivot = pivot
             copy.morphTargets = morphTargets
             copy.morphWeights = morphWeights
             copy.skin = skin
