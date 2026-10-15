@@ -4,15 +4,9 @@ import MetalSupport
 import SwiftMesh
 import simd
 
-extension BoundingBox {
-    func union(_ other: BoundingBox) -> BoundingBox {
-        BoundingBox(min: simd_min(min, other.min), max: simd_max(max, other.max))
-    }
-}
-
 extension MetalMesh {
     // Reads positions from the vertex buffers (shared storage). Nil if there is no float3 position attribute.
-    func positionBounds() -> BoundingBox? {
+    func positionBounds() -> BoundingBox3D? {
         guard let attribute = vertexDescriptor.attributes.first(where: { $0.semantic == .position }),
               attribute.format == .float3,
               let buffer = vertexBuffers[attribute.bufferIndex],
@@ -34,17 +28,17 @@ extension MetalMesh {
             lower = simd_min(lower, position)
             upper = simd_max(upper, position)
         }
-        return BoundingBox(min: lower, max: upper)
+        return BoundingBox3D(min: lower, max: upper)
     }
 }
 
 extension SceneGraph.Node {
     // Bounds of this node's mesh in its own space; nil for non-mesh nodes.
-    public var meshBounds: BoundingBox? {
+    public var meshBounds: BoundingBox3D? {
         if let cache = boundsCache.mesh, cache.revision == revision.structure {
             return cache.bounds
         }
-        var bounds: BoundingBox?
+        var bounds: BoundingBox3D?
         if case let .mesh(mesh, _, _, _) = content {
             bounds = mesh.positionBounds()
         }
@@ -53,7 +47,7 @@ extension SceneGraph.Node {
     }
 
     // Bounds of this node and its descendants in the parent's space (this node's transform applied). Nil if hidden.
-    public var subtreeBounds: BoundingBox? {
+    public var subtreeBounds: BoundingBox3D? {
         guard isVisible else {
             return nil
         }
@@ -84,12 +78,12 @@ extension SceneGraph.Node {
 
 extension SceneGraph {
     // World-space bounds of every mesh in the graph.
-    public var bounds: BoundingBox? {
+    public var bounds: BoundingBox3D? {
         root.subtreeBounds
     }
 
     // World-space bounds of `node` and its descendants. Nil if it or an ancestor is hidden.
-    public func worldBounds(of node: Node) -> BoundingBox? {
+    public func worldBounds(of node: Node) -> BoundingBox3D? {
         var ancestor = node.parent
         while let current = ancestor {
             guard current.isVisible else {

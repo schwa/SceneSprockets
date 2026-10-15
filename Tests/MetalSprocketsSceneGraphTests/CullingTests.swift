@@ -12,7 +12,7 @@ private extension simd_float4x4 {
     }
 }
 
-private let unitBox = BoundingBox(min: [-0.5, -0.5, -0.5], max: [0.5, 0.5, 0.5])
+private let unitBox = BoundingBox3D(min: [-0.5, -0.5, -0.5], max: [0.5, 0.5, 0.5])
 
 private func viewProjection() -> simd_float4x4 {
     // Camera at origin looking down -Z.

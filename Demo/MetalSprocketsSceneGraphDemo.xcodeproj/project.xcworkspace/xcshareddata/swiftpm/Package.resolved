@@ -34,7 +34,7 @@
       "location" : "https://github.com/schwa/GeometryLite3D",
       "state" : {
         "branch" : "main",
-        "revision" : "7b576374fb9f5cbd07bc85ad7e8090a850492382"
+        "revision" : "0eddc584482eec5a991c8caff2ec1c864299e377"
       }
     },
     {
@@ -43,7 +43,7 @@
       "location" : "https://github.com/schwa/Interaction3D",
       "state" : {
         "branch" : "main",
-        "revision" : "4cdd1495b7703981308a7afc11cd8a88c08b72ce"
+        "revision" : "9bc6c85de11da1156e0b72edd28015945fdedc4d"
       }
     },
     {
@@ -79,7 +79,7 @@
       "location" : "https://github.com/schwa/MetalSprocketsGLTF",
       "state" : {
         "branch" : "main",
-        "revision" : "26795f3d10f950a5636b57ddf13d88c27a9bdec8"
+        "revision" : "6aafd9c77db12ae0d03fcc311c9e516d27762155"
       }
     },
     {
@@ -88,7 +88,7 @@
       "location" : "https://github.com/schwa/MetalSprocketsPBR",
       "state" : {
         "branch" : "main",
-        "revision" : "29f4616114c07ace16c427fd0e353c6c180d1f4d"
+        "revision" : "9b5495b6d51fe274a5be471fc577a9b3f9f88986"
       }
     },
     {
@@ -139,7 +139,7 @@
     {
       "identity" : "swift-collections",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-collections.git",
+      "location" : "https://github.com/apple/swift-collections",
       "state" : {
         "revision" : "35a1edcb8ebd2bfe251d587f0b69e62af28f508c",
         "version" : "1.7.3"
@@ -205,7 +205,7 @@
       "location" : "https://github.com/schwa/SwiftMesh",
       "state" : {
         "branch" : "main",
-        "revision" : "93ae4066f79097344376445ad5b033a3b0bf8a38"
+        "revision" : "cdb410e46388fb95edf7fbebdd0e988af9163db4"
       }
     }
   ],

@@ -106,7 +106,7 @@ func spotAndPointLightsCastShadows(light: LightType) throws {
 @Test
 func pointLightUsesSixViews() throws {
     let shadows = SceneGraphShadows()
-    let bounds = BoundingBox(min: [-1, -1, -1], max: [1, 1, 1])
+    let bounds = BoundingBox3D(min: [-1, -1, -1], max: [1, 1, 1])
     #expect(shadows.shadowViews(lights: [(matrix_identity_float4x4, Light(type: .point))], bounds: bounds).count == 6)
     #expect(shadows.shadowViews(lights: [(matrix_identity_float4x4, Light(type: .spot))], bounds: bounds).count == 1)
     // Two point lights exceed the 8 slices: the second is dropped whole, and a later spot light still fits.

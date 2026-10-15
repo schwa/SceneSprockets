@@ -86,7 +86,7 @@ public final class SceneGraphShadows {
     }
 
     // Nil when nothing casts or there is no light.
-    func prepare(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, bounds: BoundingBox?, viewSize: (width: Int, height: Int)? = nil) throws -> Frame? {
+    func prepare(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, bounds: BoundingBox3D?, viewSize: (width: Int, height: Int)? = nil) throws -> Frame? {
         guard let bounds else {
             return nil
         }
@@ -178,13 +178,13 @@ public final class SceneGraphShadows {
     // One view-projection per shadow map slice, up to MAX_SHADOW_LIGHTS: directional lights get an orthographic view
     // fitted to `bounds`, spot lights a perspective view of their outer cone, point lights six 90° views. All use
     // reversed depth, like ShadowMap's default.
-    func shadowViews(lights: [(worldTransform: simd_float4x4, light: Light)], bounds: BoundingBox) -> [simd_float4x4] {
+    func shadowViews(lights: [(worldTransform: simd_float4x4, light: Light)], bounds: BoundingBox3D) -> [simd_float4x4] {
         shadowViewsAndDroppedLights(lights: lights, bounds: bounds).views
     }
 
     // A light whose views do not all fit in the remaining slices is dropped whole; later lights may still fit.
     // `slices` is parallel to `lights`: the slices of each light's views, empty for lights that cast none.
-    func shadowViewsAndDroppedLights(lights: [(worldTransform: simd_float4x4, light: Light)], bounds: BoundingBox) -> (views: [simd_float4x4], dropped: Int, slices: [Range<Int>]) {
+    func shadowViewsAndDroppedLights(lights: [(worldTransform: simd_float4x4, light: Light)], bounds: BoundingBox3D) -> (views: [simd_float4x4], dropped: Int, slices: [Range<Int>]) {
         let center = (bounds.min + bounds.max) / 2
         let radius = max(simd_length(bounds.max - bounds.min) / 2, 0.01)
         var views: [simd_float4x4] = []

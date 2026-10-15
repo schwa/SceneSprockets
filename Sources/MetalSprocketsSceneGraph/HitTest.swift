@@ -222,7 +222,7 @@ private func intersect(origin: SIMD3<Float>, direction: SIMD3<Float>, _ a: SIMD3
 }
 
 // Where the ray enters the box (or 0 when it starts inside), with the outward normal of the face it enters through.
-private func boxEntry(origin: SIMD3<Float>, direction: SIMD3<Float>, bounds: BoundingBox) -> (t: Float, normal: SIMD3<Float>)? {
+private func boxEntry(origin: SIMD3<Float>, direction: SIMD3<Float>, bounds: BoundingBox3D) -> (t: Float, normal: SIMD3<Float>)? {
     var near = -Float.infinity
     var far = Float.infinity
     var normal = SIMD3<Float>.zero
@@ -249,7 +249,7 @@ private func boxEntry(origin: SIMD3<Float>, direction: SIMD3<Float>, bounds: Bou
 }
 
 // Slab test.
-private func intersects(origin: SIMD3<Float>, direction: SIMD3<Float>, bounds: BoundingBox) -> Bool {
+private func intersects(origin: SIMD3<Float>, direction: SIMD3<Float>, bounds: BoundingBox3D) -> Bool {
     var near = -Float.infinity
     var far = Float.infinity
     for axis in 0..<3 {

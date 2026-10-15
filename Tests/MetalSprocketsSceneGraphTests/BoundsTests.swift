@@ -7,7 +7,7 @@ import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
 
-private func approximatelyEqual(_ lhs: BoundingBox?, _ rhs: BoundingBox) -> Bool {
+private func approximatelyEqual(_ lhs: BoundingBox3D?, _ rhs: BoundingBox3D) -> Bool {
     guard let lhs else {
         return false
     }
@@ -28,7 +28,7 @@ func meshBoundsComeFromPositions() throws {
     for layout in [MetalMesh.BufferLayout.interleaved, .separateBuffers] {
         let box = makeBox(device: device, layout: layout)
         let node = SceneGraph.Node(content: .mesh(box, material: material))
-        #expect(approximatelyEqual(node.meshBounds, BoundingBox(min: [-0.5, -0.5, -0.5], max: [0.5, 0.5, 0.5])))
+        #expect(approximatelyEqual(node.meshBounds, BoundingBox3D(min: [-0.5, -0.5, -0.5], max: [0.5, 0.5, 0.5])))
     }
 }
 
@@ -54,12 +54,12 @@ func worldBoundsIncludeTransformsAndChildren() throws {
     let sceneGraph = SceneGraph(root: root)
 
     // Group spans x -1.5...1.5 locally, scaled by 2, then moved up 10.
-    #expect(approximatelyEqual(sceneGraph.bounds, BoundingBox(min: [-3, 9, -1], max: [3, 11, 1])))
-    #expect(approximatelyEqual(sceneGraph.worldBounds(of: right), BoundingBox(min: [1, 9, -1], max: [3, 11, 1])))
+    #expect(approximatelyEqual(sceneGraph.bounds, BoundingBox3D(min: [-3, 9, -1], max: [3, 11, 1])))
+    #expect(approximatelyEqual(sceneGraph.worldBounds(of: right), BoundingBox3D(min: [1, 9, -1], max: [3, 11, 1])))
 
     right.trs.translation = [5, 0, 0]
-    #expect(approximatelyEqual(sceneGraph.bounds, BoundingBox(min: [-3, 9, -1], max: [11, 11, 1])))
+    #expect(approximatelyEqual(sceneGraph.bounds, BoundingBox3D(min: [-3, 9, -1], max: [11, 11, 1])))
 
     right.removeFromParent()
-    #expect(approximatelyEqual(sceneGraph.bounds, BoundingBox(min: [-3, 9, -1], max: [-1, 11, 1])))
+    #expect(approximatelyEqual(sceneGraph.bounds, BoundingBox3D(min: [-3, 9, -1], max: [-1, 11, 1])))
 }

@@ -63,8 +63,8 @@ extension SceneGraph {
         public private(set) var revision = Revision(structure: Revision.next(), transform: Revision.next())
 
         struct BoundsCache {
-            var mesh: (revision: Int, bounds: BoundingBox?)?
-            var subtree: (revision: Revision, bounds: BoundingBox?)?
+            var mesh: (revision: Int, bounds: BoundingBox3D?)?
+            var subtree: (revision: Revision, bounds: BoundingBox3D?)?
         }
 
         var boundsCache = BoundsCache()

@@ -1,13 +1,13 @@
 {
-  "originHash" : "82a1b4777d6b7d59c218de668617d7ddac7278e3a77387d8e88d53aab775e609",
+  "originHash" : "b2be2093a1f34c483775e1606bf6cbff30b2aa55520d19956f2c5ed8f8275adf",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/BasisUniversalMetal",
       "state" : {
-        "revision" : "67a8610ae61c1230f91374ec8b388a4915b4915f",
-        "version" : "0.0.2"
+        "revision" : "002f03eae0e1b0cbb0f3deb3fed1ab2b5290b5a4",
+        "version" : "0.0.3"
       }
     },
     {
@@ -25,7 +25,7 @@
       "location" : "https://github.com/schwa/GeometryLite3D",
       "state" : {
         "branch" : "main",
-        "revision" : "7b576374fb9f5cbd07bc85ad7e8090a850492382"
+        "revision" : "0eddc584482eec5a991c8caff2ec1c864299e377"
       }
     },
     {
@@ -34,7 +34,7 @@
       "location" : "https://github.com/schwa/Interaction3D",
       "state" : {
         "branch" : "main",
-        "revision" : "4cdd1495b7703981308a7afc11cd8a88c08b72ce"
+        "revision" : "9bc6c85de11da1156e0b72edd28015945fdedc4d"
       }
     },
     {
@@ -70,7 +70,7 @@
       "location" : "https://github.com/schwa/MetalSprocketsGLTF",
       "state" : {
         "branch" : "main",
-        "revision" : "306a04f3fb684f9f4d2f17c87d951f7d9bdb68bb"
+        "revision" : "6aafd9c77db12ae0d03fcc311c9e516d27762155"
       }
     },
     {
@@ -79,7 +79,7 @@
       "location" : "https://github.com/schwa/MetalSprocketsPBR",
       "state" : {
         "branch" : "main",
-        "revision" : "29f4616114c07ace16c427fd0e353c6c180d1f4d"
+        "revision" : "9b5495b6d51fe274a5be471fc577a9b3f9f88986"
       }
     },
     {
@@ -130,7 +130,7 @@
     {
       "identity" : "swift-collections",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-collections.git",
+      "location" : "https://github.com/apple/swift-collections",
       "state" : {
         "revision" : "35a1edcb8ebd2bfe251d587f0b69e62af28f508c",
         "version" : "1.7.3"
@@ -187,7 +187,7 @@
       "location" : "https://github.com/schwa/SwiftMesh",
       "state" : {
         "branch" : "main",
-        "revision" : "e02b6dba449be104b1c98050e1e780242df269e3"
+        "revision" : "cdb410e46388fb95edf7fbebdd0e988af9163db4"
       }
     }
   ],

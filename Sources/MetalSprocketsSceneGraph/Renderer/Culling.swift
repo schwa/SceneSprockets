@@ -2,7 +2,7 @@ import GeometryLite3D
 import simd
 
 // Conservative: false only when all eight corners are outside the same clip plane (Metal clip space, z in 0...w).
-func isInFrustum(_ bounds: BoundingBox, viewProjection: simd_float4x4) -> Bool {
+func isInFrustum(_ bounds: BoundingBox3D, viewProjection: simd_float4x4) -> Bool {
     let corners = (0..<8).map { index -> SIMD4<Float> in
         let corner = SIMD3<Float>(
             index & 1 == 0 ? bounds.min.x : bounds.max.x,

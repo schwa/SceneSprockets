@@ -21,7 +21,7 @@ extension SceneGraph {
                 self.init()
                 return
             }
-            self.init(translation: components.translate, rotation: components.rotation, scale: components.scale)
+            self.init(translation: components.translation, rotation: components.rotation, scale: components.scale)
         }
 
         public var matrix: simd_float4x4 {
