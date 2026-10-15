@@ -25,12 +25,12 @@ public struct SceneDemoView: View {
     public var body: some View {
         SceneView(
             sceneGraph: scene.sceneGraph,
-            options: [.allowsCameraControl],
+            options: scene.usesSceneCamera ? [] : [.allowsCameraControl],
             renderers: scene.renderers,
             delegate: delegate,
             isPlaying: !isPaused,
             shadows: scene.shadows,
-            cameraMatrix: $cameraMatrix,
+            cameraMatrix: scene.usesSceneCamera ? .constant(nil) : $cameraMatrix,
             hitTestCategoryBitMask: scene.pickCategoryBitMask
         ) { hit in
             scene.pick(hit)
@@ -44,15 +44,24 @@ public struct SceneDemoView: View {
         }
         .toolbar {
             ForEach(scene.actions) { action in
-                Button(action.name, systemImage: action.systemImage) {
-                    action.perform()
+                if let shortcut = action.shortcut {
+                    Button(action.name, systemImage: action.systemImage) {
+                        action.perform()
+                    }
+                    .keyboardShortcut(shortcut, modifiers: [])
+                } else {
+                    Button(action.name, systemImage: action.systemImage) {
+                        action.perform()
+                    }
                 }
             }
             Button(isPaused ? "Play" : "Pause", systemImage: isPaused ? "play.fill" : "pause.fill") {
                 isPaused.toggle()
             }
-            Button("Reset Camera", systemImage: "camera.viewfinder") {
-                cameraMatrix = scene.initialCameraMatrix
+            if !scene.usesSceneCamera {
+                Button("Reset Camera", systemImage: "camera.viewfinder") {
+                    cameraMatrix = scene.initialCameraMatrix
+                }
             }
         }
         // DemoKit shows this in its own inspector, with a toolbar button to toggle it.

@@ -1,6 +1,7 @@
 public enum DemoCatalog {
     // Demos that need only this package. Apps can append their own (e.g. ones that need extra dependencies).
     public static let demos: [Demo] = [
+        Demo(id: "keynote", title: "Introduction to SceneGraph", systemImage: "play.rectangle", section: .basics, summary: "A keynote-style tour built from scene graph features. Arrow keys or click to move between slides; turn on Auto-advance in the inspector.") { KeynoteDemo() },
         Demo(id: "scenekit-features", title: "SceneKit Features", systemImage: "sparkles", section: .basics, summary: "Shapes and text, lights and shadows, actions, constraints, implicit animation, fog, custom shaders and category masks in one scene.") { SceneKitFeaturesDemo() },
         Demo(id: "shadows", title: "Shadows", systemImage: "shadow", section: .basics, summary: "Directional, spot or point light shadows on their own, with intensity, softness, color, and a floor that can stop receiving them.") { ShadowsDemo() },
         Demo(id: "pbr-materials", title: "Materials", systemImage: "circle.grid.3x3", section: .materials, summary: "PBR spheres (metallic to the right, roughness upward) beside Blinn-Phong spheres, drawn in one pass.") { PBRMaterialsDemo() },

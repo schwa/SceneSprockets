@@ -1959,12 +1959,13 @@ Candidates to add to GeometryLite3D, then use here:
 ## 98: Demo: "Introduction to MSSG" keynote-style presentation
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: area:demo, effort:l
 created: 2026-10-15T02:37:51Z
-updated: 2026-10-15T19:22:45Z
+updated: 2026-10-15T20:27:29Z
+closed: 2026-10-15T20:27:29Z
 +++
 
 A demo that presents MSSG like an Apple WWDC keynote, built entirely with MSSG. Slides and transitions are scenes, not SwiftUI views.
@@ -1975,6 +1976,8 @@ A demo that presents MSSG like an Apple WWDC keynote, built entirely with MSSG. 
 - Lives in the demo package with the other demos, runnable from the app and from scenegraph-demos.
 
 Gaps it may hit: text styling (#80), node opacity for fades (#76), post-processing such as bloom (#45).
+
+- `2026-10-15T20:27:29Z`: Added KeynoteDemo ("Introduction to SceneGraph", first in the catalog): 10 slides along +X, camera flights with Transaction, slide cross-fades with node opacity, Next/Previous toolbar actions on the arrow keys, click to advance, Auto-advance parameter. DemoAction gained a key shortcut and DemoScene.usesSceneCamera turns off user camera control. Slides for the remaining listed features are #115.
 
 ---
 
@@ -2245,5 +2248,19 @@ created: 2026-10-15T20:21:37Z
 +++
 
 MaterialRenderState (#84) works for Blinn-Phong and ShaderMaterial. PBRSceneMaterial has none: PBRRenderer sets its own depth/stencil, blending and fill state inside MetalSprocketsPBR with no per-material hook (only alphaMode and doubleSided). Needs MetalSprocketsPBR to accept per-material blend mode, depth read/write, color write mask and fill mode (or a pipeline/encoder hook), then PBRSceneMaterial.renderState wired through.
+
+---
+
+## 115: Keynote demo is missing slides for several features
+
++++
+status: new
+priority: low
+kind: task
+labels: area:demo, effort:m
+created: 2026-10-15T20:27:29Z
++++
+
+The keynote demo (#98, KeynoteDemo.swift) has slides for the scene graph, shapes, materials, lights, actions, constraints, opacity/fades and blend modes. Features #98 listed with no slide yet: shadows, fog and environment, Transaction (used only for the camera flights), animation blending, morphing and skinning, glTF and Model I/O import, hit testing, SceneView, and physics. Lights are range-limited per slide; scene-wide settings (fog, shadows, environment) need a way to switch on per slide.
 
 ---

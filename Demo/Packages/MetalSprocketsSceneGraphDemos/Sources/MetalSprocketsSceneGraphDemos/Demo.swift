@@ -7,6 +7,7 @@ import MetalSprocketsSupport
 import MetalSupport
 import Observation
 import SwiftMesh
+import SwiftUI
 import simd
 
 public enum DemoSection: String, CaseIterable, Sendable {
@@ -75,11 +76,14 @@ public struct DemoAction: Identifiable {
     public var id: String { name }
     public var name: String
     public var systemImage: String
+    // A key with no modifiers that runs the action, such as .rightArrow.
+    public var shortcut: KeyEquivalent?
     public var perform: @MainActor () -> Void
 
-    public init(_ name: String, systemImage: String, perform: @escaping @MainActor () -> Void) {
+    public init(_ name: String, systemImage: String, shortcut: KeyEquivalent? = nil, perform: @escaping @MainActor () -> Void) {
         self.name = name
         self.systemImage = systemImage
+        self.shortcut = shortcut
         self.perform = perform
     }
 }
@@ -103,6 +107,8 @@ open class DemoScene {
     public var selectedNodeID: SceneGraph.Node.ID?
     // Only nodes in these categories can be picked.
     public var pickCategoryBitMask: UInt = .max
+    // True when the demo moves its own camera node: the view then turns off user camera control.
+    @ObservationIgnored public var usesSceneCamera = false
 
     public init(sceneGraph: SceneGraph, renderers: [any SceneGraphMaterialRenderer] = [BlinnPhongMaterialRenderer()], cameraMatrix: simd_float4x4, parameters: [DemoParameter] = []) {
         self.sceneGraph = sceneGraph
