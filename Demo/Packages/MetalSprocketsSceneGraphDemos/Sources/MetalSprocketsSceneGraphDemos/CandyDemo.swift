@@ -16,7 +16,7 @@ final class CandyDemo: DemoScene {
         root.addChild(.pointLight("Key Light", at: [-4, 6, 8], intensity: 60))
         root.addChild(.pointLight("Fill Light", at: [6, -2, 6], color: [0.9, 0.95, 1], intensity: 15))
         // Behind the shapes, so diffuse transmission makes the gummies glow at their thin edges.
-        root.addChild(.pointLight("Back Light", at: [1, 3, -8], color: [1, 0.9, 0.8], intensity: 150))
+        root.addChild(.pointLight("Back Light", at: [1, 3, -8], color: [1, 0.9, 0.8], intensity: 400))
 
         let speckles = Self.makeSpeckleBinding()
         let roundedBox = MetalMesh(mesh: .roundedBox(extents: [1.6, 2.2, 1.1], radius: 0.35), device: demoDevice)
@@ -69,16 +69,19 @@ final class CandyDemo: DemoScene {
     // MARK: Materials
 
     private static func gummy(color: SIMD3<Float>, speckles: PBRMaterial.Binding) -> PBRSceneMaterial {
-        var uniforms = PBRMaterialUniforms.defaults(baseColor: SIMD4(color, 1), metallic: 0, roughness: 0.55)
+        var uniforms = PBRMaterialUniforms.defaults(baseColor: SIMD4(color, 1), metallic: 0, roughness: 0.4)
         uniforms.baseColor.enabled = 1
         uniforms.baseColor.transform = simd_float3x3(diagonal: [1.5, 1.5, 1])
         uniforms.sheenColorFactor = [1, 0.95, 0.9] * 0.25
         uniforms.sheenRoughnessFactor = 0.4
-        uniforms.diffuseTransmissionFactor = 0.6
+        uniforms.diffuseTransmissionFactor = 0.9
         uniforms.diffuseTransmissionColorFactor = color
+        // Some blurred refraction of the surroundings makes the body read as jelly, not plastic.
+        uniforms.transmissionFactor = 0.35
+        uniforms.ior = 1.4
         // Thicker parts absorb more and go a deeper, more saturated color.
         uniforms.thicknessFactor = 1
-        uniforms.attenuationDistance = 0.8
+        uniforms.attenuationDistance = 0.5
         uniforms.attenuationColor = simd_mix(color, color * color, [0.5, 0.5, 0.5])
         uniforms.volumeScatter = 1
         uniforms.multiscatterColorFactor = simd_mix(color, [1, 1, 1], [0.4, 0.4, 0.4])

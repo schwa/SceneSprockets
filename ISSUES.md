@@ -2294,12 +2294,13 @@ Each demo must be added in two places: DemoCatalog.demos (used by the CLI, DemoS
 ## 117: Candy demo gummies don't look subsurface-scattered
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: demo, effort:s, area:demo
 created: 2026-10-15T21:15:13Z
-updated: 2026-10-15T21:23:01Z
+updated: 2026-10-15T21:28:05Z
+closed: 2026-10-15T21:28:05Z
 +++
 
 The gummies in CandyDemo read as tinted plastic, not soft translucent candy. Light does not seem to bleed through thin edges or glow deeper in thick parts.
@@ -2312,6 +2313,8 @@ Notes from MetalSprocketsGLTF / MetalSprocketsPBR:
 - The GLTFViewer ShowcaseScene glass sample uses KHR_materials_transmission + ior + volume. The gummy uses none of that.
 
 Expected: gummies look soft and translucent, with brighter, more saturated thin edges when backlit.
+
+- `2026-10-15T21:28:05Z`: Gummies now use partial specular transmission (0.35, IOR 1.4), more diffuse transmission (0.9), lower roughness (0.4), shorter attenuation distance (0.5) and a stronger back light. Thickness still constant: no thickness texture, and view-dependent thinness at silhouettes is not something a texture can express. No test: visual tuning of a demo with no golden image; checked with scenegraph-demos --render candy.
 
 ---
 
