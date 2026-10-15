@@ -1845,12 +1845,13 @@ SceneView/SceneGraphElement have no multisampling, no debug overlays or statisti
 ## 96: Sort transparent entries back to front
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: effort:m, area:renderer
 created: 2026-10-15T02:28:08Z
-updated: 2026-10-15T02:31:17Z
+updated: 2026-10-15T02:51:27Z
+closed: 2026-10-15T02:51:27Z
 +++
 
 No renderer sorts transparent entries back to front; you have to use renderingOrder by hand. ShaderMaterial with isTransparent is not sorted, and Blinn-Phong has no transparency yet (#36). See docs/SceneKitComparison.md.

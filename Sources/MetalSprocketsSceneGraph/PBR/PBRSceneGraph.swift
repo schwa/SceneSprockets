@@ -14,6 +14,10 @@ public struct PBRSceneMaterial: MetalSprocketsSceneGraph.Material {
         self.pbrMaterial = pbrMaterial
     }
 
+    public var isTransparent: Bool {
+        pbrMaterial.isBlended
+    }
+
     public init(device: MTLDevice, baseColor: SIMD4<Float> = [1, 1, 1, 1], metallic: Float = 0, roughness: Float = 0.5) throws {
         let uniforms = PBRMaterialUniforms.defaults(baseColor: baseColor, metallic: metallic, roughness: roughness)
         pbrMaterial = try PBRMaterial(uniforms: uniforms, placeholder: PBRMaterial.placeholderBinding(device: device), device: device)

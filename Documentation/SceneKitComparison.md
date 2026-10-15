@@ -132,7 +132,7 @@ Legend:
 | `lightingModel = .lambert`, `.constant` | — | 🟡 | Use Blinn-Phong with no specular, PBR `unlit`, or a `ShaderMaterial`. |
 | `lightingModel = .shadowOnly` | — | ❌ | |
 | `SCNMaterialProperty` (contents, intensity, wrap, filter, mip, `contentsTransform`) | PBR texture slots with texture transforms; Blinn-Phong `ColorSource` | 🟡 | No uniform "property" type across materials. |
-| `transparency`, `transparencyMode`, `blendMode` | PBR `alphaMode` (opaque, mask, blend); `ShaderMaterial.isTransparent` | 🟡 | No additive, multiply or screen blend modes. Transparent `ShaderMaterial`s are not sorted; use `renderingOrder`. |
+| `transparency`, `transparencyMode`, `blendMode` | PBR `alphaMode` (opaque, mask, blend); `ShaderMaterial.isTransparent` | 🟡 | No additive, multiply or screen blend modes. Transparent entries draw after opaque ones, farthest first (`Material.isTransparent`). |
 | `isDoubleSided`, `cullMode` | PBR `doubleSided` | 🟡 | Blinn-Phong and `ShaderMaterial` have no cull mode setting. |
 | `writesToDepthBuffer`, `readsFromDepthBuffer` | `ShaderMaterial.isTransparent` (tests depth, does not write) | 🟡 | No general switch. |
 | `colorBufferWriteMask` | — | ❌ | |
@@ -305,7 +305,7 @@ SceneKit animates with `CAAnimation`/`SCNAnimation` and `SCNAnimationPlayer`, ke
 | `SCNSceneRendererDelegate` (`update`, `didApplyAnimations`, `didSimulatePhysics`, `didApplyConstraints`, `willRender`, `didRender`) | `SceneViewDelegate` (`sceneView(updateAtTime:deltaTime:)`, `sceneView(didApplyActionsAtTime:)`) | 🟡 | Two callbacks. No physics, constraint or render callbacks. |
 | `SCNNodeRendererDelegate` | A custom `SceneGraphMaterialRenderer` | 🟡 | Per material type, not per node. |
 | Frustum culling | Blinn-Phong: CPU AABB culling, front-to-back sort | 🟡 | PBR culling is up to MetalSprocketsPBR. `ShaderMaterial` does not cull. |
-| Transparency sorting | PBR: opaque before blended | 🟡 | No back-to-front sorting of transparent nodes in MSSG; use `renderingOrder`. |
+| Transparency sorting | Within each `renderingOrder`: opaque first, then transparent entries farthest first | 🟡 | Sorted by bounds center, per renderer: transparent entries of different renderers do not interleave. |
 | Depth | Reversed depth (near 1, far 0) everywhere | ➕ | Required by MetalSprocketsPBR. |
 | Metal / OpenGL | Metal 4 only (MetalSprockets) | 🟡 | |
 | — | `SceneGraphBackgroundRenderer` | ➕ | Renderers can draw the environment background. |

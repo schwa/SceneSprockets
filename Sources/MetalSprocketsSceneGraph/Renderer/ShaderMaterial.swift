@@ -26,8 +26,8 @@ public struct ShaderMaterial: MetalSprocketsSceneGraph.Material {
     public var vertexShader: VertexShader
     public var fragmentShader: FragmentShader
     public var parameters: [String: Value]
-    // Alpha-blends over what is already drawn and does not write depth. Transparent materials are not sorted; draw
-    // order follows Node.renderingOrder (then scene order), so give transparent nodes a higher renderingOrder.
+    // Alpha-blends over what is already drawn and does not write depth. Drawn after opaque meshes of the same
+    // Node.renderingOrder, farthest first.
     public var isTransparent: Bool
 
     public init(vertexShader: VertexShader, fragmentShader: FragmentShader, parameters: [String: Value] = [:], isTransparent: Bool = false) {

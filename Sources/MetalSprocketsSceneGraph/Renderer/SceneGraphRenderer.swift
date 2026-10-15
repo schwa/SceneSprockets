@@ -188,11 +188,13 @@ func makeRenderContext(sceneGraph: SceneGraph, camera: SceneGraph.Node?, cameraM
     )
 }
 
-// Groups entries by rendering order (ascending), then by the lights whose masks match, keeping first-seen order.
-// Each batch's context holds only its lights.
+// Groups entries by rendering order (ascending), then opaque before transparent, then by the lights whose masks
+// match, keeping first-seen order. Transparent entries are sorted farthest first. Each batch's context holds only
+// its lights.
 func renderBatches(_ entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) -> [(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext)] {
     struct Key: Hashable {
         var order: Int
+        var isTransparent: Bool
         var lights: [Int]
     }
     var keys: [Key] = []
@@ -203,14 +205,21 @@ func renderBatches(_ entries: [SceneGraph.MeshEntry], context: SceneGraphRenderC
             let mask = index < context.lightCategoryBitMasks.count ? context.lightCategoryBitMasks[index] : .max
             return mask & entry.node.categoryBitMask != 0
         }
-        let key = Key(order: entry.node.renderingOrder, lights: lights)
+        let key = Key(order: entry.node.renderingOrder, isTransparent: entry.material.isTransparent, lights: lights)
         if groups[key] == nil {
             keys.append(key)
         }
         groups[key, default: []].append(entry)
     }
+    let cameraPosition = SIMD3(context.cameraMatrix.columns.3.x, context.cameraMatrix.columns.3.y, context.cameraMatrix.columns.3.z)
+    for key in keys where key.isTransparent {
+        groups[key] = sortedBackToFront(groups[key] ?? [], cameraPosition: cameraPosition)
+    }
     let allLights = Array(context.lights.indices)
-    return keys.enumerated().sorted { ($0.element.order, $0.offset) < ($1.element.order, $1.offset) }.map { _, key in
+    return keys.enumerated().sorted {
+        ($0.element.order, $0.element.isTransparent ? 1 : 0, $0.offset) < ($1.element.order, $1.element.isTransparent ? 1 : 0, $1.offset)
+    }
+    .map { _, key in
         var batchContext = context
         if key.lights != allLights {
             batchContext.lights = key.lights.map { context.lights[$0] }
