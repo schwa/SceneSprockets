@@ -1813,12 +1813,13 @@ SceneGraph.hitTest always tests both faces, returns every hit, and runs on the w
 ## 94: Scene queries: project/unproject point, frustum queries
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: effort:s, area:scenegraph
 created: 2026-10-15T02:28:08Z
-updated: 2026-10-15T02:31:16Z
+updated: 2026-10-15T02:52:11Z
+closed: 2026-10-15T02:52:11Z
 +++
 
 Missing SceneKit renderer APIs: projectPoint, unprojectPoint (Ray(viewPoint:) covers part of this), nodesInsideFrustum(of:) and isNode(_:insideFrustumOf:). Frustum culling exists but is internal to the Blinn-Phong renderer. See docs/SceneKitComparison.md.

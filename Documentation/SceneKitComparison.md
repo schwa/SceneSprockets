@@ -25,7 +25,7 @@ Legend:
 | Implicit animation | 🟡 | Transform and morph weights only |
 | Constraints | 🟡 | Look-at, billboard and distance; no IK (#57), no replicator, acceleration, slider, avoid-occluder or transform constraints |
 | Morphing and skinning | ✅ | Four influences per vertex; CPU fallback for Blinn-Phong |
-| Hit testing | 🟡 | Ray against triangles only; no `projectPoint`, no options (back-face, bounding-box-only, first-only), no frustum queries |
+| Hit testing | 🟡 | Ray against triangles only; no options (back-face, bounding-box-only, first-only) |
 | Physics | ❌ | Demo-only Jolt integration (#38) |
 | Particles | ❌ | #50 |
 | Audio | ❌ | #51 |
@@ -273,8 +273,8 @@ SceneKit animates with `CAAnimation`/`SCNAnimation` and `SCNAnimationPlayer`, ke
 | `SCNHitTestResult` (node, geometryIndex, faceIndex, localCoordinates, worldCoordinates, localNormal, worldNormal, `textureCoordinates(withMappingChannel:)`) | `Hit` (node, submeshIndex, triangleIndex, distance, position, normal) | 🟡 | World position and face normal only. No local coordinates, no texture coordinates, no barycentrics. |
 | Options: `boundingBoxOnly`, `backFaceCulling`, `firstFoundOnly`, `sortResults`, `ignoreHiddenNodes`, `searchMode`, `categoryBitMask` | `categoryBitMask` | 🟡 | Always both faces, always every hit sorted nearest first, always skips hidden nodes. |
 | Deformed geometry | Uses CPU-deformed geometry for skinned and morphed meshes | ✅ | |
-| `projectPoint`, `unprojectPoint` | — | ❌ | `Ray(viewPoint:…)` does the unproject part. |
-| `nodesInsideFrustum(of:)`, `isNode(_:insideFrustumOf:)` | — | ❌ | Frustum culling exists but is internal to the Blinn-Phong renderer. |
+| `projectPoint`, `unprojectPoint` | `SceneGraph.projectPoint`, `SceneGraph.unprojectPoint` | ✅ | Static: pass view size, camera and projection matrices. |
+| `nodesInsideFrustum(of:)`, `isNode(_:insideFrustumOf:)` | `nodesInsideFrustum(cameraMatrix:projectionMatrix:)`, `isNode(_:insideFrustumWithCameraMatrix:projectionMatrix:)` | ✅ | Conservative bounding-box test. |
 | Physics queries (`rayTestWithSegment`, `contactTest`, `convexSweepTest`) | — | ❌ | |
 
 ## Physics
