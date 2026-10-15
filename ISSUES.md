@@ -889,7 +889,7 @@ Want: fog settings on the scene, used by Blinn-Phong and PBR.
 
 ---
 
-## 45: Camera post-processing: HDR, bloom, DOF, SSAO, tone mapping
+## 45: Camera post-processing: HDR, bloom, depth of field, tone mapping
 
 +++
 status: open
@@ -897,7 +897,7 @@ priority: low
 kind: feature
 labels: area:renderer, effort:l
 created: 2026-10-13T20:20:23Z
-updated: 2026-10-13T20:21:45Z
+updated: 2026-10-15T03:32:22Z
 +++
 
 Cameras have only a projection. SceneKit cameras have HDR, exposure, bloom, depth of field, motion blur, SSAO, vignette and color grading.
@@ -905,6 +905,7 @@ Cameras have only a projection. SceneKit cameras have HDR, exposure, bloom, dept
 Want: post-processing settings on `Camera`, applied after the scene pass. Start with HDR, tone mapping and bloom.
 
 - `2026-10-13T20:21:45Z`: Related: #43 (scene environment).
+- `2026-10-15T03:32:22Z`: Done: SceneGraph.postProcessing with SSAO (unblurred), exposure, contrast, saturation and vignette, as compute passes after fog; Shadows demo toggles and a golden image. Left: HDR and tone mapping (needs float render targets in the renderers, including MetalSprocketsPBR), bloom and depth of field (need extra textures and blur passes), an SSAO blur.
 
 ---
 

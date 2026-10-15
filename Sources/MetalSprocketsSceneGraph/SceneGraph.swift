@@ -13,6 +13,8 @@ public class SceneGraph {
     public var environment = Environment()
     // Nil: no fog. Read every frame, so changing it does not change `revision`.
     public var fog: Fog?
+    // Nil: no post-processing. Read every frame, like `fog`.
+    public var postProcessing: PostProcessing?
 
     public init(root: Node) {
         self.root = root

@@ -156,7 +156,7 @@ public struct SceneView: View {
 
     // Read when SwiftUI updates the view; setting fog later needs a view update to take effect.
     private var needsPostPasses: Bool {
-        shadows != nil || sceneGraph.fog != nil
+        shadows != nil || sceneGraph.fog != nil || sceneGraph.postProcessing != nil
     }
 
     private var cameraBinding: Binding<simd_float4x4> {

@@ -106,8 +106,12 @@ public struct SceneGraphElement: Element {
                 try shadows?.prepare(entries: entries, context: context, bounds: sceneGraph.bounds, viewSize: (targets.color.width, targets.color.height))
             }
             let fog = postTargets == nil ? nil : sceneGraph.fog
-            let scenePass = try makeScenePass(elements: elements, clearColor: clearColor, storesDepth: shadowFrame != nil || fog != nil)
-            guard let postTargets, shadowFrame != nil || fog != nil else {
+            let postProcessing = postTargets == nil ? nil : sceneGraph.postProcessing
+            let ambientOcclusion = postProcessing?.ambientOcclusion
+            let adjustsColor = postProcessing?.adjustsColor ?? false
+            let hasPostPasses = shadowFrame != nil || fog != nil || ambientOcclusion != nil || adjustsColor
+            let scenePass = try makeScenePass(elements: elements, clearColor: clearColor, storesDepth: hasPostPasses)
+            guard let postTargets, hasPostPasses else {
                 return scenePass.eraseToAnyElement()
             }
             let inverseViewProjection = (context.projectionMatrix * context.viewMatrix).inverse
@@ -128,8 +132,15 @@ public struct SceneGraphElement: Element {
                         radius: shadows.softness
                     )
                 }
+                // Occlusion darkens geometry before fog covers it; color adjustment comes last.
+                if let ambientOcclusion {
+                    AmbientOcclusionPass(settings: ambientOcclusion, depthTexture: postTargets.depth, colorTexture: postTargets.color, viewProjection: context.projectionMatrix * context.viewMatrix, cameraPosition: cameraPosition)
+                }
                 if let fog {
-                    FogPass(fog: fog, depthTexture: postTargets.depth, colorTexture: postTargets.color, inverseViewProjection: inverseViewProjection, cameraPosition: SIMD3(context.cameraMatrix.columns.3.x, context.cameraMatrix.columns.3.y, context.cameraMatrix.columns.3.z))
+                    FogPass(fog: fog, depthTexture: postTargets.depth, colorTexture: postTargets.color, inverseViewProjection: inverseViewProjection, cameraPosition: cameraPosition)
+                }
+                if let postProcessing, adjustsColor {
+                    ColorAdjustPass(settings: postProcessing, colorTexture: postTargets.color)
                 }
             }
             .eraseToAnyElement()

@@ -41,6 +41,8 @@ final class ShadowsDemo: DemoScene {
                 .toggle("Blue Shadows", default: false),
                 .toggle("Floor Receives Shadows", default: true),
                 .slider("Light Angle", 0...(2 * .pi), default: 0.6),
+                .toggle("Ambient Occlusion", default: false),
+                .slider("Vignette", 0...1, default: 0),
             ]
         )
     }
@@ -65,6 +67,9 @@ final class ShadowsDemo: DemoScene {
         shadowRenderer.intensity = self[value: "Shadow Intensity"]
         shadowRenderer.softness = Int(self[value: "Softness"].rounded())
         shadowRenderer.color = self[flag: "Blue Shadows"] ? [0.2, 0.3, 1] : .zero
+        let ambientOcclusion = self[flag: "Ambient Occlusion"] ? SceneGraph.AmbientOcclusion(radius: 0.6, intensity: 0.9, sampleCount: 16) : nil
+        let vignette = self[value: "Vignette"]
+        sceneGraph.postProcessing = ambientOcclusion == nil && vignette == 0 ? nil : SceneGraph.PostProcessing(vignetteIntensity: vignette, ambientOcclusion: ambientOcclusion)
         let receives = self[flag: "Floor Receives Shadows"]
         if case let .mesh(mesh, materials, castsShadow, receivesShadow) = floor.content, receivesShadow != receives {
             floor.content = .mesh(mesh, materials: materials, castsShadow: castsShadow, receivesShadow: receives)

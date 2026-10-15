@@ -18,7 +18,7 @@ Legend:
 | Geometry | 🟡 | No geometry sources/elements API (uses `MetalMesh`), no GPU tessellation, no `SCNShape` (Bézier extrusion), no tube or pyramid, no segment counts |
 | Materials | 🟡 | No `SCNMaterial` with lighting models; Blinn-Phong has no transparency (#36); no shader modifiers |
 | Lights | 🟡 | Directional, point and spot only; no ambient light node, no IES, no area or probe lights |
-| Cameras | 🟡 | Perspective only; no HDR, bloom, DOF, motion blur, SSAO or color grading (#45) |
+| Cameras | 🟡 | Perspective only; SSAO, vignette, exposure, contrast and saturation, but no HDR, bloom, depth of field or motion blur (#45) |
 | Shadows | 🟡 | Shadow maps for all three light types, but one global setting, max 8 slices |
 | Animation | ✅ (different design) | Keyframe clips, blending, layers, state machine, events; no `CAAnimation` interop |
 | Actions | 🟡 | No fade, no `follow(path:)`, no sound actions, no JavaScript actions |
@@ -167,8 +167,9 @@ Legend:
 | `projectionTransform` (custom) | A custom `ProjectionProtocol` | ✅ | |
 | `categoryBitMask` | `Camera.categoryBitMask` | ✅ | Draws only matching nodes; also limits `SceneView` tap hits. |
 | `pointOfView` | `SceneGraphElement(camera:)`, `SceneView(pointOfView:)` | ✅ | Defaults to the first camera node. `cameraMatrix` overrides the world transform. With no camera node, `defaultCamera` is used. |
-| `wantsHDR`, exposure, tone mapping | PBR `exposure` | 🟡 | Exposure only, on `PBRMaterialRenderer`. #45. |
-| Bloom, depth of field, motion blur, SSAO, vignetting, color fringe, color grading, film grain | — | ❌ | #45. |
+| `wantsHDR`, exposure, tone mapping | `PostProcessing.exposure`; PBR `exposure` | 🟡 | Exposure on low dynamic range color; no HDR or tone mapping. #45. |
+| SSAO, vignetting, color grading (saturation, contrast) | `SceneGraph.postProcessing` (`ambientOcclusion`, `vignetteIntensity`, `saturation`, `contrast`) | 🟡 | Screen-space, after fog. SSAO is unblurred (grainy). No color lookup tables. |
+| Bloom, depth of field, motion blur, color fringe, film grain | — | ❌ | #45. |
 | `wantsExposureAdaptation` | — | ❌ | |
 | Camera control (`allowsCameraControl`, `SCNCameraController`) | `SceneView.Options.allowsCameraControl` | 🟡 | Orbit, pan and zoom from Interaction3D, around a target fixed when the view appears. Does not move the point-of-view node; the result is exposed through the `cameraMatrix` binding. No fly or turntable modes, no inertia settings. |
 

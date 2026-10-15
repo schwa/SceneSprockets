@@ -30,6 +30,7 @@ struct GoldenImageTests {
         Case(name: "shadows-spot", demo: "shadows", values: ["Light": 1]),
         Case(name: "shadows-point", demo: "shadows", values: ["Light": 2]),
         Case(name: "shadows-floor-not-receiving", demo: "shadows", values: ["Floor Receives Shadows": 0]),
+        Case(name: "ambient-occlusion-vignette", demo: "shadows", values: ["Shadows": 0, "Ambient Occlusion": 1, "Vignette": 0.6]),
         // Seeded emitters, so the particles are the same each run.
         Case(name: "particles", demo: "particles", values: [:], frames: 90),
     ]
