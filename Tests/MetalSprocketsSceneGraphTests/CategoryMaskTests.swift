@@ -53,7 +53,7 @@ func blinnPhongDrawsMeshesNoLightReaches() throws {
 func hitTestRespectsMask() throws {
     let (sceneGraph, box) = try scene()
     box.categoryBitMask = 0b10
-    let ray = SceneGraph.Ray(origin: [0, 0, 4], direction: [0, 0, -1])
+    let ray = Ray3D(origin: [0, 0, 4], direction: [0, 0, -1])
     #expect(sceneGraph.hitTest(ray).count > 0)
     #expect(sceneGraph.hitTest(ray, categoryBitMask: 0b01).isEmpty)
     #expect(sceneGraph.hitTest(ray, categoryBitMask: 0b10).count > 0)

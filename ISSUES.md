@@ -2091,13 +2091,17 @@ Move the public API closer to SceneKit's model so it is simple and easy to use. 
 ## 107: Hit testing has its own ray type and intersection code
 
 +++
-status: new
+status: closed
 priority: medium
 kind: enhancement
 labels: area:scenegraph, effort:s
 created: 2026-10-15T19:07:12Z
+updated: 2026-10-15T19:21:21Z
+closed: 2026-10-15T19:21:21Z
 +++
 
 HitTest.swift has SceneGraph.Ray and private Möller–Trumbore, slab and box-entry tests. GeometryLite3D has Ray3D with intersect(triangle:) and intersect(box:), but they cannot replace ours until GeometryLite3D #33 (nil when the ray starts inside the box), #34 (NaN for axis-parallel rays on a face plane) and #35 (fixed epsilon misses small triangles) are fixed. SceneGraph.Ray(viewPoint:viewSize:cameraMatrix:projectionMatrix:) is public and works out reversed depth by itself; Ray3D needs a reversedDepth flag or a ViewProjection. Split out of #97.
+
+- `2026-10-15T19:21:21Z`: Done with GeometryLite3D 0.2.3.
 
 ---

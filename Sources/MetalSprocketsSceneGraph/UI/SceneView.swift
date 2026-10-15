@@ -201,7 +201,7 @@ public struct SceneView: View {
         let camera = entry?.camera ?? SceneView.defaultCamera
         let matrix = options.contains(.allowsCameraControl) ? cameraMatrix ?? viewpoint.matrix : entry?.worldTransform ?? viewpoint.matrix
         let size = SIMD2<Float>(Float(viewSize.width), Float(viewSize.height))
-        let ray = SceneGraph.Ray(viewPoint: [Float(location.x), Float(location.y)], viewSize: size, cameraMatrix: matrix, projectionMatrix: camera.projection.projectionMatrix(aspectRatio: size.x / size.y))
+        let ray = ViewProjection(viewMatrix: matrix.inverse, projection: camera.projection, viewSize: size).ray(through: [Float(location.x), Float(location.y)])
         // Like SceneKit, taps only hit nodes the camera can see, further limited by hitTestCategoryBitMask.
         return sceneGraph.hitTest(ray, categoryBitMask: camera.categoryBitMask & hitTestCategoryBitMask).first
     }

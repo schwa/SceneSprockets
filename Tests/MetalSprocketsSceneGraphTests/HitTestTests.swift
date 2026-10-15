@@ -23,7 +23,7 @@ func hitTestFindsNearestBoxFirst() throws {
     sideways.trs.translation = [10, 0, -5]
     let sceneGraph = SceneGraph(root: root)
 
-    let hits = sceneGraph.hitTest(SceneGraph.Ray(origin: .zero, direction: [0, 0, -1]))
+    let hits = sceneGraph.hitTest(Ray3D(origin: .zero, direction: [0, 0, -1]))
     let bounds = try #require(near.meshBounds)
     #expect(hits.first?.node === near)
     #expect(hits.contains { $0.node === far })
@@ -44,7 +44,7 @@ func hitTestIgnoresHiddenNodesAndHitsBehindOrigin() throws {
     hidden.isVisible = false
     let behind = SceneGraph.Node(parent: root, content: .mesh(box, material: material()))
     behind.trs.translation = [0, 0, 5]
-    let hits = SceneGraph(root: root).hitTest(SceneGraph.Ray(origin: .zero, direction: [0, 0, -1]))
+    let hits = SceneGraph(root: root).hitTest(Ray3D(origin: .zero, direction: [0, 0, -1]))
     #expect(hits.isEmpty)
 }
 
@@ -56,7 +56,7 @@ func hitTestFollowsScaledTransforms() throws {
     node.trs = Transform3D(translation: [3, 0, 0], scale: [10, 1, 1])
     let bounds = try #require(node.meshBounds)
     // Misses the unscaled box at x = 3 + 2 * maxX, hits the scaled one.
-    let hits = SceneGraph(root: node).hitTest(SceneGraph.Ray(origin: [3 + 2 * bounds.max.x, 0, 10], direction: [0, 0, -1]))
+    let hits = SceneGraph(root: node).hitTest(Ray3D(origin: [3 + 2 * bounds.max.x, 0, 10], direction: [0, 0, -1]))
     #expect(hits.count == 2)
     #expect(abs(hits[0].distance - (10 - bounds.max.z)) < 1e-4)
 }
@@ -75,10 +75,11 @@ func viewPointRayGoesThroughCenter() {
         [0, 0, far / (near - far), -1],
         [0, 0, near * far / (near - far), 0]
     ))
-    let center = SceneGraph.Ray(viewPoint: [50, 50], viewSize: [100, 100], cameraMatrix: camera, projectionMatrix: projection)
+    let viewProjection = ViewProjection(viewMatrix: camera.inverse, projectionMatrix: projection, isReversedDepth: false, viewSize: [100, 100])
+    let center = viewProjection.ray(through: [50, 50])
     #expect(simd_distance(center.direction, [0, 0, -1]) < 1e-4)
     #expect(simd_distance(center.origin, [1, 2, 3 - near]) < 1e-3)
-    let top = SceneGraph.Ray(viewPoint: [50, 0], viewSize: [100, 100], cameraMatrix: camera, projectionMatrix: projection)
+    let top = viewProjection.ray(through: [50, 0])
     #expect(abs(acos(simd_dot(top.direction, [0, 0, -1])) - fov / 2) < 1e-3)
     #expect(top.direction.y > 0)
 }
@@ -97,7 +98,7 @@ private func twoBoxes() throws -> (SceneGraph, near: SceneGraph.Node, far: Scene
 func hitTestOptionsCullBackFacesAndStopEarly() throws {
     let (sceneGraph, near, _) = try twoBoxes()
     // Off center, so the ray does not run along the faces' diagonals.
-    let ray = SceneGraph.Ray(origin: [0.1, 0.2, 0], direction: [0, 0, -1])
+    let ray = Ray3D(origin: [0.1, 0.2, 0], direction: [0, 0, -1])
     // Each box has a front and a back face on the ray.
     #expect(sceneGraph.hitTest(ray).count == 4)
     #expect(sceneGraph.hitTest(ray, options: .init(backFaceCulling: true)).count == 2)
@@ -116,7 +117,7 @@ func segmentHitTestStopsAtItsEnd() throws {
 @Test
 func boundingBoxHitsReportEntryFace() throws {
     let (sceneGraph, near, _) = try twoBoxes()
-    let hits = sceneGraph.hitTest(SceneGraph.Ray(origin: .zero, direction: [0, 0, -1]), options: .init(boundingBoxOnly: true))
+    let hits = sceneGraph.hitTest(Ray3D(origin: .zero, direction: [0, 0, -1]), options: .init(boundingBoxOnly: true))
     #expect(hits.count == 2)
     let first = try #require(hits.first)
     #expect(first.node === near)
@@ -131,7 +132,7 @@ func hitsReportBarycentricsAndTextureCoordinates() throws {
     // A 2x2 quad in XY: texture coordinates follow x and y.
     let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh(device: device)
     let node = SceneGraph.Node(content: .mesh(quad, material: material()))
-    let hit = try #require(SceneGraph(root: node).hitTest(SceneGraph.Ray(origin: [0.5, 0.5, 5], direction: [0, 0, -1])).first)
+    let hit = try #require(SceneGraph(root: node).hitTest(Ray3D(origin: [0.5, 0.5, 5], direction: [0, 0, -1])).first)
     #expect(abs(hit.barycentric.sum() - 1) < 1e-5)
     #expect(simd_distance(hit.localPosition, [0.5, 0.5, 0]) < 1e-4)
     let uv = try #require(hit.textureCoordinates())

@@ -270,7 +270,7 @@ SceneKit animates with `CAAnimation`/`SCNAnimation` and `SCNAnimationPlayer`, ke
 
 | SceneKit | MSSG | Status | Notes |
 |---|---|---|---|
-| `SCNSceneRenderer.hitTest(_:options:)` (screen point) | `SceneGraph.Ray(viewPoint:viewSize:cameraMatrix:projectionMatrix:)` + `hitTest`; `SceneView(onTap:)` | ✅ | `onTap` gets the nearest hit, limited to the camera's mask and `hitTestCategoryBitMask`. |
+| `SCNSceneRenderer.hitTest(_:options:)` (screen point) | `ViewProjection.ray(through:)` + `hitTest`; `SceneView(onTap:)` | ✅ | `onTap` gets the nearest hit, limited to the camera's mask and `hitTestCategoryBitMask`. |
 | `SCNNode.hitTestWithSegment(from:to:options:)` | `SceneGraph.hitTest(segmentFrom:to:options:)` with `options.rootNode` | ✅ | |
 | `SCNHitTestResult` (node, geometryIndex, faceIndex, localCoordinates, worldCoordinates, localNormal, worldNormal, `textureCoordinates(withMappingChannel:)`) | `Hit` | ✅ | Plus `localPosition`, `barycentric`, `vertexIndices` and `textureCoordinates(index:)`. No local normal. |
 | Options: `boundingBoxOnly`, `backFaceCulling`, `firstFoundOnly`, `sortResults`, `ignoreHiddenNodes`, `searchMode`, `categoryBitMask` | `HitTestOptions`: `categoryBitMask`, `backFaceCulling`, `boundingBoxOnly`, `firstFoundOnly`, `maximumDistance`, `rootNode` | 🟡 | Results are always sorted and hidden nodes always skipped. |

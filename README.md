@@ -98,7 +98,7 @@ You do not change the scene graph core.
 
 - **Revisions.** `SceneGraph.revision` has a `structure` and a `transform` value. Hierarchy, content, visibility, skin and morph target edits change `structure`. Transform and morph weight edits change `transform`. Compare revisions to skip work.
 - **Cached queries.** `meshEntries()`, `lightNodes()` and `cameraNodes()` share one traversal, cached by revision.
-- **Hit testing.** `SceneGraph.hitTest(_:)` returns every triangle a `SceneGraph.Ray` hits, nearest first, with node, submesh, triangle index, distance, position and normal. Skinned and morphed meshes use their deformed positions. `Ray(viewPoint:viewSize:cameraMatrix:projectionMatrix:)` makes the ray for a point in a view.
+- **Hit testing.** `SceneGraph.hitTest(_:)` returns every triangle a GeometryLite3D `Ray3D` hits, nearest first, with node, submesh, triangle index, distance, position and normal. Skinned and morphed meshes use their deformed positions. `ViewProjection.ray(through:)` makes the ray for a point in a view.
 - **Bounds.** `Node.meshBounds`, `Node.subtreeBounds`, `SceneGraph.bounds` and `SceneGraph.worldBounds(of:)` return `BoundingBox3D` values. They are cached by revision.
 
 ## Animation, morph targets, skins
