@@ -701,8 +701,9 @@ status: open
 priority: high
 kind: enhancement
 labels: effort:m, area:renderer
+depends: 100
 created: 2026-10-12T15:40:04Z
-updated: 2026-10-15T02:31:15Z
+updated: 2026-10-15T12:02:24Z
 +++
 
 Split from #32 (instancing done). BlinnPhongMaterial (MetalSprocketsAddOns) has no alpha or blend mode, so the renderer cannot tell transparent entries apart. Needs: alpha/blend mode on the material (upstream in MetalSprocketsAddOns, plus blending in BlinnPhongShader), then draw opaque first, transparent back-to-front with depth writes off. PBR already does this.
@@ -711,6 +712,7 @@ Split from #32 (instancing done). BlinnPhongMaterial (MetalSprocketsAddOns) has 
 - `2026-10-14T13:36:18Z`: Looked at it. Punting: BlinnPhongMaterial and its shader live in MetalSprocketsAddOns, a remote dependency on main. The fragment shader always returns alpha 1, and the material has no opacity or blend mode, so transparency needs an upstream change. Options: (a) add opacity/blend mode to BlinnPhongMaterial and alpha output to BlinnPhongShader in MetalSprocketsAddOns (commit there; you push), then do the opaque-then-sorted-transparent split here; (b) give this repo its own Blinn-Phong shader in MetalSprocketsSceneGraphShaders with opacity, which duplicates AddOns code. Which do you want?
 - `2026-10-14T13:54:48Z`: Decision: bring our own Blinn-Phong material and shaders into this repo (MetalSprocketsSceneGraphShaders + renderer target) and stop using BlinnPhongMaterial/BlinnPhongShader from MetalSprocketsAddOns. Then do the opaque/transparent split.
 - `2026-10-15T02:31:16Z`: Related: #83, #96.
+- `2026-10-15T12:02:24Z`: Depends on #100 (own Blinn-Phong).
 
 ---
 
@@ -1430,8 +1432,9 @@ status: open
 priority: high
 kind: bug
 labels: area:renderer, effort:m
+depends: 100
 created: 2026-10-14T15:36:23Z
-updated: 2026-10-15T02:49:40Z
+updated: 2026-10-15T12:02:24Z
 +++
 
 Reported: shadows have been badly broken in the demos since the demo consolidation. Exact symptoms not yet recorded (wrong place, missing, all dark, flickering?) and which demos (SceneKit Features, Imported Assets).
@@ -1447,6 +1450,7 @@ Next: get a screenshot or description, then render SceneKit Features offscreen w
 - `2026-10-14T15:48:46Z`: Symptoms (SceneKit Features, screenshot 2026-10-14 11.46.47): (1) acne/z-fighting-like shadow pattern on the extruded text (see #60); (2) a giant dark, flickering wedge over the front of the floor, shaped like a light frustum. Probably a spot or point-light shadow view from #58 treating a large area as shadowed. Also only ~31 FPS with all 8 shadow views. Workaround: shadows toggle in the demo, default off.
 - `2026-10-15T02:44:10Z`: Investigated offscreen (DemoSnapshot with Shadows on, each light alone, diffed against shadows off). Cause: the screen-space shadow mask multiplies every light's shadow factor and darkens the pixel, whatever light actually lights it. So (1) surfaces facing away from the red point light or the spotlight are 'self-shadowed' in those lights' maps and get darkened even where the sun lights them (all shapes go dark), (2) the red light only lights category 2 but its shadows darken everything, giving the large wedge-shaped dark areas on the floor. The geometry of each light's shadow alone looks right. Punting: a real fix needs per-light shadow factors inside the lighting shaders (MetalSprocketsAddOns Blinn-Phong and MetalSprocketsPBR), or a design call such as SceneKit-style per-light castsShadow (SceneKit defaults it to false) so only chosen lights cast. Which do you want?
 - `2026-10-15T02:49:40Z`: Update after #66: the shadow mask kernel now lives in MSSG (SceneShadowMask). A fix without other libraries is possible: per pixel, weight each light's shadow by that light's contribution (N·L from depth-reconstructed normals, range/cone falloff, color*intensity) so a light that does not light a surface cannot darken it; and write each mesh's categoryBitMask into the mask pass so lightCategoryBitMask is respected. Say if you want that instead of per-light castsShadow.
+- `2026-10-15T12:02:24Z`: Depends on #100 (own Blinn-Phong).
 
 ---
 
@@ -1546,11 +1550,14 @@ status: open
 priority: medium
 kind: feature
 labels: effort:m, area:scenegraph
+depends: 100
 created: 2026-10-15T02:28:06Z
-updated: 2026-10-15T02:31:14Z
+updated: 2026-10-15T12:02:24Z
 +++
 
 SceneKit has SCNNode.opacity (inherited by children) and fadeIn/fadeOut/fadeOpacity actions. Nodes here have no opacity, so there are no fade actions either. Want: Node.opacity applied by every renderer, plus the fade actions. See docs/SceneKitComparison.md.
+
+- `2026-10-15T12:02:24Z`: Depends on #100 (own Blinn-Phong).
 
 ---
 
@@ -1660,13 +1667,15 @@ status: open
 priority: medium
 kind: enhancement
 labels: effort:m, area:renderer
+depends: 100
 created: 2026-10-15T02:28:07Z
-updated: 2026-10-15T02:31:16Z
+updated: 2026-10-15T12:02:24Z
 +++
 
 BlinnPhongMaterial has only ambient, diffuse and specular color sources and shininess. It has no normal map, no emission, and no double-sided/cull mode setting. Transparency is #36. See docs/SceneKitComparison.md.
 
 - `2026-10-15T02:31:16Z`: Related: #36.
+- `2026-10-15T12:02:24Z`: Depends on #100 (own Blinn-Phong).
 
 ---
 
@@ -1947,5 +1956,27 @@ closed: 2026-10-15T02:44:10Z
 +++
 
 When light category masks leave a Blinn-Phong batch with no lights (for example only a light with lightCategoryBitMask 0b10 and a mesh in category 1), BlinnPhongMaterialRenderer passes an empty array to Lighting, which asserts (MetalSprocketsAddOns Lighting.swift:62). Seen while rendering SceneKit Features with only the red light visible.
+
+---
+
+## 100: Own Blinn-Phong material, renderer and shaders (stop using AddOns')
+
++++
+status: new
+priority: high
+kind: enhancement
+labels: area:renderer, effort:l
+created: 2026-10-15T12:02:03Z
++++
+
+Decision on #36 (2026-10-14): bring Blinn-Phong into this repo and stop using BlinnPhongMaterial, BlinnPhongShader and Lighting from MetalSprocketsAddOns.
+
+Scope:
+- A Blinn-Phong material type in MetalSprocketsSceneGraph (ambient, diffuse, specular as color or texture; shininess), replacing AddOns' BlinnPhongMaterial everywhere (renderer, ModelIO loader, tests, demos).
+- Shaders in MetalSprocketsSceneGraphShaders: directional, point and spot lights with node orientation, range and cone falloff; instanced and non-instanced paths; reversed depth.
+- BlinnPhongMaterialRenderer keeps culling, front-to-back sorting, instancing and the CPU deformation fallback.
+- Same output as today for existing scenes (golden images or pixel tests before and after).
+
+Unblocks: #36 (opacity and transparency), #71 (per-light shadows sampled in the fragment shader), #83 (normal maps, emission, cull mode), the Blinn-Phong half of #76 (node opacity), and GPU skinning/morphing for Blinn-Phong.
 
 ---
