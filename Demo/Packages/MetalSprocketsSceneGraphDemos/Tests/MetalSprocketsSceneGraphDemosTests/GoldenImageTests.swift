@@ -37,6 +37,7 @@ struct GoldenImageTests {
         Case(name: "scenekit-features-shadows", demo: "scenekit-features", values: ["Shadows": 1]),
         Case(name: "instancing", demo: "instancing", values: [:]),
         Case(name: "materials", demo: "pbr-materials", values: [:]),
+        Case(name: "materials-translucent-blinn-phong", demo: "pbr-materials", values: ["Blinn-Phong Opacity": 0.4, "Turn": 1], frames: 650),
         Case(name: "deformation", demo: "deformation", values: [:], frames: 30),
         // Seeded emitters, so the particles are the same each run.
         Case(name: "particles", demo: "particles", values: [:], frames: 90),

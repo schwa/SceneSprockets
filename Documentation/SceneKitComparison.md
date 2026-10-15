@@ -16,7 +16,7 @@ Legend:
 | Scene and nodes | 🟡 | No opacity, no `flattenedClone`, no `presentation` node, no serialization |
 | Transforms | 🟡 | No Euler angles, no `look(at:)` method (use a constraint), no world-space setters |
 | Geometry | 🟡 | No geometry sources/elements API (uses `MetalMesh`), no GPU tessellation, no `SCNShape` (Bézier extrusion), no tube or pyramid, no segment counts |
-| Materials | 🟡 | No `SCNMaterial` with lighting models; Blinn-Phong has no transparency (#36); no shader modifiers |
+| Materials | 🟡 | No `SCNMaterial` with lighting models; no shader modifiers |
 | Lights | 🟡 | Directional, point and spot only; no ambient light node, no IES, no area or probe lights |
 | Cameras | 🟡 | Perspective only; SSAO, vignette, exposure, contrast and saturation, but no HDR, bloom, depth of field or motion blur (#45) |
 | Shadows | 🟡 | Shadow maps for all three light types, but one global setting, max 8 slices |
@@ -128,11 +128,11 @@ Legend:
 |---|---|---|---|
 | `SCNMaterial` (one type, many lighting models) | `Material` marker protocol; one renderer per material type | 🟡 | Different design: each material family has its own `SceneGraphMaterialRenderer`. Add a family without changing the core. |
 | `lightingModel = .physicallyBased` | `PBRSceneMaterial` (wraps `PBRMaterial`) | ✅ | Metallic-roughness glTF model, plus many extensions: transmission, volume (thickness, attenuation), IOR, specular, iridescence, anisotropy, sheen, clearcoat, dispersion, diffuse transmission, emissive strength, unlit, texture transforms. Much wider than SceneKit's PBR. |
-| `lightingModel = .blinn` / `.phong` | `BlinnPhongSceneMaterial` | 🟡 | Ambient, diffuse and specular as a color or a tinted 2D texture, and `shininess`. Own shaders in this repo. No transparency (#36), no normal maps, no emission (#83). One ambient light color per renderer (`BlinnPhongMaterialRenderer.ambientLightColor`). |
+| `lightingModel = .blinn` / `.phong` | `BlinnPhongSceneMaterial` | 🟡 | Ambient, diffuse and specular as a color or a tinted 2D texture, and `shininess`. Own shaders in this repo. `opacity` and diffuse texture alpha. No normal maps, no emission (#83). One ambient light color per renderer (`BlinnPhongMaterialRenderer.ambientLightColor`). |
 | `lightingModel = .lambert`, `.constant` | — | 🟡 | Use Blinn-Phong with no specular, PBR `unlit`, or a `ShaderMaterial`. |
 | `lightingModel = .shadowOnly` | — | ❌ | |
 | `SCNMaterialProperty` (contents, intensity, wrap, filter, mip, `contentsTransform`) | PBR texture slots with texture transforms; Blinn-Phong `BlinnPhongSceneMaterial.Source` | 🟡 | No uniform "property" type across materials. |
-| `transparency`, `transparencyMode`, `blendMode` | PBR `alphaMode` (opaque, mask, blend); `ShaderMaterial.isTransparent` | 🟡 | No additive, multiply or screen blend modes. Transparent entries draw after opaque ones, farthest first (`Material.isTransparent`). |
+| `transparency`, `transparencyMode`, `blendMode` | PBR `alphaMode` (opaque, mask, blend); `ShaderMaterial.isTransparent`; Blinn-Phong `opacity` | 🟡 | No additive, multiply or screen blend modes. Transparent entries draw after opaque ones, farthest first (`Material.isTransparent`). |
 | `isDoubleSided`, `cullMode` | PBR `doubleSided` | 🟡 | Blinn-Phong and `ShaderMaterial` have no cull mode setting. |
 | `writesToDepthBuffer`, `readsFromDepthBuffer` | `ShaderMaterial.isTransparent` (tests depth, does not write) | 🟡 | No general switch. |
 | `colorBufferWriteMask` | — | ❌ | |

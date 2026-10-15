@@ -697,13 +697,14 @@ Split from #18, which got a README guide (scene building, rendering, custom rend
 ## 36: Blinn-Phong transparency: opaque/transparent split
 
 +++
-status: open
+status: closed
 priority: high
 kind: enhancement
 labels: effort:m, area:renderer
 depends: 100
 created: 2026-10-12T15:40:04Z
-updated: 2026-10-15T12:02:24Z
+updated: 2026-10-15T13:18:16Z
+closed: 2026-10-15T13:18:16Z
 +++
 
 Split from #32 (instancing done). BlinnPhongMaterial (MetalSprocketsAddOns) has no alpha or blend mode, so the renderer cannot tell transparent entries apart. Needs: alpha/blend mode on the material (upstream in MetalSprocketsAddOns, plus blending in BlinnPhongShader), then draw opaque first, transparent back-to-front with depth writes off. PBR already does this.

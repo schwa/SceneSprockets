@@ -57,5 +57,8 @@ struct BlinnPhongMaterialUniforms {
     int hasSpecularTexture;
     // 0 ignores shadows for this mesh.
     int receivesShadow;
+    // Output alpha; multiplied by the diffuse texture's alpha when usesDiffuseAlpha is set.
+    float opacity;
+    int usesDiffuseAlpha;
 };
 typedef struct BlinnPhongMaterialUniforms BlinnPhongMaterialUniforms;

@@ -91,11 +91,16 @@ namespace BlinnPhong {
         float3 ambientColor = material.ambient;
         float3 diffuseColor = material.diffuse;
         float3 specularColor = material.specular;
+        float alpha = material.opacity;
         if (material.hasAmbientTexture) {
             ambientColor *= ambientTexture.sample(textureSampler, in.textureCoordinate).rgb;
         }
         if (material.hasDiffuseTexture) {
-            diffuseColor *= diffuseTexture.sample(textureSampler, in.textureCoordinate).rgb;
+            float4 sample = diffuseTexture.sample(textureSampler, in.textureCoordinate);
+            diffuseColor *= sample.rgb;
+            if (material.usesDiffuseAlpha) {
+                alpha *= sample.a;
+            }
         }
         if (material.hasSpecularTexture) {
             specularColor *= specularTexture.sample(textureSampler, in.textureCoordinate).rgb;
@@ -150,7 +155,7 @@ namespace BlinnPhong {
             diffuse += diffuseColor * lambertian * light.color * attenuation * shadowing;
             specular += specularColor * highlight * light.color * attenuation * shadowing;
         }
-        return float4(frame.ambientLightColor * ambientColor + diffuse + specular, 1);
+        return float4(frame.ambientLightColor * ambientColor + diffuse + specular, alpha);
     }
 
 }

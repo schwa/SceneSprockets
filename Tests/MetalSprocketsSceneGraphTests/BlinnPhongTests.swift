@@ -36,6 +36,64 @@ func diffuseAndAmbientTexturesAreSampled() throws {
     #expect(value.x < 5 && value.y < 5)
 }
 
+// #36: two flat-colored quads, `near` in front. Returns the center pixel (BGRA).
+@MainActor
+private func quads(near: BlinnPhongSceneMaterial, far: BlinnPhongSceneMaterial, nearFirst: Bool = true) throws -> SIMD4<UInt8> {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh(device: device)
+    let root = SceneGraph.Node()
+    _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40)))))
+    let nearNode = SceneGraph.Node(trs: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: near))
+    let farNode = SceneGraph.Node(content: .mesh(quad, material: far))
+    for node in nearFirst ? [nearNode, farNode] : [farNode, nearNode] {
+        root.addChild(node)
+    }
+    let renderer = try OffscreenRenderer(size: CGSize(width: 16, height: 16))
+    let texture = try renderer.render(SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [1, 1, 1])])).texture
+    var value = SIMD4<UInt8>.zero
+    texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(8, 8, 1, 1), mipmapLevel: 0)
+    return value
+}
+
+private func flat(_ color: SIMD3<Float>, opacity: Float = 1) -> BlinnPhongSceneMaterial {
+    BlinnPhongSceneMaterial(ambient: .color(color), diffuse: .color(0), specular: .color(0), shininess: 1, opacity: opacity)
+}
+
+@Test
+@MainActor
+func translucentBlinnPhongBlendsOverWhatIsBehind() throws {
+    // Opaque red in front hides blue.
+    let opaque = try quads(near: flat([1, 0, 0]), far: flat([0, 0, 1]))
+    #expect(opaque.z > 200 && opaque.x < 5)
+    // Half-transparent red in front: both show. The opaque quad draws first, even though it comes second.
+    let blended = try quads(near: flat([1, 0, 0], opacity: 0.5), far: flat([0, 0, 1]))
+    #expect(blended.z > 100 && blended.x > 100)
+}
+
+@Test(arguments: [true, false])
+@MainActor
+func translucentBlinnPhongDrawsBackToFront(nearFirst: Bool) throws {
+    // Both half-transparent: the nearer one draws last and dominates, whatever the scene order.
+    let value = try quads(near: flat([1, 0, 0], opacity: 0.5), far: flat([0, 0, 1], opacity: 0.5), nearFirst: nearFirst)
+    #expect(Int(value.z) > Int(value.x) + 20)
+    // And the far one shows through (transparent draws do not write depth).
+    #expect(value.x > 40)
+}
+
+@Test
+@MainActor
+func diffuseTextureAlphaIsOpacity() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba8Unorm, width: 1, height: 1, mipmapped: false)
+    let clear = try #require(device.makeTexture(descriptor: descriptor))
+    clear.replace(region: MTLRegionMake2D(0, 0, 1, 1), mipmapLevel: 0, withBytes: [UInt8(255), 255, 255, 0], bytesPerRow: 4)
+    let material = BlinnPhongSceneMaterial(ambient: .color([1, 0, 0]), diffuse: .texture(clear), specular: .color(0), shininess: 1, usesDiffuseTextureAlpha: true)
+    #expect(material.isTransparent)
+    // Fully clear: only the blue quad behind shows.
+    let value = try quads(near: material, far: flat([0, 0, 1]))
+    #expect(value.x > 200 && value.z < 5)
+}
+
 @Test
 @MainActor
 func zeroNormalsFallBackToFaceNormals() throws {

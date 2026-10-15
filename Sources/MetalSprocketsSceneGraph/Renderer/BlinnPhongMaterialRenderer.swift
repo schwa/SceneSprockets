@@ -26,12 +26,23 @@ public struct BlinnPhongSceneMaterial: MetalSprocketsSceneGraph.Material, Sample
     public var diffuse: Source
     public var specular: Source
     public var shininess: Float
+    // 0 is invisible, 1 opaque. Below 1 the material blends over what is behind it and does not write depth;
+    // transparent meshes draw after opaque ones of the same rendering order, farthest first.
+    public var opacity: Float
+    // Multiplies opacity by the diffuse texture's alpha (and makes the material transparent).
+    public var usesDiffuseTextureAlpha: Bool
 
-    public init(ambient: Source, diffuse: Source, specular: Source, shininess: Float) {
+    public init(ambient: Source, diffuse: Source, specular: Source, shininess: Float, opacity: Float = 1, usesDiffuseTextureAlpha: Bool = false) {
         self.ambient = ambient
         self.diffuse = diffuse
         self.specular = specular
         self.shininess = shininess
+        self.opacity = opacity
+        self.usesDiffuseTextureAlpha = usesDiffuseTextureAlpha
+    }
+
+    public var isTransparent: Bool {
+        opacity < 1 || usesDiffuseTextureAlpha
     }
 }
 
@@ -55,26 +66,50 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer {
         let lightValues = lights.isEmpty ? [BlinnPhongLight()] : lights
         // The shader has no morph or skin inputs, so those meshes are deformed on the CPU. They skip culling because
         // their node bounds do not cover the deformation.
-        var plain: [SceneGraph.MeshEntry] = []
+        // SceneGraphElement batches opaque and transparent entries apart, transparent ones sorted farthest first.
+        let isTransparent = entries.first?.material.isTransparent ?? false
+        let culled = Set(culledMeshEntries(entries, viewProjection: viewProjection).map { ObjectIdentifier($0.node) })
+        var visible: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, modelMatrix: simd_float4x4)] = []
         var deformed: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, modelMatrix: simd_float4x4)] = []
         for entry in entries {
             if let result = entry.deformed(revision: context.revision) {
-                deformed.append((entry, result.mesh, result.modelMatrix))
-            } else {
-                plain.append(entry)
+                // Deformed meshes skip culling; their node bounds do not cover the deformation.
+                if isTransparent {
+                    visible.append((entry, result.mesh, result.modelMatrix))
+                } else {
+                    deformed.append((entry, result.mesh, result.modelMatrix))
+                }
+            } else if culled.contains(ObjectIdentifier(entry.node)) {
+                visible.append((entry, entry.mesh, entry.worldTransform))
             }
         }
-        let visible = sortedFrontToBack(culledMeshEntries(plain, viewProjection: viewProjection), cameraPosition: cameraPosition)
-            .map { (entry: $0, mesh: $0.mesh, modelMatrix: $0.worldTransform) } + deformed
+        if !isTransparent {
+            visible = sortedFrontToBack(visible.map(\.entry), cameraPosition: cameraPosition).map { (entry: $0, mesh: $0.mesh, modelMatrix: $0.worldTransform) } + deformed
+        }
         let items = visible.compactMap { item in
             (item.entry.material as? BlinnPhongSceneMaterial).map { (entry: item.entry, mesh: item.mesh, modelMatrix: item.modelMatrix, material: $0) }
         }
-        // Each vertex layout needs its own pipelines; repeated mesh+material pairs draw as one instanced call.
-        let groups = groupedByVertexDescriptor(items) { $0.mesh.vertexDescriptor }.map { group in
-            let batches = instanceBatches(group.entries)
-            return (vertexDescriptor: group.vertexDescriptor, single: batches.filter { $0.modelMatrices.count == 1 }, instanced: batches.filter { $0.modelMatrices.count > 1 })
+        let groups: [(vertexDescriptor: VertexDescriptor, single: [InstanceBatch], instanced: [InstanceBatch])]
+        if isTransparent {
+            // Keep the order: consecutive runs of one vertex layout, with no instancing (it would reorder draws).
+            var runs: [(vertexDescriptor: VertexDescriptor, single: [InstanceBatch], instanced: [InstanceBatch])] = []
+            for item in items {
+                let batch = InstanceBatch(mesh: item.mesh, submeshIndex: item.entry.submeshIndex, material: item.material, receivesShadow: item.entry.receivesShadow, modelMatrices: [item.modelMatrix])
+                if let last = runs.indices.last, runs[last].vertexDescriptor == item.mesh.vertexDescriptor {
+                    runs[last].single.append(batch)
+                } else {
+                    runs.append((item.mesh.vertexDescriptor, [batch], []))
+                }
+            }
+            groups = runs
+        } else {
+            // Each vertex layout needs its own pipelines; repeated mesh+material pairs draw as one instanced call.
+            groups = groupedByVertexDescriptor(items) { $0.mesh.vertexDescriptor }.map { group in
+                let batches = instanceBatches(group.entries)
+                return (vertexDescriptor: group.vertexDescriptor, single: batches.filter { $0.modelMatrices.count == 1 }, instanced: batches.filter { $0.modelMatrices.count > 1 })
+            }
         }
-        return BlinnPhongBatchesElement(groups: groups, frame: frame, lights: lightValues, shadow: context.shadow).eraseToAnyElement()
+        return BlinnPhongBatchesElement(groups: groups, frame: frame, lights: lightValues, shadow: context.shadow, isTransparent: isTransparent).eraseToAnyElement()
     }
 }
 
@@ -85,6 +120,8 @@ private struct BlinnPhongBatchesElement: Element {
     var frame: BlinnPhongFrame
     var lights: [BlinnPhongLight]
     var shadow: SceneGraphShadows.Sampling?
+    // Blends and does not write depth.
+    var isTransparent: Bool
 
     @MSEnvironment(\.submissionIndex)
     private var submissionIndex
@@ -166,6 +203,7 @@ private struct BlinnPhongBatchesElement: Element {
                         }
                     }
                     .vertexDescriptor(group.vertexDescriptor.mtlVertexDescriptor)
+                    .blinnPhongTransparency(isTransparent)
                 }
                 if !group.instanced.isEmpty {
                     try RenderPipeline(label: "Blinn-Phong Instanced", vertexShader: shaders.instancedVertex, fragmentShader: fragmentShader) {
@@ -174,9 +212,28 @@ private struct BlinnPhongBatchesElement: Element {
                         }
                     }
                     .vertexDescriptor(group.vertexDescriptor.mtlVertexDescriptor)
+                    .blinnPhongTransparency(isTransparent)
                 }
             }
         }
+    }
+}
+
+private extension Element {
+    // Reversed depth. Transparent draws test depth but do not write it, and blend straight alpha over the target.
+    func blinnPhongTransparency(_ isTransparent: Bool) -> some Element {
+        depthCompare(function: .greater, enabled: !isTransparent)
+            .renderPipelineDescriptorTransformer { descriptor in
+                guard isTransparent else {
+                    return
+                }
+                let attachment = descriptor.colorAttachments[0]!
+                attachment.blendingState = .enabled
+                attachment.sourceRGBBlendFactor = .sourceAlpha
+                attachment.destinationRGBBlendFactor = .oneMinusSourceAlpha
+                attachment.sourceAlphaBlendFactor = .one
+                attachment.destinationAlphaBlendFactor = .oneMinusSourceAlpha
+            }
     }
 }
 
@@ -216,7 +273,9 @@ extension BlinnPhongSceneMaterial {
             hasAmbientTexture: ambient.texture == nil ? 0 : 1,
             hasDiffuseTexture: diffuse.texture == nil ? 0 : 1,
             hasSpecularTexture: specular.texture == nil ? 0 : 1,
-            receivesShadow: 1
+            receivesShadow: 1,
+            opacity: opacity,
+            usesDiffuseAlpha: usesDiffuseTextureAlpha ? 1 : 0
         )
         let sampler = diffuse.sampler ?? ambient.sampler ?? specular.sampler ?? defaultSampler
         return Resolved(uniforms: uniforms, ambientTexture: ambient.texture ?? placeholder, diffuseTexture: diffuse.texture ?? placeholder, specularTexture: specular.texture ?? placeholder, sampler: sampler)
@@ -258,10 +317,14 @@ func instanceBatches(_ items: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, mo
 private struct MaterialKey: Hashable {
     var sources: [SourceKey]
     var shininess: Float
+    var opacity: Float
+    var usesDiffuseTextureAlpha: Bool
 
     init(_ material: BlinnPhongSceneMaterial) {
         sources = [material.ambient, material.diffuse, material.specular].map(SourceKey.init)
         shininess = material.shininess
+        opacity = material.opacity
+        usesDiffuseTextureAlpha = material.usesDiffuseTextureAlpha
     }
 
     enum SourceKey: Hashable {

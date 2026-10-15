@@ -9,6 +9,8 @@ import simd
 // Blinn-Phong spheres with matching shininess: both renderers in one pass, sharing camera, lights and depth.
 final class PBRMaterialsDemo: DemoScene {
     private let grid: SceneGraph.Node
+    private var blinnPhongNodes: [SceneGraph.Node] = []
+    private var blinnPhongOpacity: Float = 1
 
     init() {
         let sphere = MetalMesh(mesh: .sphere(latitudeSegments: 32, longitudeSegments: 64), device: demoDevice)
@@ -32,17 +34,27 @@ final class PBRMaterialsDemo: DemoScene {
             }
             let blinnPhong = BlinnPhongSceneMaterial.plastic([0.9, 0.35, 0.2], shininess: 4 + (1 - roughness) * 120)
             let position = SIMD3<Float>(Float(count - count / 2) * spacing + offset + 0.4, y, 0)
-            _ = SceneGraph.Node(parent: grid, label: "Blinn-Phong R \(row)", trs: .init(translation: position), content: .mesh(sphere, material: blinnPhong))
+            blinnPhongNodes.append(SceneGraph.Node(parent: grid, label: "Blinn-Phong R \(row)", trs: .init(translation: position), content: .mesh(sphere, material: blinnPhong)))
         }
         super.init(
             sceneGraph: SceneGraph(root: root),
             renderers: [BlinnPhongMaterialRenderer(), PBRMaterialRenderer(device: demoDevice)],
             cameraMatrix: .camera(eye: [0, 0, 14], target: .zero),
-            parameters: [.toggle("Turn", default: false)]
+            parameters: [.toggle("Turn", default: false), .slider("Blinn-Phong Opacity", 0...1, default: 1)]
         )
     }
 
     override func update(time: Float, deltaTime: Float) {
+        let opacity = self[value: "Blinn-Phong Opacity"]
+        if opacity != blinnPhongOpacity {
+            blinnPhongOpacity = opacity
+            for node in blinnPhongNodes {
+                if case let .mesh(mesh, materials, castsShadow, receivesShadow) = node.content, var material = materials.first as? BlinnPhongSceneMaterial {
+                    material.opacity = opacity
+                    node.content = .mesh(mesh, materials: [material], castsShadow: castsShadow, receivesShadow: receivesShadow)
+                }
+            }
+        }
         if self[flag: "Turn"] {
             grid.trs.rotation = simd_normalize(simd_quatf(angle: deltaTime * 0.4, axis: [0, 1, 0]) * grid.trs.rotation)
         }
