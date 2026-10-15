@@ -6,6 +6,7 @@ import SwiftMesh
 import simd
 
 // SceneKit-style features in one scene:
+// - Orthographic camera (#87): a toggle swaps the camera's projection.
 // - Shapes (#61): a row of parametric shapes and 3D text; sliders reshape the torus live.
 // - Actions (#62): the shapes spin forever, an orbit pivot turns, and "Hop" runs a one-shot sequence on the text.
 // - Constraints (#63): a spotlight and a cone track the orbiting ball, the text faces the camera (Y only), and a
@@ -20,6 +21,7 @@ final class SceneKitFeaturesDemo: DemoScene {
         ("Ease In Out", .easeInEaseOut), ("Ease In", .easeIn), ("Ease Out", .easeOut), ("Linear", .linear),
     ]
     private static let categoryTwo: UInt = 0b10
+    private static let perspective = PerspectiveProjection(verticalAngleOfView: .degrees(45))
 
     private let cameraNode: SceneGraph.Node
     private let torus: SceneGraph.Node
@@ -125,6 +127,7 @@ final class SceneKitFeaturesDemo: DemoScene {
                 .toggle("Blue Pane Drawn Last", default: true),
                 .toggle("Pick Category 1 Only", default: false),
                 .toggle("Shadows", default: true),
+                .toggle("Orthographic", default: false),
             ]
         )
         actions = [
@@ -145,9 +148,14 @@ final class SceneKitFeaturesDemo: DemoScene {
         }
         sceneGraph.fog = self[flag: "Fog"] ? SceneGraph.Fog(color: [0.55, 0.6, 0.7, 1], startDistance: 8, endDistance: 18) : nil
         let mask: UInt = self[flag: "Show Category 2"] ? .max : ~Self.categoryTwo
-        if case var .camera(camera) = cameraNode.content, camera.categoryBitMask != mask {
-            camera.categoryBitMask = mask
-            cameraNode.content = .camera(camera)
+        if case var .camera(camera) = cameraNode.content {
+            let isOrthographic = self[flag: "Orthographic"]
+            if camera.categoryBitMask != mask || (camera.projection is OrthographicProjection) != isOrthographic {
+                camera.categoryBitMask = mask
+                // The orthographic view is about as tall as the perspective one at the scene's center.
+                camera.projection = isOrthographic ? OrthographicProjection(halfHeight: 4.5, depthMode: .standard(zClip: 0.01 ... 100)) : Self.perspective
+                cameraNode.content = .camera(camera)
+            }
         }
     }
 

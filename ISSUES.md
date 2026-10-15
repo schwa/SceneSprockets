@@ -2210,15 +2210,18 @@ BlinnPhongSceneMaterial.emission, normalMap and cullMode (#83) have no demo. Add
 ## 112: SceneKit Features demo has no orthographic camera
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: area:demo, effort:xs
 created: 2026-10-15T20:12:17Z
-updated: 2026-10-15T20:12:55Z
+updated: 2026-10-15T20:29:38Z
+closed: 2026-10-15T20:29:38Z
 +++
 
 Orthographic cameras (#87) have no demo. Add a perspective/orthographic toggle to SceneKitFeaturesDemo that swaps the camera node's projection to OrthographicProjection (halfHeight sized to frame the scene). Check that SceneView's camera control and tap hit testing still work with it.
+
+- `2026-10-15T20:29:38Z`: Added an Orthographic toggle to SceneKitFeaturesDemo that swaps the camera node's projection (halfHeight 4.5). Test: projection swaps both ways and a tap ray built like SceneView's hits the sphere. Not checked by hand: SceneView's camera control in orthographic mode (dolly moves the camera but does not zoom, since orthographic size does not depend on distance).
 
 ---
 

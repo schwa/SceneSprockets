@@ -1,4 +1,5 @@
 import CoreGraphics
+import GeometryLite3D
 import Metal
 import MetalSprockets
 import MetalSprocketsSceneGraph
@@ -64,6 +65,37 @@ func deformationDemoMorphKeepsSurfaceClosed() throws {
             deltaByPosition[key] = delta
         }
     }
+}
+
+// #112: the orthographic toggle swaps the camera's projection; it still renders, and a tap ray (built like SceneView's)
+// through a shape's projected center hits that shape.
+@Test
+@MainActor
+func sceneKitFeaturesOrthographicToggle() throws {
+    let scene = SceneKitFeaturesDemo()
+    scene[flag: "Orthographic"] = true
+    scene.update(time: 0, deltaTime: 0)
+    let cameraNode = try #require(scene.sceneGraph.cameraNodes().first?.node)
+    guard case let .camera(camera) = cameraNode.content else {
+        Issue.record("Expected a camera")
+        return
+    }
+    #expect(camera.projection is OrthographicProjection)
+
+    let viewSize = SIMD2<Float>(64, 64)
+    let viewProjection = ViewProjection(viewMatrix: scene.initialCameraMatrix.inverse, projection: camera.projection, viewSize: viewSize)
+    // The torus has a hole at its center; the sphere does not.
+    let target = try #require(scene.sceneGraph.meshEntries().first { $0.node.label == "Sphere" }?.node)
+    let point = try #require(viewProjection.project(target.worldPosition))
+    let hit = scene.sceneGraph.hitTest(viewProjection.ray(through: [point.x, point.y]), categoryBitMask: camera.categoryBitMask).first
+    #expect(hit?.node === target)
+
+    scene[flag: "Orthographic"] = false
+    scene.update(time: 0, deltaTime: 0)
+    guard case let .camera(perspective) = cameraNode.content else {
+        return
+    }
+    #expect(perspective.projection is PerspectiveProjection)
 }
 
 @Test

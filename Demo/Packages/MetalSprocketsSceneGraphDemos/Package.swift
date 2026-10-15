@@ -61,6 +61,7 @@ let package = Package(
                 .product(name: "MetalSprocketsSceneGraph", package: "MetalSprocketsSceneGraph"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
                 .product(name: "GoldenImage", package: "GoldenImage"),
+                .product(name: "GeometryLite3D", package: "GeometryLite3D"),
             ],
             resources: [.copy("Golden Images")]
         ),
