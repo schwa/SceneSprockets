@@ -1,5 +1,5 @@
 {
-  "originHash" : "91eece4ddceb032c9f3dfa096e8a5f9f6e43d3142ee494d3d79d9db43f186c4b",
+  "originHash" : "383d442bc580453438482474af1b764b08d2fd6806df7e9445abf813d6cabc26",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -79,7 +79,7 @@
       "location" : "https://github.com/schwa/MetalSprocketsGLTF",
       "state" : {
         "branch" : "main",
-        "revision" : "6aafd9c77db12ae0d03fcc311c9e516d27762155"
+        "revision" : "72327d4151d09f75a404f4f880eef2852373f65c"
       }
     },
     {
