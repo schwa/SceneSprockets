@@ -1531,9 +1531,9 @@ The difference must be in SceneDemoView or SceneView: .onGeometryChange, .onTapG
 status: open
 priority: medium
 kind: enhancement
-labels: area:renderer, effort:l
+labels: area:renderer, effort:l, deferred
 created: 2026-10-14T16:41:14Z
-updated: 2026-10-15T02:31:13Z
+updated: 2026-10-15T20:11:38Z
 +++
 
 Target: 120 fps (8.3 ms frames) on a ProMotion display in every demo. Some demos drop well below that.
@@ -2138,13 +2138,93 @@ HitTest.swift has SceneGraph.Ray and private Möller–Trumbore, slab and box-en
 ## 108: PBR meshes ignore node opacity
 
 +++
-status: new
+status: open
 priority: medium
 kind: enhancement
 labels: area:renderer, effort:m
 created: 2026-10-15T19:51:39Z
+updated: 2026-10-15T20:12:55Z
 +++
 
 Node.opacity (#76) fades Blinn-Phong and ShaderMaterial meshes, but PBRSceneMaterial has appliesNodeOpacity false, so PBR meshes stay opaque during fades. PBRMaterial is a class with a resource buffer built once, and PBRModel draws blended materials in different passes, so applying opacity means a per-node material copy with a scaled baseColorFactor alpha and alphaMode blend, and a model rebuild when an entry crosses opacity 1. A per-instance opacity input in MetalSprocketsPBR would avoid both.
+
+- `2026-10-15T20:12:56Z`: Related: #110 (fade demo should note PBR is excluded until this lands).
+
+---
+
+## 109: Scene graph lights and shadow maps come from MetalSprocketsAddOns
+
++++
+status: open
+priority: medium
+kind: task
+labels: area:renderer, effort:m
+created: 2026-10-15T20:07:48Z
+updated: 2026-10-15T20:12:55Z
++++
+
+MSSG's core types depend on MetalSprocketsAddOns: Light (and its type enum) is the C struct from MetalSprocketsAddOnsShaders/Lighting.h, used by Node.Content.light, SceneGraphRenderer, Shadows, BlinnPhong and the glTF/Model I/O loaders. Shadows use AddOns' ShadowMap and ShadowContext (requiredColorUsage/requiredDepthUsage), and ShadowCasterDepthPass mirrors ShadowMapDepthPass. Nine source files import MetalSprocketsAddOns. Since #100, Blinn-Phong is in-repo, so these are the main remaining ties. Users must import MetalSprocketsAddOnsShaders just to make a light (the physics demo needed it). Want: MSSG-owned Light (a Swift type) and shadow map types, and drop the AddOns dependency where it is only used for these.
+
+- `2026-10-15T20:10:26Z`: Audit: Light/its type enum and ShadowMap/ShadowContext/ShadowMapDepthPass are the only AddOns symbols MSSG uses. No MSSG shader includes AddOns headers, and no other dependency (PBR, glTF, SwiftMesh...) depends on AddOns. So after this: remove the AddOns package and both products from Package.swift, its imports from 9 source files and ~25 test files (mostly only for Light), and from the demos (they use only Light and ShadowContext).
+
+---
+
+## 110: SceneKit Features demo does not show node opacity or fade actions
+
++++
+status: open
+priority: medium
+kind: task
+labels: area:demo, effort:s
+created: 2026-10-15T20:12:17Z
+updated: 2026-10-15T20:12:55Z
++++
+
+Node.opacity and the fade actions (#76) have no demo. Add them to SceneKitFeaturesDemo: for example a "Fade" action that runs fadeOut then fadeIn on a shape, and an opacity slider on a parent node to show that children inherit it. Use Blinn-Phong or ShaderMaterial shapes; PBR ignores node opacity (#108).
+
+---
+
+## 111: SceneKit Features demo does not show Blinn-Phong emission, normal maps or cull mode
+
++++
+status: open
+priority: medium
+kind: task
+labels: area:demo, effort:s
+created: 2026-10-15T20:12:17Z
+updated: 2026-10-15T20:12:55Z
++++
+
+BlinnPhongSceneMaterial.emission, normalMap and cullMode (#83) have no demo. Add them to SceneKitFeaturesDemo: a glowing (emissive) shape, a shape with a procedural normal map (bumps or tiles, so no asset is needed), and a toggle that sets a shape's cullMode to .back or .front so the hidden side is visible. A normal map with a clear up direction would also check the +Y green convention, which no test covers.
+
+---
+
+## 112: SceneKit Features demo has no orthographic camera
+
++++
+status: open
+priority: medium
+kind: task
+labels: area:demo, effort:xs
+created: 2026-10-15T20:12:17Z
+updated: 2026-10-15T20:12:55Z
++++
+
+Orthographic cameras (#87) have no demo. Add a perspective/orthographic toggle to SceneKitFeaturesDemo that swaps the camera node's projection to OrthographicProjection (halfHeight sized to frame the scene). Check that SceneView's camera control and tap hit testing still work with it.
+
+---
+
+## 113: SceneKit Features demo does not use the node transform helpers
+
++++
+status: open
+priority: low
+kind: task
+labels: area:demo, effort:s
+created: 2026-10-15T20:12:17Z
+updated: 2026-10-15T20:12:55Z
++++
+
+eulerAngles, worldPosition/worldOrientation setters, convertPosition/convertVector/convertTransform and look(at:) (#79) have no demo. Use them in SceneKitFeaturesDemo where they fit, for example a "Look at Ball" action that calls look(at:) once on a node (beside the existing lookAt constraint), and yaw/pitch/roll sliders bound to eulerAngles on one shape.
 
 ---
