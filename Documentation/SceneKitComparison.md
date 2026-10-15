@@ -28,7 +28,7 @@ Legend:
 | Hit testing | ✅ | Triangles or bounding boxes, rays or segments, with SceneKit-style options |
 | Physics | ❌ | Demo-only Jolt integration (#38) |
 | Particles | ❌ | #50 |
-| Audio | ❌ | #51 |
+| Audio | 🟡 | Positional `AudioPlayer`s on nodes, played by `SceneAudio`; no audio actions |
 | Fog and environment | ✅ | Linear and exponent fog; color or IBL background |
 | Rendering pipeline | 🟡 (different design) | No `SCNTechnique`, no render delegates at pass level; pluggable material renderers instead |
 | SwiftUI view | ✅ | `SceneView` with camera control, default lighting, delegate, tap hit testing |
@@ -80,7 +80,7 @@ Legend:
 | `constraints` | `constraints: [Constraint]` | 🟡 | See [Constraints](#constraints). |
 | `physicsBody`, `physicsField` | — | ❌ | |
 | `particleSystems` | — | ❌ | |
-| `audioPlayers` | — | ❌ | |
+| `audioPlayers` | `audioPlayers` | ✅ | |
 | `filters` (Core Image) | — | ❌ | |
 | `boundingBox`, `boundingSphere` | `meshBounds`, `subtreeBounds`, `SceneGraph.bounds`, `SceneGraph.worldBounds(of:)` | 🟡 | Axis-aligned boxes only, no spheres. Computed on the CPU from float3 positions (shared storage) and cached per revision. Skinned and morphed meshes report rest-pose bounds. |
 | `enumerateChildNodes`, `enumerateHierarchy` | `SceneGraph.visit(worldTransform:includeHidden:_:)`, `traverse` (skip children or stop), `nodesWithWorldTransforms` | ✅ | Depth-first, with the accumulated world transform. Skips hidden subtrees unless asked. |
@@ -289,7 +289,7 @@ SceneKit animates with `CAAnimation`/`SCNAnimation` and `SCNAnimationPlayer`, ke
 | SceneKit | MSSG | Status | Notes |
 |---|---|---|---|
 | `SCNParticleSystem` | — | ❌ | #50. |
-| `SCNAudioSource`, `SCNAudioPlayer`, positional audio | — | ❌ | #51. |
+| `SCNAudioSource`, `SCNAudioPlayer`, positional audio | `AudioPlayer` (buffer or file), `SceneAudio` (AVAudioEngine + environment node), `SceneView(audio:)` | 🟡 | Mono buffers are positioned; listener is the camera. No `playAudio` action. |
 
 ## Rendering pipeline
 

@@ -47,6 +47,7 @@ public struct SceneView: View {
     private weak var delegate: (any SceneViewDelegate)?
     private let isPlaying: Bool
     private let shadows: SceneGraphShadows?
+    private let audio: SceneAudio?
     private let externalCameraMatrix: Binding<simd_float4x4?>?
     private let onTap: ((SceneGraph.Hit?) -> Void)?
     private let hitTestCategoryBitMask: UInt
@@ -70,6 +71,7 @@ public struct SceneView: View {
         delegate: (any SceneViewDelegate)? = nil,
         isPlaying: Bool = true,
         shadows: SceneGraphShadows? = nil,
+        audio: SceneAudio? = nil,
         cameraMatrix: Binding<simd_float4x4?>? = nil,
         hitTestCategoryBitMask: UInt = .max,
         onTap: ((SceneGraph.Hit?) -> Void)? = nil
@@ -81,6 +83,7 @@ public struct SceneView: View {
         self.delegate = delegate
         self.isPlaying = isPlaying
         self.shadows = shadows
+        self.audio = audio
         self.externalCameraMatrix = cameraMatrix
         self.onTap = onTap
         self.hitTestCategoryBitMask = hitTestCategoryBitMask
@@ -106,6 +109,8 @@ public struct SceneView: View {
             let _ = delegate?.sceneView(didApplyActionsAtTime: time)
             let _ = sceneGraph.applyConstraints(pointOfView: currentCameraMatrix)
             let _ = delegate?.sceneView(didApplyConstraintsAtTime: time)
+            // The listener is the camera. Audio failures leave the frame drawing.
+            let _ = try? audio?.update(sceneGraph: sceneGraph, listener: currentCameraMatrix)
             SceneGraphElement(
                 sceneGraph: sceneGraph,
                 camera: pointOfView,

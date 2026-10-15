@@ -73,6 +73,8 @@ extension SceneGraph {
         var runningActions: [RunningAction] = []
         // Multiplies the time this node's actions advance by; 0 pauses them. Not inherited by children.
         public var actionSpeed: Float = 1
+        // Sounds that play from this node; see SceneAudio. Not copied by clone().
+        public var audioPlayers: [AudioPlayer] = []
         // Simpler meshes for distant cameras; see LevelOfDetail. Order does not matter.
         public var levelsOfDetail: [LevelOfDetail] = [] {
             didSet { bump(structure: true) }

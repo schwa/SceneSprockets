@@ -1005,12 +1005,13 @@ Want: a particle emitter as node content, with a GPU simulation and a renderer f
 ## 51: Positional audio
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:audio, effort:m
 created: 2026-10-13T20:20:23Z
-updated: 2026-10-13T20:21:45Z
+updated: 2026-10-15T03:22:06Z
+closed: 2026-10-15T03:22:06Z
 +++
 
 No audio. SceneKit has `SCNAudioSource`, `SCNAudioPlayer` and `audioListener`.
