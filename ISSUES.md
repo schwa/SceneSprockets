@@ -2086,12 +2086,13 @@ Split the particle simulation (ParticleSystem: emission, integration, size and c
 ## 104: Move the audio engine into its own target
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:audio, effort:s
 created: 2026-10-15T13:22:24Z
-updated: 2026-10-15T19:22:45Z
+updated: 2026-10-15T23:47:16Z
+closed: 2026-10-15T23:47:16Z
 +++
 
 Split the positional audio engine out of MetalSprocketsSceneGraph into its own target (e.g. MetalSprocketsAudio) that depends only on AVFAudio and simd, not on the scene graph: AudioPlayer (buffer or file, loops, volume) and a spatial mixer (AVAudioEngine plus AVAudioEnvironmentNode) with an API to attach/detach players, set each player's position, pause/resume, and set the listener transform. MetalSprocketsSceneGraph depends on it and keeps the scene integration: Node.audioPlayers and SceneAudio.update(sceneGraph:listener:) (walk the graph, push world positions, pause players on hidden nodes, detach removed ones), plus SceneView(audio:). Keep SceneGraph.AudioPlayer as a typealias so callers do not change. Same shape as #103.

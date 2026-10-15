@@ -1,5 +1,6 @@
 import GeometryLite3D
 import Metal
+import MetalSprocketsAudio
 import MetalSprocketsParticles
 import SwiftMesh
 import simd

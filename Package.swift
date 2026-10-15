@@ -13,6 +13,7 @@ let package = Package(
         .library(name: "MetalSprocketsSceneGraph", targets: ["MetalSprocketsSceneGraph"]),
         .library(name: "MetalSprocketsSceneGraphPhysics", targets: ["MetalSprocketsSceneGraphPhysics"]),
         .library(name: "MetalSprocketsParticles", targets: ["MetalSprocketsParticles"]),
+        .library(name: "MetalSprocketsAudio", targets: ["MetalSprocketsAudio"]),
     ],
     dependencies: [
         .package(url: "https://github.com/schwa/GeometryLite3D", from: "0.2.3"),
@@ -30,6 +31,7 @@ let package = Package(
         .target(
             name: "MetalSprocketsSceneGraph",
             dependencies: [
+                "MetalSprocketsAudio",
                 "MetalSprocketsParticles",
                 "MetalSprocketsSceneGraphShaders",
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
@@ -46,6 +48,8 @@ let package = Package(
             ]
         ),
         .target(name: "MetalSprocketsParticles"),
+        .target(name: "MetalSprocketsAudio"),
+        .testTarget(name: "MetalSprocketsAudioTests", dependencies: ["MetalSprocketsAudio"]),
         .testTarget(name: "MetalSprocketsParticlesTests", dependencies: ["MetalSprocketsParticles"]),
         .target(
             name: "MetalSprocketsSceneGraphPhysics",
@@ -74,6 +78,7 @@ let package = Package(
         .testTarget(
             name: "MetalSprocketsSceneGraphTests",
             dependencies: [
+                "MetalSprocketsAudio",
                 "MetalSprocketsParticles",
                 "MetalSprocketsSceneGraph",
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
