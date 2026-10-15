@@ -333,7 +333,7 @@ SceneKit animates with `CAAnimation`/`SCNAnimation` and `SCNAnimationPlayer`, ke
 | OBJ, PLY, STL, ABC | Via Model I/O | `ModelIOSceneGraph` | ✅ | Choose PBR or Blinn-Phong materials. Vertices repacked to position, normal and texture coordinates. |
 | Model I/O textures | ✅ | Base color, emission, normal, occlusion, metallic and roughness | ✅ | Metallic and roughness maps are packed into one texture for PBR. Blinn-Phong uses base color only. |
 | `.dae` (Collada) | ✅ (macOS) | Model I/O if it can read it | 🟡 | |
-| glTF / GLB | ❌ | `GLTFAsset.makeSceneGraph(device:)` | ➕ | Hierarchy, meshes (one submesh per primitive), PBR materials with variants, perspective cameras, punctual lights, skins, morph targets, node animations. Not supported: `EXT_mesh_gpu_instancing`, `KHR_node_visibility`, orthographic cameras, `KHR_animation_pointer` (#54). Returns `nodes` indexed like the document, and `warnings`. |
+| glTF / GLB | ❌ | `GLTFAsset.makeSceneGraph(device:)` | ➕ | Hierarchy, meshes (one submesh per primitive), PBR materials with variants, perspective cameras, punctual lights, skins, morph targets, node animations, `EXT_mesh_gpu_instancing` (as child nodes), `KHR_node_visibility`. Not supported: orthographic cameras, `KHR_animation_pointer` (#54). Returns `nodes` indexed like the document, and `warnings`. |
 
 ## Asset export
 

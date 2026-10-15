@@ -1061,7 +1061,7 @@ Want: a ready-made SwiftUI view that has a camera, a frame clock and update hook
 
 ---
 
-## 54: glTF scene graph loader: instancing, node visibility, orthographic cameras, pointer animations
+## 54: glTF scene graph loader: orthographic cameras, pointer animations
 
 +++
 status: open
@@ -1069,7 +1069,7 @@ priority: low
 kind: enhancement
 labels: area:assets, effort:m
 created: 2026-10-13T20:37:21Z
-updated: 2026-10-15T02:31:16Z
+updated: 2026-10-15T02:59:59Z
 +++
 
 MetalSprocketsSceneGraphGLTF (#16) does not map these glTF features into the scene graph:
@@ -1082,6 +1082,7 @@ MetalSprocketsSceneGraphGLTF (#16) does not map these glTF features into the sce
 The loader adds a warning for skipped cameras and channels.
 
 - `2026-10-15T02:31:16Z`: Related: #87.
+- `2026-10-15T02:59:59Z`: Done: EXT_mesh_gpu_instancing copies become child nodes (skinned meshes keep one), KHR_node_visibility sets isVisible. Left: orthographic cameras (needs #87) and KHR_animation_pointer channels (needs key-path animation targets, #89).
 
 ---
 

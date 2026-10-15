@@ -128,6 +128,42 @@ func gltfSceneGraphBuildsPBRModel() throws {
     #expect(model.skins.count == 1)
 }
 
+// #54: EXT_mesh_gpu_instancing copies become child nodes, KHR_node_visibility hides nodes.
+@Test
+func gltfInstancingAndVisibilityAreMapped() throws {
+    var data = Data()
+    [Float](arrayLiteral: 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 0, 0, -5, 0, 0).withUnsafeBytes { data.append(contentsOf: $0) }
+    let json = """
+    {
+      "asset": {"version": "2.0"},
+      "extensionsUsed": ["EXT_mesh_gpu_instancing", "KHR_node_visibility"],
+      "scenes": [{"nodes": [0, 1]}],
+      "nodes": [
+        {"name": "Copies", "mesh": 0, "extensions": {"EXT_mesh_gpu_instancing": {"attributes": {"TRANSLATION": 1}}}},
+        {"name": "Hidden", "mesh": 0, "extensions": {"KHR_node_visibility": {"visible": false}}}
+      ],
+      "meshes": [{"primitives": [{"attributes": {"POSITION": 0}}]}],
+      "accessors": [
+        {"bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3", "min": [0, 0, 0], "max": [1, 1, 0]},
+        {"bufferView": 1, "componentType": 5126, "count": 2, "type": "VEC3"}
+      ],
+      "bufferViews": [{"buffer": 0, "byteOffset": 0, "byteLength": 36}, {"buffer": 0, "byteOffset": 36, "byteLength": 24}],
+      "buffers": [{"byteLength": \(data.count), "uri": "data:application/octet-stream;base64,\(data.base64EncodedString())"}]
+    }
+    """
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
+    try Data(json.utf8).write(to: url)
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let result = try GLTFAsset(url: url, device: device).makeSceneGraph(device: device)
+    let copies = try #require(result.nodes[0])
+    #expect(copies.children.count == 2)
+    #expect(copies.children.map { $0.transform.columns.3.x } == [5, -5])
+    let hidden = try #require(result.nodes[1])
+    #expect(!hidden.isVisible)
+    // Only the two copies are drawn.
+    #expect(result.sceneGraph.meshEntries().count == 2)
+}
+
 // #92: morph target names come from the mesh's extras.targetNames.
 @Test
 func gltfMorphTargetNamesAreRead() throws {

@@ -7,8 +7,9 @@ import simd
 import SwiftGLTF
 import SwiftMesh
 
-// A glTF scene as a scene graph. Not supported: EXT_mesh_gpu_instancing copies, KHR_node_visibility,
-// orthographic cameras, and animation channels that target materials, lights, cameras or visibility.
+// A glTF scene as a scene graph. EXT_mesh_gpu_instancing copies become child nodes; KHR_node_visibility sets
+// isVisible. Not supported: orthographic cameras, and animation channels that target materials, lights, cameras or
+// visibility.
 public struct GLTFSceneGraph {
     public var sceneGraph: SceneGraph
     public var animations: [SceneGraph.AnimationClip]
@@ -82,11 +83,23 @@ private struct GLTFSceneGraphBuilder {
             }
             nodes[index] = node
 
+            // KHR_node_visibility hides the node's mesh and its descendants, like isVisible.
+            node.isVisible = source.isVisible
             if let meshIndex = source.mesh?.index, let converted = try mesh(meshIndex) {
-                node.content = .mesh(converted.mesh, materials: converted.materials)
-                node.morphTargets = converted.morphTargets
-                node.morphWeights = source.weights ?? converted.defaultWeights
-                if let skin = source.skin?.index, !converted.skinVertices.isEmpty {
+                let skin = converted.skinVertices.isEmpty ? nil : source.skin?.index
+                // EXT_mesh_gpu_instancing: one child per copy. Skinned meshes follow their joints, so they get one.
+                let instances = skin == nil ? try instanceTransforms(of: source) : nil
+                let meshNodes = instances.map { transforms in
+                    transforms.enumerated().map { index, transform in
+                        SceneGraph.Node(parent: node, label: "\(source.name ?? "Instance") \(index)", transform: transform)
+                    }
+                } ?? [node]
+                for meshNode in meshNodes {
+                    meshNode.content = .mesh(converted.mesh, materials: converted.materials)
+                    meshNode.morphTargets = converted.morphTargets
+                    meshNode.morphWeights = source.weights ?? converted.defaultWeights
+                }
+                if let skin {
                     node.skinVertices = converted.skinVertices
                     skinNodes.append((node, skin))
                 }
@@ -244,6 +257,39 @@ private struct GLTFSceneGraphBuilder {
         return ConvertedMesh(mesh: mesh, materials: meshMaterials, skinVertices: skinVertices, morphTargets: morphTargets, defaultWeights: defaultWeights)
     }
 
+    // EXT_mesh_gpu_instancing copies, relative to the node; nil when the node does not use it.
+    func instanceTransforms(of node: SwiftGLTF.Node) throws -> [simd_float4x4]? {
+        guard let instancing = try? node.extensionValue(EXTMeshGPUInstancing.self) else {
+            return nil
+        }
+        func values(_ name: String, components: Int) throws -> [Float]? {
+            guard let index = instancing.attributes[name] else {
+                return nil
+            }
+            guard document.accessors.indices.contains(index), document.accessors[index].type.componentCount == components else {
+                throw GLTFSceneGraphError.invalidInstancing(name)
+            }
+            return try asset.container.floatComponents(for: document.accessors[index])
+        }
+        let translations = try values("TRANSLATION", components: 3)
+        let rotations = try values("ROTATION", components: 4)
+        let scales = try values("SCALE", components: 3)
+        let counts = [translations.map { $0.count / 3 }, rotations.map { $0.count / 4 }, scales.map { $0.count / 3 }].compactMap(\.self)
+        guard let count = counts.first else {
+            return nil
+        }
+        guard counts.allSatisfy({ $0 == count }) else {
+            throw GLTFSceneGraphError.invalidInstancing("attribute counts differ")
+        }
+        return (0..<count).map { index in
+            SceneGraph.TRS(
+                translation: translations.map { SIMD3($0[index * 3], $0[index * 3 + 1], $0[index * 3 + 2]) } ?? .zero,
+                rotation: rotations.map { simd_normalize(simd_quatf(ix: $0[index * 4], iy: $0[index * 4 + 1], iz: $0[index * 4 + 2], r: $0[index * 4 + 3])) } ?? simd_quatf(ix: 0, iy: 0, iz: 0, r: 1),
+                scale: scales.map { SIMD3($0[index * 3], $0[index * 3 + 1], $0[index * 3 + 2]) } ?? .one
+            ).matrix
+        }
+    }
+
     func camera(_ index: Int) -> MetalSprocketsSceneGraph.Camera? {
         guard document.cameras.indices.contains(index), let perspective = document.cameras[index].perspective else {
             return nil
@@ -264,6 +310,7 @@ enum GLTFSceneGraphError: Error {
     case invalidNode(Int)
     case cycle(Int)
     case mixedVertexLayouts(Int)
+    case invalidInstancing(String)
 }
 
 extension MetalSprocketsAddOnsShaders.Light {
