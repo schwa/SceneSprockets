@@ -2316,11 +2316,13 @@ Expected: gummies look soft and translucent, with brighter, more saturated thin 
 ## 118: Curved SceneGraph.Shape primitives render with faceted normals
 
 +++
-status: new
+status: closed
 priority: medium
 kind: bug
 labels: rendering
 created: 2026-10-15T21:15:56Z
+updated: 2026-10-15T21:18:26Z
+closed: 2026-10-15T21:18:26Z
 +++
 
 Tori, capsules, spheres, cylinders and cones made from SceneGraph.Shape look faceted in the demos (e.g. SceneKitFeaturesDemo, KeynoteDemo, ShadowsDemo).

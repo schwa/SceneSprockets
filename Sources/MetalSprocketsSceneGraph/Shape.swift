@@ -20,21 +20,23 @@ extension SceneGraph {
         case text(String, fontName: String = "Helvetica", fontSize: Float = 1, extrusionDepth: Float = 0.1)
 
         public func mesh() -> Mesh {
-            switch self {
+            // SwiftMesh defaults to flat normals; curved shapes need smooth ones (#118).
+            let smooth: MeshAttributes = [.smoothNormals, .textureCoordinates]
+            return switch self {
             case let .box(width, height, length):
                 .box(extents: [width, height, length])
             case let .sphere(radius):
-                .sphere(extents: SIMD3(repeating: radius * 2))
+                .sphere(extents: SIMD3(repeating: radius * 2), latitudeSegments: 32, longitudeSegments: 64, attributes: smooth)
             case let .plane(width, height):
                 .quad(extents: [width, height])
             case let .cylinder(radius, height):
-                .cylinder(height: height, radius: radius)
+                .cylinder(height: height, radius: radius, attributes: smooth)
             case let .cone(topRadius, bottomRadius, height):
-                topRadius == 0 ? .cone(height: height, radius: bottomRadius) : .conicalFrustum(height: height, topRadius: topRadius, bottomRadius: bottomRadius)
+                topRadius == 0 ? .cone(height: height, radius: bottomRadius, attributes: smooth) : .conicalFrustum(height: height, topRadius: topRadius, bottomRadius: bottomRadius, attributes: smooth)
             case let .capsule(capRadius, height):
-                .capsule(height: height, radius: capRadius)
+                .capsule(segments: 64, height: height, radius: capRadius, latitudeSegments: 16, attributes: smooth)
             case let .torus(ringRadius, pipeRadius):
-                .torus(majorRadius: ringRadius, minorRadius: pipeRadius)
+                .torus(majorSegments: 64, minorSegments: 32, majorRadius: ringRadius, minorRadius: pipeRadius, attributes: smooth)
             case let .text(string, fontName, fontSize, extrusionDepth):
                 // SwiftMesh leaves hole corners of n-gon caps without normals, so triangulate before adding them (#101).
                 Mesh.extrudedText(string, fontName: fontName, size: CGFloat(fontSize), depth: extrusionDepth, attributes: []).triangulated().withFlatNormals()
