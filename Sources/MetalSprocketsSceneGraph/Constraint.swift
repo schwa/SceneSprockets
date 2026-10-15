@@ -8,8 +8,17 @@ extension SceneGraph {
         // Turns the node so `localFront` points at `target`, keeping `worldUp` up when possible.
         case lookAt(target: Node, worldUp: SIMD3<Float> = [0, 1, 0], localFront: SIMD3<Float> = [0, 0, -1])
         // Turns the node to face the point of view (its +Z towards the camera, matching the camera's orientation).
-        // With `.y` only the node turns about its Y axis, like a tree sprite.
+        // With one axis (for example `.y`, like a tree sprite) the node only turns about that world axis; with two
+        // it turns towards the camera without rolling.
         case billboard(freeAxes: BillboardAxes = .all)
+        // Copies `target`'s world position, orientation and scale (each optional), with offsets in the target's
+        // space, like SCNReplicatorConstraint.
+        case replicator(target: Node, position: Bool = true, orientation: Bool = true, scale: Bool = true, positionOffset: SIMD3<Float> = .zero, orientationOffset: simd_quatf = simd_quatf(ix: 0, iy: 0, iz: 0, r: 1), scaleOffset: SIMD3<Float> = .one)
+        // Moves the node towards `target` until nothing (in `categoryBitMask`) blocks the line between them, like
+        // SCNAvoidOccluderConstraint. Hits on the node's and the target's subtrees are ignored.
+        case avoidOccluder(target: Node, categoryBitMask: UInt = .max, bias: Float = 0.01)
+        // Returns the node's new world TRS from its current one, like SCNTransformConstraint.
+        case transform((Node, TRS) -> TRS)
         // Keeps the node between `minimum` and `maximum` from `target`, moving along the line between them.
         case distance(target: Node, minimum: Float = 0, maximum: Float = .infinity)
         // Turns the node's ancestors, from its parent up to `chainRoot`, so the node reaches towards `target`, like
@@ -18,9 +27,17 @@ extension SceneGraph {
         case inverseKinematics(chainRoot: Node, target: Node, iterations: Int = 10, maximumAngle: Float = .pi)
     }
 
-    public enum BillboardAxes: Sendable {
-        case all
-        case y
+    public struct BillboardAxes: OptionSet, Sendable {
+        public let rawValue: Int
+
+        public init(rawValue: Int) {
+            self.rawValue = rawValue
+        }
+
+        public static let x = Self(rawValue: 1 << 0)
+        public static let y = Self(rawValue: 1 << 1)
+        public static let z = Self(rawValue: 1 << 2)
+        public static let all: Self = [.x, .y, .z]
     }
 
     // Applies every node's constraints, parents before children. `pointOfView` is the camera's world transform,
@@ -34,14 +51,14 @@ extension SceneGraph {
         }
         for node in constrained {
             for constraint in node.constraints {
-                node.apply(constraint, pointOfView: pointOfView)
+                node.apply(constraint, pointOfView: pointOfView, sceneGraph: self)
             }
         }
     }
 }
 
 extension SceneGraph.Node {
-    func apply(_ constraint: SceneGraph.Constraint, pointOfView: simd_float4x4) {
+    func apply(_ constraint: SceneGraph.Constraint, pointOfView: simd_float4x4, sceneGraph: SceneGraph? = nil) {
         if case let .inverseKinematics(chainRoot, target, iterations, maximumAngle) = constraint {
             solveInverseKinematics(chainRoot: chainRoot, target: target.worldTransform.columns.3.xyz, iterations: iterations, maximumAngle: maximumAngle)
             return
@@ -57,19 +74,57 @@ extension SceneGraph.Node {
             }
             desired.rotation = rotation
         case let .billboard(freeAxes):
-            let cameraRotation = SceneGraph.TRS(matrix: pointOfView).rotation
-            switch freeAxes {
-            case .all:
-                desired.rotation = cameraRotation
-            case .y:
-                // Yaw only: face the camera's position projected onto the node's horizontal plane.
-                var toCamera = pointOfView.columns.3.xyz - world.translation
-                toCamera.y = 0
-                guard simd_length(toCamera) > 1e-6 else {
+            let toCamera = pointOfView.columns.3.xyz - world.translation
+            let axes: [SIMD3<Float>] = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+            let free = [SceneGraph.BillboardAxes.x, .y, .z].indices.filter { freeAxes.contains([SceneGraph.BillboardAxes.x, .y, .z][$0]) }
+            switch free.count {
+            case 3:
+                desired.rotation = SceneGraph.TRS(matrix: pointOfView).rotation
+            case 2:
+                // Face the camera position, keeping an up vector so there is no roll.
+                let up = free.contains(1) ? axes[1] : axes[free[0]]
+                guard let rotation = lookRotation(from: world.translation, to: pointOfView.columns.3.xyz, worldUp: up, localFront: [0, 0, 1]) else {
                     return
                 }
-                desired.rotation = simd_quatf(angle: atan2(toCamera.x, toCamera.z), axis: [0, 1, 0])
+                desired.rotation = rotation
+            case 1:
+                // Turn about the free axis so the node's reference direction (+Z, or +Y for Z) faces the camera's
+                // position projected onto the plane across that axis.
+                let axis = axes[free[0]]
+                let reference: SIMD3<Float> = free[0] == 2 ? [0, 1, 0] : [0, 0, 1]
+                let projected = toCamera - axis * simd_dot(toCamera, axis)
+                guard simd_length(projected) > 1e-6 else {
+                    return
+                }
+                let direction = simd_normalize(projected)
+                desired.rotation = simd_quatf(angle: atan2(simd_dot(simd_cross(reference, direction), axis), simd_dot(reference, direction)), axis: axis)
+            default:
+                return
             }
+        case let .replicator(target, position, orientation, scale, positionOffset, orientationOffset, scaleOffset):
+            let targetWorld = SceneGraph.TRS(matrix: target.worldTransform)
+            if position {
+                desired.translation = (target.worldTransform * SIMD4(positionOffset, 1)).xyz
+            }
+            if orientation {
+                desired.rotation = simd_normalize(targetWorld.rotation * orientationOffset)
+            }
+            if scale {
+                desired.scale = targetWorld.scale * scaleOffset
+            }
+        case let .avoidOccluder(target, categoryBitMask, bias):
+            guard let sceneGraph else {
+                return
+            }
+            let targetPosition = target.worldTransform.columns.3.xyz
+            let ignored = { (node: SceneGraph.Node) in node === self || self.isAncestor(of: node) || node === target || target.isAncestor(of: node) }
+            guard let hit = sceneGraph.hitTest(segmentFrom: targetPosition, to: world.translation, options: .init(categoryBitMask: categoryBitMask)).first(where: { !ignored($0.node) }) else {
+                return
+            }
+            let direction = simd_normalize(world.translation - targetPosition)
+            desired.translation = targetPosition + direction * max(hit.distance - bias, 0)
+        case let .transform(body):
+            desired = body(self, world)
         case let .distance(target, minimum, maximum):
             let targetPosition = target.worldTransform.columns.3.xyz
             let offset = world.translation - targetPosition

@@ -1775,7 +1775,7 @@ Missing SCNAction features: reversed(), per-action and per-node speed, wait(dura
 
 ---
 
-## 91: Constraint gaps: more types, influence factor, enabled flag, billboard axes
+## 91: Constraint gaps: acceleration, slider, influence factor, enabled flag
 
 +++
 status: open
@@ -1783,12 +1783,13 @@ priority: low
 kind: feature
 labels: effort:m, area:scenegraph
 created: 2026-10-15T02:28:08Z
-updated: 2026-10-15T02:31:16Z
+updated: 2026-10-15T03:17:39Z
 +++
 
 Missing: SCNReplicatorConstraint, SCNAccelerationConstraint, SCNSliderConstraint, SCNAvoidOccluderConstraint and SCNTransformConstraint; influenceFactor, isEnabled and isIncremental; and billboard with any set of free axes (today only .all or .y). IK is #57. See docs/SceneKitComparison.md.
 
 - `2026-10-15T02:31:16Z`: Related: #57 (IK).
+- `2026-10-15T03:17:39Z`: Done: replicator, avoidOccluder, transform constraints, and billboard with any set of free axes. Left: acceleration (needs frame time passed to applyConstraints and per-node state), slider (needs physics, #38), and influenceFactor/isEnabled/isIncremental (Constraint is an enum; these need a wrapper type, which is an API decision).
 
 ---
 

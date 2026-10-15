@@ -1,3 +1,6 @@
+import GeometryLite3D
+import Metal
+import SwiftMesh
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
@@ -70,6 +73,54 @@ func distanceClampsAlongLine() {
     node.trs.translation = [1.5, 0, 0]
     graph.applyConstraints(pointOfView: matrix_identity_float4x4)
     #expect(simd_distance(node.trs.translation, [2, 0, 0]) < 1e-4)
+}
+
+// #91
+@Test
+func replicatorCopiesTargetWithOffsets() {
+    let root = SceneGraph.Node()
+    let target = SceneGraph.Node(parent: root, trs: .init(translation: [1, 2, 3], rotation: simd_quatf(angle: .pi / 2, axis: [0, 1, 0]), scale: [2, 2, 2]))
+    let follower = SceneGraph.Node(parent: root)
+    follower.constraints = [.replicator(target: target, scale: false, positionOffset: [1, 0, 0])]
+    SceneGraph(root: root).applyConstraints(pointOfView: matrix_identity_float4x4)
+    // +X in the target's space is -Z in the world, scaled by 2.
+    #expect(simd_distance(follower.trs.translation, [1, 2, 1]) < 1e-4)
+    #expect(abs(follower.trs.rotation.angle - .pi / 2) < 1e-4)
+    #expect(simd_distance(follower.trs.scale, .one) < 1e-4)
+}
+
+@Test
+func avoidOccluderMovesInFrontOfBlocker() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let root = SceneGraph.Node()
+    let target = SceneGraph.Node(parent: root)
+    let camera = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 10]))
+    // A 1-unit box centered at z = 5 blocks the line from the target to the camera.
+    _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 5]), content: .mesh(MetalMesh(mesh: .box(), device: device), material: try ShaderMaterial.normals()))
+    camera.constraints = [.avoidOccluder(target: target, bias: 0)]
+    SceneGraph(root: root).applyConstraints(pointOfView: matrix_identity_float4x4)
+    let bounds = try #require(root.children[2].meshBounds)
+    #expect(abs(camera.trs.translation.z - (5 + bounds.min.z)) < 1e-3)
+}
+
+@Test
+func transformConstraintAndBillboardAxes() {
+    let root = SceneGraph.Node()
+    let node = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 0]))
+    node.constraints = [.transform { _, world in
+        var result = world
+        result.translation.y = 7
+        return result
+    }]
+    let graph = SceneGraph(root: root)
+    graph.applyConstraints(pointOfView: matrix_identity_float4x4)
+    #expect(node.trs.translation.y == 7)
+
+    // Free about X only: the node tips its +Z up towards a camera above it.
+    let sprite = SceneGraph.Node(parent: root)
+    sprite.constraints = [.billboard(freeAxes: .x)]
+    graph.applyConstraints(pointOfView: simd_float4x4(translation: [0, 5, 0]))
+    #expect(simd_distance(sprite.trs.rotation.act([0, 0, 1]), [0, 1, 0]) < 1e-4)
 }
 
 // #57: a two-bone arm (lengths 1 and 1) along +X reaches a target it can reach.
