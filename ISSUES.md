@@ -988,12 +988,13 @@ Want: helpers that make mesh nodes for common shapes and text. Check what SwiftM
 ## 50: Particle systems
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:renderer, effort:l
 created: 2026-10-13T20:20:23Z
-updated: 2026-10-13T20:21:45Z
+updated: 2026-10-15T03:28:26Z
+closed: 2026-10-15T03:28:26Z
 +++
 
 No particles. SceneKit has `SCNParticleSystem` attached to nodes.

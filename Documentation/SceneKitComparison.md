@@ -27,7 +27,7 @@ Legend:
 | Morphing and skinning | ✅ | Four influences per vertex; CPU fallback for Blinn-Phong |
 | Hit testing | ✅ | Triangles or bounding boxes, rays or segments, with SceneKit-style options |
 | Physics | ❌ | Demo-only Jolt integration (#38) |
-| Particles | ❌ | #50 |
+| Particles | 🟡 | CPU emitters drawn as soft sprites; no textures, image sequences or particle collisions |
 | Audio | 🟡 | Positional `AudioPlayer`s on nodes, played by `SceneAudio`; no audio actions |
 | Fog and environment | ✅ | Linear and exponent fog; color or IBL background |
 | Rendering pipeline | 🟡 (different design) | No `SCNTechnique`, no render delegates at pass level; pluggable material renderers instead |
@@ -47,7 +47,7 @@ Legend:
 | `SCNScene.fogStartDistance`, `fogEndDistance`, `fogDensityExponent`, `fogColor` | `SceneGraph.fog: Fog?` | ✅ | Same four parameters. `color.w` scales the maximum amount. Applied as a screen-space compute pass after all renderers, on geometry only (not the background). Needs a readable depth texture. |
 | `SCNScene.isPaused` | `SceneView(isPlaying:)` | 🟡 | A view parameter, not a scene property. Freezes delegate time and actions. |
 | `SCNScene.physicsWorld` | — | ❌ | See [Physics](#physics). |
-| `SCNScene.particleSystems` | — | ❌ | #50. |
+| `SCNScene.particleSystems` | Systems on the root node | 🟡 | |
 | `SCNScene.screenSpaceReflection…` | — | ❌ | |
 | `SCNScene(url:)`, `SCNScene(named:)` | `GLTFAsset.makeSceneGraph(device:)`, `ModelIOSceneGraph(url:device:)` | 🟡 | See [Asset import](#asset-import). |
 | `SCNScene.write(to:)` / `NSSecureCoding` | — | ❌ | No save or load (#52). |
@@ -79,7 +79,7 @@ Legend:
 | `skinner` (`SCNSkinner`) | `skin`, `skinVertices` | ✅ | See [Morphing and skinning](#morphing-and-skinning). |
 | `constraints` | `constraints: [Constraint]` | 🟡 | See [Constraints](#constraints). |
 | `physicsBody`, `physicsField` | — | ❌ | |
-| `particleSystems` | — | ❌ | |
+| `particleSystems` | `particleSystems` | ✅ | Emitted in world space from the node. |
 | `audioPlayers` | `audioPlayers` | ✅ | |
 | `filters` (Core Image) | — | ❌ | |
 | `boundingBox`, `boundingSphere` | `meshBounds`, `subtreeBounds`, `SceneGraph.bounds`, `SceneGraph.worldBounds(of:)` | 🟡 | Axis-aligned boxes only, no spheres. Computed on the CPU from float3 positions (shared storage) and cached per revision. Skinned and morphed meshes report rest-pose bounds. |
@@ -288,7 +288,7 @@ SceneKit animates with `CAAnimation`/`SCNAnimation` and `SCNAnimationPlayer`, ke
 
 | SceneKit | MSSG | Status | Notes |
 |---|---|---|---|
-| `SCNParticleSystem` | — | ❌ | #50. |
+| `SCNParticleSystem` | `ParticleSystem` | 🟡 | Birth rate, lifetime, emitter shapes (point, box, sphere), spread, speed, acceleration, damping, size and color over life, alpha or additive blending, seedable. No textures, image sequences, collisions, fields or orientation modes. |
 | `SCNAudioSource`, `SCNAudioPlayer`, positional audio | `AudioPlayer` (buffer or file), `SceneAudio` (AVAudioEngine + environment node), `SceneView(audio:)` | 🟡 | Mono buffers are positioned; listener is the camera. No `playAudio` action. |
 
 ## Rendering pipeline

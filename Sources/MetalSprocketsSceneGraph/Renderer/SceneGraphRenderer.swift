@@ -83,6 +83,10 @@ public struct SceneGraphElement: Element {
                     entries.isEmpty ? nil : try renderer.makeElement(entries: entries, context: batch.context)
                 }
             }
+            let particleSystems = sceneGraph.visibleParticleSystems().filter { $0.particleCount > 0 }
+            if !particleSystems.isEmpty {
+                elements.append(ParticlesElement(systems: particleSystems, context: context).eraseToAnyElement())
+            }
             let clearColor: MTLClearColor? = if case let .color(color) = context.environment.background {
                 MTLClearColor(red: Double(color.x), green: Double(color.y), blue: Double(color.z), alpha: Double(color.w))
             } else {

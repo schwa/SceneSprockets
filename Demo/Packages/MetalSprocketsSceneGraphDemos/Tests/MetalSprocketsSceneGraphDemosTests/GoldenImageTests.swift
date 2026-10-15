@@ -20,6 +20,7 @@ struct GoldenImageTests {
         var name: String
         var demo: String
         var values: [String: Float]
+        var frames = 1
 
         var testDescription: String { name }
     }
@@ -29,13 +30,14 @@ struct GoldenImageTests {
         Case(name: "shadows-spot", demo: "shadows", values: ["Light": 1]),
         Case(name: "shadows-point", demo: "shadows", values: ["Light": 2]),
         Case(name: "shadows-floor-not-receiving", demo: "shadows", values: ["Floor Receives Shadows": 0]),
+        // Seeded emitters, so the particles are the same each run.
+        Case(name: "particles", demo: "particles", values: [:], frames: 90),
     ]
 
     @Test(arguments: cases)
     @MainActor
     func matchesGolden(_ testCase: Case) throws {
-        // Few frames, so animated parts barely move from their start.
-        let image = try DemoSnapshot.render(demoID: testCase.demo, width: 320, height: 200, frames: 1, values: testCase.values)
+        let image = try DemoSnapshot.render(demoID: testCase.demo, width: 320, height: 200, frames: testCase.frames, values: testCase.values)
         let goldens = try #require(Bundle.module.url(forResource: "Golden Images", withExtension: nil))
         let comparison = GoldenImageComparison(imageDirectory: goldens, psnrThreshold: Self.psnrThreshold, failureOutputDirectory: Self.outputDirectory)
         do {

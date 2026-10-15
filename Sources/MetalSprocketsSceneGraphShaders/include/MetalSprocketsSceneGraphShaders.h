@@ -3,6 +3,7 @@
 #import "Fog.h"
 #import "ShaderMaterial.h"
 #import "ShadowMask.h"
+#import "Particles.h"
 
 #ifdef __OBJC__
 #import <Foundation/Foundation.h>

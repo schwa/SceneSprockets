@@ -106,6 +106,7 @@ public struct SceneView: View {
             let (time, deltaTime) = clock.advance(to: context.frameUniforms.time, isPaused: !isPlaying)
             let _ = delegate?.sceneView(updateAtTime: time, deltaTime: deltaTime)
             let _ = sceneGraph.advanceActions(by: deltaTime)
+            let _ = sceneGraph.advanceParticles(by: deltaTime)
             let _ = delegate?.sceneView(didApplyActionsAtTime: time)
             let _ = sceneGraph.applyConstraints(pointOfView: currentCameraMatrix)
             let _ = delegate?.sceneView(didApplyConstraintsAtTime: time)

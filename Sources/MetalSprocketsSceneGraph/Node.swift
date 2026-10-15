@@ -95,6 +95,8 @@ extension SceneGraph {
             content = .mesh(result, materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
         }
 
+        // Particle emitters at this node; see ParticleSystem. Shared, not copied, by clone().
+        public var particleSystems: [ParticleSystem] = []
         // Sounds that play from this node; see SceneAudio. Not copied by clone().
         public var audioPlayers: [AudioPlayer] = []
         // Simpler meshes for distant cameras; see LevelOfDetail. Order does not matter.
@@ -288,6 +290,7 @@ extension SceneGraph {
             copy.lightCategoryBitMask = lightCategoryBitMask
             copy.renderingOrder = renderingOrder
             copy.levelsOfDetail = levelsOfDetail
+            copy.particleSystems = particleSystems
             copy.subdivisionBase = subdivisionBase
             copy.subdivisionLevel = subdivisionLevel
             copy.actionSpeed = actionSpeed
