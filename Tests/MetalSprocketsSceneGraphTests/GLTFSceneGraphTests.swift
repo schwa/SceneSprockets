@@ -234,6 +234,60 @@ func gltfPointerAnimationsAreMapped() throws {
     #expect(abs(projection.verticalAngleOfView.radians - 1) < 1e-5)
 }
 
+// #54: KHR_animation_pointer material channels change the mesh's PBR material.
+@Test
+func gltfMaterialPointerAnimationsAreMapped() throws {
+    var data = Data()
+    // Triangle positions, times, then baseColorFactor and roughnessFactor keyframes.
+    [Float](arrayLiteral: 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0.2).withUnsafeBytes { data.append(contentsOf: $0) }
+    let json = """
+    {
+      "asset": {"version": "2.0"},
+      "extensionsUsed": ["KHR_animation_pointer"],
+      "scenes": [{"nodes": [0]}],
+      "nodes": [{"mesh": 0}],
+      "materials": [{"pbrMetallicRoughness": {"baseColorFactor": [1, 1, 1, 1], "roughnessFactor": 1}}],
+      "meshes": [{"primitives": [{"attributes": {"POSITION": 0}, "material": 0}]}],
+      "animations": [{
+        "samplers": [{"input": 1, "output": 2}, {"input": 1, "output": 3}],
+        "channels": [
+          {"sampler": 0, "target": {"path": "pointer", "extensions": {"KHR_animation_pointer": {"pointer": "/materials/0/pbrMetallicRoughness/baseColorFactor"}}}},
+          {"sampler": 1, "target": {"path": "pointer", "extensions": {"KHR_animation_pointer": {"pointer": "/materials/0/pbrMetallicRoughness/roughnessFactor"}}}}
+        ]
+      }],
+      "accessors": [
+        {"bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3", "min": [0, 0, 0], "max": [1, 1, 0]},
+        {"bufferView": 1, "componentType": 5126, "count": 2, "type": "SCALAR", "min": [0], "max": [1]},
+        {"bufferView": 2, "componentType": 5126, "count": 2, "type": "VEC4"},
+        {"bufferView": 3, "componentType": 5126, "count": 2, "type": "SCALAR"}
+      ],
+      "bufferViews": [
+        {"buffer": 0, "byteOffset": 0, "byteLength": 36},
+        {"buffer": 0, "byteOffset": 36, "byteLength": 8},
+        {"buffer": 0, "byteOffset": 44, "byteLength": 32},
+        {"buffer": 0, "byteOffset": 76, "byteLength": 8}
+      ],
+      "buffers": [{"byteLength": \(data.count), "uri": "data:application/octet-stream;base64,\(data.base64EncodedString())"}]
+    }
+    """
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
+    try Data(json.utf8).write(to: url)
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let result = try GLTFAsset(url: url, device: device).makeSceneGraph(device: device)
+    let clip = try #require(result.animations.first)
+    #expect(clip.channels.count == 2)
+    #expect(!result.warnings.contains { $0.contains("animation channels skipped") })
+
+    clip.apply(at: 1)
+    let node = try #require(result.nodes[0])
+    guard case let .mesh(_, materials, _, _) = node.content, let material = materials.first as? PBRSceneMaterial else {
+        Issue.record("Node has no PBR mesh")
+        return
+    }
+    #expect(material.pbrMaterial.uniforms.baseColorFactor == [1, 0, 0, 1])
+    #expect(abs(material.pbrMaterial.uniforms.roughnessFactor - 0.2) < 1e-5)
+}
+
 // #92: morph target names come from the mesh's extras.targetNames.
 @Test
 func gltfMorphTargetNamesAreRead() throws {

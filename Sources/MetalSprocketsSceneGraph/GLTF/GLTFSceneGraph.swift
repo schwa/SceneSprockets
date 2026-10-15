@@ -7,8 +7,8 @@ import SwiftGLTF
 import SwiftMesh
 
 // A glTF scene as a scene graph. EXT_mesh_gpu_instancing copies become child nodes; KHR_node_visibility sets
-// isVisible. KHR_animation_pointer channels for visibility, lights and cameras become property channels. Not
-// supported: channels that target materials, and camera xmag and aspectRatio.
+// isVisible. KHR_animation_pointer channels for visibility, materials, lights and cameras become property channels. Not
+// supported: camera xmag and aspectRatio.
 public struct GLTFSceneGraph {
     public var sceneGraph: SceneGraph
     public var animations: [SceneGraph.AnimationClip]
@@ -154,6 +154,18 @@ private struct GLTFSceneGraphBuilder {
             nodes.indices.contains(index) ? nodes[index].map { [$0] } ?? [] : []
         }
         var skippedChannels = 0
+        var animatedMaterials: [Int: AnimatedMaterial] = [:]
+        func animatedMaterial(_ index: Int) -> AnimatedMaterial? {
+            guard asset.materials.indices.contains(index) else {
+                return nil
+            }
+            if let existing = animatedMaterials[index] {
+                return existing
+            }
+            let created = AnimatedMaterial(asset.materials[index])
+            animatedMaterials[index] = created
+            return created
+        }
         let animations = asset.animations.map { clip in
             SceneGraph.AnimationClip(name: clip.name, channels: clip.channels.flatMap { channel -> [SceneGraph.AnimationClip.Channel] in
                 let targets: [(node: SceneGraph.Node, path: SceneGraph.AnimationClip.Path)]
@@ -172,8 +184,13 @@ private struct GLTFSceneGraphBuilder {
                     targets = SceneGraph.AnimationClip.Property.gltfLight(name).map { property in lightNodes[index, default: []].map { ($0, .property(property)) } } ?? []
                 case let .camera(index, name):
                     targets = SceneGraph.AnimationClip.Property.gltfCamera(name).map { property in cameraNodes[index, default: []].map { ($0, .property(property)) } } ?? []
-                case .material:
-                    targets = []
+                case let .material(index, name):
+                    // Materials are shared, not per node, so the channel targets the root.
+                    if let material = animatedMaterial(index), let property = GLTFAnimationPointer.MaterialProperty(name) {
+                        targets = [(root, .property(.gltfMaterial(material, index: index, name: name, property: property)))]
+                    } else {
+                        targets = []
+                    }
                 }
                 if targets.isEmpty {
                     skippedChannels += 1
@@ -188,7 +205,7 @@ private struct GLTFSceneGraphBuilder {
             })
         }
         if skippedChannels > 0 {
-            warnings.append("\(skippedChannels) animation channels skipped: material channels, camera xmag/aspectRatio and missing targets are not supported")
+            warnings.append("\(skippedChannels) animation channels skipped: unsupported pointers (such as camera xmag/aspectRatio) or missing targets")
         }
 
         return GLTFSceneGraph(sceneGraph: SceneGraph(root: root), animations: animations, nodes: nodes, warnings: asset.warnings + warnings)
@@ -333,7 +350,28 @@ private func floats<T>(_ attribute: MetalMesh.VertexAttributeData, as type: T.Ty
     }
 }
 
+// A glTF material and its animated uniforms, shared by every channel that targets it.
+final class AnimatedMaterial: @unchecked Sendable {
+    let material: PBRMaterial
+    var state: PBRMaterial.AnimatedState
+
+    init(_ material: PBRMaterial) {
+        self.material = material
+        state = material.animatedState()
+    }
+}
+
 extension SceneGraph.AnimationClip.Property {
+    // A KHR_animation_pointer material property. Writes the material's uniforms; there is no rest value to blend from.
+    static func gltfMaterial(_ material: AnimatedMaterial, index: Int, name: String, property: GLTFAnimationPointer.MaterialProperty) -> Self {
+        Self(name: "material.\(index)/\(name)") { _ in
+            []
+        } set: { _, value in
+            material.state.apply(property, value: value)
+            material.material.uniforms = material.state.uniforms
+        }
+    }
+
     // A KHR_lights_punctual light property, named below `/extensions/KHR_lights_punctual/lights/N/`.
     static func gltfLight(_ name: String) -> Self? {
         switch name {

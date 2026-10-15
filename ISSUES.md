@@ -1073,12 +1073,13 @@ Want: a ready-made SwiftUI view that has a camera, a frame clock and update hook
 ## 54: glTF scene graph loader: pointer animations
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:assets, effort:m
 created: 2026-10-13T20:37:21Z
-updated: 2026-10-15T19:48:51Z
+updated: 2026-10-15T23:35:09Z
+closed: 2026-10-15T23:35:09Z
 +++
 
 MetalSprocketsSceneGraphGLTF (#16) does not map these glTF features into the scene graph:
