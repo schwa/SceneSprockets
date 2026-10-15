@@ -2264,14 +2264,17 @@ eulerAngles, worldPosition/worldOrientation setters, convertPosition/convertVect
 ## 114: PBR materials have no render state (blend mode, depth, color mask, fill mode)
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
 labels: area:renderer, effort:m
 created: 2026-10-15T20:21:37Z
+updated: 2026-10-15T23:37:01Z
 +++
 
 MaterialRenderState (#84) works for Blinn-Phong and ShaderMaterial. PBRSceneMaterial has none: PBRRenderer sets its own depth/stencil, blending and fill state inside MetalSprocketsPBR with no per-material hook (only alphaMode and doubleSided). Needs MetalSprocketsPBR to accept per-material blend mode, depth read/write, color write mask and fill mode (or a pipeline/encoder hook), then PBRSceneMaterial.renderState wired through.
+
+- `2026-10-15T23:38:02Z`: Checked: PBRMaterialRenderer.makeElement builds one PBRRenderer for all entries; PBRRenderer (MetalSprocketsPBR) sets its own depth/blend/fill state inside, so wrapping it with materialRenderState from outside would be overridden. Punting: needs a MetalSprocketsPBR change first. Unblocker: OK to add per-material render state to MetalSprocketsPBR (e.g. PBRMaterial.renderState with blend mode, depth read/write, color write mask, fill mode, applied per batch in PBRRenderer) and push it? Then PBRSceneMaterial wires it through.
 
 ---
 
@@ -2405,11 +2408,12 @@ Unknown whether it is tied to the slide transition, the sphere mesh, or the mate
 ## 121: glTF loader ignores image-based light, transmission and variant names
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
-labels: area:assets
+labels: area:assets, effort:m
 created: 2026-10-15T22:00:46Z
+updated: 2026-10-15T23:37:01Z
 +++
 
 GLTFAsset.makeSceneGraph(device:) drops parts of the asset that MetalSprocketsGLTF already exposes:
@@ -2417,5 +2421,58 @@ GLTFAsset.makeSceneGraph(device:) drops parts of the asset that MetalSprocketsGL
 - EXT_lights_image_based: GLTFAsset.environment() is public, but sceneGraph.environment is never set from it.
 - Transmission: GLTFAsset.hasTransmission is true for glass assets, but the scene graph has no pass that renders the scene behind transmissive surfaces, so glass shows only the environment map.
 - KHR_materials_variants: variantNames is not copied into GLTFSceneGraph, and a loaded scene graph cannot switch variants (needs MetalSprocketsGLTF to expose per-variant materials).
+
+---
+
+## 122: glTF material animation channels do not blend in AnimationMixer
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:animation, area:assets, effort:s
+created: 2026-10-15T23:35:09Z
+updated: 2026-10-15T23:37:01Z
++++
+
+KHR_animation_pointer material channels from GLTFSceneGraph use a Property whose get returns an empty array, because a material has no generic way to read back the animated value. AnimationMixer uses get as the rest value, so material channels cannot be weighted, cross-faded or added on top of other clips. They only work when a clip is applied directly (AnimationClip.apply / AnimationPlayer).
+
+Expected: material channels blend like transform and light channels.
+Actual: with a mixer, material channels are ignored when blending against the rest value.
+
+- `2026-10-15T23:38:02Z`: Punting: MaterialProperty.factor in MetalSprocketsGLTF is set-only, so the scene graph cannot read a factor back for the mixer's rest value. Unblocker: OK to give .factor a getter (or key path) in MetalSprocketsGLTF and push?
+
+---
+
+## 123: Transmissive PBR materials do not show the scene behind them
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:renderer, effort:m
+created: 2026-10-15T23:39:36Z
++++
+
+PBR materials with transmissionFactor > 0 (glTF KHR_materials_transmission) refract only the environment map in the scene graph. MetalSprocketsPBR can sample a transmission scene (PBRRenderer.transmissionTarget, frame.hasTransmissionScene), but PBRMaterialRenderer never renders the opaque scene into one, so objects behind glass are not visible through it.
+
+Expected: glass shows the refracted scene behind it.
+Actual: glass shows only the environment map.
+
+---
+
+## 124: Cannot switch glTF material variants on a loaded scene graph
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:assets,effort:s,blocked
+created: 2026-10-15T23:39:37Z
++++
+
+GLTFSceneGraph keeps variantNames, but the scene graph always shows the variant the GLTFAsset was loaded with. Switching means loading the asset again and rebuilding the graph, which loses node state and animation players.
+
+Blocked on MetalSprocketsGLTF#176 (per-variant materials are not public).
 
 ---
