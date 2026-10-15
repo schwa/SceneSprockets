@@ -1,3 +1,4 @@
+import MetalSprocketsAddOnsShaders
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
@@ -83,6 +84,77 @@ func playerAdvancesAndStopsAtEnd() {
     player.advance(by: 5)
     #expect(node.trs.translation == [10, 0, 0])
     #expect(!player.isPlaying)
+}
+
+// #89
+private func slide(_ node: SceneGraph.Node) -> Clip {
+    Clip(name: "slide", channels: [.init(target: node, path: .translation, sampler: .init(times: [0, 1], values: [0, 0, 0, 10, 0, 0], interpolation: .linear))])
+}
+
+@Test
+func playerRepeatsAndAutoreverses() {
+    let node = SceneGraph.Node()
+    let player = SceneGraph.AnimationPlayer(clip: slide(node), isLooping: false)
+    player.repeatCount = 2
+    player.autoreverses = true
+    player.advance(by: 1.5)
+    // Half way back in the first cycle.
+    #expect(simd_distance(node.trs.translation, [5, 0, 0]) < 1e-4)
+    player.advance(by: 1)
+    // Half way out in the second cycle.
+    #expect(simd_distance(node.trs.translation, [5, 0, 0]) < 1e-4)
+    #expect(player.isPlaying)
+    player.advance(by: 10)
+    #expect(!player.isPlaying)
+    #expect(node.trs.translation == [0, 0, 0])
+}
+
+@Test
+func playerTimingModeEasesEachPass() {
+    let node = SceneGraph.Node()
+    let player = SceneGraph.AnimationPlayer(clip: slide(node), isLooping: true)
+    player.timingMode = .easeIn
+    player.advance(by: 0.5)
+    #expect(simd_distance(node.trs.translation, [2.5, 0, 0]) < 1e-4)
+}
+
+@Test
+func eventsFireWhenPassedInBothDirections() {
+    let node = SceneGraph.Node()
+    var clip = slide(node)
+    var fired: [Bool] = []
+    clip.events = [.init(time: 0.5) { fired.append($0) }]
+    let player = SceneGraph.AnimationPlayer(clip: clip, isLooping: true)
+    player.autoreverses = true
+    player.advance(by: 0.4)
+    #expect(fired.isEmpty)
+    player.advance(by: 0.2)
+    #expect(fired == [false])
+    // Through the end and back past 0.5, then into the next cycle past 0.5 again.
+    player.advance(by: 2)
+    #expect(fired == [false, true, false])
+}
+
+@Test
+func propertyPathsAnimateLights() {
+    let node = SceneGraph.Node(content: .light(Light(type: .point, color: [1, 1, 1], intensity: 0)))
+    let clip = Clip(name: "flicker", channels: [
+        .init(target: node, path: .property(.lightIntensity), sampler: .init(times: [0, 1], values: [0, 4], interpolation: .linear)),
+        .init(target: node, path: .property(.lightColor), sampler: .init(times: [0, 1], values: [1, 0, 0, 0, 0, 1], interpolation: .linear)),
+    ])
+    clip.apply(at: 0.5)
+    guard case let .light(light) = node.content else {
+        Issue.record("Expected a light")
+        return
+    }
+    #expect(light.intensity == 2)
+    #expect(light.color == [0.5, 0, 0.5])
+    // The mixer captures and blends property paths too.
+    let mixer = SceneGraph.AnimationMixer(clips: [clip])
+    mixer.apply([.init(clip: 0, time: 1)])
+    if case let .light(light) = node.content {
+        #expect(light.intensity == 4)
+    }
 }
 
 @Test

@@ -20,7 +20,7 @@ Legend:
 | Lights | 🟡 | Directional, point and spot only; no ambient light node, no IES, no area or probe lights |
 | Cameras | 🟡 | Perspective only; no HDR, bloom, DOF, motion blur, SSAO or color grading (#45) |
 | Shadows | 🟡 | Shadow maps for all three light types, but one global setting, max 8 slices |
-| Animation | ✅ (different design) | Keyframe clips, blending, layers, state machine; no `CAAnimation` interop, no animation events |
+| Animation | ✅ (different design) | Keyframe clips, blending, layers, state machine, events; no `CAAnimation` interop |
 | Actions | 🟡 | No fade, no `follow(path:)`, no sound actions, no JavaScript actions |
 | Implicit animation | 🟡 | Transform and morph weights only |
 | Constraints | 🟡 | Look-at, billboard and distance; no IK (#57), no replicator, acceleration, slider, avoid-occluder or transform constraints |
@@ -198,17 +198,17 @@ SceneKit animates with `CAAnimation`/`SCNAnimation` and `SCNAnimationPlayer`, ke
 
 | SceneKit | MSSG | Status | Notes |
 |---|---|---|---|
-| `SCNAnimation` / `CAKeyframeAnimation` | `AnimationClip` | 🟡 | Channels target a node's `translation`, `rotation`, `scale` or `weights`. Not key-path based: cannot animate material, light or camera properties. |
-| Interpolation and timing functions | `Interpolation`: `.step`, `.linear` (slerp for rotation), `.cubicSpline` (glTF Hermite) | 🟡 | No Bézier timing functions on clips. |
+| `SCNAnimation` / `CAKeyframeAnimation` | `AnimationClip` | ✅ | Channels target `translation`, `rotation`, `scale`, `weights`, or any value through `.property(Property)` (built in: `lightIntensity`, `lightColor`). |
+| Interpolation and timing functions | `Interpolation`: `.step`, `.linear` (slerp for rotation), `.cubicSpline` (glTF Hermite) , plus `AnimationPlayer.timingMode` (including `.custom`) | ✅ | |
 | `SCNAnimationPlayer` (play, stop, speed, `blendFactor`) | `AnimationPlayer` (`time`, `speed`, `isLooping`, `isPlaying`, `advance(by:)`) | ✅ | |
-| `repeatCount`, `autoreverses`, `isAppliedOnCompletion`, `fillMode` | `isLooping` | 🟡 | No autoreverse or fixed repeat count. Non-looping clips hold the last frame. |
+| `repeatCount`, `autoreverses`, `isAppliedOnCompletion`, `fillMode` | `isLooping`, `repeatCount`, `autoreverses` | 🟡 | Finished clips hold their last frame; no fill modes. |
 | `blendInDuration`, `blendOutDuration` | `AnimationController.play(_:fadeDuration:…)` | ✅ | Cross-fades every other track out. |
 | `isAdditive` | `AnimationLayer.Mode.additive`, `AnimationController.setAdditive` | ✅ | Adds the clip's offset from rest, scaled by weight. |
 | Multiple simultaneous animations with weights | `AnimationMixer` + `AnimationLayer` | ➕ | Normalized-weight blending of override layers; rest pose captured from nodes. |
 | — | `AnimationController.blend(_:parameter:syncsPhase:)` | ➕ | One-parameter blend space with phase sync (for example walk/run). |
 | — | Root motion (`rootMotionNode`, `rootMotion`) | ➕ | Keeps the root's x/z at rest and reports how far it moved, including across loops. |
 | — | `AnimationStateMachine` | ➕ | Named states, ordered transitions with conditions on parameters, normalized time and state time. |
-| `animationEvents` (`SCNAnimationEvent`) | — | ❌ | Use state-machine conditions or poll `time`. |
+| `animationEvents` (`SCNAnimationEvent`) | `AnimationClip.events` | ✅ | Fired by `AnimationPlayer`, in both directions. Not fired by `AnimationMixer`. |
 | `SCNSceneSource` animation extraction | `GLTFSceneGraph.animations`, `ModelIOSceneGraph.animation` | 🟡 | glTF: all clips. Model I/O: keyframed transforms sampled at key times into one clip. |
 | Driving | `advance(by:)` each frame | 🟡 | Not driven by `SceneView`; call it from the delegate. |
 

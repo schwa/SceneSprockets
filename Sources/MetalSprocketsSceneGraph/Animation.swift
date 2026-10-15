@@ -1,13 +1,87 @@
 import simd
 
 extension SceneGraph {
-    // Format-neutral keyframe animation. Channels target node translation, rotation, scale or morph weights.
+    // Format-neutral keyframe animation. Channels target node translation, rotation, scale, morph weights, or any
+    // other value through a Property.
     public struct AnimationClip {
-        public enum Path: Sendable {
+        public enum Path: Sendable, Hashable {
             case translation
             case rotation
             case scale
             case weights
+            // Anything else (light intensity, a material value, ...), like a CAAnimation key path.
+            case property(Property)
+
+            func set(_ value: [Float], on node: Node) {
+                switch self {
+                case .translation where value.count == 3:
+                    node.trs.translation = SIMD3(value[0], value[1], value[2])
+                case .rotation where value.count == 4:
+                    node.trs.rotation = simd_quatf(vector: SIMD4(value[0], value[1], value[2], value[3]))
+                case .scale where value.count == 3:
+                    node.trs.scale = SIMD3(value[0], value[1], value[2])
+                case .weights:
+                    node.morphWeights = value
+                case .property(let property):
+                    property.set(node, value)
+                default:
+                    break
+                }
+            }
+        }
+
+        // A named animatable value. Equal when names are equal, so use one name per value.
+        public struct Property: Sendable, Hashable {
+            public var name: String
+            // The node's current value, used as the rest value by AnimationMixer.
+            public var get: @Sendable (Node) -> [Float]
+            public var set: @Sendable (Node, [Float]) -> Void
+
+            public init(name: String, get: @escaping @Sendable (Node) -> [Float], set: @escaping @Sendable (Node, [Float]) -> Void) {
+                self.name = name
+                self.get = get
+                self.set = set
+            }
+
+            public static func == (lhs: Self, rhs: Self) -> Bool {
+                lhs.name == rhs.name
+            }
+
+            public func hash(into hasher: inout Hasher) {
+                hasher.combine(name)
+            }
+
+            // The intensity of a light node.
+            public static let lightIntensity = Property(name: "light.intensity") { node in
+                if case let .light(light) = node.content { [light.intensity] } else { [] }
+            } set: { node, value in
+                if case var .light(light) = node.content, let intensity = value.first {
+                    light.intensity = intensity
+                    node.content = .light(light)
+                }
+            }
+
+            // The linear RGB color of a light node.
+            public static let lightColor = Property(name: "light.color") { node in
+                if case let .light(light) = node.content { [light.color.x, light.color.y, light.color.z] } else { [] }
+            } set: { node, value in
+                if case var .light(light) = node.content, value.count == 3 {
+                    light.color = SIMD3(value[0], value[1], value[2])
+                    node.content = .light(light)
+                }
+            }
+        }
+
+        // Calls `handler` when playback passes `time` (clip seconds), like SCNAnimationEvent. `isPlayingBackward`
+        // is true during the reversed half of an autoreversing cycle.
+        public struct Event {
+            public var time: Float
+            public var handler: (_ isPlayingBackward: Bool) -> Void
+
+            public init(time: Float, handler: @escaping (_ isPlayingBackward: Bool) -> Void) {
+                self.time = time
+                self.handler = handler
+            }
         }
 
         public enum Interpolation: Sendable {
@@ -106,10 +180,13 @@ extension SceneGraph {
 
         public var name: String?
         public var channels: [Channel]
+        // Fired by AnimationPlayer.
+        public var events: [Event] = []
 
-        public init(name: String? = nil, channels: [Channel]) {
+        public init(name: String? = nil, channels: [Channel], events: [Event] = []) {
             self.name = name
             self.channels = channels
+            self.events = events
         }
 
         public var duration: Float {
@@ -126,30 +203,24 @@ extension SceneGraph {
                 }
             }
             for channel in channels {
-                let value = channel.sampler.sample(at: time, isRotation: channel.path == .rotation)
-                let node = channel.target
-                switch channel.path {
-                case .translation where value.count == 3:
-                    node.trs.translation = SIMD3(value[0], value[1], value[2])
-                case .rotation where value.count == 4:
-                    node.trs.rotation = simd_quatf(vector: SIMD4(value[0], value[1], value[2], value[3]))
-                case .scale where value.count == 3:
-                    node.trs.scale = SIMD3(value[0], value[1], value[2])
-                case .weights:
-                    node.morphWeights = value
-                default:
-                    break
-                }
+                channel.path.set(channel.sampler.sample(at: time, isRotation: channel.path == .rotation), on: channel.target)
             }
         }
     }
 
-    // Plays one clip: holds the time and applies the clip as time advances.
+    // Plays one clip: holds the time and applies the clip as time advances, like SCNAnimationPlayer.
     public final class AnimationPlayer {
         public var clip: AnimationClip
+        // Seconds of playback since the start, across repeats.
         public var time: Float = 0
         public var speed: Float = 1
+        // Repeats forever; otherwise plays `repeatCount` cycles and stops on the last frame.
         public var isLooping: Bool
+        public var repeatCount = 1
+        // Each cycle plays forwards, then backwards.
+        public var autoreverses = false
+        // Eases each pass through the clip.
+        public var timingMode: Action.TimingMode = .linear
         public var isPlaying = true
 
         public init(clip: AnimationClip, isLooping: Bool = true) {
@@ -157,16 +228,67 @@ extension SceneGraph {
             self.isLooping = isLooping
         }
 
+        private var cycleDuration: Float {
+            clip.duration * (autoreverses ? 2 : 1)
+        }
+
+        // Clip time and direction at playback time `time`, before easing.
+        private func clipTime(at time: Float) -> (time: Float, isBackward: Bool) {
+            let duration = clip.duration
+            guard duration > 0 else {
+                return (0, false)
+            }
+            let total = isLooping ? Float.infinity : cycleDuration * Float(max(repeatCount, 1))
+            if time >= total {
+                return autoreverses ? (0, true) : (duration, false)
+            }
+            let cycle = max(time, 0).truncatingRemainder(dividingBy: cycleDuration)
+            return cycle > duration ? (2 * duration - cycle, true) : (cycle, false)
+        }
+
         public func advance(by deltaTime: Float) {
             guard isPlaying else {
                 return
             }
+            let previous = time
             time += deltaTime * speed
-            if !isLooping, time >= clip.duration {
-                time = clip.duration
+            if !isLooping, time >= cycleDuration * Float(max(repeatCount, 1)) {
+                time = cycleDuration * Float(max(repeatCount, 1))
                 isPlaying = false
             }
-            clip.apply(at: time, looping: isLooping)
+            fireEvents(from: previous, to: time)
+            let (local, _) = clipTime(at: time)
+            let duration = clip.duration
+            clip.apply(at: duration > 0 ? timingMode.apply(local / duration) * duration : 0)
+        }
+
+        // Fires events whose clip time is passed between two playback times, a pass (forward or backward) at a time.
+        private func fireEvents(from start: Float, to end: Float) {
+            let duration = clip.duration
+            guard !clip.events.isEmpty, duration > 0, end > start else {
+                return
+            }
+            var passStart = start
+            // Bounded, so a huge step does not loop for long.
+            for _ in 0..<64 where passStart < end {
+                let passIndex = (passStart / duration).rounded(.down)
+                let passEnd = min((passIndex + 1) * duration, end)
+                let isBackward = autoreverses && Int(passIndex) % 2 == 1
+                let startOffset = passStart - passIndex * duration
+                let endOffset = passEnd - passIndex * duration
+                for event in clip.events {
+                    let passed = if isBackward {
+                        event.time < duration - startOffset && event.time >= duration - endOffset
+                    } else {
+                        // A forward pass that starts at its beginning includes events at 0.
+                        (startOffset == 0 ? event.time >= 0 : event.time > startOffset) && event.time <= endOffset
+                    }
+                    if passed {
+                        event.handler(isBackward)
+                    }
+                }
+                passStart = passEnd
+            }
         }
     }
 }

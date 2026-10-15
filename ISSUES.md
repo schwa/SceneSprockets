@@ -1741,12 +1741,13 @@ SceneGraphShadows is one global setting. Missing: shadowColor (today only intens
 ## 89: Animation gaps: events, autoreverse, repeat count, timing, key-path targets
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: effort:l, area:animation
 created: 2026-10-15T02:28:08Z
-updated: 2026-10-15T02:31:15Z
+updated: 2026-10-15T03:07:43Z
+closed: 2026-10-15T03:07:43Z
 +++
 
 AnimationClip/AnimationPlayer has no animation events, no autoreverse, no fixed repeat count (only looping), and no Bézier timing functions. Channels can target only translation, rotation, scale and morph weights, not material, light or camera properties. See docs/SceneKitComparison.md.

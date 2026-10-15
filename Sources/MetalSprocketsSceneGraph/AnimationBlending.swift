@@ -181,22 +181,13 @@ extension SceneGraph {
                 return [trs.scale.x, trs.scale.y, trs.scale.z]
             case .weights:
                 return node.morphWeights
+            case .property(let property):
+                return property.get(node)
             }
         }
 
         private static func set(_ value: [Float], on node: Node, path: AnimationClip.Path) {
-            switch path {
-            case .translation where value.count == 3:
-                node.trs.translation = SIMD3(value[0], value[1], value[2])
-            case .rotation where value.count == 4:
-                node.trs.rotation = simd_quatf(vector: SIMD4(value[0], value[1], value[2], value[3]))
-            case .scale where value.count == 3:
-                node.trs.scale = SIMD3(value[0], value[1], value[2])
-            case .weights:
-                node.morphWeights = value
-            default:
-                break
-            }
+            path.set(value, on: node)
         }
     }
 
