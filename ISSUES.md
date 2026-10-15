@@ -1923,8 +1923,17 @@ Candidates to add to GeometryLite3D, then use here:
 - Projection helpers in Shadows.swift: viewMatrix(eye:forward:), perspective(fieldOfView:near:far:), orthographic(halfSize:near:far:), the reversedDepth matrix (SceneGraphRenderer.swift), and an orthographic ProjectionProtocol type (#87).
 - Matrix accessors such as translation/position of a float4x4.
 
-- `2026-10-15T02:31:17Z`: Related: #79, #87, #94.
-- `2026-10-15T13:29:45Z`: Done here: GeometryLite3D's SIMD4.xyz replaces the private copies and the spelled-out columns.3 positions (except PBRSceneGraph.swift, where MetalSprocketsPBR's own public xyz makes it ambiguous); LookAt.cameraMatrix replaces SceneView's lookAt. The rest needs GeometryLite3D first, filed there: #1 OrthographicProjection, #2 float4x4 translation/normal matrix, #3 BoundingBox helpers, #4 Ray and intersections, #5 frustum test, #6 projection/view helpers, #7 TRS, #8 quaternion look rotation.
+\- `2026-10-15T02:31:17Z`: Related: #79, #87, #94.
+\- `2026-10-15T13:29:45Z`: Done here: GeometryLite3D's SIMD4.xyz replaces the private copies and the spelled-out columns.3 positions (except PBRSceneGraph.swift, where MetalSprocketsPBR's own public xyz makes it ambiguous); LookAt.cameraMatrix replaces SceneView's lookAt. The rest needs GeometryLite3D first, filed there: #1 OrthographicProjection, #2 float4x4 translation/normal matrix, #3 BoundingBox helpers, #4 Ray and intersections, #5 frustum test, #6 projection/view helpers, #7 TRS, #8 quaternion look rotation.
+\- `2026-10-15T18:54:18Z`: GeometryLite3D now has the missing pieces (upstream #1–#8 done; BoundingBox3D rename and union adopted in 6fa9359e). Remaining work, one step at a time:
+1. float4x4.normalMatrix: replace normalMatrix() in BlinnPhongMaterialRenderer.swift and .inverse.transpose in ShaderMaterial.swift.
+2. simd_quatf.lookRotation: replace the private lookRotation in Constraint.swift.
+3. OrthographicProjection: replace orthographic(halfSize:near:far:) in Shadows.swift; also check viewMatrix(eye:forward:), perspective(...), and the reversedDepth matrix in SceneGraphRenderer.swift against Projection/ViewProjection.
+4. Ray3D: replace HitTest.Ray and the private triangle and slab tests in HitTest.swift. HitTest.Ray is public API.
+5. Frustum and ViewProjection: replace the frustum tests in Culling.swift and Queries.swift, and project/unproject/ray in Queries.swift. The reversed-depth convention must match the renderer.
+6. Transform3D: replace SceneGraph.TRS (public API; keep a typealias?). Transform3D(matrix:) returns nil for lossy matrices, but TRS(matrix:) falls back to identity. Decide which behaviour callers get.
+
+- `2026-10-15T19:03:42Z`: Step 4 (Ray3D) is blocked on GeometryLite3D #33 (box test returns nil from inside the box), #34 (NaN for axis-parallel rays on a face plane) and #35 (fixed epsilon misses small triangles). The public SceneGraph.Ray(viewPoint:...) also works out reversed depth by itself, but Ray3D needs a flag or a ViewProjection.
 
 ---
 
@@ -2074,5 +2083,19 @@ created: 2026-10-15T13:24:33Z
 +++
 
 Move the public API closer to SceneKit's model so it is simple and easy to use. Goal: a newcomer who knows SceneKit can build and render a scene with little boilerplate. This is an ongoing direction, not a single change.
+
+---
+
+## 107: Hit testing has its own ray type and intersection code
+
++++
+status: new
+priority: medium
+kind: enhancement
+labels: area:scenegraph, effort:s
+created: 2026-10-15T19:07:12Z
++++
+
+HitTest.swift has SceneGraph.Ray and private Möller–Trumbore, slab and box-entry tests. GeometryLite3D has Ray3D with intersect(triangle:) and intersect(box:), but they cannot replace ours until GeometryLite3D #33 (nil when the ray starts inside the box), #34 (NaN for axis-parallel rays on a face plane) and #35 (fixed epsilon misses small triangles) are fixed. SceneGraph.Ray(viewPoint:viewSize:cameraMatrix:projectionMatrix:) is public and works out reversed depth by itself; Ray3D needs a reversedDepth flag or a ViewProjection. Split out of #97.
 
 ---
