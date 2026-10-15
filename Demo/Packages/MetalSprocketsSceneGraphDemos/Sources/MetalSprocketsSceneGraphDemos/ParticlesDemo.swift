@@ -1,10 +1,11 @@
+import MetalSprocketsParticles
 import MetalSprocketsSceneGraph
 import simd
 
 // A fountain (alpha blended, with gravity) and a fire (additive) on a floor (#50).
 final class ParticlesDemo: DemoScene {
-    private let fountain = SceneGraph.ParticleSystem(seed: 1)
-    private let fire = SceneGraph.ParticleSystem(seed: 2)
+    private let fountain = ParticleSystem(seed: 1)
+    private let fire = ParticleSystem(seed: 2)
 
     init() {
         let root = SceneGraph.Node(label: "Root")

@@ -12,6 +12,7 @@ let package = Package(
     products: [
         .library(name: "MetalSprocketsSceneGraph", targets: ["MetalSprocketsSceneGraph"]),
         .library(name: "MetalSprocketsSceneGraphPhysics", targets: ["MetalSprocketsSceneGraphPhysics"]),
+        .library(name: "MetalSprocketsParticles", targets: ["MetalSprocketsParticles"]),
     ],
     dependencies: [
         .package(url: "https://github.com/schwa/GeometryLite3D", from: "0.2.3"),
@@ -29,6 +30,7 @@ let package = Package(
         .target(
             name: "MetalSprocketsSceneGraph",
             dependencies: [
+                "MetalSprocketsParticles",
                 "MetalSprocketsSceneGraphShaders",
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
                 .product(name: "Interaction3D", package: "Interaction3D"),
@@ -43,6 +45,8 @@ let package = Package(
                 .product(name: "SwiftMesh", package: "SwiftMesh"),
             ]
         ),
+        .target(name: "MetalSprocketsParticles"),
+        .testTarget(name: "MetalSprocketsParticlesTests", dependencies: ["MetalSprocketsParticles"]),
         .target(
             name: "MetalSprocketsSceneGraphPhysics",
             dependencies: [
@@ -70,6 +74,7 @@ let package = Package(
         .testTarget(
             name: "MetalSprocketsSceneGraphTests",
             dependencies: [
+                "MetalSprocketsParticles",
                 "MetalSprocketsSceneGraph",
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),

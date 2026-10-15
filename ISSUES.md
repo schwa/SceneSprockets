@@ -2067,12 +2067,13 @@ Since #71, Blinn-Phong samples each light's shadow slices while shading, so a li
 ## 103: Move the particle engine into its own target
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:renderer, effort:s
 created: 2026-10-15T13:22:15Z
-updated: 2026-10-15T19:22:45Z
+updated: 2026-10-15T23:44:52Z
+closed: 2026-10-15T23:44:52Z
 +++
 
 Split the particle simulation (ParticleSystem: emission, integration, size and color over life, SplitMix64) out of MetalSprocketsSceneGraph into its own target (e.g. MetalSprocketsParticles) that depends only on simd, not on the scene graph. Make advance(by:emitterTransform:), instances() and the particle list public there. MetalSprocketsSceneGraph depends on it and keeps the scene integration: Node.particleSystems, SceneGraph.advanceParticles(by:), visibleParticleSystems() and ParticlesElement drawing. Keep SceneGraph.ParticleSystem as a typealias so callers do not change.

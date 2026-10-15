@@ -2,13 +2,14 @@ import GeometryLite3D
 import Foundation
 import Metal
 import MetalSprockets
+import MetalSprocketsParticles
 import MetalSprocketsSceneGraphShaders
 import MetalSupport
 import simd
 
 // Draws particle systems inside the scene pass, after the meshes.
 struct ParticlesElement: Element {
-    var systems: [SceneGraph.ParticleSystem]
+    var systems: [ParticleSystem]
     var context: SceneGraphRenderContext
 
     var body: some Element {
@@ -21,7 +22,7 @@ struct ParticlesElement: Element {
                 up: SIMD4(simd_normalize(SIMD3(camera.columns.1.x, camera.columns.1.y, camera.columns.1.z)), 0)
             )
             let cameraPosition = camera.columns.3.xyz
-            let draws: [(buffer: MTLBuffer, count: Int, blendMode: SceneGraph.ParticleSystem.BlendMode)] = systems.compactMap { system in
+            let draws: [(buffer: MTLBuffer, count: Int, blendMode: ParticleSystem.BlendMode)] = systems.compactMap { system in
                 // Farthest first, so alpha-blended sprites composite correctly.
                 let instances = system.instances()
                     .sorted { simd_distance_squared($0.position, cameraPosition) > simd_distance_squared($1.position, cameraPosition) }

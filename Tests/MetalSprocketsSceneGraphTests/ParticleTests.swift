@@ -2,6 +2,7 @@ import CoreGraphics
 import GeometryLite3D
 import Metal
 import MetalSprockets
+import MetalSprocketsParticles
 import SwiftMesh
 import Testing
 import simd
@@ -10,7 +11,7 @@ import simd
 // #50
 @Test
 func particlesEmitMoveAndDie() {
-    let system = SceneGraph.ParticleSystem(seed: 1)
+    let system = ParticleSystem(seed: 1)
     system.birthRate = 10
     system.lifetime = 1
     system.direction = [0, 1, 0]
@@ -35,7 +36,7 @@ func particlesEmitMoveAndDie() {
 
 @Test
 func emissionDurationStopsEmitting() {
-    let system = SceneGraph.ParticleSystem(seed: 2)
+    let system = ParticleSystem(seed: 2)
     system.birthRate = 100
     system.lifetime = 10
     system.emissionDuration = 0.5
@@ -54,7 +55,7 @@ func particlesDrawInFrontAndAreHiddenBehindMeshes() throws {
     let root = SceneGraph.Node()
     _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 5]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(30)))))
     let emitter = SceneGraph.Node(parent: root)
-    let system = SceneGraph.ParticleSystem(seed: 3)
+    let system = ParticleSystem(seed: 3)
     system.birthRate = 1_000
     system.speed = 0
     system.startSize = 1
