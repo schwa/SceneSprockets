@@ -1,13 +1,13 @@
 {
-  "originHash" : "f295bb53c12344e021bed9cf020344a7662c885c976c297f85b1fce31658a3df",
+  "originHash" : "481ba521eaad9e9ae065df0ed157b2dec73cca325f32062330736b0bfdde8d94",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/BasisUniversalMetal",
       "state" : {
-        "revision" : "67a8610ae61c1230f91374ec8b388a4915b4915f",
-        "version" : "0.0.2"
+        "revision" : "002f03eae0e1b0cbb0f3deb3fed1ab2b5290b5a4",
+        "version" : "0.0.3"
       }
     },
     {
@@ -188,6 +188,15 @@
       "state" : {
         "branch" : "main",
         "revision" : "4fc88ff6665f0bd3f24a45e379426942ec593584"
+      }
+    },
+    {
+      "identity" : "swiftjolt",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/SwiftJolt.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "fef62b844107c76a37afde85ceef1142cdf8b166"
       }
     },
     {

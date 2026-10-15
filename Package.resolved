@@ -1,5 +1,5 @@
 {
-  "originHash" : "2b5a3253739979da17e4d01bef56741aaa77eaedbb336296b2ddcec62f65c023",
+  "originHash" : "82a1b4777d6b7d59c218de668617d7ddac7278e3a77387d8e88d53aab775e609",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -8,15 +8,6 @@
       "state" : {
         "revision" : "67a8610ae61c1230f91374ec8b388a4915b4915f",
         "version" : "0.0.2"
-      }
-    },
-    {
-      "identity" : "demokit",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/schwa/DemoKit",
-      "state" : {
-        "branch" : "main",
-        "revision" : "6232f26ca98c0aa17b27f1413abd803c27b96fcb"
       }
     },
     {
@@ -79,7 +70,7 @@
       "location" : "https://github.com/schwa/MetalSprocketsGLTF",
       "state" : {
         "branch" : "main",
-        "revision" : "26795f3d10f950a5636b57ddf13d88c27a9bdec8"
+        "revision" : "306a04f3fb684f9f4d2f17c87d951f7d9bdb68bb"
       }
     },
     {
@@ -187,16 +178,7 @@
       "location" : "https://github.com/schwa/SwiftGLTF",
       "state" : {
         "branch" : "main",
-        "revision" : "63ef2e4dd1df8cedf1175407e444216978125969"
-      }
-    },
-    {
-      "identity" : "swiftjolt",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/schwa/SwiftJolt.git",
-      "state" : {
-        "branch" : "main",
-        "revision" : "fef62b844107c76a37afde85ceef1142cdf8b166"
+        "revision" : "4fc88ff6665f0bd3f24a45e379426942ec593584"
       }
     },
     {

@@ -11,8 +11,6 @@ A format-neutral 3D scene graph for [MetalSprockets](https://github.com/schwa/Me
 | `MetalSprocketsSceneGraphPBR` | `PBRSceneMaterial` and `PBRMaterialRenderer`. Depends on `../MetalSprocketsPBR` (local path). |
 | `MetalSprocketsSceneGraphModelIO` | `ModelIOSceneGraph(url:device:materials:)`: loads any format `MDLAsset` reads (OBJ, PLY, STL, ABC, USD) into a `SceneGraph`, keeping the object hierarchy, with PBR or Blinn-Phong materials, cameras, lights and keyframed transforms. |
 | `MetalSprocketsSceneGraphGLTF` | `GLTFAsset.makeSceneGraph(device:)`: loads a glTF scene (hierarchy, meshes with PBR materials, cameras, lights, skins, morph targets, node animations) into a `SceneGraph`. Depends on `../MetalSprocketsGLTF` (local path). |
-| `MetalSprocketsSceneGraphDemos` | All demos, their SwiftUI views and a DemoKit picker (`SceneGraphDemosScene`). Depends on DemoKit and SwiftJolt. |
-| `scenegraph-demos` (executable) | Runs the demos from the command line. |
 
 Requirements: iOS 26, macOS 26 or visionOS 26; Swift 6.2.
 
@@ -120,7 +118,7 @@ You do not change the scene graph core.
 
 ## Demo
 
-The demos live in the `MetalSprocketsSceneGraphDemos` target and use DemoKit for the picker. Each has a scene outline, a node inspector, an interactive camera and click-to-pick.
+The demos live in a separate package, `Demo/Packages/MetalSprocketsSceneGraphDemos`, with the `MetalSprocketsSceneGraphDemos` library (all demos and a DemoKit picker, `SceneGraphDemosScene`; depends on DemoKit and SwiftJolt), the `scenegraph-demos` executable and the demo render tests. Each has a scene outline, a node inspector, an interactive camera and click-to-pick.
 
 - **Xcode:** `Demo/MetalSprocketsSceneGraphDemo.xcodeproj` is a thin app around `SceneGraphDemosScene`.
-- **Command line:** `xcb run scenegraph-demos` opens the picker. `scenegraph-demos --list` lists demo ids, and `scenegraph-demos --render <id> [file.png] [--size 1280x800] [--frames 60]` renders a demo offscreen to a PNG without opening a window.
+- **Command line:** from `Demo/Packages/MetalSprocketsSceneGraphDemos`, `xcb run scenegraph-demos` opens the picker. `scenegraph-demos --list` lists demo ids, and `scenegraph-demos --render <id> [file.png] [--size 1280x800] [--frames 60]` renders a demo offscreen to a PNG without opening a window.
