@@ -21,12 +21,12 @@ private func viewProjection() -> simd_float4x4 {
 
 @Test
 func boxesInsideAndOutsideFrustum() {
-    let matrix = viewProjection()
-    #expect(isInFrustum(unitBox.transformed(by: .translation(0, 0, -5)), viewProjection: matrix))
-    #expect(!isInFrustum(unitBox.transformed(by: .translation(0, 0, 5)), viewProjection: matrix))
-    #expect(!isInFrustum(unitBox.transformed(by: .translation(50, 0, -5)), viewProjection: matrix))
+    let frustum = Frustum(viewProjection: viewProjection())
+    #expect(frustum.intersects(unitBox.transformed(by: .translation(0, 0, -5))))
+    #expect(!frustum.intersects(unitBox.transformed(by: .translation(0, 0, 5))))
+    #expect(!frustum.intersects(unitBox.transformed(by: .translation(50, 0, -5))))
     // Straddles the left plane.
-    #expect(isInFrustum(unitBox.transformed(by: .translation(-5, 0, -5)), viewProjection: matrix))
+    #expect(frustum.intersects(unitBox.transformed(by: .translation(-5, 0, -5))))
 }
 
 @Test

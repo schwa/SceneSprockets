@@ -1,31 +1,14 @@
 import GeometryLite3D
 import simd
 
-// Conservative: false only when all eight corners are outside the same clip plane (Metal clip space, z in 0...w).
-func isInFrustum(_ bounds: BoundingBox3D, viewProjection: simd_float4x4) -> Bool {
-    let corners = (0..<8).map { index -> SIMD4<Float> in
-        let corner = SIMD3<Float>(
-            index & 1 == 0 ? bounds.min.x : bounds.max.x,
-            index & 2 == 0 ? bounds.min.y : bounds.max.y,
-            index & 4 == 0 ? bounds.min.z : bounds.max.z
-        )
-        return viewProjection * SIMD4(corner, 1)
-    }
-    let outsideTests: [(SIMD4<Float>) -> Bool] = [
-        { $0.x < -$0.w }, { $0.x > $0.w },
-        { $0.y < -$0.w }, { $0.y > $0.w },
-        { $0.z < 0 }, { $0.z > $0.w },
-    ]
-    return !outsideTests.contains { test in corners.allSatisfy(test) }
-}
-
 // Entries without bounds are kept.
 func culledMeshEntries(_ entries: [SceneGraph.MeshEntry], viewProjection: simd_float4x4) -> [SceneGraph.MeshEntry] {
-    entries.filter { entry in
+    let frustum = Frustum(viewProjection: viewProjection)
+    return entries.filter { entry in
         guard let bounds = entry.node.meshBounds else {
             return true
         }
-        return isInFrustum(bounds.transformed(by: entry.worldTransform), viewProjection: viewProjection)
+        return frustum.intersects(bounds.transformed(by: entry.worldTransform))
     }
 }
 

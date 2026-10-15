@@ -48,10 +48,10 @@ extension SceneGraph {
 
     // Visible mesh nodes whose world bounds may be inside the frustum (a conservative test), in traversal order.
     public func nodesInsideFrustum(cameraMatrix: simd_float4x4, projectionMatrix: simd_float4x4) -> [Node] {
-        let viewProjection = projectionMatrix * cameraMatrix.inverse
+        let frustum = Frustum(viewProjection: projectionMatrix * cameraMatrix.inverse)
         var nodes: [Node] = []
         visit { node, worldTransform in
-            if let bounds = node.meshBounds, isInFrustum(bounds.transformed(by: worldTransform), viewProjection: viewProjection) {
+            if let bounds = node.meshBounds, frustum.intersects(bounds.transformed(by: worldTransform)) {
                 nodes.append(node)
             }
         }
@@ -63,6 +63,6 @@ extension SceneGraph {
         guard let bounds = worldBounds(of: node) else {
             return false
         }
-        return isInFrustum(bounds, viewProjection: projectionMatrix * cameraMatrix.inverse)
+        return Frustum(viewProjection: projectionMatrix * cameraMatrix.inverse).intersects(bounds)
     }
 }
