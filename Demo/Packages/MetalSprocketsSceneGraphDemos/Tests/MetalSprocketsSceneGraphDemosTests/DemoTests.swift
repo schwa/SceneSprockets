@@ -1,4 +1,5 @@
 import CoreGraphics
+import DemoKit
 import GeometryLite3D
 import Metal
 import MetalSprockets
@@ -151,6 +152,16 @@ func bumpNormalMapPointsUpOnTop() throws {
     // The first cell spans rows 0..<32 and is centered on row 16.
     #expect(green(row: 8) > 160)
     #expect(green(row: 24) < 96)
+}
+
+// Every catalog demo must also be in the app's picker list, which needs its own wrapper type.
+@Test
+@MainActor
+func everyCatalogDemoIsInTheApp() {
+    let appNames = Set(SceneGraphDemos.all.map { $0.metadata.name })
+    for demo in DemoCatalog.demos {
+        #expect(appNames.contains(demo.title), "\(demo.id) is not in SceneGraphDemos.all")
+    }
 }
 
 @Test

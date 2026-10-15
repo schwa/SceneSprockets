@@ -4,6 +4,7 @@ import SwiftUI
 // DemoKit needs one type per demo; each wraps a DemoCatalog entry in a SceneDemoView.
 public enum SceneGraphDemos {
     public static let all: [any DemoView.Type] = [
+        KeynoteDemoView.self,
         SceneKitFeaturesDemoView.self,
         ShadowsDemoView.self,
         MaterialsDemoView.self,
@@ -41,6 +42,11 @@ extension DemoCatalog {
         let demo = demo(id)
         return DemoMetadata(id: .init(demo.id), name: demo.title, systemImage: demo.systemImage, description: demo.summary, group: demo.section.rawValue)
     }
+}
+
+struct KeynoteDemoView: DemoView {
+    static let metadata = DemoCatalog.metadata("keynote")
+    var body: some View { SceneDemoView(demo: DemoCatalog.demo("keynote")) }
 }
 
 struct SceneKitFeaturesDemoView: DemoView {
