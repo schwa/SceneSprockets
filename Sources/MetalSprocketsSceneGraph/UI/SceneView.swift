@@ -2,9 +2,6 @@ import GeometryLite3D
 import Interaction3D
 import MetalSprockets
 import MetalSprocketsAddOnsShaders
-import MetalSprocketsSceneGraph
-import MetalSprocketsSceneGraphPBR
-import MetalSprocketsSceneGraphRenderer
 import MetalSprocketsUI
 import simd
 import SwiftUI

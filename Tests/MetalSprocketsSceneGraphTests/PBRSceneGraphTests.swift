@@ -5,7 +5,6 @@ import Testing
 import MetalSprocketsAddOnsShaders
 import simd
 @testable import MetalSprocketsSceneGraph
-@testable import MetalSprocketsSceneGraphPBR
 
 @Test
 func pbrModelIsBuiltFromSceneGraph() throws {

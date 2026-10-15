@@ -2,7 +2,7 @@ import Metal
 import MetalSupport
 import SwiftMesh
 import Testing
-@testable import MetalSprocketsSceneGraphRenderer
+@testable import MetalSprocketsSceneGraph
 
 @Test
 func meshesWithDifferentVertexDescriptorsGetSeparateGroups() throws {

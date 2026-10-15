@@ -8,7 +8,6 @@ import MetalSprocketsAddOnsShaders
 import MetalSprocketsSceneGraph
 import MetalSupport
 import SwiftMesh
-import MetalSprocketsSceneGraphRenderer
 import MetalSprocketsSupport
 import MetalSprocketsUI
 import simd

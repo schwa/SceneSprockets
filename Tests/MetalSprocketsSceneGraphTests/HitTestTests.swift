@@ -4,7 +4,6 @@ import SwiftMesh
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
-@testable import MetalSprocketsSceneGraphRenderer
 
 private func material() -> BlinnPhongMaterial {
     BlinnPhongMaterial(ambient: .color(0.1), diffuse: .color([1, 1, 1]), specular: .color(0), shininess: 1)

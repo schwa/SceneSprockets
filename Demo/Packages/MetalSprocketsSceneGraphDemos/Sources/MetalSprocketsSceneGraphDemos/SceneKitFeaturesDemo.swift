@@ -2,7 +2,6 @@ import GeometryLite3D
 import MetalSprocketsAddOns
 import MetalSprocketsAddOnsShaders
 import MetalSprocketsSceneGraph
-import MetalSprocketsSceneGraphRenderer
 import SwiftMesh
 import simd
 

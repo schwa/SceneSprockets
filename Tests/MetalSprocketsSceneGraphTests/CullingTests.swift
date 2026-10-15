@@ -5,7 +5,6 @@ import SwiftMesh
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
-@testable import MetalSprocketsSceneGraphRenderer
 
 private extension simd_float4x4 {
     static func translation(_ x: Float, _ y: Float, _ z: Float) -> simd_float4x4 {

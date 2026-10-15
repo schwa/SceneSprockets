@@ -4,7 +4,6 @@ import MetalSprocketsAddOns
 import SwiftMesh
 import Testing
 @testable import MetalSprocketsSceneGraph
-@testable import MetalSprocketsSceneGraphRenderer
 
 private struct UnlitMaterial: MetalSprocketsSceneGraph.Material {
     var color: SIMD3<Float>

@@ -31,11 +31,6 @@ let package = Package(
             name: "MetalSprocketsSceneGraphDemos",
             dependencies: [
                 .product(name: "MetalSprocketsSceneGraph", package: "MetalSprocketsSceneGraph"),
-                .product(name: "MetalSprocketsSceneGraphRenderer", package: "MetalSprocketsSceneGraph"),
-                .product(name: "MetalSprocketsSceneGraphPBR", package: "MetalSprocketsSceneGraph"),
-                .product(name: "MetalSprocketsSceneGraphGLTF", package: "MetalSprocketsSceneGraph"),
-                .product(name: "MetalSprocketsSceneGraphModelIO", package: "MetalSprocketsSceneGraph"),
-                .product(name: "MetalSprocketsSceneGraphUI", package: "MetalSprocketsSceneGraph"),
                 .product(name: "DemoKit", package: "DemoKit"),
                 .product(name: "JoltPhysics", package: "SwiftJolt"),
                 .product(name: "Interaction3D", package: "Interaction3D"),
@@ -64,7 +59,6 @@ let package = Package(
             dependencies: [
                 "MetalSprocketsSceneGraphDemos",
                 .product(name: "MetalSprocketsSceneGraph", package: "MetalSprocketsSceneGraph"),
-                .product(name: "MetalSprocketsSceneGraphRenderer", package: "MetalSprocketsSceneGraph"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
             ]
         ),

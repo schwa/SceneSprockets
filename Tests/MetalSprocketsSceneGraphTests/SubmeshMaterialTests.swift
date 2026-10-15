@@ -3,7 +3,6 @@ import MetalSprocketsAddOns
 import SwiftMesh
 import Testing
 @testable import MetalSprocketsSceneGraph
-@testable import MetalSprocketsSceneGraphRenderer
 
 @Test
 func eachSubmeshGetsItsOwnMaterial() throws {

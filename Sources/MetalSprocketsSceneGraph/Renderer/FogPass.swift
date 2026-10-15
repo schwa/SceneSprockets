@@ -1,7 +1,6 @@
 import Foundation
 import Metal
 import MetalSprockets
-import MetalSprocketsSceneGraph
 import MetalSprocketsSceneGraphShaders
 import simd
 

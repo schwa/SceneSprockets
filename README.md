@@ -2,15 +2,18 @@
 
 A format-neutral 3D scene graph for [MetalSprockets](https://github.com/schwa/MetalSprockets). You build a tree of nodes with meshes, lights and cameras. Then you render it with one or more material renderers: Blinn-Phong, PBR (through [MetalSprocketsPBR](../MetalSprocketsPBR)), or your own.
 
-## Libraries
+## Library
 
-| Product | Contents |
+One product, `MetalSprocketsSceneGraph`. Source folders:
+
+| Folder | Contents |
 |---|---|
-| `MetalSprocketsSceneGraph` | `SceneGraph`, `SceneGraph.Node`, transforms (`TRS`), materials protocol, bounds, change tracking, animation clips, morph targets, skins. No renderer code. |
-| `MetalSprocketsSceneGraphRenderer` | `SceneGraphElement`, the `SceneGraphMaterialRenderer` protocol, and the Blinn-Phong renderer. |
-| `MetalSprocketsSceneGraphPBR` | `PBRSceneMaterial` and `PBRMaterialRenderer`. Depends on `../MetalSprocketsPBR` (local path). |
-| `MetalSprocketsSceneGraphModelIO` | `ModelIOSceneGraph(url:device:materials:)`: loads any format `MDLAsset` reads (OBJ, PLY, STL, ABC, USD) into a `SceneGraph`, keeping the object hierarchy, with PBR or Blinn-Phong materials, cameras, lights and keyframed transforms. |
-| `MetalSprocketsSceneGraphGLTF` | `GLTFAsset.makeSceneGraph(device:)`: loads a glTF scene (hierarchy, meshes with PBR materials, cameras, lights, skins, morph targets, node animations) into a `SceneGraph`. Depends on `../MetalSprocketsGLTF` (local path). |
+| (root) | `SceneGraph`, `SceneGraph.Node`, transforms (`TRS`), materials protocol, bounds, change tracking, animation clips, morph targets, skins. |
+| ↳ Renderer | `SceneGraphElement`, the `SceneGraphMaterialRenderer` protocol, and the Blinn-Phong renderer. |
+| ↳ PBR | `PBRSceneMaterial` and `PBRMaterialRenderer`. |
+| ↳ ModelIO | `ModelIOSceneGraph(url:device:materials:)`: loads any format `MDLAsset` reads (OBJ, PLY, STL, ABC, USD) into a `SceneGraph`, keeping the object hierarchy, with PBR or Blinn-Phong materials, cameras, lights and keyframed transforms. |
+| ↳ GLTF | `GLTFAsset.makeSceneGraph(device:)`: loads a glTF scene (hierarchy, meshes with PBR materials, cameras, lights, skins, morph targets, node animations) into a `SceneGraph`. |
+| ↳ UI | `SceneView`, a SwiftUI view like SceneKit's `SceneView`. |
 
 Requirements: iOS 26, macOS 26 or visionOS 26; Swift 6.2.
 
@@ -41,7 +44,7 @@ let sceneGraph = SceneGraph(root: root)
 
 ## Render
 
-The simplest way is `SceneView` (in `MetalSprocketsSceneGraphUI`), like SceneKit's SwiftUI `SceneView`:
+The simplest way is `SceneView`, like SceneKit's SwiftUI `SceneView`:
 
 ```swift
 SceneView(sceneGraph: sceneGraph, options: [.allowsCameraControl, .autoenablesDefaultLighting]) { hit in

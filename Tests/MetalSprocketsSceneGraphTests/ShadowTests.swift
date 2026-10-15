@@ -8,7 +8,6 @@ import SwiftMesh
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
-@testable import MetalSprocketsSceneGraphRenderer
 
 private let size = CGSize(width: 128, height: 128)
 

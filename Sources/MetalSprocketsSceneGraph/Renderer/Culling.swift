@@ -1,5 +1,4 @@
 import GeometryLite3D
-import MetalSprocketsSceneGraph
 import simd
 
 // Conservative: false only when all eight corners are outside the same clip plane (Metal clip space, z in 0...w).

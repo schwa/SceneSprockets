@@ -3,7 +3,6 @@ import Metal
 import MetalSprocketsAddOns
 import MetalSprocketsAddOnsShaders
 import MetalSprocketsSceneGraph
-import MetalSprocketsSceneGraphRenderer
 import MetalSprocketsSupport
 import MetalSupport
 import Observation

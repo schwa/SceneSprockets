@@ -3,7 +3,6 @@ import Metal
 import MetalSprockets
 import MetalSprocketsAddOns
 import MetalSprocketsAddOnsShaders
-import MetalSprocketsSceneGraph
 import MetalSupport
 import simd
 

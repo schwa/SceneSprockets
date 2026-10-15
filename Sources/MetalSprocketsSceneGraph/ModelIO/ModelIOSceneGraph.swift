@@ -4,9 +4,6 @@ import MetalKit
 import MetalSprocketsAddOns
 import MetalSprocketsAddOnsShaders
 import MetalSprocketsPBR
-import MetalSprocketsSceneGraph
-import MetalSprocketsSceneGraphPBR
-import MetalSprocketsSceneGraphRenderer
 import ModelIO
 import simd
 import SwiftMesh

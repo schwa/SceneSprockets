@@ -8,7 +8,6 @@ import SwiftMesh
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
-@testable import MetalSprocketsSceneGraphRenderer
 
 @Test
 func fogAmountFollowsStartEndAndExponent() {

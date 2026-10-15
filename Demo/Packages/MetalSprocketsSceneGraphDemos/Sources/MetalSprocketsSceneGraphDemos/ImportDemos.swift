@@ -5,14 +5,10 @@ import MetalSprocketsAddOnsShaders
 import MetalSprocketsGLTF
 import MetalSprocketsPBR
 import MetalSprocketsSceneGraph
-import MetalSprocketsSceneGraphGLTF
-import MetalSprocketsSceneGraphModelIO
-import MetalSprocketsSceneGraphPBR
-import MetalSprocketsSceneGraphRenderer
 import SwiftMesh
 import simd
 
-// An animated glTF fox (MetalSprocketsSceneGraphGLTF) on an OBJ pedestal (MetalSprocketsSceneGraphModelIO), lit and
+// An animated glTF fox (glTF) on an OBJ pedestal (Model I/O), lit and
 // backed by the scene environment. Click to pick: the hit node is selected and a marker shows the hit point.
 final class ImportedAssetsDemo: DemoScene {
     private static let backgrounds = ["Environment", "Blurred Environment", "Color"]

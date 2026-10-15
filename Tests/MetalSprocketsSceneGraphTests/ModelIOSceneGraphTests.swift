@@ -4,8 +4,6 @@ import MetalSprocketsAddOns
 import simd
 import Testing
 @testable import MetalSprocketsSceneGraph
-@testable import MetalSprocketsSceneGraphModelIO
-@testable import MetalSprocketsSceneGraphPBR
 
 private func temporaryDirectory() throws -> URL {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)

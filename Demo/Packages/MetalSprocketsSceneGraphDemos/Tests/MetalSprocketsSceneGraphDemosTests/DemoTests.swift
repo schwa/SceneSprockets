@@ -3,7 +3,6 @@ import Metal
 import MetalSprockets
 import MetalSprocketsSceneGraph
 @testable import MetalSprocketsSceneGraphDemos
-import MetalSprocketsSceneGraphRenderer
 import Testing
 import simd
 

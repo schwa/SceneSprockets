@@ -5,8 +5,6 @@ import MetalSprocketsGLTF
 import simd
 import Testing
 @testable import MetalSprocketsSceneGraph
-@testable import MetalSprocketsSceneGraphGLTF
-@testable import MetalSprocketsSceneGraphPBR
 
 // Mesh node 0 (x = 10) has two triangle primitives with different materials, skinned to joint node 1 (x = 3), which
 // is animated from x = 3 to x = -3. Node 2 holds a camera and node 3 (a child of node 2) a point light.

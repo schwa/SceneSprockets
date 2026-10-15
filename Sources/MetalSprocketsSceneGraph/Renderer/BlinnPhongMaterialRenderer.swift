@@ -2,7 +2,6 @@ import Metal
 import MetalSprockets
 import MetalSprocketsAddOns
 import MetalSprocketsAddOnsShaders
-import MetalSprocketsSceneGraph
 import SwiftMesh
 import simd
 

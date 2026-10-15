@@ -3,8 +3,6 @@ import Metal
 import MetalSprocketsAddOnsShaders
 import MetalSprocketsGLTF
 import MetalSprocketsPBR
-import MetalSprocketsSceneGraph
-import MetalSprocketsSceneGraphPBR
 import simd
 import SwiftGLTF
 import SwiftMesh

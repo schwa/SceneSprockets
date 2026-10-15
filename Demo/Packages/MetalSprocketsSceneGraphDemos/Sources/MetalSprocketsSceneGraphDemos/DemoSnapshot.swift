@@ -5,7 +5,6 @@ import Metal
 import MetalSprockets
 import MetalSprocketsAddOns
 import MetalSprocketsSceneGraph
-import MetalSprocketsSceneGraphRenderer
 import UniformTypeIdentifiers
 
 // Renders a demo offscreen, without a window: steps it `frames` times at 60 Hz (update, actions, constraints) from
