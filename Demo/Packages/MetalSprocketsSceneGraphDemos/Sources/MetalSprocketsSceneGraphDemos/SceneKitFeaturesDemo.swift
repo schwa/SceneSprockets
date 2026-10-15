@@ -7,6 +7,8 @@ import simd
 
 // SceneKit-style features in one scene:
 // - Orthographic camera (#87): a toggle swaps the camera's projection.
+// - Opacity and fades (#76): a slider sets the shapes group's opacity, which every shape inherits; "Fade" runs
+//   fadeOut then fadeIn on the text.
 // - Shapes (#61): a row of parametric shapes and 3D text; sliders reshape the torus live.
 // - Actions (#62): the shapes spin forever, an orbit pivot turns, and "Hop" runs a one-shot sequence on the text.
 // - Constraints (#63): a spotlight and a cone track the orbiting ball, the text faces the camera (Y only), and a
@@ -30,6 +32,8 @@ final class SceneKitFeaturesDemo: DemoScene {
     private let bluePane: SceneGraph.Node
     private let text: SceneGraph.Node
     private var holders: [SceneGraph.Node] = []
+    // Parent of the shape holders, so its opacity fades them all.
+    private let shapesGroup: SceneGraph.Node
     private let homePositions: [SIMD3<Float>]
 
     init() {
@@ -44,6 +48,8 @@ final class SceneKitFeaturesDemo: DemoScene {
         _ = SceneGraph.Node(parent: root, label: "Floor", shape: .box(width: 14, height: 0.1, length: 10), material: BlinnPhongSceneMaterial.plastic([0.55, 0.55, 0.6], shininess: 8), device: demoDevice, trs: .init(translation: [0, -0.05, 0]))
 
         // Shapes, each spinning inside a holder that Shuffle moves.
+        let shapesGroup = SceneGraph.Node(parent: root, label: "Shapes")
+        self.shapesGroup = shapesGroup
         let shapes: [(SceneGraph.Shape, SIMD3<Float>)] = [
             (.box(width: 1, height: 1, length: 1), [0.9, 0.3, 0.25]),
             (.sphere(radius: 0.55), [0.25, 0.6, 0.9]),
@@ -57,7 +63,7 @@ final class SceneKitFeaturesDemo: DemoScene {
         for (index, (shape, color)) in shapes.enumerated() {
             let position = SIMD3<Float>(Float(index) * 1.6 - 4, 0.75, 1.5)
             homePositions.append(position)
-            let holder = SceneGraph.Node(parent: root, label: "Holder \(index)", trs: .init(translation: position))
+            let holder = SceneGraph.Node(parent: shapesGroup, label: "Holder \(index)", trs: .init(translation: position))
             // The capsule uses a custom shader (ShaderMaterial, #48); the rest use Blinn-Phong.
             let material: any MetalSprocketsSceneGraph.Material = if case .capsule = shape, let normals = try? ShaderMaterial.normals() {
                 normals
@@ -128,17 +134,22 @@ final class SceneKitFeaturesDemo: DemoScene {
                 .toggle("Pick Category 1 Only", default: false),
                 .toggle("Shadows", default: true),
                 .toggle("Orthographic", default: false),
+                .slider("Shapes Opacity", 0...1, default: 1),
             ]
         )
         actions = [
             DemoAction("Shuffle", systemImage: "shuffle") { [weak self] in self?.shuffle() },
             DemoAction("Reset Layout", systemImage: "arrow.uturn.backward") { [weak self] in self?.resetLayout() },
             DemoAction("Hop", systemImage: "arrow.up.circle") { [weak self] in self?.hop() },
+            DemoAction("Fade", systemImage: "circle.lefthalf.filled") { [weak self] in self?.fade() },
         ]
     }
 
     override func update(time: Float, deltaTime: Float) {
         torus.shape = .torus(ringRadius: self[value: "Torus Ring"], pipeRadius: self[value: "Torus Pipe"])
+        if shapesGroup.opacity != self[value: "Shapes Opacity"] {
+            shapesGroup.opacity = self[value: "Shapes Opacity"]
+        }
         let blueLast = self[flag: "Blue Pane Drawn Last"]
         redPane.renderingOrder = blueLast ? 1 : 2
         bluePane.renderingOrder = blueLast ? 2 : 1
@@ -177,6 +188,10 @@ final class SceneKitFeaturesDemo: DemoScene {
                 holder.trs.translation = position
             }
         }
+    }
+
+    private func fade() {
+        text.run(.sequence([.fadeOut(duration: 0.6), .wait(duration: 0.3), .fadeIn(duration: 0.6)]), forKey: "fade")
     }
 
     private func hop() {

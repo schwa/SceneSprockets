@@ -2180,15 +2180,18 @@ MSSG's core types depend on MetalSprocketsAddOns: Light (and its type enum) is t
 ## 110: SceneKit Features demo does not show node opacity or fade actions
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: area:demo, effort:s
 created: 2026-10-15T20:12:17Z
-updated: 2026-10-15T20:12:55Z
+updated: 2026-10-15T20:31:01Z
+closed: 2026-10-15T20:31:01Z
 +++
 
 Node.opacity and the fade actions (#76) have no demo. Add them to SceneKitFeaturesDemo: for example a "Fade" action that runs fadeOut then fadeIn on a shape, and an opacity slider on a parent node to show that children inherit it. Use Blinn-Phong or ShaderMaterial shapes; PBR ignores node opacity (#108).
+
+- `2026-10-15T20:31:01Z`: SceneKitFeaturesDemo: shapes now sit under a "Shapes" group with a Shapes Opacity slider (inherited by every shape, including the ShaderMaterial capsule), and a Fade action runs fadeOut/fadeIn on the text. Test covers inheritance and the fade.
 
 ---
 

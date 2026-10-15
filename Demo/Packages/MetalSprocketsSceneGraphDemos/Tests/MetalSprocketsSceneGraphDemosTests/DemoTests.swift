@@ -98,6 +98,26 @@ func sceneKitFeaturesOrthographicToggle() throws {
     #expect(perspective.projection is PerspectiveProjection)
 }
 
+// #110: the opacity slider fades every shape through their group, and Fade takes the text out and back in.
+@Test
+@MainActor
+func sceneKitFeaturesOpacityAndFade() throws {
+    let scene = SceneKitFeaturesDemo()
+    scene[value: "Shapes Opacity"] = 0.5
+    scene.update(time: 0, deltaTime: 0)
+    let shapes = scene.sceneGraph.meshEntries().filter { $0.node.parent?.label?.hasPrefix("Holder") == true }
+    #expect(shapes.count == 6)
+    #expect(shapes.allSatisfy { abs($0.opacity - 0.5) < 1e-6 && $0.isTransparent })
+
+    let text = try #require(scene.sceneGraph.meshEntries().first { $0.node.label == "Glyphs" }?.node.parent)
+    let fade = try #require(scene.actions.first { $0.name == "Fade" })
+    fade.perform()
+    scene.sceneGraph.advanceActions(by: 0.6)
+    #expect(text.opacity < 1e-4)
+    scene.sceneGraph.advanceActions(by: 1)
+    #expect(text.opacity == 1)
+}
+
 @Test
 @MainActor
 func demoParametersHaveDefaults() {
