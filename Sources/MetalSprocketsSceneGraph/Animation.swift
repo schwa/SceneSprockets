@@ -1,3 +1,4 @@
+import GeometryLite3D
 import simd
 
 extension SceneGraph {
@@ -70,6 +71,102 @@ extension SceneGraph {
                     node.content = .light(light)
                 }
             }
+
+            // isVisible as 0 or 1; values above 0.5 show the node.
+            public static let visibility = Property(name: "isVisible") { node in
+                [node.isVisible ? 1 : 0]
+            } set: { node, value in
+                if let visible = value.first {
+                    node.isVisible = visible > 0.5
+                }
+            }
+
+            static func light(_ name: String, _ keyPath: WritableKeyPath<Light, Float> & Sendable) -> Property {
+                Property(name: "light.\(name)") { node in
+                    if case let .light(light) = node.content { [light[keyPath: keyPath]] } else { [] }
+                } set: { node, value in
+                    if case var .light(light) = node.content, let newValue = value.first {
+                        light[keyPath: keyPath] = newValue
+                        node.content = .light(light)
+                    }
+                }
+            }
+
+            public static let lightRange = light("range", \.range)
+            public static let lightInnerConeAngle = light("innerConeAngle", \.innerConeAngle)
+            public static let lightOuterConeAngle = light("outerConeAngle", \.outerConeAngle)
+
+            // A perspective camera's vertical field of view, in radians.
+            public static let cameraVerticalFieldOfView = Property(name: "camera.verticalFieldOfView") { node in
+                if case let .camera(camera) = node.content, let projection = camera.projection as? PerspectiveProjection { [projection.verticalAngleOfView.radians] } else { [] }
+            } set: { node, value in
+                if case var .camera(camera) = node.content, var projection = camera.projection as? PerspectiveProjection, let radians = value.first {
+                    projection.verticalAngleOfView = .radians(radians)
+                    camera.projection = projection
+                    node.content = .camera(camera)
+                }
+            }
+
+            // An orthographic camera's half height.
+            public static let cameraHalfHeight = Property(name: "camera.halfHeight") { node in
+                if case let .camera(camera) = node.content, let projection = camera.projection as? OrthographicProjection { [projection.halfHeight] } else { [] }
+            } set: { node, value in
+                if case var .camera(camera) = node.content, var projection = camera.projection as? OrthographicProjection, let halfHeight = value.first {
+                    projection.halfHeight = halfHeight
+                    camera.projection = projection
+                    node.content = .camera(camera)
+                }
+            }
+
+            // The near (isNear) or far clip plane of a perspective or orthographic camera with a clip range.
+            static func cameraClip(isNear: Bool) -> Property {
+                @Sendable func clip(_ range: ClosedRange<Float>, _ value: Float) -> ClosedRange<Float> {
+                    isNear ? min(value, range.upperBound)...range.upperBound : range.lowerBound...max(value, range.lowerBound)
+                }
+                return Property(name: isNear ? "camera.zNear" : "camera.zFar") { node in
+                    guard case let .camera(camera) = node.content else {
+                        return []
+                    }
+                    let range: ClosedRange<Float>? = switch camera.projection {
+                    case let projection as PerspectiveProjection:
+                        switch projection.depthMode {
+                        case let .standard(zClip), let .reversed(zClip): zClip
+                        case let .reversedInfinite(zNear): isNear ? zNear...zNear : nil
+                        }
+                    case let projection as OrthographicProjection:
+                        switch projection.depthMode {
+                        case let .standard(zClip), let .reversed(zClip): zClip
+                        }
+                    default: nil
+                    }
+                    return range.map { [isNear ? $0.lowerBound : $0.upperBound] } ?? []
+                } set: { node, value in
+                    guard case var .camera(camera) = node.content, let value = value.first else {
+                        return
+                    }
+                    switch camera.projection {
+                    case var projection as PerspectiveProjection:
+                        switch projection.depthMode {
+                        case let .standard(zClip): projection.depthMode = .standard(zClip: clip(zClip, value))
+                        case let .reversed(zClip): projection.depthMode = .reversed(zClip: clip(zClip, value))
+                        case .reversedInfinite: if isNear { projection.depthMode = .reversedInfinite(zNear: value) }
+                        }
+                        camera.projection = projection
+                    case var projection as OrthographicProjection:
+                        switch projection.depthMode {
+                        case let .standard(zClip): projection.depthMode = .standard(zClip: clip(zClip, value))
+                        case let .reversed(zClip): projection.depthMode = .reversed(zClip: clip(zClip, value))
+                        }
+                        camera.projection = projection
+                    default:
+                        return
+                    }
+                    node.content = .camera(camera)
+                }
+            }
+
+            public static let cameraNear = cameraClip(isNear: true)
+            public static let cameraFar = cameraClip(isNear: false)
         }
 
         // Calls `handler` when playback passes `time` (clip seconds), like SCNAnimationEvent. `isPlayingBackward`

@@ -7,8 +7,8 @@ import SwiftGLTF
 import SwiftMesh
 
 // A glTF scene as a scene graph. EXT_mesh_gpu_instancing copies become child nodes; KHR_node_visibility sets
-// isVisible. Not supported: animation channels that target materials, lights, cameras or
-// visibility.
+// isVisible. KHR_animation_pointer channels for visibility, lights and cameras become property channels. Not
+// supported: channels that target materials, and camera xmag and aspectRatio.
 public struct GLTFSceneGraph {
     public var sceneGraph: SceneGraph
     public var animations: [SceneGraph.AnimationClip]
@@ -60,6 +60,9 @@ private struct GLTFSceneGraphBuilder {
 
         var nodes: [SceneGraph.Node?] = Array(repeating: nil, count: document.nodes.count)
         var skinNodes: [(node: SceneGraph.Node, skin: Int)] = []
+        // Scene nodes holding each glTF light and camera, for pointer animations.
+        var lightNodes: [Int: [SceneGraph.Node]] = [:]
+        var cameraNodes: [Int: [SceneGraph.Node]] = [:]
         var path = Set<Int>()
         func visit(_ index: Int, parent: SceneGraph.Node) throws {
             guard document.nodes.indices.contains(index) else {
@@ -104,23 +107,22 @@ private struct GLTFSceneGraphBuilder {
                 }
             }
             // A glTF node can hold a mesh, a camera and a light; the scene graph has one content per node.
-            var extras: [SceneGraph.Node.Content] = []
+            func addContent(_ content: SceneGraph.Node.Content) -> SceneGraph.Node {
+                if case .empty = node.content {
+                    node.content = content
+                    return node
+                }
+                return SceneGraph.Node(parent: node, label: source.name, content: content)
+            }
             if let cameraIndex = source.camera?.index {
                 if let camera = camera(cameraIndex) {
-                    extras.append(.camera(camera))
+                    cameraNodes[cameraIndex, default: []].append(addContent(.camera(camera)))
                 } else {
                     warnings.append("Camera \(cameraIndex) skipped: it has no perspective or orthographic settings")
                 }
             }
-            if let light = source.punctualLight(in: document) {
-                extras.append(.light(MetalSprocketsSceneGraph.Light(light)))
-            }
-            for content in extras {
-                if case .empty = node.content {
-                    node.content = content
-                } else {
-                    _ = SceneGraph.Node(parent: node, label: source.name, content: content)
-                }
+            if let light = source.punctualLight(in: document), let lightIndex = (try? source.extensionValue(KHRLightsPunctualNodeRef.self))??.light {
+                lightNodes[lightIndex, default: []].append(addContent(.light(MetalSprocketsSceneGraph.Light(light))))
             }
             for child in source.children {
                 try visit(child.index, parent: node)
@@ -148,28 +150,45 @@ private struct GLTFSceneGraphBuilder {
             node.skin = skins[index]
         }
 
+        func node(_ index: Int) -> [SceneGraph.Node] {
+            nodes.indices.contains(index) ? nodes[index].map { [$0] } ?? [] : []
+        }
+        var skippedChannels = 0
         let animations = asset.animations.map { clip in
-            SceneGraph.AnimationClip(name: clip.name, channels: clip.channels.compactMap { channel in
-                guard case let .node(index, property) = channel.target, nodes.indices.contains(index), let node = nodes[index] else {
-                    return nil
+            SceneGraph.AnimationClip(name: clip.name, channels: clip.channels.flatMap { channel -> [SceneGraph.AnimationClip.Channel] in
+                let targets: [(node: SceneGraph.Node, path: SceneGraph.AnimationClip.Path)]
+                switch channel.target {
+                case let .node(index, property):
+                    let path: SceneGraph.AnimationClip.Path = switch property {
+                    case .translation: .translation
+                    case .rotation: .rotation
+                    case .scale: .scale
+                    case .weights: .weights
+                    }
+                    targets = node(index).map { ($0, path) }
+                case let .visibility(index):
+                    targets = node(index).map { ($0, .property(.visibility)) }
+                case let .light(index, name):
+                    targets = SceneGraph.AnimationClip.Property.gltfLight(name).map { property in lightNodes[index, default: []].map { ($0, .property(property)) } } ?? []
+                case let .camera(index, name):
+                    targets = SceneGraph.AnimationClip.Property.gltfCamera(name).map { property in cameraNodes[index, default: []].map { ($0, .property(property)) } } ?? []
+                case .material:
+                    targets = []
                 }
-                let path: SceneGraph.AnimationClip.Path = switch property {
-                case .translation: .translation
-                case .rotation: .rotation
-                case .scale: .scale
-                case .weights: .weights
+                if targets.isEmpty {
+                    skippedChannels += 1
                 }
                 let interpolation: SceneGraph.AnimationClip.Interpolation = switch channel.interpolation {
                 case .step: .step
                 case .linear: .linear
                 case .cubicSpline: .cubicSpline
                 }
-                return SceneGraph.AnimationClip.Channel(target: node, path: path, sampler: .init(times: channel.times, values: channel.values, interpolation: interpolation))
+                let sampler = SceneGraph.AnimationClip.Sampler(times: channel.times, values: channel.values, interpolation: interpolation)
+                return targets.map { SceneGraph.AnimationClip.Channel(target: $0.node, path: $0.path, sampler: sampler) }
             })
         }
-        let skippedChannels = asset.animations.flatMap(\.channels).filter { if case .node = $0.target { false } else { true } }.count
         if skippedChannels > 0 {
-            warnings.append("\(skippedChannels) animation channels skipped: only node channels are supported")
+            warnings.append("\(skippedChannels) animation channels skipped: material channels, camera xmag/aspectRatio and missing targets are not supported")
         }
 
         return GLTFSceneGraph(sceneGraph: SceneGraph(root: root), animations: animations, nodes: nodes, warnings: asset.warnings + warnings)
@@ -311,6 +330,32 @@ private func floats<T>(_ attribute: MetalMesh.VertexAttributeData, as type: T.Ty
     let size = attribute.format.size
     return attribute.bytes.withUnsafeBytes { bytes in
         (0..<attribute.count).map { bytes.loadUnaligned(fromByteOffset: $0 * size, as: T.self) }
+    }
+}
+
+extension SceneGraph.AnimationClip.Property {
+    // A KHR_lights_punctual light property, named below `/extensions/KHR_lights_punctual/lights/N/`.
+    static func gltfLight(_ name: String) -> Self? {
+        switch name {
+        case "color": .lightColor
+        case "intensity": .lightIntensity
+        case "range": .lightRange
+        case "spot/innerConeAngle": .lightInnerConeAngle
+        case "spot/outerConeAngle": .lightOuterConeAngle
+        default: nil
+        }
+    }
+
+    // A camera property, named below `/cameras/N/`. The width follows the view, so xmag and aspectRatio are not
+    // supported.
+    static func gltfCamera(_ name: String) -> Self? {
+        switch name {
+        case "perspective/yfov": .cameraVerticalFieldOfView
+        case "orthographic/ymag": .cameraHalfHeight
+        case "perspective/znear", "orthographic/znear": .cameraNear
+        case "perspective/zfar", "orthographic/zfar": .cameraFar
+        default: nil
+        }
     }
 }
 

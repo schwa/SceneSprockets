@@ -1093,6 +1093,7 @@ The loader adds a warning for skipped cameras and channels.
 - `2026-10-15T02:31:16Z`: Related: #87.
 - `2026-10-15T02:59:59Z`: Done: EXT_mesh_gpu_instancing copies become child nodes (skinned meshes keep one), KHR_node_visibility sets isVisible. Left: orthographic cameras (needs #87) and KHR_animation_pointer channels (needs key-path animation targets, #89).
 - `2026-10-15T19:48:51Z`: Orthographic cameras now load (done in #87); only KHR_animation_pointer remains.
+- `2026-10-15T21:32:48Z`: Done: KHR_animation_pointer channels for KHR_node_visibility, lights (color, intensity, range, spot cone angles) and cameras (yfov, ymag, znear, zfar) become property channels; new Property statics visibility, lightRange, lightInner/OuterConeAngle, cameraVerticalFieldOfView, cameraHalfHeight, cameraNear/Far. Left: material channels. MetalSprocketsGLTF parses /materials/N/... into GLTFAnimationPointer.MaterialProperty and PBRMaterial.AnimatedState, both internal. Unblocker: OK to make those public in MetalSprocketsGLTF (and push), or should the scene graph map material pointers itself? Camera xmag/aspectRatio are skipped on purpose (width follows the view).
 
 ---
 
