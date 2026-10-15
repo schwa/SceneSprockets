@@ -1094,6 +1094,7 @@ The loader adds a warning for skipped cameras and channels.
 - `2026-10-15T02:59:59Z`: Done: EXT_mesh_gpu_instancing copies become child nodes (skinned meshes keep one), KHR_node_visibility sets isVisible. Left: orthographic cameras (needs #87) and KHR_animation_pointer channels (needs key-path animation targets, #89).
 - `2026-10-15T19:48:51Z`: Orthographic cameras now load (done in #87); only KHR_animation_pointer remains.
 - `2026-10-15T21:32:48Z`: Done: KHR_animation_pointer channels for KHR_node_visibility, lights (color, intensity, range, spot cone angles) and cameras (yfov, ymag, znear, zfar) become property channels; new Property statics visibility, lightRange, lightInner/OuterConeAngle, cameraVerticalFieldOfView, cameraHalfHeight, cameraNear/Far. Left: material channels. MetalSprocketsGLTF parses /materials/N/... into GLTFAnimationPointer.MaterialProperty and PBRMaterial.AnimatedState, both internal. Unblocker: OK to make those public in MetalSprocketsGLTF (and push), or should the scene graph map material pointers itself? Camera xmag/aspectRatio are skipped on purpose (width follows the view).
+- `2026-10-15T21:58:17Z`: No API consumers: public API can change freely. Making MetalSprocketsGLTF material pointer types public is fine (MetalSprocketsGLTF#175).
 
 ---
 
@@ -1827,6 +1828,8 @@ Missing: SCNReplicatorConstraint, SCNAccelerationConstraint, SCNSliderConstraint
 
 - `2026-10-15T02:31:16Z`: Related: #57 (IK).
 - `2026-10-15T03:17:39Z`: Done: replicator, avoidOccluder, transform constraints, and billboard with any set of free axes. Left: acceleration (needs frame time passed to applyConstraints and per-node state), slider (needs physics, #38), and influenceFactor/isEnabled/isIncremental (Constraint is an enum; these need a wrapper type, which is an API decision).
+- `2026-10-15T21:33:11Z`: Reviewed what is left (acceleration, slider, influenceFactor/isEnabled/isIncremental). Punting: each changes public API. influenceFactor/isEnabled/isIncremental need Constraint to become a wrapper (e.g. struct Constraint { kind; influence; isEnabled; isIncremental }) or new enum cases; acceleration needs applyConstraints(pointOfView:deltaTime:) plus per-node velocity state; slider can now use physics (#38 closed) but needs a collision query API from the physics module. Unblocker: OK to (1) turn Constraint into a struct wrapping today's enum as 'kind', with influence/isEnabled/isIncremental fields, and (2) add deltaTime to applyConstraints?
+- `2026-10-15T21:58:16Z`: No API consumers: public API can change freely. Go ahead with a Constraint wrapper struct and a deltaTime argument on applyConstraints; no unblocker needed.
 
 ---
 
@@ -1954,6 +1957,8 @@ Candidates to add to GeometryLite3D, then use here:
 
 - `2026-10-15T19:03:42Z`: Step 4 (Ray3D) is blocked on GeometryLite3D #33 (box test returns nil from inside the box), #34 (NaN for axis-parallel rays on a face plane) and #35 (fixed epsilon misses small triangles). The public SceneGraph.Ray(viewPoint:...) also works out reversed depth by itself, but Ray3D needs a flag or a ViewProjection.
 - `2026-10-15T19:10:52Z`: Done except Ray3D, split out as #107.
+- `2026-10-15T21:58:17Z`: No API consumers: public API can change freely. Replace HitTest.Ray and SceneGraph.TRS outright; no typealias needed.
+- `2026-10-15T22:00:46Z`: Correction: do NOT add typealiases or deprecations to keep old callers working. Break the API and update all callers. Replace SceneGraph.TRS and HitTest.Ray outright.
 
 ---
 
@@ -2069,6 +2074,9 @@ updated: 2026-10-15T19:22:45Z
 
 Split the particle simulation (ParticleSystem: emission, integration, size and color over life, SplitMix64) out of MetalSprocketsSceneGraph into its own target (e.g. MetalSprocketsParticles) that depends only on simd, not on the scene graph. Make advance(by:emitterTransform:), instances() and the particle list public there. MetalSprocketsSceneGraph depends on it and keeps the scene integration: Node.particleSystems, SceneGraph.advanceParticles(by:), visibleParticleSystems() and ParticlesElement drawing. Keep SceneGraph.ParticleSystem as a typealias so callers do not change.
 
+- `2026-10-15T21:58:17Z`: No API consumers: public API can change freely. The SceneGraph.ParticleSystem typealias is optional.
+- `2026-10-15T22:00:46Z`: Correction: do NOT add typealiases or deprecations to keep old callers working. Break the API and update all callers. No SceneGraph.ParticleSystem typealias.
+
 ---
 
 ## 104: Move the audio engine into its own target
@@ -2083,6 +2091,9 @@ updated: 2026-10-15T19:22:45Z
 +++
 
 Split the positional audio engine out of MetalSprocketsSceneGraph into its own target (e.g. MetalSprocketsAudio) that depends only on AVFAudio and simd, not on the scene graph: AudioPlayer (buffer or file, loops, volume) and a spatial mixer (AVAudioEngine plus AVAudioEnvironmentNode) with an API to attach/detach players, set each player's position, pause/resume, and set the listener transform. MetalSprocketsSceneGraph depends on it and keeps the scene integration: Node.audioPlayers and SceneAudio.update(sceneGraph:listener:) (walk the graph, push world positions, pause players on hidden nodes, detach removed ones), plus SceneView(audio:). Keep SceneGraph.AudioPlayer as a typealias so callers do not change. Same shape as #103.
+
+- `2026-10-15T21:58:17Z`: No API consumers: public API can change freely. The SceneGraph.AudioPlayer typealias is optional.
+- `2026-10-15T22:00:46Z`: Correction: do NOT add typealiases or deprecations to keep old callers working. Break the API and update all callers. No SceneGraph.AudioPlayer typealias.
 
 ---
 
@@ -2385,5 +2396,23 @@ Expected: smooth shading on all spheres.
 Actual: striped, torn-looking upper hemispheres on the red spheres.
 
 Unknown whether it is tied to the slide transition, the sphere mesh, or the material on that row.
+
+---
+
+## 121: glTF loader ignores image-based light, transmission and variant names
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:assets
+created: 2026-10-15T22:00:46Z
++++
+
+GLTFAsset.makeSceneGraph(device:) drops parts of the asset that MetalSprocketsGLTF already exposes:
+
+- EXT_lights_image_based: GLTFAsset.environment() is public, but sceneGraph.environment is never set from it.
+- Transmission: GLTFAsset.hasTransmission is true for glass assets, but the scene graph has no pass that renders the scene behind transmissive surfaces, so glass shows only the environment map.
+- KHR_materials_variants: variantNames is not copied into GLTFSceneGraph, and a loaded scene graph cannot switch variants (needs MetalSprocketsGLTF to expose per-variant materials).
 
 ---
