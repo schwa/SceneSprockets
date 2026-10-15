@@ -31,8 +31,7 @@ let package = Package(
         .package(url: "https://github.com/schwa/Interaction3D", branch: "main"),
         .package(url: "https://github.com/schwa/MetalCompilerPlugin", from: "0.4.1"),
         .package(url: "https://github.com/schwa/DemoKit", branch: "main"),
-        // Local until SwiftJolt has a remote (#38).
-        .package(path: "../../../Scratch/SwiftJolt"),
+        .package(url: "https://github.com/schwa/SwiftJolt.git", branch: "main"),
     ],
     targets: [
         .target(

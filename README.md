@@ -11,7 +11,7 @@ A format-neutral 3D scene graph for [MetalSprockets](https://github.com/schwa/Me
 | `MetalSprocketsSceneGraphPBR` | `PBRSceneMaterial` and `PBRMaterialRenderer`. Depends on `../MetalSprocketsPBR` (local path). |
 | `MetalSprocketsSceneGraphModelIO` | `ModelIOSceneGraph(url:device:materials:)`: loads any format `MDLAsset` reads (OBJ, PLY, STL, ABC, USD) into a `SceneGraph`, keeping the object hierarchy, with PBR or Blinn-Phong materials, cameras, lights and keyframed transforms. |
 | `MetalSprocketsSceneGraphGLTF` | `GLTFAsset.makeSceneGraph(device:)`: loads a glTF scene (hierarchy, meshes with PBR materials, cameras, lights, skins, morph targets, node animations) into a `SceneGraph`. Depends on `../MetalSprocketsGLTF` (local path). |
-| `MetalSprocketsSceneGraphDemos` | All demos, their SwiftUI views and a DemoKit picker (`SceneGraphDemosScene`). Depends on DemoKit and SwiftJolt (local path `../../../Scratch/SwiftJolt` for now). |
+| `MetalSprocketsSceneGraphDemos` | All demos, their SwiftUI views and a DemoKit picker (`SceneGraphDemosScene`). Depends on DemoKit and SwiftJolt. |
 | `scenegraph-demos` (executable) | Runs the demos from the command line. |
 
 Requirements: iOS 26, macOS 26 or visionOS 26; Swift 6.2.
