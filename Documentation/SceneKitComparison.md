@@ -14,7 +14,7 @@ Legend:
 | Area | Status | Main gaps |
 |---|---|---|
 | Scene and nodes | 🟡 | No opacity, no `flattenedClone`, no `presentation` node, no serialization |
-| Transforms | 🟡 | No Euler angles, no `look(at:)` method (use a constraint), no world-space setters |
+| Transforms | ✅ | TRS or matrix, pivot, Euler angles, world-space setters, space conversion, `look(at:)` |
 | Geometry | 🟡 | No geometry sources/elements API (uses `MetalMesh`), no GPU tessellation, no `SCNShape` (Bézier extrusion), no tube or pyramid, no segment counts |
 | Materials | 🟡 | No `SCNMaterial` with lighting models; no shader modifiers |
 | Lights | 🟡 | Directional, point and spot only; no ambient light node, no IES, no area or probe lights |
@@ -92,10 +92,10 @@ Legend:
 |---|---|---|---|
 | `transform` / `simdTransform` | `transform: float4x4` | ✅ | Setting it stores a matrix. |
 | `position`, `orientation`, `scale` | `trs: Transform3D` (`translation`, `rotation: simd_quatf`, `scale`) | ✅ | Setting it stores TRS. Reading `trs` from a matrix decomposes it (lossy for skew, perspective, negative scale). |
-| `eulerAngles`, `rotation` (axis-angle) | — | ❌ | Quaternions only. |
-| `worldTransform`, `worldPosition`, `worldOrientation` | `worldTransform` (read only) | 🟡 | No world-space setters; no `worldPosition`/`worldOrientation` shortcuts. |
-| `convertPosition(_:from:)`, `convertVector`, `convertTransform` | — | ❌ | Multiply world transforms by hand. |
-| `look(at:up:localFront:)` | `Constraint.lookAt(target:worldUp:localFront:)` | 🟡 | A constraint that targets a node, not a one-shot method that targets a point. |
+| `eulerAngles`, `rotation` (axis-angle) | `eulerAngles` (GeometryLite3D `Euler`, ZYX) | 🟡 | No axis-angle property; use `simd_quatf(angle:axis:)`. |
+| `worldTransform`, `worldPosition`, `worldOrientation` | Same names, settable | ✅ | Setting keeps the node's local transform kind (TRS stays TRS). |
+| `convertPosition(_:from:)`, `convertVector`, `convertTransform` | Same names, `from:`/`to:` | ✅ | `nil` means world space. |
+| `look(at:up:localFront:)` | `look(at:up:localFront:)` | ✅ | One-shot. `Constraint.lookAt` keeps tracking a node. |
 | `localUp`, `localRight`, `localFront` (class) | — | ❌ | Lights and cameras use −Z forward, like SceneKit. |
 | — | `LocalTransform` (`.matrix` or `.trs`) | ➕ | Keeps the form you set, so glTF matrices stay exact. |
 

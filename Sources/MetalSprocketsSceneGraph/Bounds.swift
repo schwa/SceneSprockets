@@ -64,16 +64,6 @@ extension SceneGraph.Node {
         boundsCache.subtree = (revision, bounds)
         return bounds
     }
-
-    public var worldTransform: float4x4 {
-        var result = composedTransform
-        var node = parent
-        while let current = node {
-            result = current.composedTransform * result
-            node = current.parent
-        }
-        return result
-    }
 }
 
 extension SceneGraph {

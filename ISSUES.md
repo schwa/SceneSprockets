@@ -1600,19 +1600,21 @@ SCNNode.pivot offsets the node's rotation and scale origin. Nodes here have no p
 ## 79: Transform helpers: Euler angles, world setters, space conversion, look(at:)
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: effort:m, area:scenegraph
 depends: 97
 created: 2026-10-15T02:28:07Z
-updated: 2026-10-15T02:35:20Z
+updated: 2026-10-15T19:35:14Z
+closed: 2026-10-15T19:35:14Z
 +++
 
 Missing SceneKit equivalents: eulerAngles; settable worldPosition/worldOrientation/worldTransform; convertPosition/convertVector/convertTransform(from:/to:); and a one-shot look(at:up:localFront:) that targets a point. Today look-at only exists as a constraint on a node. See docs/SceneKitComparison.md.
 
 - `2026-10-15T02:31:16Z`: Related: #97 (GeometryLite3D has Euler and LookAt).
 - `2026-10-15T02:35:20Z`: Depends on #97: build these helpers on GeometryLite3D (Euler, LookAt, matrix accessors), adding what is missing there first, not as new local math in MSSG.
+- `2026-10-15T19:35:14Z`: Added NodeSpace.swift: eulerAngles, settable worldTransform/worldPosition/worldOrientation, convertPosition/convertVector/convertTransform(from:/to:), look(at:up:localFront:). Built on GeometryLite3D Euler, Transform3D and lookRotation.
 
 ---
 
