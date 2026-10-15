@@ -127,3 +127,34 @@ func gltfSceneGraphBuildsPBRModel() throws {
     #expect(model.opaqueInstances.count == 2)
     #expect(model.skins.count == 1)
 }
+
+// #92: morph target names come from the mesh's extras.targetNames.
+@Test
+func gltfMorphTargetNamesAreRead() throws {
+    var data = Data()
+    [Float](arrayLiteral: 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1).withUnsafeBytes { data.append(contentsOf: $0) }
+    let json = """
+    {
+      "asset": {"version": "2.0"},
+      "scenes": [{"nodes": [0]}],
+      "nodes": [{"mesh": 0}],
+      "meshes": [{"primitives": [{"attributes": {"POSITION": 0}, "targets": [{"POSITION": 1}]}], "weights": [0.25], "extras": {"targetNames": ["Smile"]}}],
+      "accessors": [
+        {"bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3", "min": [0, 0, 0], "max": [1, 1, 0]},
+        {"bufferView": 1, "componentType": 5126, "count": 3, "type": "VEC3", "min": [0, 0, 1], "max": [0, 0, 1]}
+      ],
+      "bufferViews": [{"buffer": 0, "byteOffset": 0, "byteLength": 36}, {"buffer": 0, "byteOffset": 36, "byteLength": 36}],
+      "buffers": [{"byteLength": \(data.count), "uri": "data:application/octet-stream;base64,\(data.base64EncodedString())"}]
+    }
+    """
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
+    try Data(json.utf8).write(to: url)
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let result = try GLTFAsset(url: url, device: device).makeSceneGraph(device: device)
+    let node = try #require(result.nodes[0])
+    #expect(node.morphTargets.map(\.name) == ["Smile"])
+    #expect(node.morphWeight(forTargetNamed: "Smile") == 0.25)
+    node.setMorphWeight(1, forTargetNamed: "Smile")
+    #expect(node.morphWeights == [1])
+    #expect(node.morphWeight(forTargetNamed: "Frown") == nil)
+}

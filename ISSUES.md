@@ -1786,12 +1786,13 @@ Missing: SCNReplicatorConstraint, SCNAccelerationConstraint, SCNSliderConstraint
 ## 92: Morph targets: names and normalized mode
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: effort:s, area:animation
 created: 2026-10-15T02:28:08Z
-updated: 2026-10-15T02:31:15Z
+updated: 2026-10-15T02:58:08Z
+closed: 2026-10-15T02:58:08Z
 +++
 
 SCNMorpher can set weights by target name and has a normalized calculation mode. Here morphWeights are by index only, and blending is always additive. See docs/SceneKitComparison.md.

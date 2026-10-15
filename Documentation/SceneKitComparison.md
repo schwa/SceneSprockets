@@ -257,8 +257,8 @@ SceneKit animates with `CAAnimation`/`SCNAnimation` and `SCNAnimationPlayer`, ke
 | SceneKit | MSSG | Status | Notes |
 |---|---|---|---|
 | `SCNMorpher.targets` | `Node.morphTargets: [MorphTarget]` | ✅ | Position, normal and tangent deltas per vertex (not whole target geometries). |
-| `SCNMorpher.weights`, `setWeight(_:forTargetNamed:)` | `Node.morphWeights: [Float]` | 🟡 | Index only, no names. |
-| `calculationMode` (normalized/additive) | Additive | 🟡 | |
+| `SCNMorpher.weights`, `setWeight(_:forTargetNamed:)` | `Node.morphWeights`, `setMorphWeight(_:forTargetNamed:)`, `morphWeight(forTargetNamed:)` | ✅ | Names from `MorphTarget.name`; glTF reads `extras.targetNames`. |
+| `calculationMode` (normalized/additive) | Offsets from the base mesh | 🟡 | Equivalent to `.normalized`. No `.additive` (absolute targets added to the base). |
 | `unifiesNormals` | — | ❌ | |
 | `SCNSkinner` (`bones`, `boneInverseBindTransforms`, `boneWeights`, `boneIndices`) | `Skin` (`joints`, `inverseBindMatrices`) + `Node.skinVertices` | ✅ | Joints are graph nodes. A skin can be shared by several meshes. Four influences per vertex. |
 | `baseGeometry`, `baseGeometryBindTransform` | — | 🟡 | Skinned meshes are placed by their joints, not the node transform. |

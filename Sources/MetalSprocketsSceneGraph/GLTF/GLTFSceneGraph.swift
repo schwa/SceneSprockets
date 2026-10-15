@@ -228,6 +228,14 @@ private struct GLTFSceneGraphBuilder {
             }
             vertexCount += mesh.vertexCount
         }
+        // Names from the common `extras.targetNames` convention (Blender and three.js write it).
+        if case let .object(extras)? = document.meshes[index].extras, case let .array(names)? = extras["targetNames"] {
+            for (target, name) in zip(morphTargets.indices, names) {
+                if case let .string(name) = name {
+                    morphTargets[target].name = name
+                }
+            }
+        }
         let label = document.meshes[index].name
         let mesh = MetalMesh(device: device, attributes: attributes, submeshes: submeshes, label: label)
         let meshMaterials: [any MetalSprocketsSceneGraph.Material] = primitives.map { primitive in
