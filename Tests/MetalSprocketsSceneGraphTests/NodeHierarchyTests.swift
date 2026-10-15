@@ -10,6 +10,54 @@ func addChildKeepsParentAndChildrenInSync() {
     #expect(root.children.map(\.label) == ["child"])
 }
 
+// #77
+@Test
+func nodeUtilitiesFindReplaceAndClone() {
+    let root = SceneGraph.Node(label: "root")
+    let a = SceneGraph.Node(parent: root, label: "a")
+    let b = SceneGraph.Node(parent: root, label: "b")
+    let deep = SceneGraph.Node(parent: a, label: "deep", trs: .init(translation: [1, 2, 3]))
+    deep.categoryBitMask = 4
+    deep.morphWeights = [0.5]
+    #expect(root.childNode(withLabel: "deep") === deep)
+    #expect(root.childNode(withLabel: "deep", recursively: false) == nil)
+
+    let replacement = SceneGraph.Node(label: "c")
+    root.replaceChild(a, with: replacement)
+    #expect(root.children.map(\.label) == ["c", "b"])
+    #expect(a.parent == nil)
+    _ = b
+
+    let copy = a.clone()
+    #expect(copy !== a && copy.parent == nil)
+    let copiedDeep = copy.childNode(withLabel: "deep")
+    #expect(copiedDeep !== deep)
+    #expect(copiedDeep?.trs.translation == [1, 2, 3])
+    #expect(copiedDeep?.categoryBitMask == 4)
+    #expect(copiedDeep?.morphWeights == [0.5])
+    #expect(deep.parent === a)
+}
+
+@Test
+func traverseCanSkipAndStop() {
+    let root = SceneGraph.Node(label: "root")
+    let a = SceneGraph.Node(parent: root, label: "a")
+    _ = SceneGraph.Node(parent: a, label: "a1")
+    _ = SceneGraph.Node(parent: root, label: "b")
+    _ = SceneGraph.Node(parent: root, label: "c")
+    let sceneGraph = SceneGraph(root: root)
+    var visited: [String] = []
+    sceneGraph.traverse { node, _ in
+        visited.append(node.label ?? "")
+        switch node.label {
+        case "a": return .skipChildren
+        case "b": return .stop
+        default: return .continue
+        }
+    }
+    #expect(visited == ["root", "a", "b"])
+}
+
 @Test
 func initWithParentAddsToParent() {
     let root = SceneGraph.Node(label: "root")

@@ -13,7 +13,7 @@ Legend:
 
 | Area | Status | Main gaps |
 |---|---|---|
-| Scene and nodes | 🟡 | No opacity, no pivot, no clone, no name lookup, no `presentation` node, no serialization |
+| Scene and nodes | 🟡 | No opacity, no pivot, no `flattenedClone`, no `presentation` node, no serialization |
 | Transforms | 🟡 | No Euler angles, no pivot, no `look(at:)` method (use a constraint), no world-space setters |
 | Geometry | 🟡 | No geometry sources/elements API (uses `MetalMesh`), no subdivision, no tessellation, no LOD, no `SCNShape` (Bézier extrusion), no tube or pyramid, no segment counts |
 | Materials | 🟡 | No `SCNMaterial` with lighting models; Blinn-Phong has no transparency (#36); no shader modifiers |
@@ -60,9 +60,9 @@ Legend:
 | SceneKit | MSSG | Status | Notes |
 |---|---|---|---|
 | `SCNNode` | `SceneGraph.Node` | ✅ | A class. `Identifiable` by object identity. |
-| `name` | `label: String?` | 🟡 | No `childNode(withName:recursively:)`. Find nodes with `visit` or `nodesWithWorldTransforms`. |
+| `name`, `childNode(withName:recursively:)` | `label`, `childNode(withLabel:recursively:)` | ✅ | |
 | `geometry` / `light` / `camera` (three separate slots) | `content: Content` (`.empty`, `.mesh`, `.light`, `.camera`) | 🟡 | One content per node. glTF nodes with a mesh plus a camera or light get extra child nodes. |
-| `addChildNode`, `insertChildNode(_:at:)`, `removeFromParentNode`, `replaceChildNode` | `addChild`, `insertChild(_:at:)`, `removeChild`, `removeFromParent`, `removeAllChildren` | 🟡 | Cycle-safe (`canAddChild`, precondition). No `replaceChildNode`. |
+| `addChildNode`, `insertChildNode(_:at:)`, `removeFromParentNode`, `replaceChildNode` | `addChild`, `insertChild(_:at:)`, `removeChild`, `removeFromParent`, `removeAllChildren`, `replaceChild(_:with:)` | ✅ | Cycle-safe (`canAddChild`, precondition). |
 | `parent`, `childNodes` | `parent` (weak), `children` | ✅ | Both read-only. |
 | `isHidden` | `isVisible` | ✅ | Inverted sense. Hides the subtree from traversal, rendering, bounds and hit testing. |
 | `opacity` | — | ❌ | No per-node opacity, so no fade actions. |
@@ -70,7 +70,7 @@ Legend:
 | `renderingOrder` | `renderingOrder` | ✅ | Lower draws first. Within one value, each renderer keeps its own order (for example PBR draws opaque before blended). |
 | `castsShadow` | `Content.mesh(…, castsShadow:)` | 🟡 | Per mesh content, not per node. |
 | — (no SceneKit equivalent) | `Content.mesh(…, receivesShadow:)` | ➕ | Non-receivers are drawn into a mask that the shadow pass skips. |
-| `clone()`, `flattenedClone()` | — | ❌ | |
+| `clone()`, `flattenedClone()` | `clone()` | 🟡 | Shares meshes, materials, skins and constraints, like SceneKit. No `flattenedClone`. |
 | `presentation` | — | ❌ | No separate presentation tree. Actions and animations write to the model values directly. |
 | `pivot` | — | ❌ | Use an extra parent node. |
 | `movabilityHint` | — | ❌ | |
@@ -83,7 +83,7 @@ Legend:
 | `audioPlayers` | — | ❌ | |
 | `filters` (Core Image) | — | ❌ | |
 | `boundingBox`, `boundingSphere` | `meshBounds`, `subtreeBounds`, `SceneGraph.bounds`, `SceneGraph.worldBounds(of:)` | 🟡 | Axis-aligned boxes only, no spheres. Computed on the CPU from float3 positions (shared storage) and cached per revision. Skinned and morphed meshes report rest-pose bounds. |
-| `enumerateChildNodes`, `enumerateHierarchy` | `SceneGraph.visit(worldTransform:includeHidden:_:)`, `nodesWithWorldTransforms` | ✅ | Depth-first, with the accumulated world transform. Skips hidden subtrees unless asked. No early stop. |
+| `enumerateChildNodes`, `enumerateHierarchy` | `SceneGraph.visit(worldTransform:includeHidden:_:)`, `traverse` (skip children or stop), `nodesWithWorldTransforms` | ✅ | Depth-first, with the accumulated world transform. Skips hidden subtrees unless asked. |
 | — | `revision` per node | ➕ | Changes propagate to ancestors. Used for caches (bounds, deformation, PBR model). |
 
 ## Transforms

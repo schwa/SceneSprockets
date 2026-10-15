@@ -204,5 +204,51 @@ extension SceneGraph {
             children.removeAll()
             bump(structure: true)
         }
+
+        // Puts `newChild` where `child` was, like SCNNode.replaceChildNode(_:with:). Does nothing when `child` is not
+        // a child of this node.
+        public func replaceChild(_ child: Node, with newChild: Node) {
+            guard child !== newChild, let index = children.firstIndex(where: { $0 === child }) else {
+                return
+            }
+            removeChild(child)
+            insertChild(newChild, at: min(index, children.count))
+        }
+
+        // The first node named `label` in depth-first order (this node excluded), like
+        // SCNNode.childNode(withName:recursively:).
+        public func childNode(withLabel label: String, recursively: Bool = true) -> Node? {
+            for child in children {
+                if child.label == label {
+                    return child
+                }
+                if recursively, let found = child.childNode(withLabel: label) {
+                    return found
+                }
+            }
+            return nil
+        }
+
+        // A copy of this node and its subtree, like SCNNode.clone(). Meshes, materials, skins and constraints are
+        // shared, not copied; running actions are not copied. The copy has no parent.
+        public func clone() -> Node {
+            let copy = Node(label: label, content: content)
+            copy.localTransform = localTransform
+            copy.morphTargets = morphTargets
+            copy.morphWeights = morphWeights
+            copy.skin = skin
+            copy.skinVertices = skinVertices
+            copy.isVisible = isVisible
+            copy.constraints = constraints
+            copy.categoryBitMask = categoryBitMask
+            copy.lightCategoryBitMask = lightCategoryBitMask
+            copy.renderingOrder = renderingOrder
+            copy.actionSpeed = actionSpeed
+            copy.shapeStorage = shapeStorage
+            for child in children {
+                copy.addChild(child.clone())
+            }
+            return copy
+        }
     }
 }

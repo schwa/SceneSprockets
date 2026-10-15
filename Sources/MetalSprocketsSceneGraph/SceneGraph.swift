@@ -39,6 +39,38 @@ public class SceneGraph {
         try Self.visit(node: root, parentTransform: initialTransform, includeHidden: includeHidden, visitor)
     }
 
+    public enum VisitResult: Sendable {
+        case `continue`
+        // Skips this node's descendants.
+        case skipChildren
+        // Ends the traversal.
+        case stop
+    }
+
+    // Depth-first traversal that the visitor can prune or end early, like enumerateHierarchy's stop flag.
+    public func traverse(worldTransform initialTransform: float4x4 = .identity, includeHidden: Bool = false, _ visitor: (Node, float4x4) throws -> VisitResult) rethrows {
+        _ = try Self.traverse(node: root, parentTransform: initialTransform, includeHidden: includeHidden, visitor)
+    }
+
+    // Returns false when the traversal stopped.
+    private static func traverse(node: Node, parentTransform: float4x4, includeHidden: Bool, _ visitor: (Node, float4x4) throws -> VisitResult) rethrows -> Bool {
+        guard includeHidden || node.isVisible else {
+            return true
+        }
+        let worldTransform = parentTransform * node.transform
+        switch try visitor(node, worldTransform) {
+        case .stop:
+            return false
+        case .skipChildren:
+            return true
+        case .continue:
+            for child in node.children where try !traverse(node: child, parentTransform: worldTransform, includeHidden: includeHidden, visitor) {
+                return false
+            }
+            return true
+        }
+    }
+
     private static func visit(node: Node, parentTransform: float4x4, includeHidden: Bool, _ visitor: (Node, float4x4) throws -> Void) rethrows {
         guard includeHidden || node.isVisible else {
             return
