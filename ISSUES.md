@@ -1520,3 +1520,302 @@ Likely CPU costs per frame: SceneGraphElement rebuilding element trees; meshEntr
 Plan: measure each demo (CPU and GPU, Instruments time profile), list the top costs per demo, fix them one by one, and add a CLI timing mode (scenegraph-demos --bench <id>, see #73) to track regressions.
 
 ---
+
+## 76: Node opacity and fade actions
+
++++
+status: new
+priority: medium
+kind: none
+created: 2026-10-15T02:28:06Z
++++
+
+SceneKit has SCNNode.opacity (inherited by children) and fadeIn/fadeOut/fadeOpacity actions. Nodes here have no opacity, so there are no fade actions either. Want: Node.opacity applied by every renderer, plus the fade actions. See docs/SceneKitComparison.md.
+
+---
+
+## 77: Node utilities: clone, find by name, replace child, early-exit traversal
+
++++
+status: new
+priority: medium
+kind: none
+created: 2026-10-15T02:28:06Z
++++
+
+Missing SceneKit equivalents: clone()/flattenedClone(), childNode(withName:recursively:), replaceChildNode(_:with:), and enumerateHierarchy's stop flag. Want them on SceneGraph.Node and SceneGraph.visit. See docs/SceneKitComparison.md.
+
+---
+
+## 78: Node pivot
+
++++
+status: new
+priority: medium
+kind: none
+created: 2026-10-15T02:28:07Z
++++
+
+SCNNode.pivot offsets the node's rotation and scale origin. Nodes here have no pivot, so you have to add an extra parent node. Want a pivot transform applied before the local transform. See docs/SceneKitComparison.md.
+
+---
+
+## 79: Transform helpers: Euler angles, world setters, space conversion, look(at:)
+
++++
+status: new
+priority: medium
+kind: none
+created: 2026-10-15T02:28:07Z
++++
+
+Missing SceneKit equivalents: eulerAngles; settable worldPosition/worldOrientation/worldTransform; convertPosition/convertVector/convertTransform(from:/to:); and a one-shot look(at:up:localFront:) that targets a point. Today look-at only exists as a constraint on a node. See docs/SceneKitComparison.md.
+
+---
+
+## 80: Shape options: segment counts, box chamfer, geodesic sphere, plane corner radius
+
++++
+status: new
+priority: medium
+kind: none
+created: 2026-10-15T02:28:07Z
++++
+
+SceneGraph.Shape has no segment counts, no box chamferRadius, no sphere isGeodesic, and no plane corner radius. SCNText's chamfer, flatness, container frame and wrapping are missing too. Needs SwiftMesh support for some of these. See docs/SceneKitComparison.md.
+
+---
+
+## 81: New shapes: tube, pyramid, floor, extruded Bézier path
+
++++
+status: new
+priority: medium
+kind: none
+created: 2026-10-15T02:28:07Z
++++
+
+SceneKit has SCNTube, SCNPyramid, SCNFloor (infinite, with optional reflections) and SCNShape (an extruded Bézier path). Shape has none of them. See docs/SceneKitComparison.md.
+
+---
+
+## 82: Subdivision and tessellation
+
++++
+status: new
+priority: medium
+kind: none
+created: 2026-10-15T02:28:07Z
++++
+
+SceneKit has subdivisionLevel, wantsAdaptiveSubdivision, the SCNGeometryTessellator and edge creases. There is no equivalent here. See docs/SceneKitComparison.md.
+
+---
+
+## 83: Blinn-Phong material: normal maps, emission, cull mode
+
++++
+status: new
+priority: medium
+kind: none
+created: 2026-10-15T02:28:07Z
++++
+
+BlinnPhongMaterial has only ambient, diffuse and specular color sources and shininess. It has no normal map, no emission, and no double-sided/cull mode setting. Transparency is #36. See docs/SceneKitComparison.md.
+
+---
+
+## 84: Material settings: blend modes, depth read/write, color write mask, wireframe
+
++++
+status: new
+priority: medium
+kind: none
+created: 2026-10-15T02:28:07Z
++++
+
+SceneKit materials have blendMode (alpha, add, subtract, multiply, screen, replace), writesToDepthBuffer/readsFromDepthBuffer, colorBufferWriteMask and fillMode .lines. Here only ShaderMaterial.isTransparent and PBR alphaMode exist. Want these settings to work across the material families. See docs/SceneKitComparison.md.
+
+---
+
+## 85: Shader modifiers
+
++++
+status: new
+priority: medium
+kind: none
+created: 2026-10-15T02:28:07Z
++++
+
+SceneKit shader modifiers inject code at geometry, surface, lighting and fragment entry points of the built-in materials. ShaderMaterial (like SCNProgram) replaces the whole shader. Want a way to tweak the built-in Blinn-Phong/PBR shading without rewriting it. See docs/SceneKitComparison.md.
+
+---
+
+## 86: Light gaps: ambient node, attenuation, temperature, IES and area lights
+
++++
+status: new
+priority: medium
+kind: none
+created: 2026-10-15T02:28:07Z
++++
+
+Missing SceneKit equivalents: an ambient light type as a node (today it is per renderer: BlinnPhongMaterialRenderer.ambientLightColor), attenuationStartDistance and attenuationFalloffExponent, color temperature, and IES, area and probe lights. See docs/SceneKitComparison.md.
+
+---
+
+## 87: Orthographic cameras
+
++++
+status: new
+priority: medium
+kind: none
+created: 2026-10-15T02:28:07Z
++++
+
+GeometryLite3D only has PerspectiveProjection, so there is no orthographic camera. The glTF and Model I/O loaders skip orthographic cameras with a warning. Needs a projection type in GeometryLite3D first. Also unblocks part of #54. See docs/SceneKitComparison.md.
+
+---
+
+## 88: Shadow gaps: color, soft shadows, cascades, per-light settings
+
++++
+status: new
+priority: medium
+kind: none
+created: 2026-10-15T02:28:07Z
++++
+
+SceneGraphShadows is one global setting. Missing: shadowColor (today only intensity toward black), soft shadows (shadowRadius, shadowSampleCount), cascades, and per-light castsShadow, resolution and bias. See docs/SceneKitComparison.md.
+
+---
+
+## 89: Animation gaps: events, autoreverse, repeat count, timing, key-path targets
+
++++
+status: new
+priority: medium
+kind: none
+created: 2026-10-15T02:28:08Z
++++
+
+AnimationClip/AnimationPlayer has no animation events, no autoreverse, no fixed repeat count (only looping), and no Bézier timing functions. Channels can target only translation, rotation, scale and morph weights, not material, light or camera properties. See docs/SceneKitComparison.md.
+
+---
+
+## 90: Action gaps: reversed, speed, random wait, action(forKey:), Euler rotate, timing function
+
++++
+status: new
+priority: medium
+kind: none
+created: 2026-10-15T02:28:08Z
++++
+
+Missing SCNAction features: reversed(), per-action and per-node speed, wait(duration:withRange:), an action(forKey:) getter, rotateBy/rotateTo with Euler angles, and a custom timingFunction. See docs/SceneKitComparison.md.
+
+---
+
+## 91: Constraint gaps: more types, influence factor, enabled flag, billboard axes
+
++++
+status: new
+priority: medium
+kind: none
+created: 2026-10-15T02:28:08Z
++++
+
+Missing: SCNReplicatorConstraint, SCNAccelerationConstraint, SCNSliderConstraint, SCNAvoidOccluderConstraint and SCNTransformConstraint; influenceFactor, isEnabled and isIncremental; and billboard with any set of free axes (today only .all or .y). IK is #57. See docs/SceneKitComparison.md.
+
+---
+
+## 92: Morph targets: names and normalized mode
+
++++
+status: new
+priority: medium
+kind: none
+created: 2026-10-15T02:28:08Z
++++
+
+SCNMorpher can set weights by target name and has a normalized calculation mode. Here morphWeights are by index only, and blending is always additive. See docs/SceneKitComparison.md.
+
+---
+
+## 93: Hit-test gaps: options, segment and subtree tests, richer results
+
++++
+status: new
+priority: medium
+kind: none
+created: 2026-10-15T02:28:08Z
++++
+
+SceneGraph.hitTest always tests both faces, returns every hit, and runs on the whole graph with an infinite ray. Missing: SceneKit options (backFaceCulling, boundingBoxOnly, firstFoundOnly), segment tests, tests on one subtree, and local coordinates, barycentrics and texture coordinates in Hit. See docs/SceneKitComparison.md.
+
+---
+
+## 94: Scene queries: project/unproject point, frustum queries
+
++++
+status: new
+priority: medium
+kind: none
+created: 2026-10-15T02:28:08Z
++++
+
+Missing SceneKit renderer APIs: projectPoint, unprojectPoint (Ray(viewPoint:) covers part of this), nodesInsideFrustum(of:) and isNode(_:insideFrustumOf:). Frustum culling exists but is internal to the Blinn-Phong renderer. See docs/SceneKitComparison.md.
+
+---
+
+## 95: Renderer and view gaps: MSAA, more delegate callbacks, statistics, prepare
+
++++
+status: new
+priority: medium
+kind: none
+created: 2026-10-15T02:28:08Z
++++
+
+SceneView/SceneGraphElement have no multisampling, no debug overlays or statistics, and no way to build pipelines/PBR models ahead of time (like SCNSceneRenderer.prepare). SceneViewDelegate has only two callbacks: there are none for constraints applied or will/did render. See docs/SceneKitComparison.md.
+
+---
+
+## 96: Sort transparent entries back to front
+
++++
+status: new
+priority: medium
+kind: none
+created: 2026-10-15T02:28:08Z
++++
+
+No renderer sorts transparent entries back to front; you have to use renderingOrder by hand. ShaderMaterial with isTransparent is not sorted, and Blinn-Phong has no transparency yet (#36). See docs/SceneKitComparison.md.
+
+---
+
+## 97: Use GeometryLite3D for transforms and other math
+
++++
+status: new
+priority: high
+kind: enhancement
+created: 2026-10-15T02:28:44Z
++++
+
+MSSG reimplements math that GeometryLite3D already has, or should have. Move it to GeometryLite3D and use it from there.
+
+Already in GeometryLite3D but duplicated here:
+- SIMD4.xyz: private copies in HitTest.swift and Constraint.swift; many places spell out SIMD3(m.columns.3.x, m.columns.3.y, m.columns.3.z) instead (SceneGraphRenderer, Culling, BlinnPhongMaterialRenderer, ShaderMaterial, Shadows, PBRSceneGraph, HitTest).
+- LookAt: SceneView.swift has its own lookAt(eye:target:up:); Constraint.swift has lookRotation.
+- Euler: exists in GeometryLite3D; MSSG has no Euler API (#79).
+
+Candidates to add to GeometryLite3D, then use here:
+- TRS (SceneGraph.TRS) on top of TransformComponents/decompose.
+- BoundingBox.union (Bounds.swift).
+- Ray and ray/triangle and ray/box tests (HitTest.swift).
+- Frustum test (Culling.swift isInFrustum).
+- Projection helpers in Shadows.swift: viewMatrix(eye:forward:), perspective(fieldOfView:near:far:), orthographic(halfSize:near:far:), the reversedDepth matrix (SceneGraphRenderer.swift), and an orthographic ProjectionProtocol type (#87).
+- Matrix accessors such as translation/position of a float4x4.
+
+---
