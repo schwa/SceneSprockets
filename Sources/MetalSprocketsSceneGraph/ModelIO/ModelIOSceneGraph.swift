@@ -9,7 +9,7 @@ import simd
 import SwiftMesh
 
 // An MDLAsset (OBJ, PLY, STL, ABC, USD, ...) as a scene graph, keeping its object hierarchy.
-// Not imported: skins and blend shapes (see #31), normal, metallic, roughness and occlusion textures.
+// Not imported: skins and blend shapes (see #31).
 public struct ModelIOSceneGraph {
     public enum MaterialKind: Sendable {
         case pbr
@@ -174,6 +174,24 @@ private struct ModelIOConverter {
                     uniforms.emissiveFactor = [1, 1, 1]
                 }
             }
+            if let normalTexture = try texture(source?.property(with: .tangentSpaceNormal), sRGB: false) {
+                bindings[Int(kPBRTextureNormal.rawValue)] = .init(texture: normalTexture, sampler: sampler)
+                uniforms.normal.enabled = 1
+            }
+            if let occlusionTexture = try texture(source?.property(with: .ambientOcclusion), sRGB: false) {
+                bindings[Int(kPBRTextureOcclusion.rawValue)] = .init(texture: occlusionTexture, sampler: sampler)
+                uniforms.occlusion.enabled = 1
+            }
+            // Model I/O has separate metallic and roughness maps; PBR reads roughness from green and metallic from
+            // blue of one texture. Their factors multiply the texture, so a mapped value's factor is 1.
+            let metallicMap = textureSource(source?.property(with: .metallic))
+            let roughnessMap = textureSource(source?.property(with: .roughness))
+            if metallicMap != nil || roughnessMap != nil, let packed = packMetallicRoughness(metallic: metallicMap, roughness: roughnessMap) {
+                bindings[Int(kPBRTextureMetallicRoughness.rawValue)] = .init(texture: packed, sampler: sampler)
+                uniforms.metallicRoughness.enabled = 1
+                uniforms.metallicFactor = metallicMap == nil ? metallic : 1
+                uniforms.roughnessFactor = roughnessMap == nil ? roughness : 1
+            }
             if baseColor.w < 1 {
                 uniforms.alphaMode = .blend
             }
@@ -217,6 +235,79 @@ private struct ModelIOConverter {
             return nil
         }
         return property.floatValue
+    }
+
+    func textureSource(_ property: MDLMaterialProperty?) -> MDLTexture? {
+        guard let property, property.type == .texture else {
+            return nil
+        }
+        return property.textureSamplerValue?.texture
+    }
+
+    // An RGBA8 texture with roughness in green and metallic in blue (255 where a map is missing), at the larger
+    // map's size. Maps are read from their first channel, sampled nearest.
+    mutating func packMetallicRoughness(metallic: MDLTexture?, roughness: MDLTexture?) -> MTLTexture? {
+        let maps = [metallic, roughness].compactMap(\.self)
+        let width = maps.map { Int($0.dimensions.x) }.max() ?? 0
+        let height = maps.map { Int($0.dimensions.y) }.max() ?? 0
+        guard width > 0, height > 0 else {
+            return nil
+        }
+        func channel(_ map: MDLTexture?) -> [UInt8]? {
+            guard let map else {
+                return Array(repeating: 255, count: width * height)
+            }
+            guard let values = firstChannel(of: map) else {
+                warnings.append("Texture \(map.name) skipped: unsupported texel format")
+                return nil
+            }
+            let mapWidth = Int(map.dimensions.x)
+            let mapHeight = Int(map.dimensions.y)
+            return (0..<(width * height)).map { index in
+                let x = index % width * mapWidth / width
+                let y = index / width * mapHeight / height
+                return values[y * mapWidth + x]
+            }
+        }
+        guard let metallicValues = channel(metallic), let roughnessValues = channel(roughness) else {
+            return nil
+        }
+        let pixels = (0..<(width * height)).flatMap { [UInt8(255), roughnessValues[$0], metallicValues[$0], UInt8(255)] }
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba8Unorm, width: width, height: height, mipmapped: false)
+        descriptor.usage = .shaderRead
+        descriptor.storageMode = .shared
+        guard let texture = device.makeTexture(descriptor: descriptor) else {
+            return nil
+        }
+        texture.label = "Metallic Roughness"
+        texture.replace(region: MTLRegionMake2D(0, 0, width, height), mipmapLevel: 0, withBytes: pixels, bytesPerRow: width * 4)
+        return texture
+    }
+
+    // First channel of each texel, as 0...255, rows top first. Nil for formats other than 8-bit, 16-bit or float.
+    func firstChannel(of map: MDLTexture) -> [UInt8]? {
+        guard let data = map.texelDataWithTopLeftOrigin() else {
+            return nil
+        }
+        let count = Int(map.dimensions.x) * Int(map.dimensions.y)
+        let channels = Int(map.channelCount)
+        return data.withUnsafeBytes { bytes -> [UInt8]? in
+            switch map.channelEncoding {
+            case .uInt8:
+                guard bytes.count >= count * channels else { return nil }
+                return (0..<count).map { bytes[$0 * channels] }
+            case .uInt16:
+                guard bytes.count >= count * channels * 2 else { return nil }
+                let values = bytes.bindMemory(to: UInt16.self)
+                return (0..<count).map { UInt8(values[$0 * channels] >> 8) }
+            case .float32:
+                guard bytes.count >= count * channels * 4 else { return nil }
+                let values = bytes.bindMemory(to: Float.self)
+                return (0..<count).map { UInt8(min(max(values[$0 * channels], 0), 1) * 255) }
+            default:
+                return nil
+            }
+        }
     }
 
     mutating func texture(_ property: MDLMaterialProperty?, sRGB: Bool) throws -> MTLTexture? {

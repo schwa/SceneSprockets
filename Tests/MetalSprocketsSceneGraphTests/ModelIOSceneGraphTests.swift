@@ -1,5 +1,9 @@
 import Foundation
 import Metal
+import MetalSprocketsPBR
+import MetalSprocketsPBRShaders
+import MetalKit
+import ModelIO
 import MetalSprocketsAddOns
 import simd
 import Testing
@@ -100,4 +104,45 @@ func usdHierarchyAndTransformsAreKept() throws {
     #expect(entry.node.label == "Triangle")
     #expect(entry.node.parent?.label == "Group")
     #expect(entry.worldTransform.columns.3 == [5, 0, 0, 1])
+}
+
+// #55: normal, occlusion, metallic and roughness maps reach the PBR material.
+@Test
+func pbrMaterialMapsAreImported() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    func map(_ name: String, _ bytes: [UInt8], channels: Int) -> MDLMaterialProperty {
+        let texture = MDLTexture(data: Data(bytes), topLeftOrigin: true, name: name, dimensions: [2, 1], rowStride: 2 * channels, channelCount: channels, channelEncoding: .uInt8, isCube: false)
+        return MDLMaterialProperty(name: name, semantic: .none, textureSampler: { let sampler = MDLTextureSampler(); sampler.texture = texture; return sampler }())
+    }
+    let material = MDLMaterial(name: "Mapped", scatteringFunction: MDLPhysicallyPlausibleScatteringFunction())
+    for (semantic, property) in [
+        (MDLMaterialSemantic.tangentSpaceNormal, map("normal", [128, 128, 255, 255, 128, 128, 255, 255], channels: 4)),
+        (.ambientOcclusion, map("occlusion", [255, 255, 255, 255, 64, 64, 64, 255], channels: 4)),
+        (.metallic, map("metallic", [0, 200], channels: 1)),
+    ] {
+        property.semantic = semantic
+        material.remove(material.property(with: semantic) ?? property)
+        material.setProperty(property)
+    }
+    material.setProperty(MDLMaterialProperty(name: "roughness", semantic: .roughness, float: 0.3))
+    let mesh = MDLMesh(boxWithExtent: [1, 1, 1], segments: [1, 1, 1], inwardNormals: false, geometryType: .triangles, allocator: MTKMeshBufferAllocator(device: device))
+    for case let submesh as MDLSubmesh in mesh.submeshes ?? [] {
+        submesh.material = material
+    }
+    let asset = MDLAsset()
+    asset.add(mesh)
+    let result = try ModelIOSceneGraph(asset: asset, device: device)
+    let pbr = try #require(result.sceneGraph.meshEntries().first?.material as? PBRSceneMaterial)
+    let uniforms = pbr.pbrMaterial.uniforms
+    #expect(uniforms.normal.enabled == 1)
+    #expect(uniforms.occlusion.enabled == 1)
+    #expect(uniforms.metallicRoughness.enabled == 1)
+    #expect(uniforms.metallicFactor == 1)
+    #expect(abs(uniforms.roughnessFactor - 0.3) < 1e-6)
+    let packed = pbr.pbrMaterial.textureBindings[Int(kPBRTextureMetallicRoughness.rawValue)].texture
+    var pixels = [UInt8](repeating: 0, count: 8)
+    packed.getBytes(&pixels, bytesPerRow: 8, from: MTLRegionMake2D(0, 0, 2, 1), mipmapLevel: 0)
+    // RGBA: roughness (no map) 255 in green, metallic map in blue.
+    #expect(pixels == [255, 255, 0, 255, 255, 255, 200, 255])
+    #expect(result.warnings.isEmpty)
 }

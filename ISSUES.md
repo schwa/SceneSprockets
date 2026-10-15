@@ -1088,12 +1088,13 @@ The loader adds a warning for skipped cameras and channels.
 ## 55: ModelIO loader: normal, metallic, roughness and occlusion textures
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:assets, effort:s
 created: 2026-10-13T20:40:29Z
-updated: 2026-10-13T21:06:09Z
+updated: 2026-10-15T02:55:06Z
+closed: 2026-10-15T02:55:06Z
 +++
 
 MetalSprocketsSceneGraphModelIO (#37) reads only base color and emission textures. Model I/O keeps normal, metallic, roughness and ambient occlusion maps as separate textures. The PBR material expects the glTF layout: one metallic-roughness texture (roughness in green, metallic in blue) and a tangent attribute for normal maps.

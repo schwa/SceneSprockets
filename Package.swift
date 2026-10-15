@@ -61,6 +61,7 @@ let package = Package(
                 .product(name: "MetalSprocketsAddOns", package: "MetalSprocketsAddOns"),
                 .product(name: "MetalSprocketsAddOnsShaders", package: "MetalSprocketsAddOns"),
                 .product(name: "MetalSprocketsPBR", package: "MetalSprocketsPBR"),
+                .product(name: "MetalSprocketsPBRShaders", package: "MetalSprocketsPBR"),
                 .product(name: "SwiftMesh", package: "SwiftMesh"),
             ]
         ),
