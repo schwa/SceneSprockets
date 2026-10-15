@@ -2013,3 +2013,64 @@ created: 2026-10-15T12:36:55Z
 Since #71, Blinn-Phong samples each light's shadow slices while shading, so a light only darkens what it lights. PBR meshes still go through the screen-space mask, which multiplies every light's shadow and darkens the whole pixel: surfaces facing away from a shadow-casting light, or outside its category, are darkened anyway (the original #71 bug). Fix: pass SceneGraphRenderContext.shadow and lightShadowSlices into MetalSprocketsPBR's lighting and scale each PBRLight's contribution by its own shadow (upstream change), then mark PBRSceneMaterial with SamplesShadowsInShader. ShaderMaterial could get a helper for the same.
 
 ---
+
+## 103: Move the particle engine into its own target
+
++++
+status: new
+priority: low
+kind: task
+labels: area:renderer, effort:s
+created: 2026-10-15T13:22:15Z
++++
+
+Split the particle simulation (ParticleSystem: emission, integration, size and color over life, SplitMix64) out of MetalSprocketsSceneGraph into its own target (e.g. MetalSprocketsParticles) that depends only on simd, not on the scene graph. Make advance(by:emitterTransform:), instances() and the particle list public there. MetalSprocketsSceneGraph depends on it and keeps the scene integration: Node.particleSystems, SceneGraph.advanceParticles(by:), visibleParticleSystems() and ParticlesElement drawing. Keep SceneGraph.ParticleSystem as a typealias so callers do not change.
+
+---
+
+## 104: Move the audio engine into its own target
+
++++
+status: new
+priority: low
+kind: task
+labels: area:audio, effort:s
+created: 2026-10-15T13:22:24Z
++++
+
+Split the positional audio engine out of MetalSprocketsSceneGraph into its own target (e.g. MetalSprocketsAudio) that depends only on AVFAudio and simd, not on the scene graph: AudioPlayer (buffer or file, loops, volume) and a spatial mixer (AVAudioEngine plus AVAudioEnvironmentNode) with an API to attach/detach players, set each player's position, pause/resume, and set the listener transform. MetalSprocketsSceneGraph depends on it and keeps the scene integration: Node.audioPlayers and SceneAudio.update(sceneGraph:listener:) (walk the graph, push world positions, pause players on hidden nodes, detach removed ones), plus SceneView(audio:). Keep SceneGraph.AudioPlayer as a typealias so callers do not change. Same shape as #103.
+
+---
+
+## 105: Move each material renderer into its own target
+
++++
+status: new
+priority: low
+kind: task
+labels: area:renderer, effort:m
+created: 2026-10-15T13:23:03Z
++++
+
+Split the material families out of MetalSprocketsSceneGraph so apps link only what they use:
+- MetalSprocketsSceneGraphBlinnPhong: BlinnPhongSceneMaterial, BlinnPhongMaterialRenderer, BlinnPhongSceneGraphElement, BlinnPhong.metal.
+- MetalSprocketsSceneGraphPBR: PBRSceneMaterial, PBRMaterialRenderer, PBRNodeLayout, PBRSceneGraphModelBuilder, environment background (the only part needing MetalSprocketsPBR).
+- Flat/unlit and custom-shader materials: ShaderMaterial, ShaderMaterialRenderer and their sample shaders (or a 'Flat' unlit material if one is added).
+The core keeps SceneGraph, SceneGraphElement, the SceneGraphMaterialRenderer and SceneGraphBackgroundRenderer protocols, shadows, fog, post-processing and particles drawing.
+
+Needs public API that is internal today: SamplesShadowsInShader, SceneGraphShadows.Sampling fields, SceneGraphRenderContext.shadow/lightShadowSlices, MeshEntry.deformed, culledMeshEntries/sortedFrontToBack/groupedByVertexDescriptor, and per-target shader bundles. Loaders that pick materials (ModelIOSceneGraph .pbr/.blinnPhong, GLTFSceneGraph uses PBR) need to move with or depend on the right renderer target. SceneView's default renderers (Blinn-Phong + PBR) would move to the UI layer or be passed in. Note: this reverses part of the earlier single-target merge for the renderers only.
+
+---
+
+## 106: Make API more SceneKit-like
+
++++
+status: new
+priority: medium
+kind: enhancement
+created: 2026-10-15T13:24:33Z
++++
+
+Move the public API closer to SceneKit's model so it is simple and easy to use. Goal: a newcomer who knows SceneKit can build and render a scene with little boilerplate. This is an ongoing direction, not a single change.
+
+---
