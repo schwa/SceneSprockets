@@ -15,7 +15,7 @@ Legend:
 |---|---|---|
 | Scene and nodes | 🟡 | No opacity, no `flattenedClone`, no `presentation` node, no serialization |
 | Transforms | 🟡 | No Euler angles, no `look(at:)` method (use a constraint), no world-space setters |
-| Geometry | 🟡 | No geometry sources/elements API (uses `MetalMesh`), no subdivision, no tessellation, no LOD, no `SCNShape` (Bézier extrusion), no tube or pyramid, no segment counts |
+| Geometry | 🟡 | No geometry sources/elements API (uses `MetalMesh`), no subdivision, no tessellation, no `SCNShape` (Bézier extrusion), no tube or pyramid, no segment counts |
 | Materials | 🟡 | No `SCNMaterial` with lighting models; Blinn-Phong has no transparency (#36); no shader modifiers |
 | Lights | 🟡 | Directional, point and spot only; no ambient light node, no IES, no area or probe lights |
 | Cameras | 🟡 | Perspective only; no HDR, bloom, DOF, motion blur, SSAO or color grading (#45) |
@@ -118,7 +118,7 @@ Legend:
 | `SCNShape` (extruded `UIBezierPath`/`NSBezierPath`) | — | ❌ | |
 | Editable parametric geometry | `Node.shape` | ✅ | Setting it rebuilds the mesh and keeps the materials and shadow flags. |
 | `subdivisionLevel`, `tessellator`, `wantsAdaptiveSubdivision` | — | ❌ | |
-| `levelsOfDetail` (`SCNLevelOfDetail`) | — | ❌ | #46. |
+| `levelsOfDetail` (`SCNLevelOfDetail`) | `Node.levelsOfDetail` (`LevelOfDetail(mesh:distance:)`) | 🟡 | World-space distance only, no screen-space radius. Hit testing uses the full mesh. |
 | `edgeCreasesElement` | — | ❌ | |
 | Automatic instancing of shared geometry | Blinn-Phong instancing | 🟡 | Blinn-Phong draws repeated mesh+material pairs (same vertex buffers, submesh and material values) as one instanced call. PBR depends on MetalSprocketsPBR. |
 

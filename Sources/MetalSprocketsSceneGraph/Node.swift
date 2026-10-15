@@ -73,6 +73,10 @@ extension SceneGraph {
         var runningActions: [RunningAction] = []
         // Multiplies the time this node's actions advance by; 0 pauses them. Not inherited by children.
         public var actionSpeed: Float = 1
+        // Simpler meshes for distant cameras; see LevelOfDetail. Order does not matter.
+        public var levelsOfDetail: [LevelOfDetail] = [] {
+            didSet { bump(structure: true) }
+        }
         // Applied in order by SceneGraph.applyConstraints(pointOfView:).
         public var constraints: [Constraint] = []
         // Matched against camera, light and hit-test masks, like SCNNode.categoryBitMask. Not inherited by children.
@@ -259,6 +263,7 @@ extension SceneGraph {
             copy.categoryBitMask = categoryBitMask
             copy.lightCategoryBitMask = lightCategoryBitMask
             copy.renderingOrder = renderingOrder
+            copy.levelsOfDetail = levelsOfDetail
             copy.actionSpeed = actionSpeed
             copy.shapeStorage = shapeStorage
             for child in children {

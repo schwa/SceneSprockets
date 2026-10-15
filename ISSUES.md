@@ -911,12 +911,13 @@ Want: post-processing settings on `Camera`, applied after the scene pass. Start 
 ## 46: Level of detail per node
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:renderer, effort:m
 created: 2026-10-13T20:20:23Z
-updated: 2026-10-13T20:21:45Z
+updated: 2026-10-15T03:14:09Z
+closed: 2026-10-15T03:14:09Z
 +++
 
 A node always draws the same mesh. SceneKit has `SCNLevelOfDetail` (other geometry by screen-space radius or distance).

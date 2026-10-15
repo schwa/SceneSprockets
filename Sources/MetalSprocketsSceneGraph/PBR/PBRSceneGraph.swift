@@ -169,10 +169,13 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer {
 private struct EntrySetKey: Hashable {
     var nodes: [ObjectIdentifier]
     var submeshes: [Int]
+    // Levels of detail swap meshes without a structure change.
+    var meshes: [ObjectIdentifier]
 
     init(_ entries: [SceneGraph.MeshEntry]) {
         nodes = entries.map { ObjectIdentifier($0.node) }
         submeshes = entries.map(\.submeshIndex)
+        meshes = entries.map { ObjectIdentifier($0.mesh.vertexBuffer) }
     }
 }
 

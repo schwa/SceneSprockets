@@ -65,7 +65,8 @@ public struct SceneGraphElement: Element {
             guard let context = makeRenderContext(sceneGraph: sceneGraph, camera: camera, cameraMatrix: cameraMatrix, aspectRatio: aspectRatio, defaultCamera: defaultCamera, defaultLight: defaultLight) else {
                 return EmptyElement().eraseToAnyElement()
             }
-            let entries = sceneGraph.meshEntries().filter { $0.node.categoryBitMask & context.categoryBitMask != 0 }
+            let cameraPosition = SIMD3(context.cameraMatrix.columns.3.x, context.cameraMatrix.columns.3.y, context.cameraMatrix.columns.3.z)
+            let entries = applyLevelsOfDetail(sceneGraph.meshEntries().filter { $0.node.categoryBitMask & context.categoryBitMask != 0 }, cameraPosition: cameraPosition)
             var elements: [AnyElement] = []
             if case .environment = context.environment.background {
                 for case let renderer as any SceneGraphBackgroundRenderer in renderers {
