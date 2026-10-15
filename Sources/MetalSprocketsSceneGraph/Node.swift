@@ -49,6 +49,11 @@ extension SceneGraph {
             didSet { bump(structure: true) }
         }
 
+        // Simulated by MetalSprocketsSceneGraphPhysics when set.
+        public var physicsBody: PhysicsBody? {
+            didSet { bump(structure: true) }
+        }
+
         var inheritedOpacity: Float {
             var result = opacity
             var node = parent
@@ -294,6 +299,7 @@ extension SceneGraph {
             copy.skinVertices = skinVertices
             copy.isVisible = isVisible
             copy.opacity = opacity
+            copy.physicsBody = physicsBody
             copy.constraints = constraints
             copy.categoryBitMask = categoryBitMask
             copy.lightCategoryBitMask = lightCategoryBitMask

@@ -748,12 +748,13 @@ Own target (e.g. MetalSprocketsSceneGraphModelIO), macOS/iOS 26, so users only p
 ## 38: Physics as part of the scene graph
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: effort:l, area:physics
 created: 2026-10-12T16:17:40Z
-updated: 2026-10-14T13:54:48Z
+updated: 2026-10-15T20:07:19Z
+closed: 2026-10-15T20:07:19Z
 +++
 
 Physics exists only in the demo app: PhysicsSimulation (Demo/.../PhysicsDemo.swift) steps a Jolt world and copies body positions/rotations onto node transforms each frame. No library target knows about physics, and SwiftJolt is linked by an absolute Scratch path.
@@ -770,6 +771,7 @@ Prerequisite: SwiftJolt needs a proper dependency (git URL or relative path), no
 - `2026-10-13T20:21:45Z`: Related: #53 (per-frame update hooks).
 - `2026-10-14T13:44:42Z`: Checked prerequisites. Punting: blocked on SwiftJolt. It is still linked by an absolute Scratch path with no remote, and the APIs this needs are all open there: #43 (set position/rotation, kinematic moves), #25 (mass/damping), #27 (contacts), #1/#3/#5/#6 (capsule/mesh/convex/compound shapes), #42 (engine init), #44 (license). Unblocker: land SwiftJolt #43 and #25 and give it a git URL, or decide on a backend-neutral physics protocol in this repo first (body type, shape, mass and material on nodes, with a pluggable world), with Jolt as one implementation.
 - `2026-10-14T13:54:48Z`: Decision: depend on SwiftJolt by local path for now; sort out paths later.
+- `2026-10-15T20:07:19Z`: Added SceneGraph.PhysicsBody + Node.physicsBody (core, backend-neutral) and the MetalSprocketsSceneGraphPhysics target (SceneGraphPhysicsWorld on SwiftJolt by git URL): syncs bodies with the graph, kinematic push, writes dynamic poses (transform revision only). Physics demo ported. Docs not updated yet.
 
 ---
 

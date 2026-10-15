@@ -1,5 +1,5 @@
 {
-  "originHash" : "b9a65903830d48cdebb2fc90a5abf60eccd16ecbe3ce794c39a06d5d94e81916",
+  "originHash" : "d3ee8ab550bd07855682ccbc8eaffca0c6be410ad31cc33a3b48f93f9f9cf2eb",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -130,7 +130,7 @@
     {
       "identity" : "swift-collections",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-collections.git",
+      "location" : "https://github.com/apple/swift-collections",
       "state" : {
         "revision" : "35a1edcb8ebd2bfe251d587f0b69e62af28f508c",
         "version" : "1.7.3"
@@ -179,6 +179,15 @@
       "state" : {
         "branch" : "main",
         "revision" : "4fc88ff6665f0bd3f24a45e379426942ec593584"
+      }
+    },
+    {
+      "identity" : "swiftjolt",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/SwiftJolt.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "fef62b844107c76a37afde85ceef1142cdf8b166"
       }
     },
     {

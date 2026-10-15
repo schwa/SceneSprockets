@@ -24,7 +24,6 @@ let package = Package(
         .package(url: "https://github.com/schwa/MetalSprocketsGLTF", branch: "main"),
         .package(url: "https://github.com/schwa/Interaction3D", branch: "main"),
         .package(url: "https://github.com/schwa/DemoKit", branch: "main"),
-        .package(url: "https://github.com/schwa/SwiftJolt.git", branch: "main"),
         .package(url: "https://github.com/schwa/GoldenImage", from: "0.1.5"),
     ],
     targets: [
@@ -32,8 +31,8 @@ let package = Package(
             name: "MetalSprocketsSceneGraphDemos",
             dependencies: [
                 .product(name: "MetalSprocketsSceneGraph", package: "MetalSprocketsSceneGraph"),
+                .product(name: "MetalSprocketsSceneGraphPhysics", package: "MetalSprocketsSceneGraph"),
                 .product(name: "DemoKit", package: "DemoKit"),
-                .product(name: "JoltPhysics", package: "SwiftJolt"),
                 .product(name: "Interaction3D", package: "Interaction3D"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
                 .product(name: "MetalSprocketsUI", package: "MetalSprockets"),
