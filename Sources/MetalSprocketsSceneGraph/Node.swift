@@ -73,6 +73,28 @@ extension SceneGraph {
         var runningActions: [RunningAction] = []
         // Multiplies the time this node's actions advance by; 0 pauses them. Not inherited by children.
         public var actionSpeed: Float = 1
+        // Loop-subdivides this node's mesh, like SCNGeometry.subdivisionLevel; 0 restores the original. Triangle
+        // meshes only. Setting `shape` rebuilds and subdivides again.
+        public var subdivisionLevel = 0 {
+            didSet {
+                guard subdivisionLevel != oldValue else {
+                    return
+                }
+                applySubdivision()
+            }
+        }
+        var subdivisionBase: MetalMesh?
+
+        func applySubdivision() {
+            guard case let .mesh(mesh, materials, castsShadow, receivesShadow) = content else {
+                return
+            }
+            let base = subdivisionBase ?? mesh
+            subdivisionBase = subdivisionLevel > 0 ? base : nil
+            let result = base.subdivided(levels: max(subdivisionLevel, 0)) ?? base
+            content = .mesh(result, materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
+        }
+
         // Sounds that play from this node; see SceneAudio. Not copied by clone().
         public var audioPlayers: [AudioPlayer] = []
         // Simpler meshes for distant cameras; see LevelOfDetail. Order does not matter.
@@ -266,6 +288,8 @@ extension SceneGraph {
             copy.lightCategoryBitMask = lightCategoryBitMask
             copy.renderingOrder = renderingOrder
             copy.levelsOfDetail = levelsOfDetail
+            copy.subdivisionBase = subdivisionBase
+            copy.subdivisionLevel = subdivisionLevel
             copy.actionSpeed = actionSpeed
             copy.shapeStorage = shapeStorage
             for child in children {

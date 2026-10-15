@@ -90,6 +90,10 @@ extension SceneGraph.Node {
             let device = shapeStorage?.device ?? mesh.vertexBuffer.device
             shapeStorage = (newValue, device)
             content = .mesh(newValue.metalMesh(device: device), materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
+            if subdivisionLevel > 0 {
+                subdivisionBase = nil
+                applySubdivision()
+            }
         }
     }
 }
