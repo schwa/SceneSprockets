@@ -184,18 +184,10 @@ extension SceneGraph.Node {
     }
 
     private func lookRotation(from position: SIMD3<Float>, to target: SIMD3<Float>, worldUp: SIMD3<Float>, localFront: SIMD3<Float>) -> simd_quatf? {
-        let direction = target - position
-        guard simd_length(direction) > 1e-6 else {
+        guard simd_length(target - position) > 1e-6 else {
             return nil
         }
-        let forward = simd_normalize(direction)
-        // Basis whose -Z is `forward`; fall back to another up vector when looking straight along `worldUp`.
-        let up = abs(simd_dot(forward, simd_normalize(worldUp))) > 0.999 ? SIMD3<Float>(0, 0, 1) : simd_normalize(worldUp)
-        let right = simd_normalize(simd_cross(forward, up))
-        let trueUp = simd_cross(right, forward)
-        let basis = simd_quatf(simd_float3x3(columns: (right, trueUp, -forward)))
-        // Turn `localFront` onto -Z first, so the basis then points it at the target.
-        return simd_normalize(basis * simd_quatf(from: simd_normalize(localFront), to: [0, 0, -1]))
+        return .lookRotation(from: position, to: target, up: worldUp, localFront: localFront)
     }
 }
 
