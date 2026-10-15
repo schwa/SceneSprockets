@@ -91,7 +91,7 @@ Legend:
 | SceneKit | MSSG | Status | Notes |
 |---|---|---|---|
 | `transform` / `simdTransform` | `transform: float4x4` | ✅ | Setting it stores a matrix. |
-| `position`, `orientation`, `scale` | `trs: TRS` (`translation`, `rotation: simd_quatf`, `scale`) | ✅ | Setting it stores TRS. Reading `trs` from a matrix decomposes it (lossy for skew, perspective, negative scale). |
+| `position`, `orientation`, `scale` | `trs: Transform3D` (`translation`, `rotation: simd_quatf`, `scale`) | ✅ | Setting it stores TRS. Reading `trs` from a matrix decomposes it (lossy for skew, perspective, negative scale). |
 | `eulerAngles`, `rotation` (axis-angle) | — | ❌ | Quaternions only. |
 | `worldTransform`, `worldPosition`, `worldOrientation` | `worldTransform` (read only) | 🟡 | No world-space setters; no `worldPosition`/`worldOrientation` shortcuts. |
 | `convertPosition(_:from:)`, `convertVector`, `convertTransform` | — | ❌ | Multiply world transforms by hand. |

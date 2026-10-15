@@ -8,7 +8,7 @@ One product, `MetalSprocketsSceneGraph`. Source folders:
 
 | Folder | Contents |
 |---|---|
-| (root) | `SceneGraph`, `SceneGraph.Node`, transforms (`TRS`), materials protocol, bounds, change tracking, animation clips, morph targets, skins. |
+| (root) | `SceneGraph`, `SceneGraph.Node`, transforms (GeometryLite3D's `Transform3D`), materials protocol, bounds, change tracking, animation clips, morph targets, skins. |
 | ↳ Renderer | `SceneGraphElement`, the `SceneGraphMaterialRenderer` protocol, and the Blinn-Phong renderer. |
 | ↳ PBR | `PBRSceneMaterial` and `PBRMaterialRenderer`. |
 | ↳ ModelIO | `ModelIOSceneGraph(url:device:materials:)`: loads any format `MDLAsset` reads (OBJ, PLY, STL, ABC, USD) into a `SceneGraph`, keeping the object hierarchy, with PBR or Blinn-Phong materials, cameras, lights and keyframed transforms. |

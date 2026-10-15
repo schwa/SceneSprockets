@@ -1,3 +1,4 @@
+import GeometryLite3D
 import MetalSprocketsAddOns
 import MetalSprocketsAddOnsShaders
 import MetalSprocketsSceneGraph
@@ -54,7 +55,7 @@ final class InstancingDemo: DemoScene {
             for column in 0..<size {
                 let x = (Float(column) - Float(size - 1) / 2) * spacing
                 let z = (Float(row) - Float(size - 1) / 2) * spacing
-                let trs = SceneGraph.TRS(translation: [x, 0, z], scale: SIMD3(repeating: spacing * 0.8))
+                let trs = Transform3D(translation: [x, 0, z], scale: SIMD3(repeating: spacing * 0.8))
                 crates.append(SceneGraph.Node(parent: grid, label: "Crate \(row)-\(column)", trs: trs, content: .mesh(box, material: materials[(row + column) % materials.count])))
             }
         }

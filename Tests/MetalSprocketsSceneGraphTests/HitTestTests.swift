@@ -1,3 +1,4 @@
+import GeometryLite3D
 import Metal
 import MetalSprocketsAddOns
 import SwiftMesh
@@ -52,7 +53,7 @@ func hitTestFollowsScaledTransforms() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
     let node = SceneGraph.Node(content: .mesh(box, material: material()))
-    node.trs = SceneGraph.TRS(translation: [3, 0, 0], scale: [10, 1, 1])
+    node.trs = Transform3D(translation: [3, 0, 0], scale: [10, 1, 1])
     let bounds = try #require(node.meshBounds)
     // Misses the unscaled box at x = 3 + 2 * maxX, hits the scaled one.
     let hits = SceneGraph(root: node).hitTest(SceneGraph.Ray(origin: [3 + 2 * bounds.max.x, 0, 10], direction: [0, 0, -1]))

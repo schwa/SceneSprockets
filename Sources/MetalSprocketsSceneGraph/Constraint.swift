@@ -19,7 +19,7 @@ extension SceneGraph {
         // SCNAvoidOccluderConstraint. Hits on the node's and the target's subtrees are ignored.
         case avoidOccluder(target: Node, categoryBitMask: UInt = .max, bias: Float = 0.01)
         // Returns the node's new world TRS from its current one, like SCNTransformConstraint.
-        case transform((Node, TRS) -> TRS)
+        case transform((Node, Transform3D) -> Transform3D)
         // Keeps the node between `minimum` and `maximum` from `target`, moving along the line between them.
         case distance(target: Node, minimum: Float = 0, maximum: Float = .infinity)
         // Turns the node's ancestors, from its parent up to `chainRoot`, so the node reaches towards `target`, like
@@ -65,7 +65,7 @@ extension SceneGraph.Node {
             return
         }
         let parentWorld = parent?.worldTransform ?? matrix_identity_float4x4
-        let world = SceneGraph.TRS(matrix: parentWorld * transform)
+        let world = Transform3D(decomposing: parentWorld * transform)
         var desired = world
         switch constraint {
         case let .lookAt(target, worldUp, localFront):
@@ -80,7 +80,7 @@ extension SceneGraph.Node {
             let free = [SceneGraph.BillboardAxes.x, .y, .z].indices.filter { freeAxes.contains([SceneGraph.BillboardAxes.x, .y, .z][$0]) }
             switch free.count {
             case 3:
-                desired.rotation = SceneGraph.TRS(matrix: pointOfView).rotation
+                desired.rotation = Transform3D(decomposing: pointOfView).rotation
             case 2:
                 // Face the camera position, keeping an up vector so there is no roll.
                 let up = free.contains(1) ? axes[1] : axes[free[0]]
@@ -103,7 +103,7 @@ extension SceneGraph.Node {
                 return
             }
         case let .replicator(target, position, orientation, scale, positionOffset, orientationOffset, scaleOffset):
-            let targetWorld = SceneGraph.TRS(matrix: target.worldTransform)
+            let targetWorld = Transform3D(decomposing: target.worldTransform)
             if position {
                 desired.translation = (target.worldTransform * SIMD4(positionOffset, 1)).xyz
             }
@@ -141,7 +141,7 @@ extension SceneGraph.Node {
         case .inverseKinematics:
             return
         }
-        trs = SceneGraph.TRS(matrix: parentWorld.inverse * desired.matrix)
+        trs = Transform3D(decomposing: parentWorld.inverse * desired.matrix)
     }
 
     // Cyclic coordinate descent: each joint, nearest first, turns so the line from it to this node points at the
@@ -173,7 +173,7 @@ extension SceneGraph.Node {
                     turn = simd_quatf(angle: maximumAngle, axis: turn.axis)
                 }
                 // Apply the world-space turn in the joint's parent space.
-                let parentRotation = SceneGraph.TRS(matrix: joint.parent?.worldTransform ?? matrix_identity_float4x4).rotation
+                let parentRotation = Transform3D(decomposing: joint.parent?.worldTransform ?? matrix_identity_float4x4).rotation
                 let localTurn = parentRotation.inverse * turn * parentRotation
                 joint.trs.rotation = simd_normalize(localTurn * joint.trs.rotation)
             }

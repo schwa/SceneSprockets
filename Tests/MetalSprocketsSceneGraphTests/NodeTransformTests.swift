@@ -28,7 +28,7 @@ func pivotMovesTheRotationCenter() {
 @Test
 func trsIsStoredLosslessly() {
     let rotation = simd_quatf(angle: .pi / 3, axis: simd_normalize([1, 1, 0]))
-    let trs = SceneGraph.TRS(translation: [1, 2, 3], rotation: rotation, scale: [2, 2, 2])
+    let trs = Transform3D(translation: [1, 2, 3], rotation: rotation, scale: [2, 2, 2])
     let node = SceneGraph.Node(trs: trs)
 
     #expect(node.trs == trs)

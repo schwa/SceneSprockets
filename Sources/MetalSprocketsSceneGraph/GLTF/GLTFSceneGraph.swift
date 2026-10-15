@@ -75,9 +75,9 @@ private struct GLTFSceneGraphBuilder {
             if let matrix = source.matrix, matrix != matrix_identity_float4x4 {
                 node.transform = matrix
             } else {
-                node.trs = SceneGraph.TRS(
+                node.trs = Transform3D(
                     translation: source.translation ?? .zero,
-                    rotation: source.rotation.map { simd_quatf(vector: $0) } ?? simd_quatf(ix: 0, iy: 0, iz: 0, r: 1),
+                    rotation: source.rotation.map { simd_quatf(vector: $0) } ?? .identity,
                     scale: source.scale ?? .one
                 )
             }
@@ -282,9 +282,9 @@ private struct GLTFSceneGraphBuilder {
             throw GLTFSceneGraphError.invalidInstancing("attribute counts differ")
         }
         return (0..<count).map { index in
-            SceneGraph.TRS(
+            Transform3D(
                 translation: translations.map { SIMD3($0[index * 3], $0[index * 3 + 1], $0[index * 3 + 2]) } ?? .zero,
-                rotation: rotations.map { simd_normalize(simd_quatf(ix: $0[index * 4], iy: $0[index * 4 + 1], iz: $0[index * 4 + 2], r: $0[index * 4 + 3])) } ?? simd_quatf(ix: 0, iy: 0, iz: 0, r: 1),
+                rotation: rotations.map { simd_normalize(simd_quatf(ix: $0[index * 4], iy: $0[index * 4 + 1], iz: $0[index * 4 + 2], r: $0[index * 4 + 3])) } ?? .identity,
                 scale: scales.map { SIMD3($0[index * 3], $0[index * 3 + 1], $0[index * 3 + 2]) } ?? .one
             ).matrix
         }

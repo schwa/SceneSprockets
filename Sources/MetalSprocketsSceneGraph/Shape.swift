@@ -1,4 +1,5 @@
 import CoreGraphics
+import GeometryLite3D
 import Metal
 import SwiftMesh
 import simd
@@ -71,7 +72,7 @@ extension SceneGraph {
 
 extension SceneGraph.Node {
     // A mesh node for `shape`. Set `shape` later to rebuild its mesh, keeping the materials.
-    public convenience init(parent: SceneGraph.Node? = nil, label: String? = nil, shape: SceneGraph.Shape, material: any Material, device: MTLDevice, trs: SceneGraph.TRS = .identity) {
+    public convenience init(parent: SceneGraph.Node? = nil, label: String? = nil, shape: SceneGraph.Shape, material: any Material, device: MTLDevice, trs: Transform3D = .identity) {
         self.init(parent: parent, label: label ?? shape.label, trs: trs, content: .mesh(shape.metalMesh(device: device), material: material))
         shapeStorage = (shape, device)
     }

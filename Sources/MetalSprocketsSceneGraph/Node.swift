@@ -155,15 +155,8 @@ extension SceneGraph {
         }
 
         // Setting this stores TRS. Reading a matrix transform decomposes it.
-        public var trs: TRS {
-            get {
-                switch localTransform {
-                case .trs(let trs):
-                    trs
-                case .matrix(let matrix):
-                    TRS(matrix: matrix)
-                }
-            }
+        public var trs: Transform3D {
+            get { localTransform.trs }
             set { localTransform = .trs(newValue) }
         }
 
@@ -187,7 +180,7 @@ extension SceneGraph {
             parent: Node? = nil,
             children: [Node] = [],
             label: String? = nil,
-            trs: TRS,
+            trs: Transform3D,
             content: Content = .empty
         ) {
             self.init(parent: parent, children: children, label: label, content: content)

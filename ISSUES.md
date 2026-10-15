@@ -1900,12 +1900,13 @@ No renderer sorts transparent entries back to front; you have to use renderingOr
 ## 97: Use GeometryLite3D for transforms and other math
 
 +++
-status: open
+status: closed
 priority: high
 kind: enhancement
 labels: effort:m, area:scenegraph
 created: 2026-10-15T02:28:44Z
-updated: 2026-10-15T13:29:45Z
+updated: 2026-10-15T19:10:52Z
+closed: 2026-10-15T19:10:52Z
 +++
 
 MSSG reimplements math that GeometryLite3D already has, or should have. Move it to GeometryLite3D and use it from there.
@@ -1934,6 +1935,7 @@ Candidates to add to GeometryLite3D, then use here:
 6. Transform3D: replace SceneGraph.TRS (public API; keep a typealias?). Transform3D(matrix:) returns nil for lossy matrices, but TRS(matrix:) falls back to identity. Decide which behaviour callers get.
 
 - `2026-10-15T19:03:42Z`: Step 4 (Ray3D) is blocked on GeometryLite3D #33 (box test returns nil from inside the box), #34 (NaN for axis-parallel rays on a face plane) and #35 (fixed epsilon misses small triangles). The public SceneGraph.Ray(viewPoint:...) also works out reversed depth by itself, but Ray3D needs a flag or a ViewProjection.
+- `2026-10-15T19:10:52Z`: Done except Ray3D, split out as #107.
 
 ---
 

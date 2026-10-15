@@ -1,3 +1,4 @@
+import GeometryLite3D
 import simd
 
 extension SceneGraph {
@@ -33,14 +34,14 @@ extension SceneGraph {
 extension SceneGraph.Transaction {
     // Collects the first old value of each changed property. Only used on the thread that runs the transaction.
     final class Recorder: @unchecked Sendable {
-        private var transforms: [(node: SceneGraph.Node, from: SceneGraph.TRS)] = []
+        private var transforms: [(node: SceneGraph.Node, from: Transform3D)] = []
         private var morphWeights: [(node: SceneGraph.Node, from: [Float])] = []
 
         func recordTransform(of node: SceneGraph.Node, oldValue: SceneGraph.LocalTransform) {
             guard !transforms.contains(where: { $0.node === node }) else {
                 return
             }
-            transforms.append((node, SceneGraph.TRS(oldValue)))
+            transforms.append((node, oldValue.trs))
         }
 
         func recordMorphWeights(of node: SceneGraph.Node, oldValue: [Float]) {
@@ -69,11 +70,7 @@ extension SceneGraph.Transaction {
                 node.trs = from
                 let action = SceneGraph.Action.custom(duration: duration) { node, elapsed in
                     let t = timingMode.apply(min(elapsed / duration, 1))
-                    node.trs = SceneGraph.TRS(
-                        translation: simd_mix(from.translation, to.translation, SIMD3(repeating: t)),
-                        rotation: simd_slerp(from.rotation, to.rotation, t),
-                        scale: simd_mix(from.scale, to.scale, SIMD3(repeating: t))
-                    )
+                    node.trs = from.interpolated(to: to, amount: t)
                 }
                 node.run(action, forKey: "implicit.transform", completion: finished)
             }
@@ -90,17 +87,6 @@ extension SceneGraph.Transaction {
                 }
                 node.run(action, forKey: "implicit.morphWeights", completion: finished)
             }
-        }
-    }
-}
-
-private extension SceneGraph.TRS {
-    init(_ transform: SceneGraph.LocalTransform) {
-        switch transform {
-        case .trs(let trs):
-            self = trs
-        case .matrix(let matrix):
-            self.init(matrix: matrix)
         }
     }
 }
