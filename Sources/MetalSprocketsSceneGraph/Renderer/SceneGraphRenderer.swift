@@ -17,6 +17,10 @@ public struct SceneGraphRenderContext {
     public var categoryBitMask: UInt = .max
     // Parallel to `lights`: each light node's lightCategoryBitMask.
     public var lightCategoryBitMasks: [UInt] = []
+    // Set when shadows are on, for renderers that sample them while shading.
+    public internal(set) var shadow: SceneGraphShadows.Sampling?
+    // Parallel to `lights` when `shadow` is set: each light's shadow map slices (empty for none).
+    public internal(set) var lightShadowSlices: [Range<Int>] = []
 }
 
 // One renderer per material family. Add a family by conforming a new type; the scene graph core does not change.
@@ -62,11 +66,29 @@ public struct SceneGraphElement: Element {
 
     public var body: some Element {
         get throws {
-            guard let context = makeRenderContext(sceneGraph: sceneGraph, camera: camera, cameraMatrix: cameraMatrix, aspectRatio: aspectRatio, defaultCamera: defaultCamera, defaultLight: defaultLight) else {
+            guard var context = makeRenderContext(sceneGraph: sceneGraph, camera: camera, cameraMatrix: cameraMatrix, aspectRatio: aspectRatio, defaultCamera: defaultCamera, defaultLight: defaultLight) else {
                 return EmptyElement().eraseToAnyElement()
             }
             let cameraPosition = SIMD3(context.cameraMatrix.columns.3.x, context.cameraMatrix.columns.3.y, context.cameraMatrix.columns.3.z)
             let entries = applyLevelsOfDetail(sceneGraph.meshEntries().filter { $0.node.categoryBitMask & context.categoryBitMask != 0 }, cameraPosition: cameraPosition)
+            // The shadow mask and fog passes read and write the view's textures, so they need the right usage.
+            let postTargets: (color: MTLTexture, depth: MTLTexture)? = {
+                guard let color = renderPassDescriptor?.colorAttachments[0].texture, let depth = renderPassDescriptor?.depthAttachment.texture,
+                      color.usage.isSuperset(of: ShadowContext.requiredColorUsage), depth.usage.isSuperset(of: ShadowContext.requiredDepthUsage),
+                      depth.storageMode != .memoryless
+                else {
+                    return nil
+                }
+                return (color, depth)
+            }()
+            // Prepared before the renderers, which sample it while shading.
+            let shadowFrame = try postTargets.flatMap { targets in
+                try shadows?.prepare(entries: entries, context: context, bounds: sceneGraph.bounds, viewSize: (targets.color.width, targets.color.height))
+            }
+            if let shadows, let shadowFrame {
+                context.shadow = SceneGraphShadows.Sampling(shadowMap: shadowFrame.shadowMap, intensity: shadows.intensity, color: shadows.color, softness: shadows.softness)
+                context.lightShadowSlices = shadowFrame.lightSlices
+            }
             var elements: [AnyElement] = []
             if case .environment = context.environment.background {
                 for case let renderer as any SceneGraphBackgroundRenderer in renderers {
@@ -92,19 +114,6 @@ public struct SceneGraphElement: Element {
             } else {
                 nil
             }
-            // The shadow mask and fog passes read and write the view's textures, so they need the right usage.
-            let postTargets: (color: MTLTexture, depth: MTLTexture)? = {
-                guard let color = renderPassDescriptor?.colorAttachments[0].texture, let depth = renderPassDescriptor?.depthAttachment.texture,
-                      color.usage.isSuperset(of: ShadowContext.requiredColorUsage), depth.usage.isSuperset(of: ShadowContext.requiredDepthUsage),
-                      depth.storageMode != .memoryless
-                else {
-                    return nil
-                }
-                return (color, depth)
-            }()
-            let shadowFrame = try postTargets.flatMap { targets in
-                try shadows?.prepare(entries: entries, context: context, bounds: sceneGraph.bounds, viewSize: (targets.color.width, targets.color.height))
-            }
             let fog = postTargets == nil ? nil : sceneGraph.fog
             let postProcessing = postTargets == nil ? nil : sceneGraph.postProcessing
             let ambientOcclusion = postProcessing?.ambientOcclusion
@@ -121,7 +130,7 @@ public struct SceneGraphElement: Element {
                     ShadowCasterDepthPass(frame: shadowFrame)
                 }
                 scenePass
-                if let shadows, let shadowFrame {
+                if let shadows, let shadowFrame, !shadowFrame.masksEverything {
                     SceneShadowMaskPass(
                         frame: shadowFrame,
                         sceneDepthTexture: postTargets.depth,
@@ -242,6 +251,9 @@ func renderBatches(_ entries: [SceneGraph.MeshEntry], context: SceneGraphRenderC
         if key.lights != allLights {
             batchContext.lights = key.lights.map { context.lights[$0] }
             batchContext.lightCategoryBitMasks = key.lights.map { $0 < context.lightCategoryBitMasks.count ? context.lightCategoryBitMasks[$0] : .max }
+            if !context.lightShadowSlices.isEmpty {
+                batchContext.lightShadowSlices = key.lights.map { $0 < context.lightShadowSlices.count ? context.lightShadowSlices[$0] : 0..<0 }
+            }
         }
         return (groups[key] ?? [], batchContext)
     }

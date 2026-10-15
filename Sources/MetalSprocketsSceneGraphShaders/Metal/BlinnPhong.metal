@@ -6,6 +6,28 @@ using namespace metal;
 // https://en.wikipedia.org/wiki/Blinn–Phong_reflection_model
 namespace BlinnPhong {
 
+    // True when a shadow map is bound.
+    constant bool HAS_SHADOWS [[function_constant(0)]];
+
+    // PCF in one slice; 1 is lit. Positions outside the slice's view are lit.
+    static float sliceShadow(float3 world, float4x4 viewProjection, float mapSize, int radius, depth2d_array<float, access::sample> shadowMap, sampler shadowSampler, uint slice) {
+        float4 clip = viewProjection * float4(world, 1);
+        float3 ndc = clip.xyz / clip.w;
+        float2 uv = float2(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5);
+        if (any(uv < 0.0) || any(uv > 1.0) || ndc.z < 0.0 || ndc.z > 1.0) {
+            return 1;
+        }
+        float shadow = 0;
+        float texel = 1.0 / mapSize;
+        for (int x = -radius; x <= radius; x++) {
+            for (int y = -radius; y <= radius; y++) {
+                shadow += shadowMap.sample_compare(shadowSampler, uv + float2(x, y) * texel, slice, ndc.z, level(0));
+            }
+        }
+        float side = float(2 * radius + 1);
+        return shadow / (side * side);
+    }
+
     struct Vertex {
         float3 position [[attribute(0)]];
         float3 normal [[attribute(1)]];
@@ -61,7 +83,10 @@ namespace BlinnPhong {
         texture2d<float> ambientTexture [[texture(0)]],
         texture2d<float> diffuseTexture [[texture(1)]],
         texture2d<float> specularTexture [[texture(2)]],
-        sampler textureSampler [[sampler(0)]]
+        sampler textureSampler [[sampler(0)]],
+        depth2d_array<float, access::sample> shadowMap [[texture(3), function_constant(HAS_SHADOWS)]],
+        sampler shadowSampler [[sampler(1), function_constant(HAS_SHADOWS)]],
+        constant BlinnPhongShadowUniforms &shadow [[buffer(3), function_constant(HAS_SHADOWS)]]
     ) {
         float3 ambientColor = material.ambient;
         float3 diffuseColor = material.diffuse;
@@ -113,8 +138,17 @@ namespace BlinnPhong {
                 continue;
             }
             float highlight = pow(max(dot(normalize(toLight + viewDirection), normal), 0.0), material.shininess);
-            diffuse += diffuseColor * lambertian * light.color * attenuation;
-            specular += specularColor * highlight * light.color * attenuation;
+            // Only this light's shadow scales only this light's contribution.
+            float3 shadowing = 1;
+            if (HAS_SHADOWS && material.receivesShadow != 0 && light.shadowSliceCount > 0) {
+                float lit = 1;
+                for (int slice = light.shadowSliceStart; slice < light.shadowSliceStart + light.shadowSliceCount; slice++) {
+                    lit *= sliceShadow(in.worldPosition, shadow.sliceViewProjections[slice], shadow.mapSize, shadow.radius, shadowMap, shadowSampler, uint(slice));
+                }
+                shadowing = mix(float3(1), shadow.color, shadow.intensity * (1.0 - lit));
+            }
+            diffuse += diffuseColor * lambertian * light.color * attenuation * shadowing;
+            specular += specularColor * highlight * light.color * attenuation * shadowing;
         }
         return float4(frame.ambientLightColor * ambientColor + diffuse + specular, 1);
     }

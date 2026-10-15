@@ -10,13 +10,19 @@ import ModelIO
 import SwiftMesh
 import simd
 
-// Shadow-mapped shadows from directional, spot and point lights, for every renderer: casters are drawn into a shadow map from each
-// light, then shadowed pixels are darkened in screen space after the scene pass. Keep one instance across frames
-// (it holds the shadow map and caster buffers) and pass it to SceneGraphElement or SceneView.
+// Materials whose renderer samples the shadow map per light while shading (Blinn-Phong). The screen-space mask skips
+// their pixels.
+protocol SamplesShadowsInShader {}
+
+// Shadow-mapped shadows from directional, spot and point lights, for every renderer: casters are drawn into a shadow
+// map from each light. Blinn-Phong samples it per light while shading, so a light only darkens what it lights; other
+// materials (PBR, ShaderMaterial) are darkened in screen space after the scene pass, by every light's shadow at
+// once. Keep one instance across frames (it holds the shadow map and caster buffers) and pass it to
+// SceneGraphElement or SceneView.
 //
 // The shadow map has 8 slices: a directional or spot light uses one, a point light six; a light that does not fit
-// casts none and is counted in `droppedLightCount`. Meshes with `castsShadow: false` cast none. Meshes with `receivesShadow: false` are drawn into a mask that
-// the screen-space pass skips.
+// casts none and is counted in `droppedLightCount`. Meshes with `castsShadow: false` cast none; meshes with
+// `receivesShadow: false` receive none.
 // The view's color texture needs `.shaderWrite` and its depth texture `.shaderRead` usage (see
 // `ShadowContext.requiredColorUsage`); otherwise no shadows are drawn.
 public final class SceneGraphShadows {
@@ -48,6 +54,14 @@ public final class SceneGraphShadows {
         self.slopeScale = slopeScale
     }
 
+    // What an in-shader renderer needs to sample the shadow map.
+    public struct Sampling {
+        var shadowMap: ShadowMap
+        var intensity: Float
+        var color: SIMD3<Float>
+        var softness: Int
+    }
+
     struct Caster {
         enum Placement {
             case model(simd_float4x4)
@@ -63,8 +77,12 @@ public final class SceneGraphShadows {
     struct Frame {
         var shadowMap: ShadowMap
         var casters: [Caster]
-        // Meshes with `receivesShadow: false`; nil when there are none.
+        // Meshes the screen-space mask skips (non-receivers and in-shader shadowing); nil when there are none.
         var nonReceivers: (casters: [Caster], masks: [MTLTexture])?
+        // Parallel to the context's lights: each light's shadow map slices.
+        var lightSlices: [Range<Int>] = []
+        // True when every mesh is skipped, so the screen-space mask pass has nothing to do.
+        var masksEverything = false
     }
 
     // Nil when nothing casts or there is no light.
@@ -72,7 +90,7 @@ public final class SceneGraphShadows {
         guard let bounds else {
             return nil
         }
-        let (views, dropped) = shadowViewsAndDroppedLights(lights: context.lights, bounds: bounds)
+        let (views, dropped, slices) = shadowViewsAndDroppedLights(lights: context.lights, bounds: bounds)
         droppedLightCount = dropped
         guard !views.isEmpty else {
             return nil
@@ -106,11 +124,14 @@ public final class SceneGraphShadows {
             }
             return Caster(positions: positions, submesh: submesh, placement: .skinned(influences: influences, jointMatrices: skin.jointMatrices()))
         }
+        // Materials that sample shadows themselves are kept out of the screen-space mask, like non-receivers.
+        let skipsMask = { (entry: SceneGraph.MeshEntry) in !entry.receivesShadow || entry.material is any SamplesShadowsInShader }
+        let masksEverything = entries.allSatisfy(skipsMask)
         for entry in entries {
             if entry.castsShadow, let caster = caster(for: entry) {
                 casters.append(caster)
             }
-            if !entry.receivesShadow, let caster = caster(for: entry) {
+            if !masksEverything, skipsMask(entry), let caster = caster(for: entry) {
                 nonReceivers.append(caster)
             }
         }
@@ -131,9 +152,9 @@ public final class SceneGraphShadows {
         shadowMap.lightViewProjectionMatrices = views
         self.shadowMap = shadowMap
         guard !nonReceivers.isEmpty, let viewSize else {
-            return Frame(shadowMap: shadowMap, casters: casters)
+            return Frame(shadowMap: shadowMap, casters: casters, lightSlices: slices, masksEverything: masksEverything)
         }
-        return Frame(shadowMap: shadowMap, casters: casters, nonReceivers: (nonReceivers, try receiverMasks(width: viewSize.width, height: viewSize.height, count: shadowMap.depthTextures.count)))
+        return Frame(shadowMap: shadowMap, casters: casters, nonReceivers: (nonReceivers, try receiverMasks(width: viewSize.width, height: viewSize.height, count: shadowMap.depthTextures.count)), lightSlices: slices, masksEverything: masksEverything)
     }
 
     private func receiverMasks(width: Int, height: Int, count: Int) throws -> [MTLTexture] {
@@ -162,11 +183,13 @@ public final class SceneGraphShadows {
     }
 
     // A light whose views do not all fit in the remaining slices is dropped whole; later lights may still fit.
-    func shadowViewsAndDroppedLights(lights: [(worldTransform: simd_float4x4, light: Light)], bounds: BoundingBox) -> (views: [simd_float4x4], dropped: Int) {
+    // `slices` is parallel to `lights`: the slices of each light's views, empty for lights that cast none.
+    func shadowViewsAndDroppedLights(lights: [(worldTransform: simd_float4x4, light: Light)], bounds: BoundingBox) -> (views: [simd_float4x4], dropped: Int, slices: [Range<Int>]) {
         let center = (bounds.min + bounds.max) / 2
         let radius = max(simd_length(bounds.max - bounds.min) / 2, 0.01)
         var views: [simd_float4x4] = []
         var dropped = 0
+        var slices: [Range<Int>] = []
         for (transform, light) in lights {
             var lightViews: [simd_float4x4] = []
             let position = SIMD3(transform.columns.3.x, transform.columns.3.y, transform.columns.3.z)
@@ -187,15 +210,18 @@ public final class SceneGraphShadows {
                     lightViews.append(perspective(fieldOfView: .pi / 2, near: near, far: far) * viewMatrix(eye: position, forward: face))
                 }
             default:
+                slices.append(0..<0)
                 continue
             }
             if views.count + lightViews.count <= Int(MAX_SHADOW_LIGHTS) {
+                slices.append(views.count..<(views.count + lightViews.count))
                 views += lightViews
             } else {
+                slices.append(0..<0)
                 dropped += 1
             }
         }
-        return (views, dropped)
+        return (views, dropped, slices)
     }
 
     private func gpuSkin(of entry: SceneGraph.MeshEntry) -> SceneGraph.Skin? {

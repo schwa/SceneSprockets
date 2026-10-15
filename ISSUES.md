@@ -1428,13 +1428,14 @@ Want: a cleaner shape, for example fewer and broader spikes or a twist/bulge tar
 ## 71: Shadows badly broken in demos since the demo consolidation
 
 +++
-status: open
+status: closed
 priority: high
 kind: bug
 labels: area:renderer, effort:m
 depends: 100
 created: 2026-10-14T15:36:23Z
-updated: 2026-10-15T12:02:24Z
+updated: 2026-10-15T12:36:55Z
+closed: 2026-10-15T12:36:55Z
 +++
 
 Reported: shadows have been badly broken in the demos since the demo consolidation. Exact symptoms not yet recorded (wrong place, missing, all dark, flickering?) and which demos (SceneKit Features, Imported Assets).
@@ -1451,6 +1452,7 @@ Next: get a screenshot or description, then render SceneKit Features offscreen w
 - `2026-10-15T02:44:10Z`: Investigated offscreen (DemoSnapshot with Shadows on, each light alone, diffed against shadows off). Cause: the screen-space shadow mask multiplies every light's shadow factor and darkens the pixel, whatever light actually lights it. So (1) surfaces facing away from the red point light or the spotlight are 'self-shadowed' in those lights' maps and get darkened even where the sun lights them (all shapes go dark), (2) the red light only lights category 2 but its shadows darken everything, giving the large wedge-shaped dark areas on the floor. The geometry of each light's shadow alone looks right. Punting: a real fix needs per-light shadow factors inside the lighting shaders (MetalSprocketsAddOns Blinn-Phong and MetalSprocketsPBR), or a design call such as SceneKit-style per-light castsShadow (SceneKit defaults it to false) so only chosen lights cast. Which do you want?
 - `2026-10-15T02:49:40Z`: Update after #66: the shadow mask kernel now lives in MSSG (SceneShadowMask). A fix without other libraries is possible: per pixel, weight each light's shadow by that light's contribution (N·L from depth-reconstructed normals, range/cone falloff, color*intensity) so a light that does not light a surface cannot darken it; and write each mesh's categoryBitMask into the mask pass so lightCategoryBitMask is respected. Say if you want that instead of per-light castsShadow.
 - `2026-10-15T12:02:24Z`: Depends on #100 (own Blinn-Phong).
+- `2026-10-15T12:36:55Z`: Fixed for Blinn-Phong (in-repo shader after #100): each light's shadow slices are sampled while shading and scale only that light's diffuse and specular; ambient is not shadowed; light category masks pick the lights per batch, so a light that does not reach a mesh cannot shadow it. The screen-space mask now skips Blinn-Phong pixels and is not run at all when every mesh is Blinn-Phong. PBR is still on the screen-space path: #102.
 
 ---
 
@@ -1994,5 +1996,19 @@ created: 2026-10-15T12:18:52Z
 +++
 
 SceneGraph.Shape.text("SceneGraph", fontName: "Helvetica-Bold") from SwiftMesh's extrudedText has 296 of 6186 vertices with zero-length normals, all in glyphs with holes (e, a, p). The old AddOns Blinn-Phong shader normalized them to NaN and drew those glyphs white; the in-repo shader (#100) now falls back to the face normal, but PBR and ShaderMaterial still get zero normals. Other shapes are fine. Fix in SwiftMesh's text extrusion (or recompute missing normals in Shape.metalMesh).
+
+---
+
+## 102: PBR: sample shadows per light in the shader
+
++++
+status: new
+priority: medium
+kind: enhancement
+labels: area:renderer, effort:m
+created: 2026-10-15T12:36:55Z
++++
+
+Since #71, Blinn-Phong samples each light's shadow slices while shading, so a light only darkens what it lights. PBR meshes still go through the screen-space mask, which multiplies every light's shadow and darkens the whole pixel: surfaces facing away from a shadow-casting light, or outside its category, are darkened anyway (the original #71 bug). Fix: pass SceneGraphRenderContext.shadow and lightShadowSlices into MetalSprocketsPBR's lighting and scale each PBRLight's contribution by its own shadow (upstream change), then mark PBRSceneMaterial with SamplesShadowsInShader. ShaderMaterial could get a helper for the same.
 
 ---

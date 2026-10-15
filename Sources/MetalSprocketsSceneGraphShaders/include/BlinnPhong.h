@@ -18,8 +18,24 @@ struct BlinnPhongLight {
     // Cosines of the spot cone half-angles.
     float innerConeCos;
     float outerConeCos;
+    // This light's shadow map slices; count 0 casts no shadow.
+    int shadowSliceStart;
+    int shadowSliceCount;
 };
 typedef struct BlinnPhongLight BlinnPhongLight;
+
+// The shadow map, for lights with shadow slices.
+struct BlinnPhongShadowUniforms {
+    // World to light clip space, one per slice.
+    simd_float4x4 sliceViewProjections[8];
+    float mapSize;
+    // 0 leaves shadowed light unchanged, 1 scales it fully by `color`.
+    float intensity;
+    simd_float3 color;
+    // PCF half-size in texels.
+    int radius;
+};
+typedef struct BlinnPhongShadowUniforms BlinnPhongShadowUniforms;
 
 // Per-draw lighting state, shared by every mesh in a batch.
 struct BlinnPhongFrame {
@@ -39,5 +55,7 @@ struct BlinnPhongMaterialUniforms {
     int hasAmbientTexture;
     int hasDiffuseTexture;
     int hasSpecularTexture;
+    // 0 ignores shadows for this mesh.
+    int receivesShadow;
 };
 typedef struct BlinnPhongMaterialUniforms BlinnPhongMaterialUniforms;

@@ -32,7 +32,9 @@ struct GoldenImageTests {
         Case(name: "shadows-floor-not-receiving", demo: "shadows", values: ["Floor Receives Shadows": 0]),
         Case(name: "ambient-occlusion-vignette", demo: "shadows", values: ["Shadows": 0, "Ambient Occlusion": 1, "Vignette": 0.6]),
         // Blinn-Phong scenes, recorded before the renderer moved off MetalSprocketsAddOns (#100).
-        Case(name: "scenekit-features", demo: "scenekit-features", values: [:]),
+        Case(name: "scenekit-features", demo: "scenekit-features", values: ["Shadows": 0]),
+        // Sun, spotlight and a category-2 point light all casting (#71).
+        Case(name: "scenekit-features-shadows", demo: "scenekit-features", values: ["Shadows": 1]),
         Case(name: "instancing", demo: "instancing", values: [:]),
         Case(name: "materials", demo: "pbr-materials", values: [:]),
         Case(name: "deformation", demo: "deformation", values: [:], frames: 30),

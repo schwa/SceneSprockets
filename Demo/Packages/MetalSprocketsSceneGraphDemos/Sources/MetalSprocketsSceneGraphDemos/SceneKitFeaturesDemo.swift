@@ -124,8 +124,7 @@ final class SceneKitFeaturesDemo: DemoScene {
                 .toggle("Fog", default: false),
                 .toggle("Blue Pane Drawn Last", default: true),
                 .toggle("Pick Category 1 Only", default: false),
-                // Off by default: shadows in this scene are broken (#71).
-                .toggle("Shadows", default: false),
+                .toggle("Shadows", default: true),
             ]
         )
         actions = [

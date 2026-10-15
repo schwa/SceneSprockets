@@ -179,7 +179,7 @@ Legend:
 |---|---|---|---|
 | Shadow maps from directional and spot lights | `SceneGraphShadows` | ✅ | Directional: orthographic view fitted to the scene bounds. Spot: perspective view of the outer cone. |
 | Point light shadows | `SceneGraphShadows` | ✅ | Six 90° views per point light. |
-| `shadowMode` (forward, deferred, modulated) | Screen-space mask after the scene pass | 🟡 | One mode, like deferred: shadowed pixels are darkened by `intensity` after all renderers draw. |
+| `shadowMode` (forward, deferred, modulated) | Blinn-Phong: per light, in the shader (like forward). PBR and `ShaderMaterial`: a screen-space mask after the scene pass | 🟡 | The screen-space mask darkens by every light at once (#102). |
 | `shadowColor` | `color` and `intensity` | ✅ | Global, not per light. |
 | `shadowMapSize` | `resolution` (default 2048) | ✅ | Global, not per light. |
 | `shadowBias` | `depthBias`, `slopeScale` | ✅ | Global. Acne is still visible on some lit surfaces (#60). |

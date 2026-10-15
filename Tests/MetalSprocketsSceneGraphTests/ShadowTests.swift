@@ -18,8 +18,9 @@ private func pose(eye: SIMD3<Float>, target: SIMD3<Float>, up: SIMD3<Float> = [0
     return simd_float4x4(columns: (SIMD4(right, 0), SIMD4(trueUp, 0), SIMD4(forward, 0), SIMD4(eye, 1)))
 }
 
+// No ambient term: Blinn-Phong shadows dim only the shadowing light's contribution (#71), so the tests measure that.
 private var material: BlinnPhongSceneMaterial {
-    BlinnPhongSceneMaterial(ambient: .color([0.5, 0.5, 0.5]), diffuse: .color([0.5, 0.5, 0.5]), specular: .color(0), shininess: 1)
+    BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color([0.5, 0.5, 0.5]), specular: .color(0), shininess: 1)
 }
 
 // A floor, a box floating above it, and a directional light shining down and towards -x, so the box's shadow
@@ -126,8 +127,8 @@ func droppedLightsAreCounted() throws {
     #expect(shadows.droppedLightCount == 1)
 }
 
-// #66: a floor that does not receive shadows stays lit under the box's shadow; the box itself still darkens
-// where it is in shadow of nothing (so the mask pass still runs).
+// #66: a floor that does not receive shadows stays lit under the box's shadow. With only Blinn-Phong meshes the
+// screen-space mask is not needed at all (#71).
 @Test
 @MainActor
 func nonReceiversAreNotDarkened() throws {
@@ -142,7 +143,59 @@ func nonReceiversAreNotDarkened() throws {
     #expect(abs(withShadows - lit) <= 3)
     let context = try #require(makeRenderContext(sceneGraph: sceneGraph, camera: nil, cameraMatrix: nil, aspectRatio: 1))
     let frame = try #require(try shadows.prepare(entries: sceneGraph.meshEntries(), context: context, bounds: sceneGraph.bounds, viewSize: (128, 128)))
+    #expect(frame.masksEverything)
+    #expect(frame.nonReceivers == nil)
+}
+
+// The screen-space mask still covers other materials, skipping Blinn-Phong meshes (which shadow themselves).
+@Test
+@MainActor
+func screenSpaceMaskSkipsBlinnPhong() throws {
+    let (sceneGraph, _) = try makeScene()
+    let floor = try #require(sceneGraph.nodesWithWorldTransforms().first { $0.node.label == "Floor" }?.node)
+    if case let .mesh(mesh, _, castsShadow, receivesShadow) = floor.content {
+        floor.content = .mesh(mesh, materials: [try ShaderMaterial.normals()], castsShadow: castsShadow, receivesShadow: receivesShadow)
+    }
+    let context = try #require(makeRenderContext(sceneGraph: sceneGraph, camera: nil, cameraMatrix: nil, aspectRatio: 1))
+    let frame = try #require(try SceneGraphShadows().prepare(entries: sceneGraph.meshEntries(), context: context, bounds: sceneGraph.bounds, viewSize: (128, 128)))
+    #expect(!frame.masksEverything)
+    // Only the Blinn-Phong box is marked.
     #expect(frame.nonReceivers?.casters.count == 1)
+}
+
+// #71: a light's shadow dims only that light. The floor spot is in the sun's box shadow but lit by a second light
+// from the other side, which must still reach it; and a light whose category excludes the floor casts nothing on it.
+@Test
+@MainActor
+func shadowsDimOnlyTheirOwnLight() throws {
+    let (sceneGraph, pixel) = try makeScene()
+    let shadows = SceneGraphShadows(intensity: 1)
+    let sunOnly = try brightness(sceneGraph, at: pixel, shadows: shadows)
+    #expect(sunOnly < 10)
+    // From the right, low: lights the floor spot and its box shadow falls left of it.
+    let fill = SceneGraph.Node(parent: sceneGraph.root, transform: pose(eye: [6, 3, 0], target: [-1, 0, 0]), content: .light(Light(type: .directional, color: [1, 1, 1], intensity: 1)))
+    let withFill = try brightness(sceneGraph, at: pixel, shadows: shadows)
+    let fillWithoutShadows = try brightness(sceneGraph, at: pixel, shadows: nil)
+    _ = fill
+    #expect(withFill > 30)
+    // The fill's contribution is not dimmed by the sun's shadow (with the old screen-space mask it went to black).
+    #expect(Double(withFill) > Double(fillWithoutShadows) * 0.3)
+
+    // A light that lights only category 2 casts no shadow on the category-1 floor.
+    let (masked, maskedPixel) = try makeScene()
+    let sun = try #require(masked.lightNodes().first?.node)
+    let other = SceneGraph.Node(parent: masked.root, transform: pose(eye: .zero, target: [-0.5, -1, 0]), content: .light(Light(type: .directional, color: [1, 1, 1], intensity: 1)))
+    other.lightCategoryBitMask = 0b10
+    sun.removeFromParent()
+    // The floor glows (ambient) and no light reaches it; the category-2 light's box shadow would land on the spot,
+    // which the old screen-space mask darkened.
+    let floor = try #require(masked.nodesWithWorldTransforms().first { $0.node.label == "Floor" }?.node)
+    if case let .mesh(mesh, _, castsShadow, receivesShadow) = floor.content {
+        floor.content = .mesh(mesh, materials: [BlinnPhongSceneMaterial(ambient: .color(1), diffuse: .color(0.5), specular: .color(0), shininess: 1)], castsShadow: castsShadow, receivesShadow: receivesShadow)
+    }
+    let glowing = try brightness(masked, at: maskedPixel, shadows: nil)
+    #expect(glowing > 30)
+    #expect(abs(try brightness(masked, at: maskedPixel, shadows: SceneGraphShadows(intensity: 1)) - glowing) <= 3)
 }
 
 @MainActor
