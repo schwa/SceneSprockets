@@ -1668,19 +1668,21 @@ SceneKit has subdivisionLevel, wantsAdaptiveSubdivision, the SCNGeometryTessella
 ## 83: Blinn-Phong material: normal maps, emission, cull mode
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: effort:m, area:renderer
 depends: 100
 created: 2026-10-15T02:28:07Z
-updated: 2026-10-15T12:02:24Z
+updated: 2026-10-15T19:43:07Z
+closed: 2026-10-15T19:43:07Z
 +++
 
 BlinnPhongMaterial has only ambient, diffuse and specular color sources and shininess. It has no normal map, no emission, and no double-sided/cull mode setting. Transparency is #36. See docs/SceneKitComparison.md.
 
 - `2026-10-15T02:31:16Z`: Related: #36.
 - `2026-10-15T12:02:24Z`: Depends on #100 (own Blinn-Phong).
+- `2026-10-15T19:43:07Z`: Added emission (color or tinted texture), normalMap (tangent frame from screen derivatives, +Y up) and cullMode (CCW front; mirrored transforms flip winding) to BlinnPhongSceneMaterial. Tests cover emission, a +X normal map and both cull modes; the bitangent sign (+Y vs -Y green) is not covered by a test.
 
 ---
 

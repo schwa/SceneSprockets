@@ -28,6 +28,26 @@ namespace BlinnPhong {
         return shadow / (side * side);
     }
 
+    // Tangent frame from screen-space derivatives (Christian Schuler, "Followup: Normal Mapping Without Precomputed
+    // Tangents"), so meshes need no tangent attribute. Texture v runs down, and normal maps point +Y up, hence -B.
+    static float3 perturbedNormal(float3 normal, float3 position, float2 uv, float3 mapped) {
+        float3 dp1 = dfdx(position);
+        float3 dp2 = dfdy(position);
+        float2 duv1 = dfdx(uv);
+        float2 duv2 = dfdy(uv);
+        float3 dp2perp = cross(dp2, normal);
+        float3 dp1perp = cross(normal, dp1);
+        float3 tangent = dp2perp * duv1.x + dp1perp * duv2.x;
+        float3 bitangent = dp2perp * duv1.y + dp1perp * duv2.y;
+        float scale = max(dot(tangent, tangent), dot(bitangent, bitangent));
+        if (scale <= 0) {
+            return normal;
+        }
+        float inverse = rsqrt(scale);
+        float3x3 frame = float3x3(tangent * inverse, -bitangent * inverse, normal);
+        return normalize(frame * mapped);
+    }
+
     struct Vertex {
         float3 position [[attribute(0)]];
         float3 normal [[attribute(1)]];
@@ -83,6 +103,8 @@ namespace BlinnPhong {
         texture2d<float> ambientTexture [[texture(0)]],
         texture2d<float> diffuseTexture [[texture(1)]],
         texture2d<float> specularTexture [[texture(2)]],
+        texture2d<float> emissionTexture [[texture(4)]],
+        texture2d<float> normalTexture [[texture(5)]],
         sampler textureSampler [[sampler(0)]],
         depth2d_array<float, access::sample> shadowMap [[texture(3), function_constant(HAS_SHADOWS)]],
         sampler shadowSampler [[sampler(1), function_constant(HAS_SHADOWS)]],
@@ -115,6 +137,14 @@ namespace BlinnPhong {
             if (dot(normal, frame.cameraPosition - in.worldPosition) < 0) {
                 normal = -normal;
             }
+        }
+        if (material.hasNormalMap) {
+            float3 mapped = normalTexture.sample(textureSampler, in.textureCoordinate).xyz * 2.0 - 1.0;
+            normal = perturbedNormal(normal, in.worldPosition, in.textureCoordinate, mapped);
+        }
+        float3 emission = material.emission;
+        if (material.hasEmissionTexture) {
+            emission *= emissionTexture.sample(textureSampler, in.textureCoordinate).rgb;
         }
         float3 viewDirection = normalize(frame.cameraPosition - in.worldPosition);
         float3 diffuse = 0;
@@ -155,7 +185,7 @@ namespace BlinnPhong {
             diffuse += diffuseColor * lambertian * light.color * attenuation * shadowing;
             specular += specularColor * highlight * light.color * attenuation * shadowing;
         }
-        return float4(frame.ambientLightColor * ambientColor + diffuse + specular, alpha);
+        return float4(frame.ambientLightColor * ambientColor + diffuse + specular + emission, alpha);
     }
 
 }

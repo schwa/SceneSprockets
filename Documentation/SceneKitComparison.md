@@ -128,12 +128,12 @@ Legend:
 |---|---|---|---|
 | `SCNMaterial` (one type, many lighting models) | `Material` marker protocol; one renderer per material type | 🟡 | Different design: each material family has its own `SceneGraphMaterialRenderer`. Add a family without changing the core. |
 | `lightingModel = .physicallyBased` | `PBRSceneMaterial` (wraps `PBRMaterial`) | ✅ | Metallic-roughness glTF model, plus many extensions: transmission, volume (thickness, attenuation), IOR, specular, iridescence, anisotropy, sheen, clearcoat, dispersion, diffuse transmission, emissive strength, unlit, texture transforms. Much wider than SceneKit's PBR. |
-| `lightingModel = .blinn` / `.phong` | `BlinnPhongSceneMaterial` | 🟡 | Ambient, diffuse and specular as a color or a tinted 2D texture, and `shininess`. Own shaders in this repo. `opacity` and diffuse texture alpha. No normal maps, no emission (#83). One ambient light color per renderer (`BlinnPhongMaterialRenderer.ambientLightColor`). |
+| `lightingModel = .blinn` / `.phong` | `BlinnPhongSceneMaterial` | 🟡 | Ambient, diffuse and specular as a color or a tinted 2D texture, and `shininess`. Own shaders in this repo. `opacity` and diffuse texture alpha, `emission`, `normalMap` (tangent frame from screen derivatives, no tangent attribute) and `cullMode`. One ambient light color per renderer (`BlinnPhongMaterialRenderer.ambientLightColor`). |
 | `lightingModel = .lambert`, `.constant` | — | 🟡 | Use Blinn-Phong with no specular, PBR `unlit`, or a `ShaderMaterial`. |
 | `lightingModel = .shadowOnly` | — | ❌ | |
 | `SCNMaterialProperty` (contents, intensity, wrap, filter, mip, `contentsTransform`) | PBR texture slots with texture transforms; Blinn-Phong `BlinnPhongSceneMaterial.Source` | 🟡 | No uniform "property" type across materials. |
 | `transparency`, `transparencyMode`, `blendMode` | PBR `alphaMode` (opaque, mask, blend); `ShaderMaterial.isTransparent`; Blinn-Phong `opacity` | 🟡 | No additive, multiply or screen blend modes. Transparent entries draw after opaque ones, farthest first (`Material.isTransparent`). |
-| `isDoubleSided`, `cullMode` | PBR `doubleSided` | 🟡 | Blinn-Phong and `ShaderMaterial` have no cull mode setting. |
+| `isDoubleSided`, `cullMode` | PBR `doubleSided`; Blinn-Phong `cullMode` | 🟡 | `ShaderMaterial` has no cull mode setting. |
 | `writesToDepthBuffer`, `readsFromDepthBuffer` | `ShaderMaterial.isTransparent` (tests depth, does not write) | 🟡 | No general switch. |
 | `colorBufferWriteMask` | — | ❌ | |
 | `fillMode = .lines` (wireframe) | — | ❌ | MetalSprocketsPBR has a wireframe debug view, but MSSG does not expose it. |

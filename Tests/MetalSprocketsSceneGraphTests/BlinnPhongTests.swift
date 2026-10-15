@@ -115,3 +115,62 @@ func zeroNormalsFallBackToFaceNormals() throws {
     texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(8, 8, 1, 1), mipmapLevel: 0)
     #expect(value.x > 200 && value.y > 200 && value.z > 200)
 }
+
+// #83: center pixel (BGRA) of a 2x2 quad at the origin, lit by a directional light shining down -Z, seen from +Z.
+@MainActor
+private func litQuadPixel(_ material: BlinnPhongSceneMaterial, quadRotation: simd_quatf = .identity) throws -> SIMD4<UInt8> {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh(device: device)
+    let root = SceneGraph.Node()
+    _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40)))))
+    _ = SceneGraph.Node(parent: root, content: .light(Light(type: .directional, color: [1, 1, 1], intensity: 1)))
+    _ = SceneGraph.Node(parent: root, trs: .init(rotation: quadRotation), content: .mesh(quad, material: material))
+    let renderer = try OffscreenRenderer(size: CGSize(width: 16, height: 16))
+    let texture = try renderer.render(SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: .zero)])).texture
+    var value = SIMD4<UInt8>.zero
+    texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(8, 8, 1, 1), mipmapLevel: 0)
+    return value
+}
+
+private func solidTexture(_ bytes: [UInt8]) throws -> MTLTexture {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba8Unorm, width: 1, height: 1, mipmapped: false)
+    let texture = try #require(device.makeTexture(descriptor: descriptor))
+    texture.replace(region: MTLRegionMake2D(0, 0, 1, 1), mipmapLevel: 0, withBytes: bytes, bytesPerRow: 4)
+    return texture
+}
+
+@Test(arguments: [false, true])
+@MainActor
+func emissionAddsUnlitColor(usesTexture: Bool) throws {
+    let emission: BlinnPhongSceneMaterial.Source = usesTexture ? .texture(try solidTexture([0, 255, 0, 255])) : .color([0, 1, 0])
+    let value = try litQuadPixel(BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: emission))
+    #expect(value.y > 250 && value.x < 5 && value.z < 5)
+}
+
+@Test
+@MainActor
+func normalMapBendsLighting() throws {
+    let plain = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(1), specular: .color(0), shininess: 1)
+    #expect(try litQuadPixel(plain).x > 200)
+    // Tangent-space +X: the normal lies in the quad's plane, at right angles to the light.
+    var mapped = plain
+    mapped.normalMap = try solidTexture([255, 128, 128, 255])
+    #expect(try litQuadPixel(mapped).x < 20)
+    // Straight up (+Z) matches the mesh normal.
+    mapped.normalMap = try solidTexture([128, 128, 255, 255])
+    #expect(try litQuadPixel(mapped).x > 200)
+}
+
+@Test
+@MainActor
+func cullModeHidesBackFaces() throws {
+    var material = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([1, 1, 1]))
+    let turned = simd_quatf(angle: .pi, axis: [0, 1, 0])
+    #expect(try litQuadPixel(material, quadRotation: turned).x > 200)
+    material.cullMode = .back
+    #expect(try litQuadPixel(material).x > 200)
+    #expect(try litQuadPixel(material, quadRotation: turned).x < 5)
+    material.cullMode = .front
+    #expect(try litQuadPixel(material).x < 5)
+}

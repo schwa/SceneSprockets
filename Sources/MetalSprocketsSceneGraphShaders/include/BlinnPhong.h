@@ -60,5 +60,10 @@ struct BlinnPhongMaterialUniforms {
     // Output alpha; multiplied by the diffuse texture's alpha when usesDiffuseAlpha is set.
     float opacity;
     int usesDiffuseAlpha;
+    // Added unlit; multiplies the emission texture when hasEmissionTexture is set.
+    simd_float3 emission;
+    int hasEmissionTexture;
+    // Tangent-space normal map (+Y up, OpenGL/glTF convention); the tangent frame comes from screen derivatives.
+    int hasNormalMap;
 };
 typedef struct BlinnPhongMaterialUniforms BlinnPhongMaterialUniforms;

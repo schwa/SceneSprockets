@@ -32,14 +32,23 @@ public struct BlinnPhongSceneMaterial: MetalSprocketsSceneGraph.Material, Sample
     public var opacity: Float
     // Multiplies opacity by the diffuse texture's alpha (and makes the material transparent).
     public var usesDiffuseTextureAlpha: Bool
+    // Added unlit, like SCNMaterial.emission.
+    public var emission: Source
+    // Tangent-space normal map (+Y up, as in glTF), sampled at the first texture coordinates. Meshes need no tangents.
+    public var normalMap: MTLTexture?
+    // Counter-clockwise triangles are front faces. `.none` draws both sides.
+    public var cullMode: MTLCullMode
 
-    public init(ambient: Source, diffuse: Source, specular: Source, shininess: Float, opacity: Float = 1, usesDiffuseTextureAlpha: Bool = false) {
+    public init(ambient: Source, diffuse: Source, specular: Source, shininess: Float, opacity: Float = 1, usesDiffuseTextureAlpha: Bool = false, emission: Source = .color(0), normalMap: MTLTexture? = nil, cullMode: MTLCullMode = .none) {
         self.ambient = ambient
         self.diffuse = diffuse
         self.specular = specular
         self.shininess = shininess
         self.opacity = opacity
         self.usesDiffuseTextureAlpha = usesDiffuseTextureAlpha
+        self.emission = emission
+        self.normalMap = normalMap
+        self.cullMode = cullMode
     }
 
     public var isTransparent: Bool {
@@ -153,14 +162,7 @@ private struct BlinnPhongBatchesElement: Element {
             func draw(_ batch: InstanceBatch, instanced: Bool) throws -> AnyElement {
                 let submesh = batch.mesh.submeshes[batch.submeshIndex]
                 let normalMatrices = batch.modelMatrices.map(\.normalMatrix)
-                var element = Draw(
-                    primitiveType: submesh.primitiveType,
-                    indexBuffer: submesh.indexBuffer,
-                    indexType: submesh.indexType,
-                    indexCount: submesh.indexCount,
-                    indexBufferOffset: submesh.indexBufferOffset,
-                    instanceCount: batch.modelMatrices.count
-                )
+                var element = culledDraw(submesh, instanceCount: batch.modelMatrices.count, cullMode: batch.material.cullMode, isMirrored: batch.isMirrored)
                 .vertexBuffers(batch.mesh.vertexBuffers)
                 .parameter("frame", functionType: .vertex, value: frame)
                 .eraseToAnyElement()
@@ -184,6 +186,8 @@ private struct BlinnPhongBatchesElement: Element {
                     .parameter("ambientTexture", texture: resolved.ambientTexture)
                     .parameter("diffuseTexture", texture: resolved.diffuseTexture)
                     .parameter("specularTexture", texture: resolved.specularTexture)
+                    .parameter("emissionTexture", texture: resolved.emissionTexture)
+                    .parameter("normalTexture", texture: resolved.normalTexture)
                     .parameter("textureSampler", samplerState: resolved.sampler)
                     .eraseToAnyElement()
                 if let shadowBinding {
@@ -220,6 +224,23 @@ private struct BlinnPhongBatchesElement: Element {
     }
 }
 
+// Draw resets cull mode to none, so culling draws set it in their own closure. Mirrored transforms flip the winding.
+private func culledDraw(_ submesh: MetalMesh.Submesh, instanceCount: Int, cullMode: MTLCullMode, isMirrored: Bool) -> AnyElement {
+    guard cullMode != .none else {
+        return Draw(primitiveType: submesh.primitiveType, indexBuffer: submesh.indexBuffer, indexType: submesh.indexType, indexCount: submesh.indexCount, indexBufferOffset: submesh.indexBufferOffset, instanceCount: instanceCount).eraseToAnyElement()
+    }
+    let indexBuffer = submesh.indexBuffer
+    let offset = submesh.indexBufferOffset
+    let (primitiveType, indexType, indexCount) = (submesh.primitiveType, submesh.indexType, submesh.indexCount)
+    return Draw { encoder in
+        encoder.setCullMode(cullMode)
+        encoder.setFrontFacing(isMirrored ? .clockwise : .counterClockwise)
+        encoder.drawIndexedPrimitives(primitiveType: primitiveType, indexCount: indexCount, indexType: indexType, indexBuffer: indexBuffer.gpuAddress + UInt64(offset), indexBufferLength: indexBuffer.length - offset, instanceCount: instanceCount)
+    }
+    .useResource(indexBuffer, usage: .read, stages: .vertex)
+    .eraseToAnyElement()
+}
+
 private extension Element {
     // Reversed depth. Transparent draws test depth but do not write it, and blend straight alpha over the target.
     func blinnPhongTransparency(_ isTransparent: Bool) -> some Element {
@@ -244,6 +265,8 @@ extension BlinnPhongSceneMaterial {
         var ambientTexture: MTLTexture
         var diffuseTexture: MTLTexture
         var specularTexture: MTLTexture
+        var emissionTexture: MTLTexture
+        var normalTexture: MTLTexture
         var sampler: MTLSamplerState
     }
 
@@ -261,6 +284,7 @@ extension BlinnPhongSceneMaterial {
         let ambient = split(self.ambient)
         let diffuse = split(self.diffuse)
         let specular = split(self.specular)
+        let emission = split(self.emission)
         let uniforms = BlinnPhongMaterialUniforms(
             ambient: ambient.color,
             diffuse: diffuse.color,
@@ -271,10 +295,13 @@ extension BlinnPhongSceneMaterial {
             hasSpecularTexture: specular.texture == nil ? 0 : 1,
             receivesShadow: 1,
             opacity: opacity,
-            usesDiffuseAlpha: usesDiffuseTextureAlpha ? 1 : 0
+            usesDiffuseAlpha: usesDiffuseTextureAlpha ? 1 : 0,
+            emission: emission.color,
+            hasEmissionTexture: emission.texture == nil ? 0 : 1,
+            hasNormalMap: normalMap == nil ? 0 : 1
         )
-        let sampler = diffuse.sampler ?? ambient.sampler ?? specular.sampler ?? defaultSampler
-        return Resolved(uniforms: uniforms, ambientTexture: ambient.texture ?? placeholder, diffuseTexture: diffuse.texture ?? placeholder, specularTexture: specular.texture ?? placeholder, sampler: sampler)
+        let sampler = diffuse.sampler ?? ambient.sampler ?? specular.sampler ?? emission.sampler ?? defaultSampler
+        return Resolved(uniforms: uniforms, ambientTexture: ambient.texture ?? placeholder, diffuseTexture: diffuse.texture ?? placeholder, specularTexture: specular.texture ?? placeholder, emissionTexture: emission.texture ?? placeholder, normalTexture: normalMap ?? placeholder, sampler: sampler)
     }
 }
 
@@ -284,6 +311,11 @@ struct InstanceBatch {
     var material: BlinnPhongSceneMaterial
     var receivesShadow: Bool
     var modelMatrices: [simd_float4x4]
+
+    // Batches never mix mirrored and unmirrored transforms, so the first one decides the winding.
+    var isMirrored: Bool {
+        modelMatrices[0].isMirroring
+    }
 }
 
 // Groups items that share vertex buffers, submesh and material, keeping first-seen order.
@@ -293,12 +325,13 @@ func instanceBatches(_ items: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, mo
         var submeshIndex: Int
         var material: MaterialKey
         var receivesShadow: Bool
+        var isMirrored: Bool
     }
     var batches: [InstanceBatch] = []
     var indexByKey: [Key: Int] = [:]
     for item in items {
         let buffers = item.mesh.vertexBuffers.sorted { $0.key < $1.key }.map { ObjectIdentifier($0.value) }
-        let key = Key(vertexBuffers: buffers, submeshIndex: item.entry.submeshIndex, material: MaterialKey(item.material), receivesShadow: item.entry.receivesShadow)
+        let key = Key(vertexBuffers: buffers, submeshIndex: item.entry.submeshIndex, material: MaterialKey(item.material), receivesShadow: item.entry.receivesShadow, isMirrored: item.modelMatrix.isMirroring)
         if let index = indexByKey[key] {
             batches[index].modelMatrices.append(item.modelMatrix)
         } else {
@@ -315,12 +348,16 @@ private struct MaterialKey: Hashable {
     var shininess: Float
     var opacity: Float
     var usesDiffuseTextureAlpha: Bool
+    var normalMap: ObjectIdentifier?
+    var cullMode: UInt
 
     init(_ material: BlinnPhongSceneMaterial) {
-        sources = [material.ambient, material.diffuse, material.specular].map(SourceKey.init)
+        sources = [material.ambient, material.diffuse, material.specular, material.emission].map(SourceKey.init)
         shininess = material.shininess
         opacity = material.opacity
         usesDiffuseTextureAlpha = material.usesDiffuseTextureAlpha
+        normalMap = material.normalMap.map { ObjectIdentifier($0) }
+        cullMode = material.cullMode.rawValue
     }
 
     enum SourceKey: Hashable {
