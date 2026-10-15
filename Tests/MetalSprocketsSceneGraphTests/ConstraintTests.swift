@@ -134,14 +134,14 @@ func inverseKinematicsReachesTarget() {
     hand.constraints = [.inverseKinematics(chainRoot: shoulder, target: target, iterations: 50)]
     let graph = SceneGraph(root: root)
     graph.applyConstraints(pointOfView: matrix_identity_float4x4)
-    let reached = SIMD3(hand.worldTransform.columns.3.x, hand.worldTransform.columns.3.y, hand.worldTransform.columns.3.z)
+    let reached = hand.worldTransform.columns.3.xyz
     #expect(simd_distance(reached, [1, 1.2, 0]) < 0.01)
     // Bone lengths are kept.
-    let elbowPosition = SIMD3(elbow.worldTransform.columns.3.x, elbow.worldTransform.columns.3.y, elbow.worldTransform.columns.3.z)
+    let elbowPosition = elbow.worldTransform.columns.3.xyz
     #expect(abs(simd_length(elbowPosition) - 1) < 1e-4)
     // Out of reach: the arm points at the target, fully stretched.
     target.trs.translation = [0, 5, 0]
     graph.applyConstraints(pointOfView: matrix_identity_float4x4)
-    let stretched = SIMD3(hand.worldTransform.columns.3.x, hand.worldTransform.columns.3.y, hand.worldTransform.columns.3.z)
+    let stretched = hand.worldTransform.columns.3.xyz
     #expect(simd_distance(stretched, [0, 2, 0]) < 0.01)
 }

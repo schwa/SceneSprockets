@@ -1,3 +1,4 @@
+import GeometryLite3D
 import simd
 
 extension SceneGraph {
@@ -197,6 +198,3 @@ struct SplitMix64: RandomNumberGenerator {
     }
 }
 
-private extension SIMD4<Float> {
-    var xyz: SIMD3<Float> { SIMD3(x, y, z) }
-}

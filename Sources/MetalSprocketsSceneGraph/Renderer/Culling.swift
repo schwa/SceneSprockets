@@ -46,7 +46,7 @@ func sortedBackToFront(_ entries: [SceneGraph.MeshEntry], cameraPosition: SIMD3<
 func sortedFrontToBack(_ entries: [SceneGraph.MeshEntry], cameraPosition: SIMD3<Float>) -> [SceneGraph.MeshEntry] {
     entries
         .map { entry in
-            let origin = SIMD3(entry.worldTransform.columns.3.x, entry.worldTransform.columns.3.y, entry.worldTransform.columns.3.z)
+            let origin = entry.worldTransform.columns.3.xyz
             return (entry, simd_distance_squared(origin, cameraPosition))
         }
         .sorted { $0.1 < $1.1 }

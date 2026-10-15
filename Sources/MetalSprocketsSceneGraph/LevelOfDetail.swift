@@ -1,3 +1,4 @@
+import GeometryLite3D
 import simd
 import SwiftMesh
 
@@ -33,7 +34,7 @@ func applyLevelsOfDetail(_ entries: [SceneGraph.MeshEntry], cameraPosition: SIMD
         guard handled.insert(ObjectIdentifier(node)).inserted else {
             continue
         }
-        let position = SIMD3(entry.worldTransform.columns.3.x, entry.worldTransform.columns.3.y, entry.worldTransform.columns.3.z)
+        let position = entry.worldTransform.columns.3.xyz
         let distance = simd_distance(position, cameraPosition)
         guard let level = node.levelsOfDetail.filter({ $0.distance <= distance }).max(by: { $0.distance < $1.distance }) else {
             result += entries.filter { $0.node === node }

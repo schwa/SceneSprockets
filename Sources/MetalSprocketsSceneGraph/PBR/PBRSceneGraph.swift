@@ -241,6 +241,7 @@ func pbrPrimitiveInput(entry: SceneGraph.MeshEntry, attributes: [MetalMesh.Verte
 // Lights point down the node's -Z axis.
 func pbrLight(worldTransform: simd_float4x4, light: Light) -> PBRLight {
     var result = PBRLight()
+    // Spelled out: MetalSprocketsPBR and GeometryLite3D both define SIMD4.xyz, which is ambiguous where both are imported.
     result.position = SIMD3(worldTransform.columns.3.x, worldTransform.columns.3.y, worldTransform.columns.3.z)
     let forward = -SIMD3(worldTransform.columns.2.x, worldTransform.columns.2.y, worldTransform.columns.2.z)
     result.direction = simd_length(forward) > 0 ? simd_normalize(forward) : [0, 0, -1]

@@ -192,7 +192,7 @@ public final class SceneGraphShadows {
         var slices: [Range<Int>] = []
         for (transform, light) in lights {
             var lightViews: [simd_float4x4] = []
-            let position = SIMD3(transform.columns.3.x, transform.columns.3.y, transform.columns.3.z)
+            let position = transform.columns.3.xyz
             let forward = simd_normalize(-SIMD3(transform.columns.2.x, transform.columns.2.y, transform.columns.2.z))
             // Far enough to reach the whole scene from the light.
             let far = max(simd_distance(position, center) + radius, 0.1)

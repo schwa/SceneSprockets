@@ -1,3 +1,4 @@
+import GeometryLite3D
 import MetalSprocketsAddOns
 import MetalSprocketsAddOnsShaders
 import MetalSprocketsSceneGraph
@@ -30,7 +31,7 @@ struct NodeInspectorView: View {
     private var transformSection: some View {
         Section("Transform") {
             let t = node.transform
-            VectorRow(label: "Position", value: SIMD3(t.columns.3.x, t.columns.3.y, t.columns.3.z))
+            VectorRow(label: "Position", value: t.columns.3.xyz)
             VectorRow(label: "X Axis", value: SIMD3(t.columns.0.x, t.columns.0.y, t.columns.0.z))
             VectorRow(label: "Y Axis", value: SIMD3(t.columns.1.x, t.columns.1.y, t.columns.1.z))
             VectorRow(label: "Z Axis", value: SIMD3(t.columns.2.x, t.columns.2.y, t.columns.2.z))

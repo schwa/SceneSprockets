@@ -1,3 +1,4 @@
+import GeometryLite3D
 import Foundation
 import Metal
 import MetalSprockets
@@ -60,7 +61,7 @@ public struct ShaderMaterialRenderer: SceneGraphMaterialRenderer {
     }
 
     public func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement {
-        let cameraPosition = SIMD3(context.cameraMatrix.columns.3.x, context.cameraMatrix.columns.3.y, context.cameraMatrix.columns.3.z)
+        let cameraPosition = context.cameraMatrix.columns.3.xyz
         // Skinned and morphed meshes are deformed on the CPU, as for Blinn-Phong.
         let items: [(mesh: MetalMesh, submeshIndex: Int, modelMatrix: simd_float4x4, material: ShaderMaterial)] = entries.compactMap { entry in
             guard let material = entry.material as? ShaderMaterial else {

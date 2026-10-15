@@ -1,3 +1,4 @@
+import GeometryLite3D
 import simd
 
 extension SceneGraph {
@@ -198,6 +199,3 @@ extension SceneGraph.Node {
     }
 }
 
-private extension SIMD4<Float> {
-    var xyz: SIMD3<Float> { SIMD3(x, y, z) }
-}

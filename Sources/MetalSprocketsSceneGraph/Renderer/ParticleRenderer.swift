@@ -1,3 +1,4 @@
+import GeometryLite3D
 import Foundation
 import Metal
 import MetalSprockets
@@ -19,7 +20,7 @@ struct ParticlesElement: Element {
                 right: SIMD4(simd_normalize(SIMD3(camera.columns.0.x, camera.columns.0.y, camera.columns.0.z)), 0),
                 up: SIMD4(simd_normalize(SIMD3(camera.columns.1.x, camera.columns.1.y, camera.columns.1.z)), 0)
             )
-            let cameraPosition = SIMD3(camera.columns.3.x, camera.columns.3.y, camera.columns.3.z)
+            let cameraPosition = camera.columns.3.xyz
             let draws: [(buffer: MTLBuffer, count: Int, blendMode: SceneGraph.ParticleSystem.BlendMode)] = systems.compactMap { system in
                 // Farthest first, so alpha-blended sprites composite correctly.
                 let instances = system.instances()

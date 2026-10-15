@@ -180,7 +180,7 @@ public struct SceneView: View {
             return (entry.worldTransform, center)
         }
         let radius = bounds.map { max(simd_length($0.max - $0.min) / 2, 0.5) } ?? 1
-        return (lookAt(eye: center + [0, radius * 0.5, radius * 2.5], target: center), center)
+        return (LookAt(position: center + [0, radius * 0.5, radius * 2.5], target: center, up: [0, 1, 0]).cameraMatrix, center)
     }
 
     // The world transform the frame is drawn from.
@@ -241,10 +241,3 @@ private struct CameraControl: ViewModifier {
     }
 }
 
-// A camera world transform at `eye` looking at `target` (-Z forward).
-func lookAt(eye: SIMD3<Float>, target: SIMD3<Float>, up: SIMD3<Float> = [0, 1, 0]) -> simd_float4x4 {
-    let forward = simd_normalize(eye - target)
-    let right = simd_normalize(simd_cross(up, forward))
-    let trueUp = simd_cross(forward, right)
-    return simd_float4x4(columns: (SIMD4(right, 0), SIMD4(trueUp, 0), SIMD4(forward, 0), SIMD4(eye, 1)))
-}

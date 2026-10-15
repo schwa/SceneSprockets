@@ -9,7 +9,7 @@ import simd
 func defaultCameraIsUsedWithoutCameraNodes() throws {
     let sceneGraph = SceneGraph(root: SceneGraph.Node())
     #expect(makeRenderContext(sceneGraph: sceneGraph, camera: nil, cameraMatrix: nil, aspectRatio: 1) == nil)
-    let matrix = lookAt(eye: [0, 0, 5], target: .zero)
+    let matrix = LookAt(position: [0, 0, 5], target: .zero, up: [0, 1, 0]).cameraMatrix
     let context = try #require(makeRenderContext(sceneGraph: sceneGraph, camera: nil, cameraMatrix: matrix, aspectRatio: 1, defaultCamera: Camera(projection: PerspectiveProjection())))
     #expect(context.cameraMatrix == matrix)
 }
@@ -29,10 +29,3 @@ func defaultLightIsAddedOnlyWithoutLights() throws {
     #expect(lit.lights[0].light.type == .point)
 }
 
-@Test
-func lookAtFacesTarget() {
-    let matrix = lookAt(eye: [0, 0, 5], target: .zero)
-    let forward = -SIMD3(matrix.columns.2.x, matrix.columns.2.y, matrix.columns.2.z)
-    #expect(simd_distance(forward, [0, 0, -1]) < 1e-5)
-    #expect(matrix.columns.3 == [0, 0, 5, 1])
-}

@@ -1,3 +1,4 @@
+import GeometryLite3D
 import AVFAudio
 import simd
 
@@ -69,7 +70,7 @@ public final class SceneAudio {
         var visible: [ObjectIdentifier: (player: SceneGraph.AudioPlayer, position: SIMD3<Float>)] = [:]
         sceneGraph.visit { node, worldTransform in
             for player in node.audioPlayers {
-                visible[ObjectIdentifier(player)] = (player, SIMD3(worldTransform.columns.3.x, worldTransform.columns.3.y, worldTransform.columns.3.z))
+                visible[ObjectIdentifier(player)] = (player, worldTransform.columns.3.xyz)
             }
         }
         var all = visible.mapValues(\.player)

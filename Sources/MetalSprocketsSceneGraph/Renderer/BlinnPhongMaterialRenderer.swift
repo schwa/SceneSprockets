@@ -1,3 +1,4 @@
+import GeometryLite3D
 import Foundation
 import Metal
 import MetalSprockets
@@ -59,7 +60,7 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer {
 
     public func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement {
         let viewProjection = context.projectionMatrix * context.viewMatrix
-        let cameraPosition = SIMD3(context.cameraMatrix.columns.3.x, context.cameraMatrix.columns.3.y, context.cameraMatrix.columns.3.z)
+        let cameraPosition = context.cameraMatrix.columns.3.xyz
         let lights = blinnPhongLights(context.lights, shadowSlices: context.shadow == nil ? [] : context.lightShadowSlices)
         let frame = BlinnPhongFrame(viewProjection: viewProjection, cameraPosition: cameraPosition, ambientLightColor: ambientLightColor, lightCount: Int32(lights.count))
         // An empty array cannot be bound; the shader reads none of it when lightCount is 0.
@@ -354,7 +355,7 @@ func blinnPhongLights(_ lights: [(worldTransform: simd_float4x4, light: Light)],
         default: Int32(BLINN_PHONG_LIGHT_POINT)
         }
         return BlinnPhongLight(
-            position: SIMD3(transform.columns.3.x, transform.columns.3.y, transform.columns.3.z),
+            position: transform.columns.3.xyz,
             direction: simd_length(forward) > 0 ? simd_normalize(forward) : [0, 0, -1],
             color: entry.light.color * entry.light.intensity,
             type: type,

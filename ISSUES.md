@@ -1730,17 +1730,18 @@ Missing SceneKit equivalents: an ambient light type as a node (today it is per r
 ## 87: Orthographic cameras
 
 +++
-status: open
+status: blocked
 priority: medium
 kind: feature
 labels: effort:s, area:renderer
 created: 2026-10-15T02:28:07Z
-updated: 2026-10-15T02:31:16Z
+updated: 2026-10-15T13:29:45Z
 +++
 
 GeometryLite3D only has PerspectiveProjection, so there is no orthographic camera. The glTF and Model I/O loaders skip orthographic cameras with a warning. Needs a projection type in GeometryLite3D first. Also unblocks part of #54. See docs/SceneKitComparison.md.
 
 - `2026-10-15T02:31:16Z`: Related: #97 (orthographic projection belongs in GeometryLite3D), #54.
+- `2026-10-15T13:29:45Z`: Blocked on GeometryLite3D #1 (OrthographicProjection).
 
 ---
 
@@ -1904,7 +1905,7 @@ priority: high
 kind: enhancement
 labels: effort:m, area:scenegraph
 created: 2026-10-15T02:28:44Z
-updated: 2026-10-15T02:31:17Z
+updated: 2026-10-15T13:29:45Z
 +++
 
 MSSG reimplements math that GeometryLite3D already has, or should have. Move it to GeometryLite3D and use it from there.
@@ -1923,6 +1924,7 @@ Candidates to add to GeometryLite3D, then use here:
 - Matrix accessors such as translation/position of a float4x4.
 
 - `2026-10-15T02:31:17Z`: Related: #79, #87, #94.
+- `2026-10-15T13:29:45Z`: Done here: GeometryLite3D's SIMD4.xyz replaces the private copies and the spelled-out columns.3 positions (except PBRSceneGraph.swift, where MetalSprocketsPBR's own public xyz makes it ambiguous); LookAt.cameraMatrix replaces SceneView's lookAt. The rest needs GeometryLite3D first, filed there: #1 OrthographicProjection, #2 float4x4 translation/normal matrix, #3 BoundingBox helpers, #4 Ray and intersections, #5 frustum test, #6 projection/view helpers, #7 TRS, #8 quaternion look rotation.
 
 ---
 

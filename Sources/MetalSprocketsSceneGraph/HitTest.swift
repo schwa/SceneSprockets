@@ -27,7 +27,7 @@ extension SceneGraph {
             let first = unproject(0)
             let second = unproject(1)
             // With reversed depth, z = 1 is the near plane.
-            let cameraPosition = SIMD3(cameraMatrix.columns.3.x, cameraMatrix.columns.3.y, cameraMatrix.columns.3.z)
+            let cameraPosition = cameraMatrix.columns.3.xyz
             let (near, far) = simd_distance_squared(first, cameraPosition) <= simd_distance_squared(second, cameraPosition) ? (first, second) : (second, first)
             self.init(origin: near, direction: far - near)
         }
@@ -301,6 +301,3 @@ extension MetalMesh {
     }
 }
 
-private extension SIMD4<Float> {
-    var xyz: SIMD3<Float> { SIMD3(x, y, z) }
-}

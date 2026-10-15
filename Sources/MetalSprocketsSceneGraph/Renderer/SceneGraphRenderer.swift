@@ -69,7 +69,7 @@ public struct SceneGraphElement: Element {
             guard var context = makeRenderContext(sceneGraph: sceneGraph, camera: camera, cameraMatrix: cameraMatrix, aspectRatio: aspectRatio, defaultCamera: defaultCamera, defaultLight: defaultLight) else {
                 return EmptyElement().eraseToAnyElement()
             }
-            let cameraPosition = SIMD3(context.cameraMatrix.columns.3.x, context.cameraMatrix.columns.3.y, context.cameraMatrix.columns.3.z)
+            let cameraPosition = context.cameraMatrix.columns.3.xyz
             let entries = applyLevelsOfDetail(sceneGraph.meshEntries().filter { $0.node.categoryBitMask & context.categoryBitMask != 0 }, cameraPosition: cameraPosition)
             // The shadow mask and fog passes read and write the view's textures, so they need the right usage.
             let postTargets: (color: MTLTexture, depth: MTLTexture)? = {
@@ -238,7 +238,7 @@ func renderBatches(_ entries: [SceneGraph.MeshEntry], context: SceneGraphRenderC
         }
         groups[key, default: []].append(entry)
     }
-    let cameraPosition = SIMD3(context.cameraMatrix.columns.3.x, context.cameraMatrix.columns.3.y, context.cameraMatrix.columns.3.z)
+    let cameraPosition = context.cameraMatrix.columns.3.xyz
     for key in keys where key.isTransparent {
         groups[key] = sortedBackToFront(groups[key] ?? [], cameraPosition: cameraPosition)
     }
