@@ -5,6 +5,7 @@ import SwiftUI
 public enum SceneGraphDemos {
     public static let all: [any DemoView.Type] = [
         SceneKitFeaturesDemoView.self,
+        ShadowsDemoView.self,
         MaterialsDemoView.self,
         AnimationBlendingDemoView.self,
         DeformationDemoView.self,
@@ -44,6 +45,11 @@ extension DemoCatalog {
 struct SceneKitFeaturesDemoView: DemoView {
     static let metadata = DemoCatalog.metadata("scenekit-features")
     var body: some View { SceneDemoView(demo: DemoCatalog.demo("scenekit-features")) }
+}
+
+struct ShadowsDemoView: DemoView {
+    static let metadata = DemoCatalog.metadata("shadows")
+    var body: some View { SceneDemoView(demo: DemoCatalog.demo("shadows")) }
 }
 
 struct MaterialsDemoView: DemoView {

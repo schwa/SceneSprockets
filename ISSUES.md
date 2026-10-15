@@ -1335,12 +1335,13 @@ Want: the scene pass marks the pixels of receivers, for example with a stencil b
 ## 67: Demo: shadow controls (on/off, per light type)
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:demo, effort:s
 created: 2026-10-14T15:18:06Z
-updated: 2026-10-14T15:42:08Z
+updated: 2026-10-15T03:20:48Z
+closed: 2026-10-15T03:20:48Z
 +++
 
 Spot and point light shadows (#58) appear in SceneKit Features only because its lights happen to cast. No control turns shadows off, and no demo compares directional, spot and point shadows on their own.

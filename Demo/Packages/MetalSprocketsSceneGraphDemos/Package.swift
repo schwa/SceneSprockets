@@ -25,6 +25,7 @@ let package = Package(
         .package(url: "https://github.com/schwa/Interaction3D", branch: "main"),
         .package(url: "https://github.com/schwa/DemoKit", branch: "main"),
         .package(url: "https://github.com/schwa/SwiftJolt.git", branch: "main"),
+        .package(url: "https://github.com/schwa/GoldenImage", from: "0.1.5"),
     ],
     targets: [
         .target(
@@ -60,7 +61,9 @@ let package = Package(
                 "MetalSprocketsSceneGraphDemos",
                 .product(name: "MetalSprocketsSceneGraph", package: "MetalSprocketsSceneGraph"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
-            ]
+                .product(name: "GoldenImage", package: "GoldenImage"),
+            ],
+            resources: [.copy("Golden Images")]
         ),
     ]
 )
