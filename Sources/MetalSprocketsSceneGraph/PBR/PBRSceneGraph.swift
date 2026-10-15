@@ -1,6 +1,5 @@
 import Metal
 import MetalSprockets
-import MetalSprocketsAddOnsShaders
 import MetalSprocketsPBR
 import MetalSprocketsPBRShaders
 import MetalSupport

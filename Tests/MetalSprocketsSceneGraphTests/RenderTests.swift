@@ -2,8 +2,6 @@ import CoreGraphics
 import GeometryLite3D
 import Metal
 import MetalSprockets
-import MetalSprocketsAddOns
-import MetalSprocketsAddOnsShaders
 import SwiftMesh
 import Testing
 import simd

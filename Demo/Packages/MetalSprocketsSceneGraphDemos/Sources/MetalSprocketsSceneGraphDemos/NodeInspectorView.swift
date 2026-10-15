@@ -1,6 +1,4 @@
 import GeometryLite3D
-import MetalSprocketsAddOns
-import MetalSprocketsAddOnsShaders
 import MetalSprocketsSceneGraph
 import simd
 import SwiftUI
@@ -104,7 +102,7 @@ struct NodeInspectorView: View {
         }
     }
 
-    private func lightTypeName(_ type: LightType) -> String {
+    private func lightTypeName(_ type: Light.LightType) -> String {
         switch type {
         case .directional: "Directional"
         case .point: "Point"

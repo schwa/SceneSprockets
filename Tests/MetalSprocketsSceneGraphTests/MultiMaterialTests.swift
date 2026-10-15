@@ -1,6 +1,5 @@
 import Metal
 import MetalSprockets
-import MetalSprocketsAddOns
 import SwiftMesh
 import Testing
 @testable import MetalSprocketsSceneGraph

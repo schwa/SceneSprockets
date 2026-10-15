@@ -2163,17 +2163,19 @@ Node.opacity (#76) fades Blinn-Phong and ShaderMaterial meshes, but PBRSceneMate
 ## 109: Scene graph lights and shadow maps come from MetalSprocketsAddOns
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: area:renderer, effort:m
 created: 2026-10-15T20:07:48Z
-updated: 2026-10-15T20:12:55Z
+updated: 2026-10-15T20:55:19Z
+closed: 2026-10-15T20:55:19Z
 +++
 
 MSSG's core types depend on MetalSprocketsAddOns: Light (and its type enum) is the C struct from MetalSprocketsAddOnsShaders/Lighting.h, used by Node.Content.light, SceneGraphRenderer, Shadows, BlinnPhong and the glTF/Model I/O loaders. Shadows use AddOns' ShadowMap and ShadowContext (requiredColorUsage/requiredDepthUsage), and ShadowCasterDepthPass mirrors ShadowMapDepthPass. Nine source files import MetalSprocketsAddOns. Since #100, Blinn-Phong is in-repo, so these are the main remaining ties. Users must import MetalSprocketsAddOnsShaders just to make a light (the physics demo needed it). Want: MSSG-owned Light (a Swift type) and shadow map types, and drop the AddOns dependency where it is only used for these.
 
 - `2026-10-15T20:10:26Z`: Audit: Light/its type enum and ShadowMap/ShadowContext/ShadowMapDepthPass are the only AddOns symbols MSSG uses. No MSSG shader includes AddOns headers, and no other dependency (PBR, glTF, SwiftMesh...) depends on AddOns. So after this: remove the AddOns package and both products from Package.swift, its imports from 9 source files and ~25 test files (mostly only for Light), and from the demos (they use only Light and ShadowContext).
+- `2026-10-15T20:55:19Z`: MSSG no longer depends on MetalSprocketsAddOns. Added a Swift Light (same initializers and cases) and an internal SceneGraphShadowMap (the parts of AddOns' ShadowMap MSSG used, reversed depth only). ShadowContext.requiredColorUsage/requiredDepthUsage moved to SceneGraphShadows. Removed AddOns from both manifests, every import (45 files) and all Package.resolved files. Package tests, demo tests and goldens (including shadows) pass unchanged.
 
 ---
 

@@ -1,5 +1,3 @@
-import MetalSprocketsAddOns
-import MetalSprocketsAddOnsShaders
 import MetalSprocketsPBR
 import MetalSprocketsSceneGraph
 import SwiftMesh

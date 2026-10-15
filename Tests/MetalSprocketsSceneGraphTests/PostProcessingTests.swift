@@ -2,8 +2,6 @@ import CoreGraphics
 import GeometryLite3D
 import Metal
 import MetalSprockets
-import MetalSprocketsAddOns
-import MetalSprocketsAddOnsShaders
 import SwiftMesh
 import Testing
 import simd
@@ -24,7 +22,7 @@ private func render(_ postProcessing: SceneGraph.PostProcessing?, color: SIMD3<F
     _ = SceneGraph.Node(parent: root, label: "Box", trs: .init(translation: [0, 0.5, 0]), content: .mesh(MetalMesh(mesh: .box(), device: device), material: material))
     let sceneGraph = SceneGraph(root: root)
     sceneGraph.postProcessing = postProcessing
-    let renderer = try OffscreenRenderer(size: CGSize(width: 64, height: 64), colorUsage: ShadowContext.requiredColorUsage, depthUsage: ShadowContext.requiredDepthUsage)
+    let renderer = try OffscreenRenderer(size: CGSize(width: 64, height: 64), colorUsage: SceneGraphShadows.requiredColorUsage, depthUsage: SceneGraphShadows.requiredDepthUsage)
     return (sceneGraph, try renderer.render(SceneGraphElement(sceneGraph: sceneGraph, aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [1, 1, 1])])).texture)
 }
 

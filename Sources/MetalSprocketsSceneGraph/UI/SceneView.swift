@@ -1,7 +1,6 @@
 import GeometryLite3D
 import Interaction3D
 import MetalSprockets
-import MetalSprocketsAddOnsShaders
 import MetalSprocketsUI
 import simd
 import SwiftUI

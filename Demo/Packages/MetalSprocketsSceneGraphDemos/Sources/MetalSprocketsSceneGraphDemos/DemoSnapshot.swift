@@ -3,7 +3,6 @@ import Foundation
 import ImageIO
 import Metal
 import MetalSprockets
-import MetalSprocketsAddOns
 import MetalSprocketsSceneGraph
 import UniformTypeIdentifiers
 
@@ -37,7 +36,7 @@ public enum DemoSnapshot {
             scene.sceneGraph.advanceParticles(by: deltaTime)
             scene.sceneGraph.applyConstraints(pointOfView: scene.initialCameraMatrix)
         }
-        let renderer = try OffscreenRenderer(size: CGSize(width: width, height: height), colorUsage: ShadowContext.requiredColorUsage, depthUsage: ShadowContext.requiredDepthUsage)
+        let renderer = try OffscreenRenderer(size: CGSize(width: width, height: height), colorUsage: SceneGraphShadows.requiredColorUsage, depthUsage: SceneGraphShadows.requiredDepthUsage)
         let element = SceneGraphElement(sceneGraph: scene.sceneGraph, cameraMatrix: scene.initialCameraMatrix, aspectRatio: Float(width) / Float(height), renderers: scene.renderers, shadows: scene.shadows)
         let texture = try renderer.render(element).texture
         let bytesPerRow = width * 4

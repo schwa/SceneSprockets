@@ -1,6 +1,5 @@
 import GeometryLite3D
 import Metal
-import MetalSprocketsAddOnsShaders
 import MetalSprocketsGLTF
 import MetalSprocketsPBR
 import simd
@@ -114,7 +113,7 @@ private struct GLTFSceneGraphBuilder {
                 }
             }
             if let light = source.punctualLight(in: document) {
-                extras.append(.light(MetalSprocketsAddOnsShaders.Light(light)))
+                extras.append(.light(MetalSprocketsSceneGraph.Light(light)))
             }
             for content in extras {
                 if case .empty = node.content {
@@ -322,7 +321,7 @@ enum GLTFSceneGraphError: Error {
     case invalidInstancing(String)
 }
 
-extension MetalSprocketsAddOnsShaders.Light {
+extension MetalSprocketsSceneGraph.Light {
     init(_ light: SwiftGLTF.Light) {
         switch light.type {
         case .directional:

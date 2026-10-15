@@ -2,8 +2,6 @@ import CoreGraphics
 import GeometryLite3D
 import Metal
 import MetalSprockets
-import MetalSprocketsAddOns
-import MetalSprocketsAddOnsShaders
 import SwiftMesh
 import Testing
 import simd
@@ -26,7 +24,7 @@ private var material: BlinnPhongSceneMaterial {
 // A floor, a box floating above it, and a directional light shining down and towards -x, so the box's shadow
 // falls on the floor around x = -1 (a visible spot left of the box). Returns the scene and that spot in pixels.
 @MainActor
-private func makeScene(boxCastsShadow: Bool = true, skinned: Bool = false, light: LightType = .directional) throws -> (SceneGraph, SIMD2<Int>) {
+private func makeScene(boxCastsShadow: Bool = true, skinned: Bool = false, light: Light.LightType = .directional) throws -> (SceneGraph, SIMD2<Int>) {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
     let root = SceneGraph.Node()
@@ -61,7 +59,7 @@ private func makeScene(boxCastsShadow: Bool = true, skinned: Bool = false, light
 
 @MainActor
 private func brightness(_ sceneGraph: SceneGraph, at pixel: SIMD2<Int>, shadows: SceneGraphShadows?) throws -> Int {
-    let renderer = try OffscreenRenderer(size: size, colorUsage: ShadowContext.requiredColorUsage, depthUsage: ShadowContext.requiredDepthUsage)
+    let renderer = try OffscreenRenderer(size: size, colorUsage: SceneGraphShadows.requiredColorUsage, depthUsage: SceneGraphShadows.requiredDepthUsage)
     let element = SceneGraphElement(sceneGraph: sceneGraph, aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer()], shadows: shadows)
     let texture = try renderer.render(element).texture
     var value = SIMD4<UInt8>.zero
@@ -93,9 +91,9 @@ func skinnedCasterIsSkinnedOnGPU() throws {
     #expect(frame.casters.contains { if case .skinned = $0.placement { true } else { false } })
 }
 
-@Test(arguments: [LightType.spot, .point])
+@Test(arguments: [Light.LightType.spot, .point])
 @MainActor
-func spotAndPointLightsCastShadows(light: LightType) throws {
+func spotAndPointLightsCastShadows(light: Light.LightType) throws {
     let (sceneGraph, pixel) = try makeScene(light: light)
     let lit = try brightness(sceneGraph, at: pixel, shadows: nil)
     let shadowed = try brightness(sceneGraph, at: pixel, shadows: SceneGraphShadows(intensity: 0.8))
@@ -200,7 +198,7 @@ func shadowsDimOnlyTheirOwnLight() throws {
 
 @MainActor
 private func pixels(_ sceneGraph: SceneGraph, shadows: SceneGraphShadows?) throws -> [SIMD4<UInt8>] {
-    let renderer = try OffscreenRenderer(size: size, colorUsage: ShadowContext.requiredColorUsage, depthUsage: ShadowContext.requiredDepthUsage)
+    let renderer = try OffscreenRenderer(size: size, colorUsage: SceneGraphShadows.requiredColorUsage, depthUsage: SceneGraphShadows.requiredDepthUsage)
     let texture = try renderer.render(SceneGraphElement(sceneGraph: sceneGraph, aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer()], shadows: shadows)).texture
     var result = [SIMD4<UInt8>](repeating: .zero, count: texture.width * texture.height)
     texture.getBytes(&result, bytesPerRow: texture.width * 4, from: MTLRegionMake2D(0, 0, texture.width, texture.height), mipmapLevel: 0)

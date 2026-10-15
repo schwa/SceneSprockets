@@ -17,7 +17,6 @@ let package = Package(
         .package(path: "../../.."),
         .package(url: "https://github.com/schwa/GeometryLite3D", from: "0.2.3"),
         .package(url: "https://github.com/schwa/MetalSprockets", branch: "main"),
-        .package(url: "https://github.com/schwa/MetalSprocketsAddOns", branch: "main"),
         .package(url: "https://github.com/schwa/SwiftMesh", branch: "main"),
         .package(url: "https://github.com/schwa/MetalSupport", branch: "main"),
         .package(url: "https://github.com/schwa/MetalSprocketsPBR", branch: "main"),
@@ -41,8 +40,6 @@ let package = Package(
                 .product(name: "MetalSprocketsGLTF", package: "MetalSprocketsGLTF"),
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
                 .product(name: "MetalSprocketsSupport", package: "MetalSprockets"),
-                .product(name: "MetalSprocketsAddOns", package: "MetalSprocketsAddOns"),
-                .product(name: "MetalSprocketsAddOnsShaders", package: "MetalSprocketsAddOns"),
                 .product(name: "SwiftMesh", package: "SwiftMesh"),
             ],
             resources: [.copy("Resources")]

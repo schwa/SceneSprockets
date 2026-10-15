@@ -1,8 +1,6 @@
 import GeometryLite3D
 import Metal
 import MetalKit
-import MetalSprocketsAddOns
-import MetalSprocketsAddOnsShaders
 import MetalSprocketsPBR
 import ModelIO
 import simd

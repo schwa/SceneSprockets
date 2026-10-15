@@ -1,6 +1,4 @@
 import GeometryLite3D
-import MetalSprocketsAddOns
-import MetalSprocketsAddOnsShaders
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph

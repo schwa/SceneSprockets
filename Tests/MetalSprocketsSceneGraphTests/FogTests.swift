@@ -2,8 +2,6 @@ import CoreGraphics
 import GeometryLite3D
 import Metal
 import MetalSprockets
-import MetalSprocketsAddOns
-import MetalSprocketsAddOnsShaders
 import SwiftMesh
 import Testing
 import simd
@@ -33,7 +31,7 @@ func fogTintsFarGeometryOnly() throws {
     sceneGraph.fog = SceneGraph.Fog(color: [1, 0, 0, 1], startDistance: 10, endDistance: 30)
 
     let size = 64
-    let renderer = try OffscreenRenderer(size: CGSize(width: size, height: size), colorUsage: ShadowContext.requiredColorUsage, depthUsage: ShadowContext.requiredDepthUsage)
+    let renderer = try OffscreenRenderer(size: CGSize(width: size, height: size), colorUsage: SceneGraphShadows.requiredColorUsage, depthUsage: SceneGraphShadows.requiredDepthUsage)
     let texture = try renderer.render(SceneGraphElement(sceneGraph: sceneGraph, aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer()])).texture
     func pixel(_ point: SIMD3<Float>) -> SIMD4<UInt8> {
         let context = makeRenderContext(sceneGraph: sceneGraph, camera: nil, cameraMatrix: nil, aspectRatio: 1)!

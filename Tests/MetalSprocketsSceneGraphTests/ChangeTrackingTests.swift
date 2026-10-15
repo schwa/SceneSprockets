@@ -1,4 +1,3 @@
-import MetalSprocketsAddOnsShaders
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph

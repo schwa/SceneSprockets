@@ -2,8 +2,6 @@ import Foundation
 import GeometryLite3D
 import Metal
 import MetalSprockets
-import MetalSprocketsAddOns
-import MetalSprocketsAddOnsShaders
 import MetalSprocketsSceneGraphShaders
 import MetalSupport
 import ModelIO
@@ -24,8 +22,13 @@ protocol SamplesShadowsInShader {}
 // casts none and is counted in `droppedLightCount`. Meshes with `castsShadow: false` cast none; meshes with
 // `receivesShadow: false` receive none.
 // The view's color texture needs `.shaderWrite` and its depth texture `.shaderRead` usage (see
-// `ShadowContext.requiredColorUsage`); otherwise no shadows are drawn.
+// `requiredColorUsage`); otherwise no shadows are drawn.
 public final class SceneGraphShadows {
+    // Usage the view's color texture needs: the shadow and post-processing passes write it from compute.
+    public static let requiredColorUsage: MTLTextureUsage = [.renderTarget, .shaderRead, .shaderWrite]
+    // Usage the view's depth texture needs: the passes sample it.
+    public static let requiredDepthUsage: MTLTextureUsage = [.renderTarget, .shaderRead]
+
     // 0 leaves shadowed pixels unchanged, 1 multiplies them by `color`.
     public var intensity: Float
     // Linear RGB multiplied into shadowed pixels, like SCNLight.shadowColor; black darkens.
@@ -39,7 +42,7 @@ public final class SceneGraphShadows {
     // Lights that cast no shadow in the last frame because their views did not fit in the 8 slices.
     public private(set) var droppedLightCount = 0
 
-    private var shadowMap: ShadowMap?
+    private var shadowMap: SceneGraphShadowMap?
     private var positionBuffers: [PositionKey: MTLBuffer] = [:]
     private var influenceBuffers: [InfluenceKey: MTLBuffer] = [:]
     // One per frame in flight, like the shadow map's depth textures.
@@ -56,7 +59,7 @@ public final class SceneGraphShadows {
 
     // What an in-shader renderer needs to sample the shadow map.
     public struct Sampling {
-        var shadowMap: ShadowMap
+        var shadowMap: SceneGraphShadowMap
         var intensity: Float
         var color: SIMD3<Float>
         var softness: Int
@@ -75,7 +78,7 @@ public final class SceneGraphShadows {
     }
 
     struct Frame {
-        var shadowMap: ShadowMap
+        var shadowMap: SceneGraphShadowMap
         var casters: [Caster]
         // Meshes the screen-space mask skips (non-receivers and in-shader shadowing); nil when there are none.
         var nonReceivers: (casters: [Caster], masks: [MTLTexture])?
@@ -142,7 +145,7 @@ public final class SceneGraphShadows {
         }
 
         if shadowMap?.lightCount != views.count || shadowMap?.resolution != resolution {
-            shadowMap = try ShadowMap(resolution: resolution, lightCount: views.count)
+            shadowMap = try SceneGraphShadowMap(resolution: resolution, lightCount: views.count)
         }
         guard var shadowMap else {
             return nil
@@ -175,7 +178,7 @@ public final class SceneGraphShadows {
         return receiverMasks
     }
 
-    // One view-projection per shadow map slice, up to MAX_SHADOW_LIGHTS: directional lights get an orthographic view
+    // One view-projection per shadow map slice, up to SCENE_SHADOW_MAX_SLICES: directional lights get an orthographic view
     // fitted to `bounds`, spot lights a perspective view of their outer cone, point lights six 90° views. All use
     // reversed depth, like ShadowMap's default.
     func shadowViews(lights: [(worldTransform: simd_float4x4, light: Light)], bounds: BoundingBox3D) -> [simd_float4x4] {
@@ -212,11 +215,8 @@ public final class SceneGraphShadows {
                 for face in faces {
                     lightViews.append(projection.projectionMatrix(aspectRatio: 1) * .viewMatrix(eye: position, forward: face))
                 }
-            default:
-                slices.append(0..<0)
-                continue
             }
-            if views.count + lightViews.count <= Int(MAX_SHADOW_LIGHTS) {
+            if views.count + lightViews.count <= Int(SCENE_SHADOW_MAX_SLICES) {
                 slices.append(views.count..<(views.count + lightViews.count))
                 views += lightViews
             } else {
@@ -293,7 +293,7 @@ private struct InfluenceKey: Hashable {
     var revision: Int
 }
 
-// Draws casters into each light's slice of the shadow map, like ShadowMapDepthPass, but with a second pipeline that
+// Draws casters into each light's slice of the shadow map, with a second pipeline that
 // skins vertices on the GPU.
 struct ShadowCasterDepthPass: Element {
     var frame: SceneGraphShadows.Frame
@@ -305,9 +305,9 @@ struct ShadowCasterDepthPass: Element {
         get throws {
             let shaders = try ShadowCasterShaders.shared()
             let shadowMap = frame.shadowMap
-            let inverseZ = shadowMap.useInverseZ
-            let depthBias = inverseZ ? -shadowMap.depthBias : shadowMap.depthBias
-            let slopeScale = inverseZ ? -shadowMap.slopeScale : shadowMap.slopeScale
+            // Reversed depth: bias pushes towards 0.
+            let depthBias = -shadowMap.depthBias
+            let slopeScale = -shadowMap.slopeScale
             let depthTexture = shadowMap.depthTexture(forSubmission: submissionIndex)
             let staticCasters = frame.casters.filter { if case .model = $0.placement { true } else { false } }
             let skinnedCasters = frame.casters.filter { if case .skinned = $0.placement { true } else { false } }
@@ -317,12 +317,12 @@ struct ShadowCasterDepthPass: Element {
                     if !staticCasters.isEmpty {
                         try pipeline("Shadow Casters", vertexShader: shaders.staticVertex, fragmentShader: shaders.fragment, vertexDescriptor: shaders.staticDescriptor, casters: staticCasters, lightViewProjection: lightViewProjection)
                             .depthBias(depthBias, slopeScale: slopeScale)
-                            .depthCompare(function: inverseZ ? .greaterEqual : .lessEqual, enabled: true)
+                            .depthCompare(function: .greaterEqual, enabled: true)
                     }
                     if !skinnedCasters.isEmpty {
                         try pipeline("Skinned Shadow Casters", vertexShader: shaders.skinnedVertex, fragmentShader: shaders.fragment, vertexDescriptor: shaders.skinnedDescriptor, casters: skinnedCasters, lightViewProjection: lightViewProjection)
                             .depthBias(depthBias, slopeScale: slopeScale)
-                            .depthCompare(function: inverseZ ? .greaterEqual : .lessEqual, enabled: true)
+                            .depthCompare(function: .greaterEqual, enabled: true)
                     }
                 }
                 .renderPassDescriptorModifier { descriptor in
@@ -332,7 +332,7 @@ struct ShadowCasterDepthPass: Element {
                     descriptor.depthAttachment.texture = depthTexture
                     descriptor.depthAttachment.slice = lightIndex
                     descriptor.depthAttachment.loadAction = .clear
-                    descriptor.depthAttachment.clearDepth = inverseZ ? 0 : 1
+                    descriptor.depthAttachment.clearDepth = 0
                     descriptor.depthAttachment.storeAction = .store
                     descriptor.renderTargetArrayLength = 1
                 }

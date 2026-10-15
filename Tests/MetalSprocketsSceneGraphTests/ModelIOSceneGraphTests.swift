@@ -4,7 +4,6 @@ import MetalSprocketsPBR
 import MetalSprocketsPBRShaders
 import MetalKit
 import ModelIO
-import MetalSprocketsAddOns
 import simd
 import Testing
 @testable import MetalSprocketsSceneGraph

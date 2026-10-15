@@ -146,7 +146,7 @@ Legend:
 
 | SceneKit | MSSG | Status | Notes |
 |---|---|---|---|
-| `SCNLight` | `Light` (MetalSprocketsAddOns) as `Content.light` | 🟡 | Fields: `type`, `color`, `intensity`, `range`, `innerConeAngle`, `outerConeAngle` (half-angles, radians). Points down the node's −Z. |
+| `SCNLight` | `Light` as `Content.light` | 🟡 | Fields: `type`, `color`, `intensity`, `range`, `innerConeAngle`, `outerConeAngle` (half-angles, radians). Points down the node's −Z. |
 | `.directional` | `.directional` | ✅ | |
 | `.omni` | `.point` | ✅ | With `range`. No `attenuationStartDistance`/`attenuationFalloffExponent`; PBR uses glTF range falloff. |
 | `.spot` | `.spot` | ✅ | Inner and outer cone. SceneKit uses full angles in degrees. |
@@ -351,4 +351,4 @@ SceneKit animates with `CAAnimation`/`SCNAnimation` and `SCNAnimationPlayer`, ke
 | Platforms | iOS, iPadOS, macOS, tvOS, watchOS, visionOS (soft-deprecated in 2025 in favor of RealityKit) | iOS 26, macOS 26, visionOS 26 |
 | Language | Objective-C API, Swift overlay | Swift 6.2 |
 | Threading | Render thread, `SCNTransaction` locks | Not `Sendable`. Nodes and materials hold Metal objects; use from one thread (`SceneView` drives it from its render closure). |
-| Source | Closed | Open, depends on MetalSprockets, MetalSprocketsAddOns, MetalSprocketsPBR, MetalSprocketsGLTF, SwiftGLTF, SwiftMesh, GeometryLite3D, Interaction3D |
+| Source | Closed | Open, depends on MetalSprockets, MetalSprocketsPBR, MetalSprocketsGLTF, SwiftGLTF, SwiftMesh, GeometryLite3D, Interaction3D |

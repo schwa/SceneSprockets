@@ -2,7 +2,6 @@ import GeometryLite3D
 import Foundation
 import Metal
 import MetalSprockets
-import MetalSprocketsAddOnsShaders
 import MetalSprocketsSceneGraphShaders
 import MetalSupport
 import SwiftMesh
@@ -377,7 +376,7 @@ func blinnPhongLights(_ lights: [(worldTransform: simd_float4x4, light: Light)],
         let type: Int32 = switch entry.light.type {
         case .directional: Int32(BLINN_PHONG_LIGHT_DIRECTIONAL)
         case .spot: Int32(BLINN_PHONG_LIGHT_SPOT)
-        default: Int32(BLINN_PHONG_LIGHT_POINT)
+        case .point: Int32(BLINN_PHONG_LIGHT_POINT)
         }
         return BlinnPhongLight(
             position: transform.columns.3.xyz,

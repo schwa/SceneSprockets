@@ -2,7 +2,6 @@ import Metal
 import MetalSprocketsPBR
 import SwiftMesh
 import Testing
-import MetalSprocketsAddOnsShaders
 import simd
 @testable import MetalSprocketsSceneGraph
 

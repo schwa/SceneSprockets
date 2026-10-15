@@ -1,5 +1,5 @@
 {
-  "originHash" : "d3ee8ab550bd07855682ccbc8eaffca0c6be410ad31cc33a3b48f93f9f9cf2eb",
+  "originHash" : "b8f6f3efdea608b70730627ac38e3cee0a899af6446acff22bc11a93d6bd6b4a",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -53,15 +53,6 @@
       "state" : {
         "branch" : "main",
         "revision" : "7eb6be9b56afc841584a0f266b6d08b6a7ba9d6e"
-      }
-    },
-    {
-      "identity" : "metalsprocketsaddons",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/schwa/MetalSprocketsAddOns",
-      "state" : {
-        "branch" : "main",
-        "revision" : "de5d8918aac95a3b44947a9f097d78dc89185ea6"
       }
     },
     {
@@ -152,15 +143,6 @@
       "state" : {
         "revision" : "4799286537280063c85a32f09884cfbca301b1a1",
         "version" : "602.0.0"
-      }
-    },
-    {
-      "identity" : "swiftearcut",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/schwa/SwiftEarcut",
-      "state" : {
-        "revision" : "216a6dea8c9804dd6157b7dc25cb4ed0adb525dd",
-        "version" : "0.0.2"
       }
     },
     {

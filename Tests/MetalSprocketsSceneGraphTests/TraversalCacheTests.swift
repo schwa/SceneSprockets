@@ -1,6 +1,4 @@
 import Metal
-import MetalSprocketsAddOns
-import MetalSprocketsAddOnsShaders
 import GeometryLite3D
 import SwiftMesh
 import Testing

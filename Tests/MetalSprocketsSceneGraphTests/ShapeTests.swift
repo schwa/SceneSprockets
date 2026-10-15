@@ -1,5 +1,4 @@
 import Metal
-import MetalSprocketsAddOns
 import SwiftMesh
 import Testing
 import simd

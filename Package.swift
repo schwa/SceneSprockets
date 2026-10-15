@@ -16,7 +16,6 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/schwa/GeometryLite3D", from: "0.2.3"),
         .package(url: "https://github.com/schwa/MetalSprockets", branch: "main"),
-        .package(url: "https://github.com/schwa/MetalSprocketsAddOns", branch: "main"),
         .package(url: "https://github.com/schwa/SwiftMesh", branch: "main"),
         .package(url: "https://github.com/schwa/MetalSupport", branch: "main"),
         .package(url: "https://github.com/schwa/MetalSprocketsPBR", branch: "main"),
@@ -36,8 +35,6 @@ let package = Package(
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
                 .product(name: "MetalSprocketsSupport", package: "MetalSprockets"),
                 .product(name: "MetalSprocketsUI", package: "MetalSprockets"),
-                .product(name: "MetalSprocketsAddOns", package: "MetalSprocketsAddOns"),
-                .product(name: "MetalSprocketsAddOnsShaders", package: "MetalSprocketsAddOns"),
                 .product(name: "MetalSprocketsGLTF", package: "MetalSprocketsGLTF"),
                 .product(name: "MetalSprocketsPBR", package: "MetalSprocketsPBR"),
                 .product(name: "MetalSprocketsPBRShaders", package: "MetalSprocketsPBR"),
@@ -60,7 +57,6 @@ let package = Package(
             dependencies: [
                 "MetalSprocketsSceneGraph",
                 "MetalSprocketsSceneGraphPhysics",
-                .product(name: "MetalSprocketsAddOns", package: "MetalSprocketsAddOns"),
                 .product(name: "SwiftMesh", package: "SwiftMesh"),
             ]
         ),
@@ -78,8 +74,6 @@ let package = Package(
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
                 .product(name: "MetalSprocketsGLTF", package: "MetalSprocketsGLTF"),
-                .product(name: "MetalSprocketsAddOns", package: "MetalSprocketsAddOns"),
-                .product(name: "MetalSprocketsAddOnsShaders", package: "MetalSprocketsAddOns"),
                 .product(name: "MetalSprocketsPBR", package: "MetalSprocketsPBR"),
                 .product(name: "MetalSprocketsPBRShaders", package: "MetalSprocketsPBR"),
                 .product(name: "SwiftMesh", package: "SwiftMesh"),

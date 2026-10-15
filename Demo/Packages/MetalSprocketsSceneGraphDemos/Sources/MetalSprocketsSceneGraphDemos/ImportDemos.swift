@@ -1,7 +1,5 @@
 import Foundation
 import GeometryLite3D
-import MetalSprocketsAddOns
-import MetalSprocketsAddOnsShaders
 import MetalSprocketsGLTF
 import MetalSprocketsPBR
 import MetalSprocketsSceneGraph

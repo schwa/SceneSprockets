@@ -1,8 +1,6 @@
 import GeometryLite3D
 import Metal
 import MetalSprockets
-import MetalSprocketsAddOns
-import MetalSprocketsAddOnsShaders
 import MetalSupport
 import simd
 
@@ -74,7 +72,7 @@ public struct SceneGraphElement: Element {
             // The shadow mask and fog passes read and write the view's textures, so they need the right usage.
             let postTargets: (color: MTLTexture, depth: MTLTexture)? = {
                 guard let color = renderPassDescriptor?.colorAttachments[0].texture, let depth = renderPassDescriptor?.depthAttachment.texture,
-                      color.usage.isSuperset(of: ShadowContext.requiredColorUsage), depth.usage.isSuperset(of: ShadowContext.requiredDepthUsage),
+                      color.usage.isSuperset(of: SceneGraphShadows.requiredColorUsage), depth.usage.isSuperset(of: SceneGraphShadows.requiredDepthUsage),
                       depth.storageMode != .memoryless
                 else {
                     return nil

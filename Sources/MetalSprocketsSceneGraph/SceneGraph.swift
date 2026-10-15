@@ -1,6 +1,4 @@
 import GeometryLite3D
-import MetalSprocketsAddOns
-import MetalSprocketsAddOnsShaders
 import SwiftMesh
 import simd
 

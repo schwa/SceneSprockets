@@ -1,5 +1,3 @@
-import MetalSprocketsAddOns
-import MetalSprocketsAddOnsShaders
 import MetalSprocketsSceneGraph
 import simd
 
