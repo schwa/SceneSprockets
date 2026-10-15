@@ -109,3 +109,75 @@ func runningSameKeyReplaces() {
     graph.advanceActions(by: 1)
     #expect(near(node.trs.translation, [0, 1, 0]))
 }
+
+// #90
+@Test
+func reversedUndoesRelativeActions() {
+    let node = SceneGraph.Node()
+    let action = SceneGraph.Action.sequence([
+        .move(by: [1, 2, 0], duration: 1),
+        .group([.rotate(by: 1, around: [0, 1, 0], duration: 0.5), .scale(by: 2, duration: 1)]),
+        .hide(),
+    ])
+    run(.sequence([action, action.reversed()]), on: node, steps: [1, 1, 1, 1])
+    #expect(near(node.trs.translation, .zero))
+    #expect(near(node.trs.scale, .one))
+    #expect(abs(node.trs.rotation.angle) < 1e-4)
+    #expect(node.isVisible)
+}
+
+@Test
+func reversedSwapsEaseInAndOut() {
+    let node = SceneGraph.Node()
+    // easeIn reversed is easeOut: half way through, a move back by 1 has covered 0.75.
+    run(.move(by: [1, 0, 0], duration: 1).timingMode(.easeIn).reversed(), on: node, steps: [0.5])
+    #expect(near(node.trs.translation, [-0.75, 0, 0]))
+}
+
+@Test
+func speedScalesActionAndNodeTime() {
+    let node = SceneGraph.Node()
+    run(.sequence([.move(by: [1, 0, 0], duration: 1).speed(2), .move(by: [0, 1, 0], duration: 1)]), on: node, steps: [0.75])
+    // The first move takes 0.5; the 0.25 left over runs the second at normal speed.
+    #expect(near(node.trs.translation, [1, 0.25, 0]))
+
+    let slow = SceneGraph.Node()
+    slow.actionSpeed = 0.5
+    run(.move(by: [1, 0, 0], duration: 1), on: slow, steps: [1])
+    #expect(near(slow.trs.translation, [0.5, 0, 0]))
+}
+
+@Test
+func waitWithRangeStaysInRange() {
+    for _ in 0..<20 {
+        let node = SceneGraph.Node()
+        run(.sequence([.wait(duration: 1, withRange: 1), .hide()]), on: node, steps: [0.49])
+        #expect(node.isVisible)
+        let graph = SceneGraph(root: node)
+        graph.advanceActions(by: 1.02)
+        #expect(!node.isVisible)
+    }
+}
+
+@Test
+func actionForKeyReturnsRunningAction() {
+    let node = SceneGraph.Node()
+    node.run(.wait(duration: 3), forKey: "pause")
+    #expect(node.action(forKey: "pause")?.duration == 3)
+    #expect(node.action(forKey: "other") == nil)
+}
+
+@Test
+func eulerRotationsAndCustomTiming() {
+    let node = SceneGraph.Node()
+    run(.rotateTo(x: 0, y: .pi / 2, z: 0, duration: 1), on: node, steps: [1])
+    #expect(near(node.trs.rotation.act([0, 0, 1]), [1, 0, 0]))
+
+    let spun = SceneGraph.Node()
+    run(.rotateBy(x: .pi / 2, y: 0, z: 0, duration: 1), on: spun, steps: [1])
+    #expect(near(spun.trs.rotation.act([0, 1, 0]), [0, 0, 1]))
+
+    let stepped = SceneGraph.Node()
+    run(.move(by: [1, 0, 0], duration: 1).timingMode(.custom { $0 < 0.5 ? 0 : 1 }), on: stepped, steps: [0.4])
+    #expect(near(stepped.trs.translation, .zero))
+}

@@ -1753,12 +1753,13 @@ AnimationClip/AnimationPlayer has no animation events, no autoreverse, no fixed 
 ## 90: Action gaps: reversed, speed, random wait, action(forKey:), Euler rotate, timing function
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: effort:s, area:animation
 created: 2026-10-15T02:28:08Z
-updated: 2026-10-15T02:31:15Z
+updated: 2026-10-15T02:56:51Z
+closed: 2026-10-15T02:56:51Z
 +++
 
 Missing SCNAction features: reversed(), per-action and per-node speed, wait(duration:withRange:), an action(forKey:) getter, rotateBy/rotateTo with Euler angles, and a custom timingFunction. See docs/SceneKitComparison.md.

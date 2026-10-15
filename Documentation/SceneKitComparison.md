@@ -21,7 +21,7 @@ Legend:
 | Cameras | 🟡 | Perspective only; no HDR, bloom, DOF, motion blur, SSAO or color grading (#45) |
 | Shadows | 🟡 | Shadow maps for all three light types, but one global setting, max 8 slices |
 | Animation | ✅ (different design) | Keyframe clips, blending, layers, state machine; no `CAAnimation` interop, no animation events |
-| Actions | 🟡 | No fade, no `follow(path:)`, no sound actions, no JavaScript actions, no speed per action |
+| Actions | 🟡 | No fade, no `follow(path:)`, no sound actions, no JavaScript actions |
 | Implicit animation | 🟡 | Transform and morph weights only |
 | Constraints | 🟡 | Look-at, billboard and distance; no IK (#57), no replicator, acceleration, slider, avoid-occluder or transform constraints |
 | Morphing and skinning | ✅ | Four influences per vertex; CPU fallback for Blinn-Phong |
@@ -218,18 +218,18 @@ SceneKit animates with `CAAnimation`/`SCNAnimation` and `SCNAnimationPlayer`, ke
 |---|---|---|---|
 | `SCNAction` | `SceneGraph.Action` | ✅ | Run with `Node.run(_:forKey:completion:)`; advance all with `SceneGraph.advanceActions(by:)` (`SceneView` does this). Actions on hidden nodes still run. |
 | `move(by:)`, `move(to:)` | Same | ✅ | |
-| `rotate(by:around:)`, `rotate(toAxisAngle:)`, `rotateBy(x:y:z:)`, `rotateTo(x:y:z:)` | `rotate(by:around:)`, `rotate(to: simd_quatf)` | 🟡 | No Euler variants. |
+| `rotate(by:around:)`, `rotate(toAxisAngle:)`, `rotateBy(x:y:z:)`, `rotateTo(x:y:z:)` | `rotate(by:around:)`, `rotate(to: simd_quatf)`, `rotateBy(x:y:z:)`, `rotateTo(x:y:z:)` | ✅ | Euler order: X, then Y, then Z about fixed axes. |
 | `scale(by:)`, `scale(to:)` | `scale(by: Float)`, `scale(to: SIMD3)` | ✅ | `scale(by:)` is multiplicative so the total is exact. |
 | `fadeIn`, `fadeOut`, `fadeOpacity` | — | ❌ | No node opacity. |
 | `hide`, `unhide`, `removeFromParentNode` | `hide()`, `unhide()`, `removeFromParent()` | ✅ | |
-| `wait(duration:)`, `wait(duration:withRange:)` | `wait(duration:)` | 🟡 | No random range. |
+| `wait(duration:)`, `wait(duration:withRange:)` | Same | ✅ | |
 | `run(_:)`, `customAction(duration:action:)` | `run(_:)`, `custom(duration:_:)` | ✅ | |
 | `sequence`, `group`, `repeat`, `repeatForever` | Same | ✅ | Leftover time carries over between steps, so sequences do not drift. |
-| `reversed()` | — | ❌ | |
-| `timingMode`, `timingFunction` | `timingMode(_:)`: linear, easeIn, easeOut, easeInEaseOut | 🟡 | No custom timing function. |
-| `speed` (per action or node) | — | ❌ | Scale `deltaTime` yourself. |
+| `reversed()` | `reversed()` | ✅ | Relative actions and composites reverse; absolute and custom actions return unchanged. easeIn and easeOut swap. |
+| `timingMode`, `timingFunction` | `timingMode(_:)`: linear, easeIn, easeOut, easeInEaseOut, `.custom(_:)` | ✅ | |
+| `speed` (per action or node) | `Action.speed(_:)`, `Node.actionSpeed` | ✅ | |
 | `playAudio`, `javaScriptAction` | — | ❌ | |
-| `removeAction(forKey:)`, `removeAllActions`, `hasActions`, `action(forKey:)` | Same, plus `hasAction(forKey:)` | 🟡 | No `action(forKey:)` getter. |
+| `removeAction(forKey:)`, `removeAllActions`, `hasActions`, `action(forKey:)` | Same, plus `hasAction(forKey:)` | ✅ | |
 
 ## Implicit animation
 

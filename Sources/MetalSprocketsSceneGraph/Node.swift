@@ -71,6 +71,8 @@ extension SceneGraph {
         var deformationCache: (revision: Revision, mesh: MetalMesh)?
         var shapeStorage: (shape: Shape, device: MTLDevice)?
         var runningActions: [RunningAction] = []
+        // Multiplies the time this node's actions advance by; 0 pauses them. Not inherited by children.
+        public var actionSpeed: Float = 1
         // Applied in order by SceneGraph.applyConstraints(pointOfView:).
         public var constraints: [Constraint] = []
         // Matched against camera, light and hit-test masks, like SCNNode.categoryBitMask. Not inherited by children.

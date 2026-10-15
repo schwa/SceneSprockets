@@ -10,6 +10,8 @@ extension SceneGraph {
             case easeIn
             case easeOut
             case easeInEaseOut
+            // Maps elapsed fraction (0...1) to progress, like SCNAction.timingFunction. Should map 0 to 0 and 1 to 1.
+            case custom(@Sendable (Float) -> Float)
 
             func apply(_ fraction: Float) -> Float {
                 switch self {
@@ -21,19 +23,40 @@ extension SceneGraph {
                     1 - (1 - fraction) * (1 - fraction)
                 case .easeInEaseOut:
                     fraction * fraction * (3 - 2 * fraction)
+                case .custom(let function):
+                    function(fraction)
+                }
+            }
+
+            // The timing that plays this one backwards.
+            var reversed: Self {
+                switch self {
+                case .linear, .easeInEaseOut:
+                    self
+                case .easeIn:
+                    .easeOut
+                case .easeOut:
+                    .easeIn
+                case .custom(let function):
+                    .custom { 1 - function(1 - $0) }
                 }
             }
         }
 
-        // Nil for actions that repeat forever.
+        // Nil for actions that repeat forever. Not changed by `speed`.
         public let duration: Float?
         // Changes how interval actions progress over their duration. Ignored by sequences, groups and repeats.
         public var timingMode: TimingMode = .linear
+        // Multiplies the time this action advances by; 2 runs it twice as fast, 0 pauses it.
+        public var speed: Float = 1
         fileprivate let makeRunner: (TimingMode) -> any ActionRunner
+        // Nil for actions that cannot be reversed (absolute ones such as move(to:)); reversed() returns them as is.
+        fileprivate var makeReversed: (() -> Action)?
 
-        fileprivate init(duration: Float?, makeRunner: @escaping (TimingMode) -> any ActionRunner) {
+        fileprivate init(duration: Float?, makeRunner: @escaping (TimingMode) -> any ActionRunner, reversed: (() -> Action)? = nil) {
             self.duration = duration
             self.makeRunner = makeRunner
+            self.makeReversed = reversed
         }
 
         public func timingMode(_ mode: TimingMode) -> Self {
@@ -42,17 +65,35 @@ extension SceneGraph {
             return copy
         }
 
+        public func speed(_ speed: Float) -> Self {
+            var copy = self
+            copy.speed = speed
+            return copy
+        }
+
+        // Plays this action backwards, like SCNAction.reversed(). Relative actions (move, rotate and scale by,
+        // hide/unhide) and composites of them reverse; absolute and custom actions are returned unchanged.
+        public func reversed() -> Self {
+            guard let makeReversed else {
+                return self
+            }
+            var result = makeReversed()
+            result.timingMode = timingMode.reversed
+            result.speed = speed
+            return result
+        }
+
         // MARK: Interval actions
 
         // `apply(node, from, to)` applies the progress between two eased fractions in 0...1.
-        fileprivate static func interval(_ duration: Float, start: @escaping (Node) -> Void = { _ in }, apply: @escaping (Node, Float, Float) -> Void) -> Self {
-            Self(duration: max(duration, 0)) { timing in
+        fileprivate static func interval(_ duration: Float, start: @escaping (Node) -> Void = { _ in }, reversed: (() -> Action)? = nil, apply: @escaping (Node, Float, Float) -> Void) -> Self {
+            Self(duration: max(duration, 0), makeRunner: { timing in
                 IntervalRunner(duration: max(duration, 0), timing: timing, start: start, apply: apply)
-            }
+            }, reversed: reversed)
         }
 
         public static func move(by delta: SIMD3<Float>, duration: Float) -> Self {
-            interval(duration) { node, from, to in
+            interval(duration, reversed: { .move(by: -delta, duration: duration) }) { node, from, to in
                 node.trs.translation += delta * (to - from)
             }
         }
@@ -67,9 +108,23 @@ extension SceneGraph {
         // Rotates in the node's parent space, about `axis` through the node's origin.
         public static func rotate(by angle: Float, around axis: SIMD3<Float>, duration: Float) -> Self {
             let axis = simd_normalize(axis)
-            return interval(duration) { node, from, to in
+            return interval(duration, reversed: { .rotate(by: -angle, around: axis, duration: duration) }) { node, from, to in
                 node.trs.rotation = simd_normalize(simd_quatf(angle: angle * (to - from), axis: axis) * node.trs.rotation)
             }
+        }
+
+        // Rotates by Euler angles in radians, like SCNAction.rotateBy(x:y:z:duration:): about the parent's X, then Y,
+        // then Z axes, through the node's origin.
+        public static func rotateBy(x: Float, y: Float, z: Float, duration: Float) -> Self {
+            interval(duration, reversed: { .rotateBy(x: -x, y: -y, z: -z, duration: duration) }) { node, from, to in
+                let step = to - from
+                node.trs.rotation = simd_normalize(eulerRotation(x: x * step, y: y * step, z: z * step) * node.trs.rotation)
+            }
+        }
+
+        // Rotates to Euler angles in radians (X, then Y, then Z), like SCNAction.rotateTo(x:y:z:duration:).
+        public static func rotateTo(x: Float, y: Float, z: Float, duration: Float) -> Self {
+            rotate(to: eulerRotation(x: x, y: y, z: z), duration: duration)
         }
 
         public static func rotate(to target: simd_quatf, duration: Float) -> Self {
@@ -80,7 +135,7 @@ extension SceneGraph {
         }
 
         public static func scale(by factor: Float, duration: Float) -> Self {
-            interval(duration) { node, from, to in
+            interval(duration, reversed: { .scale(by: 1 / factor, duration: duration) }) { node, from, to in
                 // Multiplicative, so the total over the duration is exactly `factor`.
                 node.trs.scale *= pow(factor, to - from)
             }
@@ -94,7 +149,16 @@ extension SceneGraph {
         }
 
         public static func wait(duration: Float) -> Self {
-            interval(duration) { _, _, _ in }
+            interval(duration, reversed: { .wait(duration: duration) }) { _, _, _ in }
+        }
+
+        // Waits a random time in duration ± range / 2 (never below 0), picked each time it starts. `duration` reports
+        // the average.
+        public static func wait(duration: Float, withRange range: Float) -> Self {
+            Self(duration: max(duration, 0), makeRunner: { timing in
+                let picked = max(duration + Float.random(in: -0.5...0.5) * range, 0)
+                return IntervalRunner(duration: picked, timing: timing, start: { _ in }, apply: { _, _, _ in })
+            }, reversed: { .wait(duration: duration, withRange: range) })
         }
 
         // `body` gets the node and the time since the action started, clamped to `duration`.
@@ -111,11 +175,15 @@ extension SceneGraph {
         }
 
         public static func hide() -> Self {
-            run { $0.isVisible = false }
+            var action = run { $0.isVisible = false }
+            action.makeReversed = { .unhide() }
+            return action
         }
 
         public static func unhide() -> Self {
-            run { $0.isVisible = true }
+            var action = run { $0.isVisible = true }
+            action.makeReversed = { .hide() }
+            return action
         }
 
         public static func removeFromParent() -> Self {
@@ -129,7 +197,7 @@ extension SceneGraph {
                 guard let sum, let duration = action.duration else { return nil }
                 return sum + duration
             }
-            return Self(duration: total) { _ in SequenceRunner(actions: actions) }
+            return Self(duration: total, makeRunner: { _ in SequenceRunner(actions: actions) }, reversed: { .sequence(actions.reversed().map { $0.reversed() }) })
         }
 
         public static func group(_ actions: [Action]) -> Self {
@@ -137,19 +205,20 @@ extension SceneGraph {
                 guard let longest, let duration = action.duration else { return nil }
                 return max(longest, duration)
             }
-            return Self(duration: total) { _ in GroupRunner(actions: actions) }
+            return Self(duration: total, makeRunner: { _ in GroupRunner(actions: actions) }, reversed: { .group(actions.map { $0.reversed() }) })
         }
 
         public static func `repeat`(_ action: Action, count: Int) -> Self {
-            Self(duration: action.duration.map { $0 * Float(max(count, 0)) }) { _ in RepeatRunner(action: action, count: max(count, 0)) }
+            Self(duration: action.duration.map { $0 * Float(max(count, 0)) }, makeRunner: { _ in RepeatRunner(action: action, count: max(count, 0)) }, reversed: { .repeat(action.reversed(), count: count) })
         }
 
         public static func repeatForever(_ action: Action) -> Self {
-            Self(duration: nil) { _ in RepeatRunner(action: action, count: nil) }
+            Self(duration: nil, makeRunner: { _ in RepeatRunner(action: action, count: nil) }, reversed: { .repeatForever(action.reversed()) })
         }
 
         fileprivate func runner() -> any ActionRunner {
-            makeRunner(timingMode)
+            let runner = makeRunner(timingMode)
+            return speed == 1 ? runner : SpeedRunner(runner: runner, speed: speed)
         }
     }
 
@@ -170,12 +239,14 @@ extension SceneGraph {
 extension SceneGraph.Node {
     final class RunningAction {
         let key: String?
+        let action: SceneGraph.Action
         let runner: any ActionRunner
         let completion: (() -> Void)?
 
-        init(key: String?, runner: any ActionRunner, completion: (() -> Void)?) {
+        init(key: String?, action: SceneGraph.Action, completion: (() -> Void)?) {
             self.key = key
-            self.runner = runner
+            self.action = action
+            self.runner = action.runner()
             self.completion = completion
         }
     }
@@ -185,7 +256,12 @@ extension SceneGraph.Node {
         if let key {
             removeAction(forKey: key)
         }
-        runningActions.append(RunningAction(key: key, runner: action.runner(), completion: completion))
+        runningActions.append(RunningAction(key: key, action: action, completion: completion))
+    }
+
+    // The running action started with `key`, like SCNNode.action(forKey:).
+    public func action(forKey key: String) -> SceneGraph.Action? {
+        runningActions.first { $0.key == key }?.action
     }
 
     public func removeAction(forKey key: String) {
@@ -205,6 +281,7 @@ extension SceneGraph.Node {
     }
 
     func advanceActions(by deltaTime: Float) {
+        let deltaTime = deltaTime * actionSpeed
         for running in runningActions {
             // An earlier action or completion may have removed this one.
             guard runningActions.contains(where: { $0 === running }) else {
@@ -225,6 +302,29 @@ protocol ActionRunner: AnyObject {
 
 private final class Box<Value> {
     var value: Value?
+}
+
+// X, then Y, then Z, about fixed axes.
+private func eulerRotation(x: Float, y: Float, z: Float) -> simd_quatf {
+    simd_quatf(angle: z, axis: [0, 0, 1]) * simd_quatf(angle: y, axis: [0, 1, 0]) * simd_quatf(angle: x, axis: [1, 0, 0])
+}
+
+// Runs another runner with scaled time. Leftover time is scaled back, so what follows runs at its own speed.
+private final class SpeedRunner: ActionRunner {
+    let runner: any ActionRunner
+    let speed: Float
+
+    init(runner: any ActionRunner, speed: Float) {
+        self.runner = runner
+        self.speed = speed
+    }
+
+    func step(_ node: SceneGraph.Node, _ deltaTime: Float) -> Float? {
+        guard speed > 0 else {
+            return nil
+        }
+        return runner.step(node, deltaTime * speed).map { $0 / speed }
+    }
 }
 
 private final class IntervalRunner: ActionRunner {
