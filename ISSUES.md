@@ -1730,18 +1730,19 @@ Missing SceneKit equivalents: an ambient light type as a node (today it is per r
 ## 87: Orthographic cameras
 
 +++
-status: blocked
+status: open
 priority: medium
 kind: feature
 labels: effort:s, area:renderer
 created: 2026-10-15T02:28:07Z
-updated: 2026-10-15T13:29:45Z
+updated: 2026-10-15T19:22:45Z
 +++
 
 GeometryLite3D only has PerspectiveProjection, so there is no orthographic camera. The glTF and Model I/O loaders skip orthographic cameras with a warning. Needs a projection type in GeometryLite3D first. Also unblocks part of #54. See docs/SceneKitComparison.md.
 
 - `2026-10-15T02:31:16Z`: Related: #97 (orthographic projection belongs in GeometryLite3D), #54.
 - `2026-10-15T13:29:45Z`: Blocked on GeometryLite3D #1 (OrthographicProjection).
+- `2026-10-15T19:22:45Z`: Unblocked: GeometryLite3D now has OrthographicProjection (used for directional shadows since #97).
 
 ---
 
@@ -1942,11 +1943,12 @@ Candidates to add to GeometryLite3D, then use here:
 ## 98: Demo: "Introduction to MSSG" keynote-style presentation
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
 labels: area:demo, effort:l
 created: 2026-10-15T02:37:51Z
+updated: 2026-10-15T19:22:45Z
 +++
 
 A demo that presents MSSG like an Apple WWDC keynote, built entirely with MSSG. Slides and transitions are scenes, not SwiftUI views.
@@ -2002,11 +2004,12 @@ Unblocks: #36 (opacity and transparency), #71 (per-light shadows sampled in the 
 ## 101: Extruded text meshes have zero-length normals
 
 +++
-status: new
+status: open
 priority: medium
 kind: bug
 labels: area:scenegraph, effort:s
 created: 2026-10-15T12:18:52Z
+updated: 2026-10-15T19:22:45Z
 +++
 
 SceneGraph.Shape.text("SceneGraph", fontName: "Helvetica-Bold") from SwiftMesh's extrudedText has 296 of 6186 vertices with zero-length normals, all in glyphs with holes (e, a, p). The old AddOns Blinn-Phong shader normalized them to NaN and drew those glyphs white; the in-repo shader (#100) now falls back to the face normal, but PBR and ShaderMaterial still get zero normals. Other shapes are fine. Fix in SwiftMesh's text extrusion (or recompute missing normals in Shape.metalMesh).
@@ -2016,11 +2019,12 @@ SceneGraph.Shape.text("SceneGraph", fontName: "Helvetica-Bold") from SwiftMesh's
 ## 102: PBR: sample shadows per light in the shader
 
 +++
-status: new
+status: open
 priority: medium
 kind: enhancement
 labels: area:renderer, effort:m
 created: 2026-10-15T12:36:55Z
+updated: 2026-10-15T19:22:45Z
 +++
 
 Since #71, Blinn-Phong samples each light's shadow slices while shading, so a light only darkens what it lights. PBR meshes still go through the screen-space mask, which multiplies every light's shadow and darkens the whole pixel: surfaces facing away from a shadow-casting light, or outside its category, are darkened anyway (the original #71 bug). Fix: pass SceneGraphRenderContext.shadow and lightShadowSlices into MetalSprocketsPBR's lighting and scale each PBRLight's contribution by its own shadow (upstream change), then mark PBRSceneMaterial with SamplesShadowsInShader. ShaderMaterial could get a helper for the same.
@@ -2030,11 +2034,12 @@ Since #71, Blinn-Phong samples each light's shadow slices while shading, so a li
 ## 103: Move the particle engine into its own target
 
 +++
-status: new
+status: open
 priority: low
 kind: task
 labels: area:renderer, effort:s
 created: 2026-10-15T13:22:15Z
+updated: 2026-10-15T19:22:45Z
 +++
 
 Split the particle simulation (ParticleSystem: emission, integration, size and color over life, SplitMix64) out of MetalSprocketsSceneGraph into its own target (e.g. MetalSprocketsParticles) that depends only on simd, not on the scene graph. Make advance(by:emitterTransform:), instances() and the particle list public there. MetalSprocketsSceneGraph depends on it and keeps the scene integration: Node.particleSystems, SceneGraph.advanceParticles(by:), visibleParticleSystems() and ParticlesElement drawing. Keep SceneGraph.ParticleSystem as a typealias so callers do not change.
@@ -2044,11 +2049,12 @@ Split the particle simulation (ParticleSystem: emission, integration, size and c
 ## 104: Move the audio engine into its own target
 
 +++
-status: new
+status: open
 priority: low
 kind: task
 labels: area:audio, effort:s
 created: 2026-10-15T13:22:24Z
+updated: 2026-10-15T19:22:45Z
 +++
 
 Split the positional audio engine out of MetalSprocketsSceneGraph into its own target (e.g. MetalSprocketsAudio) that depends only on AVFAudio and simd, not on the scene graph: AudioPlayer (buffer or file, loops, volume) and a spatial mixer (AVAudioEngine plus AVAudioEnvironmentNode) with an API to attach/detach players, set each player's position, pause/resume, and set the listener transform. MetalSprocketsSceneGraph depends on it and keeps the scene integration: Node.audioPlayers and SceneAudio.update(sceneGraph:listener:) (walk the graph, push world positions, pause players on hidden nodes, detach removed ones), plus SceneView(audio:). Keep SceneGraph.AudioPlayer as a typealias so callers do not change. Same shape as #103.
@@ -2058,11 +2064,12 @@ Split the positional audio engine out of MetalSprocketsSceneGraph into its own t
 ## 105: Move each material renderer into its own target
 
 +++
-status: new
+status: open
 priority: low
 kind: task
 labels: area:renderer, effort:m
 created: 2026-10-15T13:23:03Z
+updated: 2026-10-15T19:22:45Z
 +++
 
 Split the material families out of MetalSprocketsSceneGraph so apps link only what they use:
@@ -2078,13 +2085,17 @@ Needs public API that is internal today: SamplesShadowsInShader, SceneGraphShado
 ## 106: Make API more SceneKit-like
 
 +++
-status: new
+status: open
 priority: medium
 kind: enhancement
+labels: effort:xl, area:scenegraph
 created: 2026-10-15T13:24:33Z
+updated: 2026-10-15T19:23:06Z
 +++
 
 Move the public API closer to SceneKit's model so it is simple and easy to use. Goal: a newcomer who knows SceneKit can build and render a scene with little boilerplate. This is an ongoing direction, not a single change.
+
+- `2026-10-15T19:23:06Z`: Ongoing direction; split concrete changes into their own issues.
 
 ---
 
