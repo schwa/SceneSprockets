@@ -15,7 +15,7 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../../.."),
-        .package(url: "https://github.com/schwa/GeometryLite3D", branch: "main"),
+        .package(url: "https://github.com/schwa/GeometryLite3D", from: "0.2.3"),
         .package(url: "https://github.com/schwa/MetalSprockets", branch: "main"),
         .package(url: "https://github.com/schwa/MetalSprocketsAddOns", branch: "main"),
         .package(url: "https://github.com/schwa/SwiftMesh", branch: "main"),

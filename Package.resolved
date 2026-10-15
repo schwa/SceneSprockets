@@ -1,5 +1,5 @@
 {
-  "originHash" : "b2be2093a1f34c483775e1606bf6cbff30b2aa55520d19956f2c5ed8f8275adf",
+  "originHash" : "b9a65903830d48cdebb2fc90a5abf60eccd16ecbe3ce794c39a06d5d94e81916",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -24,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/GeometryLite3D",
       "state" : {
-        "branch" : "main",
-        "revision" : "0eddc584482eec5a991c8caff2ec1c864299e377"
+        "revision" : "4a1c76400e564b76140a14d14a7e6d6279908faf",
+        "version" : "0.2.3"
       }
     },
     {
@@ -130,7 +130,7 @@
     {
       "identity" : "swift-collections",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-collections",
+      "location" : "https://github.com/apple/swift-collections.git",
       "state" : {
         "revision" : "35a1edcb8ebd2bfe251d587f0b69e62af28f508c",
         "version" : "1.7.3"
