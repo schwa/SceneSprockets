@@ -36,6 +36,16 @@ func textShapeIsExtruded() throws {
     #expect(node.label == "Text \"Hi\"")
 }
 
+// #101: glyphs with holes (e, a, p) had zero-length normals.
+@Test
+func textShapeHasUnitNormals() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let mesh = SceneGraph.Shape.text("SceneGraph", fontName: "Helvetica-Bold").metalMesh(device: device)
+    let normals = try #require(mesh.float3Values(.normal))
+    #expect(!normals.isEmpty)
+    #expect(normals.filter { abs(simd_length($0) - 1) > 1e-3 }.isEmpty)
+}
+
 @Test
 func settingShapeRebuildsMeshAndKeepsMaterial() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())

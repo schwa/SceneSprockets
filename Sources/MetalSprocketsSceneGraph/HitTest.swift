@@ -186,11 +186,16 @@ extension MetalMesh {
 
     // float3 positions read from the vertex buffers; empty if there are none.
     public func positions() -> [SIMD3<Float>] {
-        guard let attribute = vertexDescriptor.attributes.first(where: { $0.semantic == .position }),
+        float3Values(.position) ?? []
+    }
+
+    // float3 values of `semantic` read from the vertex buffers; nil if there is no such float3 attribute.
+    func float3Values(_ semantic: VertexDescriptor.Attribute.Semantic) -> [SIMD3<Float>]? {
+        guard let attribute = vertexDescriptor.attributes.first(where: { $0.semantic == semantic }),
               attribute.format == .float3,
               let buffer = vertexBuffers[attribute.bufferIndex]
         else {
-            return []
+            return nil
         }
         let stride = vertexDescriptor.layouts[attribute.bufferIndex]?.stride ?? 12
         let base = buffer.contents().advanced(by: (vertexBufferOffsets[attribute.bufferIndex] ?? 0) + attribute.offset)

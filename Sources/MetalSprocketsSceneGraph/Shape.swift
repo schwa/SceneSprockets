@@ -36,7 +36,8 @@ extension SceneGraph {
             case let .torus(ringRadius, pipeRadius):
                 .torus(majorRadius: ringRadius, minorRadius: pipeRadius)
             case let .text(string, fontName, fontSize, extrusionDepth):
-                .extrudedText(string, fontName: fontName, size: CGFloat(fontSize), depth: extrusionDepth)
+                // SwiftMesh leaves hole corners of n-gon caps without normals, so triangulate before adding them (#101).
+                Mesh.extrudedText(string, fontName: fontName, size: CGFloat(fontSize), depth: extrusionDepth, attributes: []).triangulated().withFlatNormals()
             }
         }
 

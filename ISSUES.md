@@ -2004,15 +2004,18 @@ Unblocks: #36 (opacity and transparency), #71 (per-light shadows sampled in the 
 ## 101: Extruded text meshes have zero-length normals
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:scenegraph, effort:s
 created: 2026-10-15T12:18:52Z
-updated: 2026-10-15T19:22:45Z
+updated: 2026-10-15T19:31:18Z
+closed: 2026-10-15T19:31:18Z
 +++
 
 SceneGraph.Shape.text("SceneGraph", fontName: "Helvetica-Bold") from SwiftMesh's extrudedText has 296 of 6186 vertices with zero-length normals, all in glyphs with holes (e, a, p). The old AddOns Blinn-Phong shader normalized them to NaN and drew those glyphs white; the in-repo shader (#100) now falls back to the face normal, but PBR and ShaderMaterial still get zero normals. Other shapes are fine. Fix in SwiftMesh's text extrusion (or recompute missing normals in Shape.metalMesh).
+
+- `2026-10-15T19:31:18Z`: Worked around in Shape.mesh() by triangulating extruded text before adding flat normals; planar UVs now cover hole corners too. Root cause filed as SwiftMesh #171.
 
 ---
 
