@@ -14,7 +14,7 @@ let package = Package(
         .executable(name: "scenegraph-demos", targets: ["scenegraph-demos"]),
     ],
     dependencies: [
-        .package(path: "../../.."),
+        .package(path: "../../../../MetalSprocketsSceneGraph"),
         .package(url: "https://github.com/schwa/GeometryLite3D", from: "0.2.3"),
         .package(url: "https://github.com/schwa/MetalSprockets", branch: "main"),
         .package(url: "https://github.com/schwa/SwiftMesh", branch: "main"),

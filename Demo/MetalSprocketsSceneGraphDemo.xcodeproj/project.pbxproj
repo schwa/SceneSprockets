@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		45E0644B2F8ED19C00E582A9 /* MetalSprocketsSceneGraphDemos in Frameworks */ = {isa = PBXBuildFile; productRef = 45E0644A2F8ED19C00E582A9 /* MetalSprocketsSceneGraphDemos */; };
+		457C0F3430816E8300878743 /* MetalSprocketsSceneGraphDemos in Frameworks */ = {isa = PBXBuildFile; productRef = 457C0F3330816E8300878743 /* MetalSprocketsSceneGraphDemos */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -19,6 +19,13 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
+			);
+			target = 45C80D302E84475800136D6D /* MetalSprocketsSceneGraphDemo */;
+		};
+		457C0F0530816E2500878743 /* Exceptions for "Packages" folder in "MetalSprocketsSceneGraphDemo" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				MetalSprocketsSceneGraphDemos,
 			);
 			target = 45C80D302E84475800136D6D /* MetalSprocketsSceneGraphDemo */;
 		};
@@ -37,6 +44,14 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		457C0F0430816E2400878743 /* Packages */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				457C0F0530816E2500878743 /* Exceptions for "Packages" folder in "MetalSprocketsSceneGraphDemo" target */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
 		45C80D332E84475800136D6D /* MetalSprocketsSceneGraphDemo */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -60,7 +75,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				45E0644B2F8ED19C00E582A9 /* MetalSprocketsSceneGraphDemos in Frameworks */,
+				457C0F3430816E8300878743 /* MetalSprocketsSceneGraphDemos in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -72,7 +87,7 @@
 			children = (
 				45CFGGRP2F64AA9A005F944D /* Configuration */,
 				45C80D332E84475800136D6D /* MetalSprocketsSceneGraphDemo */,
-				45FAC3DF2F8ED0B300352C52 /* Frameworks */,
+				457C0F0430816E2400878743 /* Packages */,
 				45C80D322E84475800136D6D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -83,13 +98,6 @@
 				45C80D312E84475800136D6D /* MetalSprocketsSceneGraphDemo.app */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		45FAC3DF2F8ED0B300352C52 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -108,12 +116,13 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				457C0F0430816E2400878743 /* Packages */,
 				45C80D332E84475800136D6D /* MetalSprocketsSceneGraphDemo */,
 				45CFGGRP2F64AA9A005F944D /* Configuration */,
 			);
 			name = MetalSprocketsSceneGraphDemo;
 			packageProductDependencies = (
-				45E0644A2F8ED19C00E582A9 /* MetalSprocketsSceneGraphDemos */,
+				457C0F3330816E8300878743 /* MetalSprocketsSceneGraphDemos */,
 			);
 			productName = MetalSprocketsSceneGraphDemo;
 			productReference = 45C80D312E84475800136D6D /* MetalSprocketsSceneGraphDemo.app */;
@@ -144,7 +153,7 @@
 			mainGroup = 45C80D282E84475800136D6D;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				45D5DFA02F8E049000CF7585 /* XCLocalSwiftPackageReference "Packages/MetalSprocketsSceneGraphDemos" */,
+				457C0F3230816E8300878743 /* XCLocalSwiftPackageReference "Packages/MetalSprocketsSceneGraphDemos" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 45C80D322E84475800136D6D /* Products */;
@@ -243,16 +252,15 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		45D5DFA02F8E049000CF7585 /* XCLocalSwiftPackageReference "Packages/MetalSprocketsSceneGraphDemos" */ = {
+		457C0F3230816E8300878743 /* XCLocalSwiftPackageReference "Packages/MetalSprocketsSceneGraphDemos" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/MetalSprocketsSceneGraphDemos;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		45E0644A2F8ED19C00E582A9 /* MetalSprocketsSceneGraphDemos */ = {
+		457C0F3330816E8300878743 /* MetalSprocketsSceneGraphDemos */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 45D5DFA02F8E049000CF7585 /* XCLocalSwiftPackageReference "Packages/MetalSprocketsSceneGraphDemos" */;
 			productName = MetalSprocketsSceneGraphDemos;
 		};
 /* End XCSwiftPackageProductDependency section */

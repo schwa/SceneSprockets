@@ -8,6 +8,7 @@ public enum SceneGraphDemos {
         SceneKitFeaturesDemoView.self,
         ShadowsDemoView.self,
         MaterialsDemoView.self,
+        CandyDemoView.self,
         AnimationBlendingDemoView.self,
         DeformationDemoView.self,
         ImportedAssetsDemoView.self,
@@ -57,6 +58,11 @@ struct SceneKitFeaturesDemoView: DemoView {
 struct ShadowsDemoView: DemoView {
     static let metadata = DemoCatalog.metadata("shadows")
     var body: some View { SceneDemoView(demo: DemoCatalog.demo("shadows")) }
+}
+
+struct CandyDemoView: DemoView {
+    static let metadata = DemoCatalog.metadata("candy")
+    var body: some View { SceneDemoView(demo: DemoCatalog.demo("candy")) }
 }
 
 struct MaterialsDemoView: DemoView {
