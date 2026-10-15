@@ -1350,12 +1350,13 @@ Want: a shadows toggle and a light-type picker (directional / spot / point) in a
 ## 68: Report when lights exceed the 8 shadow map slices
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:renderer, effort:xs
 created: 2026-10-14T15:18:06Z
-updated: 2026-10-14T15:42:08Z
+updated: 2026-10-15T02:52:57Z
+closed: 2026-10-15T02:52:57Z
 +++
 
 SceneGraphShadows has 8 shadow map slices: a directional or spot light uses 1, a point light 6. Shadow views past 8 are dropped without any notice. SceneKit Features already uses all 8 (sun + spotlight + red point light), so adding a light there silently removes its shadows.

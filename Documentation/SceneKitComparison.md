@@ -186,7 +186,7 @@ Legend:
 | `orthographicScale`, `shadowCascadeCount`, `shadowCascadeSplittingFactor`, `automaticallyAdjustsShadowProjection` | Automatic fit to scene bounds | 🟡 | No cascades. |
 | `castsShadow` per node / light | `castsShadow` per mesh content | 🟡 | All lights cast (up to the slice limit). |
 | — | `receivesShadow` | ➕ | Honored through a receiver mask. |
-| Number of shadowing lights | 8 shadow map slices | 🟡 | Directional or spot uses 1, point uses 6. Lights past the limit cast none, silently (#68). |
+| Number of shadowing lights | 8 shadow map slices | 🟡 | Directional or spot uses 1, point uses 6. A light that does not fit casts none; see `droppedLightCount`. |
 | Skinned casters | GPU skinning in the caster pass | ✅ | Morphed meshes use CPU-deformed positions. |
 | Requirements | Color texture `.shaderWrite`, depth `.shaderRead`, depth not memoryless | — | `SceneView` sets these when shadows or fog are on. Otherwise shadows are silently skipped. |
 

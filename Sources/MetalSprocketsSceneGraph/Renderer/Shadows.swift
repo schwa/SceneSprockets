@@ -14,8 +14,8 @@ import simd
 // light, then shadowed pixels are darkened in screen space after the scene pass. Keep one instance across frames
 // (it holds the shadow map and caster buffers) and pass it to SceneGraphElement or SceneView.
 //
-// The shadow map has 8 slices: a directional or spot light uses one, a point light six; lights past that cast
-// none. Meshes with `castsShadow: false` cast none. Meshes with `receivesShadow: false` are drawn into a mask that
+// The shadow map has 8 slices: a directional or spot light uses one, a point light six; a light that does not fit
+// casts none and is counted in `droppedLightCount`. Meshes with `castsShadow: false` cast none. Meshes with `receivesShadow: false` are drawn into a mask that
 // the screen-space pass skips.
 // The view's color texture needs `.shaderWrite` and its depth texture `.shaderRead` usage (see
 // `ShadowContext.requiredColorUsage`); otherwise no shadows are drawn.
@@ -25,6 +25,8 @@ public final class SceneGraphShadows {
     public var resolution: Int
     public var depthBias: Float
     public var slopeScale: Float
+    // Lights that cast no shadow in the last frame because their views did not fit in the 8 slices.
+    public private(set) var droppedLightCount = 0
 
     private var shadowMap: ShadowMap?
     private var positionBuffers: [PositionKey: MTLBuffer] = [:]
@@ -63,7 +65,8 @@ public final class SceneGraphShadows {
         guard let bounds else {
             return nil
         }
-        let views = shadowViews(lights: context.lights, bounds: bounds)
+        let (views, dropped) = shadowViewsAndDroppedLights(lights: context.lights, bounds: bounds)
+        droppedLightCount = dropped
         guard !views.isEmpty else {
             return nil
         }
@@ -148,10 +151,17 @@ public final class SceneGraphShadows {
     // fitted to `bounds`, spot lights a perspective view of their outer cone, point lights six 90° views. All use
     // reversed depth, like ShadowMap's default.
     func shadowViews(lights: [(worldTransform: simd_float4x4, light: Light)], bounds: BoundingBox) -> [simd_float4x4] {
+        shadowViewsAndDroppedLights(lights: lights, bounds: bounds).views
+    }
+
+    // A light whose views do not all fit in the remaining slices is dropped whole; later lights may still fit.
+    func shadowViewsAndDroppedLights(lights: [(worldTransform: simd_float4x4, light: Light)], bounds: BoundingBox) -> (views: [simd_float4x4], dropped: Int) {
         let center = (bounds.min + bounds.max) / 2
         let radius = max(simd_length(bounds.max - bounds.min) / 2, 0.01)
         var views: [simd_float4x4] = []
+        var dropped = 0
         for (transform, light) in lights {
+            var lightViews: [simd_float4x4] = []
             let position = SIMD3(transform.columns.3.x, transform.columns.3.y, transform.columns.3.z)
             let forward = simd_normalize(-SIMD3(transform.columns.2.x, transform.columns.2.y, transform.columns.2.z))
             // Far enough to reach the whole scene from the light.
@@ -160,20 +170,25 @@ public final class SceneGraphShadows {
             switch light.type {
             case .directional:
                 let eye = center - forward * radius * 2
-                views.append(orthographic(halfSize: radius, near: radius * 0.5, far: radius * 3.5) * viewMatrix(eye: eye, forward: forward))
+                lightViews.append(orthographic(halfSize: radius, near: radius * 0.5, far: radius * 3.5) * viewMatrix(eye: eye, forward: forward))
             case .spot:
                 let fieldOfView = min(max(light.outerConeAngle * 2, 0.01), .pi * 0.95)
-                views.append(perspective(fieldOfView: fieldOfView, near: near, far: far) * viewMatrix(eye: position, forward: forward))
+                lightViews.append(perspective(fieldOfView: fieldOfView, near: near, far: far) * viewMatrix(eye: position, forward: forward))
             case .point:
                 let faces: [SIMD3<Float>] = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]
                 for face in faces {
-                    views.append(perspective(fieldOfView: .pi / 2, near: near, far: far) * viewMatrix(eye: position, forward: face))
+                    lightViews.append(perspective(fieldOfView: .pi / 2, near: near, far: far) * viewMatrix(eye: position, forward: face))
                 }
             default:
                 continue
             }
+            if views.count + lightViews.count <= Int(MAX_SHADOW_LIGHTS) {
+                views += lightViews
+            } else {
+                dropped += 1
+            }
         }
-        return Array(views.prefix(Int(MAX_SHADOW_LIGHTS)))
+        return (views, dropped)
     }
 
     private func gpuSkin(of entry: SceneGraph.MeshEntry) -> SceneGraph.Skin? {

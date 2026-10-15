@@ -108,8 +108,22 @@ func pointLightUsesSixViews() throws {
     let bounds = BoundingBox(min: [-1, -1, -1], max: [1, 1, 1])
     #expect(shadows.shadowViews(lights: [(matrix_identity_float4x4, Light(type: .point))], bounds: bounds).count == 6)
     #expect(shadows.shadowViews(lights: [(matrix_identity_float4x4, Light(type: .spot))], bounds: bounds).count == 1)
-    // Two point lights exceed the 8 slices; the extra views are dropped.
-    #expect(shadows.shadowViews(lights: Array(repeating: (matrix_identity_float4x4, Light(type: .point)), count: 2), bounds: bounds).count == 8)
+    // Two point lights exceed the 8 slices: the second is dropped whole, and a later spot light still fits.
+    let lights = Array(repeating: (matrix_identity_float4x4, Light(type: .point)), count: 2) + [(matrix_identity_float4x4, Light(type: .spot))]
+    let result = shadows.shadowViewsAndDroppedLights(lights: lights, bounds: bounds)
+    #expect(result.views.count == 7)
+    #expect(result.dropped == 1)
+}
+
+@Test
+@MainActor
+func droppedLightsAreCounted() throws {
+    let (sceneGraph, _) = try makeScene(light: .point)
+    _ = SceneGraph.Node(parent: sceneGraph.root, transform: pose(eye: [-1.5, 4, 0], target: .zero), content: .light(Light(type: .point, color: [1, 1, 1], intensity: 20)))
+    let shadows = SceneGraphShadows()
+    let context = try #require(makeRenderContext(sceneGraph: sceneGraph, camera: nil, cameraMatrix: nil, aspectRatio: 1))
+    _ = try shadows.prepare(entries: sceneGraph.meshEntries(), context: context, bounds: sceneGraph.bounds)
+    #expect(shadows.droppedLightCount == 1)
 }
 
 // #66: a floor that does not receive shadows stays lit under the box's shadow; the box itself still darkens
