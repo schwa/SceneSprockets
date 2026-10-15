@@ -702,7 +702,7 @@ priority: high
 kind: enhancement
 labels: effort:m, area:renderer
 created: 2026-10-12T15:40:04Z
-updated: 2026-10-14T13:54:48Z
+updated: 2026-10-15T02:31:15Z
 +++
 
 Split from #32 (instancing done). BlinnPhongMaterial (MetalSprocketsAddOns) has no alpha or blend mode, so the renderer cannot tell transparent entries apart. Needs: alpha/blend mode on the material (upstream in MetalSprocketsAddOns, plus blending in BlinnPhongShader), then draw opaque first, transparent back-to-front with depth writes off. PBR already does this.
@@ -710,6 +710,7 @@ Split from #32 (instancing done). BlinnPhongMaterial (MetalSprocketsAddOns) has 
 - `2026-10-14T13:31:44Z`: Related: #65 (renderingOrder demo needs transparency).
 - `2026-10-14T13:36:18Z`: Looked at it. Punting: BlinnPhongMaterial and its shader live in MetalSprocketsAddOns, a remote dependency on main. The fragment shader always returns alpha 1, and the material has no opacity or blend mode, so transparency needs an upstream change. Options: (a) add opacity/blend mode to BlinnPhongMaterial and alpha output to BlinnPhongShader in MetalSprocketsAddOns (commit there; you push), then do the opaque-then-sorted-transparent split here; (b) give this repo its own Blinn-Phong shader in MetalSprocketsSceneGraphShaders with opacity, which duplicates AddOns code. Which do you want?
 - `2026-10-14T13:54:48Z`: Decision: bring our own Blinn-Phong material and shaders into this repo (MetalSprocketsSceneGraphShaders + renderer target) and stop using BlinnPhongMaterial/BlinnPhongShader from MetalSprocketsAddOns. Then do the opaque/transparent split.
+- `2026-10-15T02:31:16Z`: Related: #83, #96.
 
 ---
 
@@ -1068,7 +1069,7 @@ priority: low
 kind: enhancement
 labels: area:assets, effort:m
 created: 2026-10-13T20:37:21Z
-updated: 2026-10-13T21:06:09Z
+updated: 2026-10-15T02:31:16Z
 +++
 
 MetalSprocketsSceneGraphGLTF (#16) does not map these glTF features into the scene graph:
@@ -1079,6 +1080,8 @@ MetalSprocketsSceneGraphGLTF (#16) does not map these glTF features into the sce
 - KHR_animation_pointer channels for materials, lights, cameras and visibility.
 
 The loader adds a warning for skipped cameras and channels.
+
+- `2026-10-15T02:31:16Z`: Related: #87.
 
 ---
 
@@ -1137,12 +1140,14 @@ priority: low
 kind: feature
 labels: area:scenegraph, effort:m
 created: 2026-10-13T21:19:39Z
-updated: 2026-10-14T13:31:44Z
+updated: 2026-10-15T02:31:16Z
 +++
 
 Constraints (#40) cover look-at, billboard and distance. SceneKit also has SCNIKConstraint: a chain of joint nodes is turned so that its end reaches a target, with angle limits per joint.
 
 Want: `.inverseKinematics(chainRoot:target:)`, using CCD or FABRIK, with optional joint angle limits.
+
+- `2026-10-15T02:31:16Z`: Related: #91.
 
 ---
 
@@ -1476,12 +1481,12 @@ Related: Use DemoKit for the demo app.
 ## 74: Demo content and inspector extend under the toolbar with DemoKit
 
 +++
-status: new
+status: blocked
 priority: medium
 kind: bug
 labels: area:demo, effort:s, blocked
 created: 2026-10-14T16:40:19Z
-updated: 2026-10-14T17:07:28Z
+updated: 2026-10-15T02:31:13Z
 +++
 
 Since moving the demos to DemoKit (#72), the top of the demo view sits under the window toolbar. The FPS overlay (topTrailing, padded) is partly hidden, and the configuration inspector's Form starts under the toolbar (the first rows are cut off). Screenshots: 2026-10-14 12.16.32 and 12.21.40.
@@ -1501,11 +1506,12 @@ The difference must be in SceneDemoView or SceneView: .onGeometryChange, .onTapG
 ## 75: Reach 120 fps in every demo
 
 +++
-status: new
+status: open
 priority: medium
 kind: enhancement
 labels: area:renderer, effort:l
 created: 2026-10-14T16:41:14Z
+updated: 2026-10-15T02:31:13Z
 +++
 
 Target: 120 fps (8.3 ms frames) on a ProMotion display in every demo. Some demos drop well below that.
@@ -1524,10 +1530,12 @@ Plan: measure each demo (CPU and GPU, Instruments time profile), list the top co
 ## 76: Node opacity and fade actions
 
 +++
-status: new
+status: open
 priority: medium
-kind: none
+kind: feature
+labels: effort:m, area:scenegraph
 created: 2026-10-15T02:28:06Z
+updated: 2026-10-15T02:31:14Z
 +++
 
 SceneKit has SCNNode.opacity (inherited by children) and fadeIn/fadeOut/fadeOpacity actions. Nodes here have no opacity, so there are no fade actions either. Want: Node.opacity applied by every renderer, plus the fade actions. See docs/SceneKitComparison.md.
@@ -1537,10 +1545,12 @@ SceneKit has SCNNode.opacity (inherited by children) and fadeIn/fadeOut/fadeOpac
 ## 77: Node utilities: clone, find by name, replace child, early-exit traversal
 
 +++
-status: new
-priority: medium
-kind: none
+status: open
+priority: low
+kind: feature
+labels: effort:s, area:scenegraph
 created: 2026-10-15T02:28:06Z
+updated: 2026-10-15T02:31:14Z
 +++
 
 Missing SceneKit equivalents: clone()/flattenedClone(), childNode(withName:recursively:), replaceChildNode(_:with:), and enumerateHierarchy's stop flag. Want them on SceneGraph.Node and SceneGraph.visit. See docs/SceneKitComparison.md.
@@ -1550,10 +1560,12 @@ Missing SceneKit equivalents: clone()/flattenedClone(), childNode(withName:recur
 ## 78: Node pivot
 
 +++
-status: new
-priority: medium
-kind: none
+status: open
+priority: low
+kind: feature
+labels: effort:s, area:scenegraph
 created: 2026-10-15T02:28:07Z
+updated: 2026-10-15T02:31:14Z
 +++
 
 SCNNode.pivot offsets the node's rotation and scale origin. Nodes here have no pivot, so you have to add an extra parent node. Want a pivot transform applied before the local transform. See docs/SceneKitComparison.md.
@@ -1563,23 +1575,31 @@ SCNNode.pivot offsets the node's rotation and scale origin. Nodes here have no p
 ## 79: Transform helpers: Euler angles, world setters, space conversion, look(at:)
 
 +++
-status: new
+status: open
 priority: medium
-kind: none
+kind: enhancement
+labels: effort:m, area:scenegraph
+depends: 97
 created: 2026-10-15T02:28:07Z
+updated: 2026-10-15T02:35:20Z
 +++
 
 Missing SceneKit equivalents: eulerAngles; settable worldPosition/worldOrientation/worldTransform; convertPosition/convertVector/convertTransform(from:/to:); and a one-shot look(at:up:localFront:) that targets a point. Today look-at only exists as a constraint on a node. See docs/SceneKitComparison.md.
+
+- `2026-10-15T02:31:16Z`: Related: #97 (GeometryLite3D has Euler and LookAt).
+- `2026-10-15T02:35:20Z`: Depends on #97: build these helpers on GeometryLite3D (Euler, LookAt, matrix accessors), adding what is missing there first, not as new local math in MSSG.
 
 ---
 
 ## 80: Shape options: segment counts, box chamfer, geodesic sphere, plane corner radius
 
 +++
-status: new
-priority: medium
-kind: none
+status: open
+priority: low
+kind: enhancement
+labels: effort:m, area:scenegraph
 created: 2026-10-15T02:28:07Z
+updated: 2026-10-15T02:31:14Z
 +++
 
 SceneGraph.Shape has no segment counts, no box chamferRadius, no sphere isGeodesic, and no plane corner radius. SCNText's chamfer, flatness, container frame and wrapping are missing too. Needs SwiftMesh support for some of these. See docs/SceneKitComparison.md.
@@ -1589,10 +1609,12 @@ SceneGraph.Shape has no segment counts, no box chamferRadius, no sphere isGeodes
 ## 81: New shapes: tube, pyramid, floor, extruded Bézier path
 
 +++
-status: new
-priority: medium
-kind: none
+status: open
+priority: low
+kind: feature
+labels: effort:m, area:scenegraph
 created: 2026-10-15T02:28:07Z
+updated: 2026-10-15T02:31:14Z
 +++
 
 SceneKit has SCNTube, SCNPyramid, SCNFloor (infinite, with optional reflections) and SCNShape (an extruded Bézier path). Shape has none of them. See docs/SceneKitComparison.md.
@@ -1602,10 +1624,12 @@ SceneKit has SCNTube, SCNPyramid, SCNFloor (infinite, with optional reflections)
 ## 82: Subdivision and tessellation
 
 +++
-status: new
-priority: medium
-kind: none
+status: open
+priority: low
+kind: feature
+labels: effort:l, area:renderer
 created: 2026-10-15T02:28:07Z
+updated: 2026-10-15T02:31:14Z
 +++
 
 SceneKit has subdivisionLevel, wantsAdaptiveSubdivision, the SCNGeometryTessellator and edge creases. There is no equivalent here. See docs/SceneKitComparison.md.
@@ -1615,23 +1639,29 @@ SceneKit has subdivisionLevel, wantsAdaptiveSubdivision, the SCNGeometryTessella
 ## 83: Blinn-Phong material: normal maps, emission, cull mode
 
 +++
-status: new
+status: open
 priority: medium
-kind: none
+kind: enhancement
+labels: effort:m, area:renderer
 created: 2026-10-15T02:28:07Z
+updated: 2026-10-15T02:31:16Z
 +++
 
 BlinnPhongMaterial has only ambient, diffuse and specular color sources and shininess. It has no normal map, no emission, and no double-sided/cull mode setting. Transparency is #36. See docs/SceneKitComparison.md.
+
+- `2026-10-15T02:31:16Z`: Related: #36.
 
 ---
 
 ## 84: Material settings: blend modes, depth read/write, color write mask, wireframe
 
 +++
-status: new
+status: open
 priority: medium
-kind: none
+kind: feature
+labels: effort:l, area:renderer
 created: 2026-10-15T02:28:07Z
+updated: 2026-10-15T02:31:14Z
 +++
 
 SceneKit materials have blendMode (alpha, add, subtract, multiply, screen, replace), writesToDepthBuffer/readsFromDepthBuffer, colorBufferWriteMask and fillMode .lines. Here only ShaderMaterial.isTransparent and PBR alphaMode exist. Want these settings to work across the material families. See docs/SceneKitComparison.md.
@@ -1641,10 +1671,12 @@ SceneKit materials have blendMode (alpha, add, subtract, multiply, screen, repla
 ## 85: Shader modifiers
 
 +++
-status: new
-priority: medium
-kind: none
+status: open
+priority: low
+kind: feature
+labels: effort:xl, area:renderer
 created: 2026-10-15T02:28:07Z
+updated: 2026-10-15T02:31:14Z
 +++
 
 SceneKit shader modifiers inject code at geometry, surface, lighting and fragment entry points of the built-in materials. ShaderMaterial (like SCNProgram) replaces the whole shader. Want a way to tweak the built-in Blinn-Phong/PBR shading without rewriting it. See docs/SceneKitComparison.md.
@@ -1654,10 +1686,12 @@ SceneKit shader modifiers inject code at geometry, surface, lighting and fragmen
 ## 86: Light gaps: ambient node, attenuation, temperature, IES and area lights
 
 +++
-status: new
-priority: medium
-kind: none
+status: open
+priority: low
+kind: feature
+labels: effort:l, area:renderer
 created: 2026-10-15T02:28:07Z
+updated: 2026-10-15T02:31:14Z
 +++
 
 Missing SceneKit equivalents: an ambient light type as a node (today it is per renderer: BlinnPhongMaterialRenderer.ambientLightColor), attenuationStartDistance and attenuationFalloffExponent, color temperature, and IES, area and probe lights. See docs/SceneKitComparison.md.
@@ -1667,23 +1701,29 @@ Missing SceneKit equivalents: an ambient light type as a node (today it is per r
 ## 87: Orthographic cameras
 
 +++
-status: new
+status: open
 priority: medium
-kind: none
+kind: feature
+labels: effort:s, area:renderer
 created: 2026-10-15T02:28:07Z
+updated: 2026-10-15T02:31:16Z
 +++
 
 GeometryLite3D only has PerspectiveProjection, so there is no orthographic camera. The glTF and Model I/O loaders skip orthographic cameras with a warning. Needs a projection type in GeometryLite3D first. Also unblocks part of #54. See docs/SceneKitComparison.md.
+
+- `2026-10-15T02:31:16Z`: Related: #97 (orthographic projection belongs in GeometryLite3D), #54.
 
 ---
 
 ## 88: Shadow gaps: color, soft shadows, cascades, per-light settings
 
 +++
-status: new
-priority: medium
-kind: none
+status: open
+priority: low
+kind: enhancement
+labels: effort:l, area:renderer
 created: 2026-10-15T02:28:07Z
+updated: 2026-10-15T02:31:15Z
 +++
 
 SceneGraphShadows is one global setting. Missing: shadowColor (today only intensity toward black), soft shadows (shadowRadius, shadowSampleCount), cascades, and per-light castsShadow, resolution and bias. See docs/SceneKitComparison.md.
@@ -1693,10 +1733,12 @@ SceneGraphShadows is one global setting. Missing: shadowColor (today only intens
 ## 89: Animation gaps: events, autoreverse, repeat count, timing, key-path targets
 
 +++
-status: new
-priority: medium
-kind: none
+status: open
+priority: low
+kind: enhancement
+labels: effort:l, area:animation
 created: 2026-10-15T02:28:08Z
+updated: 2026-10-15T02:31:15Z
 +++
 
 AnimationClip/AnimationPlayer has no animation events, no autoreverse, no fixed repeat count (only looping), and no Bézier timing functions. Channels can target only translation, rotation, scale and morph weights, not material, light or camera properties. See docs/SceneKitComparison.md.
@@ -1706,10 +1748,12 @@ AnimationClip/AnimationPlayer has no animation events, no autoreverse, no fixed 
 ## 90: Action gaps: reversed, speed, random wait, action(forKey:), Euler rotate, timing function
 
 +++
-status: new
-priority: medium
-kind: none
+status: open
+priority: low
+kind: enhancement
+labels: effort:s, area:animation
 created: 2026-10-15T02:28:08Z
+updated: 2026-10-15T02:31:15Z
 +++
 
 Missing SCNAction features: reversed(), per-action and per-node speed, wait(duration:withRange:), an action(forKey:) getter, rotateBy/rotateTo with Euler angles, and a custom timingFunction. See docs/SceneKitComparison.md.
@@ -1719,23 +1763,29 @@ Missing SCNAction features: reversed(), per-action and per-node speed, wait(dura
 ## 91: Constraint gaps: more types, influence factor, enabled flag, billboard axes
 
 +++
-status: new
-priority: medium
-kind: none
+status: open
+priority: low
+kind: feature
+labels: effort:m, area:scenegraph
 created: 2026-10-15T02:28:08Z
+updated: 2026-10-15T02:31:16Z
 +++
 
 Missing: SCNReplicatorConstraint, SCNAccelerationConstraint, SCNSliderConstraint, SCNAvoidOccluderConstraint and SCNTransformConstraint; influenceFactor, isEnabled and isIncremental; and billboard with any set of free axes (today only .all or .y). IK is #57. See docs/SceneKitComparison.md.
+
+- `2026-10-15T02:31:16Z`: Related: #57 (IK).
 
 ---
 
 ## 92: Morph targets: names and normalized mode
 
 +++
-status: new
-priority: medium
-kind: none
+status: open
+priority: low
+kind: enhancement
+labels: effort:s, area:animation
 created: 2026-10-15T02:28:08Z
+updated: 2026-10-15T02:31:15Z
 +++
 
 SCNMorpher can set weights by target name and has a normalized calculation mode. Here morphWeights are by index only, and blending is always additive. See docs/SceneKitComparison.md.
@@ -1745,10 +1795,12 @@ SCNMorpher can set weights by target name and has a normalized calculation mode.
 ## 93: Hit-test gaps: options, segment and subtree tests, richer results
 
 +++
-status: new
-priority: medium
-kind: none
+status: open
+priority: low
+kind: enhancement
+labels: effort:m, area:scenegraph
 created: 2026-10-15T02:28:08Z
+updated: 2026-10-15T02:31:15Z
 +++
 
 SceneGraph.hitTest always tests both faces, returns every hit, and runs on the whole graph with an infinite ray. Missing: SceneKit options (backFaceCulling, boundingBoxOnly, firstFoundOnly), segment tests, tests on one subtree, and local coordinates, barycentrics and texture coordinates in Hit. See docs/SceneKitComparison.md.
@@ -1758,23 +1810,29 @@ SceneGraph.hitTest always tests both faces, returns every hit, and runs on the w
 ## 94: Scene queries: project/unproject point, frustum queries
 
 +++
-status: new
+status: open
 priority: medium
-kind: none
+kind: feature
+labels: effort:s, area:scenegraph
 created: 2026-10-15T02:28:08Z
+updated: 2026-10-15T02:31:16Z
 +++
 
 Missing SceneKit renderer APIs: projectPoint, unprojectPoint (Ray(viewPoint:) covers part of this), nodesInsideFrustum(of:) and isNode(_:insideFrustumOf:). Frustum culling exists but is internal to the Blinn-Phong renderer. See docs/SceneKitComparison.md.
+
+- `2026-10-15T02:31:17Z`: Related: #97 (frustum test could move to GeometryLite3D).
 
 ---
 
 ## 95: Renderer and view gaps: MSAA, more delegate callbacks, statistics, prepare
 
 +++
-status: new
-priority: medium
-kind: none
+status: open
+priority: low
+kind: enhancement
+labels: effort:l, area:renderer
 created: 2026-10-15T02:28:08Z
+updated: 2026-10-15T02:31:15Z
 +++
 
 SceneView/SceneGraphElement have no multisampling, no debug overlays or statistics, and no way to build pipelines/PBR models ahead of time (like SCNSceneRenderer.prepare). SceneViewDelegate has only two callbacks: there are none for constraints applied or will/did render. See docs/SceneKitComparison.md.
@@ -1784,23 +1842,29 @@ SceneView/SceneGraphElement have no multisampling, no debug overlays or statisti
 ## 96: Sort transparent entries back to front
 
 +++
-status: new
+status: open
 priority: medium
-kind: none
+kind: enhancement
+labels: effort:m, area:renderer
 created: 2026-10-15T02:28:08Z
+updated: 2026-10-15T02:31:17Z
 +++
 
 No renderer sorts transparent entries back to front; you have to use renderingOrder by hand. ShaderMaterial with isTransparent is not sorted, and Blinn-Phong has no transparency yet (#36). See docs/SceneKitComparison.md.
+
+- `2026-10-15T02:31:17Z`: Related: #36.
 
 ---
 
 ## 97: Use GeometryLite3D for transforms and other math
 
 +++
-status: new
+status: open
 priority: high
 kind: enhancement
+labels: effort:m, area:scenegraph
 created: 2026-10-15T02:28:44Z
+updated: 2026-10-15T02:31:17Z
 +++
 
 MSSG reimplements math that GeometryLite3D already has, or should have. Move it to GeometryLite3D and use it from there.
@@ -1817,5 +1881,28 @@ Candidates to add to GeometryLite3D, then use here:
 - Frustum test (Culling.swift isInFrustum).
 - Projection helpers in Shadows.swift: viewMatrix(eye:forward:), perspective(fieldOfView:near:far:), orthographic(halfSize:near:far:), the reversedDepth matrix (SceneGraphRenderer.swift), and an orthographic ProjectionProtocol type (#87).
 - Matrix accessors such as translation/position of a float4x4.
+
+- `2026-10-15T02:31:17Z`: Related: #79, #87, #94.
+
+---
+
+## 98: Demo: "Introduction to MSSG" keynote-style presentation
+
++++
+status: new
+priority: medium
+kind: feature
+labels: area:demo, effort:l
+created: 2026-10-15T02:37:51Z
++++
+
+A demo that presents MSSG like an Apple WWDC keynote, built entirely with MSSG. Slides and transitions are scenes, not SwiftUI views.
+
+- Look: black or dark gradient background, large clean titles (Shape.text), one idea per slide, cinematic camera moves between slides.
+- Content: one slide per feature (scene graph, shapes, Blinn-Phong and PBR materials, lights and shadows, fog and environment, actions, Transaction, constraints, animation blending, morphing and skinning, glTF and Model I/O import, hit testing, SceneView), each showing the feature live.
+- Navigation: next/previous with arrow keys and click, plus auto-advance. Transitions use actions and Transaction (camera fly-throughs, fades once #76 lands).
+- Lives in the demo package with the other demos, runnable from the app and from scenegraph-demos.
+
+Gaps it may hit: text styling (#80), node opacity for fades (#76), post-processing such as bloom (#45).
 
 ---
