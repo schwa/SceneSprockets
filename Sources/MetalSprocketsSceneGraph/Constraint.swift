@@ -5,28 +5,82 @@ extension SceneGraph {
     // Changes a node's transform from other nodes each frame, like SceneKit's SCNConstraint subclasses. Constraints
     // set the node's local TRS, keeping its world scale; run them with `SceneGraph.applyConstraints(pointOfView:)`
     // after animation and actions.
-    public enum Constraint {
+    public struct Constraint {
+        public var kind: Kind
+        // 0 leaves the node as it was, 1 applies the constraint fully; in between blends, like SCNConstraint.
+        public var influenceFactor: Float = 1
+        public var isEnabled = true
+
+        public init(_ kind: Kind, influenceFactor: Float = 1, isEnabled: Bool = true) {
+            self.kind = kind
+            self.influenceFactor = influenceFactor
+            self.isEnabled = isEnabled
+        }
+
+        public static func lookAt(target: Node, worldUp: SIMD3<Float> = [0, 1, 0], localFront: SIMD3<Float> = [0, 0, -1]) -> Self {
+            Self(.lookAt(target: target, worldUp: worldUp, localFront: localFront))
+        }
+
+        public static func billboard(freeAxes: BillboardAxes = .all) -> Self {
+            Self(.billboard(freeAxes: freeAxes))
+        }
+
+        public static func replicator(target: Node, position: Bool = true, orientation: Bool = true, scale: Bool = true, positionOffset: SIMD3<Float> = .zero, orientationOffset: simd_quatf = simd_quatf(ix: 0, iy: 0, iz: 0, r: 1), scaleOffset: SIMD3<Float> = .one) -> Self {
+            Self(.replicator(target: target, position: position, orientation: orientation, scale: scale, positionOffset: positionOffset, orientationOffset: orientationOffset, scaleOffset: scaleOffset))
+        }
+
+        public static func avoidOccluder(target: Node, categoryBitMask: UInt = .max, bias: Float = 0.01) -> Self {
+            Self(.avoidOccluder(target: target, categoryBitMask: categoryBitMask, bias: bias))
+        }
+
+        public static func transform(_ body: @escaping (Node, Transform3D) -> Transform3D) -> Self {
+            Self(.transform(body))
+        }
+
+        public static func distance(target: Node, minimum: Float = 0, maximum: Float = .infinity) -> Self {
+            Self(.distance(target: target, minimum: minimum, maximum: maximum))
+        }
+
+        public static func inverseKinematics(chainRoot: Node, target: Node, iterations: Int = 10, maximumAngle: Float = .pi) -> Self {
+            Self(.inverseKinematics(chainRoot: chainRoot, target: target, iterations: iterations, maximumAngle: maximumAngle))
+        }
+
+        public static func acceleration(maximumLinearAcceleration: Float = 3, maximumLinearVelocity: Float = 10, damping: Float = 0.1) -> Self {
+            Self(.acceleration(maximumLinearAcceleration: maximumLinearAcceleration, maximumLinearVelocity: maximumLinearVelocity, damping: damping))
+        }
+    }
+}
+
+extension SceneGraph.Constraint {
+    public enum Kind {
         // Turns the node so `localFront` points at `target`, keeping `worldUp` up when possible.
-        case lookAt(target: Node, worldUp: SIMD3<Float> = [0, 1, 0], localFront: SIMD3<Float> = [0, 0, -1])
+        case lookAt(target: SceneGraph.Node, worldUp: SIMD3<Float> = [0, 1, 0], localFront: SIMD3<Float> = [0, 0, -1])
         // Turns the node to face the point of view (its +Z towards the camera, matching the camera's orientation).
         // With one axis (for example `.y`, like a tree sprite) the node only turns about that world axis; with two
         // it turns towards the camera without rolling.
-        case billboard(freeAxes: BillboardAxes = .all)
+        case billboard(freeAxes: SceneGraph.BillboardAxes = .all)
         // Copies `target`'s world position, orientation and scale (each optional), with offsets in the target's
         // space, like SCNReplicatorConstraint.
-        case replicator(target: Node, position: Bool = true, orientation: Bool = true, scale: Bool = true, positionOffset: SIMD3<Float> = .zero, orientationOffset: simd_quatf = simd_quatf(ix: 0, iy: 0, iz: 0, r: 1), scaleOffset: SIMD3<Float> = .one)
+        case replicator(target: SceneGraph.Node, position: Bool = true, orientation: Bool = true, scale: Bool = true, positionOffset: SIMD3<Float> = .zero, orientationOffset: simd_quatf = simd_quatf(ix: 0, iy: 0, iz: 0, r: 1), scaleOffset: SIMD3<Float> = .one)
         // Moves the node towards `target` until nothing (in `categoryBitMask`) blocks the line between them, like
         // SCNAvoidOccluderConstraint. Hits on the node's and the target's subtrees are ignored.
-        case avoidOccluder(target: Node, categoryBitMask: UInt = .max, bias: Float = 0.01)
+        case avoidOccluder(target: SceneGraph.Node, categoryBitMask: UInt = .max, bias: Float = 0.01)
         // Returns the node's new world TRS from its current one, like SCNTransformConstraint.
-        case transform((Node, Transform3D) -> Transform3D)
+        case transform((SceneGraph.Node, Transform3D) -> Transform3D)
         // Keeps the node between `minimum` and `maximum` from `target`, moving along the line between them.
-        case distance(target: Node, minimum: Float = 0, maximum: Float = .infinity)
+        case distance(target: SceneGraph.Node, minimum: Float = 0, maximum: Float = .infinity)
         // Turns the node's ancestors, from its parent up to `chainRoot`, so the node reaches towards `target`, like
         // SCNIKConstraint (cyclic coordinate descent). The node itself does not turn. `maximumAngle` (radians) limits
         // each joint's turn per step.
-        case inverseKinematics(chainRoot: Node, target: Node, iterations: Int = 10, maximumAngle: Float = .pi)
+        case inverseKinematics(chainRoot: SceneGraph.Node, target: SceneGraph.Node, iterations: Int = 10, maximumAngle: Float = .pi)
+        // Smooths the node's world position: it follows where the earlier constraints and animation put it, but
+        // speeds up by at most `maximumLinearAcceleration` (m/s per second) and moves at most
+        // `maximumLinearVelocity` (m/s), like SCNAccelerationConstraint. `damping` (0...1) slows it each second.
+        case acceleration(maximumLinearAcceleration: Float = 3, maximumLinearVelocity: Float = 10, damping: Float = 0.1)
     }
+}
+
+extension SceneGraph {
 
     public struct BillboardAxes: OptionSet, Sendable {
         public let rawValue: Int
@@ -42,8 +96,8 @@ extension SceneGraph {
     }
 
     // Applies every node's constraints, parents before children. `pointOfView` is the camera's world transform,
-    // used by billboards.
-    public func applyConstraints(pointOfView: simd_float4x4) {
+    // used by billboards. `deltaTime` (seconds since the last call) drives acceleration constraints.
+    public func applyConstraints(pointOfView: simd_float4x4, deltaTime: Float = 0) {
         var constrained: [Node] = []
         visit(includeHidden: true) { node, _ in
             if !node.constraints.isEmpty {
@@ -51,23 +105,33 @@ extension SceneGraph {
             }
         }
         for node in constrained {
-            for constraint in node.constraints {
-                node.apply(constraint, pointOfView: pointOfView, sceneGraph: self)
+            for (index, constraint) in node.constraints.enumerated() where constraint.isEnabled {
+                node.apply(constraint, index: index, pointOfView: pointOfView, deltaTime: deltaTime, sceneGraph: self)
             }
         }
     }
 }
 
+struct AccelerationState {
+    var position: SIMD3<Float>
+    var velocity: SIMD3<Float>
+}
+
 extension SceneGraph.Node {
-    func apply(_ constraint: SceneGraph.Constraint, pointOfView: simd_float4x4, sceneGraph: SceneGraph? = nil) {
-        if case let .inverseKinematics(chainRoot, target, iterations, maximumAngle) = constraint {
-            solveInverseKinematics(chainRoot: chainRoot, target: target.worldTransform.columns.3.xyz, iterations: iterations, maximumAngle: maximumAngle)
+    func apply(_ constraint: SceneGraph.Constraint, index: Int, pointOfView: simd_float4x4, deltaTime: Float, sceneGraph: SceneGraph? = nil) {
+        let influence = min(max(constraint.influenceFactor, 0), 1)
+        guard influence > 0 else {
+            return
+        }
+        if case let .inverseKinematics(chainRoot, target, iterations, maximumAngle) = constraint.kind {
+            // Influence scales how far each joint may turn per step.
+            solveInverseKinematics(chainRoot: chainRoot, target: target.worldTransform.columns.3.xyz, iterations: iterations, maximumAngle: maximumAngle * influence)
             return
         }
         let parentWorld = parent?.worldTransform ?? matrix_identity_float4x4
         let world = Transform3D(decomposing: parentWorld * transform)
         var desired = world
-        switch constraint {
+        switch constraint.kind {
         case let .lookAt(target, worldUp, localFront):
             let targetPosition = target.worldTransform.columns.3.xyz
             guard let rotation = lookRotation(from: world.translation, to: targetPosition, worldUp: worldUp, localFront: localFront) else {
@@ -140,8 +204,37 @@ extension SceneGraph.Node {
             desired.translation = targetPosition + offset / length * clamped
         case .inverseKinematics:
             return
+        case let .acceleration(maximumLinearAcceleration, maximumLinearVelocity, damping):
+            desired.translation = accelerate(towards: world.translation, index: index, deltaTime: deltaTime, maximumLinearAcceleration: maximumLinearAcceleration, maximumLinearVelocity: maximumLinearVelocity, damping: damping)
+        }
+        if influence < 1 {
+            desired.translation = simd_mix(world.translation, desired.translation, SIMD3(repeating: influence))
+            desired.rotation = simd_slerp(world.rotation, desired.rotation, influence)
+            desired.scale = simd_mix(world.scale, desired.scale, SIMD3(repeating: influence))
         }
         trs = Transform3D(decomposing: parentWorld.inverse * desired.matrix)
+    }
+
+    // Moves the node's smoothed position towards `goal`, keeping velocity per constraint between frames.
+    private func accelerate(towards goal: SIMD3<Float>, index: Int, deltaTime: Float, maximumLinearAcceleration: Float, maximumLinearVelocity: Float, damping: Float) -> SIMD3<Float> {
+        guard var state = accelerationStates[index], deltaTime > 0 else {
+            accelerationStates[index] = AccelerationState(position: goal, velocity: .zero)
+            return goal
+        }
+        let wanted = (goal - state.position) / deltaTime
+        var change = wanted - state.velocity
+        let maximumChange = maximumLinearAcceleration * deltaTime
+        if simd_length(change) > maximumChange {
+            change = simd_normalize(change) * maximumChange
+        }
+        state.velocity += change
+        state.velocity *= max(1 - damping * deltaTime, 0)
+        if simd_length(state.velocity) > maximumLinearVelocity {
+            state.velocity = simd_normalize(state.velocity) * maximumLinearVelocity
+        }
+        state.position += state.velocity * deltaTime
+        accelerationStates[index] = state
+        return state.position
     }
 
     // Cyclic coordinate descent: each joint, nearest first, turns so the line from it to this node points at the

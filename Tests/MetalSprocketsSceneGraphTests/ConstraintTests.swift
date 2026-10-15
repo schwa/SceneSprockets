@@ -145,3 +145,46 @@ func inverseKinematicsReachesTarget() {
     let stretched = hand.worldTransform.columns.3.xyz
     #expect(simd_distance(stretched, [0, 2, 0]) < 0.01)
 }
+
+// #91: influenceFactor blends between the unconstrained and constrained transform; disabled constraints do nothing.
+@Test
+func constraintInfluenceAndEnabled() {
+    let root = SceneGraph.Node()
+    let target = SceneGraph.Node(parent: root, trs: .init(translation: [4, 0, 0]))
+    let node = SceneGraph.Node(parent: root)
+    var constraint = SceneGraph.Constraint.replicator(target: target, orientation: false, scale: false)
+    constraint.influenceFactor = 0.25
+    node.constraints = [constraint]
+    let graph = SceneGraph(root: root)
+    graph.applyConstraints(pointOfView: matrix_identity_float4x4)
+    #expect(simd_distance(node.trs.translation, [1, 0, 0]) < 1e-5)
+
+    node.trs.translation = .zero
+    node.constraints[0].isEnabled = false
+    graph.applyConstraints(pointOfView: matrix_identity_float4x4)
+    #expect(node.trs.translation == .zero)
+}
+
+// #91: acceleration limits how fast the node's position can change.
+@Test
+func accelerationConstraintLimitsSpeed() {
+    let root = SceneGraph.Node()
+    let node = SceneGraph.Node(parent: root)
+    node.constraints = [.acceleration(maximumLinearAcceleration: 2, maximumLinearVelocity: 1, damping: 0)]
+    let graph = SceneGraph(root: root)
+    graph.applyConstraints(pointOfView: matrix_identity_float4x4, deltaTime: 0.1)
+    // The node jumps to x = 10; from rest it may only speed up by 2 m/s each second.
+    node.trs.translation = [10, 0, 0]
+    graph.applyConstraints(pointOfView: matrix_identity_float4x4, deltaTime: 0.1)
+    #expect(abs(node.trs.translation.x - 0.02) < 1e-4)
+    for _ in 0..<100 {
+        node.trs.translation = [10, 0, 0]
+        graph.applyConstraints(pointOfView: matrix_identity_float4x4, deltaTime: 0.1)
+    }
+    // Never faster than 1 m/s: at most 10 seconds' travel.
+    #expect(node.trs.translation.x <= 10.0001)
+    let before = node.trs.translation.x
+    node.trs.translation = [10, 0, 0]
+    graph.applyConstraints(pointOfView: matrix_identity_float4x4, deltaTime: 0.1)
+    #expect(node.trs.translation.x - before <= 0.1 + 1e-4)
+}

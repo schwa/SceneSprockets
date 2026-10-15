@@ -34,7 +34,7 @@ public enum DemoSnapshot {
             scene.update(time: Float(frame) * deltaTime, deltaTime: deltaTime)
             scene.sceneGraph.advanceActions(by: deltaTime)
             scene.sceneGraph.advanceParticles(by: deltaTime)
-            scene.sceneGraph.applyConstraints(pointOfView: scene.initialCameraMatrix)
+            scene.sceneGraph.applyConstraints(pointOfView: scene.initialCameraMatrix, deltaTime: deltaTime)
         }
         let renderer = try OffscreenRenderer(size: CGSize(width: width, height: height), colorUsage: SceneGraphShadows.requiredColorUsage, depthUsage: SceneGraphShadows.requiredDepthUsage)
         let element = SceneGraphElement(sceneGraph: scene.sceneGraph, cameraMatrix: scene.initialCameraMatrix, aspectRatio: Float(width) / Float(height), renderers: scene.renderers, shadows: scene.shadows)

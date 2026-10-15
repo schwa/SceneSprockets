@@ -107,7 +107,7 @@ public struct SceneView: View {
             let _ = sceneGraph.advanceActions(by: deltaTime)
             let _ = sceneGraph.advanceParticles(by: deltaTime)
             let _ = delegate?.sceneView(didApplyActionsAtTime: time)
-            let _ = sceneGraph.applyConstraints(pointOfView: currentCameraMatrix)
+            let _ = sceneGraph.applyConstraints(pointOfView: currentCameraMatrix, deltaTime: deltaTime)
             let _ = delegate?.sceneView(didApplyConstraintsAtTime: time)
             // The listener is the camera. Audio failures leave the frame drawing.
             let _ = try? audio?.update(sceneGraph: sceneGraph, listener: currentCameraMatrix)

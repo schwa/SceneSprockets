@@ -1817,12 +1817,13 @@ Missing SCNAction features: reversed(), per-action and per-node speed, wait(dura
 ## 91: Constraint gaps: acceleration, slider, influence factor, enabled flag
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: effort:m, area:scenegraph
 created: 2026-10-15T02:28:08Z
-updated: 2026-10-15T03:17:39Z
+updated: 2026-10-15T23:42:34Z
+closed: 2026-10-15T23:42:34Z
 +++
 
 Missing: SCNReplicatorConstraint, SCNAccelerationConstraint, SCNSliderConstraint, SCNAvoidOccluderConstraint and SCNTransformConstraint; influenceFactor, isEnabled and isIncremental; and billboard with any set of free axes (today only .all or .y). IK is #57. See docs/SceneKitComparison.md.
@@ -1831,6 +1832,7 @@ Missing: SCNReplicatorConstraint, SCNAccelerationConstraint, SCNSliderConstraint
 - `2026-10-15T03:17:39Z`: Done: replicator, avoidOccluder, transform constraints, and billboard with any set of free axes. Left: acceleration (needs frame time passed to applyConstraints and per-node state), slider (needs physics, #38), and influenceFactor/isEnabled/isIncremental (Constraint is an enum; these need a wrapper type, which is an API decision).
 - `2026-10-15T21:33:11Z`: Reviewed what is left (acceleration, slider, influenceFactor/isEnabled/isIncremental). Punting: each changes public API. influenceFactor/isEnabled/isIncremental need Constraint to become a wrapper (e.g. struct Constraint { kind; influence; isEnabled; isIncremental }) or new enum cases; acceleration needs applyConstraints(pointOfView:deltaTime:) plus per-node velocity state; slider can now use physics (#38 closed) but needs a collision query API from the physics module. Unblocker: OK to (1) turn Constraint into a struct wrapping today's enum as 'kind', with influence/isEnabled/isIncremental fields, and (2) add deltaTime to applyConstraints?
 - `2026-10-15T21:58:16Z`: No API consumers: public API can change freely. Go ahead with a Constraint wrapper struct and a deltaTime argument on applyConstraints; no unblocker needed.
+- `2026-10-15T23:42:34Z`: Done: Constraint is now a struct (kind, influenceFactor, isEnabled) with static factories per kind; new acceleration kind; applyConstraints(pointOfView:deltaTime:). Slider and isIncremental split to a new issue.
 
 ---
 
@@ -2486,7 +2488,7 @@ Blocked on MetalSprocketsGLTF#176 (per-variant materials are not public).
 status: new
 priority: low
 kind: feature
-labels: area:scenegraph,effort:m
+labels: area:scenegraph, effort:m
 created: 2026-10-15T23:42:34Z
 +++
 

@@ -122,8 +122,12 @@ extension SceneGraph {
         public var levelsOfDetail: [LevelOfDetail] = [] {
             didSet { bump(structure: true) }
         }
-        // Applied in order by SceneGraph.applyConstraints(pointOfView:).
-        public var constraints: [Constraint] = []
+        // Applied in order by SceneGraph.applyConstraints(pointOfView:deltaTime:).
+        public var constraints: [Constraint] = [] {
+            didSet { accelerationStates = [:] }
+        }
+        // Smoothed position and velocity of each acceleration constraint, by index in `constraints`.
+        var accelerationStates: [Int: AccelerationState] = [:]
         // Matched against camera, light and hit-test masks, like SCNNode.categoryBitMask. Not inherited by children.
         public var categoryBitMask: UInt = 1 {
             didSet { bump(structure: true) }
