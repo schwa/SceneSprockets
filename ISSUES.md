@@ -2408,12 +2408,13 @@ Unknown whether it is tied to the slide transition, the sphere mesh, or the mate
 ## 121: glTF loader ignores image-based light, transmission and variant names
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:assets, effort:m
 created: 2026-10-15T22:00:46Z
-updated: 2026-10-15T23:37:01Z
+updated: 2026-10-15T23:39:37Z
+closed: 2026-10-15T23:39:37Z
 +++
 
 GLTFAsset.makeSceneGraph(device:) drops parts of the asset that MetalSprocketsGLTF already exposes:
@@ -2421,6 +2422,8 @@ GLTFAsset.makeSceneGraph(device:) drops parts of the asset that MetalSprocketsGL
 - EXT_lights_image_based: GLTFAsset.environment() is public, but sceneGraph.environment is never set from it.
 - Transmission: GLTFAsset.hasTransmission is true for glass assets, but the scene graph has no pass that renders the scene behind transmissive surfaces, so glass shows only the environment map.
 - KHR_materials_variants: variantNames is not copied into GLTFSceneGraph, and a loaded scene graph cannot switch variants (needs MetalSprocketsGLTF to expose per-variant materials).
+
+- `2026-10-15T23:39:37Z`: Done: the scene's EXT_lights_image_based light sets sceneGraph.environment.map; variantNames is on GLTFSceneGraph. Split off: transmission scene pass and runtime variant switching (new issues).
 
 ---
 
@@ -2467,7 +2470,7 @@ Actual: glass shows only the environment map.
 status: new
 priority: low
 kind: enhancement
-labels: area:assets,effort:s,blocked
+labels: area:assets, effort:s, blocked
 created: 2026-10-15T23:39:37Z
 +++
 

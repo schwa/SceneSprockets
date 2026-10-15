@@ -14,6 +14,8 @@ public struct GLTFSceneGraph {
     public var animations: [SceneGraph.AnimationClip]
     // Indexed like the glTF document's nodes; nil for nodes outside the loaded scene.
     public var nodes: [SceneGraph.Node?]
+    // KHR_materials_variants names. The scene graph shows the variant the asset was loaded with.
+    public var variantNames: [String]
     public var warnings: [String]
 }
 
@@ -208,7 +210,16 @@ private struct GLTFSceneGraphBuilder {
             warnings.append("\(skippedChannels) animation channels skipped: unsupported pointers (such as camera xmag/aspectRatio) or missing targets")
         }
 
-        return GLTFSceneGraph(sceneGraph: SceneGraph(root: root), animations: animations, nodes: nodes, warnings: asset.warnings + warnings)
+        let sceneGraph = SceneGraph(root: root)
+        // EXT_lights_image_based: the scene's light lights the scene; the background stays as it is.
+        do {
+            if let environment = try asset.environment() {
+                sceneGraph.environment.map = environment
+            }
+        } catch {
+            warnings.append("Image-based light skipped: \(error)")
+        }
+        return GLTFSceneGraph(sceneGraph: sceneGraph, animations: animations, nodes: nodes, variantNames: asset.variantNames, warnings: asset.warnings + warnings)
     }
 
     // The asset resolves each primitive's material (including variants); instances carry the result.

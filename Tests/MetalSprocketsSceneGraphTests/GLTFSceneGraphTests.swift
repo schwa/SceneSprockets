@@ -1,9 +1,13 @@
+import CoreGraphics
 import Foundation
 import GeometryLite3D
+import ImageIO
 import Metal
 import MetalSprocketsGLTF
+import MetalSprocketsPBR
 import simd
 import Testing
+import UniformTypeIdentifiers
 @testable import MetalSprocketsSceneGraph
 
 // Mesh node 0 (x = 10) has two triangle primitives with different materials, skinned to joint node 1 (x = 3), which
@@ -317,4 +321,47 @@ func gltfMorphTargetNamesAreRead() throws {
     node.setMorphWeight(1, forTargetNamed: "Smile")
     #expect(node.morphWeights == [1])
     #expect(node.morphWeight(forTargetNamed: "Frown") == nil)
+}
+
+// A 4 x 4 PNG of one opaque gray.
+private func grayPNG() throws -> Data {
+    let pixels = [UInt8](repeating: 128, count: 64)
+    let provider = try #require(CGDataProvider(data: Data(pixels) as CFData))
+    let image = try #require(CGImage(width: 4, height: 4, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: 16, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue), provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent))
+    let data = NSMutableData()
+    let destination = try #require(CGImageDestinationCreateWithData(data, UTType.png.identifier as CFString, 1, nil))
+    CGImageDestinationAddImage(destination, image, nil)
+    #expect(CGImageDestinationFinalize(destination))
+    return data as Data
+}
+
+// #121: the scene's EXT_lights_image_based light becomes the scene environment; variant names are kept.
+@Test
+func gltfImageBasedLightAndVariantNamesAreMapped() throws {
+    let face = try grayPNG().base64EncodedString()
+    let images = Array(repeating: #"{"uri": "data:image/png;base64,\#(face)"}"#, count: 6).joined(separator: ", ")
+    let coefficients = Array(repeating: "[0, 0, 0]", count: 9).joined(separator: ", ")
+    let buffer = [Float](arrayLiteral: -1, -1, 0, 1, -1, 0, 0, 1, 0).withUnsafeBytes { Data($0) }.base64EncodedString()
+    let json = """
+    {
+      "asset": {"version": "2.0"},
+      "extensionsUsed": ["EXT_lights_image_based", "KHR_materials_variants"],
+      "extensions": {
+        "EXT_lights_image_based": {"lights": [{"intensity": 1, "irradianceCoefficients": [\(coefficients)], "specularImageSize": 4, "specularImages": [[0, 1, 2, 3, 4, 5]]}]},
+        "KHR_materials_variants": {"variants": [{"name": "Red"}, {"name": "Blue"}]}
+      },
+      "scene": 0, "scenes": [{"nodes": [0], "extensions": {"EXT_lights_image_based": {"light": 0}}}], "nodes": [{"mesh": 0}],
+      "meshes": [{"primitives": [{"attributes": {"POSITION": 0}}]}],
+      "images": [\(images)],
+      "accessors": [{"bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3", "min": [-1, -1, 0], "max": [1, 1, 0]}],
+      "bufferViews": [{"buffer": 0, "byteLength": 36}],
+      "buffers": [{"byteLength": 36, "uri": "data:application/octet-stream;base64,\(buffer)"}]
+    }
+    """
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
+    try Data(json.utf8).write(to: url)
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let result = try GLTFAsset(url: url, device: device).makeSceneGraph(device: device)
+    #expect(result.sceneGraph.environment.map is PBREnvironment)
+    #expect(result.variantNames == ["Red", "Blue"])
 }
