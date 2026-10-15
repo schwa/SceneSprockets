@@ -25,7 +25,7 @@ Legend:
 | Implicit animation | 🟡 | Transform and morph weights only |
 | Constraints | 🟡 | Look-at, billboard and distance; no IK (#57), no replicator, acceleration, slider, avoid-occluder or transform constraints |
 | Morphing and skinning | ✅ | Four influences per vertex; CPU fallback for Blinn-Phong |
-| Hit testing | 🟡 | Ray against triangles only; no options (back-face, bounding-box-only, first-only) |
+| Hit testing | ✅ | Triangles or bounding boxes, rays or segments, with SceneKit-style options |
 | Physics | ❌ | Demo-only Jolt integration (#38) |
 | Particles | ❌ | #50 |
 | Audio | ❌ | #51 |
@@ -269,9 +269,9 @@ SceneKit animates with `CAAnimation`/`SCNAnimation` and `SCNAnimationPlayer`, ke
 | SceneKit | MSSG | Status | Notes |
 |---|---|---|---|
 | `SCNSceneRenderer.hitTest(_:options:)` (screen point) | `SceneGraph.Ray(viewPoint:viewSize:cameraMatrix:projectionMatrix:)` + `hitTest`; `SceneView(onTap:)` | ✅ | `onTap` gets the nearest hit, limited to the camera's mask and `hitTestCategoryBitMask`. |
-| `SCNNode.hitTestWithSegment(from:to:options:)` | `SceneGraph.hitTest(_ ray:categoryBitMask:)` | 🟡 | A ray (infinite), not a segment, and on the whole graph, not one subtree. |
-| `SCNHitTestResult` (node, geometryIndex, faceIndex, localCoordinates, worldCoordinates, localNormal, worldNormal, `textureCoordinates(withMappingChannel:)`) | `Hit` (node, submeshIndex, triangleIndex, distance, position, normal) | 🟡 | World position and face normal only. No local coordinates, no texture coordinates, no barycentrics. |
-| Options: `boundingBoxOnly`, `backFaceCulling`, `firstFoundOnly`, `sortResults`, `ignoreHiddenNodes`, `searchMode`, `categoryBitMask` | `categoryBitMask` | 🟡 | Always both faces, always every hit sorted nearest first, always skips hidden nodes. |
+| `SCNNode.hitTestWithSegment(from:to:options:)` | `SceneGraph.hitTest(segmentFrom:to:options:)` with `options.rootNode` | ✅ | |
+| `SCNHitTestResult` (node, geometryIndex, faceIndex, localCoordinates, worldCoordinates, localNormal, worldNormal, `textureCoordinates(withMappingChannel:)`) | `Hit` | ✅ | Plus `localPosition`, `barycentric`, `vertexIndices` and `textureCoordinates(index:)`. No local normal. |
+| Options: `boundingBoxOnly`, `backFaceCulling`, `firstFoundOnly`, `sortResults`, `ignoreHiddenNodes`, `searchMode`, `categoryBitMask` | `HitTestOptions`: `categoryBitMask`, `backFaceCulling`, `boundingBoxOnly`, `firstFoundOnly`, `maximumDistance`, `rootNode` | 🟡 | Results are always sorted and hidden nodes always skipped. |
 | Deformed geometry | Uses CPU-deformed geometry for skinned and morphed meshes | ✅ | |
 | `projectPoint`, `unprojectPoint` | `SceneGraph.projectPoint`, `SceneGraph.unprojectPoint` | ✅ | Static: pass view size, camera and projection matrices. |
 | `nodesInsideFrustum(of:)`, `isNode(_:insideFrustumOf:)` | `nodesInsideFrustum(cameraMatrix:projectionMatrix:)`, `isNode(_:insideFrustumWithCameraMatrix:projectionMatrix:)` | ✅ | Conservative bounding-box test. |

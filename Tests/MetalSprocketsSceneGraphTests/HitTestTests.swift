@@ -81,3 +81,60 @@ func viewPointRayGoesThroughCenter() {
     #expect(abs(acos(simd_dot(top.direction, [0, 0, -1])) - fov / 2) < 1e-3)
     #expect(top.direction.y > 0)
 }
+
+// #93
+private func twoBoxes() throws -> (SceneGraph, near: SceneGraph.Node, far: SceneGraph.Node) {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let box = MetalMesh(mesh: .box(), device: device)
+    let root = SceneGraph.Node()
+    let near = SceneGraph.Node(parent: root, label: "near", trs: .init(translation: [0, 0, -5]), content: .mesh(box, material: material()))
+    let far = SceneGraph.Node(parent: root, label: "far", trs: .init(translation: [0, 0, -10]), content: .mesh(box, material: material()))
+    return (SceneGraph(root: root), near, far)
+}
+
+@Test
+func hitTestOptionsCullBackFacesAndStopEarly() throws {
+    let (sceneGraph, near, _) = try twoBoxes()
+    // Off center, so the ray does not run along the faces' diagonals.
+    let ray = SceneGraph.Ray(origin: [0.1, 0.2, 0], direction: [0, 0, -1])
+    // Each box has a front and a back face on the ray.
+    #expect(sceneGraph.hitTest(ray).count == 4)
+    #expect(sceneGraph.hitTest(ray, options: .init(backFaceCulling: true)).count == 2)
+    #expect(sceneGraph.hitTest(ray, options: .init(firstFoundOnly: true)).count == 1)
+    let subtree = sceneGraph.hitTest(ray, options: .init(rootNode: near))
+    #expect(subtree.count == 2 && subtree.allSatisfy { $0.node === near })
+}
+
+@Test
+func segmentHitTestStopsAtItsEnd() throws {
+    let (sceneGraph, near, _) = try twoBoxes()
+    let hits = sceneGraph.hitTest(segmentFrom: [0.1, 0.2, 0], to: [0.1, 0.2, -7])
+    #expect(hits.count == 2 && hits.allSatisfy { $0.node === near })
+}
+
+@Test
+func boundingBoxHitsReportEntryFace() throws {
+    let (sceneGraph, near, _) = try twoBoxes()
+    let hits = sceneGraph.hitTest(SceneGraph.Ray(origin: .zero, direction: [0, 0, -1]), options: .init(boundingBoxOnly: true))
+    #expect(hits.count == 2)
+    let first = try #require(hits.first)
+    #expect(first.node === near)
+    #expect(first.triangleIndex == -1)
+    #expect(simd_distance(first.normal, [0, 0, 1]) < 1e-4)
+    #expect(abs(first.position.z - (-5 + near.meshBounds!.max.z)) < 1e-4)
+}
+
+@Test
+func hitsReportBarycentricsAndTextureCoordinates() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    // A 2x2 quad in XY: texture coordinates follow x and y.
+    let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh(device: device)
+    let node = SceneGraph.Node(content: .mesh(quad, material: material()))
+    let hit = try #require(SceneGraph(root: node).hitTest(SceneGraph.Ray(origin: [0.5, 0.5, 5], direction: [0, 0, -1])).first)
+    #expect(abs(hit.barycentric.sum() - 1) < 1e-5)
+    #expect(simd_distance(hit.localPosition, [0.5, 0.5, 0]) < 1e-4)
+    let uv = try #require(hit.textureCoordinates())
+    // Center is (0.5, 0.5); a quarter of the way right and up.
+    #expect(abs(uv.x - 0.75) < 1e-3)
+    #expect(abs(uv.y - 0.25) < 1e-3 || abs(uv.y - 0.75) < 1e-3)
+}

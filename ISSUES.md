@@ -1803,12 +1803,13 @@ SCNMorpher can set weights by target name and has a normalized calculation mode.
 ## 93: Hit-test gaps: options, segment and subtree tests, richer results
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: effort:m, area:scenegraph
 created: 2026-10-15T02:28:08Z
-updated: 2026-10-15T02:31:15Z
+updated: 2026-10-15T03:03:32Z
+closed: 2026-10-15T03:03:32Z
 +++
 
 SceneGraph.hitTest always tests both faces, returns every hit, and runs on the whole graph with an infinite ray. Missing: SceneKit options (backFaceCulling, boundingBoxOnly, firstFoundOnly), segment tests, tests on one subtree, and local coordinates, barycentrics and texture coordinates in Hit. See docs/SceneKitComparison.md.
