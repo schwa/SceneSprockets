@@ -2479,3 +2479,20 @@ GLTFSceneGraph keeps variantNames, but the scene graph always shows the variant 
 Blocked on MetalSprocketsGLTF#176 (per-variant materials are not public).
 
 ---
+
+## 125: Constraints: no slider constraint and no isIncremental
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:scenegraph,effort:m
+created: 2026-10-15T23:42:34Z
++++
+
+SceneGraph.Constraint now has influenceFactor, isEnabled and an acceleration kind (#91), but still lacks:
+
+- A slider constraint (SCNSliderConstraint): keeps a node from moving into physics bodies in a category, sliding along them. Needs a sphere-cast or overlap query from MetalSprocketsSceneGraphPhysics; the core module cannot see physics.
+- isIncremental (SCNConstraint.isIncremental). Influence blends from the node's transform at the time the constraint runs, which carries the previous frame's result unless animation resets it. There is no switch for blending from the unconstrained transform instead.
+
+---
