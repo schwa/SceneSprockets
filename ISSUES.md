@@ -2292,11 +2292,13 @@ The keynote demo (#98, KeynoteDemo.swift) has slides for the scene graph, shapes
 ## 116: Demos are listed twice: DemoCatalog.demos and SceneGraphDemos.all
 
 +++
-status: new
+status: closed
 priority: medium
 kind: task
 labels: area:demo, effort:s
 created: 2026-10-15T21:07:57Z
+updated: 2026-10-15T22:09:35Z
+closed: 2026-10-15T22:09:35Z
 +++
 
 Each demo must be added in two places: DemoCatalog.demos (used by the CLI, DemoSnapshot and tests) and SceneGraphDemos.all in DemoKitDemos.swift (the app's picker), which also needs a hand-written DemoView wrapper type per demo. The keynote demo (#98) was added only to DemoCatalog and did not appear in the app. everyCatalogDemoIsInTheApp now catches a mismatch, but the duplication remains. Want one list: for example a single generic DemoView wrapper parameterised by catalog id, if DemoKit can take instances or a closure instead of one type per demo.

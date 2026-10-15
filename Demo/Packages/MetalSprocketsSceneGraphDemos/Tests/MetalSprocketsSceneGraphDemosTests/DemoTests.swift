@@ -154,14 +154,12 @@ func bumpNormalMapPointsUpOnTop() throws {
     #expect(green(row: 24) < 96)
 }
 
-// Every catalog demo must also be in the app's picker list, which needs its own wrapper type.
+// The catalog and the app's picker come from one list (#116); ids must still be unique.
 @Test
 @MainActor
-func everyCatalogDemoIsInTheApp() {
-    let appNames = Set(SceneGraphDemos.all.map { $0.metadata.name })
-    for demo in DemoCatalog.demos {
-        #expect(appNames.contains(demo.title), "\(demo.id) is not in SceneGraphDemos.all")
-    }
+func catalogMatchesAppAndIDsAreUnique() {
+    #expect(SceneGraphDemos.all.map { $0.metadata.id.rawValue } == DemoCatalog.demos.map(\.id))
+    #expect(Set(DemoCatalog.demos.map(\.id)).count == DemoCatalog.demos.count)
 }
 
 @Test
