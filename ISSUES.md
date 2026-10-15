@@ -1421,7 +1421,7 @@ priority: high
 kind: bug
 labels: area:renderer, effort:m
 created: 2026-10-14T15:36:23Z
-updated: 2026-10-14T15:48:45Z
+updated: 2026-10-15T02:44:10Z
 +++
 
 Reported: shadows have been badly broken in the demos since the demo consolidation. Exact symptoms not yet recorded (wrong place, missing, all dark, flickering?) and which demos (SceneKit Features, Imported Assets).
@@ -1435,6 +1435,7 @@ Next: get a screenshot or description, then render SceneKit Features offscreen w
 
 - `2026-10-14T15:42:08Z`: needs-info: what the broken shadows look like (wrong place, missing, all dark, flicker?) and in which demos. Related: #67, #68.
 - `2026-10-14T15:48:46Z`: Symptoms (SceneKit Features, screenshot 2026-10-14 11.46.47): (1) acne/z-fighting-like shadow pattern on the extruded text (see #60); (2) a giant dark, flickering wedge over the front of the floor, shaped like a light frustum. Probably a spot or point-light shadow view from #58 treating a large area as shadowed. Also only ~31 FPS with all 8 shadow views. Workaround: shadows toggle in the demo, default off.
+- `2026-10-15T02:44:10Z`: Investigated offscreen (DemoSnapshot with Shadows on, each light alone, diffed against shadows off). Cause: the screen-space shadow mask multiplies every light's shadow factor and darkens the pixel, whatever light actually lights it. So (1) surfaces facing away from the red point light or the spotlight are 'self-shadowed' in those lights' maps and get darkened even where the sun lights them (all shapes go dark), (2) the red light only lights category 2 but its shadows darken everything, giving the large wedge-shaped dark areas on the floor. The geometry of each light's shadow alone looks right. Punting: a real fix needs per-light shadow factors inside the lighting shaders (MetalSprocketsAddOns Blinn-Phong and MetalSprocketsPBR), or a design call such as SceneKit-style per-light castsShadow (SceneKit defaults it to false) so only chosen lights cast. Which do you want?
 
 ---
 
@@ -1904,5 +1905,20 @@ A demo that presents MSSG like an Apple WWDC keynote, built entirely with MSSG. 
 - Lives in the demo package with the other demos, runnable from the app and from scenegraph-demos.
 
 Gaps it may hit: text styling (#80), node opacity for fades (#76), post-processing such as bloom (#45).
+
+---
+
+## 99: Blinn-Phong crashes when no light reaches a batch
+
++++
+status: closed
+priority: high
+kind: bug
+labels: area:renderer, effort:xs
+created: 2026-10-15T02:44:10Z
+closed: 2026-10-15T02:44:10Z
++++
+
+When light category masks leave a Blinn-Phong batch with no lights (for example only a light with lightCategoryBitMask 0b10 and a mesh in category 1), BlinnPhongMaterialRenderer passes an empty array to Lighting, which asserts (MetalSprocketsAddOns Lighting.swift:62). Seen while rendering SceneKit Features with only the red light visible.
 
 ---

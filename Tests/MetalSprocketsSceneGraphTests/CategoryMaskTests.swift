@@ -34,6 +34,21 @@ func cameraMaskHidesNodes() throws {
     #expect(value.x < 3 && value.y < 3 && value.z < 3)
 }
 
+// Regression for #99: a Blinn-Phong batch that no light reaches hit an assertion in Lighting.
+@Test
+@MainActor
+func blinnPhongDrawsMeshesNoLightReaches() throws {
+    let (sceneGraph, _) = try scene()
+    let light = SceneGraph.Node(parent: sceneGraph.root, content: .light(Light(type: .directional, color: [1, 1, 1], intensity: 1)))
+    light.lightCategoryBitMask = 0b10
+    let renderer = try OffscreenRenderer(size: CGSize(width: 32, height: 32))
+    let texture = try renderer.render(SceneGraphElement(sceneGraph: sceneGraph, aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [1, 1, 1])])).texture
+    var value = SIMD4<UInt8>.zero
+    texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(16, 16, 1, 1), mipmapLevel: 0)
+    // Ambient only.
+    #expect(value.x > 20)
+}
+
 @Test
 func hitTestRespectsMask() throws {
     let (sceneGraph, box) = try scene()

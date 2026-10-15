@@ -20,7 +20,9 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer {
     }
 
     public func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement {
-        let lighting = try Lighting(ambientLightColor: ambientLightColor, orientedLights: blinnPhongLights(context.lights))
+        // Lighting needs at least one light; a black one leaves only the ambient term.
+        let lights = context.lights.isEmpty ? [(worldTransform: matrix_identity_float4x4, light: Light(type: .directional, color: .zero, intensity: 0))] : context.lights
+        let lighting = try Lighting(ambientLightColor: ambientLightColor, orientedLights: blinnPhongLights(lights))
         let viewProjection = context.projectionMatrix * context.viewMatrix
         let cameraPosition = SIMD3(context.cameraMatrix.columns.3.x, context.cameraMatrix.columns.3.y, context.cameraMatrix.columns.3.z)
         // The shader has no morph or skin inputs, so those meshes are deformed on the CPU. They skip culling because

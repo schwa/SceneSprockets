@@ -23,11 +23,13 @@ public enum DemoSnapshot {
     }
 
     @MainActor
-    public static func render(demoID: String, width: Int = 1280, height: Int = 800, frames: Int = 60) throws -> CGImage {
+    public static func render(demoID: String, width: Int = 1280, height: Int = 800, frames: Int = 60, values: [String: Float] = [:], configure: (DemoScene) -> Void = { _ in }) throws -> CGImage {
         guard let demo = DemoCatalog.demos.first(where: { $0.id == demoID }) else {
             throw Failure.unknownDemo(demoID)
         }
         let scene = demo.make()
+        scene.values.merge(values) { $1 }
+        configure(scene)
         let deltaTime: Float = 1 / 60
         for frame in 0..<frames {
             scene.update(time: Float(frame) * deltaTime, deltaTime: deltaTime)
