@@ -44,9 +44,10 @@ extension SceneGraph {
             didSet { bump(structure: true) }
         }
         // 0 is invisible, 1 opaque; multiplies with the ancestors' opacity, like SCNNode.opacity. Applied by materials
-        // with appliesNodeOpacity (Blinn-Phong, ShaderMaterial).
+        // with appliesNodeOpacity (Blinn-Phong, ShaderMaterial, PBR). Bumps the transform revision, not the structure
+        // one, so fading does not rebuild renderer caches.
         public var opacity: Float = 1 {
-            didSet { bump(structure: true) }
+            didSet { bump(structure: false) }
         }
 
         // Simulated by MetalSprocketsSceneGraphPhysics when set.

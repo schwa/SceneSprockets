@@ -2138,17 +2138,19 @@ HitTest.swift has SceneGraph.Ray and private Möller–Trumbore, slab and box-en
 ## 108: PBR meshes ignore node opacity
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: area:renderer, effort:m
 created: 2026-10-15T19:51:39Z
-updated: 2026-10-15T20:12:55Z
+updated: 2026-10-15T20:18:13Z
+closed: 2026-10-15T20:18:13Z
 +++
 
 Node.opacity (#76) fades Blinn-Phong and ShaderMaterial meshes, but PBRSceneMaterial has appliesNodeOpacity false, so PBR meshes stay opaque during fades. PBRMaterial is a class with a resource buffer built once, and PBRModel draws blended materials in different passes, so applying opacity means a per-node material copy with a scaled baseColorFactor alpha and alphaMode blend, and a model rebuild when an entry crosses opacity 1. A per-instance opacity input in MetalSprocketsPBR would avoid both.
 
 - `2026-10-15T20:12:56Z`: Related: #110 (fade demo should note PBR is excluded until this lands).
+- `2026-10-15T20:18:13Z`: PBRSceneMaterial applies node opacity: fading entries are built with a blended copy (alpha scaled) and per-frame opacity goes through PBRRenderer.materialOverrides, so the model only rebuilds when an entry starts or stops fading. Node.opacity now bumps the transform revision instead of structure. Masked materials lose their cutoff while fading.
 
 ---
 

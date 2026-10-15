@@ -18,6 +18,20 @@ public struct PBRSceneMaterial: MetalSprocketsSceneGraph.Material {
         pbrMaterial.isBlended
     }
 
+    public var appliesNodeOpacity: Bool {
+        true
+    }
+
+    // A blended copy with base color alpha scaled by `opacity`. Masked materials lose their cutoff while fading.
+    func faded(_ opacity: Float, device: MTLDevice) throws -> PBRMaterial {
+        var uniforms = pbrMaterial.uniforms
+        uniforms.alphaMode = .blend
+        uniforms.baseColorFactor.w *= opacity
+        let material = try PBRMaterial(name: pbrMaterial.name, uniforms: uniforms, doubleSided: pbrMaterial.doubleSided, textureBindings: pbrMaterial.textureBindings, device: device)
+        material.textureTransforms = pbrMaterial.textureTransforms
+        return material
+    }
+
     public init(device: MTLDevice, baseColor: SIMD4<Float> = [1, 1, 1, 1], metallic: Float = 0, roughness: Float = 0.5) throws {
         let uniforms = PBRMaterialUniforms.defaults(baseColor: baseColor, metallic: metallic, roughness: roughness)
         pbrMaterial = try PBRMaterial(uniforms: uniforms, placeholder: PBRMaterial.placeholderBinding(device: device), device: device)
@@ -88,6 +102,12 @@ public struct PBRSceneGraphModelBuilder {
     }
 
     public func makeModel(entries: [SceneGraph.MeshEntry], layout: PBRNodeLayout) throws -> PBRModel {
+        try makeModelAndKeys(entries: entries, layout: layout).model
+    }
+
+    // Also returns each entry's primitive key (nil for non-PBR entries), for per-frame material overrides. Entries
+    // that fade are built with a blended material so they draw in the blended pass.
+    func makeModelAndKeys(entries: [SceneGraph.MeshEntry], layout: PBRNodeLayout) throws -> (model: PBRModel, keys: [PBRModel.Primitive.Key?]) {
         var geometry = PBRGeometryBuilder(device: device)
         var attributeCache: [ObjectIdentifier: [MetalMesh.VertexAttributeData]] = [:]
         var primitiveIDs: [Int] = []
@@ -101,13 +121,18 @@ public struct PBRSceneGraphModelBuilder {
         let primitives = try geometry.build()
         var builder = PBRModelBuilder(device: device, restPose: layout.pose())
         builder.skins = layout.pbrSkins
+        var keys: [PBRModel.Primitive.Key?] = []
         for (index, entry) in entries.enumerated() {
             guard let material = entry.material as? PBRSceneMaterial else {
+                keys.append(nil)
                 continue
             }
-            builder.addInstance(primitives[primitiveIDs[index]], material: material.pbrMaterial, node: index, skin: layout.skinIndex(of: entry))
+            let primitive = primitives[primitiveIDs[index]]
+            let pbrMaterial = entry.opacity < 1 ? try material.faded(entry.opacity, device: device) : material.pbrMaterial
+            builder.addInstance(primitive, material: pbrMaterial, node: index, skin: layout.skinIndex(of: entry))
+            keys.append(primitive.key)
         }
-        return try builder.build()
+        return (try builder.build(), keys)
     }
 }
 
@@ -117,8 +142,10 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer {
     public var environmentIntensity: Float
     public var exposure: Float
     // One model per entry set (SceneGraphElement may split entries into batches), for the current structure.
-    private var cachedModels: [EntrySetKey: PBRModel] = [:]
+    private var cachedModels: [EntrySetKey: (model: PBRModel, keys: [PBRModel.Primitive.Key?])] = [:]
     private var cachedRevision: Int?
+    // Faded copies from the last frame, reused while a node's opacity holds still.
+    private var fadedMaterials: [FadeKey: PBRMaterial] = [:]
 
     public init(device: MTLDevice, environment: PBREnvironment = .studio, environmentIntensity: Float = 1, exposure: Float = 1) {
         self.device = device
@@ -133,36 +160,55 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer {
 
     // Rebuilds the model only on structure changes (meshes, materials, skins, morph targets, hierarchy);
     // transform and weight changes go through the pose.
-    func model(for entries: [SceneGraph.MeshEntry], layout: PBRNodeLayout, structureRevision: Int) throws -> PBRModel {
+    // Node opacity changes only rebuild when an entry starts or stops fading (it changes pass); otherwise
+    // `materialOverrides(for:keys:)` applies the current opacity.
+    func modelAndKeys(for entries: [SceneGraph.MeshEntry], layout: PBRNodeLayout, structureRevision: Int) throws -> (model: PBRModel, keys: [PBRModel.Primitive.Key?]) {
         if cachedRevision != structureRevision {
             cachedModels.removeAll()
             cachedRevision = structureRevision
         }
         let key = EntrySetKey(entries)
-        if let model = cachedModels[key] {
-            return model
+        if let cached = cachedModels[key] {
+            return cached
         }
-        let model = try PBRSceneGraphModelBuilder(device: device).makeModel(entries: entries, layout: layout)
-        cachedModels[key] = model
-        return model
+        let built = try PBRSceneGraphModelBuilder(device: device).makeModelAndKeys(entries: entries, layout: layout)
+        cachedModels[key] = built
+        return built
     }
 
     func model(for entries: [SceneGraph.MeshEntry], structureRevision: Int) throws -> PBRModel {
-        try model(for: entries, layout: PBRNodeLayout(entries: entries), structureRevision: structureRevision)
+        try modelAndKeys(for: entries, layout: PBRNodeLayout(entries: entries), structureRevision: structureRevision).model
+    }
+
+    func materialOverrides(for entries: [SceneGraph.MeshEntry], keys: [PBRModel.Primitive.Key?]) throws -> PBRModel.MaterialOverrides {
+        var overrides: PBRModel.MaterialOverrides = [:]
+        var materials: [FadeKey: PBRMaterial] = [:]
+        for (entry, key) in zip(entries, keys) {
+            guard entry.opacity < 1, let key, let material = entry.material as? PBRSceneMaterial else {
+                continue
+            }
+            let fadeKey = FadeKey(material: ObjectIdentifier(material.pbrMaterial), opacity: entry.opacity)
+            let faded = try materials[fadeKey] ?? fadedMaterials[fadeKey] ?? material.faded(entry.opacity, device: device)
+            materials[fadeKey] = faded
+            overrides[key] = faded
+        }
+        fadedMaterials = materials
+        return overrides
     }
 
     public func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement {
         let layout = PBRNodeLayout(entries: entries)
-        let model = try model(for: entries, layout: layout, structureRevision: context.revision.structure)
+        let (model, keys) = try modelAndKeys(for: entries, layout: layout, structureRevision: context.revision.structure)
         let lighting = lighting(context: context)
-        return PBRRenderer(
+        var renderer = PBRRenderer(
             model: model,
             viewMatrix: context.viewMatrix,
             projectionMatrix: context.projectionMatrix,
             lighting: lighting,
             pose: layout.pose()
         )
-        .eraseToAnyElement()
+        renderer.materialOverrides = try materialOverrides(for: entries, keys: keys)
+        return renderer.eraseToAnyElement()
     }
 }
 
@@ -171,12 +217,20 @@ private struct EntrySetKey: Hashable {
     var submeshes: [Int]
     // Levels of detail swap meshes without a structure change.
     var meshes: [ObjectIdentifier]
+    // Fading entries draw in the blended pass, so starting or stopping a fade needs a new model.
+    var fading: [Bool]
 
     init(_ entries: [SceneGraph.MeshEntry]) {
         nodes = entries.map { ObjectIdentifier($0.node) }
         submeshes = entries.map(\.submeshIndex)
         meshes = entries.map { ObjectIdentifier($0.mesh.vertexBuffer) }
+        fading = entries.map { $0.opacity < 1 }
     }
+}
+
+private struct FadeKey: Hashable {
+    var material: ObjectIdentifier
+    var opacity: Float
 }
 
 extension PBREnvironment: EnvironmentMap {}

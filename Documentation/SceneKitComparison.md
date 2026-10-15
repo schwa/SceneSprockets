@@ -65,7 +65,7 @@ Legend:
 | `addChildNode`, `insertChildNode(_:at:)`, `removeFromParentNode`, `replaceChildNode` | `addChild`, `insertChild(_:at:)`, `removeChild`, `removeFromParent`, `removeAllChildren`, `replaceChild(_:with:)` | ✅ | Cycle-safe (`canAddChild`, precondition). |
 | `parent`, `childNodes` | `parent` (weak), `children` | ✅ | Both read-only. |
 | `isHidden` | `isVisible` | ✅ | Inverted sense. Hides the subtree from traversal, rendering, bounds and hit testing. |
-| `opacity` | `Node.opacity` | 🟡 | Inherited by children. Applied by Blinn-Phong and `ShaderMaterial` (`transforms.opacity`); not yet PBR (#108). |
+| `opacity` | `Node.opacity` | 🟡 | Inherited by children. Applied by Blinn-Phong, PBR (a blended copy of the material while fading) and `ShaderMaterial` (`transforms.opacity`). |
 | `categoryBitMask` | `categoryBitMask` | ✅ | Default `1`. Matched against camera, light and hit-test masks. Not inherited by children (same as SceneKit). |
 | `renderingOrder` | `renderingOrder` | ✅ | Lower draws first. Within one value, each renderer keeps its own order (for example PBR draws opaque before blended). |
 | `castsShadow` | `Content.mesh(…, castsShadow:)` | 🟡 | Per mesh content, not per node. |
@@ -221,7 +221,7 @@ SceneKit animates with `CAAnimation`/`SCNAnimation` and `SCNAnimationPlayer`, ke
 | `move(by:)`, `move(to:)` | Same | ✅ | |
 | `rotate(by:around:)`, `rotate(toAxisAngle:)`, `rotateBy(x:y:z:)`, `rotateTo(x:y:z:)` | `rotate(by:around:)`, `rotate(to: simd_quatf)`, `rotateBy(x:y:z:)`, `rotateTo(x:y:z:)` | ✅ | Euler order: X, then Y, then Z about fixed axes. |
 | `scale(by:)`, `scale(to:)` | `scale(by: Float)`, `scale(to: SIMD3)` | ✅ | `scale(by:)` is multiplicative so the total is exact. |
-| `fadeIn`, `fadeOut`, `fadeOpacity` | `Action.fadeIn`, `fadeOut`, `fadeOpacity(to:)`, `fadeOpacity(by:)` | ✅ | PBR meshes do not fade yet (#108). |
+| `fadeIn`, `fadeOut`, `fadeOpacity` | `Action.fadeIn`, `fadeOut`, `fadeOpacity(to:)`, `fadeOpacity(by:)` | ✅ | PBR masked materials lose their alpha cutoff while fading. |
 | `hide`, `unhide`, `removeFromParentNode` | `hide()`, `unhide()`, `removeFromParent()` | ✅ | |
 | `wait(duration:)`, `wait(duration:withRange:)` | Same | ✅ | |
 | `run(_:)`, `customAction(duration:action:)` | `run(_:)`, `custom(duration:_:)` | ✅ | |
