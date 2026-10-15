@@ -7,7 +7,7 @@ import SwiftUI
 // scenegraph-demos                         open the demo picker
 // scenegraph-demos --list                  list demo ids
 // scenegraph-demos --render <id> [file]    render a demo offscreen to a PNG (default: <id>.png)
-//                  [--size WxH] [--frames N]
+//                  [--size WxH] [--frames N] [--slide N]
 
 struct SceneGraphDemosApp: App {
     init() {
@@ -52,6 +52,7 @@ case "--render":
         fail("--size must look like 1280x800")
     }
     let frames = option("--frames").map { Int($0) ?? -1 } ?? 60
+    let slide = option("--slide").flatMap { Int($0) }
     guard frames >= 0 else {
         fail("--frames must be a number")
     }
@@ -61,7 +62,11 @@ case "--render":
     let id = arguments[1]
     let url = URL(fileURLWithPath: arguments.count >= 3 ? arguments[2] : "\(id).png")
     do {
-        let image = try MainActor.assumeIsolated { try DemoSnapshot.render(demoID: id, width: size[0], height: size[1], frames: frames) }
+        let image = try MainActor.assumeIsolated { try DemoSnapshot.render(demoID: id, width: size[0], height: size[1], frames: frames) { scene in
+            if let slide, let keynote = scene as? KeynoteDemo {
+                keynote.show(slide: slide)
+            }
+        } }
         try DemoSnapshot.writePNG(image, to: url)
         print(url.path)
     } catch {

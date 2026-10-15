@@ -1968,12 +1968,13 @@ Candidates to add to GeometryLite3D, then use here:
 ## 98: Demo: "Introduction to MSSG" keynote-style presentation
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
-labels: area:demo, effort:l, deferred
+labels: area:demo, effort:l
 created: 2026-10-15T02:37:51Z
-updated: 2026-10-15T21:19:12Z
+updated: 2026-10-16T01:55:15Z
+closed: 2026-10-16T01:55:15Z
 +++
 
 A demo that presents MSSG like an Apple WWDC keynote, built entirely with MSSG. Slides and transitions are scenes, not SwiftUI views.
@@ -1987,6 +1988,7 @@ Gaps it may hit: text styling (#80), node opacity for fades (#76), post-processi
 
 - `2026-10-15T20:27:29Z`: Added KeynoteDemo ("Introduction to SceneGraph", first in the catalog): 10 slides along +X, camera flights with Transaction, slide cross-fades with node opacity, Next/Previous toolbar actions on the arrow keys, click to advance, Auto-advance parameter. DemoAction gained a key shortcut and DemoScene.usesSceneCamera turns off user camera control. Slides for the remaining listed features are #115.
 - `2026-10-15T21:10:39Z`: Reopened: slides should also show actual code, keynote style — a short Swift snippet beside each live feature (for example the Node/action/constraint calls that build what is on screen). Open question: render code as 3D text (Shape.text, monospaced font, maybe syntax colors per token) or as a textured quad from a rendered image; either way it should be built from scene graph features. Missing slides are still #115.
+- `2026-10-16T00:03:20Z`: Code panels added: CodePanel renders a syntax-highlighted Swift snippet with SwiftUI ImageRenderer into a texture on a plane (emission + diffuse alpha). Every feature slide shows the code behind it. Camera moved back to fit the panels. scenegraph-demos --render gained --slide N; DemoSnapshot uses the scene camera when usesSceneCamera is set.
 
 ---
 
@@ -2287,15 +2289,18 @@ MaterialRenderState (#84) works for Blinn-Phong and ShaderMaterial. PBRSceneMate
 ## 115: Keynote demo is missing slides for several features
 
 +++
-status: new
+status: closed
 priority: low
 kind: task
-labels: area:demo, effort:m, deferred
+labels: area:demo, effort:m
 created: 2026-10-15T20:27:29Z
-updated: 2026-10-15T21:19:12Z
+updated: 2026-10-16T01:55:15Z
+closed: 2026-10-16T01:55:15Z
 +++
 
 The keynote demo (#98, KeynoteDemo.swift) has slides for the scene graph, shapes, materials, lights, actions, constraints, opacity/fades and blend modes. Features #98 listed with no slide yet: shadows, fog and environment, Transaction (used only for the camera flights), animation blending, morphing and skinning, glTF and Model I/O import, hit testing, SceneView, and physics. Lights are range-limited per slide; scene-wide settings (fog, shadows, environment) need a way to switch on per slide.
+
+- `2026-10-16T00:03:20Z`: Added slides: Shadows, Fog, Implicit Animation (Transaction), Animation Blending, glTF & Model I/O (animated fox + pedestal), Hit Testing (click shapes to hop them), Physics (restacks on arrival), SceneView. Shadows/fog switch on per slide. Still missing: morphing and skinning.
 
 ---
 
@@ -2391,9 +2396,9 @@ Want: 2D text in the scene graph using Slug from MetalSprocketsAddOns.
 status: new
 priority: medium
 kind: bug
-labels: rendering, deferred
+labels: rendering
 created: 2026-10-15T21:22:03Z
-updated: 2026-10-15T21:22:23Z
+updated: 2026-10-15T23:47:39Z
 +++
 
 In KeynoteDemo, on the Materials slide during animation, the top row of red spheres shows horizontal stripes across their upper half. The stripes stop at a hard line near each sphere's equator. The bottom row of gold spheres looks fine.
@@ -2408,6 +2413,8 @@ Expected: smooth shading on all spheres.
 Actual: striped, torn-looking upper hemispheres on the red spheres.
 
 Unknown whether it is tied to the slide transition, the sphere mesh, or the material on that row.
+
+- `2026-10-16T00:03:20Z`: Fixed in working copy: transparent (faded) Blinn-Phong meshes with cullMode .none blended back and front faces in index order, so back faces landed on top in bands. BlinnPhongBatchesElement now draws such meshes in two passes, back faces then front faces. Reproduced and verified with scenegraph-demos --render keynote --slide 3 at slide opacity 0.5.
 
 ---
 
@@ -2504,5 +2511,57 @@ SceneGraph.Constraint now has influenceFactor, isEnabled and an acceleration kin
 - isIncremental (SCNConstraint.isIncremental). Influence blends from the node's transform at the time the constraint runs, which carries the previous frame's result unless animation resets it. There is no switch for blending from the unconstrained transform instead.
 
 - `2026-10-16T00:05:43Z`: Slider done: SceneGraphPhysicsWorld.sliderConstraint(radius:categoryBitMask:) (sphere sweep, stops and slides; uses node categoryBitMask). isIncremental left out on purpose: constraints write trs directly, so there is no unconstrained transform to blend from; supporting it would mean storing each node's pre-constraint transform every frame. Reopen if needed.
+
+---
+
+## 126: Keynote code panels: snippets would not compile as written
+
++++
+status: new
+priority: low
+kind: bug
+labels: area:demo
+created: 2026-10-16T00:06:57Z
++++
+
+The code panels in KeynoteDemo.swift show Swift that does not compile if pasted.
+
+- Scene Graph and Shapes slides: Node(shape:material:) leaves out the required device: argument.
+- Animation Blending slide: 'let controller' must be 'var' (blend and advance are mutating). 'mixer' is not defined.
+- Actions slide: 'down' is not defined.
+
+Expected: each snippet compiles, given the obvious names (materials, nodes) it refers to.
+
+---
+
+## 127: Keynote code panels: snippets do not match what the slide does
+
++++
+status: new
+priority: low
+kind: bug
+labels: area:demo
+created: 2026-10-16T00:06:57Z
++++
+
+Some code panels in KeynoteDemo.swift differ from the code that builds the slide, or show demo-only API.
+
+- Shadows slide: 'scene.shadows = SceneGraphShadows(...)' is a DemoScene property, not library API. Library users pass shadows to SceneView(..., shadows:).
+- Scene Graph slide: the orbit's parent is shown as 'sun', but the demo parents it to the slide (the sun is a sibling).
+- Actions slide: leaves out the rotate that runs in a group with the hop.
+
+---
+
+## 128: Keynote code panels: decide on short type names
+
++++
+status: new
+priority: low
+kind: task
+labels: area:demo
+created: 2026-10-16T00:06:57Z
++++
+
+Keynote code panels use Node, Action, AnimationController and AnimationPlayer. The real names are SceneGraph.Node and so on, and there are no typealiases. Decide: keep short names for readability, use full names, or add public typealiases.
 
 ---

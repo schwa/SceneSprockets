@@ -175,10 +175,22 @@ private struct BlinnPhongBatchesElement: Element {
                 return (shadow.shadowMap.depthTexture(forSubmission: submissionIndex), shadow.shadowMap.sampler, uniforms)
             }
 
-            func draw(_ batch: InstanceBatch, instanced: Bool) throws -> AnyElement {
+            // Unculled transparent meshes draw back faces first, then front faces. In one pass the faces blend in index
+            // order, so back faces can land on top of front faces (#120).
+            let isTransparent = isTransparent
+            func passes(_ batches: [InstanceBatch]) -> [(batch: InstanceBatch, cullMode: MTLCullMode)] {
+                batches.flatMap { batch -> [(batch: InstanceBatch, cullMode: MTLCullMode)] in
+                    guard isTransparent, batch.material.cullMode == .none, batch.material.renderState.fillMode == .fill else {
+                        return [(batch, batch.material.cullMode)]
+                    }
+                    return [(batch, .front), (batch, .back)]
+                }
+            }
+
+            func draw(_ batch: InstanceBatch, cullMode: MTLCullMode, instanced: Bool) throws -> AnyElement {
                 let submesh = batch.mesh.submeshes[batch.submeshIndex]
                 let normalMatrices = batch.modelMatrices.map(\.normalMatrix)
-                var element = materialDraw(submesh, instanceCount: batch.modelMatrices.count, cullMode: batch.material.cullMode, isMirrored: batch.isMirrored, fillMode: batch.material.renderState.fillMode)
+                var element = materialDraw(submesh, instanceCount: batch.modelMatrices.count, cullMode: cullMode, isMirrored: batch.isMirrored, fillMode: batch.material.renderState.fillMode)
                 .vertexBuffers(batch.mesh.vertexBuffers)
                 .parameter("frame", functionType: .vertex, value: frame)
                 .eraseToAnyElement()
@@ -220,8 +232,8 @@ private struct BlinnPhongBatchesElement: Element {
             return try ForEach(Array(groups.enumerated()), id: \.offset) { _, group in
                 if !group.single.isEmpty {
                     try RenderPipeline(label: "Blinn-Phong", vertexShader: shaders.vertex, fragmentShader: fragmentShader) {
-                        try ForEach(Array(group.single.enumerated()), id: \.offset) { _, batch in
-                            try draw(batch, instanced: false)
+                        try ForEach(Array(passes(group.single).enumerated()), id: \.offset) { _, pass in
+                            try draw(pass.batch, cullMode: pass.cullMode, instanced: false)
                         }
                     }
                     .vertexDescriptor(group.key.vertexDescriptor.mtlVertexDescriptor)
@@ -229,8 +241,8 @@ private struct BlinnPhongBatchesElement: Element {
                 }
                 if !group.instanced.isEmpty {
                     try RenderPipeline(label: "Blinn-Phong Instanced", vertexShader: shaders.instancedVertex, fragmentShader: fragmentShader) {
-                        try ForEach(Array(group.instanced.enumerated()), id: \.offset) { _, batch in
-                            try draw(batch, instanced: true)
+                        try ForEach(Array(passes(group.instanced).enumerated()), id: \.offset) { _, pass in
+                            try draw(pass.batch, cullMode: pass.cullMode, instanced: true)
                         }
                     }
                     .vertexDescriptor(group.key.vertexDescriptor.mtlVertexDescriptor)
