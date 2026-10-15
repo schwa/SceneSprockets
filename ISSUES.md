@@ -1544,6 +1544,8 @@ Likely CPU costs per frame: SceneGraphElement rebuilding element trees; meshEntr
 
 Plan: measure each demo (CPU and GPU, Instruments time profile), list the top costs per demo, fix them one by one, and add a CLI timing mode (scenegraph-demos --bench <id>, see #73) to track regressions.
 
+- `2026-10-15T19:45:35Z`: Looked at measuring headlessly: scenegraph-demos --render uses OffscreenRenderer, which skips SwiftUI, the display link and SceneView's per-frame work, the suspected main-thread costs. Punting: the target (120 fps on ProMotion) and the root causes need on-screen runs with Instruments, which opens windows. Unblocker: OK to run the demo app and profile it, or split out a --bench <id> CLI mode (renders N frames through the same per-frame path and reports CPU/GPU ms) as its own issue first.
+
 ---
 
 ## 76: Node opacity and fade actions
@@ -2029,12 +2031,14 @@ SceneGraph.Shape.text("SceneGraph", fontName: "Helvetica-Bold") from SwiftMesh's
 status: open
 priority: medium
 kind: enhancement
-labels: area:renderer, effort:m
+labels: area:renderer, effort:m, blocked
 created: 2026-10-15T12:36:55Z
-updated: 2026-10-15T19:22:45Z
+updated: 2026-10-15T19:43:58Z
 +++
 
 Since #71, Blinn-Phong samples each light's shadow slices while shading, so a light only darkens what it lights. PBR meshes still go through the screen-space mask, which multiplies every light's shadow and darkens the whole pixel: surfaces facing away from a shadow-casting light, or outside its category, are darkened anyway (the original #71 bug). Fix: pass SceneGraphRenderContext.shadow and lightShadowSlices into MetalSprocketsPBR's lighting and scale each PBRLight's contribution by its own shadow (upstream change), then mark PBRSceneMaterial with SamplesShadowsInShader. ShaderMaterial could get a helper for the same.
+
+- `2026-10-15T19:43:58Z`: Checked MetalSprocketsPBR (9b5495b): PBRLight and the lighting shader have no shadow input. Punting: the fix is an upstream shader/API change that then has to be released before MSSG can use it. Filed as MetalSprocketsPBR #14. Unblocker: implement #14 there (or tell me to do it in that repo), then this is wiring plus SamplesShadowsInShader.
 
 ---
 
