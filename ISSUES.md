@@ -1138,12 +1138,13 @@ Related: #53 (update hooks and view wrapper; may be closed by this issue).
 ## 57: Inverse kinematics constraint
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:scenegraph, effort:m
 created: 2026-10-13T21:19:39Z
-updated: 2026-10-15T02:31:16Z
+updated: 2026-10-15T03:15:38Z
+closed: 2026-10-15T03:15:38Z
 +++
 
 Constraints (#40) cover look-at, billboard and distance. SceneKit also has SCNIKConstraint: a chain of joint nodes is turned so that its end reaches a target, with angle limits per joint.

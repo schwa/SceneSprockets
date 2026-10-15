@@ -23,7 +23,7 @@ Legend:
 | Animation | ✅ (different design) | Keyframe clips, blending, layers, state machine, events; no `CAAnimation` interop |
 | Actions | 🟡 | No fade, no `follow(path:)`, no sound actions, no JavaScript actions |
 | Implicit animation | 🟡 | Transform and morph weights only |
-| Constraints | 🟡 | Look-at, billboard and distance; no IK (#57), no replicator, acceleration, slider, avoid-occluder or transform constraints |
+| Constraints | 🟡 | Look-at, billboard, distance and IK; no replicator, acceleration, slider, avoid-occluder or transform constraints |
 | Morphing and skinning | ✅ | Four influences per vertex; CPU fallback for Blinn-Phong |
 | Hit testing | ✅ | Triangles or bounding boxes, rays or segments, with SceneKit-style options |
 | Physics | ❌ | Demo-only Jolt integration (#38) |
@@ -247,7 +247,7 @@ SceneKit animates with `CAAnimation`/`SCNAnimation` and `SCNAnimationPlayer`, ke
 | `SCNLookAtConstraint` | `Constraint.lookAt(target:worldUp:localFront:)` | ✅ | Falls back to another up vector when looking straight along `worldUp`. No `isGimbalLockEnabled`. |
 | `SCNBillboardConstraint` | `Constraint.billboard(freeAxes:)` | 🟡 | `.all` or `.y` only (SceneKit allows any axis set). |
 | `SCNDistanceConstraint` | `Constraint.distance(target:minimum:maximum:)` | ✅ | |
-| `SCNIKConstraint` | — | ❌ | #57. |
+| `SCNIKConstraint` | `Constraint.inverseKinematics(chainRoot:target:iterations:maximumAngle:)` | 🟡 | CCD solver; one angle limit for all joints, no per-joint limits. |
 | `SCNReplicatorConstraint`, `SCNAccelerationConstraint`, `SCNSliderConstraint`, `SCNAvoidOccluderConstraint`, `SCNTransformConstraint` | — | ❌ | |
 | `influenceFactor`, `isIncremental`, `isEnabled` | — | ❌ | |
 | Evaluation | `SceneGraph.applyConstraints(pointOfView:)` | 🟡 | Parents before children, after actions. Sets the local TRS and keeps world scale. `SceneView` calls it each frame. |
