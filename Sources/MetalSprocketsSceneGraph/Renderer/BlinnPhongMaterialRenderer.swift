@@ -152,7 +152,7 @@ private struct BlinnPhongBatchesElement: Element {
 
             func draw(_ batch: InstanceBatch, instanced: Bool) throws -> AnyElement {
                 let submesh = batch.mesh.submeshes[batch.submeshIndex]
-                let normalMatrices = batch.modelMatrices.map(normalMatrix)
+                let normalMatrices = batch.modelMatrices.map(\.normalMatrix)
                 var element = Draw(
                     primitiveType: submesh.primitiveType,
                     indexBuffer: submesh.indexBuffer,
@@ -236,11 +236,6 @@ private extension Element {
                 attachment.destinationAlphaBlendFactor = .oneMinusSourceAlpha
             }
     }
-}
-
-private func normalMatrix(_ modelMatrix: simd_float4x4) -> simd_float3x3 {
-    let upper = simd_float3x3(SIMD3(modelMatrix.columns.0.x, modelMatrix.columns.0.y, modelMatrix.columns.0.z), SIMD3(modelMatrix.columns.1.x, modelMatrix.columns.1.y, modelMatrix.columns.1.z), SIMD3(modelMatrix.columns.2.x, modelMatrix.columns.2.y, modelMatrix.columns.2.z))
-    return upper.inverse.transpose
 }
 
 extension BlinnPhongSceneMaterial {
