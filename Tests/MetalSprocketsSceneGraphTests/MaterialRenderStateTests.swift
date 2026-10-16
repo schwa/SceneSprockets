@@ -6,6 +6,8 @@ import SwiftMesh
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
+@testable import MetalSprocketsSceneGraphShaderMaterial
+@testable import MetalSprocketsSceneGraphBlinnPhong
 
 // #84: a quad at z = 0.5 (`near`) in front of one at z = 0 (`far`), seen from z = 3. Returns BGRA at `pixel`.
 @MainActor

@@ -302,7 +302,7 @@ func partitionMeshEntries(_ entries: [SceneGraph.MeshEntry], renderers: [any Sce
 }
 
 extension Element {
-    func vertexBuffers(_ buffers: [Int: MTLBuffer]) -> some Element {
+    public func vertexBuffers(_ buffers: [Int: MTLBuffer]) -> some Element {
         buffers.sorted { $0.key < $1.key }.reduce(AnyElement(self)) { element, entry in
             AnyElement(element.vertexBuffer(entry.value, index: entry.key))
         }
@@ -310,7 +310,7 @@ extension Element {
 }
 
 // Groups entries by vertex descriptor, keeping first-seen order.
-func groupedByVertexDescriptor<Entry>(_ entries: [Entry], vertexDescriptor: (Entry) -> VertexDescriptor) -> [(vertexDescriptor: VertexDescriptor, entries: [Entry])] {
+public func groupedByVertexDescriptor<Entry>(_ entries: [Entry], vertexDescriptor: (Entry) -> VertexDescriptor) -> [(vertexDescriptor: VertexDescriptor, entries: [Entry])] {
     var groups: [(vertexDescriptor: VertexDescriptor, entries: [Entry])] = []
     for entry in entries {
         let descriptor = vertexDescriptor(entry)

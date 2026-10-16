@@ -62,7 +62,7 @@ public struct MaterialRenderState: Sendable, Hashable {
 
 extension Element {
     // Reversed depth. `isTransparent` draws do not write depth and blend by alpha unless the blend mode says otherwise.
-    func materialRenderState(_ state: MaterialRenderState, isTransparent: Bool) -> some Element {
+    public func materialRenderState(_ state: MaterialRenderState, isTransparent: Bool) -> some Element {
         depthCompare(function: state.readsFromDepthBuffer ? .greater : .always, enabled: state.writesToDepthBuffer && !isTransparent)
             .renderPipelineDescriptorTransformer { descriptor in
                 let attachment = descriptor.colorAttachments[0]!
@@ -100,7 +100,7 @@ extension Element {
 
 // Draw resets cull and fill mode, so draws that need them set them in their own closure. Mirrored transforms flip the
 // winding.
-func materialDraw(_ submesh: MetalMesh.Submesh, instanceCount: Int = 1, cullMode: MTLCullMode = .none, isMirrored: Bool = false, fillMode: MTLTriangleFillMode = .fill) -> AnyElement {
+public func materialDraw(_ submesh: MetalMesh.Submesh, instanceCount: Int = 1, cullMode: MTLCullMode = .none, isMirrored: Bool = false, fillMode: MTLTriangleFillMode = .fill) -> AnyElement {
     guard cullMode != .none || fillMode != .fill else {
         return Draw(primitiveType: submesh.primitiveType, indexBuffer: submesh.indexBuffer, indexType: submesh.indexType, indexCount: submesh.indexCount, indexBufferOffset: submesh.indexBufferOffset, instanceCount: instanceCount).eraseToAnyElement()
     }

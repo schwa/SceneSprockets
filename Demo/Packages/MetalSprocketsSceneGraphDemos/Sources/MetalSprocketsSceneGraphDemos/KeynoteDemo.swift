@@ -3,6 +3,8 @@ import GeometryLite3D
 import Metal
 import MetalSprocketsGLTF
 import MetalSprocketsSceneGraph
+import MetalSprocketsSceneGraphShaderMaterial
+import MetalSprocketsSceneGraphBlinnPhong
 import MetalSprocketsSceneGraphPBR
 import MetalSprocketsSceneGraphPhysics
 import SwiftMesh
@@ -312,7 +314,7 @@ public final class KeynoteDemo: DemoScene {
             hitTestingSlide(slide)
             addCode("""
             // Click a shape.
-            SceneView(sceneGraph: sceneGraph) { hit in
+            SceneView(sceneGraph: sceneGraph, renderers: [BlinnPhongMaterialRenderer()]) { hit in
                 hit?.node.run(.move(by: [0, 1, 0], duration: 0.25))
             }
             let hits = sceneGraph.hitTest(ray) // nearest first
@@ -331,6 +333,7 @@ public final class KeynoteDemo: DemoScene {
                 let sceneGraph = SceneGraph(root: root)
                 var body: some View {
                     SceneView(sceneGraph: sceneGraph, options: [.allowsCameraControl],
+                              renderers: [BlinnPhongMaterialRenderer()],
                               shadows: SceneGraphShadows())
                 }
             }

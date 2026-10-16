@@ -7,6 +7,7 @@ import SwiftMesh
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
+@testable import MetalSprocketsSceneGraphShaderMaterial
 
 // #50
 @Test

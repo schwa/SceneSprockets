@@ -4,6 +4,7 @@ import GeometryLite3D
 import Metal
 import MetalSprockets
 import MetalSprocketsSceneGraph
+import MetalSprocketsSceneGraphBlinnPhong
 @testable import MetalSprocketsSceneGraphDemos
 import Testing
 import simd

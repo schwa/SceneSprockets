@@ -5,14 +5,14 @@ import simd
 
 // Depth array textures with one slice per shadow view, and the matrices and bias to render and sample them.
 // Reversed depth: the depth test and the comparison sampler use greater-equal.
-struct SceneGraphShadowMap {
+public struct SceneGraphShadowMap {
     // One texture per in-flight submission, so a frame never clears a map an earlier frame still samples.
     let depthTextures: [MTLTexture]
-    let sampler: MTLSamplerState
-    var lightViewProjectionMatrices: [simd_float4x4]
+    public let sampler: MTLSamplerState
+    public internal(set) var lightViewProjectionMatrices: [simd_float4x4]
     var depthBias: Float
     var slopeScale: Float
-    let resolution: Int
+    public let resolution: Int
     // Number of slices (shadow views).
     let lightCount: Int
 
@@ -54,7 +54,7 @@ struct SceneGraphShadowMap {
     }
 
     // The texture for a submission (MSEnvironmentValues.submissionIndex).
-    func depthTexture(forSubmission submissionIndex: UInt64) -> MTLTexture {
+    public func depthTexture(forSubmission submissionIndex: UInt64) -> MTLTexture {
         depthTextures[Int(submissionIndex % UInt64(depthTextures.count))]
     }
 }

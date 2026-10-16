@@ -317,7 +317,7 @@ SceneKit animates with `CAAnimation`/`SCNAnimation` and `SCNAnimationPlayer`, ke
 
 | SceneKit | MSSG | Status | Notes |
 |---|---|---|---|
-| `SceneView(scene:pointOfView:options:preferredFramesPerSecond:antialiasingMode:delegate:technique:)` | `SceneView(sceneGraph:pointOfView:options:renderers:delegate:isPlaying:shadows:cameraMatrix:hitTestCategoryBitMask:onTap:)` | ✅ | Default renderers: Blinn-Phong and PBR. No frame rate, antialiasing or technique parameters. |
+| `SceneView(scene:pointOfView:options:preferredFramesPerSecond:antialiasingMode:delegate:technique:)` | `SceneView(sceneGraph:pointOfView:options:renderers:delegate:isPlaying:shadows:cameraMatrix:hitTestCategoryBitMask:onTap:)` | ✅ | `renderers` is required (no default). No frame rate, antialiasing or technique parameters. |
 | `.allowsCameraControl` | Same | ✅ | See [Cameras](#cameras). |
 | `.autoenablesDefaultLighting` | Same | ✅ | |
 | `.rendersContinuously`, `.temporalAntialiasingEnabled`, `.jitteringEnabled` | — | ❌ | Always renders continuously. |

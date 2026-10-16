@@ -3,6 +3,7 @@ import MetalSprocketsSceneGraphShaders
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
+@testable import MetalSprocketsSceneGraphBlinnPhong
 @testable import MetalSprocketsSceneGraphPBR
 
 // Rotate -90° about X: the node's -Z axis points down (-Y).

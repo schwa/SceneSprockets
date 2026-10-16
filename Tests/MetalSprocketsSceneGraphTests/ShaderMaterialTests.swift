@@ -6,6 +6,7 @@ import SwiftMesh
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
+@testable import MetalSprocketsSceneGraphShaderMaterial
 
 @MainActor
 private func render(_ material: ShaderMaterial) throws -> SIMD4<UInt8> {

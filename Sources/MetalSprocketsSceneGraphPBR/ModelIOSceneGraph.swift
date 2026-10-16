@@ -3,6 +3,7 @@ import Metal
 import MetalKit
 import MetalSprocketsPBR
 import MetalSprocketsSceneGraph
+import MetalSprocketsSceneGraphBlinnPhong
 import ModelIO
 import simd
 import SwiftMesh

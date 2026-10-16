@@ -6,6 +6,7 @@ import SwiftMesh
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
+@testable import MetalSprocketsSceneGraphBlinnPhong
 
 // #45: a box on a floor, both flat-lit (ambient only), seen from above and in front.
 @MainActor

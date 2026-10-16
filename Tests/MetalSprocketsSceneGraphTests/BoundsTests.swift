@@ -4,6 +4,7 @@ import SwiftMesh
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
+@testable import MetalSprocketsSceneGraphBlinnPhong
 
 private func approximatelyEqual(_ lhs: BoundingBox3D?, _ rhs: BoundingBox3D) -> Bool {
     guard let lhs else {

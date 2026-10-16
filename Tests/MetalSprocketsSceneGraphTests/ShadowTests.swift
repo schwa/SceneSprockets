@@ -6,6 +6,8 @@ import SwiftMesh
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
+@testable import MetalSprocketsSceneGraphShaderMaterial
+@testable import MetalSprocketsSceneGraphBlinnPhong
 
 private let size = CGSize(width: 128, height: 128)
 

@@ -3,6 +3,7 @@ import GeometryLite3D
 import MetalSprocketsGLTF
 import MetalSprocketsPBR
 import MetalSprocketsSceneGraph
+import MetalSprocketsSceneGraphBlinnPhong
 import MetalSprocketsSceneGraphPBR
 import SwiftMesh
 import simd

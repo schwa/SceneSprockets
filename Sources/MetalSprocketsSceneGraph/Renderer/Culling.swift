@@ -2,7 +2,7 @@ import GeometryLite3D
 import simd
 
 // Entries without bounds are kept.
-func culledMeshEntries(_ entries: [SceneGraph.MeshEntry], viewProjection: simd_float4x4) -> [SceneGraph.MeshEntry] {
+public func culledMeshEntries(_ entries: [SceneGraph.MeshEntry], viewProjection: simd_float4x4) -> [SceneGraph.MeshEntry] {
     let frustum = Frustum(viewProjection: viewProjection)
     return entries.filter { entry in
         guard let bounds = entry.node.meshBounds else {
@@ -26,7 +26,7 @@ func sortedBackToFront(_ entries: [SceneGraph.MeshEntry], cameraPosition: SIMD3<
 }
 
 // Sorts by distance from the camera to each entry's world origin, nearest first, to reduce overdraw.
-func sortedFrontToBack(_ entries: [SceneGraph.MeshEntry], cameraPosition: SIMD3<Float>) -> [SceneGraph.MeshEntry] {
+public func sortedFrontToBack(_ entries: [SceneGraph.MeshEntry], cameraPosition: SIMD3<Float>) -> [SceneGraph.MeshEntry] {
     entries
         .map { entry in
             let origin = entry.worldTransform.columns.3.xyz

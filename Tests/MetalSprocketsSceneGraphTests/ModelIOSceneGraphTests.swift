@@ -7,6 +7,7 @@ import ModelIO
 import simd
 import Testing
 @testable import MetalSprocketsSceneGraph
+@testable import MetalSprocketsSceneGraphBlinnPhong
 @testable import MetalSprocketsSceneGraphPBR
 
 private func temporaryDirectory() throws -> URL {

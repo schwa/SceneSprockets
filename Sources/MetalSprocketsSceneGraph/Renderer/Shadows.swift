@@ -10,7 +10,7 @@ import simd
 
 // Materials whose renderer samples the shadow map per light while shading (Blinn-Phong). The screen-space mask skips
 // their pixels.
-protocol SamplesShadowsInShader {}
+public protocol SamplesShadowsInShader {}
 
 // Shadow-mapped shadows from directional, spot and point lights, for every renderer: casters are drawn into a shadow
 // map from each light. Blinn-Phong samples it per light while shading, so a light only darkens what it lights; other
@@ -59,10 +59,10 @@ public final class SceneGraphShadows {
 
     // What an in-shader renderer needs to sample the shadow map.
     public struct Sampling {
-        var shadowMap: SceneGraphShadowMap
-        var intensity: Float
-        var color: SIMD3<Float>
-        var softness: Int
+        public internal(set) var shadowMap: SceneGraphShadowMap
+        public internal(set) var intensity: Float
+        public internal(set) var color: SIMD3<Float>
+        public internal(set) var softness: Int
     }
 
     struct Caster {

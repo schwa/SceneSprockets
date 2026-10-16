@@ -33,6 +33,8 @@ let package = Package(
                 .product(name: "MetalSprocketsSceneGraphPhysics", package: "MetalSprocketsSceneGraph"),
                 .product(name: "MetalSprocketsParticles", package: "MetalSprocketsSceneGraph"),
                 .product(name: "MetalSprocketsSceneGraphPBR", package: "MetalSprocketsSceneGraph"),
+                .product(name: "MetalSprocketsSceneGraphBlinnPhong", package: "MetalSprocketsSceneGraph"),
+                .product(name: "MetalSprocketsSceneGraphShaderMaterial", package: "MetalSprocketsSceneGraph"),
                 .product(name: "DemoKit", package: "DemoKit"),
                 .product(name: "Interaction3D", package: "Interaction3D"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
@@ -58,6 +60,7 @@ let package = Package(
             dependencies: [
                 "MetalSprocketsSceneGraphDemos",
                 .product(name: "MetalSprocketsSceneGraph", package: "MetalSprocketsSceneGraph"),
+                .product(name: "MetalSprocketsSceneGraphBlinnPhong", package: "MetalSprocketsSceneGraph"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
                 .product(name: "GoldenImage", package: "GoldenImage"),
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),

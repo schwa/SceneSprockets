@@ -2,6 +2,7 @@ import Metal
 import SwiftMesh
 import Testing
 @testable import MetalSprocketsSceneGraph
+@testable import MetalSprocketsSceneGraphBlinnPhong
 
 @Test
 func eachSubmeshGetsItsOwnMaterial() throws {

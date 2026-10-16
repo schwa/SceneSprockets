@@ -1,5 +1,6 @@
 import GeometryLite3D
 import MetalSprocketsSceneGraph
+import MetalSprocketsSceneGraphBlinnPhong
 import SwiftMesh
 import simd
 

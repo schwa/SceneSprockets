@@ -1,5 +1,6 @@
 import MetalSprocketsParticles
 import MetalSprocketsSceneGraph
+import MetalSprocketsSceneGraphBlinnPhong
 import simd
 
 // A fountain (alpha blended, with gravity) and a fire (additive) on a floor (#50).

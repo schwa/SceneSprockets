@@ -4,6 +4,7 @@ import SwiftMesh
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
+@testable import MetalSprocketsSceneGraphShaderMaterial
 
 private func front(of node: SceneGraph.Node) -> SIMD3<Float> {
     let matrix = node.worldTransform

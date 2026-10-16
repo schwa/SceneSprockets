@@ -1,6 +1,7 @@
 import GeometryLite3D
 import Metal
 import MetalSprocketsSceneGraph
+import MetalSprocketsSceneGraphBlinnPhong
 import MetalSprocketsSceneGraphPhysics
 import MetalSupport
 import SwiftMesh

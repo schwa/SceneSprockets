@@ -6,6 +6,7 @@ import SwiftMesh
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
+@testable import MetalSprocketsSceneGraphBlinnPhong
 
 // #100: the in-repo Blinn-Phong renderer.
 @MainActor

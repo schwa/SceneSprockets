@@ -2,6 +2,7 @@ import GeometryLite3D
 import Foundation
 import Metal
 import MetalSprockets
+import MetalSprocketsSceneGraph
 import MetalSprocketsSceneGraphShaders
 import MetalSupport
 import SwiftMesh

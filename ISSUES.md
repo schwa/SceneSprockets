@@ -2107,12 +2107,13 @@ Split the positional audio engine out of MetalSprocketsSceneGraph into its own t
 ## 105: Move each material renderer into its own target
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:renderer, effort:m
 created: 2026-10-15T13:23:03Z
-updated: 2026-10-15T19:22:45Z
+updated: 2026-10-16T02:25:52Z
+closed: 2026-10-16T02:25:52Z
 +++
 
 Split the material families out of MetalSprocketsSceneGraph so apps link only what they use:
@@ -2124,6 +2125,7 @@ The core keeps SceneGraph, SceneGraphElement, the SceneGraphMaterialRenderer and
 Needs public API that is internal today: SamplesShadowsInShader, SceneGraphShadows.Sampling fields, SceneGraphRenderContext.shadow/lightShadowSlices, MeshEntry.deformed, culledMeshEntries/sortedFrontToBack/groupedByVertexDescriptor, and per-target shader bundles. Loaders that pick materials (ModelIOSceneGraph .pbr/.blinnPhong, GLTFSceneGraph uses PBR) need to move with or depend on the right renderer target. SceneView's default renderers (Blinn-Phong + PBR) would move to the UI layer or be passed in. Note: this reverses part of the earlier single-target merge for the renderers only.
 
 - `2026-10-15T23:52:40Z`: Done: MetalSprocketsSceneGraphPBR target with PBRSceneMaterial, PBRMaterialRenderer, PBRNodeLayout, the glTF loader and the Model I/O loader. The core no longer depends on MetalSprocketsPBR, MetalSprocketsGLTF or SwiftGLTF. SceneView's default renderers are now Blinn-Phong only; pass PBRMaterialRenderer for PBR. Left: Blinn-Phong and ShaderMaterial targets. They need SceneView's default renderer, Shadows.swift, MaterialRenderState and Node.swift untangled, many internal render helpers made public, and a decision on shaders: keep BlinnPhong.metal and ShaderMaterialSamples.metal in the shared MetalSprocketsSceneGraphShaders bundle, or give each target its own bundle.
+- `2026-10-16T02:25:52Z`: Done: MetalSprocketsSceneGraphBlinnPhong and MetalSprocketsSceneGraphShaderMaterial targets. SceneView.renderers is now required. Shaders stay in the shared MetalSprocketsSceneGraphShaders bundle. MetalSprocketsSceneGraphPBR depends on Blinn-Phong for the Model I/O loader. Made public: SamplesShadowsInShader, SceneGraphShadowMap (read-only parts), SceneGraphShadows.Sampling fields (read-only), materialDraw, materialRenderState, vertexBuffers, culledMeshEntries, sortedFrontToBack, groupedByVertexDescriptor.
 
 ---
 

@@ -4,16 +4,14 @@ A format-neutral 3D scene graph for [MetalSprockets](https://github.com/schwa/Me
 
 ## Library
 
-One product, `MetalSprocketsSceneGraph`. Source folders:
+The core is `MetalSprocketsSceneGraph`. Each material family is its own product, so an app links only what it uses:
 
-| Folder | Contents |
+| Product | Contents |
 |---|---|
-| (root) | `SceneGraph`, `SceneGraph.Node`, transforms (GeometryLite3D's `Transform3D`), materials protocol, bounds, change tracking, animation clips, morph targets, skins. |
-| ↳ Renderer | `SceneGraphElement`, the `SceneGraphMaterialRenderer` protocol, and the Blinn-Phong renderer. |
-| ↳ PBR | `PBRSceneMaterial` and `PBRMaterialRenderer`. |
-| ↳ ModelIO | `ModelIOSceneGraph(url:device:materials:)`: loads any format `MDLAsset` reads (OBJ, PLY, STL, ABC, USD) into a `SceneGraph`, keeping the object hierarchy, with PBR or Blinn-Phong materials, cameras, lights and keyframed transforms. |
-| ↳ GLTF | `GLTFAsset.makeSceneGraph(device:)`: loads a glTF scene (hierarchy, meshes with PBR materials, cameras, lights, skins, morph targets, node animations) into a `SceneGraph`. |
-| ↳ UI | `SceneView`, a SwiftUI view like SceneKit's `SceneView`. |
+| `MetalSprocketsSceneGraph` | `SceneGraph`, `SceneGraph.Node`, transforms (GeometryLite3D's `Transform3D`), the materials protocol, bounds, change tracking, animation clips, morph targets, skins; `SceneGraphElement` and the `SceneGraphMaterialRenderer` protocol; shadows, fog, post-processing, particles; `SceneView`, a SwiftUI view like SceneKit's `SceneView`. |
+| `MetalSprocketsSceneGraphBlinnPhong` | `BlinnPhongSceneMaterial`, `BlinnPhongMaterialRenderer` and `BlinnPhongSceneGraphElement`. |
+| `MetalSprocketsSceneGraphShaderMaterial` | `ShaderMaterial` and `ShaderMaterialRenderer`. |
+| `MetalSprocketsSceneGraphPBR` | `PBRSceneMaterial` and `PBRMaterialRenderer`. `GLTFAsset.makeSceneGraph(device:)` loads a glTF scene (hierarchy, meshes with PBR materials, cameras, lights, skins, morph targets, node animations). `ModelIOSceneGraph(url:device:materials:)` loads any format `MDLAsset` reads (OBJ, PLY, STL, ABC, USD), with PBR or Blinn-Phong materials, cameras, lights and keyframed transforms. |
 
 Requirements: iOS 26, macOS 26 or visionOS 26; Swift 6.2.
 
@@ -47,7 +45,7 @@ let sceneGraph = SceneGraph(root: root)
 The simplest way is `SceneView`, like SceneKit's SwiftUI `SceneView`:
 
 ```swift
-SceneView(sceneGraph: sceneGraph, options: [.allowsCameraControl, .autoenablesDefaultLighting]) { hit in
+SceneView(sceneGraph: sceneGraph, options: [.allowsCameraControl, .autoenablesDefaultLighting], renderers: [BlinnPhongMaterialRenderer()]) { hit in
     print(hit?.node.label ?? "nothing")
 }
 ```

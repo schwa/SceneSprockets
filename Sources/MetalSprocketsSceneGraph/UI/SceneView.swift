@@ -59,14 +59,15 @@ public struct SceneView: View {
     @State private var clock = SceneClock()
 
     // `pointOfView` defaults to the first camera node; with no camera node a camera framing the scene is used.
-    // `renderers` defaults to Blinn-Phong; pass PBRMaterialRenderer (MetalSprocketsSceneGraphPBR) for PBR materials. `isPlaying` false freezes scene time (delegate time and actions).
+    // `renderers` draw the material families, e.g. BlinnPhongMaterialRenderer (MetalSprocketsSceneGraphBlinnPhong) or
+    // PBRMaterialRenderer (MetalSprocketsSceneGraphPBR). `isPlaying` false freezes scene time (delegate time and actions).
     // `cameraMatrix` exposes the camera-control transform (nil: start from the point of view; set nil to reset).
     // `onTap` gets the nearest hit under a tap or click.
     public init(
         sceneGraph: SceneGraph,
         pointOfView: SceneGraph.Node? = nil,
         options: Options = [],
-        renderers: [any SceneGraphMaterialRenderer]? = nil,
+        renderers: [any SceneGraphMaterialRenderer],
         delegate: (any SceneViewDelegate)? = nil,
         isPlaying: Bool = true,
         shadows: SceneGraphShadows? = nil,
@@ -78,7 +79,7 @@ public struct SceneView: View {
         self.sceneGraph = sceneGraph
         self.pointOfView = pointOfView
         self.options = options
-        self.renderers = renderers ?? SceneView.defaultRenderers
+        self.renderers = renderers
         self.delegate = delegate
         self.isPlaying = isPlaying
         self.shadows = shadows
@@ -91,10 +92,6 @@ public struct SceneView: View {
     private var cameraMatrix: simd_float4x4? {
         externalCameraMatrix?.wrappedValue ?? internalCameraMatrix
     }
-
-    @MainActor static let defaultRenderers: [any SceneGraphMaterialRenderer] = {
-        [BlinnPhongMaterialRenderer()]
-    }()
 
     public var body: some View {
         RenderView { context, size in

@@ -7,6 +7,7 @@ import MetalSprocketsGLTF
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
+@testable import MetalSprocketsSceneGraphBlinnPhong
 @testable import MetalSprocketsSceneGraphPBR
 
 // #87
