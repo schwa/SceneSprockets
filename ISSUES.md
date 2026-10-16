@@ -2607,11 +2607,12 @@ Keynote code panels use Node, Action, AnimationController and AnimationPlayer. T
 ## 129: Glass does not show non-PBR objects behind it
 
 +++
-status: new
+status: blocked
 priority: low
 kind: enhancement
-labels: area:renderer, effort:m
+labels: area:renderer, effort:m, blocked
 created: 2026-10-16T02:06:06Z
+updated: 2026-10-16T12:15:59Z
 +++
 
 The transmission pre-pass (#123) draws only PBR entries. Blinn-Phong, ShaderMaterial and particle content behind transmissive PBR glass is missing from the refracted scene.
@@ -2620,6 +2621,8 @@ Expected: everything opaque behind glass shows through it.
 Actual: only PBR meshes and the environment show through.
 
 Needs the other material renderers to draw into the transmission target with linear (not tone-mapped) output.
+
+- `2026-10-16T12:15:59Z`: Plan: (1) MetalSprocketsPBR#18 lets PBRTransmissionPass draw extra content. (2) The pre-pass hook gets the other renderers' opaque elements, in the main pass's batches. (3) PBRMaterialRenderer passes those elements to the transmission pass. Blinn-Phong already writes linear output. Particles are left out at first because they are transparent. Blocked on MetalSprocketsPBR#18.
 
 ---
 
