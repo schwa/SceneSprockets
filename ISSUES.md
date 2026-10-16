@@ -2273,17 +2273,18 @@ eulerAngles, worldPosition/worldOrientation setters, convertPosition/convertVect
 ## 114: PBR materials have no render state (blend mode, depth, color mask, fill mode)
 
 +++
-status: open
+status: blocked
 priority: low
 kind: enhancement
-labels: area:renderer, effort:m
+labels: area:renderer, effort:m, blocked
 created: 2026-10-15T20:21:37Z
-updated: 2026-10-15T23:37:01Z
+updated: 2026-10-16T01:59:20Z
 +++
 
 MaterialRenderState (#84) works for Blinn-Phong and ShaderMaterial. PBRSceneMaterial has none: PBRRenderer sets its own depth/stencil, blending and fill state inside MetalSprocketsPBR with no per-material hook (only alphaMode and doubleSided). Needs MetalSprocketsPBR to accept per-material blend mode, depth read/write, color write mask and fill mode (or a pipeline/encoder hook), then PBRSceneMaterial.renderState wired through.
 
 - `2026-10-15T23:38:02Z`: Checked: PBRMaterialRenderer.makeElement builds one PBRRenderer for all entries; PBRRenderer (MetalSprocketsPBR) sets its own depth/blend/fill state inside, so wrapping it with materialRenderState from outside would be overridden. Punting: needs a MetalSprocketsPBR change first. Unblocker: OK to add per-material render state to MetalSprocketsPBR (e.g. PBRMaterial.renderState with blend mode, depth read/write, color write mask, fill mode, applied per batch in PBRRenderer) and push it? Then PBRSceneMaterial wires it through.
+- `2026-10-16T01:59:20Z`: Blocked on MetalSprocketsPBR#15 (per-material render state).
 
 ---
 
@@ -2394,12 +2395,13 @@ Want: 2D text in the scene graph using Slug from MetalSprocketsAddOns.
 ## 120: Keynote Materials slide: horizontal banding on spheres while animating
 
 +++
-status: new
+status: closed
 priority: medium
 kind: bug
 labels: rendering
 created: 2026-10-15T21:22:03Z
-updated: 2026-10-15T23:47:39Z
+updated: 2026-10-16T01:58:26Z
+closed: 2026-10-16T01:58:26Z
 +++
 
 In KeynoteDemo, on the Materials slide during animation, the top row of red spheres shows horizontal stripes across their upper half. The stripes stop at a hard line near each sphere's equator. The bottom row of gold spheres looks fine.
@@ -2416,6 +2418,7 @@ Actual: striped, torn-looking upper hemispheres on the red spheres.
 Unknown whether it is tied to the slide transition, the sphere mesh, or the material on that row.
 
 - `2026-10-16T00:03:20Z`: Fixed in working copy: transparent (faded) Blinn-Phong meshes with cullMode .none blended back and front faces in index order, so back faces landed on top in bands. BlinnPhongBatchesElement now draws such meshes in two passes, back faces then front faces. Reproduced and verified with scenegraph-demos --render keynote --slide 3 at slide opacity 0.5.
+- `2026-10-16T01:58:26Z`: Fixed
 
 ---
 
@@ -2444,12 +2447,12 @@ GLTFAsset.makeSceneGraph(device:) drops parts of the asset that MetalSprocketsGL
 ## 122: glTF material animation channels do not blend in AnimationMixer
 
 +++
-status: open
+status: blocked
 priority: low
 kind: enhancement
-labels: area:animation, area:assets, effort:s
+labels: area:animation, area:assets, effort:s, blocked
 created: 2026-10-15T23:35:09Z
-updated: 2026-10-15T23:37:01Z
+updated: 2026-10-16T02:01:08Z
 +++
 
 KHR_animation_pointer material channels from GLTFSceneGraph use a Property whose get returns an empty array, because a material has no generic way to read back the animated value. AnimationMixer uses get as the rest value, so material channels cannot be weighted, cross-faded or added on top of other clips. They only work when a clip is applied directly (AnimationClip.apply / AnimationPlayer).
@@ -2458,6 +2461,8 @@ Expected: material channels blend like transform and light channels.
 Actual: with a mixer, material channels are ignored when blending against the rest value.
 
 - `2026-10-15T23:38:02Z`: Punting: MaterialProperty.factor in MetalSprocketsGLTF is set-only, so the scene graph cannot read a factor back for the mixer's rest value. Unblocker: OK to give .factor a getter (or key path) in MetalSprocketsGLTF and push?
+- `2026-10-16T02:01:05Z`: Blocked on MetalSprocketsGLTF issue (material properties need a getter).
+- `2026-10-16T02:01:08Z`: Upstream: MetalSprocketsGLTF#177.
 
 ---
 
