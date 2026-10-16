@@ -13,7 +13,7 @@ Legend:
 
 | Area | Status | Main gaps |
 |---|---|---|
-| Scene and nodes | 🟡 | No `flattenedClone`, no `presentation` node, no serialization |
+| Scene and nodes | 🟡 | No `presentation` node, no serialization |
 | Transforms | ✅ | TRS or matrix, pivot, Euler angles, world-space setters, space conversion, `look(at:)` |
 | Geometry | 🟡 | No geometry sources/elements API (uses `MetalMesh`), no GPU tessellation, no `SCNShape` (Bézier extrusion), no tube or pyramid, no segment counts |
 | Materials | 🟡 | No `SCNMaterial` with lighting models; no shader modifiers |
@@ -70,7 +70,7 @@ Legend:
 | `renderingOrder` | `renderingOrder` | ✅ | Lower draws first. Within one value, each renderer keeps its own order (for example PBR draws opaque before blended). |
 | `castsShadow` | `Content.mesh(…, castsShadow:)` | 🟡 | Per mesh content, not per node. |
 | — (no SceneKit equivalent) | `Content.mesh(…, receivesShadow:)` | ➕ | Non-receivers are drawn into a mask that the shadow pass skips. |
-| `clone()`, `flattenedClone()` | `clone()` | 🟡 | Shares meshes, materials, skins and constraints, like SceneKit. No `flattenedClone`. |
+| `clone()`, `flattenedClone()` | `clone()`, `flattenedClone()` | ✅ | `clone()` shares meshes, materials, skins and constraints, like SceneKit. `flattenedClone()` merges the subtree's meshes on the CPU; nil for mixed vertex layouts, skinned or morphed meshes. |
 | `presentation` | — | ❌ | No separate presentation tree. Actions and animations write to the model values directly. |
 | `pivot` | `pivot` | ✅ | `composedTransform` is the local transform with the pivot applied. |
 | `movabilityHint` | — | ❌ | |

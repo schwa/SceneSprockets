@@ -1582,17 +1582,19 @@ SceneKit has SCNNode.opacity (inherited by children) and fadeIn/fadeOut/fadeOpac
 ## 77: Node flattenedClone
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: effort:s, area:scenegraph
 created: 2026-10-15T02:28:06Z
-updated: 2026-10-16T02:35:14Z
+updated: 2026-10-16T12:04:39Z
+closed: 2026-10-16T12:04:39Z
 +++
 
 Missing SceneKit equivalents: clone()/flattenedClone(), childNode(withName:recursively:), replaceChildNode(_:with:), and enumerateHierarchy's stop flag. Want them on SceneGraph.Node and SceneGraph.visit. See docs/SceneKitComparison.md.
 
 - `2026-10-15T03:10:47Z`: Done: clone(), childNode(withLabel:recursively:), replaceChild(_:with:), SceneGraph.traverse with skipChildren/stop. Left: flattenedClone (merging meshes needs matching vertex layouts).
+- `2026-10-16T12:04:39Z`: Added Node.flattenedClone(): merges every visible mesh in the subtree into one mesh, with transforms baked into positions, normals and tangents. Each submesh keeps its material. Returns nil for mixed vertex layouts or skinned/morphed meshes. Tests did not compile before the change.
 
 ---
 
