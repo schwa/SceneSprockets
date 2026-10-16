@@ -239,9 +239,9 @@ func gltfPointerAnimationsAreMapped() throws {
     #expect(abs(projection.verticalAngleOfView.radians - 1) < 1e-5)
 }
 
-// #54: KHR_animation_pointer material channels change the mesh's PBR material.
-@Test
-func gltfMaterialPointerAnimationsAreMapped() throws {
+// A triangle whose material's baseColorFactor goes from white to red and roughnessFactor from 1 to 0.2 over 1 s,
+// through KHR_animation_pointer.
+private func materialPointerAnimationSceneGraph() throws -> GLTFSceneGraph {
     var data = Data()
     // Triangle positions, times, then baseColorFactor and roughnessFactor keyframes.
     [Float](arrayLiteral: 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0.2).withUnsafeBytes { data.append(contentsOf: $0) }
@@ -278,19 +278,44 @@ func gltfMaterialPointerAnimationsAreMapped() throws {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
     try Data(json.utf8).write(to: url)
     let device = try #require(MTLCreateSystemDefaultDevice())
-    let result = try GLTFAsset(url: url, device: device).makeSceneGraph(device: device)
+    return try GLTFAsset(url: url, device: device).makeSceneGraph(device: device)
+}
+
+private func pbrMaterial(of node: SceneGraph.Node?) throws -> PBRSceneMaterial {
+    guard case let .mesh(_, materials, _, _) = try #require(node).content, let material = materials.first as? PBRSceneMaterial else {
+        throw MaterialMissing()
+    }
+    return material
+}
+
+private struct MaterialMissing: Error {}
+
+// #54: KHR_animation_pointer material channels change the mesh's PBR material.
+@Test
+func gltfMaterialPointerAnimationsAreMapped() throws {
+    let result = try materialPointerAnimationSceneGraph()
     let clip = try #require(result.animations.first)
     #expect(clip.channels.count == 2)
     #expect(!result.warnings.contains { $0.contains("animation channels skipped") })
 
     clip.apply(at: 1)
-    let node = try #require(result.nodes[0])
-    guard case let .mesh(_, materials, _, _) = node.content, let material = materials.first as? PBRSceneMaterial else {
-        Issue.record("Node has no PBR mesh")
-        return
-    }
+    let material = try pbrMaterial(of: result.nodes[0])
     #expect(material.pbrMaterial.uniforms.baseColorFactor == [1, 0, 0, 1])
     #expect(abs(material.pbrMaterial.uniforms.roughnessFactor - 0.2) < 1e-5)
+}
+
+// #122: the mixer blends material channels against the material's rest value.
+@Test
+func gltfMaterialChannelsBlendInMixer() throws {
+    let result = try materialPointerAnimationSceneGraph()
+    let clip = try #require(result.animations.first)
+    let mixer = SceneGraph.AnimationMixer(clips: [clip])
+    // An additive layer adds half the offset from rest; it needs the rest value.
+    mixer.apply([.init(clip: 0, time: 1, weight: 0.5, mode: .additive)])
+    let material = try pbrMaterial(of: result.nodes[0])
+    // Halfway from rest (roughness 1, white) to the sample (0.2, red).
+    #expect(abs(material.pbrMaterial.uniforms.roughnessFactor - 0.6) < 1e-4)
+    #expect(simd_distance(material.pbrMaterial.uniforms.baseColorFactor, [1, 0.5, 0.5, 1]) < 1e-4)
 }
 
 // #92: morph target names come from the mesh's extras.targetNames.

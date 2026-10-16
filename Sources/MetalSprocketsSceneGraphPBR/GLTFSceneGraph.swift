@@ -374,10 +374,11 @@ final class AnimatedMaterial: @unchecked Sendable {
 }
 
 extension SceneGraph.AnimationClip.Property {
-    // A KHR_animation_pointer material property. Writes the material's uniforms; there is no rest value to blend from.
+    // A KHR_animation_pointer material property. Writes the material's uniforms; reads the animated state back, so the
+    // mixer can blend from it.
     static func gltfMaterial(_ material: AnimatedMaterial, index: Int, name: String, property: GLTFAnimationPointer.MaterialProperty) -> Self {
         Self(name: "material.\(index)/\(name)") { _ in
-            []
+            material.state.value(of: property) ?? []
         } set: { _, value in
             material.state.apply(property, value: value)
             material.material.uniforms = material.state.uniforms

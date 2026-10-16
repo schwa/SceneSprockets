@@ -2457,12 +2457,13 @@ GLTFAsset.makeSceneGraph(device:) drops parts of the asset that MetalSprocketsGL
 ## 122: glTF material animation channels do not blend in AnimationMixer
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:animation, area:assets, effort:s
 created: 2026-10-15T23:35:09Z
-updated: 2026-10-16T02:32:53Z
+updated: 2026-10-16T06:42:29Z
+closed: 2026-10-16T06:42:29Z
 +++
 
 KHR_animation_pointer material channels from GLTFSceneGraph use a Property whose get returns an empty array, because a material has no generic way to read back the animated value. AnimationMixer uses get as the rest value, so material channels cannot be weighted, cross-faded or added on top of other clips. They only work when a clip is applied directly (AnimationClip.apply / AnimationPlayer).
@@ -2474,6 +2475,7 @@ Actual: with a mixer, material channels are ignored when blending against the re
 - `2026-10-16T02:01:05Z`: Blocked on MetalSprocketsGLTF issue (material properties need a getter).
 - `2026-10-16T02:01:08Z`: Upstream: MetalSprocketsGLTF#177.
 - `2026-10-16T02:32:53Z`: Unblocked: upstream fix landed (dependencies updated).
+- `2026-10-16T06:42:30Z`: gltfMaterial's get reads the animated state (MetalSprocketsGLTF AnimatedState.value(of:)), so the mixer has a rest value. Test: an additive layer at weight 0.5 fails before the fix and passes after.
 
 ---
 
