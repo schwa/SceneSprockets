@@ -2059,12 +2059,13 @@ SceneGraph.Shape.text("SceneGraph", fontName: "Helvetica-Bold") from SwiftMesh's
 ## 102: PBR: sample shadows per light in the shader
 
 +++
-status: blocked
+status: closed
 priority: medium
 kind: enhancement
-labels: area:renderer, effort:m, blocked
+labels: area:renderer, effort:m
 created: 2026-10-15T12:36:55Z
-updated: 2026-10-16T02:39:20Z
+updated: 2026-10-16T12:13:29Z
+closed: 2026-10-16T12:13:29Z
 +++
 
 Since #71, Blinn-Phong samples each light's shadow slices while shading, so a light only darkens what it lights. PBR meshes still go through the screen-space mask, which multiplies every light's shadow and darkens the whole pixel: surfaces facing away from a shadow-casting light, or outside its category, are darkened anyway (the original #71 bug). Fix: pass SceneGraphRenderContext.shadow and lightShadowSlices into MetalSprocketsPBR's lighting and scale each PBRLight's contribution by its own shadow (upstream change), then mark PBRSceneMaterial with SamplesShadowsInShader. ShaderMaterial could get a helper for the same.
@@ -2072,6 +2073,8 @@ Since #71, Blinn-Phong samples each light's shadow slices while shading, so a li
 - `2026-10-15T19:43:58Z`: Checked MetalSprocketsPBR (9b5495b): PBRLight and the lighting shader have no shadow input. Punting: the fix is an upstream shader/API change that then has to be released before MSSG can use it. Filed as MetalSprocketsPBR #14. Unblocker: implement #14 there (or tell me to do it in that repo), then this is wiring plus SamplesShadowsInShader.
 - `2026-10-16T02:34:31Z`: Unblocked: upstream fix is in the resolved dependencies.
 - `2026-10-16T02:39:20Z`: Checked MetalSprocketsPBR #14 (PBRShadows, PBRLight.shadowSliceStart/Count). The wiring is straightforward: build PBRShadows from context.shadow, using the submission's depth texture and our greaterEqual sampler, and set the slices on each PBRLight. Punting: PBRShadows has no intensity or color, so PBR would lose SceneGraphShadows.intensity (default 0.6) and color, which the screen-space mask supports today. Filed MetalSprocketsPBR#17. Unblocker: land #17, or accept full-strength, untinted PBR shadows.
+- `2026-10-16T12:07:45Z`: Unblocked: MetalSprocketsPBR#17 landed.
+- `2026-10-16T12:13:29Z`: PBRSceneMaterial is now SamplesShadowsInShader. PBRMaterialRenderer passes SceneGraphShadows to MetalSprocketsPBR's PBRShadows (map for the current submission, slices, softness, intensity, color), and sets each PBRLight's shadow slices. Used in both the main pass and the transmission pre-pass. Test pbrShadowsDimOnlyTheirOwnLight fails before the change (the fill light was darkened by the sun's screen-space shadow).
 
 ---
 

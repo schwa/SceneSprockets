@@ -8,6 +8,7 @@ import simd
 @testable import MetalSprocketsSceneGraph
 @testable import MetalSprocketsSceneGraphShaderMaterial
 @testable import MetalSprocketsSceneGraphBlinnPhong
+@testable import MetalSprocketsSceneGraphPBR
 
 private let size = CGSize(width: 128, height: 128)
 
@@ -60,9 +61,9 @@ private func makeScene(boxCastsShadow: Bool = true, skinned: Bool = false, light
 }
 
 @MainActor
-private func brightness(_ sceneGraph: SceneGraph, at pixel: SIMD2<Int>, shadows: SceneGraphShadows?) throws -> Int {
+private func brightness(_ sceneGraph: SceneGraph, at pixel: SIMD2<Int>, shadows: SceneGraphShadows?, renderers: [any SceneGraphMaterialRenderer] = [BlinnPhongMaterialRenderer()]) throws -> Int {
     let renderer = try OffscreenRenderer(size: size, colorUsage: SceneGraphShadows.requiredColorUsage, depthUsage: SceneGraphShadows.requiredDepthUsage)
-    let element = SceneGraphElement(sceneGraph: sceneGraph, aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer()], shadows: shadows)
+    let element = SceneGraphElement(sceneGraph: sceneGraph, aspectRatio: 1, renderers: renderers, shadows: shadows)
     let texture = try renderer.render(element).texture
     var value = SIMD4<UInt8>.zero
     texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(pixel.x, pixel.y, 1, 1), mipmapLevel: 0)
@@ -196,6 +197,29 @@ func shadowsDimOnlyTheirOwnLight() throws {
     let glowing = try brightness(masked, at: maskedPixel, shadows: nil)
     #expect(glowing > 30)
     #expect(abs(try brightness(masked, at: maskedPixel, shadows: SceneGraphShadows(intensity: 1)) - glowing) <= 3)
+}
+
+// #102: PBR samples each light's shadow in its shader, so the sun's shadow does not dim the fill light.
+@Test
+@MainActor
+func pbrShadowsDimOnlyTheirOwnLight() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let (sceneGraph, pixel) = try makeScene()
+    let gray = try PBRSceneMaterial(device: device, baseColor: [0.5, 0.5, 0.5, 1], roughness: 1)
+    for (node, _) in sceneGraph.nodesWithWorldTransforms() {
+        if case let .mesh(mesh, _, castsShadow, receivesShadow) = node.content {
+            node.content = .mesh(mesh, materials: [gray], castsShadow: castsShadow, receivesShadow: receivesShadow)
+        }
+    }
+    let renderers: [any SceneGraphMaterialRenderer] = [PBRMaterialRenderer(device: device, environmentIntensity: 0)]
+    let shadows = SceneGraphShadows(intensity: 1)
+    #expect(try brightness(sceneGraph, at: pixel, shadows: shadows, renderers: renderers) < 10)
+    _ = SceneGraph.Node(parent: sceneGraph.root, transform: pose(eye: [6, 3, 0], target: [-1, 0, 0]), content: .light(Light(type: .directional, color: [1, 1, 1], intensity: 1)))
+    let withFill = try brightness(sceneGraph, at: pixel, shadows: shadows, renderers: renderers)
+    let fillWithoutShadows = try brightness(sceneGraph, at: pixel, shadows: nil, renderers: renderers)
+    #expect(withFill > 30)
+    #expect(Double(withFill) > Double(fillWithoutShadows) * 0.3)
+    #expect(PBRSceneMaterial.self is any SamplesShadowsInShader.Type)
 }
 
 @MainActor

@@ -7,7 +7,7 @@ import MetalSupport
 import SwiftMesh
 import simd
 
-public struct PBRSceneMaterial: MetalSprocketsSceneGraph.Material {
+public struct PBRSceneMaterial: MetalSprocketsSceneGraph.Material, SamplesShadowsInShader {
     public var pbrMaterial: PBRMaterial
 
     public init(_ pbrMaterial: PBRMaterial) {
@@ -209,7 +209,13 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer {
     }
 
     public func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement {
-        try makeRenderer(entries: entries, context: context, transmissionTarget: frameTransmissionTarget).eraseToAnyElement()
+        let renderer = try makeRenderer(entries: entries, context: context, transmissionTarget: frameTransmissionTarget)
+        return PBRShadowedElement(shadow: context.shadow) { shadows in
+            var renderer = renderer
+            renderer.lighting.shadows = shadows
+            return renderer.eraseToAnyElement()
+        }
+        .eraseToAnyElement()
     }
 
     func makeRenderer(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, transmissionTarget: PBRTransmissionTarget?) throws -> PBRRenderer {
@@ -250,8 +256,40 @@ extension PBRMaterialRenderer: SceneGraphPrePassRenderer {
             try makeRenderer(entries: batch.entries, context: batch.context, transmissionTarget: target)
         }
         let showsBackground = if case .environment = context.environment.background { true } else { false }
-        return PBRTransmissionPass(renderers: renderers, target: target, showsBackground: showsBackground)
-            .eraseToAnyElement()
+        return PBRShadowedElement(shadow: context.shadow) { shadows in
+            let renderers = renderers.map { renderer in
+                var renderer = renderer
+                renderer.lighting.shadows = shadows
+                return renderer
+            }
+            return PBRTransmissionPass(renderers: renderers, target: target, showsBackground: showsBackground).eraseToAnyElement()
+        }
+        .eraseToAnyElement()
+    }
+}
+
+// Binds this frame's shadow map, which is chosen by submission index, so only known while building the frame.
+private struct PBRShadowedElement: Element {
+    var shadow: SceneGraphShadows.Sampling?
+    var content: (PBRShadows?) throws -> AnyElement
+
+    @MSEnvironment(\.submissionIndex)
+    private var submissionIndex
+
+    var body: some Element {
+        get throws {
+            let shadows = shadow.map { shadow in
+                PBRShadows(
+                    map: shadow.shadowMap.depthTexture(forSubmission: submissionIndex),
+                    sliceViewProjections: shadow.shadowMap.lightViewProjectionMatrices,
+                    filterRadius: max(shadow.softness, 0),
+                    sampler: shadow.shadowMap.sampler,
+                    intensity: shadow.intensity,
+                    color: shadow.color
+                )
+            }
+            return try content(shadows)
+        }
     }
 }
 
@@ -282,7 +320,16 @@ extension PBRMaterialRenderer: SceneGraphBackgroundRenderer {
     // The scene's environment map when it is a PBREnvironment, otherwise `environment`; intensities multiply.
     func lighting(context: SceneGraphRenderContext) -> PBRLighting {
         var lighting = PBRLighting(
-            lights: context.lights.map { pbrLight(worldTransform: $0.worldTransform, light: $0.light) },
+            lights: context.lights.enumerated().map { index, light in
+                var result = pbrLight(worldTransform: light.worldTransform, light: light.light)
+                // Each light samples only its own shadow slices.
+                if context.shadow != nil, index < context.lightShadowSlices.count {
+                    let slices = context.lightShadowSlices[index]
+                    result.shadowSliceStart = Int32(slices.lowerBound)
+                    result.shadowSliceCount = Int32(slices.count)
+                }
+                return result
+            },
             environment: context.environment.map as? PBREnvironment ?? environment,
             environmentIntensity: environmentIntensity * context.environment.intensity,
             exposure: exposure

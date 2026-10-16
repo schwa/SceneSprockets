@@ -13,8 +13,8 @@ import simd
 public protocol SamplesShadowsInShader {}
 
 // Shadow-mapped shadows from directional, spot and point lights, for every renderer: casters are drawn into a shadow
-// map from each light. Blinn-Phong samples it per light while shading, so a light only darkens what it lights; other
-// materials (PBR, ShaderMaterial) are darkened in screen space after the scene pass, by every light's shadow at
+// map from each light. Blinn-Phong and PBR sample it per light while shading, so a light only darkens what it lights;
+// other materials (ShaderMaterial) are darkened in screen space after the scene pass, by every light's shadow at
 // once. Keep one instance across frames (it holds the shadow map and caster buffers) and pass it to
 // SceneGraphElement or SceneView.
 //
