@@ -35,8 +35,10 @@ public protocol SceneGraphBackgroundRenderer {
 
 // A renderer that needs its own passes before the scene pass, such as one that draws what is behind glass.
 // `entries` are all of this renderer's entries; `makeElement` is called after this for each batch.
+// `otherOpaqueContent` makes the other renderers' opaque batches, for a pass that needs the rest of the scene; nil
+// when there are none.
 public protocol SceneGraphPrePassRenderer {
-    func makePrePassElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, viewSize: (width: Int, height: Int)) throws -> AnyElement?
+    func makePrePassElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, viewSize: (width: Int, height: Int), otherOpaqueContent: () throws -> AnyElement?) throws -> AnyElement?
 }
 
 // Renders every mesh entry in one pass by handing each material family to its renderer.
@@ -96,10 +98,14 @@ public struct SceneGraphElement: Element {
             var prePasses: [AnyElement] = []
             if let color = renderPassDescriptor?.colorAttachments[0].texture {
                 for (renderer, rendererEntries) in zip(renderers, partitionMeshEntries(entries, renderers: renderers)) {
-                    guard let renderer = renderer as? any SceneGraphPrePassRenderer, !rendererEntries.isEmpty else {
+                    guard let prePassRenderer = renderer as? any SceneGraphPrePassRenderer, !rendererEntries.isEmpty else {
                         continue
                     }
-                    if let prePass = try renderer.makePrePassElement(entries: rendererEntries, context: context, viewSize: (color.width, color.height)) {
+                    let frameContext = context
+                    let materialType = renderer.materialType
+                    if let prePass = try prePassRenderer.makePrePassElement(entries: rendererEntries, context: frameContext, viewSize: (color.width, color.height), otherOpaqueContent: {
+                        try makeOpaqueContent(entries: entries, context: frameContext, excluding: materialType)
+                    }) {
                         prePasses.append(prePass)
                     }
                 }
@@ -181,6 +187,25 @@ public struct SceneGraphElement: Element {
             }
             .eraseToAnyElement()
         }
+    }
+
+    // Opaque batches of every renderer except the one for `excluding`, with reversed depth.
+    private func makeOpaqueContent(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, excluding: any MetalSprocketsSceneGraph.Material.Type) throws -> AnyElement? {
+        var elements: [AnyElement] = []
+        for batch in renderBatches(entries.filter { !$0.isTransparent }, context: context) {
+            let partitions = partitionMeshEntries(batch.entries, renderers: renderers)
+            for (renderer, entries) in zip(renderers, partitions) where !entries.isEmpty && ObjectIdentifier(renderer.materialType) != ObjectIdentifier(excluding) {
+                elements.append(try renderer.makeElement(entries: entries, context: batch.context))
+            }
+        }
+        guard !elements.isEmpty else {
+            return nil
+        }
+        return ForEach(Array(elements.enumerated()), id: \.offset) { _, element in
+            element
+        }
+        .depthCompare(function: .greater, enabled: true)
+        .eraseToAnyElement()
     }
 
     private func makeScenePass(elements: [AnyElement], clearColor: MTLClearColor?, storesDepth: Bool) throws -> some Element {

@@ -236,9 +236,9 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer {
 }
 
 extension PBRMaterialRenderer: SceneGraphPrePassRenderer {
-    // Draws the opaque PBR scene behind transmissive surfaces, so glass refracts it, with the same batches (lights,
-    // fades) as the main pass. Other material families are not in it.
-    public func makePrePassElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, viewSize: (width: Int, height: Int)) throws -> AnyElement? {
+    // Draws the opaque scene behind transmissive surfaces, so glass refracts it: PBR with the same batches (lights,
+    // fades) as the main pass, then the other renderers' opaque batches. Their output must be linear (not tone-mapped).
+    public func makePrePassElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, viewSize: (width: Int, height: Int), otherOpaqueContent: () throws -> AnyElement?) throws -> AnyElement? {
         frameTransmissionTarget = nil
         let hasTransmission = entries.contains { ($0.material as? PBRSceneMaterial)?.pbrMaterial.isTransmissive ?? false }
         guard hasTransmission, viewSize.width > 0, viewSize.height > 0 else {
@@ -256,13 +256,14 @@ extension PBRMaterialRenderer: SceneGraphPrePassRenderer {
             try makeRenderer(entries: batch.entries, context: batch.context, transmissionTarget: target)
         }
         let showsBackground = if case .environment = context.environment.background { true } else { false }
+        let additionalContent = try otherOpaqueContent()
         return PBRShadowedElement(shadow: context.shadow) { shadows in
             let renderers = renderers.map { renderer in
                 var renderer = renderer
                 renderer.lighting.shadows = shadows
                 return renderer
             }
-            return PBRTransmissionPass(renderers: renderers, target: target, showsBackground: showsBackground).eraseToAnyElement()
+            return PBRTransmissionPass(renderers: renderers, target: target, showsBackground: showsBackground, additionalContent: additionalContent).eraseToAnyElement()
         }
         .eraseToAnyElement()
     }

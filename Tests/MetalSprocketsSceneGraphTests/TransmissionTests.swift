@@ -6,11 +6,13 @@ import MetalSprocketsPBR
 import Testing
 import simd
 @testable import MetalSprocketsSceneGraph
+@testable import MetalSprocketsSceneGraphBlinnPhong
 @testable import MetalSprocketsSceneGraphPBR
 
 // #123: a smooth glass quad in front of an emissive green quad, or nothing. Returns the center pixel (BGRA).
+// `blinnPhong` (#129) makes the green quad Blinn-Phong instead of PBR.
 @MainActor
-private func glass(behind: Bool) throws -> SIMD4<UInt8> {
+private func glass(behind: Bool, blinnPhong: Bool = false) throws -> SIMD4<UInt8> {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh(device: device)
     let root = SceneGraph.Node()
@@ -18,13 +20,16 @@ private func glass(behind: Bool) throws -> SIMD4<UInt8> {
     let glass = try PBRSceneMaterial(device: device, baseColor: [1, 1, 1, 1], roughness: 0)
     glass.pbrMaterial.uniforms.transmissionFactor = 1
     _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: glass))
-    if behind {
+    if behind && blinnPhong {
+        let green = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0, 1, 0]))
+        _ = SceneGraph.Node(parent: root, content: .mesh(quad, material: green))
+    } else if behind {
         let green = try PBRSceneMaterial(device: device, baseColor: [0, 0, 0, 1])
         green.pbrMaterial.uniforms.emissiveFactor = [0, 1, 0]
         _ = SceneGraph.Node(parent: root, content: .mesh(quad, material: green))
     }
     let graph = SceneGraph(root: root)
-    let element = SceneGraphElement(sceneGraph: graph, aspectRatio: 1, renderers: [PBRMaterialRenderer(device: device)])
+    let element = SceneGraphElement(sceneGraph: graph, aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: .zero), PBRMaterialRenderer(device: device)])
     let texture = try OffscreenRenderer(size: CGSize(width: 16, height: 16)).render(element).texture
     var value = SIMD4<UInt8>.zero
     texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(8, 8, 1, 1), mipmapLevel: 0)
@@ -62,6 +67,15 @@ func lightMasksApplyBehindGlass() throws {
     let masked = try glassOverLitQuad(lightReachesQuad: false)
     #expect(Int(lit.z) > 60)
     #expect(Int(masked.z) < Int(lit.z) / 4)
+}
+
+@Test
+@MainActor
+func glassShowsBlinnPhongBehindIt() throws {
+    let empty = try glass(behind: false)
+    let green = try glass(behind: true, blinnPhong: true)
+    #expect(Int(green.y) > Int(empty.y) + 60)
+    #expect(Int(green.y) > Int(green.x) + 60)
 }
 
 @Test
