@@ -129,3 +129,37 @@ func boundingBoxAndMeshShapesComeFromTheMesh() throws {
 }
 
 private struct Unlit: MetalSprocketsSceneGraph.Material {}
+
+// #125: the slider constraint stops a node at physics bodies and lets it slide along them.
+@Test
+func sliderConstraintStopsAtWallAndSlides() throws {
+    let root = SceneGraph.Node()
+    // A wall whose near face is the plane x = 2.
+    let wall = SceneGraph.Node(parent: root, label: "Wall", trs: .init(translation: [2.5, 0, 0]))
+    wall.physicsBody = .init(type: .static, shape: .box(size: [1, 10, 10]))
+    let ignored = SceneGraph.Node(parent: root, label: "Other Category", trs: .init(translation: [-2.5, 0, 0]))
+    ignored.physicsBody = .init(type: .static, shape: .box(size: [1, 10, 10]))
+    ignored.categoryBitMask = 0b10
+    let mover = SceneGraph.Node(parent: root)
+    let sceneGraph = SceneGraph(root: root)
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: sceneGraph)
+    physics.sync()
+    mover.constraints = [physics.sliderConstraint(radius: 0.5, categoryBitMask: 0b01)]
+    sceneGraph.applyConstraints(pointOfView: matrix_identity_float4x4)
+
+    // Straight into the wall: stops with its sphere touching the face.
+    mover.trs.translation = [5, 0, 0]
+    sceneGraph.applyConstraints(pointOfView: matrix_identity_float4x4)
+    #expect(abs(mover.trs.translation.x - 1.5) < 0.05)
+
+    // Diagonally into the wall: blocked in x, free in z.
+    mover.trs.translation = [4, 0, 3]
+    sceneGraph.applyConstraints(pointOfView: matrix_identity_float4x4)
+    #expect(abs(mover.trs.translation.x - 1.5) < 0.05)
+    #expect(abs(mover.trs.translation.z - 3) < 0.05)
+
+    // Bodies outside the category do not block.
+    mover.trs.translation = [-5, 0, 3]
+    sceneGraph.applyConstraints(pointOfView: matrix_identity_float4x4)
+    #expect(abs(mover.trs.translation.x + 5) < 0.05)
+}

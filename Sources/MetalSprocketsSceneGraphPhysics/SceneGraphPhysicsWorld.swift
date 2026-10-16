@@ -13,13 +13,13 @@ public final class SceneGraphPhysicsWorld {
     // The Jolt world, for anything this type does not wrap (constraints, contacts, queries).
     public let world: PhysicsWorld
 
-    private struct Entry {
+    struct Entry {
         var node: SceneGraph.Node
         var body: BodyID
         var description: SceneGraph.PhysicsBody
     }
 
-    private var entries: [ObjectIdentifier: Entry] = [:]
+    private(set) var entries: [ObjectIdentifier: Entry] = [:]
 
     public init(sceneGraph: SceneGraph, gravity: SIMD3<Float> = [0, -9.81, 0]) throws {
         self.sceneGraph = sceneGraph
