@@ -8,6 +8,8 @@ import SwiftUI
 // scenegraph-demos --list                  list demo ids
 // scenegraph-demos --render <id> [file]    render a demo offscreen to a PNG (default: <id>.png)
 //                  [--size WxH] [--frames N] [--slide N]
+// scenegraph-demos --benchmark <id>        render every frame offscreen and print frame times
+//                  [--size WxH] [--frames N] [--slide N]
 
 struct SceneGraphDemosApp: App {
     init() {
@@ -69,6 +71,26 @@ case "--render":
         } }
         try DemoSnapshot.writePNG(image, to: url)
         print(url.path)
+    } catch {
+        fail("\(error)")
+    }
+case "--benchmark":
+    let size = option("--size").map { $0.split(separator: "x").compactMap { Int($0) } } ?? [1280, 800]
+    let frames = option("--frames").flatMap { Int($0) } ?? 120
+    let slide = option("--slide").flatMap { Int($0) }
+    guard size.count == 2, arguments.count >= 2 else {
+        fail("usage: scenegraph-demos --benchmark <id> [--size WxH] [--frames N] [--slide N]")
+    }
+    do {
+        let times = try MainActor.assumeIsolated { try DemoSnapshot.benchmark(demoID: arguments[1], width: size[0], height: size[1], frames: frames) { scene in
+            if let slide, let keynote = scene as? KeynoteDemo {
+                keynote.show(slide: slide)
+            }
+        } }
+        let sorted = times.sorted()
+        let mean = times.reduce(0, +) / Double(max(times.count, 1))
+        func milliseconds(_ seconds: Double) -> String { String(format: "%.2f ms", seconds * 1000) }
+        print("frames \(times.count)  mean \(milliseconds(mean)) (\(String(format: "%.1f", 1 / mean)) fps)  median \(milliseconds(sorted[sorted.count / 2]))  p95 \(milliseconds(sorted[sorted.count * 95 / 100]))  max \(milliseconds(sorted.last ?? 0))")
     } catch {
         fail("\(error)")
     }

@@ -22,6 +22,35 @@ public enum DemoSnapshot {
     }
 
     @MainActor
+    // Renders `frames` frames one after another, each waiting for the GPU, and returns each frame's wall time in
+    // seconds (scene update, encoding and GPU). The first `warmUp` frames are rendered but not timed.
+    public static func benchmark(demoID: String, width: Int = 1280, height: Int = 800, frames: Int = 120, warmUp: Int = 10, configure: (DemoScene) -> Void = { _ in }) throws -> [Double] {
+        guard let demo = DemoCatalog.demos.first(where: { $0.id == demoID }) else {
+            throw Failure.unknownDemo(demoID)
+        }
+        let scene = demo.make()
+        configure(scene)
+        let renderer = try OffscreenRenderer(size: CGSize(width: width, height: height), colorUsage: SceneGraphShadows.requiredColorUsage, depthUsage: SceneGraphShadows.requiredDepthUsage)
+        let deltaTime: Float = 1 / 60
+        var times: [Double] = []
+        for frame in 0..<(warmUp + frames) {
+            let start = ContinuousClock.now
+            scene.update(time: Float(frame) * deltaTime, deltaTime: deltaTime)
+            scene.sceneGraph.advanceActions(by: deltaTime)
+            scene.sceneGraph.advanceParticles(by: deltaTime)
+            scene.sceneGraph.applyConstraints(pointOfView: scene.initialCameraMatrix, deltaTime: deltaTime)
+            let sceneCamera = scene.usesSceneCamera ? scene.sceneGraph.cameraNodes().first?.worldTransform : nil
+            let element = SceneGraphElement(sceneGraph: scene.sceneGraph, cameraMatrix: sceneCamera ?? scene.initialCameraMatrix, aspectRatio: Float(width) / Float(height), renderers: scene.renderers, shadows: scene.shadows)
+            _ = try renderer.render(element)
+            let elapsed = ContinuousClock.now - start
+            if frame >= warmUp {
+                times.append(Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) * 1e-18)
+            }
+        }
+        return times
+    }
+
+    @MainActor
     public static func render(demoID: String, width: Int = 1280, height: Int = 800, frames: Int = 60, values: [String: Float] = [:], configure: (DemoScene) -> Void = { _ in }) throws -> CGImage {
         guard let demo = DemoCatalog.demos.first(where: { $0.id == demoID }) else {
             throw Failure.unknownDemo(demoID)

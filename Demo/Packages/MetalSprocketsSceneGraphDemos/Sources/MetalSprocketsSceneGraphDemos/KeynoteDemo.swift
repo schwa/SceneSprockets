@@ -19,7 +19,7 @@ public final class KeynoteDemo: DemoScene {
     private static let spacing: Float = 24
     private static let titles = [
         "SceneGraph", "Scene Graph", "Shapes", "Materials", "Lights", "Actions", "Constraints", "Opacity & Fades", "Blend Modes",
-        "Shadows", "Fog", "Implicit Animation", "Animation Blending", "glTF & Model I/O", "Hit Testing", "Physics", "SceneView", "Thank You",
+        "Glass", "Shadows", "Fog", "Implicit Animation", "Animation Blending", "glTF & Model I/O", "Hit Testing", "Physics", "SceneView", "Thank You",
     ]
 
     private let cameraNode: SceneGraph.Node
@@ -273,6 +273,13 @@ public final class KeynoteDemo: DemoScene {
         }
         addTitle(title, y: 4, to: slide)
         switch title {
+        case "Glass":
+            glassSlide(slide)
+            addCode("""
+            let glass = try PBRSceneMaterial(device: device, roughness: 0)
+            glass.pbrMaterial.uniforms.transmissionFactor = 1
+            // Blinn-Phong and PBR objects behind it are refracted alike.
+            """, to: slide)
         case "Shadows":
             shadowsSlide(slide)
             addCode("""
@@ -473,6 +480,45 @@ public final class KeynoteDemo: DemoScene {
         let wire = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0.5, 0.55, 0.65]), renderState: MaterialRenderState(fillMode: .lines))
         let sphere = SceneGraph.Node(parent: slide, shape: .sphere(radius: 1.5), material: wire, device: demoDevice, trs: .init(translation: [0, 1.5, -3]))
         sphere.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 12)))
+    }
+
+    // PBR glass in front of turning Blinn-Phong and PBR shapes, which show through it refracted (#123, #129).
+    private func glassSlide(_ slide: SceneGraph.Node) {
+        addLight(to: slide, at: [0, 5, 6], intensity: 80)
+        // A checkered Blinn-Phong wall, so the glass always has something to bend.
+        let light = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0.55, 0.57, 0.62]))
+        let dark = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0.12, 0.13, 0.16]))
+        // One mesh for every tile, so Blinn-Phong draws them as two instanced batches.
+        let tile = SceneGraph.Shape.box(width: 0.6, height: 0.6, length: 0.05).metalMesh(device: demoDevice)
+        for row in 0..<6 {
+            for column in 0..<14 {
+                let material = (row + column).isMultiple(of: 2) ? light : dark
+                _ = SceneGraph.Node(parent: slide, trs: .init(translation: [Float(column) * 0.6 - 3.9, Float(row) * 0.6 + 0.1, -4.5]), content: .mesh(tile, material: material))
+            }
+        }
+        let colors: [SIMD3<Float>] = [[0.95, 0.3, 0.25], [0.95, 0.8, 0.2], [0.3, 0.8, 0.4], [0.25, 0.5, 1], [0.8, 0.35, 0.9]]
+        for (index, color) in colors.enumerated() {
+            let x = Float(index) * 1.6 - 3.2
+            let material: any MetalSprocketsSceneGraph.Material = index.isMultiple(of: 2)
+                ? BlinnPhongSceneMaterial.plastic(color, shininess: 32)
+                : (try? PBRSceneMaterial(device: demoDevice, baseColor: SIMD4(color, 1), metallic: 0, roughness: 0.4)) ?? BlinnPhongSceneMaterial.plastic(color)
+            let bar = SceneGraph.Node(parent: slide, shape: .box(width: 0.5, height: 3, length: 0.5), material: material, device: demoDevice, trs: .init(translation: [x, 1.6, -2.5]))
+            bar.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 6 + Float(index))))
+        }
+        let shapes: [(SceneGraph.Shape, Float, Float)] = [
+            (.sphere(radius: 0.9), -2.6, 0),
+            (.box(width: 1.6, height: 1.6, length: 0.4), 0, 0.15),
+            (.torus(ringRadius: 0.75, pipeRadius: 0.3), 2.6, 0.05),
+        ]
+        for (shape, x, roughness) in shapes {
+            guard let glass = try? PBRSceneMaterial(device: demoDevice, baseColor: [1, 1, 1, 1], metallic: 0, roughness: roughness) else {
+                continue
+            }
+            glass.pbrMaterial.uniforms.transmissionFactor = 1
+            glass.pbrMaterial.uniforms.thicknessFactor = 0.6
+            let node = SceneGraph.Node(parent: slide, shape: shape, material: glass, device: demoDevice, trs: .init(translation: [x, 1.6, 1]))
+            node.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([0.3, 1, 0]), duration: 10)))
+        }
     }
 
     private func shadowsSlide(_ slide: SceneGraph.Node) {
