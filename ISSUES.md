@@ -1225,9 +1225,9 @@ Next steps: capture a GPU trace of a flashing frame, or render into renderer-own
 status: open
 priority: medium
 kind: bug
-labels: area:renderer, effort:s, deferred
+labels: area:renderer, effort:s
 created: 2026-10-14T01:14:55Z
-updated: 2026-10-14T13:31:44Z
+updated: 2026-10-16T02:38:45Z
 +++
 
 Surfaces that face the light show a fine dotted shadow pattern, and shadow edges are stepped. It is clearly visible on the fox's head in the Imported Assets demo. It may also cause the random flicker in #59, because borderline texels flip between lit and shadowed.
@@ -1237,6 +1237,8 @@ Cause: the hardware depth bias does almost nothing with the depth32Float shadow 
 Fix: apply a world-space depth offset in the ShadowCasters vertex shaders. Push caster depth away from the light by about 1 to 2 texels, computed as orthoSize * 2 / resolution and converted to clip z through the orthographic range. Make it a property of SceneGraphShadows. Optionally fit the shadow map tighter (casters plus receivers in view), or raise the resolution.
 
 Related: #59.
+
+- `2026-10-16T02:38:45Z`: Tried to reproduce in a unit test: a flat plane lit by a directional or spot light, at about 7° and 20° grazing angles, with a distant object to stretch the shadow map. Covered both shadow paths: Blinn-Phong in-shader sampling and the screen-space mask (ShaderMaterial). Result: 0 self-shadowed pixels at 128x128 in every case. A box floor showed dark pixels, but those were side faces facing away from the light, so they were real shadows. Punting: I can't confirm that the depth-bias explanation is the cause. Unblocker: a screenshot or repro steps in the Imported Assets demo (window size, light setup), or permission to change the bias without a failing test.
 
 ---
 
@@ -1506,12 +1508,13 @@ Related: Use DemoKit for the demo app.
 ## 74: Demo content and inspector extend under the toolbar with DemoKit
 
 +++
-status: blocked
+status: closed
 priority: medium
 kind: bug
-labels: area:demo, effort:s, blocked
+labels: area:demo, effort:s
 created: 2026-10-14T16:40:19Z
-updated: 2026-10-15T02:31:13Z
+updated: 2026-10-16T02:35:08Z
+closed: 2026-10-16T02:35:08Z
 +++
 
 Since moving the demos to DemoKit (#72), the top of the demo view sits under the window toolbar. The FPS overlay (topTrailing, padded) is partly hidden, and the configuration inspector's Form starts under the toolbar (the first rows are cut off). Screenshots: 2026-10-14 12.16.32 and 12.21.40.
@@ -1525,6 +1528,8 @@ The difference must be in SceneDemoView or SceneView: .onGeometryChange, .onTapG
 
 - `2026-10-14T16:47:38Z`: View hierarchy (MetalSprocketsSceneGraphDemo[49042].viewhierarchy): every split item, including the detail and the inspector hosting views, is full window height (1031 pt), which is normal on macOS 26. The visible rect starts 52 pt down (under the toolbar). The MTKView platform host frame is also 1031 pt tall from y=0, so SwiftUI lays out our detail content (and the inspector Form) with no top safe-area inset. Nothing in MetalSprocketsUI, Interaction3D or SceneView calls ignoresSafeArea. DemoKit's description overlay (a ScrollView) is inset correctly. Hypothesis, not verified: DemoKit's detail wrapper (ZStack { Color.clear; content }.clipped(), with .inspector applied inside it) loses the safe area for non-scroll content; the old ContentView put the demo directly in the split view's detail and was fine. Check: does MetalSprocketsExamples show its frame-timing overlay under the toolbar too?
 - `2026-10-14T17:07:28Z`: Also happens in MetalSprockets-Examples, so it's in DemoKit. Filed DemoKit #22 (content underlaps toolbar) and added findings to DemoKit #21 (inspector). Blocked on those.
+- `2026-10-16T02:34:31Z`: Unblocked: upstream fix is in the resolved dependencies.
+- `2026-10-16T02:35:08Z`: Fixed upstream in DemoKit (#21, #22); the resolved DemoKit includes the fix.
 
 ---
 
@@ -1580,9 +1585,9 @@ SceneKit has SCNNode.opacity (inherited by children) and fadeIn/fadeOut/fadeOpac
 status: open
 priority: low
 kind: feature
-labels: effort:s, area:scenegraph, deferred
+labels: effort:s, area:scenegraph
 created: 2026-10-15T02:28:06Z
-updated: 2026-10-15T21:19:11Z
+updated: 2026-10-16T02:35:14Z
 +++
 
 Missing SceneKit equivalents: clone()/flattenedClone(), childNode(withName:recursively:), replaceChildNode(_:with:), and enumerateHierarchy's stop flag. Want them on SceneGraph.Node and SceneGraph.visit. See docs/SceneKitComparison.md.
@@ -2052,17 +2057,19 @@ SceneGraph.Shape.text("SceneGraph", fontName: "Helvetica-Bold") from SwiftMesh's
 ## 102: PBR: sample shadows per light in the shader
 
 +++
-status: open
+status: blocked
 priority: medium
 kind: enhancement
 labels: area:renderer, effort:m, blocked
 created: 2026-10-15T12:36:55Z
-updated: 2026-10-15T19:43:58Z
+updated: 2026-10-16T02:39:20Z
 +++
 
 Since #71, Blinn-Phong samples each light's shadow slices while shading, so a light only darkens what it lights. PBR meshes still go through the screen-space mask, which multiplies every light's shadow and darkens the whole pixel: surfaces facing away from a shadow-casting light, or outside its category, are darkened anyway (the original #71 bug). Fix: pass SceneGraphRenderContext.shadow and lightShadowSlices into MetalSprocketsPBR's lighting and scale each PBRLight's contribution by its own shadow (upstream change), then mark PBRSceneMaterial with SamplesShadowsInShader. ShaderMaterial could get a helper for the same.
 
 - `2026-10-15T19:43:58Z`: Checked MetalSprocketsPBR (9b5495b): PBRLight and the lighting shader have no shadow input. Punting: the fix is an upstream shader/API change that then has to be released before MSSG can use it. Filed as MetalSprocketsPBR #14. Unblocker: implement #14 there (or tell me to do it in that repo), then this is wiring plus SamplesShadowsInShader.
+- `2026-10-16T02:34:31Z`: Unblocked: upstream fix is in the resolved dependencies.
+- `2026-10-16T02:39:20Z`: Checked MetalSprocketsPBR #14 (PBRShadows, PBRLight.shadowSliceStart/Count). The wiring is straightforward: build PBRShadows from context.shadow, using the submission's depth texture and our greaterEqual sampler, and set the slices on each PBRLight. Punting: PBRShadows has no intensity or color, so PBR would lose SceneGraphShadows.intensity (default 0.6) and color, which the screen-space mask supports today. Filed MetalSprocketsPBR#17. Unblocker: land #17, or accept full-strength, untinted PBR shadows.
 
 ---
 
@@ -2275,18 +2282,19 @@ eulerAngles, worldPosition/worldOrientation setters, convertPosition/convertVect
 ## 114: PBR materials have no render state (blend mode, depth, color mask, fill mode)
 
 +++
-status: blocked
+status: open
 priority: low
 kind: enhancement
-labels: area:renderer, effort:m, blocked
+labels: area:renderer, effort:m
 created: 2026-10-15T20:21:37Z
-updated: 2026-10-16T01:59:20Z
+updated: 2026-10-16T02:32:53Z
 +++
 
 MaterialRenderState (#84) works for Blinn-Phong and ShaderMaterial. PBRSceneMaterial has none: PBRRenderer sets its own depth/stencil, blending and fill state inside MetalSprocketsPBR with no per-material hook (only alphaMode and doubleSided). Needs MetalSprocketsPBR to accept per-material blend mode, depth read/write, color write mask and fill mode (or a pipeline/encoder hook), then PBRSceneMaterial.renderState wired through.
 
 - `2026-10-15T23:38:02Z`: Checked: PBRMaterialRenderer.makeElement builds one PBRRenderer for all entries; PBRRenderer (MetalSprocketsPBR) sets its own depth/blend/fill state inside, so wrapping it with materialRenderState from outside would be overridden. Punting: needs a MetalSprocketsPBR change first. Unblocker: OK to add per-material render state to MetalSprocketsPBR (e.g. PBRMaterial.renderState with blend mode, depth read/write, color write mask, fill mode, applied per batch in PBRRenderer) and push it? Then PBRSceneMaterial wires it through.
 - `2026-10-16T01:59:20Z`: Blocked on MetalSprocketsPBR#15 (per-material render state).
+- `2026-10-16T02:32:53Z`: Unblocked: upstream fix landed (dependencies updated).
 
 ---
 
@@ -2449,12 +2457,12 @@ GLTFAsset.makeSceneGraph(device:) drops parts of the asset that MetalSprocketsGL
 ## 122: glTF material animation channels do not blend in AnimationMixer
 
 +++
-status: blocked
+status: open
 priority: low
 kind: enhancement
-labels: area:animation, area:assets, effort:s, blocked
+labels: area:animation, area:assets, effort:s
 created: 2026-10-15T23:35:09Z
-updated: 2026-10-16T02:01:08Z
+updated: 2026-10-16T02:32:53Z
 +++
 
 KHR_animation_pointer material channels from GLTFSceneGraph use a Property whose get returns an empty array, because a material has no generic way to read back the animated value. AnimationMixer uses get as the rest value, so material channels cannot be weighted, cross-faded or added on top of other clips. They only work when a clip is applied directly (AnimationClip.apply / AnimationPlayer).
@@ -2465,6 +2473,7 @@ Actual: with a mixer, material channels are ignored when blending against the re
 - `2026-10-15T23:38:02Z`: Punting: MaterialProperty.factor in MetalSprocketsGLTF is set-only, so the scene graph cannot read a factor back for the mixer's rest value. Unblocker: OK to give .factor a getter (or key path) in MetalSprocketsGLTF and push?
 - `2026-10-16T02:01:05Z`: Blocked on MetalSprocketsGLTF issue (material properties need a getter).
 - `2026-10-16T02:01:08Z`: Upstream: MetalSprocketsGLTF#177.
+- `2026-10-16T02:32:53Z`: Unblocked: upstream fix landed (dependencies updated).
 
 ---
 
@@ -2492,16 +2501,19 @@ Actual: glass shows only the environment map.
 ## 124: Cannot switch glTF material variants on a loaded scene graph
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
-labels: area:assets, effort:s, blocked
+labels: area:assets, effort:s
 created: 2026-10-15T23:39:37Z
+updated: 2026-10-16T02:34:31Z
 +++
 
 GLTFSceneGraph keeps variantNames, but the scene graph always shows the variant the GLTFAsset was loaded with. Switching means loading the asset again and rebuilding the graph, which loses node state and animation players.
 
 Blocked on MetalSprocketsGLTF#176 (per-variant materials are not public).
+
+- `2026-10-16T02:34:31Z`: Unblocked: upstream fix is in the resolved dependencies.
 
 ---
 
@@ -2572,8 +2584,9 @@ Some code panels in KeynoteDemo.swift differ from the code that builds the slide
 status: new
 priority: low
 kind: task
-labels: area:demo
+labels: area:demo, deferred
 created: 2026-10-16T00:06:57Z
+updated: 2026-10-16T02:35:36Z
 +++
 
 Keynote code panels use Node, Action, AnimationController and AnimationPlayer. The real names are SceneGraph.Node and so on, and there are no typealiases. Decide: keep short names for readability, use full names, or add public typealiases.
@@ -2602,12 +2615,12 @@ Needs the other material renderers to draw into the transmission target with lin
 ## 130: Transmission pre-pass ignores fades and light category masks
 
 +++
-status: blocked
+status: open
 priority: low
 kind: bug
-labels: area:renderer, effort:s, blocked
+labels: area:renderer, effort:s
 created: 2026-10-16T02:06:06Z
-updated: 2026-10-16T02:06:14Z
+updated: 2026-10-16T02:32:54Z
 +++
 
 PBRMaterialRenderer's transmission pre-pass (#123) draws all PBR entries as one model with all lights. In the scene seen through glass, fading nodes are drawn fully opaque, and lights light nodes their category masks exclude.
@@ -2615,5 +2628,34 @@ PBRMaterialRenderer's transmission pre-pass (#123) draws all PBR entries as one 
 Expected: the scene behind glass matches the main pass.
 
 Blocked on MetalSprocketsPBR#16 (PBRTransmissionPass from existing renderers).
+
+- `2026-10-16T02:32:54Z`: Unblocked: upstream fix landed (dependencies updated).
+
+---
+
+## 131: Add SceneKit-style debug statistics overlay
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-10-16T02:37:54Z
++++
+
+Add an optional debug info overlay to the scene view, like SceneKit's showsStatistics.
+
+Reference: https://p.kagi.com/proxy/FG7aA.png?c=paVMepdr69omyIsuiCcXRC3n_YTvrIv4uKvP_RH_p1sKrZU_OYHNk4M0KKz7GNsN
+
+Collapsed bar shows:
+- Backend and FPS (e.g. 'Metal 60fps')
+- Draw call count
+- Triangle/vertex count
+- Frame-time sparkline
+
+Expanded panel shows:
+- Donut chart of frame time (e.g. 0.2 s)
+- Breakdown by phase with color legend: e.g. update/animation, scene graph traversal, culling, encoding/rendering, GPU time, 2D/UI overlay
+
+Done when: a view modifier or flag turns the overlay on, and it shows live per-frame stats.
 
 ---
