@@ -1,4 +1,7 @@
+import CoreGraphics
+import GeometryLite3D
 import Metal
+import MetalSprockets
 import MetalSprocketsPBR
 import SwiftMesh
 import Testing
@@ -107,4 +110,35 @@ func pbrLightDirectionFollowsNodeRotation() {
     let light = pbrLight(worldTransform: rotation, light: Light(type: .directional))
     #expect(light.type == .directional)
     #expect(simd_distance(light.direction, [0, -1, 0]) < 0.001)
+}
+
+// #114: PBRSceneMaterial.renderState reaches the PBR renderer, and fading keeps it.
+@Test
+@MainActor
+func pbrRenderStateIsApplied() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh(device: device)
+    func centerPixel(_ renderState: PBRRenderState) throws -> SIMD4<UInt8> {
+        let root = SceneGraph.Node()
+        _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40)))))
+        let material = try PBRSceneMaterial(device: device, baseColor: [0, 0, 0, 1])
+        material.pbrMaterial.uniforms.emissiveFactor = [1, 0, 0]
+        material.renderState = renderState
+        _ = SceneGraph.Node(parent: root, content: .mesh(quad, material: material))
+        let graph = SceneGraph(root: root)
+        graph.environment.background = .color([0, 0, 0, 1])
+        let element = SceneGraphElement(sceneGraph: graph, aspectRatio: 1, renderers: [PBRMaterialRenderer(device: device, environmentIntensity: 0)])
+        let texture = try OffscreenRenderer(size: CGSize(width: 16, height: 16)).render(element).texture
+        var value = SIMD4<UInt8>.zero
+        texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(8, 8, 1, 1), mipmapLevel: 0)
+        return value
+    }
+    #expect(try centerPixel(PBRRenderState()).z > 200)
+    #expect(try centerPixel(PBRRenderState(colorWriteMask: [.green, .blue, .alpha])).z < 10)
+
+    let additive = try PBRSceneMaterial(device: device)
+    additive.renderState = PBRRenderState(blendMode: .additive)
+    #expect(additive.isTransparent)
+    let faded = try additive.faded(0.5, device: device)
+    #expect(faded.renderState == additive.renderState)
 }

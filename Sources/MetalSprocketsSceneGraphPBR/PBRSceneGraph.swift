@@ -22,6 +22,13 @@ public struct PBRSceneMaterial: MetalSprocketsSceneGraph.Material {
         true
     }
 
+    // Blend mode, depth test and write, color write mask and fill mode. Stored on the shared PBRMaterial, so every
+    // PBRSceneMaterial wrapping it sees the change.
+    public var renderState: PBRRenderState {
+        get { pbrMaterial.renderState }
+        nonmutating set { pbrMaterial.renderState = newValue }
+    }
+
     // A blended copy with base color alpha scaled by `opacity`. Masked materials lose their cutoff while fading.
     func faded(_ opacity: Float, device: MTLDevice) throws -> PBRMaterial {
         var uniforms = pbrMaterial.uniforms
@@ -29,6 +36,7 @@ public struct PBRSceneMaterial: MetalSprocketsSceneGraph.Material {
         uniforms.baseColorFactor.w *= opacity
         let material = try PBRMaterial(name: pbrMaterial.name, uniforms: uniforms, doubleSided: pbrMaterial.doubleSided, textureBindings: pbrMaterial.textureBindings, device: device)
         material.textureTransforms = pbrMaterial.textureTransforms
+        material.renderState = pbrMaterial.renderState
         return material
     }
 

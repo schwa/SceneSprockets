@@ -2282,12 +2282,13 @@ eulerAngles, worldPosition/worldOrientation setters, convertPosition/convertVect
 ## 114: PBR materials have no render state (blend mode, depth, color mask, fill mode)
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:renderer, effort:m
 created: 2026-10-15T20:21:37Z
-updated: 2026-10-16T02:32:53Z
+updated: 2026-10-16T12:02:30Z
+closed: 2026-10-16T12:02:30Z
 +++
 
 MaterialRenderState (#84) works for Blinn-Phong and ShaderMaterial. PBRSceneMaterial has none: PBRRenderer sets its own depth/stencil, blending and fill state inside MetalSprocketsPBR with no per-material hook (only alphaMode and doubleSided). Needs MetalSprocketsPBR to accept per-material blend mode, depth read/write, color write mask and fill mode (or a pipeline/encoder hook), then PBRSceneMaterial.renderState wired through.
@@ -2295,6 +2296,7 @@ MaterialRenderState (#84) works for Blinn-Phong and ShaderMaterial. PBRSceneMate
 - `2026-10-15T23:38:02Z`: Checked: PBRMaterialRenderer.makeElement builds one PBRRenderer for all entries; PBRRenderer (MetalSprocketsPBR) sets its own depth/blend/fill state inside, so wrapping it with materialRenderState from outside would be overridden. Punting: needs a MetalSprocketsPBR change first. Unblocker: OK to add per-material render state to MetalSprocketsPBR (e.g. PBRMaterial.renderState with blend mode, depth read/write, color write mask, fill mode, applied per batch in PBRRenderer) and push it? Then PBRSceneMaterial wires it through.
 - `2026-10-16T01:59:20Z`: Blocked on MetalSprocketsPBR#15 (per-material render state).
 - `2026-10-16T02:32:53Z`: Unblocked: upstream fix landed (dependencies updated).
+- `2026-10-16T12:02:30Z`: PBRSceneMaterial.renderState exposes MetalSprocketsPBR's PBRRenderState: blend mode (opaque, alpha, premultiplied, additive), depth test and write, color write mask, and fill mode. It is stored on the shared PBRMaterial. Faded copies keep it. It is PBRRenderState, not MaterialRenderState: PBR has no subtract, multiply or screen blending. Test pbrRenderStateIsApplied did not compile before the change.
 
 ---
 
