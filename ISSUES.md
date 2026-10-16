@@ -2530,8 +2530,9 @@ SceneGraph.Constraint now has influenceFactor, isEnabled and an acceleration kin
 status: new
 priority: low
 kind: bug
-labels: area:demo
+labels: area:demo, deferred
 created: 2026-10-16T00:06:57Z
+updated: 2026-10-16T02:19:59Z
 +++
 
 The code panels in KeynoteDemo.swift show Swift that does not compile if pasted.
@@ -2550,8 +2551,9 @@ Expected: each snippet compiles, given the obvious names (materials, nodes) it r
 status: new
 priority: low
 kind: bug
-labels: area:demo
+labels: area:demo, deferred
 created: 2026-10-16T00:06:57Z
+updated: 2026-10-16T02:19:59Z
 +++
 
 Some code panels in KeynoteDemo.swift differ from the code that builds the slide, or show demo-only API.
