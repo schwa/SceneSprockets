@@ -1,5 +1,5 @@
 {
-  "originHash" : "383d442bc580453438482474af1b764b08d2fd6806df7e9445abf813d6cabc26",
+  "originHash" : "f7f58960666ad8473548ab7dce79ecbcd9397a2e4517cb4621a384dc55ee0deb",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -79,7 +79,7 @@
       "location" : "https://github.com/schwa/MetalSprocketsGLTF",
       "state" : {
         "branch" : "main",
-        "revision" : "72327d4151d09f75a404f4f880eef2852373f65c"
+        "revision" : "473d23795f2c77712d6ad3045aa06740866e71f7"
       }
     },
     {
@@ -88,7 +88,7 @@
       "location" : "https://github.com/schwa/MetalSprocketsPBR",
       "state" : {
         "branch" : "main",
-        "revision" : "9b5495b6d51fe274a5be471fc577a9b3f9f88986"
+        "revision" : "06ce6afbaa03dad9fe5036f4141f5d37cd58d785"
       }
     },
     {
@@ -196,7 +196,7 @@
       "location" : "https://github.com/schwa/SwiftMesh",
       "state" : {
         "branch" : "main",
-        "revision" : "cdb410e46388fb95edf7fbebdd0e988af9163db4"
+        "revision" : "2c0918b8415cfa50d963521fc147ca1ee376dff3"
       }
     }
   ],
