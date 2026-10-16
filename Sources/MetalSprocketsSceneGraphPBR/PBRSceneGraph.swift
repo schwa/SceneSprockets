@@ -146,6 +146,10 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer {
     private var cachedRevision: Int?
     // Faded copies from the last frame, reused while a node's opacity holds still.
     private var fadedMaterials: [FadeKey: PBRMaterial] = [:]
+    // Reused while the view size holds still.
+    private var transmissionTarget: PBRTransmissionTarget?
+    // Set by the pre-pass when this frame has transmissive entries; the batches' renderers refract it.
+    private var frameTransmissionTarget: PBRTransmissionTarget?
 
     public init(device: MTLDevice, environment: PBREnvironment = .studio, environmentIntensity: Float = 1, exposure: Float = 1) {
         self.device = device
@@ -205,10 +209,44 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer {
             viewMatrix: context.viewMatrix,
             projectionMatrix: context.projectionMatrix,
             lighting: lighting,
-            pose: layout.pose()
+            pose: layout.pose(),
+            transmissionTarget: frameTransmissionTarget
         )
         renderer.materialOverrides = try materialOverrides(for: entries, keys: keys)
         return renderer.eraseToAnyElement()
+    }
+}
+
+extension PBRMaterialRenderer: SceneGraphPrePassRenderer {
+    // Draws the opaque PBR scene behind transmissive surfaces, so glass refracts it. Other material families are not
+    // in it. Light category masks and fades are ignored here.
+    public func makePrePassElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, viewSize: (width: Int, height: Int)) throws -> AnyElement? {
+        frameTransmissionTarget = nil
+        let hasTransmission = entries.contains { ($0.material as? PBRSceneMaterial)?.pbrMaterial.isTransmissive ?? false }
+        guard hasTransmission, viewSize.width > 0, viewSize.height > 0 else {
+            return nil
+        }
+        let target: PBRTransmissionTarget
+        if let transmissionTarget, transmissionTarget.width == viewSize.width, transmissionTarget.height == viewSize.height {
+            target = transmissionTarget
+        } else {
+            target = try PBRTransmissionTarget(device: device, width: viewSize.width, height: viewSize.height)
+            transmissionTarget = target
+        }
+        frameTransmissionTarget = target
+        let layout = PBRNodeLayout(entries: entries)
+        let model = try modelAndKeys(for: entries, layout: layout, structureRevision: context.revision.structure).model
+        let showsBackground = if case .environment = context.environment.background { true } else { false }
+        return PBRTransmissionPass(
+            model: model,
+            viewMatrix: context.viewMatrix,
+            projectionMatrix: context.projectionMatrix,
+            lighting: lighting(context: context),
+            pose: layout.pose(),
+            target: target,
+            showsBackground: showsBackground
+        )
+        .eraseToAnyElement()
     }
 }
 

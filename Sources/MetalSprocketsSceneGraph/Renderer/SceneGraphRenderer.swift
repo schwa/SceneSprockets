@@ -33,6 +33,12 @@ public protocol SceneGraphBackgroundRenderer {
     func makeBackgroundElement(context: SceneGraphRenderContext) throws -> AnyElement?
 }
 
+// A renderer that needs its own passes before the scene pass, such as one that draws what is behind glass.
+// `entries` are all of this renderer's entries; `makeElement` is called after this for each batch.
+public protocol SceneGraphPrePassRenderer {
+    func makePrePassElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, viewSize: (width: Int, height: Int)) throws -> AnyElement?
+}
+
 // Renders every mesh entry in one pass by handing each material family to its renderer.
 // Entries whose material type has no renderer are skipped.
 // The view comes from `camera` (default: the first camera node) unless `cameraMatrix` overrides its world transform.
@@ -87,6 +93,17 @@ public struct SceneGraphElement: Element {
                 context.shadow = SceneGraphShadows.Sampling(shadowMap: shadowFrame.shadowMap, intensity: shadows.intensity, color: shadows.color, softness: shadows.softness)
                 context.lightShadowSlices = shadowFrame.lightSlices
             }
+            var prePasses: [AnyElement] = []
+            if let color = renderPassDescriptor?.colorAttachments[0].texture {
+                for (renderer, rendererEntries) in zip(renderers, partitionMeshEntries(entries, renderers: renderers)) {
+                    guard let renderer = renderer as? any SceneGraphPrePassRenderer, !rendererEntries.isEmpty else {
+                        continue
+                    }
+                    if let prePass = try renderer.makePrePassElement(entries: rendererEntries, context: context, viewSize: (color.width, color.height)) {
+                        prePasses.append(prePass)
+                    }
+                }
+            }
             var elements: [AnyElement] = []
             if case .environment = context.environment.background {
                 for case let renderer as any SceneGraphBackgroundRenderer in renderers {
@@ -119,13 +136,25 @@ public struct SceneGraphElement: Element {
             let hasPostPasses = shadowFrame != nil || fog != nil || ambientOcclusion != nil || adjustsColor
             let scenePass = try makeScenePass(elements: elements, clearColor: clearColor, storesDepth: hasPostPasses)
             guard let postTargets, hasPostPasses else {
-                return scenePass.eraseToAnyElement()
+                if prePasses.isEmpty {
+                    return scenePass.eraseToAnyElement()
+                }
+                return try MetalSprockets.Group {
+                    ForEach(Array(prePasses.enumerated()), id: \.offset) { _, prePass in
+                        prePass
+                    }
+                    scenePass
+                }
+                .eraseToAnyElement()
             }
             let inverseViewProjection = (context.projectionMatrix * context.viewMatrix).inverse
             // The shadow and post passes open their own encoders, so they are siblings of the scene pass.
             return try MetalSprockets.Group {
                 if let shadowFrame {
                     ShadowCasterDepthPass(frame: shadowFrame)
+                }
+                ForEach(Array(prePasses.enumerated()), id: \.offset) { _, prePass in
+                    prePass
                 }
                 scenePass
                 if let shadows, let shadowFrame, !shadowFrame.masksEverything {

@@ -2469,17 +2469,21 @@ Actual: with a mixer, material channels are ignored when blending against the re
 ## 123: Transmissive PBR materials do not show the scene behind them
 
 +++
-status: new
+status: closed
 priority: low
 kind: enhancement
 labels: area:renderer, effort:m
 created: 2026-10-15T23:39:36Z
+updated: 2026-10-16T02:06:09Z
+closed: 2026-10-16T02:06:09Z
 +++
 
 PBR materials with transmissionFactor > 0 (glTF KHR_materials_transmission) refract only the environment map in the scene graph. MetalSprocketsPBR can sample a transmission scene (PBRRenderer.transmissionTarget, frame.hasTransmissionScene), but PBRMaterialRenderer never renders the opaque scene into one, so objects behind glass are not visible through it.
 
 Expected: glass shows the refracted scene behind it.
 Actual: glass shows only the environment map.
+
+- `2026-10-16T02:06:10Z`: PBRMaterialRenderer adds a transmission pre-pass (new SceneGraphPrePassRenderer hook). Follow-ups: #129, #130.
 
 ---
 
@@ -2569,5 +2573,43 @@ created: 2026-10-16T00:06:57Z
 +++
 
 Keynote code panels use Node, Action, AnimationController and AnimationPlayer. The real names are SceneGraph.Node and so on, and there are no typealiases. Decide: keep short names for readability, use full names, or add public typealiases.
+
+---
+
+## 129: Glass does not show non-PBR objects behind it
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:renderer, effort:m
+created: 2026-10-16T02:06:06Z
++++
+
+The transmission pre-pass (#123) draws only PBR entries. Blinn-Phong, ShaderMaterial and particle content behind transmissive PBR glass is missing from the refracted scene.
+
+Expected: everything opaque behind glass shows through it.
+Actual: only PBR meshes and the environment show through.
+
+Needs the other material renderers to draw into the transmission target with linear (not tone-mapped) output.
+
+---
+
+## 130: Transmission pre-pass ignores fades and light category masks
+
++++
+status: blocked
+priority: low
+kind: bug
+labels: area:renderer, effort:s, blocked
+created: 2026-10-16T02:06:06Z
+updated: 2026-10-16T02:06:14Z
++++
+
+PBRMaterialRenderer's transmission pre-pass (#123) draws all PBR entries as one model with all lights. In the scene seen through glass, fading nodes are drawn fully opaque, and lights light nodes their category masks exclude.
+
+Expected: the scene behind glass matches the main pass.
+
+Blocked on MetalSprocketsPBR#16 (PBRTransmissionPass from existing renderers).
 
 ---
