@@ -245,7 +245,7 @@ func makeRenderContext(sceneGraph: SceneGraph, camera: SceneGraph.Node?, cameraM
 // Groups entries by rendering order (ascending), then opaque before transparent, then by the lights whose masks
 // match, keeping first-seen order. Transparent entries are sorted farthest first. Each batch's context holds only
 // its lights.
-func renderBatches(_ entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) -> [(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext)] {
+public func renderBatches(_ entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) -> [(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext)] {
     struct Key: Hashable {
         var order: Int
         var isTransparent: Bool

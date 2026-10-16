@@ -201,6 +201,10 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer {
     }
 
     public func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement {
+        try makeRenderer(entries: entries, context: context, transmissionTarget: frameTransmissionTarget).eraseToAnyElement()
+    }
+
+    func makeRenderer(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, transmissionTarget: PBRTransmissionTarget?) throws -> PBRRenderer {
         let layout = PBRNodeLayout(entries: entries)
         let (model, keys) = try modelAndKeys(for: entries, layout: layout, structureRevision: context.revision.structure)
         let lighting = lighting(context: context)
@@ -210,16 +214,16 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer {
             projectionMatrix: context.projectionMatrix,
             lighting: lighting,
             pose: layout.pose(),
-            transmissionTarget: frameTransmissionTarget
+            transmissionTarget: transmissionTarget
         )
         renderer.materialOverrides = try materialOverrides(for: entries, keys: keys)
-        return renderer.eraseToAnyElement()
+        return renderer
     }
 }
 
 extension PBRMaterialRenderer: SceneGraphPrePassRenderer {
-    // Draws the opaque PBR scene behind transmissive surfaces, so glass refracts it. Other material families are not
-    // in it. Light category masks and fades are ignored here.
+    // Draws the opaque PBR scene behind transmissive surfaces, so glass refracts it, with the same batches (lights,
+    // fades) as the main pass. Other material families are not in it.
     public func makePrePassElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, viewSize: (width: Int, height: Int)) throws -> AnyElement? {
         frameTransmissionTarget = nil
         let hasTransmission = entries.contains { ($0.material as? PBRSceneMaterial)?.pbrMaterial.isTransmissive ?? false }
@@ -234,19 +238,12 @@ extension PBRMaterialRenderer: SceneGraphPrePassRenderer {
             transmissionTarget = target
         }
         frameTransmissionTarget = target
-        let layout = PBRNodeLayout(entries: entries)
-        let model = try modelAndKeys(for: entries, layout: layout, structureRevision: context.revision.structure).model
+        let renderers = try renderBatches(entries, context: context).map { batch in
+            try makeRenderer(entries: batch.entries, context: batch.context, transmissionTarget: target)
+        }
         let showsBackground = if case .environment = context.environment.background { true } else { false }
-        return PBRTransmissionPass(
-            model: model,
-            viewMatrix: context.viewMatrix,
-            projectionMatrix: context.projectionMatrix,
-            lighting: lighting(context: context),
-            pose: layout.pose(),
-            target: target,
-            showsBackground: showsBackground
-        )
-        .eraseToAnyElement()
+        return PBRTransmissionPass(renderers: renderers, target: target, showsBackground: showsBackground)
+            .eraseToAnyElement()
     }
 }
 

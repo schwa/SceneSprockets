@@ -31,6 +31,39 @@ private func glass(behind: Bool) throws -> SIMD4<UInt8> {
     return value
 }
 
+// #130: a white quad behind glass, lit by a red light whose mask includes the quad or not. Returns the center
+// pixel (BGRA).
+@MainActor
+private func glassOverLitQuad(lightReachesQuad: Bool) throws -> SIMD4<UInt8> {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh(device: device)
+    let root = SceneGraph.Node()
+    _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40)))))
+    let glass = try PBRSceneMaterial(device: device, baseColor: [1, 1, 1, 1], roughness: 0)
+    glass.pbrMaterial.uniforms.transmissionFactor = 1
+    _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: glass))
+    let quadNode = SceneGraph.Node(parent: root, content: .mesh(quad, material: try PBRSceneMaterial(device: device, baseColor: [1, 1, 1, 1], roughness: 1)))
+    quadNode.categoryBitMask = 2
+    let light = SceneGraph.Node(parent: root, content: .light(Light(type: .directional, color: [1, 0, 0], intensity: 10)))
+    // Never the glass (mask 1), whose smooth surface would reflect the light straight at the camera.
+    light.lightCategoryBitMask = lightReachesQuad ? 2 : 4
+    let renderer = PBRMaterialRenderer(device: device, environmentIntensity: 0)
+    let element = SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [renderer])
+    let texture = try OffscreenRenderer(size: CGSize(width: 16, height: 16)).render(element).texture
+    var value = SIMD4<UInt8>.zero
+    texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(8, 8, 1, 1), mipmapLevel: 0)
+    return value
+}
+
+@Test
+@MainActor
+func lightMasksApplyBehindGlass() throws {
+    let lit = try glassOverLitQuad(lightReachesQuad: true)
+    let masked = try glassOverLitQuad(lightReachesQuad: false)
+    #expect(Int(lit.z) > 60)
+    #expect(Int(masked.z) < Int(lit.z) / 4)
+}
+
 @Test
 @MainActor
 func glassShowsTheSceneBehindIt() throws {

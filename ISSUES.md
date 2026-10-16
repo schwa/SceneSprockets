@@ -2615,12 +2615,13 @@ Needs the other material renderers to draw into the transmission target with lin
 ## 130: Transmission pre-pass ignores fades and light category masks
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:renderer, effort:s
 created: 2026-10-16T02:06:06Z
-updated: 2026-10-16T02:32:54Z
+updated: 2026-10-16T02:42:08Z
+closed: 2026-10-16T02:42:08Z
 +++
 
 PBRMaterialRenderer's transmission pre-pass (#123) draws all PBR entries as one model with all lights. In the scene seen through glass, fading nodes are drawn fully opaque, and lights light nodes their category masks exclude.
@@ -2630,6 +2631,7 @@ Expected: the scene behind glass matches the main pass.
 Blocked on MetalSprocketsPBR#16 (PBRTransmissionPass from existing renderers).
 
 - `2026-10-16T02:32:54Z`: Unblocked: upstream fix landed (dependencies updated).
+- `2026-10-16T02:42:08Z`: The transmission pre-pass now uses the main pass's batches (renderBatches, now public): per-batch lights and material overrides through PBRTransmissionPass(renderers:). The light-mask test fails before the fix. Fades already looked right before the change (5% red behind glass was dim either way), so there is no fade test.
 
 ---
 
