@@ -2503,12 +2503,13 @@ Actual: glass shows only the environment map.
 ## 124: Cannot switch glTF material variants on a loaded scene graph
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:assets, effort:s
 created: 2026-10-15T23:39:37Z
-updated: 2026-10-16T02:34:31Z
+updated: 2026-10-16T10:42:22Z
+closed: 2026-10-16T10:42:22Z
 +++
 
 GLTFSceneGraph keeps variantNames, but the scene graph always shows the variant the GLTFAsset was loaded with. Switching means loading the asset again and rebuilding the graph, which loses node state and animation players.
@@ -2516,6 +2517,7 @@ GLTFSceneGraph keeps variantNames, but the scene graph always shows the variant 
 Blocked on MetalSprocketsGLTF#176 (per-variant materials are not public).
 
 - `2026-10-16T02:34:31Z`: Unblocked: upstream fix is in the resolved dependencies.
+- `2026-10-16T10:42:22Z`: Added GLTFSceneGraph.selectVariant(_:): swaps each mesh node's materials using GLTFAsset.material(for:variant:), keeping node state, mesh and shadow flags. Test gltfMaterialVariantsSwitchInPlace did not compile before the change.
 
 ---
 

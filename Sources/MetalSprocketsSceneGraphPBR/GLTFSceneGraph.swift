@@ -15,9 +15,28 @@ public struct GLTFSceneGraph {
     public var animations: [SceneGraph.AnimationClip]
     // Indexed like the glTF document's nodes; nil for nodes outside the loaded scene.
     public var nodes: [SceneGraph.Node?]
-    // KHR_materials_variants names. The scene graph shows the variant the asset was loaded with.
+    // KHR_materials_variants names. The scene graph starts with the variant the asset was loaded with;
+    // selectVariant(_:) switches it.
     public var variantNames: [String]
     public var warnings: [String]
+    let asset: GLTFAsset
+    // Every scene node showing a glTF mesh, with that mesh's index.
+    let meshNodes: [(node: SceneGraph.Node, mesh: Int)]
+
+    // Swaps every mesh node's materials for variant `index` (into variantNames; nil for the default materials).
+    // Node state and animation players are kept. Throws for an out-of-range index.
+    public func selectVariant(_ index: Int?) throws {
+        var materials: [Int: [any MetalSprocketsSceneGraph.Material]] = [:]
+        for (node, meshIndex) in meshNodes {
+            guard case let .mesh(mesh, _, castsShadow, receivesShadow) = node.content else {
+                continue
+            }
+            if materials[meshIndex] == nil {
+                materials[meshIndex] = try asset.meshes[meshIndex].map { PBRSceneMaterial(try asset.material(for: $0, variant: index)) }
+            }
+            node.content = .mesh(mesh, materials: materials[meshIndex] ?? [], castsShadow: castsShadow, receivesShadow: receivesShadow)
+        }
+    }
 }
 
 public extension GLTFAsset {
@@ -66,6 +85,7 @@ private struct GLTFSceneGraphBuilder {
         // Scene nodes holding each glTF light and camera, for pointer animations.
         var lightNodes: [Int: [SceneGraph.Node]] = [:]
         var cameraNodes: [Int: [SceneGraph.Node]] = [:]
+        var meshNodeList: [(node: SceneGraph.Node, mesh: Int)] = []
         var path = Set<Int>()
         func visit(_ index: Int, parent: SceneGraph.Node) throws {
             guard document.nodes.indices.contains(index) else {
@@ -101,6 +121,7 @@ private struct GLTFSceneGraphBuilder {
                 } ?? [node]
                 for meshNode in meshNodes {
                     meshNode.content = .mesh(converted.mesh, materials: converted.materials)
+                    meshNodeList.append((meshNode, meshIndex))
                     meshNode.morphTargets = converted.morphTargets
                     meshNode.morphWeights = source.weights ?? converted.defaultWeights
                 }
@@ -220,7 +241,7 @@ private struct GLTFSceneGraphBuilder {
         } catch {
             warnings.append("Image-based light skipped: \(error)")
         }
-        return GLTFSceneGraph(sceneGraph: sceneGraph, animations: animations, nodes: nodes, variantNames: asset.variantNames, warnings: asset.warnings + warnings)
+        return GLTFSceneGraph(sceneGraph: sceneGraph, animations: animations, nodes: nodes, variantNames: asset.variantNames, warnings: asset.warnings + warnings, asset: asset, meshNodes: meshNodeList)
     }
 
     // The asset resolves each primitive's material (including variants); instances carry the result.

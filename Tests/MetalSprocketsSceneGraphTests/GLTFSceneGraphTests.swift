@@ -391,3 +391,41 @@ func gltfImageBasedLightAndVariantNamesAreMapped() throws {
     #expect(result.sceneGraph.environment.map is PBREnvironment)
     #expect(result.variantNames == ["Red", "Blue"])
 }
+
+// #124: switching KHR_materials_variants on a loaded scene graph swaps the mesh's materials in place.
+@Test
+func gltfMaterialVariantsSwitchInPlace() throws {
+    let buffer = [Float](arrayLiteral: -1, -1, 0, 1, -1, 0, 0, 1, 0).withUnsafeBytes { Data($0) }.base64EncodedString()
+    let json = """
+    {
+      "asset": {"version": "2.0"},
+      "extensionsUsed": ["KHR_materials_variants"],
+      "extensions": {"KHR_materials_variants": {"variants": [{"name": "Red"}, {"name": "Blue"}]}},
+      "scene": 0, "scenes": [{"nodes": [0]}], "nodes": [{"mesh": 0}],
+      "materials": [
+        {"pbrMetallicRoughness": {"baseColorFactor": [1, 1, 1, 1]}},
+        {"pbrMetallicRoughness": {"baseColorFactor": [1, 0, 0, 1]}},
+        {"pbrMetallicRoughness": {"baseColorFactor": [0, 0, 1, 1]}}
+      ],
+      "meshes": [{"primitives": [{"attributes": {"POSITION": 0}, "material": 0, "extensions": {"KHR_materials_variants": {"mappings": [
+        {"material": 1, "variants": [0]}, {"material": 2, "variants": [1]}
+      ]}}}]}],
+      "accessors": [{"bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3", "min": [-1, -1, 0], "max": [1, 1, 0]}],
+      "bufferViews": [{"buffer": 0, "byteLength": 36}],
+      "buffers": [{"byteLength": 36, "uri": "data:application/octet-stream;base64,\(buffer)"}]
+    }
+    """
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
+    try Data(json.utf8).write(to: url)
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let result = try GLTFAsset(url: url, device: device).makeSceneGraph(device: device)
+    let node = try #require(result.nodes[0])
+    #expect(try pbrMaterial(of: node).pbrMaterial.uniforms.baseColorFactor == [1, 1, 1, 1])
+    try result.selectVariant(1)
+    #expect(try pbrMaterial(of: node).pbrMaterial.uniforms.baseColorFactor == [0, 0, 1, 1])
+    try result.selectVariant(0)
+    #expect(try pbrMaterial(of: node).pbrMaterial.uniforms.baseColorFactor == [1, 0, 0, 1])
+    try result.selectVariant(nil)
+    #expect(try pbrMaterial(of: node).pbrMaterial.uniforms.baseColorFactor == [1, 1, 1, 1])
+    #expect(throws: (any Error).self) { try result.selectVariant(5) }
+}
