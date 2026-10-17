@@ -1225,9 +1225,9 @@ Next steps: capture a GPU trace of a flashing frame, or render into renderer-own
 status: open
 priority: medium
 kind: bug
-labels: area:renderer, effort:s
+labels: area:renderer, effort:s, deferred
 created: 2026-10-14T01:14:55Z
-updated: 2026-10-16T02:38:45Z
+updated: 2026-10-20T02:27:43Z
 +++
 
 Surfaces that face the light show a fine dotted shadow pattern, and shadow edges are stepped. It is clearly visible on the fox's head in the Imported Assets demo. It may also cause the random flicker in #59, because borderline texels flip between lit and shadowed.
@@ -2393,12 +2393,12 @@ Expected: curved shapes shade smoothly; box and plane stay flat.
 ## 119: No 2D text rendering
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
-labels: text, deferred
+labels: deferred, effort:m, area:text
 created: 2026-10-15T21:21:02Z
-updated: 2026-10-15T21:21:03Z
+updated: 2026-10-20T02:26:42Z
 +++
 
 SceneGraph can only show text as extruded 3D meshes (Shape.text, SwiftMesh extrusion). There is no flat, resolution-independent 2D text for labels, HUDs or slide copy.
@@ -2552,12 +2552,12 @@ SceneGraph.Constraint now has influenceFactor, isEnabled and an acceleration kin
 ## 126: Keynote code panels: snippets would not compile as written
 
 +++
-status: new
+status: open
 priority: low
 kind: bug
-labels: area:demo, deferred
+labels: area:demo, deferred, effort:s
 created: 2026-10-16T00:06:57Z
-updated: 2026-10-16T02:19:59Z
+updated: 2026-10-20T02:26:42Z
 +++
 
 The code panels in KeynoteDemo.swift show Swift that does not compile if pasted.
@@ -2573,12 +2573,12 @@ Expected: each snippet compiles, given the obvious names (materials, nodes) it r
 ## 127: Keynote code panels: snippets do not match what the slide does
 
 +++
-status: new
+status: open
 priority: low
 kind: bug
-labels: area:demo, deferred
+labels: area:demo, deferred, effort:s
 created: 2026-10-16T00:06:57Z
-updated: 2026-10-16T02:19:59Z
+updated: 2026-10-20T02:26:42Z
 +++
 
 Some code panels in KeynoteDemo.swift differ from the code that builds the slide, or show demo-only API.
@@ -2592,12 +2592,12 @@ Some code panels in KeynoteDemo.swift differ from the code that builds the slide
 ## 128: Keynote code panels: decide on short type names
 
 +++
-status: new
+status: open
 priority: low
 kind: task
-labels: area:demo, deferred
+labels: area:demo, deferred, effort:s
 created: 2026-10-16T00:06:57Z
-updated: 2026-10-16T02:35:36Z
+updated: 2026-10-20T02:26:42Z
 +++
 
 Keynote code panels use Node, Action, AnimationController and AnimationPlayer. The real names are SceneGraph.Node and so on, and there are no typealiases. Decide: keep short names for readability, use full names, or add public typealiases.
@@ -2655,10 +2655,12 @@ Blocked on MetalSprocketsPBR#16 (PBRTransmissionPass from existing renderers).
 ## 131: Add SceneKit-style debug statistics overlay
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
+labels: effort:l, area:renderer, deferred
 created: 2026-10-16T02:37:54Z
+updated: 2026-10-20T02:27:43Z
 +++
 
 Add an optional debug info overlay to the scene view, like SceneKit's showsStatistics.
@@ -2682,10 +2684,12 @@ Done when: a view modifier or flag turns the overlay on, and it shows live per-f
 ## 132: No built-in debug visualization modes for scene graph rendering
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
+labels: effort:l, area:renderer, deferred
 created: 2026-10-17T12:19:22Z
+updated: 2026-10-20T02:27:43Z
 +++
 
 SceneGraph has no standard way to view a scene in debug modes such as normals, UVs, tangents, world position or material channels. The only option is ShaderMaterial.normals(), which has to be set on each node by hand.
@@ -2737,10 +2741,12 @@ On the keynote's Performance slide (1,600 animated crates, 3 batches) this group
 ## 135: No explicit instancing API; drawing many copies always goes through per-node implicit instancing
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
+labels: effort:l, area:scenegraph, deferred
 created: 2026-10-17T12:50:07Z
+updated: 2026-10-20T02:27:43Z
 +++
 
 The only way to draw many copies of a mesh is one Node per copy. Renderers then discover the repeats each frame (implicit instancing): flatten the tree into one MeshEntry per node, cull each entry, and group entries back into instance batches. Even with the cached batching from #134, the per-node cost remains: node traversal and world transforms, one MeshEntry and one frustum test per copy, and gathering one model matrix per copy every frame.
@@ -2748,5 +2754,164 @@ The only way to draw many copies of a mesh is one Node per copy. Renderers then 
 On the keynote's Performance slide this scales with crate count: 1,600 crates took about 1.6 ms per frame and 484 crates about 0.9 ms (Release, offscreen benchmark), almost all on the CPU, for what the GPU draws as 3 instanced calls.
 
 There is no way to give the scene graph a single node holding a mesh, a material and an array of instance transforms (and optionally per-instance colors), like SCNGeometry with a custom instance buffer or EXT_mesh_gpu_instancing, so that the cost does not grow with one node per copy. glTF EXT_mesh_gpu_instancing is currently expanded into child nodes for the same reason.
+
+---
+
+## 136: Ambient occlusion is part of PostProcessing and darkens the final lit color
+
++++
+status: open
+priority: medium
+kind: bug
+labels: effort:m, area:renderer, deferred
+created: 2026-10-17T13:09:48Z
+updated: 2026-10-20T02:27:43Z
++++
+
+Screen-space ambient occlusion is configured as SceneGraph.PostProcessing.ambientOcclusion, next to exposure, contrast, saturation and vignette, and runs as a post pass (ambient_occlusion in PostProcessing.metal) that multiplies the final rendered color.
+
+Problems:
+- It is grouped with color grading, although it is a lighting effect.
+- It darkens all light at a pixel: direct lighting, specular highlights and emission are occluded, not just ambient and indirect light. A crease lit by a spotlight still goes dark, and emissive or unlit content (for example the keynote's code panels and titles) is darkened.
+- Material renderers never see the occlusion: Blinn-Phong ambient and PBR image-based lighting cannot apply it to their ambient terms.
+
+Expected: ambient occlusion reduces only ambient and indirect lighting, and is configured as a lighting setting, separate from post-processing color adjustments.
+
+---
+
+## 137: Evaluate MetalSprocketsParticles as replacement for particle system
+
++++
+status: open
+priority: medium
+kind: task
+labels: has-subtasks, effort:xl, area:renderer
+depends: 138, 139, 140, 141, 142, 143
+created: 2026-10-19T12:06:26Z
+updated: 2026-10-20T02:26:42Z
++++
+
+Evaluate MetalSprocketsParticles (https://github.com/schwa/MetalSprocketsParticles, local: /Users/schwa/Projects/Scratch/MetalSprocketsParticles) as a replacement for the current particle system. If adopted, it becomes our particle system and the in-repo MetalSprocketsParticles target is deleted.
+
+## Prelim findings (code read only, not built or benchmarked)
+
+No show stoppers found.
+
+Current system: small CPU sim (MetalSprocketsParticles target, ParticleRenderer.swift, Particles.metal). Sorts on CPU and builds a new MTLBuffer every frame. Used by KeynoteDemo, ParticleTests, ParticleSystemTests.
+
+Candidate: about 8.6k lines, GPU sim and render, built as MetalSprockets elements (runtime.simulate / runtime.render). Render-pass agnostic.
+
+### Integration work
+- Delete our MetalSprocketsParticles target (same product and type names).
+- Model split: ParticleSystem (Codable description) vs ParticleSystemRuntime (GPU state). Node.particleSystems must hold runtimes or a wrapper. Rethink clone() sharing.
+- Move per-frame simulate out of SceneView.advanceParticles into the renderer frame setup. Pass node world transforms via simulate(transforms:).
+- Hidden nodes: map to the per-emitter isEmitting.
+- Port KeynoteDemo effects (fire, fountain, firefly trail) and the tests.
+- Check extra dependencies: SwiftMesh, MetalCompilerPlugin.
+
+### Upstream changes needed
+- Reversed depth: they use .less; we use .greater. Need an option or a caller-supplied depth compare.
+- Soft particles need a scene depth texture from our renderer (optional; depends on MetalSprockets #530).
+- cameraEye/cameraTarget on ParticleSystem are irrelevant to us (cosmetic).
+
+- `2026-10-20T02:25:07Z`: Split into subtasks: #138 → #139 → #140 → #141 → #142, #143
+
+---
+
+## 138: Upstream: configurable depth compare in MetalSprocketsParticles
+
++++
+status: closed
+priority: medium
+kind: task
+labels: effort:m, subtask, area:renderer
+created: 2026-10-20T02:25:07Z
+updated: 2026-10-21T16:47:49Z
+closed: 2026-10-21T16:47:49Z
++++
+
+MetalSprocketsParticles uses .less depth compare; we use reversed-Z (.greater). Add an option or caller-supplied depth compare upstream. Done when particles depth-test correctly against a .greater depth buffer. Part of #137.
+
+- `2026-10-21T16:47:49Z`: Already done upstream: ParticleSystemRuntime.reverseZ (#144) gives .greater depth compare. Package tagged 0.0.1 on GitHub.
+
+---
+
+## 139: Adopt MetalSprocketsParticles package and delete in-repo particle target
+
++++
+status: open
+priority: medium
+kind: task
+labels: effort:m, subtask, area:renderer
+depends: 138
+created: 2026-10-20T02:25:07Z
+updated: 2026-10-20T02:26:42Z
++++
+
+Add the MetalSprocketsParticles package dependency (check SwiftMesh and MetalCompilerPlugin deps). Delete the in-repo MetalSprocketsParticles target, ParticleRenderer.swift, and Particles.metal. Done when the package builds. Part of #137.
+
+---
+
+## 140: Integrate ParticleSystem/ParticleSystemRuntime into Node model
+
++++
+status: open
+priority: medium
+kind: task
+labels: effort:m, subtask, area:renderer
+depends: 139
+created: 2026-10-20T02:25:07Z
+updated: 2026-10-20T02:26:43Z
++++
+
+Node.particleSystems holds runtimes or a wrapper. Split Codable description from GPU runtime state. Rethink clone() sharing. Map hidden nodes to per-emitter isEmitting. Part of #137.
+
+---
+
+## 141: Move particle simulation into renderer frame setup
+
++++
+status: open
+priority: medium
+kind: task
+labels: effort:m, subtask, area:renderer
+depends: 140
+created: 2026-10-20T02:25:07Z
+updated: 2026-10-20T02:26:43Z
++++
+
+Move per-frame simulate out of SceneView.advanceParticles into renderer frame setup. Pass node world transforms via simulate(transforms:). Done when particles simulate and render in the scene. Part of #137.
+
+---
+
+## 142: Port KeynoteDemo particle effects to new system
+
++++
+status: open
+priority: medium
+kind: task
+labels: effort:m, subtask, area:renderer
+depends: 141
+created: 2026-10-20T02:25:07Z
+updated: 2026-10-20T02:26:43Z
++++
+
+Port fire, fountain, and firefly trail effects in KeynoteDemo. Done when they look and behave as before. Part of #137.
+
+---
+
+## 143: Port particle tests to new system
+
++++
+status: open
+priority: medium
+kind: task
+labels: effort:m, subtask, area:renderer
+depends: 141
+created: 2026-10-20T02:25:07Z
+updated: 2026-10-20T02:26:43Z
++++
+
+Port ParticleTests and ParticleSystemTests to the new particle system. Done when tests pass. Part of #137.
 
 ---
