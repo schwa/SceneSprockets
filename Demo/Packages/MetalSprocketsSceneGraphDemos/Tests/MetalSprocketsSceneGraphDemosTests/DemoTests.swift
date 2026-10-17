@@ -14,7 +14,7 @@ import simd
 func demoBuildsUpdatesAndRenders(demo: Demo) throws {
     let scene = demo.make()
     #expect(!scene.sceneGraph.cameraNodes().isEmpty)
-    #expect(!scene.sceneGraph.meshEntries().isEmpty || demo.id == "instancing")
+    #expect(!scene.sceneGraph.meshEntries().isEmpty)
     for frame in 0..<3 {
         scene.update(time: Float(frame) / 60, deltaTime: 1 / 60)
     }
@@ -34,28 +34,32 @@ func demoBuildsUpdatesAndRenders(demo: Demo) throws {
 // the joints' world transforms they were offset and swung around far-away pivots.
 @Test
 @MainActor
-func deformationDemoTubesFollowTheirSkeletons() throws {
-    let demo = DeformationDemo()
-    let graph = demo.sceneGraph
-    for name in ["Blinn-Phong", "PBR"] {
-        let nodes = graph.nodesWithWorldTransforms().map(\.node)
-        let skeleton = try #require(nodes.first { $0.label == "\(name) Skeleton" })
-        let tube = try #require(graph.meshEntries().first { $0.node.label == "\(name) Tube" })
-        let positions = try #require(tube.deformed(revision: graph.revision)).mesh.positions()
-        let skeletonX = skeleton.worldTransform.columns.3.x
-        let baseX = positions.filter { $0.y < 0.05 }.map(\.x)
-        // The base ring (weighted to joint 0, which never moves) stays around the skeleton.
-        #expect(abs((baseX.min()! + baseX.max()!) / 2 - skeletonX) < 0.01, "\(name) tube base is not on its skeleton")
-    }
+func deformationSlideTubeFollowsItsSkeleton() throws {
+    let graph = try keynoteShowing("Deformation").sceneGraph
+    let nodes = graph.nodesWithWorldTransforms().map(\.node)
+    let skeleton = try #require(nodes.first { $0.label == "Skeleton" })
+    let tube = try #require(graph.meshEntries().first { $0.node.label == "Tube" })
+    let positions = try #require(tube.deformed(revision: graph.revision)).mesh.positions()
+    let skeletonX = skeleton.worldTransform.columns.3.x
+    let baseX = positions.filter { $0.y < 0.05 }.map(\.x)
+    // The base ring (weighted to joint 0, which never moves) stays around the skeleton.
+    #expect(abs((baseX.min()! + baseX.max()!) / 2 - skeletonX) < 0.01, "tube base is not on its skeleton")
+}
+
+@MainActor
+func keynoteShowing(_ title: String) throws -> KeynoteDemo {
+    let keynote = KeynoteDemo()
+    keynote.show(slide: try #require(KeynoteDemo.titles.firstIndex(of: title)))
+    return keynote
 }
 
 // #70: the bump target moves vertices along the direction from the center, so vertices that share a position (one
 // per face) move together and the surface does not tear.
 @Test
 @MainActor
-func deformationDemoMorphKeepsSurfaceClosed() throws {
-    let demo = DeformationDemo()
-    let blob = try #require(demo.sceneGraph.meshEntries().first { $0.node.label == "PBR Blob" })
+func deformationSlideMorphKeepsSurfaceClosed() throws {
+    let demo = try keynoteShowing("Deformation")
+    let blob = try #require(demo.sceneGraph.meshEntries().first { $0.node.label == "Blob" })
     let positions = blob.mesh.positions()
     let deltas = try #require(blob.node.morphTargets.first).positionDeltas
     var deltaByPosition: [SIMD3<Int32>: SIMD3<Float>] = [:]

@@ -6,70 +6,12 @@ import MetalSprocketsSceneGraphPBR
 import SwiftMesh
 import simd
 
-// Soft candy shapes on a grey backdrop: speckled gummies (procedural noise texture, sheen, diffuse transmission,
-// clearcoat) and pearlescent blobs (thin-film iridescence).
-final class CandyDemo: DemoScene {
-    private var spinners: [(node: SceneGraph.Node, axis: SIMD3<Float>, speed: Float, base: SIMD3<Float>, phase: Float)] = []
+// Materials for the keynote's Candy slide: speckled gummies (procedural noise texture, sheen, diffuse transmission,
+// clearcoat) and pearls (thin-film iridescence).
+@MainActor
+enum CandyMaterials {
 
-    init() {
-        let root = SceneGraph.Node(label: "Root")
-        root.addChild(.camera(fieldOfView: 35, eye: [0, 0, 11]))
-        root.addChild(.pointLight("Key Light", at: [-4, 6, 8], intensity: 60))
-        root.addChild(.pointLight("Fill Light", at: [6, -2, 6], color: [0.9, 0.95, 1], intensity: 15))
-        // Behind the shapes, so diffuse transmission makes the gummies glow at their thin edges.
-        root.addChild(.pointLight("Back Light", at: [1, 3, -8], color: [1, 0.9, 0.8], intensity: 400))
-
-        let speckles = Self.makeSpeckleBinding()
-        let roundedBox = MetalMesh(mesh: .roundedBox(extents: [1.6, 2.2, 1.1], radius: 0.35), device: demoDevice)
-        let cube = MetalMesh(mesh: .roundedBox(extents: [1.8, 1.8, 1.8], radius: 0.3), device: demoDevice)
-        // SwiftMesh primitives default to flat normals.
-        let smooth: MeshAttributes = [.smoothNormals, .textureCoordinates]
-        let bean = MetalMesh(mesh: .capsule(segments: 64, height: 2.6, radius: 0.6, latitudeSegments: 24, attributes: smooth), device: demoDevice)
-        let egg = MetalMesh(mesh: .sphere(extents: [1.6, 2, 1.6], latitudeSegments: 48, longitudeSegments: 96, attributes: smooth), device: demoDevice)
-
-        let orange = Self.gummy(color: [1, 0.3, 0.1], speckles: speckles)
-        let green = Self.gummy(color: [0.5, 0.75, 0.15], speckles: speckles)
-        let teal = Self.gummy(color: [0.2, 0.65, 0.5], speckles: speckles)
-        let pearl = Self.pearl()
-
-        super.init(
-            sceneGraph: SceneGraph(root: root),
-            renderers: [PBRMaterialRenderer(device: demoDevice)],
-            cameraMatrix: .camera(eye: [0, 0, 11], target: .zero),
-            parameters: [.toggle("Float", default: true)]
-        )
-        sceneGraph.environment = SceneGraph.Environment(background: .color([0.5, 0.53, 0.52, 1]), map: PBREnvironment.studio)
-
-        add(root, "Gummy", roundedBox, orange, at: [-1.2, -0.6, 1], rotation: simd_quatf(angle: 0.25, axis: [0.3, 1, 0.1]))
-        add(root, "Gummy Back", roundedBox, orange, at: [-1.5, -1.1, -0.2], rotation: simd_quatf(angle: -0.2, axis: [0, 1, 0.2]))
-        add(root, "Pearl Cube", cube, pearl, at: [1.8, 1.2, 0], rotation: simd_quatf(angle: 0.7, axis: simd_normalize([0.4, 0.3, 1])))
-        add(root, "Pearl Bean", bean, pearl, at: [-1.8, 2.4, -1], rotation: simd_quatf(angle: -0.25, axis: [0, 0, 1]))
-        add(root, "Green Egg", egg, green, at: [3.4, 2.6, -1.5], rotation: simd_quatf(angle: 0.4, axis: [1, 0, 0]))
-        add(root, "Green Egg 2", egg, green, at: [-3.6, 0.6, -1], rotation: simd_quatf(angle: 1.2, axis: [0, 0, 1]))
-        add(root, "Teal Egg", egg, teal, at: [3.2, -3.0, -0.5], rotation: simd_quatf(angle: 0.6, axis: [1, 1, 0]))
-        add(root, "Orange Egg", egg, orange, at: [-0.2, -3.8, -1], rotation: simd_quatf(angle: 1.5, axis: [1, 0, 0]))
-    }
-
-    private func add(_ root: SceneGraph.Node, _ label: String, _ mesh: MetalMesh, _ material: PBRSceneMaterial, at position: SIMD3<Float>, rotation: simd_quatf) {
-        let node = SceneGraph.Node(parent: root, label: label, trs: .init(translation: position, rotation: rotation), content: .mesh(mesh, material: material))
-        var generator = SystemRandomNumberGenerator()
-        let axis = simd_normalize(SIMD3<Float>(.random(in: -1...1, using: &generator), .random(in: -1...1, using: &generator), .random(in: -1...1, using: &generator)))
-        spinners.append((node, axis, .random(in: 0.08...0.25), position, .random(in: 0...(2 * .pi))))
-    }
-
-    override func update(time: Float, deltaTime: Float) {
-        guard self[flag: "Float"] else {
-            return
-        }
-        for spinner in spinners {
-            spinner.node.trs.rotation = simd_normalize(simd_quatf(angle: deltaTime * spinner.speed, axis: spinner.axis) * spinner.node.trs.rotation)
-            spinner.node.trs.translation = spinner.base + [0, sin(time * 0.6 + spinner.phase) * 0.15, 0]
-        }
-    }
-
-    // MARK: Materials
-
-    private static func gummy(color: SIMD3<Float>, speckles: PBRMaterial.Binding) -> PBRSceneMaterial {
+    static func gummy(color: SIMD3<Float>, speckles: PBRMaterial.Binding) -> PBRSceneMaterial {
         var uniforms = PBRMaterialUniforms.defaults(baseColor: SIMD4(color, 1), metallic: 0, roughness: 0.4)
         uniforms.baseColor.enabled = 1
         uniforms.baseColor.transform = simd_float3x3(diagonal: [1.5, 1.5, 1])
@@ -94,7 +36,7 @@ final class CandyDemo: DemoScene {
         return PBRSceneMaterial(try! PBRMaterial(name: "Gummy", uniforms: uniforms, textureBindings: bindings, device: demoDevice))
     }
 
-    private static func pearl() -> PBRSceneMaterial {
+    static func pearl() -> PBRSceneMaterial {
         var uniforms = PBRMaterialUniforms.defaults(baseColor: [0.85, 0.84, 0.92, 1], metallic: 0.35, roughness: 0.45)
         uniforms.iridescenceFactor = 1
         uniforms.iridescenceIor = 1.4
@@ -108,7 +50,7 @@ final class CandyDemo: DemoScene {
     // MARK: Noise texture
 
     // White with soft value-noise mottling, sparse dark specks and fainter light flecks. Tinted by the base color factor.
-    private static func makeSpeckleBinding() -> PBRMaterial.Binding {
+    static func makeSpeckleBinding() -> PBRMaterial.Binding {
         let size = 1024
         var random = SplitMix(seed: 0xC0FFEE)
         var pixels = [Float](repeating: 1, count: size * size)

@@ -1,8 +1,13 @@
 [defaults]
 destination = "mac"
+container = "MetalSprocketsSceneGraph"
+skip_plugin_validation = true
+
+[defaults.build]
 scheme = "MetalSprocketsSceneGraphDemo"
-extra_args = []
 
-[output]
+[defaults.test]
+scheme = "MetalSprocketsSceneGraph"
 
-[new]
+[defaults.run]
+scheme = "MetalSprocketsSceneGraphDemo"

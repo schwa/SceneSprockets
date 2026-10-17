@@ -19,8 +19,10 @@ struct GoldenImageTests {
     struct Case: Sendable, CustomTestStringConvertible {
         var name: String
         var demo: String
-        var values: [String: Float]
+        var values: [String: Float] = [:]
         var frames = 1
+        // A keynote slide title, shown before rendering.
+        var slide: String?
 
         var testDescription: String { name }
     }
@@ -35,18 +37,20 @@ struct GoldenImageTests {
         Case(name: "scenekit-features", demo: "scenekit-features", values: ["Shadows": 0]),
         // Sun, spotlight and a category-2 point light all casting (#71).
         Case(name: "scenekit-features-shadows", demo: "scenekit-features", values: ["Shadows": 1]),
-        Case(name: "instancing", demo: "instancing", values: [:]),
-        Case(name: "materials", demo: "pbr-materials", values: [:]),
-        Case(name: "materials-translucent-blinn-phong", demo: "pbr-materials", values: ["Blinn-Phong Opacity": 0.4, "Turn": 1], frames: 650),
-        Case(name: "deformation", demo: "deformation", values: [:], frames: 30),
-        // Seeded emitters, so the particles are the same each run.
-        Case(name: "particles", demo: "particles", values: [:], frames: 90),
+        Case(name: "keynote-materials", demo: "keynote", slide: "Materials"),
+        Case(name: "keynote-deformation", demo: "keynote", frames: 30, slide: "Deformation"),
+        Case(name: "keynote-performance", demo: "keynote", frames: 30, slide: "Performance"),
+        Case(name: "keynote-gltf", demo: "keynote", frames: 30, slide: "glTF & Model I/O"),
     ]
 
     @Test(arguments: cases)
     @MainActor
     func matchesGolden(_ testCase: Case) throws {
-        let image = try DemoSnapshot.render(demoID: testCase.demo, width: 320, height: 200, frames: testCase.frames, values: testCase.values)
+        let image = try DemoSnapshot.render(demoID: testCase.demo, width: 320, height: 200, frames: testCase.frames, values: testCase.values) { scene in
+            if let title = testCase.slide, let keynote = scene as? KeynoteDemo, let index = KeynoteDemo.titles.firstIndex(of: title) {
+                keynote.show(slide: index)
+            }
+        }
         let goldens = try #require(Bundle.module.url(forResource: "Golden Images", withExtension: nil))
         let comparison = GoldenImageComparison(imageDirectory: goldens, psnrThreshold: Self.psnrThreshold, failureOutputDirectory: Self.outputDirectory)
         do {

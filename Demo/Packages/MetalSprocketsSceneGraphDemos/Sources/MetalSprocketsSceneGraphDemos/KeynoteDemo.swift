@@ -2,6 +2,7 @@ import Foundation
 import GeometryLite3D
 import Metal
 import MetalSprocketsGLTF
+import MetalSprocketsParticles
 import MetalSprocketsSceneGraph
 import MetalSprocketsSceneGraphShaderMaterial
 import MetalSprocketsSceneGraphBlinnPhong
@@ -17,9 +18,10 @@ import simd
 // also advances, and Auto-advance moves on every few seconds.
 public final class KeynoteDemo: DemoScene {
     private static let spacing: Float = 24
-    private static let titles = [
+    static let titles = [
         "SceneGraph", "Scene Graph", "Shapes", "Materials", "Lights", "Actions", "Constraints", "Opacity & Fades", "Blend Modes",
-        "Glass", "Shadows", "Fog", "Implicit Animation", "Animation Blending", "glTF & Model I/O", "Hit Testing", "Physics", "SceneView", "Thank You",
+        "Custom Shaders", "Glass", "Candy", "Shadows", "Fog", "Particles", "Implicit Animation", "Animation Blending", "Deformation",
+        "glTF & Model I/O", "Hit Testing", "Physics", "Performance", "Post-processing", "SceneView", "Thank You",
     ]
 
     private let cameraNode: SceneGraph.Node
@@ -38,6 +40,11 @@ public final class KeynoteDemo: DemoScene {
     private var physics: SceneGraphPhysicsWorld?
     private var physicsStack: SceneGraph.Node?
     private var sincePhysicsReset: Float = 0
+    private var candies: [(node: SceneGraph.Node, axis: SIMD3<Float>, speed: Float)] = []
+    private var morphed: [SceneGraph.Node] = []
+    private var bendingJoints: [SceneGraph.Node] = []
+    private var crates: [SceneGraph.Node] = []
+    private static let crateGridSize = 40
 
     init() {
         let root = SceneGraph.Node(label: "Root")
@@ -128,6 +135,25 @@ public final class KeynoteDemo: DemoScene {
             controller.advance(by: deltaTime)
             blendMixer.apply(controller.layers)
             blendController = controller
+        case "Candy":
+            for candy in candies {
+                candy.node.trs.rotation = simd_normalize(simd_quatf(angle: deltaTime * candy.speed, axis: candy.axis) * candy.node.trs.rotation)
+            }
+        case "Deformation":
+            let weights = [(sin(time * 1.3) + 1) / 2, max(0, sin(time * 0.7))]
+            for node in morphed {
+                node.morphWeights = weights
+            }
+            let rotation = simd_quatf(angle: sin(time * 1.5) * 0.7, axis: [0, 0, 1])
+            for joint in bendingJoints {
+                joint.trs.rotation = rotation
+            }
+        case "Performance":
+            waveCrates(time: time)
+        case "Post-processing":
+            // Cycles through a few grades.
+            let phase = (sin(time * 0.6) + 1) / 2
+            sceneGraph.postProcessing = SceneGraph.PostProcessing(exposure: phase * 0.4 - 0.2, contrast: 1 + phase * 0.3, saturation: 1.4 - phase * 1.4, vignetteIntensity: 0.3 + phase * 0.5, ambientOcclusion: SceneGraph.AmbientOcclusion(radius: 0.4, intensity: 0.8))
         case "glTF & Model I/O":
             foxPlayer?.advance(by: deltaTime)
         case "Physics":
@@ -145,6 +171,9 @@ public final class KeynoteDemo: DemoScene {
     private func applySceneSettings() {
         shadows = currentTitle == "Shadows" ? shadowRenderer : nil
         sceneGraph.fog = currentTitle == "Fog" ? SceneGraph.Fog(color: [0.05, 0.06, 0.1, 1], startDistance: 12, endDistance: 34) : nil
+        if currentTitle != "Post-processing" {
+            sceneGraph.postProcessing = nil
+        }
         if currentTitle == "Physics" {
             resetPhysics()
         }
@@ -286,6 +315,51 @@ public final class KeynoteDemo: DemoScene {
             let sun = Node(content: .light(Light(type: .directional, intensity: 1.5)))
             sun.transform = .camera(eye: [3, 6, 4], target: .zero)
             scene.shadows = SceneGraphShadows(intensity: 0.75, softness: 2)
+            """, to: slide)
+        case "Custom Shaders":
+            customShadersSlide(slide)
+            addCode("""
+            let normals = try ShaderMaterial.normals()
+            let rim = try ShaderMaterial.rim(color: [0.3, 0.8, 1, 1])
+            ShaderMaterial(vertexShader: vertex, fragmentShader: fragment,
+                           parameters: ["time": .float(t)])
+            """, to: slide)
+        case "Candy":
+            candySlide(slide)
+            addCode("""
+            uniforms.sheenColorFactor = [1, 0.95, 0.9] * 0.25
+            uniforms.diffuseTransmissionFactor = 0.9
+            uniforms.clearcoatFactor = 0.25
+            uniforms.iridescenceFactor = 1 // pearls
+            """, to: slide)
+        case "Particles":
+            particlesSlide(slide)
+            addCode("""
+            let fire = ParticleSystem()
+            fire.birthRate = 200
+            fire.blendMode = .additive
+            node.particleSystems = [fire]
+            """, to: slide)
+        case "Deformation":
+            deformationSlide(slide)
+            addCode("""
+            blob.morphTargets = [bumps, squash]
+            blob.morphWeights = [0.5, 0.2]
+            tube.skin = Skin(joints: joints, inverseBindMatrices: inverseBind)
+            """, to: slide)
+        case "Performance":
+            performanceSlide(slide)
+            addCode("""
+            // Same mesh + material: one instanced draw per color.
+            // Nodes outside the view are culled.
+            Node(parent: grid, content: .mesh(box, material: crate))
+            """, to: slide)
+        case "Post-processing":
+            postProcessingSlide(slide)
+            addCode("""
+            sceneGraph.postProcessing = PostProcessing(
+                exposure: 0.3, contrast: 1.2, saturation: 0.5, vignetteIntensity: 0.6,
+                ambientOcclusion: AmbientOcclusion(radius: 0.4))
             """, to: slide)
         case "Fog":
             fogSlide(slide)
@@ -651,6 +725,158 @@ public final class KeynoteDemo: DemoScene {
         ball.physicsBody = .init(type: .dynamic, shape: .sphere(radius: 0.35), friction: 0.3, restitution: 0.4)
         physics?.sync()
         physics?.setVelocity([14, 3, 0], of: ball)
+    }
+
+    private func customShadersSlide(_ slide: SceneGraph.Node) {
+        addLight(to: slide, at: [0, 6, 6], intensity: 70)
+        let materials: [any MetalSprocketsSceneGraph.Material] = [
+            try? ShaderMaterial.normals(),
+            try? ShaderMaterial.rim(color: [0.3, 0.8, 1, 1]),
+            try? ShaderMaterial.rim(color: [1, 0.4, 0.7, 1]),
+        ].compactMap { $0 }
+        let shapes: [SceneGraph.Shape] = [.torus(ringRadius: 0.7, pipeRadius: 0.28), .sphere(radius: 0.9), .capsule(capRadius: 0.5, height: 1.8)]
+        for (index, (shape, material)) in zip(shapes, materials).enumerated() {
+            let node = SceneGraph.Node(parent: slide, shape: shape, material: material, device: demoDevice, trs: .init(translation: [Float(index) * 3 - 3, 1.4, 0]))
+            node.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([0.4, 1, 0.2]), duration: 7 + Float(index))))
+        }
+    }
+
+    // Gummies and pearls, slowly turning.
+    private func candySlide(_ slide: SceneGraph.Node) {
+        addLight(to: slide, at: [-4, 6, 8], intensity: 60)
+        addLight(to: slide, at: [6, -2, 6], color: [0.9, 0.95, 1], intensity: 15)
+        addLight(to: slide, at: [1, 3, -8], color: [1, 0.9, 0.8], intensity: 400)
+        let speckles = CandyMaterials.makeSpeckleBinding()
+        let roundedBox = MetalMesh(mesh: .roundedBox(extents: [1.6, 2.2, 1.1], radius: 0.35), device: demoDevice)
+        let cube = MetalMesh(mesh: .roundedBox(extents: [1.6, 1.6, 1.6], radius: 0.3), device: demoDevice)
+        let smooth: MeshAttributes = [.smoothNormals, .textureCoordinates]
+        let egg = MetalMesh(mesh: .sphere(extents: [1.4, 1.8, 1.4], latitudeSegments: 48, longitudeSegments: 96, attributes: smooth), device: demoDevice)
+        let bean = MetalMesh(mesh: .capsule(segments: 64, height: 2.2, radius: 0.5, latitudeSegments: 24, attributes: smooth), device: demoDevice)
+        let pearl = CandyMaterials.pearl()
+        let pieces: [(MetalMesh, PBRSceneMaterial, SIMD3<Float>)] = [
+            (roundedBox, CandyMaterials.gummy(color: [1, 0.3, 0.1], speckles: speckles), [-3.6, 1.4, 0]),
+            (cube, pearl, [-1.2, 1.6, 0]),
+            (egg, CandyMaterials.gummy(color: [0.5, 0.75, 0.15], speckles: speckles), [1.2, 1.4, 0]),
+            (bean, pearl, [3.6, 1.4, 0]),
+        ]
+        var generator = SystemRandomNumberGenerator()
+        for (mesh, material, position) in pieces {
+            let node = SceneGraph.Node(parent: slide, label: material.pbrMaterial.name, trs: .init(translation: position), content: .mesh(mesh, material: material))
+            let axis = simd_normalize(SIMD3<Float>(.random(in: -1...1, using: &generator), .random(in: -1...1, using: &generator), .random(in: -1...1, using: &generator)))
+            candies.append((node, axis, .random(in: 0.2...0.5, using: &generator)))
+        }
+    }
+
+    private func particlesSlide(_ slide: SceneGraph.Node) {
+        addLight(to: slide, at: [0, 6, 6], intensity: 60)
+        _ = SceneGraph.Node(parent: slide, label: "Floor", shape: .box(width: 10, height: 0.1, length: 4), material: BlinnPhongSceneMaterial.plastic([0.35, 0.35, 0.4], shininess: 8), device: demoDevice, trs: .init(translation: [0, -0.05, 0]))
+        let fountain = ParticleSystem(seed: 1)
+        fountain.birthRate = 300
+        fountain.lifetime = 2
+        fountain.lifetimeRange = 0.5
+        fountain.spreadAngle = 0.25
+        fountain.speed = 5
+        fountain.speedRange = 1
+        fountain.acceleration = [0, -6, 0]
+        fountain.startSize = 0.12
+        fountain.endSize = 0.05
+        fountain.startColor = [0.5, 0.75, 1, 0.9]
+        fountain.endColor = [0.3, 0.5, 1, 0]
+        _ = SceneGraph.Node(parent: slide, label: "Fountain", trs: .init(translation: [-2.2, 0, 0])).particleSystems = [fountain]
+        let fire = ParticleSystem(seed: 2)
+        fire.birthRate = 200
+        fire.lifetime = 0.9
+        fire.lifetimeRange = 0.4
+        fire.emitterShape = .sphere(radius: 0.25)
+        fire.spreadAngle = 0.4
+        fire.speed = 1.6
+        fire.damping = 0.5
+        fire.startSize = 0.45
+        fire.endSize = 0.1
+        fire.startColor = [1, 0.55, 0.15, 0.8]
+        fire.endColor = [0.8, 0.1, 0.02, 0]
+        fire.blendMode = .additive
+        _ = SceneGraph.Node(parent: slide, label: "Fire", trs: .init(translation: [2.2, 0.2, 0])).particleSystems = [fire]
+    }
+
+    // A morphing blob and a skinned tube. The bumps move vertices along the direction from the center, not the vertex
+    // normal: each face has its own vertices, so moving along normals would tear the faces apart (#70).
+    private func deformationSlide(_ slide: SceneGraph.Node) {
+        addLight(to: slide, at: [2, 6, 5], intensity: 50)
+        addLight(to: slide, at: [-3, 1, 3], color: [0.5, 0.6, 1], intensity: 15)
+        let mesh = MetalMesh(mesh: .icoSphere(subdivisions: 4), device: demoDevice)
+        let positions = mesh.float3Attribute(.position)
+        let normals = mesh.float3Attribute(.normal)
+        let indices = mesh.submeshes.flatMap(\.indices)
+        let axes: [SIMD3<Float>] = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]
+        let bumpDeltas = positions.map { position in
+            let direction = simd_normalize(position)
+            return direction * (axes.map { pow(max(0, simd_dot(direction, $0)), 12) }.max() ?? 0) * 0.6
+        }
+        let squashDeltas = positions.map { SIMD3<Float>($0.x * 0.5, -$0.y * 0.5, $0.z * 0.5) }
+        let bumps = SceneGraph.MorphTarget(positionDeltas: bumpDeltas, normalDeltas: DeformationMeshes.normalDeltas(positions: positions, normals: normals, deltas: bumpDeltas, indices: indices))
+        let squash = SceneGraph.MorphTarget(positionDeltas: squashDeltas, normalDeltas: DeformationMeshes.normalDeltas(positions: positions, normals: normals, deltas: squashDeltas, indices: indices))
+        let blobMaterial: any MetalSprocketsSceneGraph.Material = (try? PBRSceneMaterial(device: demoDevice, baseColor: [0.3, 0.8, 0.5, 1], metallic: 0.1, roughness: 0.3)) ?? BlinnPhongSceneMaterial.plastic([0.3, 0.8, 0.5])
+        let blob = SceneGraph.Node(parent: slide, label: "Blob", trs: .init(translation: [-2.5, 1.5, 0]), content: .mesh(mesh, material: blobMaterial))
+        blob.morphTargets = [bumps, squash]
+        blob.morphWeights = [0, 0]
+        morphed.append(blob)
+
+        let tube = MetalMesh(mesh: DeformationMeshes.tube(height: 3, radius: 0.3, rings: 24, segments: 24), device: demoDevice)
+        let skinVertices = tube.float3Attribute(.position).map { position in
+            let y = min(max(position.y, 0), 2)
+            let lower = min(Int(y), 1)
+            let fraction = y - Float(lower)
+            return SceneGraph.SkinVertex(joints: [UInt16(lower), UInt16(lower + 1), 0, 0], weights: [1 - fraction, fraction, 0, 0])
+        }
+        let skeleton = SceneGraph.Node(parent: slide, label: "Skeleton", trs: .init(translation: [2.5, 0, 0]))
+        let joint0 = SceneGraph.Node(parent: skeleton, label: "Joint 0")
+        let joint1 = SceneGraph.Node(parent: joint0, label: "Joint 1", trs: .init(translation: [0, 1, 0]))
+        let joint2 = SceneGraph.Node(parent: joint1, label: "Joint 2", trs: .init(translation: [0, 1, 0]))
+        bendingJoints += [joint1, joint2]
+        // Skinned vertices end up in world space, so the tube node's own transform does not matter.
+        let skeletonInverse = skeleton.worldTransform.inverse
+        let inverseBind = [joint0, joint1, joint2].map { (skeletonInverse * $0.worldTransform).inverse }
+        let tubeMaterial: any MetalSprocketsSceneGraph.Material = (try? PBRSceneMaterial(device: demoDevice, baseColor: [0.9, 0.6, 0.2, 1], metallic: 0, roughness: 0.4)) ?? BlinnPhongSceneMaterial.plastic([0.9, 0.6, 0.2])
+        let skinned = SceneGraph.Node(parent: slide, label: "Tube", content: .mesh(tube, material: tubeMaterial))
+        skinned.skin = SceneGraph.Skin(joints: [joint0, joint1, joint2], inverseBindMatrices: inverseBind)
+        skinned.skinVertices = skinVertices
+    }
+
+    private func performanceSlide(_ slide: SceneGraph.Node) {
+        _ = SceneGraph.Node(parent: slide, label: "Sun", transform: .camera(eye: [2, 6, 4], target: .zero), content: .light(Light(type: .directional, intensity: 1)))
+        addLight(to: slide, at: [0, 4, 6], color: [0.5, 0.6, 0.9], intensity: 30)
+        let box = MetalMesh(mesh: .box(), device: demoDevice)
+        let materials = [[0.8, 0.5, 0.2], [0.6, 0.3, 0.15], [0.7, 0.6, 0.3]].map { BlinnPhongSceneMaterial.plastic($0, shininess: 16) }
+        let grid = SceneGraph.Node(parent: slide, label: "Grid", trs: .init(translation: [0, 0.5, -3]))
+        let size = Self.crateGridSize
+        let spacing: Float = 12 / Float(size)
+        for row in 0..<size {
+            for column in 0..<size {
+                let trs = Transform3D(translation: [(Float(column) - Float(size - 1) / 2) * spacing, 0, (Float(row) - Float(size - 1) / 2) * spacing], scale: SIMD3(repeating: spacing * 0.8))
+                crates.append(SceneGraph.Node(parent: grid, label: "Crate", trs: trs, content: .mesh(box, material: materials[(row + column) % materials.count])))
+            }
+        }
+        addTitle("\(size * size) crates, \(materials.count) draw calls", size: 0.35, y: 3, color: [0.6, 0.65, 0.75], to: slide)
+    }
+
+    private func waveCrates(time: Float) {
+        for crate in crates {
+            let position = crate.trs.translation
+            crate.trs.translation.y = sin(time * 2 + (position.x + position.z) * 0.8) * 0.4
+        }
+    }
+
+    private func postProcessingSlide(_ slide: SceneGraph.Node) {
+        addLight(to: slide, at: [3, 6, 6], intensity: 80)
+        _ = SceneGraph.Node(parent: slide, label: "Floor", shape: .box(width: 12, height: 0.1, length: 6), material: BlinnPhongSceneMaterial.plastic([0.8, 0.8, 0.82], shininess: 8), device: demoDevice, trs: .init(translation: [0, -0.05, 0]))
+        let colors: [SIMD3<Float>] = [[1, 0.35, 0.3], [1, 0.8, 0.3], [0.4, 0.85, 0.45], [0.3, 0.6, 1], [0.75, 0.45, 1]]
+        for (index, color) in colors.enumerated() {
+            let height = 0.6 + Float(index % 3) * 0.5
+            _ = SceneGraph.Node(parent: slide, shape: .box(width: 0.9, height: height, length: 0.9), material: BlinnPhongSceneMaterial.plastic(color, shininess: 32), device: demoDevice, trs: .init(translation: [Float(index) * 1.4 - 2.8, height / 2, 0]))
+        }
+        let torus = SceneGraph.Node(parent: slide, shape: .torus(ringRadius: 0.5, pipeRadius: 0.18), material: BlinnPhongSceneMaterial.plastic([0.95, 0.95, 0.95], shininess: 64), device: demoDevice, trs: .init(translation: [0, 2.3, 0]))
+        torus.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([1, 0.5, 0]), duration: 6)))
     }
 
     private func sceneViewSlide(_ slide: SceneGraph.Node) {

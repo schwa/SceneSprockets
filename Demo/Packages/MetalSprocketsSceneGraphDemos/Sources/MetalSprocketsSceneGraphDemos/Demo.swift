@@ -11,11 +11,6 @@ import simd
 
 public enum DemoSection: String, CaseIterable, Sendable {
     case basics = "Basics"
-    case materials = "Materials"
-    case animation = "Animation"
-    case assets = "Assets"
-    case performance = "Performance"
-    case simulation = "Simulation"
 }
 
 // A catalog entry. `make` builds a fresh scene each time the demo is opened.

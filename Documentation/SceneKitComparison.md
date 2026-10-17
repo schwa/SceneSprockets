@@ -283,7 +283,7 @@ SceneKit animates with `CAAnimation`/`SCNAnimation` and `SCNAnimationPlayer`, ke
 
 | SceneKit | MSSG | Status | Notes |
 |---|---|---|---|
-| `SCNPhysicsWorld`, `SCNPhysicsBody`, shapes, joints, fields, vehicles, contacts | — | ❌ | The demo package has a Jolt-based physics demo that copies body transforms onto nodes each frame. Physics in the library is #38. |
+| `SCNPhysicsWorld`, `SCNPhysicsBody`, shapes, joints, fields, vehicles, contacts | — | ❌ | The keynote demo's Physics slide uses the Jolt-based MetalSprocketsSceneGraphPhysics module, which copies body transforms onto nodes each frame. Physics in the library is #38. |
 
 ## Particles and audio
 
