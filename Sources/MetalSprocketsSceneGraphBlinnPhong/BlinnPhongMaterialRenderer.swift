@@ -64,6 +64,8 @@ public struct BlinnPhongSceneMaterial: MetalSprocketsSceneGraph.Material, Sample
 
 public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer {
     public var ambientLightColor: SIMD3<Float>
+    // Shared by copies of the renderer, so SwiftUI re-creating the struct keeps the cache.
+    private let batchPlans = BatchPlanCache()
 
     public init(ambientLightColor: SIMD3<Float> = [0.15, 0.15, 0.2]) {
         self.ambientLightColor = ambientLightColor
@@ -84,27 +86,30 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer {
         // their node bounds do not cover the deformation.
         // SceneGraphElement batches opaque and transparent entries apart, transparent ones sorted farthest first.
         let isTransparent = entries.first?.isTransparent ?? false
-        let culled = Set(culledMeshEntries(entries, viewProjection: viewProjection).map { ObjectIdentifier($0.node) })
-        var visible: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, modelMatrix: simd_float4x4)] = []
-        var deformed: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, modelMatrix: simd_float4x4)] = []
-        for entry in entries {
+        let inFrustum = meshEntriesInFrustum(entries, viewProjection: viewProjection)
+        if !isTransparent, let groups = cachedOpaqueGroups(entries: entries, inFrustum: inFrustum, context: context, cameraPosition: cameraPosition) {
+            return BlinnPhongBatchesElement(groups: groups, frame: frame, lights: lightValues, shadow: context.shadow, isTransparent: false).eraseToAnyElement()
+        }
+        // One pass, with capacity reserved: this runs every frame over every entry, so copies add up.
+        var items: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, modelMatrix: simd_float4x4, material: BlinnPhongSceneMaterial)] = []
+        items.reserveCapacity(entries.count)
+        var deformed: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, modelMatrix: simd_float4x4, material: BlinnPhongSceneMaterial)] = []
+        for (entry, isInFrustum) in zip(entries, inFrustum) {
+            guard let material = entry.material as? BlinnPhongSceneMaterial else {
+                continue
+            }
             if let result = entry.deformed(revision: context.revision) {
                 // Deformed meshes skip culling; their node bounds do not cover the deformation.
                 if isTransparent {
-                    visible.append((entry, result.mesh, result.modelMatrix))
+                    items.append((entry, result.mesh, result.modelMatrix, material))
                 } else {
-                    deformed.append((entry, result.mesh, result.modelMatrix))
+                    deformed.append((entry, result.mesh, result.modelMatrix, material))
                 }
-            } else if culled.contains(ObjectIdentifier(entry.node)) {
-                visible.append((entry, entry.mesh, entry.worldTransform))
+            } else if isInFrustum {
+                items.append((entry, entry.mesh, entry.worldTransform, material))
             }
         }
-        if !isTransparent {
-            visible = sortedFrontToBack(visible.map(\.entry), cameraPosition: cameraPosition).map { (entry: $0, mesh: $0.mesh, modelMatrix: $0.worldTransform) } + deformed
-        }
-        let items = visible.compactMap { item in
-            (item.entry.material as? BlinnPhongSceneMaterial).map { (entry: item.entry, mesh: item.mesh, modelMatrix: item.modelMatrix, material: $0) }
-        }
+        items += deformed
         let groups: [(key: PipelineKey, single: [InstanceBatch], instanced: [InstanceBatch])]
         if isTransparent {
             // Keep the order: consecutive runs of one vertex layout, with no instancing (it would reorder draws).
@@ -133,10 +138,57 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer {
             }
             groups = grouped.map { group in
                 let batches = instanceBatches(group.items)
-                return (key: group.key, single: batches.filter { $0.modelMatrices.count == 1 }, instanced: batches.filter { $0.modelMatrices.count > 1 })
+                // Single draws go nearest first to reduce overdraw. Instanced batches are one draw call each, so
+                // sorting their instances would gain little.
+                let single = batches.filter { $0.modelMatrices.count == 1 }
+                let distances = single.map { distanceSquared(from: cameraPosition, toOriginOf: $0.modelMatrices[0]) }
+                let sortedSingle = single.indices.sorted { distances[$0] < distances[$1] }.map { single[$0] }
+                return (key: group.key, single: sortedSingle, instanced: batches.filter { $0.modelMatrices.count > 1 })
             }
         }
         return BlinnPhongBatchesElement(groups: groups, frame: frame, lights: lightValues, shadow: context.shadow, isTransparent: isTransparent).eraseToAnyElement()
+    }
+
+    // Opaque batching depends on structure, opacity and mirroring, not on where things are, so it is cached and only
+    // the model matrices are gathered each frame (#134). Nil (use the full path) when an entry may deform or swap
+    // its level of detail, since those change meshes without a structure change.
+    func cachedOpaqueGroups(entries: [SceneGraph.MeshEntry], inFrustum: [Bool], context: SceneGraphRenderContext, cameraPosition: SIMD3<Float>) -> [(key: PipelineKey, single: [InstanceBatch], instanced: [InstanceBatch])]? {
+        var hasher = Hasher()
+        hasher.combine(context.revision.structure)
+        hasher.combine(entries.count)
+        for entry in entries {
+            let node = entry.node
+            guard node.skin == nil, node.morphTargets.isEmpty, node.levelsOfDetail.isEmpty else {
+                return nil
+            }
+            hasher.combine(ObjectIdentifier(node))
+            hasher.combine(entry.submeshIndex)
+            hasher.combine(entry.opacity)
+            hasher.combine(entry.worldTransform.isMirroring)
+        }
+        let plan = batchPlans.plan(for: hasher.finalize()) {
+            OpaqueBatchPlan(entries: entries)
+        }
+        return plan.groups.map { group in
+            var single: [InstanceBatch] = []
+            var instanced: [InstanceBatch] = []
+            for planned in group.batches {
+                var batch = planned.template
+                batch.modelMatrices = planned.entryIndices.compactMap { inFrustum[$0] ? entries[$0].worldTransform : nil }
+                switch batch.modelMatrices.count {
+                case 0:
+                    continue
+                case 1:
+                    single.append(batch)
+                default:
+                    instanced.append(batch)
+                }
+            }
+            // Single draws go nearest first to reduce overdraw.
+            let distances = single.map { distanceSquared(from: cameraPosition, toOriginOf: $0.modelMatrices[0]) }
+            let sortedSingle = single.indices.sorted { distances[$0] < distances[$1] }.map { single[$0] }
+            return (key: group.key, single: sortedSingle, instanced: instanced)
+        }
     }
 }
 
@@ -320,34 +372,123 @@ struct InstanceBatch {
     }
 }
 
+// Which entries draw together, by pipeline and instance batch. Batches have no model matrices; those are gathered
+// per frame.
+struct OpaqueBatchPlan {
+    struct Batch {
+        var template: InstanceBatch
+        var entryIndices: [Int]
+    }
+
+    var groups: [(key: PipelineKey, batches: [Batch])] = []
+
+    init(entries: [SceneGraph.MeshEntry]) {
+        var grouped: [(key: PipelineKey, items: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, modelMatrix: simd_float4x4, material: BlinnPhongSceneMaterial)], entryIndices: [Int])] = []
+        for (index, entry) in entries.enumerated() {
+            guard let material = entry.material as? BlinnPhongSceneMaterial else {
+                continue
+            }
+            let item = (entry: entry, mesh: entry.mesh, modelMatrix: entry.worldTransform, material: material)
+            let key = PipelineKey(vertexDescriptor: entry.mesh.vertexDescriptor, renderState: material.renderState)
+            if let groupIndex = grouped.firstIndex(where: { $0.key == key }) {
+                grouped[groupIndex].items.append(item)
+                grouped[groupIndex].entryIndices.append(index)
+            } else {
+                grouped.append((key, [item], [index]))
+            }
+        }
+        groups = grouped.map { group in
+            let batches = instanceBatchMembers(group.items).map { batch, members in
+                var template = batch
+                template.modelMatrices = []
+                return Batch(template: template, entryIndices: members.map { group.entryIndices[$0] })
+            }
+            return (group.key, batches)
+        }
+    }
+}
+
+final class BatchPlanCache: @unchecked Sendable {
+    private let lock = NSLock()
+    private var plans: [Int: OpaqueBatchPlan] = [:]
+
+    func plan(for signature: Int, make: () -> OpaqueBatchPlan) -> OpaqueBatchPlan {
+        lock.lock()
+        defer { lock.unlock() }
+        if let plan = plans[signature] {
+            return plan
+        }
+        let plan = make()
+        // A scene asks for a few plans per frame (one per render batch); a full cache means the scene changed.
+        if plans.count >= 16 {
+            plans.removeAll()
+        }
+        plans[signature] = plan
+        return plan
+    }
+}
+
 // Groups items that share vertex buffers, submesh and material, keeping first-seen order.
 func instanceBatches(_ items: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, modelMatrix: simd_float4x4, material: BlinnPhongSceneMaterial)]) -> [InstanceBatch] {
+    instanceBatchMembers(items).map(\.batch)
+}
+
+// Like instanceBatches, with the indices into `items` of each batch's members.
+func instanceBatchMembers(_ items: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, modelMatrix: simd_float4x4, material: BlinnPhongSceneMaterial)]) -> [(batch: InstanceBatch, members: [Int])] {
+    // Built for every item every frame, so it avoids allocating: the first two vertex buffers (by buffer index) are
+    // stored inline, any others in an array.
     struct Key: Hashable {
-        var vertexBuffers: [ObjectIdentifier]
+        var firstBuffer: ObjectIdentifier?
+        var secondBuffer: ObjectIdentifier?
+        var otherBuffers: [ObjectIdentifier]
         var submeshIndex: Int
         var material: MaterialKey
         var receivesShadow: Bool
         var isMirrored: Bool
         var opacity: Float
     }
-    var batches: [InstanceBatch] = []
+    var batches: [(batch: InstanceBatch, members: [Int])] = []
     var indexByKey: [Key: Int] = [:]
-    for item in items {
-        let buffers = item.mesh.vertexBuffers.sorted { $0.key < $1.key }.map { ObjectIdentifier($0.value) }
-        let key = Key(vertexBuffers: buffers, submeshIndex: item.entry.submeshIndex, material: MaterialKey(item.material), receivesShadow: item.entry.receivesShadow, isMirrored: item.modelMatrix.isMirroring, opacity: item.entry.opacity)
+    for (itemIndex, item) in items.enumerated() {
+        let buffers = vertexBufferIdentifiers(item.mesh)
+        let key = Key(firstBuffer: buffers.first, secondBuffer: buffers.second, otherBuffers: buffers.others, submeshIndex: item.entry.submeshIndex, material: MaterialKey(item.material), receivesShadow: item.entry.receivesShadow, isMirrored: item.modelMatrix.isMirroring, opacity: item.entry.opacity)
         if let index = indexByKey[key] {
-            batches[index].modelMatrices.append(item.modelMatrix)
+            batches[index].batch.modelMatrices.append(item.modelMatrix)
+            batches[index].members.append(itemIndex)
         } else {
             indexByKey[key] = batches.count
-            batches.append(InstanceBatch(mesh: item.mesh, submeshIndex: item.entry.submeshIndex, material: item.material, receivesShadow: item.entry.receivesShadow, opacity: item.entry.opacity, modelMatrices: [item.modelMatrix]))
+            batches.append((InstanceBatch(mesh: item.mesh, submeshIndex: item.entry.submeshIndex, material: item.material, receivesShadow: item.entry.receivesShadow, opacity: item.entry.opacity, modelMatrices: [item.modelMatrix]), [itemIndex]))
         }
     }
     return batches
 }
 
+private func vertexBufferIdentifiers(_ mesh: MetalMesh) -> (first: ObjectIdentifier?, second: ObjectIdentifier?, others: [ObjectIdentifier]) {
+    let buffers = mesh.vertexBuffers
+    switch buffers.count {
+    case 0:
+        return (nil, nil, [])
+    case 1:
+        return (buffers.first.map { ObjectIdentifier($0.value) }, nil, [])
+    case 2:
+        var iterator = buffers.makeIterator()
+        guard let a = iterator.next(), let b = iterator.next() else {
+            return (nil, nil, [])
+        }
+        let (low, high) = a.key < b.key ? (a, b) : (b, a)
+        return (ObjectIdentifier(low.value), ObjectIdentifier(high.value), [])
+    default:
+        let sorted = buffers.sorted { $0.key < $1.key }.map { ObjectIdentifier($0.value) }
+        return (sorted[0], sorted[1], Array(sorted.dropFirst(2)))
+    }
+}
+
 // Materials hold textures, so they are not Hashable; compare colors by value and textures by identity.
 private struct MaterialKey: Hashable {
-    var sources: [SourceKey]
+    var ambient: SourceKey
+    var diffuse: SourceKey
+    var specular: SourceKey
+    var emission: SourceKey
     var shininess: Float
     var opacity: Float
     var usesDiffuseTextureAlpha: Bool
@@ -356,7 +497,10 @@ private struct MaterialKey: Hashable {
     var renderState: MaterialRenderState
 
     init(_ material: BlinnPhongSceneMaterial) {
-        sources = [material.ambient, material.diffuse, material.specular, material.emission].map(SourceKey.init)
+        ambient = SourceKey(material.ambient)
+        diffuse = SourceKey(material.diffuse)
+        specular = SourceKey(material.specular)
+        emission = SourceKey(material.emission)
         shininess = material.shininess
         opacity = material.opacity
         usesDiffuseTextureAlpha = material.usesDiffuseTextureAlpha

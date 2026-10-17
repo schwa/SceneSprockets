@@ -2703,11 +2703,12 @@ Requested (per user): make debug shaders a default part of this project, so any 
 ## 133: MeshEntry values are copied many times per frame
 
 +++
-status: new
+status: closed
 priority: medium
 kind: bug
 created: 2026-10-17T12:35:33Z
-updated: 2026-10-17T12:35:47Z
+updated: 2026-10-17T12:51:38Z
+closed: 2026-10-17T12:51:38Z
 +++
 
 SceneGraph.MeshEntry is a large struct: a Node reference, a world transform, a MetalMesh (a struct holding arrays and dictionaries of Metal buffers), a material existential and a few flags. Each frame the render path copies every entry several times: meshEntries(), the category-mask filter, applyLevelsOfDetail, renderBatches, partitionMeshEntries, and the renderer's own intermediate arrays (for example BlinnPhongMaterialRenderer's item tuples and InstanceBatch). Every copy retains and releases each reference inside the entry.
@@ -2719,10 +2720,12 @@ Measured on the keynote's Performance slide (1,600 crates, Release build, after 
 ## 134: Renderers rebuild draw batches every frame even when only transforms change
 
 +++
-status: new
+status: closed
 priority: medium
 kind: feature
 created: 2026-10-17T12:35:33Z
+updated: 2026-10-17T12:51:38Z
+closed: 2026-10-17T12:51:38Z
 +++
 
 BlinnPhongMaterialRenderer.makeElement regroups all entries by pipeline key, builds an instance-batch key per entry and hashes it, every frame. When a scene's structure (meshes, materials, visibility, opacity) is unchanged and only node transforms move, the grouping comes out the same each frame; only the model matrices differ.

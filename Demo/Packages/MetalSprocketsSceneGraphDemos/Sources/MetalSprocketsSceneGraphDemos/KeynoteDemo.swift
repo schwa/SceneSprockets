@@ -44,7 +44,7 @@ public final class KeynoteDemo: DemoScene {
     private var morphed: [SceneGraph.Node] = []
     private var bendingJoints: [SceneGraph.Node] = []
     private var crates: [SceneGraph.Node] = []
-    private static let crateGridSize = 40
+    private static let crateGridSize = 22
 
     init() {
         let root = SceneGraph.Node(label: "Root")

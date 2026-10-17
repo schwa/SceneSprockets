@@ -84,16 +84,88 @@ public class SceneGraph {
 
     // MARK: - Queries
 
+    // Copy-on-write: renderers copy entries through several stages every frame, so the fields live in one shared
+    // object and a copy is a single retain (#133).
     public struct MeshEntry {
-        public var node: Node
-        public var worldTransform: float4x4
-        public var mesh: MetalMesh
-        public var submeshIndex: Int
-        public var material: any Material
-        public var castsShadow: Bool
-        public var receivesShadow: Bool
+        private final class Storage {
+            var node: Node
+            var worldTransform: float4x4
+            var mesh: MetalMesh
+            var submeshIndex: Int
+            var material: any Material
+            var castsShadow: Bool
+            var receivesShadow: Bool
+            var opacity: Float
+
+            init(node: Node, worldTransform: float4x4, mesh: MetalMesh, submeshIndex: Int, material: any Material, castsShadow: Bool, receivesShadow: Bool, opacity: Float) {
+                self.node = node
+                self.worldTransform = worldTransform
+                self.mesh = mesh
+                self.submeshIndex = submeshIndex
+                self.material = material
+                self.castsShadow = castsShadow
+                self.receivesShadow = receivesShadow
+                self.opacity = opacity
+            }
+
+            func copy() -> Storage {
+                Storage(node: node, worldTransform: worldTransform, mesh: mesh, submeshIndex: submeshIndex, material: material, castsShadow: castsShadow, receivesShadow: receivesShadow, opacity: opacity)
+            }
+        }
+
+        private var storage: Storage
+
+        public init(node: Node, worldTransform: float4x4, mesh: MetalMesh, submeshIndex: Int, material: any Material, castsShadow: Bool, receivesShadow: Bool, opacity: Float = 1) {
+            storage = Storage(node: node, worldTransform: worldTransform, mesh: mesh, submeshIndex: submeshIndex, material: material, castsShadow: castsShadow, receivesShadow: receivesShadow, opacity: opacity)
+        }
+
+        private mutating func uniqueStorage() -> Storage {
+            if !isKnownUniquelyReferenced(&storage) {
+                storage = storage.copy()
+            }
+            return storage
+        }
+
+        public var node: Node {
+            get { storage.node }
+            set { uniqueStorage().node = newValue }
+        }
+
+        public var worldTransform: float4x4 {
+            get { storage.worldTransform }
+            set { uniqueStorage().worldTransform = newValue }
+        }
+
+        public var mesh: MetalMesh {
+            get { storage.mesh }
+            set { uniqueStorage().mesh = newValue }
+        }
+
+        public var submeshIndex: Int {
+            get { storage.submeshIndex }
+            set { uniqueStorage().submeshIndex = newValue }
+        }
+
+        public var material: any Material {
+            get { storage.material }
+            set { uniqueStorage().material = newValue }
+        }
+
+        public var castsShadow: Bool {
+            get { storage.castsShadow }
+            set { uniqueStorage().castsShadow = newValue }
+        }
+
+        public var receivesShadow: Bool {
+            get { storage.receivesShadow }
+            set { uniqueStorage().receivesShadow = newValue }
+        }
+
         // The node's opacity times its ancestors'.
-        public var opacity: Float = 1
+        public var opacity: Float {
+            get { storage.opacity }
+            set { uniqueStorage().opacity = newValue }
+        }
 
         // Blends: the material is transparent, or it applies node opacity and that is below 1.
         public var isTransparent: Bool {

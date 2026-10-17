@@ -37,6 +37,44 @@ func identicalMeshAndMaterialShareABatch() throws {
     #expect(crates.modelMatrices[3].columns.3 == SIMD4<Float>(3, 0, 0, 1))
 }
 
+// #134: opaque batching is cached across frames. Moving nodes reuses it with new matrices; changing a material or
+// opacity rebuilds it.
+@Test
+func cachedOpaqueBatchesFollowChanges() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let box = MetalMesh(mesh: .box(), device: device)
+    let root = SceneGraph.Node()
+    let nodes = (0..<4).map { index in
+        SceneGraph.Node(parent: root, transform: translation(Float(index), 0, 0), content: .mesh(box, material: material(0.8)))
+    }
+    let graph = SceneGraph(root: root)
+    let renderer = BlinnPhongMaterialRenderer()
+
+    func groups() throws -> (single: [InstanceBatch], instanced: [InstanceBatch]) {
+        let entries = graph.meshEntries()
+        let context = SceneGraphRenderContext(viewMatrix: .identity, projectionMatrix: .identity, cameraMatrix: .identity, lights: [], revision: graph.revision, environment: .init())
+        let groups = try #require(renderer.cachedOpaqueGroups(entries: entries, inFrustum: entries.map { _ in true }, context: context, cameraPosition: .zero))
+        return (groups.flatMap(\.single), groups.flatMap(\.instanced))
+    }
+
+    #expect(try groups().instanced.map(\.modelMatrices.count) == [4])
+
+    nodes[2].transform = translation(10, 0, 0)
+    let moved = try groups()
+    #expect(moved.instanced.map(\.modelMatrices.count) == [4])
+    #expect(moved.instanced[0].modelMatrices.contains { $0.columns.3 == SIMD4<Float>(10, 0, 0, 1) })
+
+    nodes[3].content = .mesh(box, material: material(0.3))
+    let recolored = try groups()
+    #expect(recolored.instanced.map(\.modelMatrices.count) == [3])
+    #expect(recolored.single.count == 1)
+
+    nodes[0].opacity = 0.5
+    let faded = try groups()
+    #expect(faded.instanced.map(\.modelMatrices.count) == [2])
+    #expect(faded.single.count == 2)
+}
+
 @Test
 @MainActor
 func instancedBoxesAllRender() throws {
