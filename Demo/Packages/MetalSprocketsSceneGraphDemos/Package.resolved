@@ -1,5 +1,5 @@
 {
-  "originHash" : "f7f58960666ad8473548ab7dce79ecbcd9397a2e4517cb4621a384dc55ee0deb",
+  "originHash" : "0d5472b310e848c608fa492f060441d1407535314c383ce7e6fbfb0bbccf281a",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -16,7 +16,7 @@
       "location" : "https://github.com/schwa/DemoKit",
       "state" : {
         "branch" : "main",
-        "revision" : "dc9ca359afeeba4faf55f2e8b53ed8d3d9ac980f"
+        "revision" : "2cbd09412c597cc12c4382b036d3c3ecd4a0129f"
       }
     },
     {
@@ -24,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/GeometryLite2D",
       "state" : {
-        "revision" : "938d2bf1276508f51b1e028153c7cc3c25648e40",
-        "version" : "0.0.3"
+        "revision" : "542e05566f76d4248f95a43d13c1ff771acb32fd",
+        "version" : "0.0.4"
       }
     },
     {
@@ -34,7 +34,7 @@
       "location" : "https://github.com/schwa/GeometryLite3D",
       "state" : {
         "revision" : "4a1c76400e564b76140a14d14a7e6d6279908faf",
-        "version" : "0.2.3"
+        "version" : "0.2.4"
       }
     },
     {
@@ -42,8 +42,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/GoldenImage",
       "state" : {
-        "revision" : "3701668a0d306bcb618fa5a39e66d252babcc723",
-        "version" : "0.1.5"
+        "revision" : "03b4d1557869ebb2161551edf97f7a27630dc7a7",
+        "version" : "0.1.6"
       }
     },
     {
@@ -52,7 +52,7 @@
       "location" : "https://github.com/schwa/Interaction3D",
       "state" : {
         "branch" : "main",
-        "revision" : "9bc6c85de11da1156e0b72edd28015945fdedc4d"
+        "revision" : "0518b2f92ca97f9d12e776eab122d1adbb1e274d"
       }
     },
     {
@@ -70,7 +70,7 @@
       "location" : "https://github.com/schwa/MetalSprockets",
       "state" : {
         "branch" : "main",
-        "revision" : "7eb6be9b56afc841584a0f266b6d08b6a7ba9d6e"
+        "revision" : "f9c04f3c59966145780348b7d692ad55001ee028"
       }
     },
     {
@@ -79,7 +79,7 @@
       "location" : "https://github.com/schwa/MetalSprocketsGLTF",
       "state" : {
         "branch" : "main",
-        "revision" : "473d23795f2c77712d6ad3045aa06740866e71f7"
+        "revision" : "a91b13c06fa6d29a6b4b75420d45019f32c663c2"
       }
     },
     {
@@ -88,7 +88,7 @@
       "location" : "https://github.com/schwa/MetalSprocketsPBR",
       "state" : {
         "branch" : "main",
-        "revision" : "88f75a6722557dd1e901eab167002e681d8f6e52"
+        "revision" : "fa2caff8d1b69b4a8a6a498085126d98ebb8c5b4"
       }
     },
     {
@@ -159,8 +159,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swiftlang/swift-syntax.git",
       "state" : {
-        "revision" : "4799286537280063c85a32f09884cfbca301b1a1",
-        "version" : "602.0.0"
+        "revision" : "050f1a346fbbac0ca2cfb15a95274f7bd1cf0ccf",
+        "version" : "604.0.0"
       }
     },
     {
@@ -178,7 +178,7 @@
       "location" : "https://github.com/schwa/SwiftGLTF",
       "state" : {
         "branch" : "main",
-        "revision" : "4fc88ff6665f0bd3f24a45e379426942ec593584"
+        "revision" : "529cf3a40fbe7fcf9990f42f0a8a39487d3aebcc"
       }
     },
     {
@@ -196,7 +196,7 @@
       "location" : "https://github.com/schwa/SwiftMesh",
       "state" : {
         "branch" : "main",
-        "revision" : "2c0918b8415cfa50d963521fc147ca1ee376dff3"
+        "revision" : "51a81219f3e4a892b9a4a4eb470098ef51184038"
       }
     }
   ],

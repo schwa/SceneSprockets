@@ -263,7 +263,12 @@ extension PBRMaterialRenderer: SceneGraphPrePassRenderer {
                 renderer.lighting.shadows = shadows
                 return renderer
             }
-            return PBRTransmissionPass(renderers: renderers, target: target, showsBackground: showsBackground, additionalContent: additionalContent).eraseToAnyElement()
+            return PBRTransmissionPass(renderers: renderers, target: target, showsBackground: showsBackground) {
+                if let additionalContent {
+                    additionalContent
+                }
+            }
+            .eraseToAnyElement()
         }
         .eraseToAnyElement()
     }
