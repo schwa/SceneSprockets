@@ -2678,3 +2678,72 @@ Expanded panel shows:
 Done when: a view modifier or flag turns the overlay on, and it shows live per-frame stats.
 
 ---
+
+## 132: No built-in debug visualization modes for scene graph rendering
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-10-17T12:19:22Z
++++
+
+SceneGraph has no standard way to view a scene in debug modes such as normals, UVs, tangents, world position or material channels. The only option is ShaderMaterial.normals(), which has to be set on each node by hand.
+
+Related debug shaders already exist in sibling packages:
+- MetalSprocketsAddOns: DebugRenderPipeline / DebugShaders.metal (DebugShadersMode: normals, texture coordinates, tangents, bitangents, world and local position, IDs).
+- MetalSprocketsPBR: PBRRenderer.debugView (PBRDebugView: base color, alpha, metallic, roughness, occlusion, emissive, shading and geometric normals, tangents, UVs, UV checker, front facing, transmission, clearcoat, sheen, iridescence and more). The GLTF viewer uses it.
+
+None of these can be turned on for a whole SceneGraph or SceneView, and Blinn-Phong has no equivalent.
+
+Requested (per user): make debug shaders a default part of this project, so any scene can be shown in a debug mode.
+
+---
+
+## 133: MeshEntry values are copied many times per frame
+
++++
+status: new
+priority: medium
+kind: bug
+created: 2026-10-17T12:35:33Z
+updated: 2026-10-17T12:35:47Z
++++
+
+SceneGraph.MeshEntry is a large struct: a Node reference, a world transform, a MetalMesh (a struct holding arrays and dictionaries of Metal buffers), a material existential and a few flags. Each frame the render path copies every entry several times: meshEntries(), the category-mask filter, applyLevelsOfDetail, renderBatches, partitionMeshEntries, and the renderer's own intermediate arrays (for example BlinnPhongMaterialRenderer's item tuples and InstanceBatch). Every copy retains and releases each reference inside the entry.
+
+Measured on the keynote's Performance slide (1,600 crates, Release build, after the Blinn-Phong sorting and batch-key fixes): about 4.1 ms per frame, of which roughly 15% (458 of 2,654 main-thread samples) is 'outlined init with copy' or 'outlined destroy' of SceneGraph.MeshEntry and MetalMesh.
+
+---
+
+## 134: Renderers rebuild draw batches every frame even when only transforms change
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-10-17T12:35:33Z
++++
+
+BlinnPhongMaterialRenderer.makeElement regroups all entries by pipeline key, builds an instance-batch key per entry and hashes it, every frame. When a scene's structure (meshes, materials, visibility, opacity) is unchanged and only node transforms move, the grouping comes out the same each frame; only the model matrices differ.
+
+On the keynote's Performance slide (1,600 animated crates, 3 batches) this grouping work is repeated 1,600 times per frame. The scene graph has one revision counter, so a renderer cannot tell a transform-only change from a structural one.
+
+---
+
+## 135: No explicit instancing API; drawing many copies always goes through per-node implicit instancing
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-10-17T12:50:07Z
++++
+
+The only way to draw many copies of a mesh is one Node per copy. Renderers then discover the repeats each frame (implicit instancing): flatten the tree into one MeshEntry per node, cull each entry, and group entries back into instance batches. Even with the cached batching from #134, the per-node cost remains: node traversal and world transforms, one MeshEntry and one frustum test per copy, and gathering one model matrix per copy every frame.
+
+On the keynote's Performance slide this scales with crate count: 1,600 crates took about 1.6 ms per frame and 484 crates about 0.9 ms (Release, offscreen benchmark), almost all on the CPU, for what the GPU draws as 3 instanced calls.
+
+There is no way to give the scene graph a single node holding a mesh, a material and an array of instance transforms (and optionally per-instance colors), like SCNGeometry with a custom instance buffer or EXT_mesh_gpu_instancing, so that the cost does not grow with one node per copy. glTF EXT_mesh_gpu_instancing is currently expanded into child nodes for the same reason.
+
+---
