@@ -3,13 +3,18 @@ import SwiftUI
 
 // DemoKit needs one type per demo. Each type owns its Demo; DemoCatalog.demos is built from this list (#116).
 public enum SceneGraphDemos {
-    nonisolated static let catalog: [any CatalogDemoView.Type] = [
-        KeynoteDemoView.self,
-        SceneKitFeaturesDemoView.self,
-        ShadowsDemoView.self,
-    ]
+    // Computed, not stored: arrays of metatypes are not Sendable, so stored globals would not be concurrency-safe.
+    nonisolated static var catalog: [any CatalogDemoView.Type] {
+        [
+            KeynoteDemoView.self,
+            SceneKitFeaturesDemoView.self,
+            ShadowsDemoView.self,
+        ]
+    }
 
-    public static let all: [any DemoView.Type] = catalog.map { $0 }
+    public static var all: [any DemoView.Type] {
+        catalog.map { $0 }
+    }
 }
 
 // The whole demo app as one scene, so apps need not depend on DemoKit themselves.

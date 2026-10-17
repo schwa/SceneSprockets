@@ -33,7 +33,7 @@ struct ParticlesElement: Element {
                 buffer.label = "Particles"
                 return (buffer, instances.count, system.blendMode)
             }
-            return try ForEach(Array(draws.enumerated()), id: \.offset) { _, draw in
+            return ForEach(Array(draws.enumerated()), id: \.offset) { _, draw in
                 try RenderPipeline(label: "Particles", vertexShader: shaders.vertex, fragmentShader: shaders.fragment) {
                     Draw { encoder in
                         encoder.drawPrimitives(primitiveType: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: draw.count)

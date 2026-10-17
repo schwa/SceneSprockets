@@ -282,10 +282,10 @@ private struct BlinnPhongBatchesElement: Element {
                 return element
             }
 
-            return try ForEach(Array(groups.enumerated()), id: \.offset) { _, group in
+            return ForEach(Array(groups.enumerated()), id: \.offset) { _, group in
                 if !group.single.isEmpty {
                     try RenderPipeline(label: "Blinn-Phong", vertexShader: shaders.vertex, fragmentShader: fragmentShader) {
-                        try ForEach(Array(passes(group.single).enumerated()), id: \.offset) { _, pass in
+                        ForEach(Array(passes(group.single).enumerated()), id: \.offset) { _, pass in
                             try draw(pass.batch, cullMode: pass.cullMode, instanced: false)
                         }
                     }
@@ -294,7 +294,7 @@ private struct BlinnPhongBatchesElement: Element {
                 }
                 if !group.instanced.isEmpty {
                     try RenderPipeline(label: "Blinn-Phong Instanced", vertexShader: shaders.instancedVertex, fragmentShader: fragmentShader) {
-                        try ForEach(Array(passes(group.instanced).enumerated()), id: \.offset) { _, pass in
+                        ForEach(Array(passes(group.instanced).enumerated()), id: \.offset) { _, pass in
                             try draw(pass.batch, cullMode: pass.cullMode, instanced: true)
                         }
                     }
