@@ -19,7 +19,7 @@ let package = Package(
         .library(name: "MetalSprocketsAudio", targets: ["MetalSprocketsAudio"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/schwa/GeometryLite3D", from: "0.2.3"),
+        .package(url: "https://github.com/schwa/GeometryLite3D", .upToNextMinor(from: "0.2.4")),
         .package(url: "https://github.com/schwa/MetalSprockets", branch: "main"),
         .package(url: "https://github.com/schwa/SwiftMesh", branch: "main"),
         .package(url: "https://github.com/schwa/MetalSupport", branch: "main"),
@@ -27,7 +27,7 @@ let package = Package(
         .package(url: "https://github.com/schwa/MetalSprocketsGLTF", branch: "main"),
         .package(url: "https://github.com/schwa/SwiftGLTF", branch: "main"),
         .package(url: "https://github.com/schwa/Interaction3D", branch: "main"),
-        .package(url: "https://github.com/schwa/MetalCompilerPlugin", from: "0.4.1"),
+        .package(url: "https://github.com/schwa/MetalCompilerPlugin", .upToNextMinor(from: "0.4.1")),
         .package(url: "https://github.com/schwa/SwiftJolt.git", branch: "main"),
     ],
     targets: [
