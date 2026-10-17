@@ -1,5 +1,5 @@
 {
-  "originHash" : "0d5472b310e848c608fa492f060441d1407535314c383ce7e6fbfb0bbccf281a",
+  "originHash" : "4bcb4a220c7dee28870f10fa47a1fec0fd1d21dea7495aae95d9e17eeaf19778",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -33,8 +33,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/GeometryLite3D",
       "state" : {
-        "revision" : "4a1c76400e564b76140a14d14a7e6d6279908faf",
-        "version" : "0.2.4"
+        "branch" : "main",
+        "revision" : "9d16075c49eb2e2f82216876e0df440dbc532b51"
       }
     },
     {
@@ -187,7 +187,7 @@
       "location" : "https://github.com/schwa/SwiftJolt.git",
       "state" : {
         "branch" : "main",
-        "revision" : "fef62b844107c76a37afde85ceef1142cdf8b166"
+        "revision" : "4cd5a89121e49f9803c926554e7751ac0e9fd0bf"
       }
     },
     {
@@ -196,7 +196,7 @@
       "location" : "https://github.com/schwa/SwiftMesh",
       "state" : {
         "branch" : "main",
-        "revision" : "51a81219f3e4a892b9a4a4eb470098ef51184038"
+        "revision" : "772901269830ca9d45e8c8620790b15ed97a5015"
       }
     }
   ],

@@ -6,10 +6,10 @@ import MetalSprocketsSceneGraphPBR
 import SwiftMesh
 import simd
 
-// Materials for the keynote's Candy slide: speckled gummies (procedural noise texture, sheen, diffuse transmission,
+// Materials for the keynote's PBR Extensions slide: speckled gummies (procedural noise texture, sheen, diffuse transmission,
 // clearcoat) and pearls (thin-film iridescence).
 @MainActor
-enum CandyMaterials {
+enum PBRExtensionMaterials {
 
     static func gummy(color: SIMD3<Float>, speckles: PBRMaterial.Binding) -> PBRSceneMaterial {
         var uniforms = PBRMaterialUniforms.defaults(baseColor: SIMD4(color, 1), metallic: 0, roughness: 0.4)

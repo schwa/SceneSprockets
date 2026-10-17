@@ -20,7 +20,7 @@ public final class KeynoteDemo: DemoScene {
     private static let spacing: Float = 24
     static let titles = [
         "SceneGraph", "Scene Graph", "Shapes", "Materials", "Lights", "Actions", "Constraints", "Opacity & Fades", "Blend Modes",
-        "Custom Shaders", "Glass", "Candy", "Shadows", "Fog", "Particles", "Implicit Animation", "Animation Blending", "Deformation",
+        "Custom Shaders", "Glass", "PBR Extensions", "Shadows", "Fog", "Particles", "Implicit Animation", "Animation Blending", "Deformation",
         "glTF & Model I/O", "Hit Testing", "Physics", "Performance", "Post-processing", "SceneView", "Thank You",
     ]
 
@@ -35,12 +35,15 @@ public final class KeynoteDemo: DemoScene {
     private var sinceShuffle: Float = 0
     private var blendMixer: SceneGraph.AnimationMixer?
     private var blendController: SceneGraph.AnimationController?
-    private var foxPlayer: SceneGraph.AnimationPlayer?
+    private var importedPlayer: SceneGraph.AnimationPlayer?
     private var hitTargets: Set<ObjectIdentifier> = []
     private var physics: SceneGraphPhysicsWorld?
     private var physicsStack: SceneGraph.Node?
     private var sincePhysicsReset: Float = 0
-    private var candies: [(node: SceneGraph.Node, axis: SIMD3<Float>, speed: Float)] = []
+    private var pbrExtensionPieces: [(node: SceneGraph.Node, axis: SIMD3<Float>, speed: Float)] = []
+    private var gradeLabels: [SceneGraph.Node] = []
+    private var gradeIndex = 0
+    private var sinceGrade: Float = 0
     private var morphed: [SceneGraph.Node] = []
     private var bendingJoints: [SceneGraph.Node] = []
     private var crates: [SceneGraph.Node] = []
@@ -135,9 +138,9 @@ public final class KeynoteDemo: DemoScene {
             controller.advance(by: deltaTime)
             blendMixer.apply(controller.layers)
             blendController = controller
-        case "Candy":
-            for candy in candies {
-                candy.node.trs.rotation = simd_normalize(simd_quatf(angle: deltaTime * candy.speed, axis: candy.axis) * candy.node.trs.rotation)
+        case "PBR Extensions":
+            for piece in pbrExtensionPieces {
+                piece.node.trs.rotation = simd_normalize(simd_quatf(angle: deltaTime * piece.speed, axis: piece.axis) * piece.node.trs.rotation)
             }
         case "Deformation":
             let weights = [(sin(time * 1.3) + 1) / 2, max(0, sin(time * 0.7))]
@@ -151,11 +154,9 @@ public final class KeynoteDemo: DemoScene {
         case "Performance":
             waveCrates(time: time)
         case "Post-processing":
-            // Cycles through a few grades.
-            let phase = (sin(time * 0.6) + 1) / 2
-            sceneGraph.postProcessing = SceneGraph.PostProcessing(exposure: phase * 0.4 - 0.2, contrast: 1 + phase * 0.3, saturation: 1.4 - phase * 1.4, vignetteIntensity: 0.3 + phase * 0.5, ambientOcclusion: SceneGraph.AmbientOcclusion(radius: 0.4, intensity: 0.8))
+            updateGrade(deltaTime: deltaTime)
         case "glTF & Model I/O":
-            foxPlayer?.advance(by: deltaTime)
+            importedPlayer?.advance(by: deltaTime)
         case "Physics":
             sincePhysicsReset += deltaTime
             if sincePhysicsReset > 7 {
@@ -171,7 +172,10 @@ public final class KeynoteDemo: DemoScene {
     private func applySceneSettings() {
         shadows = currentTitle == "Shadows" ? shadowRenderer : nil
         sceneGraph.fog = currentTitle == "Fog" ? SceneGraph.Fog(color: [0.05, 0.06, 0.1, 1], startDistance: 12, endDistance: 34) : nil
-        if currentTitle != "Post-processing" {
+        if currentTitle == "Post-processing" {
+            gradeIndex = 0
+            sinceGrade = 0
+        } else {
             sceneGraph.postProcessing = nil
         }
         if currentTitle == "Physics" {
@@ -324,8 +328,8 @@ public final class KeynoteDemo: DemoScene {
             ShaderMaterial(vertexShader: vertex, fragmentShader: fragment,
                            parameters: ["time": .float(t)])
             """, to: slide)
-        case "Candy":
-            candySlide(slide)
+        case "PBR Extensions":
+            pbrExtensionsSlide(slide)
             addCode("""
             uniforms.sheenColorFactor = [1, 0.95, 0.9] * 0.25
             uniforms.diffuseTransmissionFactor = 0.9
@@ -357,9 +361,9 @@ public final class KeynoteDemo: DemoScene {
         case "Post-processing":
             postProcessingSlide(slide)
             addCode("""
-            sceneGraph.postProcessing = PostProcessing(
-                exposure: 0.3, contrast: 1.2, saturation: 0.5, vignetteIntensity: 0.6,
-                ambientOcclusion: AmbientOcclusion(radius: 0.4))
+            // Noir
+            sceneGraph.postProcessing = PostProcessing(contrast: 1.8, saturation: 0,
+                                                       vignetteIntensity: 0.9, vignetteRadius: 0.35)
             """, to: slide)
         case "Fog":
             fogSlide(slide)
@@ -387,9 +391,9 @@ public final class KeynoteDemo: DemoScene {
         case "glTF & Model I/O":
             importSlide(slide)
             addCode("""
-            let fox = try GLTFAsset(url: foxURL, device: device).makeSceneGraph(device: device)
+            let plant = try GLTFAsset(url: plantURL, device: device).makeSceneGraph(device: device)
             let pedestal = try ModelIOSceneGraph(url: objURL, device: device)
-            player = AnimationPlayer(clip: fox.animations[1])
+            player = AnimationPlayer(clip: plant.animations[0]) // fireflies with point lights
             """, to: slide)
         case "Hit Testing":
             hitTestingSlide(slide)
@@ -660,18 +664,38 @@ public final class KeynoteDemo: DemoScene {
     private func importSlide(_ slide: SceneGraph.Node) {
         _ = SceneGraph.Node(parent: slide, label: "Sun", transform: .camera(eye: [2, 4, 3], target: .zero), content: .light(Light(type: .directional, color: [1, 0.95, 0.9], intensity: 2)))
         addLight(to: slide, at: [-3, 3, 5], color: [0.6, 0.7, 1], intensity: 30)
-        // The fox is about 100 units long and the pedestal about 1; the holder scales both up for the slide.
+        // The plant is about 0.6 units tall and the pedestal 1 wide (its top at y = 0); the holder scales both up.
         let holder = SceneGraph.Node(parent: slide, label: "Imported", trs: .init(translation: [0, 0.3, -1], scale: [1.4, 1.4, 1.4]))
         do {
-            if let url = Bundle.module.url(forResource: "Fox", withExtension: "glb", subdirectory: "Resources") {
-                let fox = try GLTFAsset(url: url, device: demoDevice).makeSceneGraph(device: demoDevice)
-                let foxHolder = SceneGraph.Node(parent: holder, label: "Fox", trs: .init(scale: [0.02, 0.02, 0.02]))
-                for child in fox.sceneGraph.root.children {
-                    foxHolder.addChild(child)
+            if let url = Bundle.module.url(forResource: "DiffuseTransmissionPlant", withExtension: "glb", subdirectory: "Resources") {
+                let plant = try GLTFAsset(url: url, device: demoDevice).makeSceneGraph(device: demoDevice)
+                let plantHolder = SceneGraph.Node(parent: holder, label: "Plant", trs: .init(scale: [3, 3, 3]))
+                for child in plant.sceneGraph.root.children {
+                    plantHolder.addChild(child)
                 }
-                if let clip = fox.animations.dropFirst().first ?? fox.animations.first {
-                    foxPlayer = SceneGraph.AnimationPlayer(clip: clip)
+                // The asset has chase cameras behind its fireflies; the keynote flies its own camera.
+                removeCameras(under: plantHolder)
+                // The fireflies are tiny with very dim lights; give them a glow, a light and a trail so they read on stage.
+                for firefly in descendants(of: plantHolder).filter({ ["firefly1", "firefly2"].contains($0.label) }) {
+                    let glow = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0.8, 1, 0.45]))
+                    _ = SceneGraph.Node(parent: firefly, label: "Glow", shape: .sphere(radius: 0.025), material: glow, device: demoDevice)
+                    var light = Light(type: .point, color: [0.8, 1, 0.5], intensity: 6)
+                    light.range = 3
+                    _ = SceneGraph.Node(parent: firefly, label: "Glow Light", content: .light(light))
+                    let trail = ParticleSystem(seed: 3)
+                    // Particle sizes are in world units.
+                    trail.birthRate = 90
+                    trail.lifetime = 1.2
+                    trail.speed = 0.05
+                    trail.spreadAngle = .pi
+                    trail.startSize = 0.3
+                    trail.endSize = 0.04
+                    trail.startColor = [0.8, 1, 0.45, 0.8]
+                    trail.endColor = [0.5, 1, 0.3, 0]
+                    trail.blendMode = .additive
+                    firefly.particleSystems = [trail]
                 }
+                importedPlayer = plant.animations.first.map { SceneGraph.AnimationPlayer(clip: $0) }
             }
             if let url = Bundle.module.url(forResource: "Pedestal", withExtension: "obj", subdirectory: "Resources") {
                 let pedestal = try ModelIOSceneGraph(url: url, device: demoDevice)
@@ -680,6 +704,19 @@ public final class KeynoteDemo: DemoScene {
             }
         } catch {
             // The slide shows whatever loaded.
+        }
+    }
+
+    private func descendants(of node: SceneGraph.Node) -> [SceneGraph.Node] {
+        node.children.flatMap { [$0] + descendants(of: $0) }
+    }
+
+    private func removeCameras(under node: SceneGraph.Node) {
+        for child in node.children {
+            if case .camera = child.content {
+                child.content = .empty
+            }
+            removeCameras(under: child)
         }
     }
 
@@ -741,29 +778,29 @@ public final class KeynoteDemo: DemoScene {
         }
     }
 
-    // Gummies and pearls, slowly turning.
-    private func candySlide(_ slide: SceneGraph.Node) {
+    // Sheen, diffuse transmission and clearcoat on speckled pieces; iridescence on pearls. Slowly turning.
+    private func pbrExtensionsSlide(_ slide: SceneGraph.Node) {
         addLight(to: slide, at: [-4, 6, 8], intensity: 60)
         addLight(to: slide, at: [6, -2, 6], color: [0.9, 0.95, 1], intensity: 15)
         addLight(to: slide, at: [1, 3, -8], color: [1, 0.9, 0.8], intensity: 400)
-        let speckles = CandyMaterials.makeSpeckleBinding()
+        let speckles = PBRExtensionMaterials.makeSpeckleBinding()
         let roundedBox = MetalMesh(mesh: .roundedBox(extents: [1.6, 2.2, 1.1], radius: 0.35), device: demoDevice)
         let cube = MetalMesh(mesh: .roundedBox(extents: [1.6, 1.6, 1.6], radius: 0.3), device: demoDevice)
         let smooth: MeshAttributes = [.smoothNormals, .textureCoordinates]
         let egg = MetalMesh(mesh: .sphere(extents: [1.4, 1.8, 1.4], latitudeSegments: 48, longitudeSegments: 96, attributes: smooth), device: demoDevice)
         let bean = MetalMesh(mesh: .capsule(segments: 64, height: 2.2, radius: 0.5, latitudeSegments: 24, attributes: smooth), device: demoDevice)
-        let pearl = CandyMaterials.pearl()
+        let pearl = PBRExtensionMaterials.pearl()
         let pieces: [(MetalMesh, PBRSceneMaterial, SIMD3<Float>)] = [
-            (roundedBox, CandyMaterials.gummy(color: [1, 0.3, 0.1], speckles: speckles), [-3.6, 1.4, 0]),
+            (roundedBox, PBRExtensionMaterials.gummy(color: [1, 0.3, 0.1], speckles: speckles), [-3.6, 1.4, 0]),
             (cube, pearl, [-1.2, 1.6, 0]),
-            (egg, CandyMaterials.gummy(color: [0.5, 0.75, 0.15], speckles: speckles), [1.2, 1.4, 0]),
+            (egg, PBRExtensionMaterials.gummy(color: [0.5, 0.75, 0.15], speckles: speckles), [1.2, 1.4, 0]),
             (bean, pearl, [3.6, 1.4, 0]),
         ]
         var generator = SystemRandomNumberGenerator()
         for (mesh, material, position) in pieces {
             let node = SceneGraph.Node(parent: slide, label: material.pbrMaterial.name, trs: .init(translation: position), content: .mesh(mesh, material: material))
             let axis = simd_normalize(SIMD3<Float>(.random(in: -1...1, using: &generator), .random(in: -1...1, using: &generator), .random(in: -1...1, using: &generator)))
-            candies.append((node, axis, .random(in: 0.2...0.5, using: &generator)))
+            pbrExtensionPieces.append((node, axis, .random(in: 0.2...0.5, using: &generator)))
         }
     }
 
@@ -877,6 +914,50 @@ public final class KeynoteDemo: DemoScene {
         }
         let torus = SceneGraph.Node(parent: slide, shape: .torus(ringRadius: 0.5, pipeRadius: 0.18), material: BlinnPhongSceneMaterial.plastic([0.95, 0.95, 0.95], shininess: 64), device: demoDevice, trs: .init(translation: [0, 2.3, 0]))
         torus.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([1, 0.5, 0]), duration: 6)))
+        gradeLabels = Self.grades.map { grade in
+            let label = SceneGraph.Node(parent: slide, label: "Grade \(grade.name)")
+            addTitle(grade.name, size: 0.4, y: 3.1, color: [0.85, 0.85, 0.9], to: label)
+            label.isVisible = false
+            return label
+        }
+        gradeLabels.first?.isVisible = true
+    }
+
+    // Strong, distinct looks so the effect reads from the back of the room.
+    private static let grades: [(name: String, settings: SceneGraph.PostProcessing)] = [
+        ("Neutral", .init()),
+        ("Noir", .init(exposure: -0.1, contrast: 1.8, saturation: 0, vignetteIntensity: 0.9, vignetteRadius: 0.35)),
+        ("Vivid", .init(exposure: 0.15, contrast: 1.35, saturation: 2.2, vignetteIntensity: 0.3)),
+        ("Overexposed", .init(exposure: 1.2, contrast: 0.8, saturation: 0.6)),
+        ("Moody", .init(exposure: -0.8, contrast: 1.5, saturation: 0.5, vignetteIntensity: 1, vignetteRadius: 0.25)),
+    ]
+
+    // Holds each grade, then eases into the next over `blendTime`.
+    private func updateGrade(deltaTime: Float) {
+        let holdTime: Float = 2.2
+        let blendTime: Float = 0.6
+        sinceGrade += deltaTime
+        if sinceGrade >= holdTime + blendTime {
+            sinceGrade = 0
+            gradeIndex = (gradeIndex + 1) % Self.grades.count
+        }
+        let from = Self.grades[gradeIndex].settings
+        let nextIndex = (gradeIndex + 1) % Self.grades.count
+        let to = Self.grades[nextIndex].settings
+        let linear = max(0, sinceGrade - holdTime) / blendTime
+        let t = linear * linear * (3 - 2 * linear)
+        func mix(_ a: Float, _ b: Float) -> Float { a + (b - a) * t }
+        sceneGraph.postProcessing = SceneGraph.PostProcessing(
+            exposure: mix(from.exposure, to.exposure),
+            contrast: mix(from.contrast, to.contrast),
+            saturation: mix(from.saturation, to.saturation),
+            vignetteIntensity: mix(from.vignetteIntensity, to.vignetteIntensity),
+            vignetteRadius: mix(from.vignetteRadius, to.vignetteRadius)
+        )
+        let shown = t < 0.5 ? gradeIndex : nextIndex
+        for (index, label) in gradeLabels.enumerated() where label.isVisible != (index == shown) {
+            label.isVisible = index == shown
+        }
     }
 
     private func sceneViewSlide(_ slide: SceneGraph.Node) {
