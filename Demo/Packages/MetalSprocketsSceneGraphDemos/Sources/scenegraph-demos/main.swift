@@ -8,6 +8,9 @@ import SwiftUI
 // scenegraph-demos --list                  list demo ids
 // scenegraph-demos --render <id> [file]    render a demo offscreen to a PNG (default: <id>.png)
 //                  [--size WxH] [--frames N] [--slide N] [--value Name=Number ...]
+// scenegraph-demos --video <id> [file]     record a demo offscreen to a movie (default: <id>.mov); the keynote
+//                  [--size WxH] [--fps N]   auto-advances through every slide unless --seconds is given
+//                  [--seconds N] [--slide N] [--value Name=Number ...]
 // scenegraph-demos --benchmark <id>        render every frame offscreen and print frame times
 //                  [--size WxH] [--frames N] [--slide N]
 
@@ -89,6 +92,48 @@ case "--render":
     } catch {
         fail("\(error)")
     }
+case "--video":
+    let size = option("--size").map { $0.split(separator: "x").compactMap { Int($0) } } ?? [1920, 1080]
+    let frameRate = option("--fps").flatMap { Double($0) } ?? 60
+    let requestedSeconds = option("--seconds").flatMap { Double($0) }
+    let slide = option("--slide").flatMap { Int($0) }
+    var values = valueOptions()
+    guard size.count == 2, arguments.count >= 2 else {
+        fail("usage: scenegraph-demos --video <id> [file.mov] [--size WxH] [--fps N] [--seconds N] [--slide N] [--value Name=Number ...]")
+    }
+    let id = arguments[1]
+    let url = URL(fileURLWithPath: arguments.count >= 3 ? arguments[2] : "\(id).mov")
+    // The keynote plays through: auto-advance, and long enough to show every slide once.
+    var seconds = requestedSeconds ?? 10
+    if id == "keynote" {
+        if values["Auto-advance"] == nil {
+            values["Auto-advance"] = 1
+        }
+        let secondsPerSlide = Double(values["Seconds per Slide"] ?? 6)
+        values["Seconds per Slide"] = Float(secondsPerSlide)
+        seconds = requestedSeconds ?? Double(KeynoteDemo.titles.count - (slide ?? 0)) * secondsPerSlide
+    }
+    Task { @MainActor in
+        do {
+            var lastReported = -1
+            try await DemoSnapshot.video(demoID: id, to: url, width: size[0], height: size[1], seconds: seconds, frameRate: frameRate, values: values) { scene in
+                if let slide, let keynote = scene as? KeynoteDemo {
+                    keynote.show(slide: slide)
+                }
+            } progress: { frame, frameCount in
+                let percent = (frame + 1) * 100 / frameCount
+                if percent != lastReported, percent % 5 == 0 {
+                    lastReported = percent
+                    FileHandle.standardError.write(Data("\(percent)% (\(frame + 1)/\(frameCount) frames)\n".utf8))
+                }
+            }
+            print(url.path)
+            exit(0)
+        } catch {
+            fail("\(error)")
+        }
+    }
+    RunLoop.main.run()
 case "--benchmark":
     let size = option("--size").map { $0.split(separator: "x").compactMap { Int($0) } } ?? [1280, 800]
     let frames = option("--frames").flatMap { Int($0) } ?? 120

@@ -88,6 +88,50 @@ public enum DemoSnapshot {
         return image
     }
 
+    // Records `seconds` of a demo to a movie at `frameRate`, stepping it one frame at a time like render(...). Calls
+    // `progress` with each frame index.
+    @MainActor
+    public static func video(
+        demoID: String,
+        to url: URL,
+        width: Int = 1920,
+        height: Int = 1080,
+        seconds: Double,
+        frameRate: Double = 60,
+        values: [String: Float] = [:],
+        configure: (DemoScene) -> Void = { _ in },
+        progress: (_ frame: Int, _ frameCount: Int) -> Void = { _, _ in }
+    ) async throws {
+        guard let demo = DemoCatalog.demos.first(where: { $0.id == demoID }) else {
+            throw Failure.unknownDemo(demoID)
+        }
+        let scene = demo.make()
+        scene.values.merge(values) { $1 }
+        configure(scene)
+        // The scene's post passes (shadow mask, fog, AO, soft particles) read and write the targets outside the pass.
+        let renderer = try OffscreenVideoRenderer(
+            size: CGSize(width: width, height: height),
+            frameRate: frameRate,
+            outputURL: url,
+            pixelFormat: .bgra8Unorm_srgb,
+            colorUsage: SceneGraphShadows.requiredColorUsage,
+            depthUsage: SceneGraphShadows.requiredDepthUsage,
+            clearDepth: 0
+        )
+        let deltaTime = Float(1 / frameRate)
+        let frameCount = Int((seconds * frameRate).rounded())
+        for frame in 0..<frameCount {
+            scene.update(time: Float(frame) * deltaTime, deltaTime: deltaTime)
+            scene.sceneGraph.advanceActions(by: deltaTime)
+            scene.sceneGraph.advanceParticles(by: deltaTime)
+            scene.sceneGraph.applyConstraints(pointOfView: scene.initialCameraMatrix, deltaTime: deltaTime)
+            let sceneCamera = scene.usesSceneCamera ? scene.sceneGraph.cameraNodes().first?.worldTransform : nil
+            try await renderer.render(SceneGraphElement(sceneGraph: scene.sceneGraph, cameraMatrix: sceneCamera ?? scene.initialCameraMatrix, aspectRatio: Float(width) / Float(height), renderers: scene.renderers, shadows: scene.shadows))
+            progress(frame, frameCount)
+        }
+        try await renderer.finalize()
+    }
+
     public static func writePNG(_ image: CGImage, to url: URL) throws {
         guard let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil) else {
             throw Failure.imageCreationFailed

@@ -33,6 +33,7 @@ let package = Package(
                 .product(name: "MetalSprocketsSceneGraph", package: "MetalSprocketsSceneGraph"),
                 .product(name: "MetalSprocketsSceneGraphPhysics", package: "MetalSprocketsSceneGraph"),
                 .product(name: "MetalSprocketsParticles", package: "MetalSprocketsParticles"),
+                .product(name: "MetalSprocketsParticlesSamples", package: "MetalSprocketsParticles"),
                 .product(name: "MetalSprocketsSceneGraphPBR", package: "MetalSprocketsSceneGraph"),
                 .product(name: "MetalSprocketsSceneGraphBlinnPhong", package: "MetalSprocketsSceneGraph"),
                 .product(name: "MetalSprocketsSceneGraphShaderMaterial", package: "MetalSprocketsSceneGraph"),

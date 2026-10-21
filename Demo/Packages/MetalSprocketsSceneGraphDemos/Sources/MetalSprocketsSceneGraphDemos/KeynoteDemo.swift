@@ -3,6 +3,7 @@ import GeometryLite3D
 import Metal
 import MetalSprocketsGLTF
 import MetalSprocketsParticles
+import MetalSprocketsParticlesSamples
 import MetalSprocketsSceneGraph
 import MetalSprocketsSceneGraphShaderMaterial
 import MetalSprocketsSceneGraphBlinnPhong
@@ -18,7 +19,7 @@ import simd
 // also advances, and Auto-advance moves on every few seconds.
 public final class KeynoteDemo: DemoScene {
     private static let spacing: Float = 24
-    static let titles = [
+    public static let titles = [
         "SceneGraph", "Scene Graph", "Shapes", "Materials", "Lights", "Actions", "Constraints", "Opacity & Fades", "Blend Modes",
         "Custom Shaders", "Glass", "PBR Extensions", "Shadows", "Fog", "Particles", "Mesh Emitters", "Implicit Animation", "Animation Blending", "Deformation",
         "glTF & Model I/O", "Hit Testing", "Physics", "Performance", "Post-processing", "SceneView", "Thank You",
@@ -40,8 +41,13 @@ public final class KeynoteDemo: DemoScene {
     private var physics: SceneGraphPhysicsWorld?
     private var physicsStack: SceneGraph.Node?
     private var sincePhysicsReset: Float = 0
+    // Waits on the ground until launched, a moment after the slide comes up.
+    private var physicsBall: SceneGraph.Node?
+    private static let ballLaunchDelay: Float = 0.5
+    private static let tubeJointCount = 7
     private var pbrExtensionPieces: [(node: SceneGraph.Node, axis: SIMD3<Float>, speed: Float)] = []
     private var burningFox: BurningFox?
+    private var campfireLight: SceneGraph.Node?
     private var gradeLabels: [SceneGraph.Node] = []
     private var gradeIndex = 0
     private var sinceGrade: Float = 0
@@ -76,11 +82,18 @@ public final class KeynoteDemo: DemoScene {
     }
 
     private static func eye(for index: Int) -> SIMD3<Float> {
-        [Float(index) * spacing, 1.6, 13]
+        switch titles[index] {
+        // From above, so the shadows on the floor show.
+        case "Shadows": [Float(index) * spacing, 4.5, 12.5]
+        default: [Float(index) * spacing, 1.6, 13]
+        }
     }
 
     private static func target(for index: Int) -> SIMD3<Float> {
-        [Float(index) * spacing, 1.1, 0]
+        switch titles[index] {
+        case "Shadows": [Float(index) * spacing, 0.8, 0]
+        default: [Float(index) * spacing, 1.1, 0]
+        }
     }
 
     override public func update(time: Float, deltaTime: Float) {
@@ -148,7 +161,8 @@ public final class KeynoteDemo: DemoScene {
             for node in morphed {
                 node.morphWeights = weights
             }
-            let rotation = simd_quatf(angle: sin(time * 1.5) * 0.7, axis: [0, 0, 1])
+            // The same total bend as before (1.4 radians at the tip), shared by every bending joint.
+            let rotation = simd_quatf(angle: sin(time * 1.5) * 1.4 / Float(Self.tubeJointCount - 1), axis: [0, 0, 1])
             for joint in bendingJoints {
                 joint.trs.rotation = rotation
             }
@@ -158,10 +172,16 @@ public final class KeynoteDemo: DemoScene {
             updateGrade(deltaTime: deltaTime)
         case "glTF & Model I/O":
             importedPlayer?.advance(by: deltaTime)
+        case "Particles":
+            flickerCampfire(time: time)
         case "Mesh Emitters":
             burningFox?.update(sceneGraph: sceneGraph, deltaTime: deltaTime)
         case "Physics":
+            let wasWaiting = sincePhysicsReset < Self.ballLaunchDelay
             sincePhysicsReset += deltaTime
+            if wasWaiting, sincePhysicsReset >= Self.ballLaunchDelay, let physicsBall {
+                physics?.setVelocity([14, 3, 0], of: physicsBall)
+            }
             if sincePhysicsReset > 7 {
                 resetPhysics()
             }
@@ -346,13 +366,11 @@ public final class KeynoteDemo: DemoScene {
         case "Particles":
             particlesSlide(slide)
             addCode("""
-            let fire = ParticleSystem("Fire") {
-                EmitterDescription("Flame") {
-                    RateModule(birthRate: 200)
-                    SpriteModule(blendMode: .additive)
-                }
-            }
-            node.particleSystems = [SceneParticleSystem(fire)]
+            import MetalSprocketsParticlesSamples
+
+            campfire.particleSystems = [SceneParticleSystem(.campfire)]
+            geyser.particleSystems = [SceneParticleSystem(.geyser)]
+            sky.particleSystems = [SceneParticleSystem(.fireworks)]
             """, to: slide)
         case "Mesh Emitters":
             meshEmittersSlide(slide)
@@ -763,7 +781,8 @@ public final class KeynoteDemo: DemoScene {
         physicsStack = SceneGraph.Node(parent: slide, label: "Bodies")
     }
 
-    // Restacks the boxes and throws a new ball. Hidden slides drop out of the physics world, so this runs on arrival.
+    // Restacks the boxes and puts a new ball on the ground; update throws it after ballLaunchDelay. Hidden slides drop
+    // out of the physics world, so this runs on arrival.
     private func resetPhysics() {
         guard let physicsStack else {
             return
@@ -779,10 +798,10 @@ public final class KeynoteDemo: DemoScene {
                 box.physicsBody = .init(type: .dynamic, shape: .boundingBox, friction: 0.4, restitution: 0.2)
             }
         }
-        let ball = SceneGraph.Node(parent: physicsStack, label: "Ball", shape: .sphere(radius: 0.35), material: BlinnPhongSceneMaterial.plastic([0.9, 0.15, 0.15], shininess: 64), device: demoDevice, trs: .init(translation: [-4.5, 1.2, 0]))
+        let ball = SceneGraph.Node(parent: physicsStack, label: "Ball", shape: .sphere(radius: 0.35), material: BlinnPhongSceneMaterial.plastic([0.9, 0.15, 0.15], shininess: 64), device: demoDevice, trs: .init(translation: [-4.5, 0.35, 0]))
         ball.physicsBody = .init(type: .dynamic, shape: .sphere(radius: 0.35), friction: 0.3, restitution: 0.4)
+        physicsBall = ball
         physics?.sync()
-        physics?.setVelocity([14, 3, 0], of: ball)
     }
 
     private func customShadersSlide(_ slide: SceneGraph.Node) {
@@ -838,38 +857,36 @@ public final class KeynoteDemo: DemoScene {
         burningFox = fox
     }
 
+    // MetalSprocketsParticles sample presets: a campfire on real logs, a geyser, and fireworks over the slide. Presets
+    // bring their own colliders (the ground plane, the logs), which follow the node they are on.
     private func particlesSlide(_ slide: SceneGraph.Node) {
-        addLight(to: slide, at: [0, 6, 6], intensity: 60)
-        _ = SceneGraph.Node(parent: slide, label: "Floor", shape: .box(width: 10, height: 0.1, length: 4), material: BlinnPhongSceneMaterial.plastic([0.35, 0.35, 0.4], shininess: 8), device: demoDevice, trs: .init(translation: [0, -0.05, 0]))
-        // Spread is a random velocity added at birth, in world units per second.
-        let fountain = ParticleSystem("Fountain") {
-            EmitterDescription("Water", capacity: 2_000) {
-                ShapeModule(shape: .point)
-                RateModule(birthRate: 300)
-                LifetimeModule(range: 1.75...2.25)
-                VelocityModule(velocity: [0, 5, 0], spread: 1.25, speedVariation: 0.5)
-                GravityModule(acceleration: [0, -6, 0])
-                DragModule(amount: 0)
-                SizeOverLifeModule(curve: .linear(from: 0.12, to: 0.05))
-                ColorOverLifeModule(color: .linear(from: [0.5, 0.75, 1, 0.9], to: [0.3, 0.5, 1, 0]))
-                SpriteModule(blendMode: .alpha, sortMode: .backToFront)
-            }
+        addLight(to: slide, at: [-4, 6, 6], color: [0.45, 0.55, 0.9], intensity: 25)
+        _ = SceneGraph.Node(parent: slide, label: "Ground", shape: .box(width: 12, height: 0.1, length: 6), material: BlinnPhongSceneMaterial.plastic([0.16, 0.15, 0.15], shininess: 6), device: demoDevice, trs: .init(translation: [0, -0.05, -1]))
+
+        let campfire = SceneGraph.Node(parent: slide, label: "Campfire", trs: .init(translation: [-2.6, 0, 0.8]))
+        campfire.particleSystems = [SceneParticleSystem(.campfire, seed: 1)]
+        // Logs where the preset's capsule colliders are, so embers land on wood.
+        let bark = BlinnPhongSceneMaterial.plastic([0.3, 0.18, 0.1], shininess: 4)
+        for (start, end) in [(SIMD3<Float>(-0.5, 0.08, -0.2), SIMD3<Float>(0.5, 0.08, 0.2)), ([-0.4, 0.08, 0.35], [0.4, 0.08, -0.35])] {
+            let axis = end - start
+            _ = SceneGraph.Node(parent: campfire, label: "Log", shape: .capsule(capRadius: 0.08, height: simd_length(axis) + 0.16), material: bark, device: demoDevice, trs: .init(translation: (start + end) / 2, rotation: simd_quatf(from: [0, 1, 0], to: simd_normalize(axis))))
         }
-        _ = SceneGraph.Node(parent: slide, label: "Fountain", trs: .init(translation: [-2.2, 0, 0])).particleSystems = [SceneParticleSystem(fountain, seed: 1)]
-        let fire = ParticleSystem("Fire") {
-            EmitterDescription("Flame", capacity: 1_000) {
-                ShapeModule(shape: .sphere(radius: 0.25))
-                RateModule(birthRate: 200)
-                LifetimeModule(range: 0.7...1.1)
-                VelocityModule(velocity: [0, 1.6, 0], spread: 0.64)
-                GravityModule(acceleration: .zero)
-                DragModule(amount: 0.5)
-                SizeOverLifeModule(curve: .linear(from: 0.45, to: 0.1))
-                ColorOverLifeModule(color: .linear(from: [1, 0.55, 0.15, 0.8], to: [0.8, 0.1, 0.02, 0]))
-                SpriteModule(blendMode: .additive)
-            }
+        var firelight = Light(type: .point, color: [1, 0.55, 0.2], intensity: 6)
+        firelight.range = 6
+        campfireLight = SceneGraph.Node(parent: campfire, label: "Firelight", trs: .init(translation: [0, 0.6, 0]), content: .light(firelight))
+
+        _ = SceneGraph.Node(parent: slide, label: "Geyser", trs: .init(translation: [2.8, 0, -0.5])).particleSystems = [SceneParticleSystem(.geyser, seed: 2)]
+        // Far back, so the bursts open above the title.
+        _ = SceneGraph.Node(parent: slide, label: "Fireworks", trs: .init(translation: [0, 0, -9])).particleSystems = [SceneParticleSystem(.fireworks, seed: 3)]
+    }
+
+    // The campfire light flickers with layered sines.
+    private func flickerCampfire(time: Float) {
+        guard let campfireLight, case var .light(light) = campfireLight.content else {
+            return
         }
-        _ = SceneGraph.Node(parent: slide, label: "Fire", trs: .init(translation: [2.2, 0.2, 0])).particleSystems = [SceneParticleSystem(fire, seed: 2)]
+        light.intensity = 6 + 1.5 * sin(time * 11) + sin(time * 17.3) + 0.7 * sin(time * 29.1)
+        campfireLight.content = .light(light)
     }
 
     // A morphing blob and a skinned tube. The bumps move vertices along the direction from the center, not the vertex
@@ -895,24 +912,28 @@ public final class KeynoteDemo: DemoScene {
         blob.morphWeights = [0, 0]
         morphed.append(blob)
 
-        let tube = MetalMesh(mesh: DeformationMeshes.tube(height: 3, radius: 0.3, rings: 24, segments: 24), device: demoDevice)
+        // Many short bones, each turning a little, bend the tube in a smooth curve; two long ones kinked it.
+        let tubeHeight: Float = 3
+        let jointSpacing = tubeHeight / Float(Self.tubeJointCount - 1)
+        let tube = MetalMesh(mesh: DeformationMeshes.tube(height: tubeHeight, radius: 0.3, rings: 48, segments: 24), device: demoDevice)
         let skinVertices = tube.float3Attribute(.position).map { position in
-            let y = min(max(position.y, 0), 2)
-            let lower = min(Int(y), 1)
-            let fraction = y - Float(lower)
+            let along = min(max(position.y / jointSpacing, 0), Float(Self.tubeJointCount - 1))
+            let lower = min(Int(along), Self.tubeJointCount - 2)
+            let fraction = along - Float(lower)
             return SceneGraph.SkinVertex(joints: [UInt16(lower), UInt16(lower + 1), 0, 0], weights: [1 - fraction, fraction, 0, 0])
         }
         let skeleton = SceneGraph.Node(parent: slide, label: "Skeleton", trs: .init(translation: [2.5, 0, 0]))
-        let joint0 = SceneGraph.Node(parent: skeleton, label: "Joint 0")
-        let joint1 = SceneGraph.Node(parent: joint0, label: "Joint 1", trs: .init(translation: [0, 1, 0]))
-        let joint2 = SceneGraph.Node(parent: joint1, label: "Joint 2", trs: .init(translation: [0, 1, 0]))
-        bendingJoints += [joint1, joint2]
+        var joints = [SceneGraph.Node(parent: skeleton, label: "Joint 0")]
+        for index in 1..<Self.tubeJointCount {
+            joints.append(SceneGraph.Node(parent: joints[index - 1], label: "Joint \(index)", trs: .init(translation: [0, jointSpacing, 0])))
+        }
+        bendingJoints += joints.dropFirst()
         // Skinned vertices end up in world space, so the tube node's own transform does not matter.
         let skeletonInverse = skeleton.worldTransform.inverse
-        let inverseBind = [joint0, joint1, joint2].map { (skeletonInverse * $0.worldTransform).inverse }
+        let inverseBind = joints.map { (skeletonInverse * $0.worldTransform).inverse }
         let tubeMaterial: any MetalSprocketsSceneGraph.Material = (try? PBRSceneMaterial(device: demoDevice, baseColor: [0.9, 0.6, 0.2, 1], metallic: 0, roughness: 0.4)) ?? BlinnPhongSceneMaterial.plastic([0.9, 0.6, 0.2])
         let skinned = SceneGraph.Node(parent: slide, label: "Tube", content: .mesh(tube, material: tubeMaterial))
-        skinned.skin = SceneGraph.Skin(joints: [joint0, joint1, joint2], inverseBindMatrices: inverseBind)
+        skinned.skin = SceneGraph.Skin(joints: joints, inverseBindMatrices: inverseBind)
         skinned.skinVertices = skinVertices
     }
 
