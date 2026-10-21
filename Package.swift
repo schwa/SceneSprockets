@@ -15,7 +15,6 @@ let package = Package(
         .library(name: "MetalSprocketsSceneGraphPBR", targets: ["MetalSprocketsSceneGraphPBR"]),
         .library(name: "MetalSprocketsSceneGraphBlinnPhong", targets: ["MetalSprocketsSceneGraphBlinnPhong"]),
         .library(name: "MetalSprocketsSceneGraphShaderMaterial", targets: ["MetalSprocketsSceneGraphShaderMaterial"]),
-        .library(name: "MetalSprocketsParticles", targets: ["MetalSprocketsParticles"]),
         .library(name: "MetalSprocketsAudio", targets: ["MetalSprocketsAudio"]),
     ],
     dependencies: [
@@ -29,14 +28,15 @@ let package = Package(
         .package(url: "https://github.com/schwa/Interaction3D", branch: "main"),
         .package(url: "https://github.com/schwa/MetalCompilerPlugin", .upToNextMinor(from: "0.4.1")),
         .package(url: "https://github.com/schwa/SwiftJolt.git", branch: "main"),
+        .package(url: "https://github.com/schwa/MetalSprocketsParticles", branch: "main"),
     ],
     targets: [
         .target(
             name: "MetalSprocketsSceneGraph",
             dependencies: [
                 "MetalSprocketsAudio",
-                "MetalSprocketsParticles",
                 "MetalSprocketsSceneGraphShaders",
+                .product(name: "MetalSprocketsParticles", package: "MetalSprocketsParticles"),
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
                 .product(name: "Interaction3D", package: "Interaction3D"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
@@ -83,10 +83,8 @@ let package = Package(
                 .product(name: "SwiftMesh", package: "SwiftMesh"),
             ]
         ),
-        .target(name: "MetalSprocketsParticles"),
         .target(name: "MetalSprocketsAudio"),
         .testTarget(name: "MetalSprocketsAudioTests", dependencies: ["MetalSprocketsAudio"]),
-        .testTarget(name: "MetalSprocketsParticlesTests", dependencies: ["MetalSprocketsParticles"]),
         .target(
             name: "MetalSprocketsSceneGraphPhysics",
             dependencies: [
@@ -115,7 +113,6 @@ let package = Package(
             name: "MetalSprocketsSceneGraphTests",
             dependencies: [
                 "MetalSprocketsAudio",
-                "MetalSprocketsParticles",
                 "MetalSprocketsSceneGraph",
                 "MetalSprocketsSceneGraphBlinnPhong",
                 "MetalSprocketsSceneGraphPBR",

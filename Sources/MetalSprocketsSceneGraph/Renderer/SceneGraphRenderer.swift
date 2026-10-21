@@ -126,10 +126,12 @@ public struct SceneGraphElement: Element {
                     entries.isEmpty ? nil : try renderer.makeElement(entries: entries, context: batch.context)
                 }
             }
-            let particleSystems = sceneGraph.visibleParticleSystems().filter { $0.particleCount > 0 }
-            if !particleSystems.isEmpty {
-                elements.append(ParticlesElement(systems: particleSystems, context: context).eraseToAnyElement())
+            // Particles simulate in their own compute pass before the scene pass, then draw after the meshes.
+            let particleSimulations = try sceneGraph.allParticleSystems().map { try $0.simulate(view: context.viewMatrix).eraseToAnyElement() }
+            for system in sceneGraph.visibleParticleSystems() {
+                elements.append(try system.runtime().render(projection: context.projectionMatrix, view: context.viewMatrix).eraseToAnyElement())
             }
+            prePasses = particleSimulations + prePasses
             let clearColor: MTLClearColor? = if case let .color(color) = context.environment.background {
                 MTLClearColor(red: Double(color.x), green: Double(color.y), blue: Double(color.z), alpha: Double(color.w))
             } else {

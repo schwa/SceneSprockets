@@ -2839,48 +2839,57 @@ MetalSprocketsParticles uses .less depth compare; we use reversed-Z (.greater). 
 ## 139: Adopt MetalSprocketsParticles package and delete in-repo particle target
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: effort:m, subtask, area:renderer
 depends: 138
 created: 2026-10-20T02:25:07Z
-updated: 2026-10-20T02:26:42Z
+updated: 2026-10-21T17:09:58Z
+closed: 2026-10-21T17:09:58Z
 +++
 
 Add the MetalSprocketsParticles package dependency (check SwiftMesh and MetalCompilerPlugin deps). Delete the in-repo MetalSprocketsParticles target, ParticleRenderer.swift, and Particles.metal. Done when the package builds. Part of #137.
+
+- `2026-10-21T17:09:58Z`: Done: MetalSprocketsParticles (GitHub, branch main) adopted; SceneParticleSystem wraps description + runtime; simulate/render in SceneGraphElement.
 
 ---
 
 ## 140: Integrate ParticleSystem/ParticleSystemRuntime into Node model
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: effort:m, subtask, area:renderer
 depends: 139
 created: 2026-10-20T02:25:07Z
-updated: 2026-10-20T02:26:43Z
+updated: 2026-10-21T17:09:59Z
+closed: 2026-10-21T17:09:59Z
 +++
 
 Node.particleSystems holds runtimes or a wrapper. Split Codable description from GPU runtime state. Rethink clone() sharing. Map hidden nodes to per-emitter isEmitting. Part of #137.
+
+- `2026-10-21T17:09:59Z`: Done: MetalSprocketsParticles (GitHub, branch main) adopted; SceneParticleSystem wraps description + runtime; simulate/render in SceneGraphElement.
 
 ---
 
 ## 141: Move particle simulation into renderer frame setup
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: effort:m, subtask, area:renderer
 depends: 140
 created: 2026-10-20T02:25:07Z
-updated: 2026-10-20T02:26:43Z
+updated: 2026-10-21T17:09:59Z
+closed: 2026-10-21T17:09:59Z
 +++
 
 Move per-frame simulate out of SceneView.advanceParticles into renderer frame setup. Pass node world transforms via simulate(transforms:). Done when particles simulate and render in the scene. Part of #137.
+
+- `2026-10-21T17:09:59Z`: Done: MetalSprocketsParticles (GitHub, branch main) adopted; SceneParticleSystem wraps description + runtime; simulate/render in SceneGraphElement.
 
 ---
 

@@ -1,5 +1,5 @@
 {
-  "originHash" : "4bcb4a220c7dee28870f10fa47a1fec0fd1d21dea7495aae95d9e17eeaf19778",
+  "originHash" : "0d5472b310e848c608fa492f060441d1407535314c383ce7e6fbfb0bbccf281a",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -34,7 +34,7 @@
       "location" : "https://github.com/schwa/GeometryLite3D",
       "state" : {
         "branch" : "main",
-        "revision" : "9d16075c49eb2e2f82216876e0df440dbc532b51"
+        "revision" : "3cfc65fceee85fb47b82de21c0652afcc0f3398f"
       }
     },
     {
@@ -70,7 +70,7 @@
       "location" : "https://github.com/schwa/MetalSprockets",
       "state" : {
         "branch" : "main",
-        "revision" : "f9c04f3c59966145780348b7d692ad55001ee028"
+        "revision" : "4d600f46c6ea70d5c709a779422dc073562356c6"
       }
     },
     {
@@ -80,6 +80,15 @@
       "state" : {
         "branch" : "main",
         "revision" : "a91b13c06fa6d29a6b4b75420d45019f32c663c2"
+      }
+    },
+    {
+      "identity" : "metalsprocketsparticles",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/MetalSprocketsParticles",
+      "state" : {
+        "branch" : "main",
+        "revision" : "339fa8dc976d32853e529498ca8e3baf24abf867"
       }
     },
     {
@@ -196,7 +205,16 @@
       "location" : "https://github.com/schwa/SwiftMesh",
       "state" : {
         "branch" : "main",
-        "revision" : "772901269830ca9d45e8c8620790b15ed97a5015"
+        "revision" : "cb80c0bc0ecc670c3b716fb2d53af792738c107b"
+      }
+    },
+    {
+      "identity" : "swiftply",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/SwiftPLY",
+      "state" : {
+        "revision" : "46a78c2f61babad1b950bd354b83f072c21489b8",
+        "version" : "0.0.1"
       }
     }
   ],
