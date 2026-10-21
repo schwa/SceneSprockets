@@ -48,6 +48,14 @@ public final class SceneGraphPhysicsWorld {
         }
     }
 
+    // Radians per second about each world axis. Syncs first, like setVelocity.
+    public func setAngularVelocity(_ velocity: SIMD3<Float>, of node: SceneGraph.Node) {
+        sync()
+        if let body = body(of: node) {
+            world.setAngularVelocity(of: body, to: velocity)
+        }
+    }
+
     public func applyImpulse(_ impulse: SIMD3<Float>, to node: SceneGraph.Node) {
         sync()
         if let body = body(of: node) {

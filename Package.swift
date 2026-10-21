@@ -97,6 +97,7 @@ let package = Package(
         .testTarget(
             name: "MetalSprocketsSceneGraphPhysicsTests",
             dependencies: [
+                .product(name: "GeometryLite3D", package: "GeometryLite3D"),
                 "MetalSprocketsSceneGraph",
                 "MetalSprocketsSceneGraphPhysics",
                 .product(name: "SwiftMesh", package: "SwiftMesh"),

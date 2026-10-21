@@ -1,3 +1,4 @@
+import GeometryLite3D
 import Metal
 import MetalSprocketsSceneGraph
 import MetalSprocketsSceneGraphPhysics
@@ -162,4 +163,49 @@ func sliderConstraintStopsAtWallAndSlides() throws {
     mover.trs.translation = [-5, 0, 3]
     sceneGraph.applyConstraints(pointOfView: matrix_identity_float4x4)
     #expect(abs(mover.trs.translation.x + 5) < 0.05)
+}
+
+// A scaled, tumbling body must keep its scale: each step writes the body's pose back into the node's transform.
+@Test
+func decomposingScaledRotationsKeepsScale() {
+    var generator = SystemRandomNumberGenerator()
+    var worst: (error: Float, rotation: simd_quatf, scale: SIMD3<Float>) = (0, simd_quatf(), .zero)
+    for _ in 0..<10_000 {
+        let rotation = simd_normalize(simd_quatf(vector: SIMD4<Float>.random(in: -1...1, using: &generator)))
+        let pose = Transform3D(translation: [1, 2, 3], rotation: rotation, scale: [0.0625, 0.0625, 0.0625])
+        let back = Transform3D(decomposing: pose.matrix)
+        let error = simd_distance(back.scale, pose.scale)
+        if error > worst.error {
+            worst = (error, rotation, back.scale)
+        }
+    }
+    #expect(worst.error < 1e-4, "rotation \(worst.rotation.vector) decomposed to scale \(worst.scale)")
+}
+
+// A pose logged from the dice demo. Decomposing its matrix gave a rotation that was not unit length, so the next
+// matrix was scaled by its squared length, and the node shrank step after step.
+@Test
+func decomposedRotationIsUnitLength() {
+    let bits: [UInt32] = [0x3f86c96c, 0x3fb5b075, 0x3f1774cd, 0x3f6f0dd7, 0x3ddbc806, 0x3eae95cb, 0x3c7312b4, 0x3d80000b, 0x3d80000c, 0x3d800009]
+    let values = bits.map(Float.init(bitPattern:))
+    let pose = Transform3D(translation: [values[0], values[1], values[2]], rotation: simd_quatf(vector: [values[3], values[4], values[5], values[6]]), scale: [values[7], values[8], values[9]])
+    let once = Transform3D(decomposing: pose.matrix)
+    #expect(abs(simd_length(once.rotation.vector) - 1) < 1e-5, "rotation length \(simd_length(once.rotation.vector))")
+    // The same rotation, as q or -q (GeometryLite3D #42).
+    #expect(abs(abs(simd_dot(once.rotation.vector, pose.rotation.vector)) - 1) < 1e-4, "rotation \(pose.rotation.vector) came back \(once.rotation.vector)")
+    let twice = Transform3D(decomposing: once.matrix)
+    #expect(simd_distance(twice.scale, pose.scale) < 1e-5, "scale \(pose.scale) came back \(twice.scale)")
+}
+
+@Test
+func tumblingScaledBodyKeepsItsScale() throws {
+    let root = SceneGraph.Node()
+    _ = makeFloor(in: root)
+    let die = SceneGraph.Node(parent: root, trs: .init(translation: [0, 2, 0], rotation: simd_quatf(angle: 0.7, axis: simd_normalize([1, 2, 3])), scale: [0.0625, 0.0625, 0.0625]))
+    die.physicsBody = .init(type: .dynamic, shape: .box(size: [8, 8, 8]))
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+    physics.setAngularVelocity([12, -9, 15], of: die)
+    run(physics, seconds: 3)
+    let scale = die.trs.scale
+    #expect(simd_distance(scale, [0.0625, 0.0625, 0.0625]) < 1e-4, "scale drifted to \(scale)")
 }

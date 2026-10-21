@@ -1190,7 +1190,7 @@ Want:
 
 ---
 
-## 59: Rare random shadow flicker on self-shadowed surfaces
+## 59: Shadow flicker on still frames (self-shadowed fox, Dice tray and dice)
 
 +++
 status: open
@@ -1198,7 +1198,7 @@ priority: medium
 kind: bug
 labels: area:renderer, effort:m, deferred
 created: 2026-10-14T01:11:25Z
-updated: 2026-10-14T13:31:44Z
+updated: 2026-10-21T21:03:02Z
 +++
 
 In the Imported Assets demo, shadowed pixels sometimes flash unshadowed for a frame. It is mostly the fox's self-shadowed side. It happens with the camera still and the animation paused (speed 0). The flashes are random and rare. They are clearly less frequent with the inspector sidebar closed, so they likely depend on frame timing.
@@ -1215,7 +1215,12 @@ Verified with per-frame logging: every frame drew shadows, and the depth and mas
 
 Next steps: capture a GPU trace of a flashing frame, or render into renderer-owned depth textures, one per frame in flight, so frames share nothing.
 
-- `2026-10-14T01:14:55Z`: Possibly caused by shadow acne (#60): borderline texels flip between lit and shadowed. Check again after fixing #60.
+\- `2026-10-14T01:14:55Z`: Possibly caused by shadow acne (#60): borderline texels flip between lit and shadowed. Check again after fixing #60.
+\- `2026-10-21T21:02:38Z`: Also seen in the Dice demo (Demos > Dice), on what should be a completely still frame: after the dice land and settle, the shadows of the tray walls and of the dice flicker. Nothing is moving then: Jolt puts the settled dice to sleep, so their transforms stop changing (logged: a settled die keeps the same world position frame after frame), and sceneGraph.bounds stays at the tray ((-3.2, -0.2, -2.2) to (3.2, 0.6, 2.2)), so the directional shadow view (fitted to bounds in shadowViewsAndDroppedLights) does not move either. That rules out shadow-frustum shimmer from changing bounds.
+
+Setup: one directional light (Sun, eye [2.5, 7, 3] looking at the origin, intensity 2.5) plus a point fill light; SceneGraphShadows(intensity: 0.65, softness: 2); Blinn-Phong tray (pine texture), PBR dice.
+
+Not reproducible offscreen: DemoSnapshot renders one frame at a time and waits for the GPU, and those frames are stable. That fits the frame-timing theory above (frames in flight sharing the view depth texture). #60 acne is also visible on the tray floor at this angle, but acne should not flicker on a still frame unless the inputs change.
 
 ---
 
@@ -2994,5 +2999,31 @@ created: 2026-10-21T17:34:49Z
 +++
 
 Package.swift and the demo package use branch main because the 0.0.1 tag depends on MetalSprockets main (#530). Switch both to .upToNextMinor once MetalSprockets is released with #530 and Particles is re-tagged.
+
+---
+
+## 148: Dice demo: bevel die edges
+
++++
+status: new
+priority: low
+kind: enhancement
+created: 2026-10-22T01:05:11Z
++++
+
+DiceGeometry builds dice with sharp edges. Real dice (and the old Dice by PCalc models) have rounded edges, which catch highlights and read as solid objects, especially on the metal and glass styles. Bevel or chamfer each edge in DiceGeometry, keeping per-face texture coordinates and the convex hull used for physics. Done when the dice show rounded edges in the Dice demo and the numbers still sit on their faces.
+
+---
+
+## 149: Dice demo: use real-world face numbering
+
++++
+status: new
+priority: low
+kind: enhancement
+created: 2026-10-22T01:05:11Z
++++
+
+DiceGeometry numbers faces with a simple scheme: opposite faces add up to n + 1 (n - 1 for the D10, numbered 0 to 9), but the arrangement around each corner is arbitrary. Store-bought dice follow conventions (for example, a D6 with 1, 2, 3 meeting counterclockwise at a corner; a balanced D20). Done when each die kind matches a standard layout.
 
 ---

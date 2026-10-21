@@ -34,7 +34,7 @@
       "location" : "https://github.com/schwa/GeometryLite3D",
       "state" : {
         "branch" : "main",
-        "revision" : "3cfc65fceee85fb47b82de21c0652afcc0f3398f"
+        "revision" : "3a206f518d934ea5a1de9e3a7579f48156bd0448"
       }
     },
     {
@@ -70,7 +70,7 @@
       "location" : "https://github.com/schwa/MetalSprockets",
       "state" : {
         "branch" : "main",
-        "revision" : "66302f6e9b9ed954499af17b4072fa3a8d90afbf"
+        "revision" : "7038521ecde3278818a9dc26cd25d371341b155b"
       }
     },
     {
