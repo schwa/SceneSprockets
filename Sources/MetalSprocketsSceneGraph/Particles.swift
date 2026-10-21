@@ -43,6 +43,11 @@ public final class SceneParticleSystem {
         return runtime
     }
 
+    // Whether any emitter fades into scene geometry (SpriteModule.softness), which needs the scene's depth.
+    var isSoft: Bool {
+        system.layers.contains { ($0.modules[SpriteModule.self]?.softness ?? 0) > 0 }
+    }
+
     // Removes every particle and restarts the clock.
     public func restart() {
         time = 0
@@ -78,7 +83,38 @@ public final class SceneParticleSystem {
         pendingDeltaTime = 0
         time += deltaTime * max(runtime.speedFactor, 0)
         let transforms = system.transforms(at: time).map { worldTransform * $0 }
-        return try runtime.simulate(deltaTime: deltaTime, colliders: system.colliders(at: time), transforms: transforms, view: view)
+        let colliders = system.colliders(at: time).map { $0.transformed(by: worldTransform) }
+        return try runtime.simulate(deltaTime: deltaTime, colliders: colliders, transforms: transforms, view: view)
+    }
+}
+
+extension Collider {
+    // The collider moved into the space of `transform`: rotation, translation and uniform scale. Non-uniform scale uses
+    // the mean of the three axis scales. Signed distance fields move and turn but do not scale.
+    func transformed(by transform: simd_float4x4) -> Collider {
+        let linear = simd_float3x3(transform.columns.0.xyz, transform.columns.1.xyz, transform.columns.2.xyz)
+        let axisScales = SIMD3(simd_length(linear.columns.0), simd_length(linear.columns.1), simd_length(linear.columns.2))
+        let scale = (axisScales.x + axisScales.y + axisScales.z) / 3
+        let rotation = simd_quatf(simd_float3x3(linear.columns.0 / axisScales.x, linear.columns.1 / axisScales.y, linear.columns.2 / axisScales.z))
+        func point(_ point: SIMD3<Float>) -> SIMD3<Float> {
+            (transform * SIMD4(point, 1)).xyz
+        }
+        var result = self
+        switch shape {
+        case let .plane(normal, distance):
+            let unitNormal = simd_normalize(normal)
+            let worldNormal = simd_normalize(rotation.act(unitNormal))
+            result.shape = .plane(normal: worldNormal, distance: simd_dot(point(unitNormal * distance), worldNormal))
+        case let .sphere(center, radius):
+            result.shape = .sphere(center: point(center), radius: radius * scale)
+        case let .box(center, halfExtents, boxRotation):
+            result.shape = .box(center: point(center), halfExtents: halfExtents * scale, rotation: rotation * boxRotation)
+        case let .capsule(start, end, radius):
+            result.shape = .capsule(start: point(start), end: point(end), radius: radius * scale)
+        case let .signedDistanceField(field, center, fieldRotation):
+            result.shape = .signedDistanceField(field, center: point(center), rotation: rotation * fieldRotation)
+        }
+        return result
     }
 }
 

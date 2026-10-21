@@ -2936,39 +2936,51 @@ Port ParticleTests and ParticleSystemTests to the new particle system. Done when
 ## 144: Particle effect colliders ignore the node transform
 
 +++
-status: new
+status: closed
 priority: low
 kind: bug
 created: 2026-10-21T17:34:49Z
+updated: 2026-10-21T17:53:15Z
+closed: 2026-10-21T17:53:15Z
 +++
 
 SceneParticleSystem passes system.colliders(at:) as is, so an effect's colliders stay in world space while its emitters follow the node. Transform them by the node's world transform. Follow-up to #137.
+
+- `2026-10-21T17:53:15Z`: Collider.transformed(by:) applies the node's world transform each step.
 
 ---
 
 ## 145: Soft particles: pass scene depth to particle render
 
 +++
-status: new
+status: closed
 priority: low
 kind: feature
 created: 2026-10-21T17:34:49Z
+updated: 2026-10-21T17:53:15Z
+closed: 2026-10-21T17:53:15Z
 +++
 
 SceneGraphElement calls runtime.render(projection:view:) without sceneDepth, so emitters with softness do not fade into geometry. Needs a scene depth texture that is not the pass's depth attachment. Follow-up to #137.
+
+- `2026-10-21T17:53:15Z`: Scene depth copied to r32Float after the scene pass; soft particles draw in a second pass with render(sceneDepth:).
 
 ---
 
 ## 146: Upstream MetalSprocketsParticles: sprite depth state and multi-step frames
 
 +++
-status: new
+status: closed
 priority: low
 kind: task
 created: 2026-10-21T17:34:49Z
+updated: 2026-10-21T17:53:15Z
+closed: 2026-10-21T17:53:15Z
 +++
 
 1. Sprite draws set no depth state and inherit the enclosing pass's (ours writes depth), which cut dark squares into additive effects. We override with .depthCompare(function: .greater, writes: false); upstream should set it itself. 2. More than ~4 simulate calls in one frame gave nondeterministic results (alive-count readback ring). We step once per frame; upstream should support or document it. Follow-up to #137.
+
+- `2026-10-21T17:53:15Z`: Workarounds in place here; upstream tracked as MetalSprocketsParticles #236 and #237.
 
 ---
 

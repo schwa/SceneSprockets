@@ -128,11 +128,26 @@ public struct SceneGraphElement: Element {
             }
             // Particles simulate in their own compute pass before the scene pass, then draw after the meshes.
             let particleSimulations = try sceneGraph.allParticleSystems().map { try $0.simulate(view: context.viewMatrix).eraseToAnyElement() }
-            for system in sceneGraph.visibleParticleSystems() {
-                // Sprite draws inherit the scene pass's depth state, which writes depth; blended sprites must not.
-                elements.append(try system.runtime().render(projection: context.projectionMatrix, view: context.viewMatrix).depthCompare(function: .greater, writes: false).eraseToAnyElement())
-            }
             prePasses = particleSimulations + prePasses
+            let visibleParticleSystems = sceneGraph.visibleParticleSystems()
+            // Soft particles read the scene's depth, so they draw in a second pass after a depth copy. That needs depth
+            // that can be stored and read, and no MSAA resolve (the second pass would have to reload the samples).
+            let softParticleDepth: (scene: MTLTexture, copy: MTLTexture)? = try {
+                guard let postTargets, visibleParticleSystems.contains(where: \.isSoft), renderPassDescriptor?.colorAttachments[0].resolveTexture == nil else {
+                    return nil
+                }
+                let copy = try ParticleDepthShaders.sceneDepthTexture(device: postTargets.depth.device, width: postTargets.depth.width, height: postTargets.depth.height)
+                return (postTargets.depth, copy)
+            }()
+            var particleElements: [AnyElement] = []
+            for system in visibleParticleSystems {
+                // Sprite draws inherit the scene pass's depth state, which writes depth; blended sprites must not.
+                particleElements.append(try system.runtime().render(projection: context.projectionMatrix, view: context.viewMatrix, sceneDepth: softParticleDepth?.copy).depthCompare(function: .greater, writes: false).eraseToAnyElement())
+            }
+            if softParticleDepth == nil {
+                elements += particleElements
+                particleElements = []
+            }
             let clearColor: MTLClearColor? = if case let .color(color) = context.environment.background {
                 MTLClearColor(red: Double(color.x), green: Double(color.y), blue: Double(color.z), alpha: Double(color.w))
             } else {
@@ -143,7 +158,13 @@ public struct SceneGraphElement: Element {
             let ambientOcclusion = postProcessing?.ambientOcclusion
             let adjustsColor = postProcessing?.adjustsColor ?? false
             let hasPostPasses = shadowFrame != nil || fog != nil || ambientOcclusion != nil || adjustsColor
-            let scenePass = try makeScenePass(elements: elements, clearColor: clearColor, storesDepth: hasPostPasses)
+            let scenePass = try MetalSprockets.Group {
+                try makeScenePass(elements: elements, clearColor: clearColor, storesDepth: hasPostPasses || softParticleDepth != nil)
+                if let softParticleDepth {
+                    ParticleDepthCopyPass(depthTexture: softParticleDepth.scene, output: softParticleDepth.copy)
+                    try makeParticlePass(elements: particleElements, storesDepth: hasPostPasses)
+                }
+            }
             guard let postTargets, hasPostPasses else {
                 if prePasses.isEmpty {
                     return scenePass.eraseToAnyElement()
@@ -209,6 +230,22 @@ public struct SceneGraphElement: Element {
         }
         .depthCompare(function: .greater, writes: true)
         .eraseToAnyElement()
+    }
+
+    // Draws soft particles over the finished scene pass: loads its color and depth.
+    private func makeParticlePass(elements: [AnyElement], storesDepth: Bool) throws -> some Element {
+        try RenderPass(label: "Soft Particles") {
+            // Wait for the depth copy.
+            QueueBarrier(after: .dispatch, before: .fragment)
+            ForEach(Array(elements.enumerated()), id: \.offset) { _, element in
+                element
+            }
+        }
+        .renderPassDescriptorModifier { descriptor in
+            descriptor.colorAttachments[0].loadAction = .load
+            descriptor.depthAttachment.loadAction = .load
+            descriptor.depthAttachment.storeAction = storesDepth ? .store : .dontCare
+        }
     }
 
     private func makeScenePass(elements: [AnyElement], clearColor: MTLClearColor?, storesDepth: Bool) throws -> some Element {
