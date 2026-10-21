@@ -317,12 +317,12 @@ struct ShadowCasterDepthPass: Element {
                     if !staticCasters.isEmpty {
                         try pipeline("Shadow Casters", vertexShader: shaders.staticVertex, fragmentShader: shaders.fragment, vertexDescriptor: shaders.staticDescriptor, casters: staticCasters, lightViewProjection: lightViewProjection)
                             .depthBias(depthBias, slopeScale: slopeScale)
-                            .depthCompare(function: .greaterEqual, enabled: true)
+                            .depthCompare(function: .greaterEqual, writes: true)
                     }
                     if !skinnedCasters.isEmpty {
                         try pipeline("Skinned Shadow Casters", vertexShader: shaders.skinnedVertex, fragmentShader: shaders.fragment, vertexDescriptor: shaders.skinnedDescriptor, casters: skinnedCasters, lightViewProjection: lightViewProjection)
                             .depthBias(depthBias, slopeScale: slopeScale)
-                            .depthCompare(function: .greaterEqual, enabled: true)
+                            .depthCompare(function: .greaterEqual, writes: true)
                     }
                 }
                 .renderPassDescriptorModifier { descriptor in

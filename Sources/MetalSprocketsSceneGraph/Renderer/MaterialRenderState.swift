@@ -63,7 +63,7 @@ public struct MaterialRenderState: Sendable, Hashable {
 extension Element {
     // Reversed depth. `isTransparent` draws do not write depth and blend by alpha unless the blend mode says otherwise.
     public func materialRenderState(_ state: MaterialRenderState, isTransparent: Bool) -> some Element {
-        depthCompare(function: state.readsFromDepthBuffer ? .greater : .always, enabled: state.writesToDepthBuffer && !isTransparent)
+        depthCompare(function: state.readsFromDepthBuffer ? .greater : .always, writes: state.writesToDepthBuffer && !isTransparent)
             .renderPipelineDescriptorTransformer { descriptor in
                 let attachment = descriptor.colorAttachments[0]!
                 attachment.writeMask = state.colorWriteMask

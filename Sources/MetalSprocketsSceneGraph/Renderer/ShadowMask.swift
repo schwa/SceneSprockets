@@ -75,12 +75,12 @@ struct SceneShadowMaskPass: Element {
             if !staticCasters.isEmpty {
                 try casterPipeline("Non-Receivers", vertexShader: shaders.staticVertex, fragmentShader: shaders.mark, vertexDescriptor: shaders.staticDescriptor, casters: staticCasters, viewProjection: viewProjection, colorPixelFormat: mask.pixelFormat)
                     .depthBias(Self.depthBias, slopeScale: Self.slopeScale)
-                    .depthCompare(function: .greaterEqual, enabled: false)
+                    .depthCompare(function: .greaterEqual, writes: false)
             }
             if !skinnedCasters.isEmpty {
                 try casterPipeline("Skinned Non-Receivers", vertexShader: shaders.skinnedVertex, fragmentShader: shaders.mark, vertexDescriptor: shaders.skinnedDescriptor, casters: skinnedCasters, viewProjection: viewProjection, colorPixelFormat: mask.pixelFormat)
                     .depthBias(Self.depthBias, slopeScale: Self.slopeScale)
-                    .depthCompare(function: .greaterEqual, enabled: false)
+                    .depthCompare(function: .greaterEqual, writes: false)
             }
         }
         .renderPassDescriptorModifier { descriptor in

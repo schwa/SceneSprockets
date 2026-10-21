@@ -207,7 +207,7 @@ public struct SceneGraphElement: Element {
         return ForEach(Array(elements.enumerated()), id: \.offset) { _, element in
             element
         }
-        .depthCompare(function: .greater, enabled: true)
+        .depthCompare(function: .greater, writes: true)
         .eraseToAnyElement()
     }
 
@@ -224,7 +224,7 @@ public struct SceneGraphElement: Element {
                 element
             }
         }
-        .depthCompare(function: .greater, enabled: true)
+        .depthCompare(function: .greater, writes: true)
         .renderPassDescriptorModifier { descriptor in
             descriptor.depthAttachment.clearDepth = 0
             // The shadow mask pass reads depth afterwards. Memoryless depth (the default) cannot be stored.
