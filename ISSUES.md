@@ -2782,13 +2782,14 @@ Expected: ambient occlusion reduces only ambient and indirect lighting, and is c
 ## 137: Evaluate MetalSprocketsParticles as replacement for particle system
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: has-subtasks, effort:xl, area:renderer
 depends: 138, 139, 140, 141, 142, 143
 created: 2026-10-19T12:06:26Z
-updated: 2026-10-20T02:26:42Z
+updated: 2026-10-21T17:34:49Z
+closed: 2026-10-21T17:34:49Z
 +++
 
 Evaluate MetalSprocketsParticles (https://github.com/schwa/MetalSprocketsParticles, local: /Users/schwa/Projects/Scratch/MetalSprocketsParticles) as a replacement for the current particle system. If adopted, it becomes our particle system and the in-repo MetalSprocketsParticles target is deleted.
@@ -2815,6 +2816,7 @@ Candidate: about 8.6k lines, GPU sim and render, built as MetalSprockets element
 - cameraEye/cameraTarget on ParticleSystem are irrelevant to us (cosmetic).
 
 - `2026-10-20T02:25:07Z`: Split into subtasks: #138 → #139 → #140 → #141 → #142, #143
+- `2026-10-21T17:34:49Z`: Adopted. All subtasks done.
 
 ---
 
@@ -2896,31 +2898,89 @@ Move per-frame simulate out of SceneView.advanceParticles into renderer frame se
 ## 142: Port KeynoteDemo particle effects to new system
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: effort:m, subtask, area:renderer
 depends: 141
 created: 2026-10-20T02:25:07Z
-updated: 2026-10-20T02:26:43Z
+updated: 2026-10-21T17:34:48Z
+closed: 2026-10-21T17:34:48Z
 +++
 
 Port fire, fountain, and firefly trail effects in KeynoteDemo. Done when they look and behave as before. Part of #137.
+
+- `2026-10-21T17:34:48Z`: Fire, fountain and firefly trail ported; keynote-particles golden added.
 
 ---
 
 ## 143: Port particle tests to new system
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: effort:m, subtask, area:renderer
 depends: 141
 created: 2026-10-20T02:25:07Z
-updated: 2026-10-20T02:26:43Z
+updated: 2026-10-21T17:34:48Z
+closed: 2026-10-21T17:34:48Z
 +++
 
 Port ParticleTests and ParticleSystemTests to the new particle system. Done when tests pass. Part of #137.
+
+- `2026-10-21T17:34:48Z`: ParticleTests ported (draw/depth, follows node, hidden stops emitting); old ParticleSystemTests removed with the target.
+
+---
+
+## 144: Particle effect colliders ignore the node transform
+
++++
+status: new
+priority: low
+kind: bug
+created: 2026-10-21T17:34:49Z
++++
+
+SceneParticleSystem passes system.colliders(at:) as is, so an effect's colliders stay in world space while its emitters follow the node. Transform them by the node's world transform. Follow-up to #137.
+
+---
+
+## 145: Soft particles: pass scene depth to particle render
+
++++
+status: new
+priority: low
+kind: feature
+created: 2026-10-21T17:34:49Z
++++
+
+SceneGraphElement calls runtime.render(projection:view:) without sceneDepth, so emitters with softness do not fade into geometry. Needs a scene depth texture that is not the pass's depth attachment. Follow-up to #137.
+
+---
+
+## 146: Upstream MetalSprocketsParticles: sprite depth state and multi-step frames
+
++++
+status: new
+priority: low
+kind: task
+created: 2026-10-21T17:34:49Z
++++
+
+1. Sprite draws set no depth state and inherit the enclosing pass's (ours writes depth), which cut dark squares into additive effects. We override with .depthCompare(function: .greater, writes: false); upstream should set it itself. 2. More than ~4 simulate calls in one frame gave nondeterministic results (alive-count readback ring). We step once per frame; upstream should support or document it. Follow-up to #137.
+
+---
+
+## 147: Pin MetalSprocketsParticles by version
+
++++
+status: new
+priority: low
+kind: task
+created: 2026-10-21T17:34:49Z
++++
+
+Package.swift and the demo package use branch main because the 0.0.1 tag depends on MetalSprockets main (#530). Switch both to .upToNextMinor once MetalSprockets is released with #530 and Particles is re-tagged.
 
 ---

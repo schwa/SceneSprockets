@@ -27,7 +27,7 @@ Legend:
 | Morphing and skinning | ✅ | Four influences per vertex; CPU fallback for Blinn-Phong |
 | Hit testing | ✅ | Triangles or bounding boxes, rays or segments, with SceneKit-style options |
 | Physics | ❌ | Demo-only Jolt integration (#38) |
-| Particles | 🟡 | CPU emitters drawn as soft sprites; no textures, image sequences or particle collisions |
+| Particles | ✅ | GPU particles from MetalSprocketsParticles: textures, sprite sheets, collisions, force fields, trails. No soft particles yet |
 | Audio | 🟡 | Positional `AudioPlayer`s on nodes, played by `SceneAudio`; no audio actions |
 | Fog and environment | ✅ | Linear and exponent fog; color or IBL background |
 | Rendering pipeline | 🟡 (different design) | No `SCNTechnique`, no render delegates at pass level; pluggable material renderers instead |
@@ -79,7 +79,7 @@ Legend:
 | `skinner` (`SCNSkinner`) | `skin`, `skinVertices` | ✅ | See [Morphing and skinning](#morphing-and-skinning). |
 | `constraints` | `constraints: [Constraint]` | 🟡 | See [Constraints](#constraints). |
 | `physicsBody`, `physicsField` | — | ❌ | |
-| `particleSystems` | `particleSystems` | ✅ | Emitted in world space from the node. |
+| `particleSystems` | `particleSystems` | ✅ | `SceneParticleSystem`s; emitters follow the node's world transform. |
 | `audioPlayers` | `audioPlayers` | ✅ | |
 | `filters` (Core Image) | — | ❌ | |
 | `boundingBox`, `boundingSphere` | `meshBounds`, `subtreeBounds`, `SceneGraph.bounds`, `SceneGraph.worldBounds(of:)` | 🟡 | Axis-aligned boxes only, no spheres. Computed on the CPU from float3 positions (shared storage) and cached per revision. Skinned and morphed meshes report rest-pose bounds. |
@@ -289,7 +289,7 @@ SceneKit animates with `CAAnimation`/`SCNAnimation` and `SCNAnimationPlayer`, ke
 
 | SceneKit | MSSG | Status | Notes |
 |---|---|---|---|
-| `SCNParticleSystem` | `ParticleSystem` | 🟡 | Birth rate, lifetime, emitter shapes (point, box, sphere), spread, speed, acceleration, damping, size and color over life, alpha or additive blending, seedable. No textures, image sequences, collisions, fields or orientation modes. |
+| `SCNParticleSystem` | `SceneParticleSystem` wrapping a MetalSprocketsParticles `ParticleSystem` | ✅ | Simulated and drawn on the GPU. Effect colliders are in world space, not the node's. No soft particles against scene depth yet. |
 | `SCNAudioSource`, `SCNAudioPlayer`, positional audio | `AudioPlayer` (buffer or file), `SceneAudio` (AVAudioEngine + environment node), `SceneView(audio:)` | 🟡 | Mono buffers are positioned; listener is the camera. No `playAudio` action. |
 
 ## Rendering pipeline

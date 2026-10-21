@@ -129,7 +129,8 @@ public struct SceneGraphElement: Element {
             // Particles simulate in their own compute pass before the scene pass, then draw after the meshes.
             let particleSimulations = try sceneGraph.allParticleSystems().map { try $0.simulate(view: context.viewMatrix).eraseToAnyElement() }
             for system in sceneGraph.visibleParticleSystems() {
-                elements.append(try system.runtime().render(projection: context.projectionMatrix, view: context.viewMatrix).eraseToAnyElement())
+                // Sprite draws inherit the scene pass's depth state, which writes depth; blended sprites must not.
+                elements.append(try system.runtime().render(projection: context.projectionMatrix, view: context.viewMatrix).depthCompare(function: .greater, writes: false).eraseToAnyElement())
             }
             prePasses = particleSimulations + prePasses
             let clearColor: MTLClearColor? = if case let .color(color) = context.environment.background {

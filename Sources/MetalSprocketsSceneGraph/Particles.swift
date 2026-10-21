@@ -69,12 +69,14 @@ public final class SceneParticleSystem {
         }
     }
 
-    // Steps by the time advanced since the last call. Place before the render pass.
+    // One step by the time advanced since the last call, capped at ParticleSystemRuntime.maximumStep; the rest is
+    // dropped. Not several steps: the runtime reads its live-particle counts back from earlier frames, which breaks when
+    // many steps share one frame. Place before the render pass.
     func simulate(view: simd_float4x4) throws -> some Element {
         let runtime = try runtime()
-        let deltaTime = pendingDeltaTime
+        let deltaTime = min(pendingDeltaTime, ParticleSystemRuntime.maximumStep)
         pendingDeltaTime = 0
-        time += deltaTime * runtime.speedFactor
+        time += deltaTime * max(runtime.speedFactor, 0)
         let transforms = system.transforms(at: time).map { worldTransform * $0 }
         return try runtime.simulate(deltaTime: deltaTime, colliders: system.colliders(at: time), transforms: transforms, view: view)
     }
@@ -94,6 +96,10 @@ extension SceneGraph {
                 system.advance(by: deltaTime, worldTransform: worldTransform, isHidden: !visible.contains(ObjectIdentifier(node)))
             }
         }
+    }
+
+    public var hasParticleSystems: Bool {
+        !allParticleSystems().isEmpty
     }
 
     // Every particle system, hidden or not, each once.

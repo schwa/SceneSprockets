@@ -58,17 +58,23 @@ public enum DemoSnapshot {
         let scene = demo.make()
         scene.values.merge(values) { $1 }
         configure(scene)
+        let renderer = try OffscreenRenderer(size: CGSize(width: width, height: height), colorUsage: SceneGraphShadows.requiredColorUsage, depthUsage: SceneGraphShadows.requiredDepthUsage)
+        func makeElement() -> SceneGraphElement {
+            let sceneCamera = scene.usesSceneCamera ? scene.sceneGraph.cameraNodes().first?.worldTransform : nil
+            return SceneGraphElement(sceneGraph: scene.sceneGraph, cameraMatrix: sceneCamera ?? scene.initialCameraMatrix, aspectRatio: Float(width) / Float(height), renderers: scene.renderers, shadows: scene.shadows)
+        }
         let deltaTime: Float = 1 / 60
         for frame in 0..<frames {
             scene.update(time: Float(frame) * deltaTime, deltaTime: deltaTime)
             scene.sceneGraph.advanceActions(by: deltaTime)
             scene.sceneGraph.advanceParticles(by: deltaTime)
             scene.sceneGraph.applyConstraints(pointOfView: scene.initialCameraMatrix, deltaTime: deltaTime)
+            // Particles simulate on the GPU one step per rendered frame, so draw the frames before the last too.
+            if frame < frames - 1, scene.sceneGraph.hasParticleSystems {
+                _ = try renderer.render(makeElement())
+            }
         }
-        let renderer = try OffscreenRenderer(size: CGSize(width: width, height: height), colorUsage: SceneGraphShadows.requiredColorUsage, depthUsage: SceneGraphShadows.requiredDepthUsage)
-        let sceneCamera = scene.usesSceneCamera ? scene.sceneGraph.cameraNodes().first?.worldTransform : nil
-        let element = SceneGraphElement(sceneGraph: scene.sceneGraph, cameraMatrix: sceneCamera ?? scene.initialCameraMatrix, aspectRatio: Float(width) / Float(height), renderers: scene.renderers, shadows: scene.shadows)
-        let texture = try renderer.render(element).texture
+        let texture = try renderer.render(makeElement()).texture
         let bytesPerRow = width * 4
         guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: bytesPerRow, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue),
               let data = context.data

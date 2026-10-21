@@ -339,10 +339,13 @@ public final class KeynoteDemo: DemoScene {
         case "Particles":
             particlesSlide(slide)
             addCode("""
-            let fire = ParticleSystem()
-            fire.birthRate = 200
-            fire.blendMode = .additive
-            node.particleSystems = [fire]
+            let fire = ParticleSystem("Fire") {
+                EmitterDescription("Flame") {
+                    RateModule(birthRate: 200)
+                    SpriteModule(blendMode: .additive)
+                }
+            }
+            node.particleSystems = [SceneParticleSystem(fire)]
             """, to: slide)
         case "Deformation":
             deformationSlide(slide)
@@ -682,18 +685,21 @@ public final class KeynoteDemo: DemoScene {
                     var light = Light(type: .point, color: [0.8, 1, 0.5], intensity: 6)
                     light.range = 3
                     _ = SceneGraph.Node(parent: firefly, label: "Glow Light", content: .light(light))
-                    let trail = ParticleSystem(seed: 3)
                     // Particle sizes are in world units.
-                    trail.birthRate = 90
-                    trail.lifetime = 1.2
-                    trail.speed = 0.05
-                    trail.spreadAngle = .pi
-                    trail.startSize = 0.3
-                    trail.endSize = 0.04
-                    trail.startColor = [0.8, 1, 0.45, 0.8]
-                    trail.endColor = [0.5, 1, 0.3, 0]
-                    trail.blendMode = .additive
-                    firefly.particleSystems = [trail]
+                    let trail = ParticleSystem("Firefly Trail") {
+                        EmitterDescription("Trail", capacity: 256) {
+                            ShapeModule(shape: .point)
+                            RateModule(birthRate: 90)
+                            LifetimeModule(range: 1.2...1.2)
+                            VelocityModule(velocity: .zero, spread: 0.05)
+                            GravityModule(acceleration: .zero)
+                            DragModule(amount: 0)
+                            SizeOverLifeModule(curve: .linear(from: 0.3, to: 0.04))
+                            ColorOverLifeModule(color: .linear(from: [0.8, 1, 0.45, 0.8], to: [0.5, 1, 0.3, 0]))
+                            SpriteModule(blendMode: .additive)
+                        }
+                    }
+                    firefly.particleSystems = [SceneParticleSystem(trail, seed: 3)]
                 }
                 importedPlayer = plant.animations.first.map { SceneGraph.AnimationPlayer(clip: $0) }
             }
@@ -807,33 +813,35 @@ public final class KeynoteDemo: DemoScene {
     private func particlesSlide(_ slide: SceneGraph.Node) {
         addLight(to: slide, at: [0, 6, 6], intensity: 60)
         _ = SceneGraph.Node(parent: slide, label: "Floor", shape: .box(width: 10, height: 0.1, length: 4), material: BlinnPhongSceneMaterial.plastic([0.35, 0.35, 0.4], shininess: 8), device: demoDevice, trs: .init(translation: [0, -0.05, 0]))
-        let fountain = ParticleSystem(seed: 1)
-        fountain.birthRate = 300
-        fountain.lifetime = 2
-        fountain.lifetimeRange = 0.5
-        fountain.spreadAngle = 0.25
-        fountain.speed = 5
-        fountain.speedRange = 1
-        fountain.acceleration = [0, -6, 0]
-        fountain.startSize = 0.12
-        fountain.endSize = 0.05
-        fountain.startColor = [0.5, 0.75, 1, 0.9]
-        fountain.endColor = [0.3, 0.5, 1, 0]
-        _ = SceneGraph.Node(parent: slide, label: "Fountain", trs: .init(translation: [-2.2, 0, 0])).particleSystems = [fountain]
-        let fire = ParticleSystem(seed: 2)
-        fire.birthRate = 200
-        fire.lifetime = 0.9
-        fire.lifetimeRange = 0.4
-        fire.emitterShape = .sphere(radius: 0.25)
-        fire.spreadAngle = 0.4
-        fire.speed = 1.6
-        fire.damping = 0.5
-        fire.startSize = 0.45
-        fire.endSize = 0.1
-        fire.startColor = [1, 0.55, 0.15, 0.8]
-        fire.endColor = [0.8, 0.1, 0.02, 0]
-        fire.blendMode = .additive
-        _ = SceneGraph.Node(parent: slide, label: "Fire", trs: .init(translation: [2.2, 0.2, 0])).particleSystems = [fire]
+        // Spread is a random velocity added at birth, in world units per second.
+        let fountain = ParticleSystem("Fountain") {
+            EmitterDescription("Water", capacity: 2_000) {
+                ShapeModule(shape: .point)
+                RateModule(birthRate: 300)
+                LifetimeModule(range: 1.75...2.25)
+                VelocityModule(velocity: [0, 5, 0], spread: 1.25, speedVariation: 0.5)
+                GravityModule(acceleration: [0, -6, 0])
+                DragModule(amount: 0)
+                SizeOverLifeModule(curve: .linear(from: 0.12, to: 0.05))
+                ColorOverLifeModule(color: .linear(from: [0.5, 0.75, 1, 0.9], to: [0.3, 0.5, 1, 0]))
+                SpriteModule(blendMode: .alpha, sortMode: .backToFront)
+            }
+        }
+        _ = SceneGraph.Node(parent: slide, label: "Fountain", trs: .init(translation: [-2.2, 0, 0])).particleSystems = [SceneParticleSystem(fountain, seed: 1)]
+        let fire = ParticleSystem("Fire") {
+            EmitterDescription("Flame", capacity: 1_000) {
+                ShapeModule(shape: .sphere(radius: 0.25))
+                RateModule(birthRate: 200)
+                LifetimeModule(range: 0.7...1.1)
+                VelocityModule(velocity: [0, 1.6, 0], spread: 0.64)
+                GravityModule(acceleration: .zero)
+                DragModule(amount: 0.5)
+                SizeOverLifeModule(curve: .linear(from: 0.45, to: 0.1))
+                ColorOverLifeModule(color: .linear(from: [1, 0.55, 0.15, 0.8], to: [0.8, 0.1, 0.02, 0]))
+                SpriteModule(blendMode: .additive)
+            }
+        }
+        _ = SceneGraph.Node(parent: slide, label: "Fire", trs: .init(translation: [2.2, 0.2, 0])).particleSystems = [SceneParticleSystem(fire, seed: 2)]
     }
 
     // A morphing blob and a skinned tube. The bumps move vertices along the direction from the center, not the vertex

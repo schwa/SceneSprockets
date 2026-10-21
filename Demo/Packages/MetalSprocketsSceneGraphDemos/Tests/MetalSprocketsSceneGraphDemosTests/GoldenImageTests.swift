@@ -41,6 +41,7 @@ struct GoldenImageTests {
         Case(name: "keynote-deformation", demo: "keynote", frames: 30, slide: "Deformation"),
         Case(name: "keynote-performance", demo: "keynote", frames: 30, slide: "Performance"),
         Case(name: "keynote-gltf", demo: "keynote", frames: 30, slide: "glTF & Model I/O"),
+        Case(name: "keynote-particles", demo: "keynote", frames: 60, slide: "Particles"),
     ]
 
     @Test(arguments: cases)
