@@ -20,7 +20,7 @@ public final class KeynoteDemo: DemoScene {
     private static let spacing: Float = 24
     static let titles = [
         "SceneGraph", "Scene Graph", "Shapes", "Materials", "Lights", "Actions", "Constraints", "Opacity & Fades", "Blend Modes",
-        "Custom Shaders", "Glass", "PBR Extensions", "Shadows", "Fog", "Particles", "Implicit Animation", "Animation Blending", "Deformation",
+        "Custom Shaders", "Glass", "PBR Extensions", "Shadows", "Fog", "Particles", "Mesh Emitters", "Implicit Animation", "Animation Blending", "Deformation",
         "glTF & Model I/O", "Hit Testing", "Physics", "Performance", "Post-processing", "SceneView", "Thank You",
     ]
 
@@ -41,6 +41,7 @@ public final class KeynoteDemo: DemoScene {
     private var physicsStack: SceneGraph.Node?
     private var sincePhysicsReset: Float = 0
     private var pbrExtensionPieces: [(node: SceneGraph.Node, axis: SIMD3<Float>, speed: Float)] = []
+    private var burningFox: BurningFox?
     private var gradeLabels: [SceneGraph.Node] = []
     private var gradeIndex = 0
     private var sinceGrade: Float = 0
@@ -157,6 +158,8 @@ public final class KeynoteDemo: DemoScene {
             updateGrade(deltaTime: deltaTime)
         case "glTF & Model I/O":
             importedPlayer?.advance(by: deltaTime)
+        case "Mesh Emitters":
+            burningFox?.update(sceneGraph: sceneGraph, deltaTime: deltaTime)
         case "Physics":
             sincePhysicsReset += deltaTime
             if sincePhysicsReset > 7 {
@@ -180,6 +183,10 @@ public final class KeynoteDemo: DemoScene {
         }
         if currentTitle == "Physics" {
             resetPhysics()
+        }
+        // The fox walks in unharmed each time its slide comes up, then catches fire.
+        if currentTitle == "Mesh Emitters" {
+            burningFox?.restart()
         }
     }
 
@@ -346,6 +353,14 @@ public final class KeynoteDemo: DemoScene {
                 }
             }
             node.particleSystems = [SceneParticleSystem(fire)]
+            """, to: slide)
+        case "Mesh Emitters":
+            meshEmittersSlide(slide)
+            addCode("""
+            ShapeModule(shape: .mesh) // born on the fox's surface
+            emitter.mesh = try EmitterMesh(device: device, positions: rest, indices: indices)
+            let skinned = entry.deformed(revision: sceneGraph.revision)
+            emitter.mesh?.setDeformedPositions(skinned.positions, stride: stride)
             """, to: slide)
         case "Deformation":
             deformationSlide(slide)
@@ -808,6 +823,19 @@ public final class KeynoteDemo: DemoScene {
             let axis = simd_normalize(SIMD3<Float>(.random(in: -1...1, using: &generator), .random(in: -1...1, using: &generator), .random(in: -1...1, using: &generator)))
             pbrExtensionPieces.append((node, axis, .random(in: 0.2...0.5, using: &generator)))
         }
+    }
+
+    // The animated glTF Fox with particles born on its skinned surface: flames, then sparks, in turn.
+    private func meshEmittersSlide(_ slide: SceneGraph.Node) {
+        addLight(to: slide, at: [-3, 5, 4], color: [0.5, 0.6, 1], intensity: 12)
+        _ = SceneGraph.Node(parent: slide, label: "Floor", shape: .box(width: 10, height: 0.1, length: 4), material: BlinnPhongSceneMaterial.plastic([0.12, 0.12, 0.14], shininess: 8), device: demoDevice, trs: .init(translation: [0, -0.05, 0]))
+        guard let fox = try? BurningFox(scale: 2) else {
+            return
+        }
+        // Side on to the camera.
+        fox.node.trs = .init(rotation: simd_quatf(angle: .pi / 2, axis: [0, 1, 0]))
+        slide.addChild(fox.node)
+        burningFox = fox
     }
 
     private func particlesSlide(_ slide: SceneGraph.Node) {

@@ -11,6 +11,9 @@ public final class SceneParticleSystem {
         didSet { needsApply = true }
     }
     public let seed: UInt32
+    // When false, emitters and colliders ignore the node's transform (the node only shows and hides them), for effects
+    // already in world space, such as emitters on a skinned mesh's world-space positions.
+    public var usesNodeTransform = true
     // Seconds simulated, for emitter motion and animated colliders.
     public private(set) var time: Float = 0
 
@@ -82,8 +85,9 @@ public final class SceneParticleSystem {
         let deltaTime = min(pendingDeltaTime, ParticleSystemRuntime.maximumStep)
         pendingDeltaTime = 0
         time += deltaTime * max(runtime.speedFactor, 0)
-        let transforms = system.transforms(at: time).map { worldTransform * $0 }
-        let colliders = system.colliders(at: time).map { $0.transformed(by: worldTransform) }
+        let placement = usesNodeTransform ? worldTransform : matrix_identity_float4x4
+        let transforms = system.transforms(at: time).map { placement * $0 }
+        let colliders = system.colliders(at: time).map { $0.transformed(by: placement) }
         return try runtime.simulate(deltaTime: deltaTime, colliders: colliders, transforms: transforms, view: view)
     }
 }

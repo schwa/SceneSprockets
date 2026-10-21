@@ -7,7 +7,7 @@ import SwiftUI
 // scenegraph-demos                         open the demo picker
 // scenegraph-demos --list                  list demo ids
 // scenegraph-demos --render <id> [file]    render a demo offscreen to a PNG (default: <id>.png)
-//                  [--size WxH] [--frames N] [--slide N]
+//                  [--size WxH] [--frames N] [--slide N] [--value Name=Number ...]
 // scenegraph-demos --benchmark <id>        render every frame offscreen and print frame times
 //                  [--size WxH] [--frames N] [--slide N]
 
@@ -43,6 +43,20 @@ func option(_ name: String) -> String? {
     return value
 }
 
+// Demo parameters from repeated --value Name=Number; choices are indices.
+@MainActor
+func valueOptions() -> [String: Float] {
+    var values: [String: Float] = [:]
+    while let pair = option("--value") {
+        let parts = pair.split(separator: "=", maxSplits: 1)
+        guard parts.count == 2, let number = Float(parts[1]) else {
+            fail("--value must look like Name=Number")
+        }
+        values[String(parts[0])] = number
+    }
+    return values
+}
+
 switch arguments.first {
 case "--list":
     for demo in DemoCatalog.demos {
@@ -55,6 +69,7 @@ case "--render":
     }
     let frames = option("--frames").map { Int($0) ?? -1 } ?? 60
     let slide = option("--slide").flatMap { Int($0) }
+    let values = valueOptions()
     guard frames >= 0 else {
         fail("--frames must be a number")
     }
@@ -64,7 +79,7 @@ case "--render":
     let id = arguments[1]
     let url = URL(fileURLWithPath: arguments.count >= 3 ? arguments[2] : "\(id).png")
     do {
-        let image = try MainActor.assumeIsolated { try DemoSnapshot.render(demoID: id, width: size[0], height: size[1], frames: frames) { scene in
+        let image = try MainActor.assumeIsolated { try DemoSnapshot.render(demoID: id, width: size[0], height: size[1], frames: frames, values: values) { scene in
             if let slide, let keynote = scene as? KeynoteDemo {
                 keynote.show(slide: slide)
             }
@@ -78,11 +93,13 @@ case "--benchmark":
     let size = option("--size").map { $0.split(separator: "x").compactMap { Int($0) } } ?? [1280, 800]
     let frames = option("--frames").flatMap { Int($0) } ?? 120
     let slide = option("--slide").flatMap { Int($0) }
+    let values = valueOptions()
     guard size.count == 2, arguments.count >= 2 else {
         fail("usage: scenegraph-demos --benchmark <id> [--size WxH] [--frames N] [--slide N]")
     }
     do {
         let times = try MainActor.assumeIsolated { try DemoSnapshot.benchmark(demoID: arguments[1], width: size[0], height: size[1], frames: frames) { scene in
+            scene.values.merge(values) { $1 }
             if let slide, let keynote = scene as? KeynoteDemo {
                 keynote.show(slide: slide)
             }
