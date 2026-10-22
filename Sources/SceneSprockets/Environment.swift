@@ -6,7 +6,7 @@ public protocol EnvironmentMap: AnyObject {}
 
 extension SceneGraph {
     public struct Environment {
-        public enum Background {
+        public enum Background: Codable {
             // Keep the render pass's clear color.
             case none
             // Linear RGBA.

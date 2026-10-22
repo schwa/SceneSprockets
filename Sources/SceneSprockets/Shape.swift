@@ -7,7 +7,7 @@ import simd
 extension SceneGraph {
     // Parametric geometry, like SceneKit's SCNBox, SCNSphere, SCNText and so on. Sizes are full extents, centered on
     // the origin, except text (baseline on y = 0, starting at x = 0, extruded towards +z) and plane (XY).
-    public enum Shape: Sendable, Equatable {
+    public enum Shape: Sendable, Equatable, Codable {
         case box(width: Float = 1, height: Float = 1, length: Float = 1)
         case sphere(radius: Float = 0.5)
         case plane(width: Float = 1, height: Float = 1)

@@ -8,7 +8,7 @@ extension SceneGraph {
     // Screen-space effects after the scene, like SCNCamera's colorGrading, vignetting and screenSpaceAmbientOcclusion
     // settings. Applied by SceneGraphElement on the view's own (low dynamic range) color, so there is no HDR, bloom or
     // tone mapping. Like fog, it needs a readable depth texture and a writable color texture.
-    public struct PostProcessing: Sendable, Equatable {
+    public struct PostProcessing: Sendable, Equatable, Codable {
         // In stops: 1 doubles brightness.
         public var exposure: Float
         // 1 leaves color unchanged; above 1 pushes away from mid grey.
@@ -37,7 +37,7 @@ extension SceneGraph {
     }
 
     // Screen-space ambient occlusion: creases and contacts get darker.
-    public struct AmbientOcclusion: Sendable, Equatable {
+    public struct AmbientOcclusion: Sendable, Equatable, Codable {
         // World units searched around each pixel.
         public var radius: Float
         // 0...1.

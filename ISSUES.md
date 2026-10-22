@@ -3417,6 +3417,97 @@ kind: feature
 created: 2026-10-22T15:28:25Z
 +++
 
-Part of #52. Meshes built in code (MetalMesh from SwiftMesh: dice, gears, hand-built geometry) are written into the package as glTF, with their materials and textures (read back from the GPU), and scene.json refers to them. Blocked on SwiftGLTF APIs for building documents from scratch (Document has no public initializer or setters today; issues to be filed in SwiftGLTF). Done when a scene with generated dice round-trips.
+Part of #52. Meshes built in code (MetalMesh from SwiftMesh: dice, gears, hand-built geometry) are written into the package as glTF, with their materials and textures (read back from the GPU), and scene.json refers to them. SwiftGLTF main can build documents from scratch (public initializers, settable Document, Container(document:binaryBuffer:url:), see its AuthoringTests). Done when a scene with generated dice round-trips.
+
+---
+
+## 159: Scene archive: make scene.json easier to read
+
++++
+status: new
+priority: low
+kind: enhancement
+created: 2026-10-22T16:11:22Z
++++
+
+Part of #52. Synthesized Codable writes enums as objects ({"directional": {}}, {"none": {}}) and SIMD vectors and matrices one number per line. Write simple enums as strings and vectors as compact arrays, keeping the format stable for reading. See ~/Desktop/shadows.scenesprocketsd (scenesprockets-demos --save shadows).
+
+---
+
+## 160: Scene archive: save ShaderMaterial
+
++++
+status: new
+priority: low
+kind: feature
+created: 2026-10-22T16:11:22Z
++++
+
+Part of #52. ShaderMaterial is not archivable: its shaders are compiled functions. Save a reference to the shader (library and function names, or source) plus parameters (floats, vectors, matrices, textures via the archive context; buffers as data). Seen in scenekit-features: 'Red Pane'.
+
+---
+
+## 161: Scene archive: save animation, constraints and actions
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-10-22T16:11:22Z
++++
+
+Part of #52. Not saved yet: animation clips and players, constraints, running actions. Closure-based ones (Constraint.transform, Action.custom/run, custom animation properties) cannot be saved; decide whether to skip them with a warning or replace them with named, registered behaviors. Seen in shadows and scenekit-features (spinning torus, look-at constraints).
+
+---
+
+## 162: Scene archive: save morph targets, skins, physics, particles, audio, levels of detail
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-10-22T16:11:22Z
++++
+
+Part of #52. Node features not saved yet: morph targets and weights, skins and skin vertices, physics bodies, particle systems (MetalSprocketsParticles' ParticleSystem is already Codable), audio players, levels of detail. Each warns today.
+
+---
+
+## 163: Scene archive: store PBR uniforms field by field
+
++++
+status: new
+priority: low
+kind: enhancement
+created: 2026-10-22T16:11:22Z
++++
+
+Part of #52. PBRSceneMaterial saves PBRMaterialUniforms as raw bytes with a size check, so archives break whenever MetalSprocketsPBR changes the struct layout. Encode the fields by name (factors, texture slots with transforms and texCoord sets, extension parameters) so archives survive layout changes and are readable.
+
+---
+
+## 164: Scene archive: samplers, texture transforms and more texture formats
+
++++
+status: new
+priority: low
+kind: enhancement
+created: 2026-10-22T16:11:23Z
++++
+
+Part of #52. Not saved yet: sampler states (textures load with linear repeat), PBR animatable texture transforms, mip levels (regenerated, not stored), cube and 3D textures, compressed formats (ASTC, BC). Float textures are raw bytes; consider EXR.
+
+---
+
+## 165: Open and save .scenesprocketsd documents in the demo app
+
++++
+status: new
+priority: low
+kind: feature
+created: 2026-10-22T16:11:23Z
++++
+
+Part of #52. Register a UTType for .scenesprocketsd (a package) and add open/save to the demo app, for example with DocumentGroup, so archives can be inspected and edited. Today only scenesprockets-demos --save writes them, and nothing reads them except tests.
 
 ---

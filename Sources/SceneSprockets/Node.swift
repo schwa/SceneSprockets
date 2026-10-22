@@ -201,6 +201,12 @@ extension SceneGraph {
             parent?.addChild(self)
         }
 
+        // For SceneArchive; see SceneGraph+Archive.swift.
+        public required convenience init(from decoder: Decoder) throws {
+            self.init()
+            try decodeArchive(from: decoder)
+        }
+
         public convenience init(
             parent: Node? = nil,
             children: [Node] = [],

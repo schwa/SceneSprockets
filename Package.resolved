@@ -1,5 +1,5 @@
 {
-  "originHash" : "60897d89e15481783078fb63a51a52383b28d7bfaab745273625a7911c54ee18",
+  "originHash" : "7a8d221f561fb8d4f5ac0621471687b95053a9a75030e6d6b068d31830a0a97c",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -70,7 +70,7 @@
       "location" : "https://github.com/schwa/MetalSprocketsParticles",
       "state" : {
         "branch" : "main",
-        "revision" : "8b7dbb3c81e95b9f7fd458e7c51be46391832a99"
+        "revision" : "9e3bcab884232107af7a4bbf2b878e8803c63ac7"
       }
     },
     {
@@ -169,7 +169,7 @@
       "location" : "https://github.com/schwa/SwiftGLTF",
       "state" : {
         "branch" : "main",
-        "revision" : "529cf3a40fbe7fcf9990f42f0a8a39487d3aebcc"
+        "revision" : "01ade1c16f8c85918eda4b0776acd0b3cb261636"
       }
     },
     {

@@ -3,7 +3,7 @@ import simd
 extension SceneGraph {
     // Distance fog, like SceneKit's fogStartDistance, fogEndDistance, fogColor and fogDensityExponent. Applied to
     // geometry (not the background) by SceneGraphElement after every renderer has drawn.
-    public struct Fog: Sendable, Equatable {
+    public struct Fog: Sendable, Equatable, Codable {
         // Linear RGB; alpha scales the maximum fog amount.
         public var color: SIMD4<Float>
         // Camera distance where fog starts and where it reaches full strength.

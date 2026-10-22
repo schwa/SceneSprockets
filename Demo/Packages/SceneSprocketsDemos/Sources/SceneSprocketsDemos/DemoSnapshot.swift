@@ -3,7 +3,10 @@ import Foundation
 import ImageIO
 import Metal
 import MetalSprockets
+import MetalSprocketsPBR
 import SceneSprockets
+import SceneSprocketsBlinnPhong
+import SceneSprocketsPBR
 import UniformTypeIdentifiers
 
 // Renders a demo offscreen, without a window: steps it `frames` times at 60 Hz (update, actions, constraints) from
@@ -130,6 +133,26 @@ public enum DemoSnapshot {
             progress(frame, frameCount)
         }
         try await renderer.finalize()
+    }
+
+    // Steps a demo `frames` times like render(...), then saves its scene graph as a .scenesprocketsd package.
+    // Returns the archive's warnings.
+    @MainActor
+    public static func save(demoID: String, to url: URL, frames: Int = 60, values: [String: Float] = [:], configure: (DemoScene) -> Void = { _ in }) throws -> [String] {
+        guard let demo = DemoCatalog.demos.first(where: { $0.id == demoID }) else {
+            throw Failure.unknownDemo(demoID)
+        }
+        let scene = demo.make()
+        scene.values.merge(values) { $1 }
+        configure(scene)
+        let deltaTime: Float = 1 / 60
+        for frame in 0..<frames {
+            scene.update(time: Float(frame) * deltaTime, deltaTime: deltaTime)
+            scene.sceneGraph.advanceActions(by: deltaTime)
+            scene.sceneGraph.applyConstraints(pointOfView: scene.initialCameraMatrix, deltaTime: deltaTime)
+        }
+        let archive = SceneArchive(materialTypes: [BlinnPhongSceneMaterial.self, PBRSceneMaterial.self], environmentMapTypes: [PBREnvironment.self])
+        return try archive.write(scene.sceneGraph, to: url)
     }
 
     public static func writePNG(_ image: CGImage, to url: URL) throws {

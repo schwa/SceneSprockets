@@ -18,6 +18,12 @@ public class SceneGraph {
         self.root = root
     }
 
+    // For SceneArchive; see SceneGraph+Archive.swift.
+    public required convenience init(from decoder: Decoder) throws {
+        self.init(root: Node())
+        try decodeArchive(from: decoder)
+    }
+
     // Changes whenever anything in the graph changes. Compare to skip work when nothing (or only transforms) changed.
     public var revision: Revision {
         Revision(structure: max(root.revision.structure, rootRevision), transform: root.revision.transform)

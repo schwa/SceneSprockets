@@ -11,6 +11,8 @@ import SwiftUI
 // scenesprockets-demos --video <id> [file]     record a demo offscreen to a movie (default: <id>.mov); the keynote
 //                  [--size WxH] [--fps N]   auto-advances through every slide unless --seconds is given
 //                  [--seconds N] [--slide N] [--value Name=Number ...]
+// scenesprockets-demos --save <id> [file]     save a demo's scene graph as a package (default: <id>.scenesprocketsd)
+//                  [--frames N] [--slide N] [--value Name=Number ...]
 // scenesprockets-demos --benchmark <id>        render every frame offscreen and print frame times
 //                  [--size WxH] [--frames N] [--slide N]
 
@@ -88,6 +90,28 @@ case "--render":
             }
         } }
         try DemoSnapshot.writePNG(image, to: url)
+        print(url.path)
+    } catch {
+        fail("\(error)")
+    }
+case "--save":
+    let frames = option("--frames").flatMap { Int($0) } ?? 60
+    let slide = option("--slide").flatMap { Int($0) }
+    let values = valueOptions()
+    guard arguments.count >= 2 else {
+        fail("usage: scenesprockets-demos --save <id> [file.scenesprocketsd] [--frames N] [--slide N] [--value Name=Number ...]")
+    }
+    let id = arguments[1]
+    let url = URL(fileURLWithPath: arguments.count >= 3 ? arguments[2] : "\(id).scenesprocketsd")
+    do {
+        let warnings = try MainActor.assumeIsolated { try DemoSnapshot.save(demoID: id, to: url, frames: frames, values: values) { scene in
+            if let slide, let keynote = scene as? KeynoteDemo {
+                keynote.show(slide: slide)
+            }
+        } }
+        for warning in warnings {
+            FileHandle.standardError.write(Data("warning: \(warning)\n".utf8))
+        }
         print(url.path)
     } catch {
         fail("\(error)")
