@@ -16,6 +16,7 @@ let package = Package(
         .library(name: "SceneSprocketsBlinnPhong", targets: ["SceneSprocketsBlinnPhong"]),
         .library(name: "SceneSprocketsShaderMaterial", targets: ["SceneSprocketsShaderMaterial"]),
         .library(name: "SceneSprocketsAudio", targets: ["SceneSprocketsAudio"]),
+        .library(name: "SceneSprocketsGizmos", targets: ["SceneSprocketsGizmos"]),
     ],
     dependencies: [
         .package(url: "https://github.com/schwa/GeometryLite3D", branch: "main"),
@@ -29,6 +30,7 @@ let package = Package(
         .package(url: "https://github.com/schwa/MetalCompilerPlugin", .upToNextMinor(from: "0.4.1")),
         .package(url: "https://github.com/schwa/SwiftJolt.git", branch: "main"),
         .package(url: "https://github.com/schwa/MetalSprocketsParticles", branch: "main"),
+        .package(url: "https://github.com/schwa/MetalSprocketsAddOns", branch: "main"),
     ],
     targets: [
         .target(
@@ -60,6 +62,25 @@ let package = Package(
                 .product(name: "MetalSupport", package: "MetalSupport"),
                 .product(name: "SwiftGLTF", package: "SwiftGLTF"),
                 .product(name: "SwiftMesh", package: "SwiftMesh"),
+            ]
+        ),
+        // Transform gizmos drawn with MetalSprocketsAddOns' GraphicsContext3D (#154).
+        .target(
+            name: "SceneSprocketsGizmos",
+            dependencies: [
+                "SceneSprockets",
+                .product(name: "GeometryLite3D", package: "GeometryLite3D"),
+                .product(name: "MetalSprockets", package: "MetalSprockets"),
+                .product(name: "MetalSprocketsAddOns", package: "MetalSprocketsAddOns"),
+            ]
+        ),
+        .testTarget(
+            name: "SceneSprocketsGizmosTests",
+            dependencies: [
+                "SceneSprockets",
+                "SceneSprocketsBlinnPhong",
+                "SceneSprocketsGizmos",
+                .product(name: "GeometryLite3D", package: "GeometryLite3D"),
             ]
         ),
         .target(

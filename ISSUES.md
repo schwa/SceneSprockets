@@ -3515,3 +3515,77 @@ created: 2026-10-22T16:11:23Z
 Part of #52. Register a UTType for .scenesprocketsd (a package) and add open/save to the demo app, for example with DocumentGroup, so archives can be inspected and edited. Today only scenesprockets-demos --save writes them, and nothing reads them except tests.
 
 ---
+
+## 166: Geometry highlighting: show selected and hovered nodes in a SceneView
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-10-22T17:48:50Z
++++
+
+Add a way to highlight nodes in a SceneView, for selection and hover feedback in an editor (like Reality Composer, Unity and Godot).
+
+Want:
+- Highlight a set of nodes (with or without their descendants).
+- Styles: outline (silhouette) drawn on top of the scene, and optionally a tint or wireframe overlay.
+- Works for all material families (BlinnPhong, PBR, shader materials) without changing the materials.
+- Separate styles for selected and hovered.
+- Low cost when nothing is highlighted.
+
+Uses: SceneSprocketsComposer (selection in the scene tree and preview), the demo inspector, and the hover highlight that the transform gizmos need (#154).
+
+---
+
+## 167: Transform gizmo: touch support on iOS and visionOS
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-10-22T18:03:48Z
++++
+
+Follow-up to #154. SceneView routes a drag to the manipulator only when the pointer hovers over a handle (onContinuousHover), so on touch screens without a pointer the gizmo cannot be dragged and camera control takes the drag. Decide at touch-down instead (hit test the start location, then suppress camera control for that gesture), and add pinch/rotate gestures for scale and rotate.
+
+---
+
+## 168: Transform gizmo: view-aligned rotate ring and trackball
+
++++
+status: new
+priority: low
+kind: enhancement
+created: 2026-10-22T18:03:48Z
++++
+
+Follow-up to #154. Rotate mode has the three axis rings only. Add a ring facing the camera (rotate about the view axis) and free trackball rotation inside the rings, like three.js TransformControls and Blender.
+
+---
+
+## 169: Transform gizmo: dim hidden ring halves and handles pointing at the camera
+
++++
+status: new
+priority: low
+kind: enhancement
+created: 2026-10-22T18:03:49Z
++++
+
+Follow-up to #154. Ring halves behind the gizmo's center draw like the front halves, and an axis pointing at the camera collapses to a dot that is hard to grab. Draw back halves dimmer and hide or fade handles that face the camera.
+
+---
+
+## 170: Demo: undo for gizmo edits and a transform inspector
+
++++
+status: new
+priority: low
+kind: enhancement
+created: 2026-10-22T18:03:49Z
++++
+
+Follow-up to #154. TransformGizmo has onBegin/onChange/onEnd, but the demo app does not record undo steps or show the selected node's transform. Register undo with the window's UndoManager on onBegin/onEnd, and show position, rotation and scale in the inspector.
+
+---

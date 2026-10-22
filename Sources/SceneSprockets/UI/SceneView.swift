@@ -50,6 +50,12 @@ public struct SceneView: View {
     private let externalCameraMatrix: Binding<simd_float4x4?>?
     private let onTap: ((SceneGraph.Hit?) -> Void)?
     private let hitTestCategoryBitMask: UInt
+    private let manipulator: (any SceneViewManipulator)?
+
+    @Environment(\.displayScale) private var displayScale
+    // The pointer is over the manipulator, so drags go to it instead of camera control.
+    @State private var isHoveringManipulator = false
+    @State private var isManipulating = false
 
     @State private var internalCameraMatrix: simd_float4x4?
     @State private var viewSize: CGSize = .zero
@@ -62,7 +68,8 @@ public struct SceneView: View {
     // `renderers` draw the material families, e.g. BlinnPhongMaterialRenderer (SceneSprocketsBlinnPhong) or
     // PBRMaterialRenderer (SceneSprocketsPBR). `isPlaying` false freezes scene time (delegate time and actions).
     // `cameraMatrix` exposes the camera-control transform (nil: start from the point of view; set nil to reset).
-    // `onTap` gets the nearest hit under a tap or click.
+    // `onTap` gets the nearest hit under a tap or click. `manipulator` draws over the scene and takes drags that start
+    // on it (for example a transform gizmo).
     public init(
         sceneGraph: SceneGraph,
         pointOfView: SceneGraph.Node? = nil,
@@ -74,6 +81,7 @@ public struct SceneView: View {
         audio: SceneAudio? = nil,
         cameraMatrix: Binding<simd_float4x4?>? = nil,
         hitTestCategoryBitMask: UInt = .max,
+        manipulator: (any SceneViewManipulator)? = nil,
         onTap: ((SceneGraph.Hit?) -> Void)? = nil
     ) {
         self.sceneGraph = sceneGraph
@@ -87,6 +95,7 @@ public struct SceneView: View {
         self.externalCameraMatrix = cameraMatrix
         self.onTap = onTap
         self.hitTestCategoryBitMask = hitTestCategoryBitMask
+        self.manipulator = manipulator
     }
 
     private var cameraMatrix: simd_float4x4? {
@@ -114,6 +123,9 @@ public struct SceneView: View {
                 defaultLight: options.contains(.autoenablesDefaultLighting) ? Light(type: .directional, color: [1, 1, 1], intensity: 1) : nil,
                 shadows: shadows
             )
+            if let overlay = manipulatorOverlay(drawableSize: size) {
+                ManipulatorOverlayPass(content: overlay)
+            }
         }
         .metalDepthStencilPixelFormat(.depth32Float)
         // Shadows and fog change the drawable from compute passes that also read depth.
@@ -125,6 +137,18 @@ public struct SceneView: View {
             orbitTarget = viewpoint.target
         }
         .onGeometryChange(for: CGSize.self) { $0.size } action: { viewSize = $0 }
+        .onContinuousHover { phase in
+            guard let manipulator, !isManipulating, let viewport = viewport() else {
+                return
+            }
+            switch phase {
+            case .active(let location):
+                isHoveringManipulator = manipulator.hitTest([Float(location.x), Float(location.y)], viewport: viewport)
+            case .ended:
+                isHoveringManipulator = manipulator.hitTest([-1_000_000, -1_000_000], viewport: viewport)
+            }
+        }
+        .highPriorityGesture(manipulatorDrag, including: manipulator != nil && (isHoveringManipulator || isManipulating) ? .all : .subviews)
         .onTapGesture { location in
             guard let onTap else {
                 return
@@ -144,6 +168,45 @@ public struct SceneView: View {
                 }
             }
         }
+    }
+
+    private var manipulatorDrag: some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                guard let manipulator, let viewport = viewport() else {
+                    return
+                }
+                if !isManipulating {
+                    isManipulating = true
+                    manipulator.beginDrag(at: [Float(value.startLocation.x), Float(value.startLocation.y)], viewport: viewport)
+                }
+                manipulator.drag(to: [Float(value.location.x), Float(value.location.y)], viewport: viewport)
+            }
+            .onEnded { _ in
+                manipulator?.endDrag()
+                isManipulating = false
+            }
+    }
+
+    private func manipulatorOverlay(drawableSize: CGSize) -> AnyElement? {
+        guard let manipulator, let viewport = viewport(drawableSize: drawableSize) else {
+            return nil
+        }
+        return try? manipulator.overlay(viewport: viewport)
+    }
+
+    // The camera the frame is drawn with. `drawableSize` defaults to the view size at the display scale.
+    private func viewport(drawableSize: CGSize? = nil) -> SceneViewport? {
+        guard viewSize.width > 0, viewSize.height > 0 else {
+            return nil
+        }
+        let cameras = sceneGraph.cameraNodes()
+        let entry = pointOfView.flatMap { node in cameras.first { $0.node === node } } ?? cameras.first
+        let projection = (entry?.camera ?? SceneView.defaultCamera).projection
+        let size = SIMD2<Float>(Float(viewSize.width), Float(viewSize.height))
+        let matrix = projection.projectionMatrix(aspectRatio: size.x / size.y)
+        let drawable = drawableSize.map { SIMD2<Float>(Float($0.width), Float($0.height)) } ?? size * Float(displayScale)
+        return SceneViewport(cameraMatrix: currentCameraMatrix, projectionMatrix: projection.isReversedDepth ? .reversedDepth * matrix : matrix, viewSize: size, drawableSize: drawable)
     }
 
     // Read when SwiftUI updates the view; setting fog later needs a view update to take effect.

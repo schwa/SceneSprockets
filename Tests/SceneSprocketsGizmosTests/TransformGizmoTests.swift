@@ -1,0 +1,157 @@
+import CoreGraphics
+import GeometryLite3D
+import Metal
+import MetalSprockets
+import Testing
+import simd
+@testable import SceneSprockets
+import SceneSprocketsBlinnPhong
+@testable import SceneSprocketsGizmos
+
+// #154
+@MainActor
+struct TransformGizmoTests {
+    // A camera 10 units back on +Z looking at the origin, in a 400x400 point view.
+    let viewport = SceneViewport(
+        cameraMatrix: LookAt(position: [0, 0, 10], target: .zero, up: [0, 1, 0]).cameraMatrix,
+        projectionMatrix: PerspectiveProjection(verticalAngleOfView: .degrees(40), depthMode: .standard(zClip: 0.1 ... 100)).projectionMatrix(aspectRatio: 1),
+        viewSize: [400, 400],
+        drawableSize: [400, 400]
+    )
+
+    func screen(_ world: SIMD3<Float>) -> SIMD2<Float> {
+        viewport.project(world)!.xy
+    }
+
+    func makeGizmo(_ mode: TransformGizmo.Mode = .translate) -> (TransformGizmo, SceneGraph.Node) {
+        let node = SceneGraph.Node(label: "Target")
+        return (TransformGizmo(target: node, mode: mode), node)
+    }
+
+    @Test
+    func handlesStayTheSameSizeOnScreen() throws {
+        let (gizmo, node) = makeGizmo()
+        let near = try #require(gizmo.frame(viewport: viewport)).length
+        node.worldPosition = [0, 0, -10]
+        let far = try #require(gizmo.frame(viewport: viewport)).length
+        #expect(abs(far / near - 2) < 0.01)
+        // The axis handle is `size` points long on screen.
+        let frame = try #require(gizmo.frame(viewport: viewport))
+        let length = simd_distance(screen(frame.origin), screen(frame.origin + [frame.length, 0, 0]))
+        #expect(abs(length - gizmo.size) < 0.5)
+    }
+
+    @Test
+    func picksTheHandleUnderThePointer() throws {
+        let (gizmo, _) = makeGizmo()
+        let frame = try #require(gizmo.frame(viewport: viewport))
+        #expect(gizmo.handle(at: screen([frame.length * 0.7, 0, 0]), viewport: viewport) == .axis(.x))
+        #expect(gizmo.handle(at: screen([0, frame.length * 0.7, 0]), viewport: viewport) == .axis(.y))
+        #expect(gizmo.handle(at: screen(.zero), viewport: viewport) == .center)
+        // The XY plane square (perpendicular to Z) sits between the X and Y axes.
+        #expect(gizmo.handle(at: screen([frame.length * 0.2, frame.length * 0.2, 0]), viewport: viewport) == .plane(.z))
+        #expect(gizmo.handle(at: [10, 10], viewport: viewport) == nil)
+    }
+
+    @Test
+    func draggingAnAxisMovesAlongItOnly() throws {
+        let (gizmo, node) = makeGizmo()
+        let frame = try #require(gizmo.frame(viewport: viewport))
+        var changes = 0
+        gizmo.onChange = { _ in changes += 1 }
+        gizmo.beginDrag(at: screen([frame.length * 0.7, 0, 0]), viewport: viewport)
+        // Drag up and to the right: only the X part counts.
+        gizmo.drag(to: screen([frame.length * 0.7 + 1, 0.5, 0]), viewport: viewport)
+        gizmo.endDrag()
+        #expect(abs(node.worldPosition.x - 1) < 0.01)
+        #expect(abs(node.worldPosition.y) < 1e-4 && abs(node.worldPosition.z) < 1e-4)
+        #expect(changes == 1)
+    }
+
+    @Test
+    func translationSnaps() throws {
+        let (gizmo, node) = makeGizmo()
+        gizmo.snapping.translation = 0.5
+        let frame = try #require(gizmo.frame(viewport: viewport))
+        gizmo.beginDrag(at: screen([frame.length * 0.7, 0, 0]), viewport: viewport)
+        gizmo.drag(to: screen([frame.length * 0.7 + 0.8, 0, 0]), viewport: viewport)
+        #expect(abs(node.worldPosition.x - 1) < 1e-4)
+    }
+
+    @Test
+    func rotatingAboutZ() throws {
+        let (gizmo, node) = makeGizmo(.rotate)
+        let frame = try #require(gizmo.frame(viewport: viewport))
+        let radius = frame.length * 0.9
+        // A quarter turn counterclockwise around +Z (toward the camera).
+        gizmo.beginDrag(at: screen([radius, 0, 0]), viewport: viewport)
+        gizmo.drag(to: screen([0, radius, 0]), viewport: viewport)
+        let rotated = node.worldOrientation.act([1, 0, 0])
+        #expect(simd_distance(rotated, [0, 1, 0]) < 0.01)
+    }
+
+    @Test
+    func scalingAnAxisAndUniformly() throws {
+        let (gizmo, node) = makeGizmo(.scale)
+        let frame = try #require(gizmo.frame(viewport: viewport))
+        gizmo.beginDrag(at: screen([frame.length * 0.5, 0, 0]), viewport: viewport)
+        gizmo.drag(to: screen([frame.length, 0, 0]), viewport: viewport)
+        gizmo.endDrag()
+        #expect(abs(node.trs.scale.x - 2) < 0.01 && node.trs.scale.y == 1)
+        gizmo.beginDrag(at: screen(.zero) + [5, 0], viewport: viewport)
+        gizmo.drag(to: screen(.zero) + [10, 0], viewport: viewport)
+        #expect(simd_distance(node.trs.scale, [4, 2, 2]) < 0.05)
+    }
+
+    @Test
+    func localSpaceFollowsTheNode() throws {
+        let (gizmo, node) = makeGizmo()
+        node.trs.rotation = simd_quatf(angle: .pi / 2, axis: [0, 0, 1])
+        gizmo.space = .local
+        let frame = try #require(gizmo.frame(viewport: viewport))
+        #expect(simd_distance(frame.axis(.x), [0, 1, 0]) < 1e-4)
+    }
+
+    // The overlay pass draws over the scene even where scene geometry is nearer the camera (reversed depth there).
+    @Test(.enabled(if: MTLCreateSystemDefaultDevice() != nil))
+    func drawsOverTheScene() throws {
+        let device = try #require(MTLCreateSystemDefaultDevice())
+        let root = SceneGraph.Node()
+        root.addChild(SceneGraph.Node(content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40), depthMode: .standard(zClip: 0.1 ... 100))))))
+        root.children[0].transform = viewport.cameraMatrix
+        // A box in front of the gizmo's X handle.
+        let box = SceneGraph.Node(parent: root, shape: .box(width: 3, height: 1, length: 1), material: BlinnPhongSceneMaterial(ambient: .color(1), diffuse: .color(0.2), specular: .color(0), shininess: 1), device: device, trs: .init(translation: [0.8, 0, 2]))
+        let (gizmo, _) = makeGizmo()
+        let overlay = try #require(try gizmo.overlay(viewport: viewport))
+        let renderer = try OffscreenRenderer(size: CGSize(width: 400, height: 400), clearDepth: 0)
+        let texture = try renderer.render(try MetalSprockets.Group {
+            SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer()])
+            ManipulatorOverlayPass(content: overlay)
+        }).texture
+        _ = box
+        // The box itself is drawn: a pixel of it away from the handles is grey.
+        var boxPixel = [UInt8](repeating: 0, count: 4)
+        let boxPoint = screen([1.9, -0.4, 2.5])
+        texture.getBytes(&boxPixel, bytesPerRow: 4, from: MTLRegionMake2D(Int(boxPoint.x), Int(boxPoint.y), 1, 1), mipmapLevel: 0)
+        #expect(boxPixel[0] > 10, "\(boxPixel)")
+        var pixels = [UInt8](repeating: 0, count: 400 * 400 * 4)
+        texture.getBytes(&pixels, bytesPerRow: 1_600, from: MTLRegionMake2D(0, 0, 400, 400), mipmapLevel: 0)
+        let point = screen([try #require(gizmo.frame(viewport: viewport)).length * 0.5, 0, 0])
+        let offset = (Int(point.y) * 400 + Int(point.x)) * 4
+        #expect(pixels[offset + 2] > 200 && Int(pixels[offset + 2]) - Int(pixels[offset + 1]) > 80, "\(pixels[offset ..< offset + 4])")
+    }
+
+    @Test(.enabled(if: MTLCreateSystemDefaultDevice() != nil))
+    func drawsItsHandles() throws {
+        let (gizmo, _) = makeGizmo()
+        let overlay = try #require(try gizmo.overlay(viewport: viewport))
+        let renderer = try OffscreenRenderer(size: CGSize(width: 400, height: 400))
+        let texture = try renderer.render(try RenderPass { overlay }).texture
+        var pixels = [UInt8](repeating: 0, count: 400 * 400 * 4)
+        texture.getBytes(&pixels, bytesPerRow: 1_600, from: MTLRegionMake2D(0, 0, 400, 400), mipmapLevel: 0)
+        // Halfway along the X handle: SwiftUI red (BGRA, sRGB encoded, so green and blue are not 0).
+        let point = screen([try #require(gizmo.frame(viewport: viewport)).length * 0.5, 0, 0])
+        let offset = (Int(point.y) * 400 + Int(point.x)) * 4
+        #expect(pixels[offset + 2] > 200 && Int(pixels[offset + 2]) - Int(pixels[offset + 1]) > 80, "\(pixels[offset ..< offset + 4])")
+    }
+}

@@ -74,6 +74,15 @@
       }
     },
     {
+      "identity" : "metalsprocketsaddons",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/MetalSprocketsAddOns",
+      "state" : {
+        "branch" : "main",
+        "revision" : "1263a4bc2d6db8e77cbd81e5c3271d38417da269"
+      }
+    },
+    {
       "identity" : "metalsprocketsgltf",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsGLTF",
@@ -187,7 +196,7 @@
       "location" : "https://github.com/schwa/SwiftGLTF",
       "state" : {
         "branch" : "main",
-        "revision" : "01ade1c16f8c85918eda4b0776acd0b3cb261636"
+        "revision" : "108c177488f227bfdcfcb558535295bcb6dddfec"
       }
     },
     {

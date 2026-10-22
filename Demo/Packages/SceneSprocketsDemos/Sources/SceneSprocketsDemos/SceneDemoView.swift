@@ -1,6 +1,7 @@
 import DemoKit
 import MetalSprockets
 import SceneSprockets
+import SceneSprocketsGizmos
 import MetalSprocketsUI
 import simd
 import SwiftUI
@@ -13,6 +14,10 @@ public struct SceneDemoView: View {
     @State private var cameraMatrix: simd_float4x4?
     @State private var isPaused = false
     @State private var frameTimingStatistics: FrameTimingStatistics?
+    // Moves, rotates and scales the selected node (#154).
+    @State private var gizmo = TransformGizmo()
+    @State private var gizmoMode = TransformGizmo.Mode.translate
+    @State private var gizmoSpace = TransformGizmo.Space.world
 
     public init(demo: Demo) {
         self.demo = demo
@@ -31,11 +36,21 @@ public struct SceneDemoView: View {
             isPlaying: !isPaused,
             shadows: scene.shadows,
             cameraMatrix: scene.usesSceneCamera ? .constant(nil) : $cameraMatrix,
-            hitTestCategoryBitMask: scene.pickCategoryBitMask
+            hitTestCategoryBitMask: scene.pickCategoryBitMask,
+            manipulator: gizmo
         ) { hit in
             scene.pick(hit)
         }
         .onFrameTimingChange { frameTimingStatistics = $0 }
+        .onChange(of: scene.selectedNodeID, initial: true) {
+            gizmo.target = scene.selectedNode
+        }
+        .onChange(of: gizmoMode, initial: true) {
+            gizmo.mode = gizmoMode
+        }
+        .onChange(of: gizmoSpace, initial: true) {
+            gizmo.space = gizmoSpace
+        }
         .overlay(alignment: .topTrailing) {
             if let frameTimingStatistics {
                 FrameTimingView(statistics: frameTimingStatistics, options: .all)
@@ -54,6 +69,17 @@ public struct SceneDemoView: View {
                         action.perform()
                     }
                 }
+            }
+            Picker("Gizmo", selection: $gizmoMode) {
+                Label("Move", systemImage: "arrow.up.and.down.and.arrow.left.and.right").tag(TransformGizmo.Mode.translate)
+                Label("Rotate", systemImage: "arrow.clockwise").tag(TransformGizmo.Mode.rotate)
+                Label("Scale", systemImage: "arrow.up.left.and.arrow.down.right").tag(TransformGizmo.Mode.scale)
+            }
+            .pickerStyle(.segmented)
+            .help("Select a node, then drag the gizmo's handles")
+            Picker("Space", selection: $gizmoSpace) {
+                Text("World").tag(TransformGizmo.Space.world)
+                Text("Local").tag(TransformGizmo.Space.local)
             }
             Button(isPaused ? "Play" : "Pause", systemImage: isPaused ? "play.fill" : "pause.fill") {
                 isPaused.toggle()
