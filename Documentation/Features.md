@@ -1,7 +1,7 @@
 # Features
 
 What MetalSprocketsSceneGraph has (✅) and does not have yet (⬜). 🧩 means it is possible today with MetalSprockets or a ShaderMaterial and needs an example. A ~~struck-through~~ feature is one we will not do. Source says where the feature comes from: SceneKit,
-RealityKit, three.js, Babylon.js, Godot, Unity, Unreal, Jolt or glTF; empty for our own.
+RealityKit, three.js, Babylon.js, Godot, Unity, Unreal, GameplayKit, Filament, Jolt or glTF; empty for our own; Brainstorm for ideas with no source.
 
 ## Scene and nodes
 
@@ -85,6 +85,17 @@ RealityKit, three.js, Babylon.js, Godot, Unity, Unreal, Jolt or glTF; empty for 
 | ⬜ | Volumetric lighting and fog | | Godot, Filament | |
 | ⬜ | Occlusion culling | | Godot | |
 | ⬜ | Debug views | | SceneKit, three.js | Normals, bounds, light gizmos |
+| ⬜ | Clustered or tiled lighting, deferred shading | | Godot, Unity, Filament | For many lights |
+| ⬜ | GPU-driven rendering: indirect draws, GPU culling, mesh shaders | | Unreal | |
+| ⬜ | Variable rate shading | | Unreal | Metal rasterization rate maps |
+| ⬜ | Gaussian splats | | Babylon.js | See MetalSprocketsGaussianSplats |
+| ⬜ | Subsurface scattering | | Unreal, Godot | |
+| ⬜ | Hair and fur | | Unreal | |
+| ⬜ | Water and ocean surfaces | | Unity, Godot | |
+| ⬜ | Foliage with wind | | Unity, Unreal | |
+| ⬜ | Impostors for distant objects | | Unreal | |
+| ⬜ | 3D labels and annotations | | three.js | |
+| ⬜ | SwiftUI views in 3D | | RealityKit | Attachments |
 
 ## Materials
 
@@ -155,6 +166,9 @@ RealityKit, three.js, Babylon.js, Godot, Unity, Unreal, Jolt or glTF; empty for 
 | ⬜ | Tween any property, springs | | RealityKit | |
 | ⬜ | Retargeting between skeletons | | Godot | |
 | ⬜ | GPU skinning for every renderer | | | |
+| ⬜ | Foot IK and look-at heads | | Unity, Unreal | |
+| ⬜ | Timeline / sequencer | | Unity, Godot | |
+| ⬜ | Lip sync from audio | | Brainstorm | |
 
 ## Constraints
 
@@ -234,6 +248,9 @@ RealityKit, three.js, Babylon.js, Godot, Unity, Unreal, Jolt or glTF; empty for 
 | ✅ | Model I/O: OBJ, PLY, STL, ABC, USD | | SceneKit | |
 | ⬜ | USD/USDZ into a scene graph | #31 | RealityKit | |
 | ⬜ | Asset metadata | | SceneKit | Up axis, units, frame rate |
+| ⬜ | Async and streaming loading with progress | | Unity, Godot | |
+| ⬜ | FBX import | | Unity, Godot | |
+| ⬜ | Export to glTF or USD | | Godot | |
 
 ## Misc
 
@@ -243,3 +260,28 @@ RealityKit, three.js, Babylon.js, Godot, Unity, Unreal, Jolt or glTF; empty for 
 | ✅ | Offscreen rendering and video export | | | Demo CLI |
 | ⬜ | Spatial audio with occlusion and reverb | | RealityKit | |
 | ⬜ | Accessibility for 3D content | | RealityKit | |
+
+## Gameplay and interaction
+
+| Done | Feature | Issues | Source | Notes |
+|---|---|---|---|---|
+| ⬜ | Navigation meshes and pathfinding | | GameplayKit, Godot, Unity | |
+| ⬜ | Game controller and keyboard input mapping | | Godot, Unity | |
+| ⬜ | Haptics | | Brainstorm | |
+| ⬜ | Networked scene replication, SharePlay | | RealityKit | |
+
+## Platforms
+
+| Done | Feature | Issues | Source | Notes |
+|---|---|---|---|---|
+| ⬜ | AR: anchors, plane detection, people occlusion | | RealityKit | |
+| ⬜ | visionOS immersive spaces and hand tracking | | RealityKit | |
+
+## Tools
+
+| Done | Feature | Issues | Source | Notes |
+|---|---|---|---|---|
+| ⬜ | Scene inspector and editor | | Godot, Unity | The demo inspector is a start |
+| ⬜ | Shader hot reload | | Brainstorm | |
+| ⬜ | GPU timing overlay per pass | | Unity | |
+| ⬜ | Deterministic simulation for tests and replays | | Brainstorm | |
