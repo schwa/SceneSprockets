@@ -3385,13 +3385,17 @@ Constraint: the renderer reads the graph every frame. Observation must not add n
 ## 156: Scene archive: scene.json for the graph
 
 +++
-status: new
+status: closed
 priority: medium
 kind: feature
 created: 2026-10-22T15:28:24Z
+updated: 2026-10-22T16:13:26Z
+closed: 2026-10-22T16:13:26Z
 +++
 
 Part of #52. Write and read a .scenesprocketsd package directory with scene.json describing the graph. Codable on the domain types (no shadow types): Node (label, local transform, pivot, visibility, opacity, category and light masks, rendering order, children), Shape (regenerated on load), Light, Camera (perspective, orthographic), Environment, Fog, PostProcessing. Materials through a codec registry the renderer modules register (PBR, Blinn-Phong). Mesh content comes from the issues for glTF references and generated meshes. Done when a round-trip test (write, read, compare) passes for a scene with shapes, lights and cameras.
+
+- `2026-10-22T16:13:26Z`: Done: SceneArchive writes and reads .scenesprocketsd packages (scene.json + textures). Round-trip tests pass. Follow-ups: #159-#165.
 
 ---
 
