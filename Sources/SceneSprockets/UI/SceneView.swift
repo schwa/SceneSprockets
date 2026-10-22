@@ -56,6 +56,7 @@ public struct SceneView: View {
     private let manipulator: (any SceneViewManipulator)?
     private let decorations: ((SceneGraphRenderContext, SIMD2<Float>) throws -> AnyElement?)?
     private let defaultCamera: Camera
+    private let overlay: ((SceneViewport) throws -> AnyElement?)?
 
     @Environment(\.displayScale) private var displayScale
     // The pointer is over the manipulator, so drags go to it instead of camera control.
@@ -95,8 +96,12 @@ public struct SceneView: View {
         manipulator: (any SceneViewManipulator)? = nil,
         onTap: ((SceneGraph.Hit?) -> Void)? = nil,
         // After `onTap`, so a trailing closure still means `onTap`.
-        decorations: ((SceneGraphRenderContext, SIMD2<Float>) throws -> AnyElement?)? = nil
+        decorations: ((SceneGraphRenderContext, SIMD2<Float>) throws -> AnyElement?)? = nil,
+        // Passes after the scene and before the manipulator, such as selection outlines. They see the finished color
+        // but not depth (memoryless without post passes). Start passes that read the drawable with a barrier.
+        overlay: ((SceneViewport) throws -> AnyElement?)? = nil
     ) {
+        self.overlay = overlay
         self.decorations = decorations
         self.defaultCamera = defaultCamera
         self.sceneGraph = sceneGraph
@@ -141,6 +146,9 @@ public struct SceneView: View {
                     { context in try decorations(context, SIMD2<Float>(Float(size.width), Float(size.height))) }
                 }
             )
+            if let overlay, let viewport = viewport(drawableSize: size), let element = try overlay(viewport) {
+                element
+            }
             if let overlay = manipulatorOverlay(drawableSize: size) {
                 ManipulatorOverlayPass(content: overlay)
             }

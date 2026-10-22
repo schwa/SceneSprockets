@@ -64,13 +64,15 @@ let package = Package(
                 .product(name: "SwiftMesh", package: "SwiftMesh"),
             ]
         ),
-        // Transform gizmos drawn with MetalSprocketsAddOns' GraphicsContext3D (#154).
+        // Editor aids: transform gizmos drawn with MetalSprocketsAddOns' GraphicsContext3D (#154), and selection
+        // outlines with its jump flood outline (#166).
         .target(
             name: "SceneSprocketsGizmos",
             dependencies: [
                 "SceneSprockets",
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
+                .product(name: "MetalSprocketsSupport", package: "MetalSprockets"),
                 .product(name: "MetalSprocketsAddOns", package: "MetalSprocketsAddOns"),
             ]
         ),
