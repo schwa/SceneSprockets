@@ -3589,3 +3589,25 @@ created: 2026-10-22T18:03:49Z
 Follow-up to #154. TransformGizmo has onBegin/onChange/onEnd, but the demo app does not record undo steps or show the selected node's transform. Register undo with the window's UndoManager on onBegin/onEnd, and show position, rotation and scale in the inspector.
 
 ---
+
+## 171: TransformGizmo sizing: constant screen size vs scaling with the camera
+
++++
+status: new
+priority: low
+kind: enhancement
+created: 2026-10-22T18:51:28Z
++++
+
+TransformGizmo keeps a constant size on screen: `size` (110 view points) is converted to world units each frame with `SceneViewport.worldSizeOfPoint`. So the gizmo does not change size when the camera zooms or moves. This is what Unity, Godot and Blender do.
+
+In SceneSprocketsComposer this felt wrong: the user expected the gizmo to change size with the camera.
+
+Decide the behavior, and maybe make it an option:
+- Screen size (current): always easy to grab, but it gives no depth cue and can look large next to small objects.
+- World size: scales with distance like the scene; can become too small or too large to use.
+- Hybrid: screen size, clamped to a world size range or scaled by a fraction of the target bounds.
+
+Related: #154 (transform gizmo).
+
+---

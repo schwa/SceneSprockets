@@ -65,6 +65,9 @@ struct ManipulatorOverlayPass: Element {
     var body: some Element {
         get throws {
             try RenderPass(label: "Manipulator") {
+                // Metal 4 does not order passes: without this, blending loaded scene color that the scene pass (and
+                // post passes) had not finished writing, and the overlay flickered with garbage tiles.
+                QueueBarrier(after: [.fragment, .dispatch], before: .fragment)
                 content
             }
             .renderPassDescriptorModifier { descriptor in

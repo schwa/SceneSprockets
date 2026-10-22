@@ -359,7 +359,8 @@ public final class TransformGizmo: SceneViewManipulator {
             }
             context.fill(square, with: highlighted == .center ? .yellow : .white)
         }
-        return GraphicsContext3DRenderPipeline(context: context, viewProjection: viewport.projectionMatrix * viewport.viewMatrix, viewport: viewport.drawableSize).eraseToAnyElement()
+        // No depth test, like most editors' gizmos: handles always draw on top.
+        return GraphicsContext3DRenderPipeline(context: context, viewProjection: viewport.projectionMatrix * viewport.viewMatrix, viewport: viewport.drawableSize, depthCompareFunction: .always, writesDepth: false).eraseToAnyElement()
     }
 
     // An arrowhead for translate, a box for scale, in the plane facing the camera.

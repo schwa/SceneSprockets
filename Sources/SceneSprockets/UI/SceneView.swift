@@ -68,6 +68,8 @@ public struct SceneView: View {
     // `renderers` draw the material families, e.g. BlinnPhongMaterialRenderer (SceneSprocketsBlinnPhong) or
     // PBRMaterialRenderer (SceneSprocketsPBR). `isPlaying` false freezes scene time (delegate time and actions).
     // `cameraMatrix` exposes the camera-control transform (nil: start from the point of view; set nil to reset).
+    // Without `.allowsCameraControl`, a non-nil `cameraMatrix` still sets the camera, for callers with their own
+    // camera control.
     // `onTap` gets the nearest hit under a tap or click. `manipulator` draws over the scene and takes drags that start
     // on it (for example a transform gizmo).
     public init(
@@ -116,7 +118,7 @@ public struct SceneView: View {
             SceneGraphElement(
                 sceneGraph: sceneGraph,
                 camera: pointOfView,
-                cameraMatrix: options.contains(.allowsCameraControl) ? cameraMatrix ?? viewpoint.matrix : nil,
+                cameraMatrix: usesFreeCamera ? cameraMatrix ?? viewpoint.matrix : nil,
                 aspectRatio: size.height > 0 ? Float(size.width / size.height) : 1,
                 renderers: renderers,
                 defaultCamera: SceneView.defaultCamera,
@@ -238,9 +240,15 @@ public struct SceneView: View {
         return (LookAt(position: center + [0, radius * 0.5, radius * 2.5], target: center, up: [0, 1, 0]).cameraMatrix, center)
     }
 
+    // Drawn from `cameraMatrix` rather than a camera node: with camera control, or when the caller sets the matrix
+    // (for its own camera control).
+    private var usesFreeCamera: Bool {
+        options.contains(.allowsCameraControl) || externalCameraMatrix?.wrappedValue != nil
+    }
+
     // The world transform the frame is drawn from.
     private var currentCameraMatrix: simd_float4x4 {
-        if options.contains(.allowsCameraControl) {
+        if usesFreeCamera {
             return cameraMatrix ?? viewpoint.matrix
         }
         let cameras = sceneGraph.cameraNodes()
@@ -254,7 +262,7 @@ public struct SceneView: View {
         let cameras = sceneGraph.cameraNodes()
         let entry = pointOfView.flatMap { node in cameras.first { $0.node === node } } ?? cameras.first
         let camera = entry?.camera ?? SceneView.defaultCamera
-        let matrix = options.contains(.allowsCameraControl) ? cameraMatrix ?? viewpoint.matrix : entry?.worldTransform ?? viewpoint.matrix
+        let matrix = usesFreeCamera ? cameraMatrix ?? viewpoint.matrix : entry?.worldTransform ?? viewpoint.matrix
         let size = SIMD2<Float>(Float(viewSize.width), Float(viewSize.height))
         let ray = ViewProjection(viewMatrix: matrix.inverse, projection: camera.projection, viewSize: size).ray(through: [Float(location.x), Float(location.y)])
         // Like SceneKit, taps only hit nodes the camera can see, further limited by hitTestCategoryBitMask.
