@@ -3040,3 +3040,287 @@ created: 2026-10-22T01:29:01Z
 Rename the package and its products to SceneSprocket. Scope to decide: package name, library/module names (MetalSprocketsSceneGraph, MetalSprocketsSceneGraphPBR, ...BlinnPhong, ...ShaderMaterial, ...Physics, ...Shaders), the demo package and app, the repository, documentation, and dependents (MetalSprocketsParticles demos, others that import these modules).
 
 ---
+
+## 151: Demos for every supported feature
+
++++
+status: new
+priority: medium
+kind: task
+created: 2026-10-22T01:40:08Z
++++
+
+Every feature should have a demo: a standalone demo, a keynote slide, or a clearly labeled part of a larger demo (Dice, Gears, Shadows, SceneKit Features). glTF loading and particles are out of scope here.
+
+Check an item when a demo shows it. Items marked "(keynote)" are partly shown on a keynote slide today, so check whether that is enough or needs its own demo.
+
+## Scene graph and nodes
+- [ ] Node hierarchy: add, insert, remove, replace children (keynote: Scene Graph)
+- [ ] Transforms: TRS and matrix local transforms, pivot
+- [ ] Node space: worldTransform, worldPosition, worldOrientation, eulerAngles, convertPosition/Vector/Transform, look(at:)
+- [ ] Visibility (isVisible) and node opacity (keynote: Opacity & Fades)
+- [ ] Rendering order
+- [ ] Category bit masks: camera, light (lightCategoryBitMask) and hit-test masks (SceneKit Features)
+- [ ] Clone and flattenedClone
+- [ ] Bounds: meshBounds, subtreeBounds, worldBounds
+- [ ] Statistics (node, mesh, triangle, light, camera counts)
+- [ ] Revision and change tracking
+
+## Geometry
+- [ ] Shapes: box, sphere, plane, cylinder, cone, capsule, torus (keynote: Shapes)
+- [ ] Extruded text (keynote: Shapes)
+- [ ] Custom meshes (SwiftMesh): generated dice, gears (Dice, Gears)
+- [ ] Multiple materials per mesh (submeshes)
+- [ ] Subdivision (subdivisionLevel)
+- [ ] Levels of detail
+- [ ] Instancing: identical mesh + material batched (keynote: Performance)
+- [ ] Frustum culling (keynote: Performance)
+
+## Cameras
+- [ ] Perspective camera
+- [ ] Orthographic camera
+- [ ] Camera nodes and switching the point of view
+- [ ] Camera category bit mask
+
+## Lights
+- [ ] Directional light
+- [ ] Point light with range
+- [ ] Spot light (inner and outer cone)
+- [ ] Light color and intensity
+- [ ] Light category masks (lights that affect only some nodes)
+- [ ] Default lighting (SceneView autoenablesDefaultLighting)
+
+## Shadows
+- [ ] Directional, spot and point light shadows (Shadows demo)
+- [ ] Intensity, color, softness (Shadows demo)
+- [ ] Resolution, depth bias, slope scale
+- [ ] castsShadow / receivesShadow per mesh (Shadows demo: floor)
+- [ ] Shadows sampled in shader (Blinn-Phong, PBR) and screen-space shadow mask (other materials)
+
+## Blinn-Phong materials
+- [ ] Ambient, diffuse, specular, shininess
+- [ ] Color and texture sources, texture tint
+- [ ] Emission
+- [ ] Normal map
+- [ ] Opacity and diffuse texture alpha
+- [ ] Cull mode (front, back, none)
+
+## PBR materials (MetalSprocketsPBR)
+- [ ] Base color, metallic, roughness (factors and textures) (keynote: Materials; Dice)
+- [ ] Normal map with normal scale (Dice)
+- [ ] Occlusion map and strength
+- [ ] Emissive color, texture and strength (Dice: Glow)
+- [ ] Alpha modes: opaque, mask (cutoff), blend
+- [ ] Unlit
+- [ ] Texture transforms (offset, rotation, scale, texCoord set)
+- [ ] Transmission, thickness, attenuation, IOR (keynote: Glass; Dice: Ruby Glass)
+- [ ] Dispersion (Dice: Rainbow Crystal)
+- [ ] Specular and specular color
+- [ ] Iridescence (keynote: PBR Extensions; Dice: Pearl)
+- [ ] Anisotropy (Dice: Brushed Steel)
+- [ ] Sheen (keynote: PBR Extensions; Dice: Velvet)
+- [ ] Clearcoat, clearcoat roughness, clearcoat normal (keynote: PBR Extensions; Dice)
+- [ ] Diffuse transmission (keynote: PBR Extensions; Dice: Gummy)
+- [ ] Volume scatter and multiscatter color (Dice: Gummy)
+- [ ] Retroreflection
+- [ ] Specular-glossiness workflow
+- [ ] Environment maps: studio, uniform color, equirectangular image; intensity; exposure
+- [ ] Environment background with blur, and environment rotation
+- [ ] Double-sided materials
+
+## Shader materials
+- [ ] Custom vertex and fragment shaders with parameters (float, vectors, matrix, texture, sampler, buffer) (keynote: Custom Shaders)
+- [ ] Built-in normals and rim materials
+
+## Render state (all material families)
+- [ ] Blend modes: alpha, add, subtract, multiply, screen, replace (keynote: Blend Modes)
+- [ ] Depth write and depth test on/off
+- [ ] Color write mask
+- [ ] Wireframe fill mode
+- [ ] Transparency sorting and node opacity
+
+## Environment and post-processing
+- [ ] Background: none, color, environment
+- [ ] Fog: color, start/end distance, density exponent (keynote: Fog)
+- [ ] Exposure, contrast, saturation (keynote: Post-processing)
+- [ ] Vignette (Shadows demo)
+- [ ] Screen-space ambient occlusion (Shadows demo)
+
+## Actions
+- [ ] move by / to
+- [ ] rotate by / to (axis-angle, Euler, quaternion)
+- [ ] scale by / to
+- [ ] fade in / out / opacity to / by (keynote: Opacity & Fades)
+- [ ] wait, wait with range
+- [ ] custom, run, hide, unhide, removeFromParent
+- [ ] sequence, group, repeat, repeatForever (keynote: Actions)
+- [ ] Timing modes: linear, ease in, ease out, ease in-out, custom
+- [ ] Action keys, removal, hasAction, node actionSpeed
+
+## Implicit animation
+- [ ] Transaction.animate and withoutAnimation (keynote: Implicit Animation)
+
+## Animation clips
+- [ ] Keyframed translation, rotation, scale channels
+- [ ] Morph weight channels
+- [ ] Custom property channels (light color, visibility, light range, cone angles, camera field of view)
+- [ ] Interpolation modes
+- [ ] Animation events
+- [ ] AnimationPlayer: speed, looping, repeat count, autoreverse, timing mode
+- [ ] Blending: AnimationMixer, AnimationController, layers (override / additive), blend weights (keynote: Animation Blending)
+- [ ] Root motion
+- [ ] Animation state machine: states, transitions with fades and conditions
+
+## Constraints
+- [ ] lookAt (keynote: Constraints)
+- [ ] billboard (all axes and limited axes)
+- [ ] replicator (position, orientation, scale, offsets)
+- [ ] avoidOccluder
+- [ ] distance (minimum, maximum)
+- [ ] inverseKinematics
+- [ ] acceleration
+- [ ] transform (custom closure)
+- [ ] slider constraint (physics module)
+
+## Deformation
+- [ ] Morph targets with weights, by name (keynote: Deformation)
+- [ ] Skinning: skins, joints, inverse bind matrices (keynote: Deformation; fox)
+
+## Hit testing and queries
+- [ ] Ray and segment hit tests with options (category mask, back-face culling, bounding box only, first only, maximum distance, root node) (keynote: Hit Testing)
+- [ ] Hit details: position, normal, texture coordinates, barycentric, triangle
+- [ ] Project and unproject points
+- [ ] Nodes inside the frustum
+
+## Physics (MetalSprocketsSceneGraphPhysics, Jolt)
+- [ ] Static, dynamic, kinematic bodies (keynote: Physics; Dice)
+- [ ] Shapes: box, sphere, capsule, cylinder, bounding box, convex hull, mesh (Dice: convex hull)
+- [ ] Mass, friction, restitution
+- [ ] Velocity, angular velocity, impulses (Dice)
+- [ ] Gravity
+
+## Audio
+- [ ] Audio players on nodes, positional audio, SceneView audio
+
+## SceneView (SwiftUI)
+- [ ] allowsCameraControl, autoenablesDefaultLighting, showsStatistics (keynote: SceneView)
+- [ ] Delegate callbacks (update, after actions, after constraints)
+- [ ] Tap handling with hit-test category mask
+- [ ] External camera binding
+
+---
+
+## 152: Feature gaps vs. SceneKit, RealityKit, three.js and others
+
++++
+status: new
+priority: low
+kind: task
+created: 2026-10-22T01:42:26Z
+updated: 2026-10-22T01:46:33Z
++++
+
+Features in SceneKit, RealityKit, three.js, Babylon.js, Godot and Filament that MetalSprocketsSceneGraph does not have. Compiled from what those libraries document plus Documentation/SceneKitComparison.md; not a commitment to build all of it. Glance at each item and either file its own issue, link the existing one, or strike it.
+
+Already tracked elsewhere: HDR, tone mapping, bloom, depth of field (#45); save/load (#52); USD/USDZ loading (#31); shape options (#80); tube, pyramid, floor, Bézier extrusion (#81); ambient node, temperature, IES and area lights (#86); shadow cascades and per-light settings (#88); explicit instancing (#135).
+
+## Rendering
+- [ ] Screen-space reflections (SceneKit, Babylon, Godot)
+- [ ] Planar reflections / mirror surfaces; reflective floor (SceneKit SCNFloor, three.js Reflector)
+- [ ] Reflection probes / local environment probes (RealityKit, Godot, Unity-style)
+- [ ] Image-based lighting from a scene capture (render the scene into a cube map)
+- [ ] Skybox / procedural sky (three.js Sky, Godot, Babylon)
+- [ ] Motion blur, chromatic aberration, film grain, lens flares (SceneKit, Babylon, Godot)
+- [ ] Anti-aliasing options: MSAA settings, FXAA/SMAA/TAA (three.js, Babylon, Godot)
+- [ ] Outlines and selection highlights (three.js OutlinePass, Babylon highlight layer, RealityKit)
+- [ ] Glow / emissive bloom per object (Babylon glow layer)
+- [ ] Contact shadows / ground shadow catcher; shadow-only material (SceneKit shadowOnly, RealityKit grounding shadows, three.js ShadowMaterial)
+- [ ] Decals projected onto meshes (three.js DecalGeometry, Babylon, Godot)
+- [ ] Order-independent transparency
+- [ ] Light baking / lightmaps (three.js, Godot, Filament)
+- [ ] Global illumination (Godot SDFGI/VoxelGI)
+- [ ] Volumetric lighting and fog (Godot, Filament)
+- [ ] Render to texture / secondary cameras into textures (SceneKit, three.js render targets)
+- [ ] Multiple viewports and split screen
+- [ ] Stereo / visionOS immersive rendering
+- [ ] Occlusion culling (beyond frustum)
+- [ ] Debug views: normals, wireframe overlay for every material, bounding boxes, light gizmos (SceneKit debugOptions, three.js helpers)
+
+## Materials
+- [ ] Shader modifiers / node-based material graph (SceneKit shader modifiers, RealityKit Shader Graph, three.js TSL, Babylon Node Material)
+- [ ] Toon / cel shading and other stylized models (three.js MeshToonMaterial)
+- [ ] Matcap material (three.js MeshMatcapMaterial)
+- [ ] Video textures (SceneKit, RealityKit VideoMaterial, three.js VideoTexture)
+- [ ] Cube-map and 3D textures in materials
+- [ ] Parallax / height mapping
+- [ ] Triplanar mapping
+- [ ] Detail maps / texture blending (terrain splatting)
+- [ ] Render state for PBR: depth write/test, color mask, wireframe (#114)
+
+## Geometry
+- [ ] Lines and line widths, line materials (three.js Line2/LineMaterial)
+- [ ] Point clouds with point size
+- [ ] Sprites / screen-aligned quads with size attenuation (three.js Sprite)
+- [ ] 2D text that is not extruded (#119)
+- [ ] Terrain / heightmap geometry
+- [ ] Constructive solid geometry in the scene graph (SwiftMesh has boolean meshes)
+- [ ] Procedural geometry modifiers: bend, twist, noise (Babylon, Blender-style)
+- [ ] GPU tessellation and displacement (SceneKit tessellator)
+
+## Animation
+- [ ] Animation along a path / spline (SceneKit follow, three.js curves)
+- [ ] Tweening of any property (three.js tween, RealityKit FromToByAnimation)
+- [ ] Physics-based springs and spring animations (RealityKit, SwiftUI-style)
+- [ ] Animation retargeting between skeletons
+- [ ] GPU skinning for all renderers (CPU skinning today is slow in Debug)
+- [ ] Constraint influence factors (SceneKit)
+
+## Physics and interaction
+- [ ] Physics joints: hinge, ball-and-socket, slider, fixed (SceneKit, RealityKit, Jolt)
+- [ ] Collision and contact callbacks, trigger volumes (SceneKit contact delegate, RealityKit CollisionEvents)
+- [ ] Physics fields: gravity, vortex, drag, noise (SceneKit SCNPhysicsField)
+- [ ] Character controller (Jolt has one)
+- [ ] Vehicles (SceneKit SCNPhysicsVehicle)
+- [ ] Soft bodies and cloth
+- [ ] Raycasts against physics (vs. render geometry)
+- [ ] Gestures and manipulators: drag, rotate and scale objects; transform gizmos (RealityKit installGestures, three.js TransformControls)
+- [ ] Camera controllers: first person, fly, map, follow camera (three.js controls)
+
+## Architecture
+- [ ] Entity-component-system or components on nodes (RealityKit, Godot)
+- [ ] Presentation tree / interpolated rendering state (SceneKit presentation)
+- [ ] Scene serialization to a native format (#52), prefabs / reusable subtrees
+- [ ] Asset metadata: up axis, units, frame rate
+- [ ] Spatial audio with occlusion and reverb (RealityKit)
+- [ ] Accessibility for 3D content (RealityKit accessibility components)
+
+---
+
+## 153: Game demo: 3D platformer like SceneKit's Fox
+
++++
+status: new
+priority: low
+kind: feature
+created: 2026-10-22T01:56:58Z
++++
+
+A small playable platformer, in the spirit of Apple's SceneKit Fox demo, to exercise the engine as a whole.
+
+Gameplay: a rigged character runs, jumps and collects items across platforms; a follow camera; simple hazards or enemies.
+
+Exercises: skinning and animation blending (idle, run, jump via the AnimationStateMachine), physics with a character controller (Jolt has one; see #152), collision callbacks/triggers for pickups, follow camera, particles and audio for pickups, shadows, PBR.
+
+Asset candidates (verify each license before adding; prefer CC0 glTF so no conversion or credits):
+- Quaternius (quaternius.com): CC0 low-poly animated characters (walk, run, jump, idle) and platformer/environment packs.
+- Kenney (kenney.nl): CC0 Platformer Kit, Animated Characters, props and level pieces.
+- KayKit (kaylousberg.itch.io): rigged characters with many animations; free tiers CC0.
+- Mixamo: auto-rig plus animation library; FBX (needs Blender conversion) and raw files probably not redistributable, so a poor fit for a public repo.
+- Sketchfab, Poly Pizza: filter by animated + CC0/CC-BY; CC-BY needs credit.
+- Already on disk: Khronos glTF sample assets (Fox, CesiumMan, BrainStem) for testing only; not a game kit.
+
+Suggested start: a Quaternius character with Kenney's Platformer Kit.
+
+Related: #151 (demos for every feature), #152 (feature gaps: character controller, contact callbacks, follow camera).
+
+---
