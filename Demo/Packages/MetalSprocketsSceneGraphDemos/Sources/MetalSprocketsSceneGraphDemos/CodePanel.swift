@@ -1,6 +1,6 @@
 import Metal
-import MetalSprocketsSceneGraph
-import MetalSprocketsSceneGraphBlinnPhong
+import SceneSprocket
+import SceneSprocketBlinnPhong
 import SwiftUI
 
 // A Swift snippet drawn by SwiftUI into a texture, shown on a plane. The texture's alpha cuts out the rounded panel.

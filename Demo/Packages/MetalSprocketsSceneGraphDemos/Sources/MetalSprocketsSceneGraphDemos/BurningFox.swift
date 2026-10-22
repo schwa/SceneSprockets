@@ -2,8 +2,8 @@ import Foundation
 import Metal
 import MetalSprocketsGLTF
 import MetalSprocketsParticles
-import MetalSprocketsSceneGraph
-import MetalSprocketsSceneGraphPBR
+import SceneSprocket
+import SceneSprocketPBR
 import SwiftMesh
 import simd
 

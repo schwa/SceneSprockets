@@ -4,7 +4,7 @@ import Metal
 import MetalKit
 import MetalSprocketsPBR
 import MetalSprocketsPBRShaders
-import MetalSprocketsSceneGraphPBR
+import SceneSprocketPBR
 import simd
 
 // PBR looks for the dice: each style is a body material and a number material, split by the die's numbers mask (white

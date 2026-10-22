@@ -1,7 +1,7 @@
 import GeometryLite3D
 import Metal
-import MetalSprocketsSceneGraph
-import MetalSprocketsSceneGraphBlinnPhong
+import SceneSprocket
+import SceneSprocketBlinnPhong
 import MetalSprocketsSupport
 import MetalSupport
 import Observation

@@ -1,6 +1,6 @@
 import DemoKit
 import MetalSprockets
-import MetalSprocketsSceneGraph
+import SceneSprocket
 import MetalSprocketsUI
 import simd
 import SwiftUI

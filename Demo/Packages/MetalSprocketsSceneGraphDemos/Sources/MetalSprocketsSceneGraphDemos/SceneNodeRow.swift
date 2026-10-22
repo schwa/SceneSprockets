@@ -1,4 +1,4 @@
-import MetalSprocketsSceneGraph
+import SceneSprocket
 import SwiftUI
 
 // One node in the scene outline, with its children in a disclosure group.

@@ -1,4 +1,4 @@
-import MetalSprocketsSceneGraph
+import SceneSprocket
 import SwiftUI
 
 // The demo's controls, its scene outline and the selected node.

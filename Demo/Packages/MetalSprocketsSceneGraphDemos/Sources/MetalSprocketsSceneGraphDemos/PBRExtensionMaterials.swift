@@ -1,8 +1,8 @@
 import Metal
 import MetalSprocketsPBR
 import MetalSprocketsPBRShaders
-import MetalSprocketsSceneGraph
-import MetalSprocketsSceneGraphPBR
+import SceneSprocket
+import SceneSprocketPBR
 import SwiftMesh
 import simd
 

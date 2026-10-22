@@ -1,7 +1,7 @@
 import Foundation
-import MetalSprocketsSceneGraph
-import MetalSprocketsSceneGraphBlinnPhong
-import MetalSprocketsSceneGraphPBR
+import SceneSprocket
+import SceneSprocketBlinnPhong
+import SceneSprocketPBR
 import simd
 import SwiftMesh
 
@@ -87,7 +87,7 @@ final class GearsDemo: DemoScene {
                 direction = directions[index]
                 center = GearTrain.center(of: spec, meshingWith: links[index - 1].spec, at: center, direction: direction)
             }
-            let material: any MetalSprocketsSceneGraph.Material = materials[index % materials.count] ?? BlinnPhongSceneMaterial.plastic([0.7, 0.6, 0.3])
+            let material: any SceneSprocket.Material = materials[index % materials.count] ?? BlinnPhongSceneMaterial.plastic([0.7, 0.6, 0.3])
             let node = SceneGraph.Node(parent: train, label: "Gear \(teeth)", trs: .init(translation: [center.x, center.y, 0]), content: .mesh(MetalMesh(mesh: .gear(spec), device: demoDevice), material: material))
             // An axle through each bore.
             _ = SceneGraph.Node(parent: train, label: "Axle", shape: .cylinder(radius: 0.11, height: 0.6), material: BlinnPhongSceneMaterial.plastic([0.2, 0.2, 0.22], shininess: 48), device: demoDevice, trs: .init(translation: [center.x, center.y, -0.1], rotation: simd_quatf(angle: .pi / 2, axis: [1, 0, 0])))

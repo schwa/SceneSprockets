@@ -14,7 +14,8 @@ let package = Package(
         .executable(name: "scenegraph-demos", targets: ["scenegraph-demos"]),
     ],
     dependencies: [
-        .package(path: "../../../../MetalSprocketsSceneGraph"),
+        // The repository root. Its package identity is the folder name: change "MetalSprocketsSceneGraph" below to "SceneSprocket" when the folder is renamed.
+        .package(path: "../../.."),
         .package(url: "https://github.com/schwa/GeometryLite3D", .upToNextMinor(from: "0.2.4")),
         .package(url: "https://github.com/schwa/MetalSprockets", branch: "main"),
         .package(url: "https://github.com/schwa/SwiftMesh", branch: "main"),
@@ -30,13 +31,13 @@ let package = Package(
         .target(
             name: "MetalSprocketsSceneGraphDemos",
             dependencies: [
-                .product(name: "MetalSprocketsSceneGraph", package: "MetalSprocketsSceneGraph"),
-                .product(name: "MetalSprocketsSceneGraphPhysics", package: "MetalSprocketsSceneGraph"),
+                .product(name: "SceneSprocket", package: "MetalSprocketsSceneGraph"),
+                .product(name: "SceneSprocketPhysics", package: "MetalSprocketsSceneGraph"),
                 .product(name: "MetalSprocketsParticles", package: "MetalSprocketsParticles"),
                 .product(name: "MetalSprocketsParticlesSamples", package: "MetalSprocketsParticles"),
-                .product(name: "MetalSprocketsSceneGraphPBR", package: "MetalSprocketsSceneGraph"),
-                .product(name: "MetalSprocketsSceneGraphBlinnPhong", package: "MetalSprocketsSceneGraph"),
-                .product(name: "MetalSprocketsSceneGraphShaderMaterial", package: "MetalSprocketsSceneGraph"),
+                .product(name: "SceneSprocketPBR", package: "MetalSprocketsSceneGraph"),
+                .product(name: "SceneSprocketBlinnPhong", package: "MetalSprocketsSceneGraph"),
+                .product(name: "SceneSprocketShaderMaterial", package: "MetalSprocketsSceneGraph"),
                 .product(name: "DemoKit", package: "DemoKit"),
                 .product(name: "Interaction3D", package: "Interaction3D"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
@@ -61,8 +62,8 @@ let package = Package(
             name: "MetalSprocketsSceneGraphDemosTests",
             dependencies: [
                 "MetalSprocketsSceneGraphDemos",
-                .product(name: "MetalSprocketsSceneGraph", package: "MetalSprocketsSceneGraph"),
-                .product(name: "MetalSprocketsSceneGraphBlinnPhong", package: "MetalSprocketsSceneGraph"),
+                .product(name: "SceneSprocket", package: "MetalSprocketsSceneGraph"),
+                .product(name: "SceneSprocketBlinnPhong", package: "MetalSprocketsSceneGraph"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
                 .product(name: "GoldenImage", package: "GoldenImage"),
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),

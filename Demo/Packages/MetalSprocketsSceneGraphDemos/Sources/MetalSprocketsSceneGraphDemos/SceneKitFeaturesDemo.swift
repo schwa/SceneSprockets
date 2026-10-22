@@ -1,8 +1,8 @@
 import GeometryLite3D
 import Metal
-import MetalSprocketsSceneGraph
-import MetalSprocketsSceneGraphShaderMaterial
-import MetalSprocketsSceneGraphBlinnPhong
+import SceneSprocket
+import SceneSprocketShaderMaterial
+import SceneSprocketBlinnPhong
 import SwiftMesh
 import simd
 
@@ -75,7 +75,7 @@ final class SceneKitFeaturesDemo: DemoScene {
             homePositions.append(position)
             let holder = SceneGraph.Node(parent: shapesGroup, label: "Holder \(index)", trs: .init(translation: position))
             // The capsule uses a custom shader (ShaderMaterial, #48); the rest use Blinn-Phong.
-            let material: any MetalSprocketsSceneGraph.Material = if case .capsule = shape, let normals = try? ShaderMaterial.normals() {
+            let material: any SceneSprocket.Material = if case .capsule = shape, let normals = try? ShaderMaterial.normals() {
                 normals
             } else {
                 BlinnPhongSceneMaterial.plastic(color)
@@ -128,8 +128,8 @@ final class SceneKitFeaturesDemo: DemoScene {
 
         // Two overlapping translucent panes: transparent materials blend in renderingOrder, so the toggle swaps which
         // one looks in front.
-        let paneMaterial = { (color: SIMD4<Float>) -> any MetalSprocketsSceneGraph.Material in
-            (try? ShaderMaterial.rim(color: color)).map { $0 as any MetalSprocketsSceneGraph.Material } ?? BlinnPhongSceneMaterial.plastic(SIMD3(color.x, color.y, color.z))
+        let paneMaterial = { (color: SIMD4<Float>) -> any SceneSprocket.Material in
+            (try? ShaderMaterial.rim(color: color)).map { $0 as any SceneSprocket.Material } ?? BlinnPhongSceneMaterial.plastic(SIMD3(color.x, color.y, color.z))
         }
         redPane = SceneGraph.Node(parent: root, label: "Red Pane", shape: .plane(width: 2, height: 1.5), material: paneMaterial([1, 0.1, 0.1, 0.6]), device: demoDevice, trs: .init(translation: [-5.4, 1.2, -1.5]))
         bluePane = SceneGraph.Node(parent: root, label: "Blue Pane", shape: .plane(width: 2, height: 1.5), material: paneMaterial([0.1, 0.3, 1, 0.6]), device: demoDevice, trs: .init(translation: [-4.6, 1.6, -1.5]))

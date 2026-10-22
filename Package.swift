@@ -3,19 +3,19 @@
 import PackageDescription
 
 let package = Package(
-    name: "MetalSprocketsSceneGraph",
+    name: "SceneSprocket",
     platforms: [
         .iOS(.v26),
         .macOS(.v26),
         .visionOS(.v26)
     ],
     products: [
-        .library(name: "MetalSprocketsSceneGraph", targets: ["MetalSprocketsSceneGraph"]),
-        .library(name: "MetalSprocketsSceneGraphPhysics", targets: ["MetalSprocketsSceneGraphPhysics"]),
-        .library(name: "MetalSprocketsSceneGraphPBR", targets: ["MetalSprocketsSceneGraphPBR"]),
-        .library(name: "MetalSprocketsSceneGraphBlinnPhong", targets: ["MetalSprocketsSceneGraphBlinnPhong"]),
-        .library(name: "MetalSprocketsSceneGraphShaderMaterial", targets: ["MetalSprocketsSceneGraphShaderMaterial"]),
-        .library(name: "MetalSprocketsAudio", targets: ["MetalSprocketsAudio"]),
+        .library(name: "SceneSprocket", targets: ["SceneSprocket"]),
+        .library(name: "SceneSprocketPhysics", targets: ["SceneSprocketPhysics"]),
+        .library(name: "SceneSprocketPBR", targets: ["SceneSprocketPBR"]),
+        .library(name: "SceneSprocketBlinnPhong", targets: ["SceneSprocketBlinnPhong"]),
+        .library(name: "SceneSprocketShaderMaterial", targets: ["SceneSprocketShaderMaterial"]),
+        .library(name: "SceneSprocketAudio", targets: ["SceneSprocketAudio"]),
     ],
     dependencies: [
         .package(url: "https://github.com/schwa/GeometryLite3D", branch: "main"),
@@ -32,10 +32,10 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "MetalSprocketsSceneGraph",
+            name: "SceneSprocket",
             dependencies: [
-                "MetalSprocketsAudio",
-                "MetalSprocketsSceneGraphShaders",
+                "SceneSprocketAudio",
+                "SceneSprocketShaders",
                 .product(name: "MetalSprocketsParticles", package: "MetalSprocketsParticles"),
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
                 .product(name: "Interaction3D", package: "Interaction3D"),
@@ -48,10 +48,10 @@ let package = Package(
         ),
         // PBR materials and the loaders that make them (glTF, Model I/O). Model I/O can also make Blinn-Phong materials.
         .target(
-            name: "MetalSprocketsSceneGraphPBR",
+            name: "SceneSprocketPBR",
             dependencies: [
-                "MetalSprocketsSceneGraph",
-                "MetalSprocketsSceneGraphBlinnPhong",
+                "SceneSprocket",
+                "SceneSprocketBlinnPhong",
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
                 .product(name: "MetalSprocketsGLTF", package: "MetalSprocketsGLTF"),
@@ -63,10 +63,10 @@ let package = Package(
             ]
         ),
         .target(
-            name: "MetalSprocketsSceneGraphBlinnPhong",
+            name: "SceneSprocketBlinnPhong",
             dependencies: [
-                "MetalSprocketsSceneGraph",
-                "MetalSprocketsSceneGraphShaders",
+                "SceneSprocket",
+                "SceneSprocketShaders",
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
                 .product(name: "MetalSupport", package: "MetalSupport"),
@@ -74,50 +74,50 @@ let package = Package(
             ]
         ),
         .target(
-            name: "MetalSprocketsSceneGraphShaderMaterial",
+            name: "SceneSprocketShaderMaterial",
             dependencies: [
-                "MetalSprocketsSceneGraph",
-                "MetalSprocketsSceneGraphShaders",
+                "SceneSprocket",
+                "SceneSprocketShaders",
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
                 .product(name: "SwiftMesh", package: "SwiftMesh"),
             ]
         ),
-        .target(name: "MetalSprocketsAudio"),
-        .testTarget(name: "MetalSprocketsAudioTests", dependencies: ["MetalSprocketsAudio"]),
+        .target(name: "SceneSprocketAudio"),
+        .testTarget(name: "SceneSprocketAudioTests", dependencies: ["SceneSprocketAudio"]),
         .target(
-            name: "MetalSprocketsSceneGraphPhysics",
+            name: "SceneSprocketPhysics",
             dependencies: [
-                "MetalSprocketsSceneGraph",
+                "SceneSprocket",
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
                 .product(name: "JoltPhysics", package: "SwiftJolt"),
                 .product(name: "SwiftMesh", package: "SwiftMesh"),
             ]
         ),
         .testTarget(
-            name: "MetalSprocketsSceneGraphPhysicsTests",
+            name: "SceneSprocketPhysicsTests",
             dependencies: [
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
-                "MetalSprocketsSceneGraph",
-                "MetalSprocketsSceneGraphPhysics",
+                "SceneSprocket",
+                "SceneSprocketPhysics",
                 .product(name: "SwiftMesh", package: "SwiftMesh"),
             ]
         ),
         .target(
-            name: "MetalSprocketsSceneGraphShaders",
+            name: "SceneSprocketShaders",
             exclude: ["Metal"],
             plugins: [
                 .plugin(name: "MetalCompilerPlugin", package: "MetalCompilerPlugin")
             ]
         ),
         .testTarget(
-            name: "MetalSprocketsSceneGraphTests",
+            name: "SceneSprocketTests",
             dependencies: [
-                "MetalSprocketsAudio",
-                "MetalSprocketsSceneGraph",
-                "MetalSprocketsSceneGraphBlinnPhong",
-                "MetalSprocketsSceneGraphPBR",
-                "MetalSprocketsSceneGraphShaderMaterial",
+                "SceneSprocketAudio",
+                "SceneSprocket",
+                "SceneSprocketBlinnPhong",
+                "SceneSprocketPBR",
+                "SceneSprocketShaderMaterial",
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
                 .product(name: "MetalSprocketsGLTF", package: "MetalSprocketsGLTF"),

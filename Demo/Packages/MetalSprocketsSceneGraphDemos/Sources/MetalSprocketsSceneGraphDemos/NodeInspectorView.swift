@@ -1,6 +1,6 @@
 import GeometryLite3D
-import MetalSprocketsSceneGraph
-import MetalSprocketsSceneGraphBlinnPhong
+import SceneSprocket
+import SceneSprocketBlinnPhong
 import simd
 import SwiftUI
 
@@ -69,7 +69,7 @@ struct NodeInspectorView: View {
         }
     }
 
-    private func meshSection(materials: [any MetalSprocketsSceneGraph.Material], castsShadow: Bool, receivesShadow: Bool) -> some View {
+    private func meshSection(materials: [any SceneSprocket.Material], castsShadow: Bool, receivesShadow: Bool) -> some View {
         Section("Mesh") {
             LabeledContent("Casts Shadow", value: castsShadow ? "Yes" : "No")
             LabeledContent("Receives Shadow", value: receivesShadow ? "Yes" : "No")

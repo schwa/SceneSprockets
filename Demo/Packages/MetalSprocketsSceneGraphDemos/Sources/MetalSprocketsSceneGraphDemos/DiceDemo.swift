@@ -4,10 +4,10 @@ import MetalKit
 import MetalSprocketsParticles
 import MetalSprocketsPBR
 import MetalSprocketsPBRShaders
-import MetalSprocketsSceneGraph
-import MetalSprocketsSceneGraphBlinnPhong
-import MetalSprocketsSceneGraphPBR
-import MetalSprocketsSceneGraphPhysics
+import SceneSprocket
+import SceneSprocketBlinnPhong
+import SceneSprocketPBR
+import SceneSprocketPhysics
 import simd
 import SwiftMesh
 import SwiftUI
@@ -197,7 +197,7 @@ final class DiceDemo: DemoScene {
     // A wooden floor and four walls, all static.
     private static func buildTray(in root: SceneGraph.Node) {
         // Poly Haven's Dark Wood (CC0): color, normal, and roughness packed in green.
-        let wood: any MetalSprocketsSceneGraph.Material = {
+        let wood: any SceneSprocket.Material = {
             let loader = MTKTextureLoader(device: demoDevice)
             func texture(_ name: String, sRGB: Bool) -> MTLTexture? {
                 Bundle.module.url(forResource: name, withExtension: "jpg", subdirectory: "Resources/Dice").flatMap {

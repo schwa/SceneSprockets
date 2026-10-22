@@ -3,7 +3,7 @@ import Foundation
 import ImageIO
 import Metal
 import MetalSprockets
-import MetalSprocketsSceneGraph
+import SceneSprocket
 import UniformTypeIdentifiers
 
 // Renders a demo offscreen, without a window: steps it `frames` times at 60 Hz (update, actions, constraints) from

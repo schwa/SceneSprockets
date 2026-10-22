@@ -1,5 +1,5 @@
-import MetalSprocketsSceneGraph
-import MetalSprocketsSceneGraphBlinnPhong
+import SceneSprocket
+import SceneSprocketBlinnPhong
 import simd
 
 // One light at a time over a few casters, to compare directional, spot and point shadows (#67), with the shadow

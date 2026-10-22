@@ -4,11 +4,11 @@ import Metal
 import MetalSprocketsGLTF
 import MetalSprocketsParticles
 import MetalSprocketsParticlesSamples
-import MetalSprocketsSceneGraph
-import MetalSprocketsSceneGraphShaderMaterial
-import MetalSprocketsSceneGraphBlinnPhong
-import MetalSprocketsSceneGraphPBR
-import MetalSprocketsSceneGraphPhysics
+import SceneSprocket
+import SceneSprocketShaderMaterial
+import SceneSprocketBlinnPhong
+import SceneSprocketPBR
+import SceneSprocketPhysics
 import SwiftMesh
 import SwiftUI
 import simd
@@ -575,7 +575,7 @@ public final class KeynoteDemo: DemoScene {
         addLight(to: slide, at: [0, 6, 6], intensity: 70)
         // Each sphere fades out and back in, a little after the one before it. Blinn-Phong and PBR both fade.
         for index in 0..<6 {
-            let material: any MetalSprocketsSceneGraph.Material = index.isMultiple(of: 2)
+            let material: any SceneSprocket.Material = index.isMultiple(of: 2)
                 ? BlinnPhongSceneMaterial.plastic([0.95, 0.4, 0.6], shininess: 48)
                 : (try? PBRSceneMaterial(device: demoDevice, baseColor: [0.4, 0.6, 1, 1], metallic: 0, roughness: 0.3)) ?? BlinnPhongSceneMaterial.plastic([0.4, 0.6, 1])
             let sphere = SceneGraph.Node(parent: slide, shape: .sphere(radius: 0.6), material: material, device: demoDevice, trs: .init(translation: [Float(index) * 1.6 - 4, 1.2, 0]))
@@ -613,7 +613,7 @@ public final class KeynoteDemo: DemoScene {
         let colors: [SIMD3<Float>] = [[0.95, 0.3, 0.25], [0.95, 0.8, 0.2], [0.3, 0.8, 0.4], [0.25, 0.5, 1], [0.8, 0.35, 0.9]]
         for (index, color) in colors.enumerated() {
             let x = Float(index) * 1.6 - 3.2
-            let material: any MetalSprocketsSceneGraph.Material = index.isMultiple(of: 2)
+            let material: any SceneSprocket.Material = index.isMultiple(of: 2)
                 ? BlinnPhongSceneMaterial.plastic(color, shininess: 32)
                 : (try? PBRSceneMaterial(device: demoDevice, baseColor: SIMD4(color, 1), metallic: 0, roughness: 0.4)) ?? BlinnPhongSceneMaterial.plastic(color)
             let bar = SceneGraph.Node(parent: slide, shape: .box(width: 0.5, height: 3, length: 0.5), material: material, device: demoDevice, trs: .init(translation: [x, 1.6, -2.5]))
@@ -806,7 +806,7 @@ public final class KeynoteDemo: DemoScene {
 
     private func customShadersSlide(_ slide: SceneGraph.Node) {
         addLight(to: slide, at: [0, 6, 6], intensity: 70)
-        let materials: [any MetalSprocketsSceneGraph.Material] = [
+        let materials: [any SceneSprocket.Material] = [
             try? ShaderMaterial.normals(),
             try? ShaderMaterial.rim(color: [0.3, 0.8, 1, 1]),
             try? ShaderMaterial.rim(color: [1, 0.4, 0.7, 1]),
@@ -906,7 +906,7 @@ public final class KeynoteDemo: DemoScene {
         let squashDeltas = positions.map { SIMD3<Float>($0.x * 0.5, -$0.y * 0.5, $0.z * 0.5) }
         let bumps = SceneGraph.MorphTarget(positionDeltas: bumpDeltas, normalDeltas: DeformationMeshes.normalDeltas(positions: positions, normals: normals, deltas: bumpDeltas, indices: indices))
         let squash = SceneGraph.MorphTarget(positionDeltas: squashDeltas, normalDeltas: DeformationMeshes.normalDeltas(positions: positions, normals: normals, deltas: squashDeltas, indices: indices))
-        let blobMaterial: any MetalSprocketsSceneGraph.Material = (try? PBRSceneMaterial(device: demoDevice, baseColor: [0.3, 0.8, 0.5, 1], metallic: 0.1, roughness: 0.3)) ?? BlinnPhongSceneMaterial.plastic([0.3, 0.8, 0.5])
+        let blobMaterial: any SceneSprocket.Material = (try? PBRSceneMaterial(device: demoDevice, baseColor: [0.3, 0.8, 0.5, 1], metallic: 0.1, roughness: 0.3)) ?? BlinnPhongSceneMaterial.plastic([0.3, 0.8, 0.5])
         let blob = SceneGraph.Node(parent: slide, label: "Blob", trs: .init(translation: [-2.5, 1.5, 0]), content: .mesh(mesh, material: blobMaterial))
         blob.morphTargets = [bumps, squash]
         blob.morphWeights = [0, 0]
@@ -931,7 +931,7 @@ public final class KeynoteDemo: DemoScene {
         // Skinned vertices end up in world space, so the tube node's own transform does not matter.
         let skeletonInverse = skeleton.worldTransform.inverse
         let inverseBind = joints.map { (skeletonInverse * $0.worldTransform).inverse }
-        let tubeMaterial: any MetalSprocketsSceneGraph.Material = (try? PBRSceneMaterial(device: demoDevice, baseColor: [0.9, 0.6, 0.2, 1], metallic: 0, roughness: 0.4)) ?? BlinnPhongSceneMaterial.plastic([0.9, 0.6, 0.2])
+        let tubeMaterial: any SceneSprocket.Material = (try? PBRSceneMaterial(device: demoDevice, baseColor: [0.9, 0.6, 0.2, 1], metallic: 0, roughness: 0.4)) ?? BlinnPhongSceneMaterial.plastic([0.9, 0.6, 0.2])
         let skinned = SceneGraph.Node(parent: slide, label: "Tube", content: .mesh(tube, material: tubeMaterial))
         skinned.skin = SceneGraph.Skin(joints: joints, inverseBindMatrices: inverseBind)
         skinned.skinVertices = skinVertices
