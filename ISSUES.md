@@ -1033,9 +1033,9 @@ Want: audio sources on nodes, positioned in 3D from the world transform, and a l
 status: open
 priority: medium
 kind: feature
-labels: area:assets, effort:l, deferred
+labels: area:assets, effort:l
 created: 2026-10-13T20:20:23Z
-updated: 2026-10-13T20:50:31Z
+updated: 2026-10-22T15:20:58Z
 +++
 
 A scene graph can't be saved. SceneKit can archive `SCNScene` (`.scn`) and export it.
@@ -1045,6 +1045,7 @@ Want: a file format for the node tree, transforms, content, materials, animation
 - `2026-10-13T20:21:45Z`: Related: #16, #31, #37 (importers).
 - `2026-10-13T20:45:21Z`: Looked at the model. Punting: this needs design decisions that the code cannot answer. (1) Materials are 'any Material' and projections 'any ProjectionProtocol' (open protocols), so decoding needs a type registry or a closed set of types. (2) Textures (MTLTexture inside PBRMaterial/BlinnPhongMaterial) and PBREnvironment maps have no source data to write back. (3) Container format: one JSON file with base64 mesh data, a package directory (scene.json + .bin buffers + images), or glTF export instead of a new format. Proposal: a package directory: scene.json (Codable nodes, TRS, skins by node id, morphs, clips, environment settings), one .bin per MetalMesh (vertex/index buffers + descriptor), PNG/EXR for textures read back from the GPU, and a MaterialCodec registry that renderer modules register (PBR, Blinn-Phong). Unblocker: OK this design (or prefer glTF export), and say if reading textures back from the GPU is acceptable.
 - `2026-10-13T20:50:31Z`: Deferred: scene graphs are built by hand (or imported) for now.
+- `2026-10-22T15:28:24Z`: Design decided: a package directory (.scenesprocketsd) with scene.json for the graph; glTF content by reference (the original file copied into the package); generated meshes written as glTF too (needs SwiftGLTF builder APIs). Core first: node tree, transforms, flags, shapes, materials, lights, cameras, environment/fog/post. Animations, skins, morphs, constraints, physics, particles later. Split into the issues below.
 
 ---
 
@@ -3358,5 +3359,64 @@ Want:
 Uses: the demo inspector, a future scene editor, and save/load round trips (#52).
 
 Related: Documentation/Features.md rows 'Gestures and transform gizmos' and 'Scene inspector and editor'.
+
+---
+
+## 155: Make scene graph changes observable to SwiftUI
+
++++
+status: new
+priority: medium
+kind: enhancement
+labels: area:ui
+created: 2026-10-22T15:22:08Z
++++
+
+SceneGraph and SceneGraph.Node are plain classes. SwiftUI views that read them (for example an outline of the node tree, or an inspector showing a node's label or transform) do not update when the graph changes.
+
+SceneSprocketsComposer needs this to show a live scene tree and inspector while editing.
+
+Expected: changing a node's children, label, content or transform invalidates SwiftUI views that read those properties. Options include `@Observable` on Node/SceneGraph, or a revision value that views can observe.
+
+Constraint: the renderer reads the graph every frame. Observation must not add noticeable per-frame cost (for example, from transform changes during animation or physics).
+
+---
+
+## 156: Scene archive: scene.json for the graph
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-10-22T15:28:24Z
++++
+
+Part of #52. Write and read a .scenesprocketsd package directory with scene.json describing the graph. Codable on the domain types (no shadow types): Node (label, local transform, pivot, visibility, opacity, category and light masks, rendering order, children), Shape (regenerated on load), Light, Camera (perspective, orthographic), Environment, Fog, PostProcessing. Materials through a codec registry the renderer modules register (PBR, Blinn-Phong). Mesh content comes from the issues for glTF references and generated meshes. Done when a round-trip test (write, read, compare) passes for a scene with shapes, lights and cameras.
+
+---
+
+## 157: Scene archive: keep glTF content by reference
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-10-22T15:28:24Z
++++
+
+Part of #52. When a glTF is loaded into a scene, tag each imported node with its source asset and glTF node index. Writing a scene copies the original glTF (with its buffers and images) into the package; scene.json refers to it (asset, node index) instead of storing meshes or materials. Reading runs the glTF loader and splices the nodes back in. Transform and visibility changes on imported nodes are stored as overrides in scene.json; decide what to do for material or mesh changes (override or fall back to writing the mesh as generated). Done when a scene with a loaded glTF round-trips, including a moved imported node.
+
+---
+
+## 158: Scene archive: write generated meshes as glTF
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-10-22T15:28:25Z
++++
+
+Part of #52. Meshes built in code (MetalMesh from SwiftMesh: dice, gears, hand-built geometry) are written into the package as glTF, with their materials and textures (read back from the GPU), and scene.json refers to them. Blocked on SwiftGLTF APIs for building documents from scratch (Document has no public initializer or setters today; issues to be filed in SwiftGLTF). Done when a scene with generated dice round-trips.
 
 ---
