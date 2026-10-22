@@ -55,11 +55,13 @@ public struct SceneGraphElement: Element {
     var defaultCamera: Camera?
     var defaultLight: Light?
     var shadows: SceneGraphShadows?
+    var decorations: ((SceneGraphRenderContext) throws -> AnyElement?)?
 
     @MSEnvironment(\.renderPassDescriptor)
     private var renderPassDescriptor
 
-    public init(sceneGraph: SceneGraph, camera: SceneGraph.Node? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any SceneGraphMaterialRenderer], defaultCamera: Camera? = nil, defaultLight: Light? = nil, shadows: SceneGraphShadows? = nil) {
+    public init(sceneGraph: SceneGraph, camera: SceneGraph.Node? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any SceneGraphMaterialRenderer], defaultCamera: Camera? = nil, defaultLight: Light? = nil, shadows: SceneGraphShadows? = nil, decorations: ((SceneGraphRenderContext) throws -> AnyElement?)? = nil) {
+        self.decorations = decorations
         self.sceneGraph = sceneGraph
         self.camera = camera
         self.cameraMatrix = cameraMatrix
@@ -125,6 +127,10 @@ public struct SceneGraphElement: Element {
                 elements += try zip(renderers, partitions).compactMap { renderer, entries in
                     entries.isEmpty ? nil : try renderer.makeElement(entries: entries, context: batch.context)
                 }
+            }
+            // Editor aids such as grids and axes: in the scene pass after the meshes, so they depth-test against them.
+            if let decorations, let decoration = try decorations(context) {
+                elements.append(decoration)
             }
             // Particles simulate in their own compute pass before the scene pass, then draw after the meshes.
             let particleSimulations = try sceneGraph.allParticleSystems().map { try $0.simulate(view: context.viewMatrix).eraseToAnyElement() }

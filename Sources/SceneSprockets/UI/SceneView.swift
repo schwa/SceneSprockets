@@ -37,6 +37,9 @@ public struct SceneView: View {
         public static let autoenablesDefaultLighting = Options(rawValue: 1 << 1)
         // Overlays frame rate and scene statistics, like SCNView.showsStatistics.
         public static let showsStatistics = Options(rawValue: 1 << 2)
+        // Keeps the drawable readable (framebufferOnly false) even without post passes, for example to inspect it in a
+        // GPU capture. Costs some bandwidth.
+        public static let disablesFramebufferOnly = Options(rawValue: 1 << 3)
     }
 
     private let sceneGraph: SceneGraph
@@ -51,6 +54,8 @@ public struct SceneView: View {
     private let onTap: ((SceneGraph.Hit?) -> Void)?
     private let hitTestCategoryBitMask: UInt
     private let manipulator: (any SceneViewManipulator)?
+    private let decorations: ((SceneGraphRenderContext, SIMD2<Float>) throws -> AnyElement?)?
+    private let defaultCamera: Camera
 
     @Environment(\.displayScale) private var displayScale
     // The pointer is over the manipulator, so drags go to it instead of camera control.
@@ -71,7 +76,9 @@ public struct SceneView: View {
     // Without `.allowsCameraControl`, a non-nil `cameraMatrix` still sets the camera, for callers with their own
     // camera control.
     // `onTap` gets the nearest hit under a tap or click. `manipulator` draws over the scene and takes drags that start
-    // on it (for example a transform gizmo).
+    // on it (for example a transform gizmo). `decorations` draws extra content in the scene pass after the meshes, with
+    // the scene's reversed depth (compare `.greater`), given the frame's context and drawable size in pixels; for
+    // editor aids such as grids that objects should hide.
     public init(
         sceneGraph: SceneGraph,
         pointOfView: SceneGraph.Node? = nil,
@@ -83,9 +90,15 @@ public struct SceneView: View {
         audio: SceneAudio? = nil,
         cameraMatrix: Binding<simd_float4x4?>? = nil,
         hitTestCategoryBitMask: UInt = .max,
+        // Used when the scene has no camera node.
+        defaultCamera: Camera = SceneView.defaultCamera,
         manipulator: (any SceneViewManipulator)? = nil,
-        onTap: ((SceneGraph.Hit?) -> Void)? = nil
+        onTap: ((SceneGraph.Hit?) -> Void)? = nil,
+        // After `onTap`, so a trailing closure still means `onTap`.
+        decorations: ((SceneGraphRenderContext, SIMD2<Float>) throws -> AnyElement?)? = nil
     ) {
+        self.decorations = decorations
+        self.defaultCamera = defaultCamera
         self.sceneGraph = sceneGraph
         self.pointOfView = pointOfView
         self.options = options
@@ -121,9 +134,12 @@ public struct SceneView: View {
                 cameraMatrix: usesFreeCamera ? cameraMatrix ?? viewpoint.matrix : nil,
                 aspectRatio: size.height > 0 ? Float(size.width / size.height) : 1,
                 renderers: renderers,
-                defaultCamera: SceneView.defaultCamera,
+                defaultCamera: defaultCamera,
                 defaultLight: options.contains(.autoenablesDefaultLighting) ? Light(type: .directional, color: [1, 1, 1], intensity: 1) : nil,
-                shadows: shadows
+                shadows: shadows,
+                decorations: decorations.map { decorations in
+                    { context in try decorations(context, SIMD2<Float>(Float(size.width), Float(size.height))) }
+                }
             )
             if let overlay = manipulatorOverlay(drawableSize: size) {
                 ManipulatorOverlayPass(content: overlay)
@@ -131,7 +147,7 @@ public struct SceneView: View {
         }
         .metalDepthStencilPixelFormat(.depth32Float)
         // Shadows and fog change the drawable from compute passes that also read depth.
-        .metalFramebufferOnly(!needsPostPasses)
+        .metalFramebufferOnly(!needsPostPasses && !options.contains(.disablesFramebufferOnly))
         .metalDepthStencilAttachmentTextureUsage(needsPostPasses ? [.renderTarget, .shaderRead] : [.renderTarget])
         .metalDepthStencilStorageMode(needsPostPasses ? .private : .memoryless)
         .modifier(CameraControl(isEnabled: options.contains(.allowsCameraControl), cameraMatrix: cameraBinding, target: orbitTarget ?? viewpoint.target))
@@ -204,7 +220,7 @@ public struct SceneView: View {
         }
         let cameras = sceneGraph.cameraNodes()
         let entry = pointOfView.flatMap { node in cameras.first { $0.node === node } } ?? cameras.first
-        let projection = (entry?.camera ?? SceneView.defaultCamera).projection
+        let projection = (entry?.camera ?? defaultCamera).projection
         let size = SIMD2<Float>(Float(viewSize.width), Float(viewSize.height))
         let matrix = projection.projectionMatrix(aspectRatio: size.x / size.y)
         let drawable = drawableSize.map { SIMD2<Float>(Float($0.width), Float($0.height)) } ?? size * Float(displayScale)
@@ -226,7 +242,7 @@ public struct SceneView: View {
         })
     }
 
-    static let defaultCamera = Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(60), depthMode: .standard(zClip: 0.01 ... 1000)))
+    public static let defaultCamera = Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(60), depthMode: .standard(zClip: 0.01 ... 1000)))
 
     // The starting camera transform, and the point camera control orbits around.
     private var viewpoint: (matrix: simd_float4x4, target: SIMD3<Float>) {
@@ -261,7 +277,7 @@ public struct SceneView: View {
         }
         let cameras = sceneGraph.cameraNodes()
         let entry = pointOfView.flatMap { node in cameras.first { $0.node === node } } ?? cameras.first
-        let camera = entry?.camera ?? SceneView.defaultCamera
+        let camera = entry?.camera ?? defaultCamera
         let matrix = usesFreeCamera ? cameraMatrix ?? viewpoint.matrix : entry?.worldTransform ?? viewpoint.matrix
         let size = SIMD2<Float>(Float(viewSize.width), Float(viewSize.height))
         let ray = ViewProjection(viewMatrix: matrix.inverse, projection: camera.projection, viewSize: size).ray(through: [Float(location.x), Float(location.y)])

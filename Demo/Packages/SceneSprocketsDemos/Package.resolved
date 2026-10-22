@@ -1,5 +1,5 @@
 {
-  "originHash" : "dafdf048c0d10b0fcbd22cf0d1baa95d279a3b5a0f53c7b96b93a6d2cd75bfab",
+  "originHash" : "157114954e3926bf697b3025dd8671891d34f94aa510c46b13c201ae80dc7d5c",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -79,7 +79,7 @@
       "location" : "https://github.com/schwa/MetalSprocketsAddOns",
       "state" : {
         "branch" : "main",
-        "revision" : "1263a4bc2d6db8e77cbd81e5c3271d38417da269"
+        "revision" : "50a90fc018a3f4167433e3e88371c4d126faca02"
       }
     },
     {
