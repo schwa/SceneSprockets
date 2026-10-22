@@ -1,17 +1,17 @@
-# MetalSprocketsSceneGraph
+# SceneSprocket
 
 A format-neutral 3D scene graph for [MetalSprockets](https://github.com/schwa/MetalSprockets). You build a tree of nodes with meshes, lights and cameras. Then you render it with one or more material renderers: Blinn-Phong, PBR (through [MetalSprocketsPBR](../MetalSprocketsPBR)), or your own.
 
 ## Library
 
-The core is `MetalSprocketsSceneGraph`. Each material family is its own product, so an app links only what it uses:
+The core is `SceneSprocket`. Each material family is its own product, so an app links only what it uses:
 
 | Product | Contents |
 |---|---|
-| `MetalSprocketsSceneGraph` | `SceneGraph`, `SceneGraph.Node`, transforms (GeometryLite3D's `Transform3D`), the materials protocol, bounds, change tracking, animation clips, morph targets, skins; `SceneGraphElement` and the `SceneGraphMaterialRenderer` protocol; shadows, fog, post-processing, particles; `SceneView`, a SwiftUI view like SceneKit's `SceneView`. |
-| `MetalSprocketsSceneGraphBlinnPhong` | `BlinnPhongSceneMaterial`, `BlinnPhongMaterialRenderer` and `BlinnPhongSceneGraphElement`. |
-| `MetalSprocketsSceneGraphShaderMaterial` | `ShaderMaterial` and `ShaderMaterialRenderer`. |
-| `MetalSprocketsSceneGraphPBR` | `PBRSceneMaterial` and `PBRMaterialRenderer`. `GLTFAsset.makeSceneGraph(device:)` loads a glTF scene (hierarchy, meshes with PBR materials, cameras, lights, skins, morph targets, node animations). `ModelIOSceneGraph(url:device:materials:)` loads any format `MDLAsset` reads (OBJ, PLY, STL, ABC, USD), with PBR or Blinn-Phong materials, cameras, lights and keyframed transforms. |
+| `SceneSprocket` | `SceneGraph`, `SceneGraph.Node`, transforms (GeometryLite3D's `Transform3D`), the materials protocol, bounds, change tracking, animation clips, morph targets, skins; `SceneGraphElement` and the `SceneGraphMaterialRenderer` protocol; shadows, fog, post-processing, particles; `SceneView`, a SwiftUI view like SceneKit's `SceneView`. |
+| `SceneSprocketBlinnPhong` | `BlinnPhongSceneMaterial`, `BlinnPhongMaterialRenderer` and `BlinnPhongSceneGraphElement`. |
+| `SceneSprocketShaderMaterial` | `ShaderMaterial` and `ShaderMaterialRenderer`. |
+| `SceneSprocketPBR` | `PBRSceneMaterial` and `PBRMaterialRenderer`. `GLTFAsset.makeSceneGraph(device:)` loads a glTF scene (hierarchy, meshes with PBR materials, cameras, lights, skins, morph targets, node animations). `ModelIOSceneGraph(url:device:materials:)` loads any format `MDLAsset` reads (OBJ, PLY, STL, ABC, USD), with PBR or Blinn-Phong materials, cameras, lights and keyframed transforms. |
 
 Requirements: iOS 26, macOS 26 or visionOS 26; Swift 6.2.
 
@@ -75,15 +75,15 @@ RenderView { _, size in
 
 ### Custom shaders
 
-`ShaderMaterial(vertexShader:fragmentShader:parameters:)` draws a mesh with your own Metal functions, like SceneKit's `SCNProgram`. Add one `ShaderMaterialRenderer()` to the renderers and it draws every `ShaderMaterial`. The vertex function must declare `constant ShaderMaterialTransforms &transforms` (see `ShaderMaterial.h` in `MetalSprocketsSceneGraphShaders`); `parameters` are bound by name. `ShaderMaterial.normals()` and `ShaderMaterial.rim(color:)` are samples.
+`ShaderMaterial(vertexShader:fragmentShader:parameters:)` draws a mesh with your own Metal functions, like SceneKit's `SCNProgram`. Add one `ShaderMaterialRenderer()` to the renderers and it draws every `ShaderMaterial`. The vertex function must declare `constant ShaderMaterialTransforms &transforms` (see `ShaderMaterial.h` in `SceneSprocketShaders`); `parameters` are bound by name. `ShaderMaterial.normals()` and `ShaderMaterial.rim(color:)` are samples.
 
 ### Add a material family
 
 ```swift
-struct UnlitMaterial: MetalSprocketsSceneGraph.Material { var color: SIMD3<Float> }
+struct UnlitMaterial: SceneSprocket.Material { var color: SIMD3<Float> }
 
 struct UnlitRenderer: SceneGraphMaterialRenderer {
-    var materialType: any MetalSprocketsSceneGraph.Material.Type { UnlitMaterial.self }
+    var materialType: any SceneSprocket.Material.Type { UnlitMaterial.self }
     func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement {
         // Draw entries[i].mesh.submeshes[entries[i].submeshIndex] at entries[i].worldTransform.
     }
@@ -119,8 +119,8 @@ You do not change the scene graph core.
 
 ## Demo
 
-The demos live in a separate package, `Demo/Packages/MetalSprocketsSceneGraphDemos`, with the `MetalSprocketsSceneGraphDemos` library (all demos and a DemoKit picker, `SceneGraphDemosScene`; depends on DemoKit and SwiftJolt), the `scenesprocket-demos` executable and the demo render tests. Each has a scene outline, a node inspector, an interactive camera and click-to-pick.
+The demos live in a separate package, `Demo/Packages/SceneSprocketDemos`, with the `SceneSprocketDemos` library (all demos and a DemoKit picker, `SceneGraphDemosScene`; depends on DemoKit and SwiftJolt), the `scenesprocket-demos` executable and the demo render tests. Each has a scene outline, a node inspector, an interactive camera and click-to-pick.
 
-- **Xcode:** `Demo/MetalSprocketsSceneGraphDemo.xcodeproj` is a thin app around `SceneGraphDemosScene`.
-- **Command line:** from `Demo/Packages/MetalSprocketsSceneGraphDemos`, `xcb run scenesprocket-demos` opens the picker. `scenesprocket-demos --list` lists demo ids, and `scenesprocket-demos --render <id> [file.png] [--size 1280x800] [--frames 60]` renders a demo offscreen to a PNG without opening a window.
-- **Golden images:** the demo package's tests render some demos offscreen and compare them with images in `Tests/MetalSprocketsSceneGraphDemosTests/Golden Images`. A missing golden fails the test and writes the render to `$TMPDIR/MetalSprocketsSceneGraphDemos-GoldenImages`; check it, then copy it in.
+- **Xcode:** `Demo/SceneSprocketDemo.xcodeproj` is a thin app around `SceneGraphDemosScene`.
+- **Command line:** from `Demo/Packages/SceneSprocketDemos`, `xcb run scenesprocket-demos` opens the picker. `scenesprocket-demos --list` lists demo ids, and `scenesprocket-demos --render <id> [file.png] [--size 1280x800] [--frames 60]` renders a demo offscreen to a PNG without opening a window.
+- **Golden images:** the demo package's tests render some demos offscreen and compare them with images in `Tests/SceneSprocketDemosTests/Golden Images`. A missing golden fails the test and writes the render to `$TMPDIR/SceneSprocketDemos-GoldenImages`; check it, then copy it in.

@@ -3031,13 +3031,17 @@ DiceGeometry numbers faces with a simple scheme: opposite faces add up to n + 1 
 ## 150: Rename MetalSprocketsSceneGraph to SceneSprocket
 
 +++
-status: new
+status: closed
 priority: medium
 kind: task
 created: 2026-10-22T01:29:01Z
+updated: 2026-10-22T15:07:06Z
+closed: 2026-10-22T15:07:06Z
 +++
 
 Rename the package and its products to SceneSprocket. Scope to decide: package name, library/module names (MetalSprocketsSceneGraph, MetalSprocketsSceneGraphPBR, ...BlinnPhong, ...ShaderMaterial, ...Physics, ...Shaders), the demo package and app, the repository, documentation, and dependents (MetalSprocketsParticles demos, others that import these modules).
+
+- `2026-10-22T15:07:06Z`: Renamed: package SceneSprocket; modules SceneSprocket, SceneSprocketPBR, SceneSprocketBlinnPhong, SceneSprocketShaderMaterial, SceneSprocketPhysics, SceneSprocketShaders, SceneSprocketAudio; demo package SceneSprocketDemos, app SceneSprocketDemo (bundle id io.schwa.SceneSprocketDemo), CLI scenesprocket-demos. Swift type names unchanged. Left for the owner: rename the repo folder (then change package: "MetalSprocketsSceneGraph" to "SceneSprocket" in Demo/Packages/SceneSprocketDemos/Package.swift and container in .xcb.toml), the GitHub repository, and references in other repos (MetalSprocketsParticles Methodology.md, MetalSprocketsGLTF PublicMaterialPointerTests.swift, other repos' ISSUES.md).
 
 ---
 
