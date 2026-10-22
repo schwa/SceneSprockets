@@ -1,19 +1,19 @@
 import CoreGraphics
 import Foundation
 import GoldenImage
-@testable import MetalSprocketsSceneGraphDemos
+@testable import SceneSprocketDemos
 import Testing
 
 // Renders demos offscreen and compares them with stored golden images.
 //
 // To add or update a golden: delete it (or add a case), run the tests, look at the image named in the failure, and
-// copy it into Tests/MetalSprocketsSceneGraphDemosTests/Golden Images.
+// copy it into Tests/SceneSprocketDemosTests/Golden Images.
 //
 // Goldens are exact renders from the machine that recorded them (Apple silicon); other GPUs may need them
 // re-recorded.
 @Suite(.serialized)
 struct GoldenImageTests {
-    static let outputDirectory = FileManager.default.temporaryDirectory.appending(path: "MetalSprocketsSceneGraphDemos-GoldenImages")
+    static let outputDirectory = FileManager.default.temporaryDirectory.appending(path: "SceneSprocketDemos-GoldenImages")
     static let psnrThreshold = 40.0
 
     struct Case: Sendable, CustomTestStringConvertible {

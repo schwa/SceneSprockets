@@ -7,39 +7,39 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		457C0F3430816E8300878743 /* MetalSprocketsSceneGraphDemos in Frameworks */ = {isa = PBXBuildFile; productRef = 457C0F3330816E8300878743 /* MetalSprocketsSceneGraphDemos */; };
+		457C0F3430816E8300878743 /* SceneSprocketDemos in Frameworks */ = {isa = PBXBuildFile; productRef = 457C0F3330816E8300878743 /* SceneSprocketDemos */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		45C80D312E84475800136D6D /* MetalSprocketsSceneGraphDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MetalSprocketsSceneGraphDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		45C80D312E84475800136D6D /* SceneSprocketDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SceneSprocketDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		4528E8B42EF5FDDB00EC19C3 /* Exceptions for "MetalSprocketsSceneGraphDemo" folder in "MetalSprocketsSceneGraphDemo" target */ = {
+		4528E8B42EF5FDDB00EC19C3 /* Exceptions for "SceneSprocketDemo" folder in "SceneSprocketDemo" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 45C80D302E84475800136D6D /* MetalSprocketsSceneGraphDemo */;
+			target = 45C80D302E84475800136D6D /* SceneSprocketDemo */;
 		};
-		457C0F0530816E2500878743 /* Exceptions for "Packages" folder in "MetalSprocketsSceneGraphDemo" target */ = {
+		457C0F0530816E2500878743 /* Exceptions for "Packages" folder in "SceneSprocketDemo" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				MetalSprocketsSceneGraphDemos,
+				SceneSprocketDemos,
 			);
-			target = 45C80D302E84475800136D6D /* MetalSprocketsSceneGraphDemo */;
+			target = 45C80D302E84475800136D6D /* SceneSprocketDemo */;
 		};
-		45CFGEXC2F64AAB2005F944D /* Exceptions for "Configuration" folder in "MetalSprocketsSceneGraphDemo" target */ = {
+		45CFGEXC2F64AAB2005F944D /* Exceptions for "Configuration" folder in "SceneSprocketDemo" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"MetalSprocketsSceneGraphDemo-Debug.xcconfig",
-				"MetalSprocketsSceneGraphDemo-Release.xcconfig",
-				"MetalSprocketsSceneGraphDemo-Shared.xcconfig",
+				"SceneSprocketDemo-Debug.xcconfig",
+				"SceneSprocketDemo-Release.xcconfig",
+				"SceneSprocketDemo-Shared.xcconfig",
 				"Project-Debug.xcconfig",
 				"Project-Release.xcconfig",
 				"Project-Shared.xcconfig",
 			);
-			target = 45C80D302E84475800136D6D /* MetalSprocketsSceneGraphDemo */;
+			target = 45C80D302E84475800136D6D /* SceneSprocketDemo */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -47,23 +47,23 @@
 		457C0F0430816E2400878743 /* Packages */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				457C0F0530816E2500878743 /* Exceptions for "Packages" folder in "MetalSprocketsSceneGraphDemo" target */,
+				457C0F0530816E2500878743 /* Exceptions for "Packages" folder in "SceneSprocketDemo" target */,
 			);
 			path = Packages;
 			sourceTree = "<group>";
 		};
-		45C80D332E84475800136D6D /* MetalSprocketsSceneGraphDemo */ = {
+		45C80D332E84475800136D6D /* SceneSprocketDemo */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				4528E8B42EF5FDDB00EC19C3 /* Exceptions for "MetalSprocketsSceneGraphDemo" folder in "MetalSprocketsSceneGraphDemo" target */,
+				4528E8B42EF5FDDB00EC19C3 /* Exceptions for "SceneSprocketDemo" folder in "SceneSprocketDemo" target */,
 			);
-			path = MetalSprocketsSceneGraphDemo;
+			path = SceneSprocketDemo;
 			sourceTree = "<group>";
 		};
 		45CFGGRP2F64AA9A005F944D /* Configuration */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				45CFGEXC2F64AAB2005F944D /* Exceptions for "Configuration" folder in "MetalSprocketsSceneGraphDemo" target */,
+				45CFGEXC2F64AAB2005F944D /* Exceptions for "Configuration" folder in "SceneSprocketDemo" target */,
 			);
 			path = Configuration;
 			sourceTree = "<group>";
@@ -75,7 +75,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				457C0F3430816E8300878743 /* MetalSprocketsSceneGraphDemos in Frameworks */,
+				457C0F3430816E8300878743 /* SceneSprocketDemos in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -86,7 +86,7 @@
 			isa = PBXGroup;
 			children = (
 				45CFGGRP2F64AA9A005F944D /* Configuration */,
-				45C80D332E84475800136D6D /* MetalSprocketsSceneGraphDemo */,
+				45C80D332E84475800136D6D /* SceneSprocketDemo */,
 				457C0F0430816E2400878743 /* Packages */,
 				45C80D322E84475800136D6D /* Products */,
 			);
@@ -95,7 +95,7 @@
 		45C80D322E84475800136D6D /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				45C80D312E84475800136D6D /* MetalSprocketsSceneGraphDemo.app */,
+				45C80D312E84475800136D6D /* SceneSprocketDemo.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -103,9 +103,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		45C80D302E84475800136D6D /* MetalSprocketsSceneGraphDemo */ = {
+		45C80D302E84475800136D6D /* SceneSprocketDemo */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 45C80D3C2E84475800136D6D /* Build configuration list for PBXNativeTarget "MetalSprocketsSceneGraphDemo" */;
+			buildConfigurationList = 45C80D3C2E84475800136D6D /* Build configuration list for PBXNativeTarget "SceneSprocketDemo" */;
 			buildPhases = (
 				45C80D2D2E84475800136D6D /* Sources */,
 				45C80D2E2E84475800136D6D /* Frameworks */,
@@ -117,15 +117,15 @@
 			);
 			fileSystemSynchronizedGroups = (
 				457C0F0430816E2400878743 /* Packages */,
-				45C80D332E84475800136D6D /* MetalSprocketsSceneGraphDemo */,
+				45C80D332E84475800136D6D /* SceneSprocketDemo */,
 				45CFGGRP2F64AA9A005F944D /* Configuration */,
 			);
-			name = MetalSprocketsSceneGraphDemo;
+			name = SceneSprocketDemo;
 			packageProductDependencies = (
-				457C0F3330816E8300878743 /* MetalSprocketsSceneGraphDemos */,
+				457C0F3330816E8300878743 /* SceneSprocketDemos */,
 			);
-			productName = MetalSprocketsSceneGraphDemo;
-			productReference = 45C80D312E84475800136D6D /* MetalSprocketsSceneGraphDemo.app */;
+			productName = SceneSprocketDemo;
+			productReference = 45C80D312E84475800136D6D /* SceneSprocketDemo.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -143,7 +143,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 45C80D2C2E84475800136D6D /* Build configuration list for PBXProject "MetalSprocketsSceneGraphDemo" */;
+			buildConfigurationList = 45C80D2C2E84475800136D6D /* Build configuration list for PBXProject "SceneSprocketDemo" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -153,14 +153,14 @@
 			mainGroup = 45C80D282E84475800136D6D;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				457C0F3230816E8300878743 /* XCLocalSwiftPackageReference "Packages/MetalSprocketsSceneGraphDemos" */,
+				457C0F3230816E8300878743 /* XCLocalSwiftPackageReference "Packages/SceneSprocketDemos" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 45C80D322E84475800136D6D /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				45C80D302E84475800136D6D /* MetalSprocketsSceneGraphDemo */,
+				45C80D302E84475800136D6D /* SceneSprocketDemo */,
 			);
 		};
 /* End PBXProject section */
@@ -207,7 +207,7 @@
 		45C80D3D2E84475800136D6D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReferenceAnchor = 45CFGGRP2F64AA9A005F944D /* Configuration */;
-			baseConfigurationReferenceRelativePath = "MetalSprocketsSceneGraphDemo-Debug.xcconfig";
+			baseConfigurationReferenceRelativePath = "SceneSprocketDemo-Debug.xcconfig";
 			buildSettings = {
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app uses the camera for augmented reality.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
@@ -219,7 +219,7 @@
 		45C80D3E2E84475800136D6D /* Release */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReferenceAnchor = 45CFGGRP2F64AA9A005F944D /* Configuration */;
-			baseConfigurationReferenceRelativePath = "MetalSprocketsSceneGraphDemo-Release.xcconfig";
+			baseConfigurationReferenceRelativePath = "SceneSprocketDemo-Release.xcconfig";
 			buildSettings = {
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app uses the camera for augmented reality.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
@@ -231,7 +231,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		45C80D2C2E84475800136D6D /* Build configuration list for PBXProject "MetalSprocketsSceneGraphDemo" */ = {
+		45C80D2C2E84475800136D6D /* Build configuration list for PBXProject "SceneSprocketDemo" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				45C80D3A2E84475800136D6D /* Debug */,
@@ -240,7 +240,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		45C80D3C2E84475800136D6D /* Build configuration list for PBXNativeTarget "MetalSprocketsSceneGraphDemo" */ = {
+		45C80D3C2E84475800136D6D /* Build configuration list for PBXNativeTarget "SceneSprocketDemo" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				45C80D3D2E84475800136D6D /* Debug */,
@@ -252,16 +252,16 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		457C0F3230816E8300878743 /* XCLocalSwiftPackageReference "Packages/MetalSprocketsSceneGraphDemos" */ = {
+		457C0F3230816E8300878743 /* XCLocalSwiftPackageReference "Packages/SceneSprocketDemos" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = Packages/MetalSprocketsSceneGraphDemos;
+			relativePath = Packages/SceneSprocketDemos;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		457C0F3330816E8300878743 /* MetalSprocketsSceneGraphDemos */ = {
+		457C0F3330816E8300878743 /* SceneSprocketDemos */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = MetalSprocketsSceneGraphDemos;
+			productName = SceneSprocketDemos;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

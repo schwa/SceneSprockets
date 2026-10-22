@@ -1,17 +1,17 @@
 import AppKit
 import DemoKit
 import Foundation
-import MetalSprocketsSceneGraphDemos
+import SceneSprocketDemos
 import SwiftUI
 
-// scenegraph-demos                         open the demo picker
-// scenegraph-demos --list                  list demo ids
-// scenegraph-demos --render <id> [file]    render a demo offscreen to a PNG (default: <id>.png)
+// scenesprocket-demos                         open the demo picker
+// scenesprocket-demos --list                  list demo ids
+// scenesprocket-demos --render <id> [file]    render a demo offscreen to a PNG (default: <id>.png)
 //                  [--size WxH] [--frames N] [--slide N] [--value Name=Number ...]
-// scenegraph-demos --video <id> [file]     record a demo offscreen to a movie (default: <id>.mov); the keynote
+// scenesprocket-demos --video <id> [file]     record a demo offscreen to a movie (default: <id>.mov); the keynote
 //                  [--size WxH] [--fps N]   auto-advances through every slide unless --seconds is given
 //                  [--seconds N] [--slide N] [--value Name=Number ...]
-// scenegraph-demos --benchmark <id>        render every frame offscreen and print frame times
+// scenesprocket-demos --benchmark <id>        render every frame offscreen and print frame times
 //                  [--size WxH] [--frames N] [--slide N]
 
 struct SceneGraphDemosApp: App {
@@ -77,7 +77,7 @@ case "--render":
         fail("--frames must be a number")
     }
     guard arguments.count >= 2 else {
-        fail("usage: scenegraph-demos --render <id> [file.png] [--size WxH] [--frames N]")
+        fail("usage: scenesprocket-demos --render <id> [file.png] [--size WxH] [--frames N]")
     }
     let id = arguments[1]
     let url = URL(fileURLWithPath: arguments.count >= 3 ? arguments[2] : "\(id).png")
@@ -99,7 +99,7 @@ case "--video":
     let slide = option("--slide").flatMap { Int($0) }
     var values = valueOptions()
     guard size.count == 2, arguments.count >= 2 else {
-        fail("usage: scenegraph-demos --video <id> [file.mov] [--size WxH] [--fps N] [--seconds N] [--slide N] [--value Name=Number ...]")
+        fail("usage: scenesprocket-demos --video <id> [file.mov] [--size WxH] [--fps N] [--seconds N] [--slide N] [--value Name=Number ...]")
     }
     let id = arguments[1]
     let url = URL(fileURLWithPath: arguments.count >= 3 ? arguments[2] : "\(id).mov")
@@ -140,7 +140,7 @@ case "--benchmark":
     let slide = option("--slide").flatMap { Int($0) }
     let values = valueOptions()
     guard size.count == 2, arguments.count >= 2 else {
-        fail("usage: scenegraph-demos --benchmark <id> [--size WxH] [--frames N] [--slide N]")
+        fail("usage: scenesprocket-demos --benchmark <id> [--size WxH] [--frames N] [--slide N]")
     }
     do {
         let times = try MainActor.assumeIsolated { try DemoSnapshot.benchmark(demoID: arguments[1], width: size[0], height: size[1], frames: frames) { scene in
@@ -159,5 +159,5 @@ case "--benchmark":
 case nil:
     SceneGraphDemosApp.main()
 default:
-    fail("usage: scenegraph-demos [--list | --render <id> [file.png] [--size WxH] [--frames N]]")
+    fail("usage: scenesprocket-demos [--list | --render <id> [file.png] [--size WxH] [--frames N]]")
 }

@@ -16,8 +16,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "45C80D302E84475800136D6D"
-               BuildableName = "MetalSprocketsSceneGraphDemo.app"
-               ReferencedContainer = "container:MetalSprocketsSceneGraphDemo.xcodeproj">
+               BuildableName = "SceneSprocketDemo.app"
+               ReferencedContainer = "container:SceneSprocketDemo.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -45,8 +45,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "45C80D302E84475800136D6D"
-            BuildableName = "MetalSprocketsSceneGraphDemo.app"
-            ReferencedContainer = "container:MetalSprocketsSceneGraphDemo.xcodeproj">
+            BuildableName = "SceneSprocketDemo.app"
+            ReferencedContainer = "container:SceneSprocketDemo.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -61,8 +61,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "45C80D302E84475800136D6D"
-            BuildableName = "MetalSprocketsSceneGraphDemo.app"
-            ReferencedContainer = "container:MetalSprocketsSceneGraphDemo.xcodeproj">
+            BuildableName = "SceneSprocketDemo.app"
+            ReferencedContainer = "container:SceneSprocketDemo.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

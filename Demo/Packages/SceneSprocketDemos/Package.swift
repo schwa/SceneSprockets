@@ -3,15 +3,15 @@
 import PackageDescription
 
 let package = Package(
-    name: "MetalSprocketsSceneGraphDemos",
+    name: "SceneSprocketDemos",
     platforms: [
         .iOS(.v26),
         .macOS(.v26),
         .visionOS(.v26)
     ],
     products: [
-        .library(name: "MetalSprocketsSceneGraphDemos", targets: ["MetalSprocketsSceneGraphDemos"]),
-        .executable(name: "scenegraph-demos", targets: ["scenegraph-demos"]),
+        .library(name: "SceneSprocketDemos", targets: ["SceneSprocketDemos"]),
+        .executable(name: "scenesprocket-demos", targets: ["scenesprocket-demos"]),
     ],
     dependencies: [
         // The repository root. Its package identity is the folder name: change "MetalSprocketsSceneGraph" below to "SceneSprocket" when the folder is renamed.
@@ -29,7 +29,7 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "MetalSprocketsSceneGraphDemos",
+            name: "SceneSprocketDemos",
             dependencies: [
                 .product(name: "SceneSprocket", package: "MetalSprocketsSceneGraph"),
                 .product(name: "SceneSprocketPhysics", package: "MetalSprocketsSceneGraph"),
@@ -52,16 +52,16 @@ let package = Package(
             resources: [.copy("Resources")]
         ),
         .executableTarget(
-            name: "scenegraph-demos",
+            name: "scenesprocket-demos",
             dependencies: [
-                "MetalSprocketsSceneGraphDemos",
+                "SceneSprocketDemos",
                 .product(name: "DemoKit", package: "DemoKit"),
             ]
         ),
         .testTarget(
-            name: "MetalSprocketsSceneGraphDemosTests",
+            name: "SceneSprocketDemosTests",
             dependencies: [
-                "MetalSprocketsSceneGraphDemos",
+                "SceneSprocketDemos",
                 .product(name: "SceneSprocket", package: "MetalSprocketsSceneGraph"),
                 .product(name: "SceneSprocketBlinnPhong", package: "MetalSprocketsSceneGraph"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),

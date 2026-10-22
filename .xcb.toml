@@ -4,10 +4,10 @@ container = "MetalSprocketsSceneGraph"
 skip_plugin_validation = true
 
 [defaults.build]
-scheme = "MetalSprocketsSceneGraphDemo"
+scheme = "SceneSprocketDemo"
 
 [defaults.test]
 scheme = "SceneSprocket"
 
 [defaults.run]
-scheme = "MetalSprocketsSceneGraphDemo"
+scheme = "SceneSprocketDemo"

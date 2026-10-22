@@ -119,8 +119,8 @@ You do not change the scene graph core.
 
 ## Demo
 
-The demos live in a separate package, `Demo/Packages/MetalSprocketsSceneGraphDemos`, with the `MetalSprocketsSceneGraphDemos` library (all demos and a DemoKit picker, `SceneGraphDemosScene`; depends on DemoKit and SwiftJolt), the `scenegraph-demos` executable and the demo render tests. Each has a scene outline, a node inspector, an interactive camera and click-to-pick.
+The demos live in a separate package, `Demo/Packages/MetalSprocketsSceneGraphDemos`, with the `MetalSprocketsSceneGraphDemos` library (all demos and a DemoKit picker, `SceneGraphDemosScene`; depends on DemoKit and SwiftJolt), the `scenesprocket-demos` executable and the demo render tests. Each has a scene outline, a node inspector, an interactive camera and click-to-pick.
 
 - **Xcode:** `Demo/MetalSprocketsSceneGraphDemo.xcodeproj` is a thin app around `SceneGraphDemosScene`.
-- **Command line:** from `Demo/Packages/MetalSprocketsSceneGraphDemos`, `xcb run scenegraph-demos` opens the picker. `scenegraph-demos --list` lists demo ids, and `scenegraph-demos --render <id> [file.png] [--size 1280x800] [--frames 60]` renders a demo offscreen to a PNG without opening a window.
+- **Command line:** from `Demo/Packages/MetalSprocketsSceneGraphDemos`, `xcb run scenesprocket-demos` opens the picker. `scenesprocket-demos --list` lists demo ids, and `scenesprocket-demos --render <id> [file.png] [--size 1280x800] [--frames 60]` renders a demo offscreen to a PNG without opening a window.
 - **Golden images:** the demo package's tests render some demos offscreen and compare them with images in `Tests/MetalSprocketsSceneGraphDemosTests/Golden Images`. A missing golden fails the test and writes the render to `$TMPDIR/MetalSprocketsSceneGraphDemos-GoldenImages`; check it, then copy it in.

@@ -5,7 +5,7 @@ import Metal
 import MetalSprockets
 import SceneSprocket
 import SceneSprocketBlinnPhong
-@testable import MetalSprocketsSceneGraphDemos
+@testable import SceneSprocketDemos
 import Testing
 import simd
 
