@@ -1,13 +1,13 @@
 [defaults]
 destination = "mac"
-container = "MetalSprocketsSceneGraph"
+container = "SceneSprockets"
 skip_plugin_validation = true
 
 [defaults.build]
-scheme = "SceneSprocketDemo"
+scheme = "SceneSprocketsDemo"
 
 [defaults.test]
-scheme = "SceneSprocket"
+scheme = "SceneSprockets"
 
 [defaults.run]
-scheme = "SceneSprocketDemo"
+scheme = "SceneSprocketsDemo"

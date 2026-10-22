@@ -1,6 +1,6 @@
 # Features
 
-What SceneSprocket has (✅) and does not have yet (⬜). 🧩 means it is possible today with MetalSprockets or a ShaderMaterial and needs an example. A ~~struck-through~~ feature is one we will not do. Source says where the feature comes from: SceneKit,
+What SceneSprockets has (✅) and does not have yet (⬜). 🧩 means it is possible today with MetalSprockets or a ShaderMaterial and needs an example. A ~~struck-through~~ feature is one we will not do. Source says where the feature comes from: SceneKit,
 RealityKit, three.js, Babylon.js, Godot, Unity, Unreal, GameplayKit, Filament, Jolt or glTF; empty for our own; Brainstorm for ideas with no source.
 
 ## Scene and nodes

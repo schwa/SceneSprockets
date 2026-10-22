@@ -1,0 +1,269 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		457C0F3430816E8300878743 /* SceneSprocketsDemos in Frameworks */ = {isa = PBXBuildFile; productRef = 457C0F3330816E8300878743 /* SceneSprocketsDemos */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		45C80D312E84475800136D6D /* SceneSprocketsDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SceneSprocketsDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		4528E8B42EF5FDDB00EC19C3 /* Exceptions for "SceneSprocketsDemo" folder in "SceneSprocketsDemo" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 45C80D302E84475800136D6D /* SceneSprocketsDemo */;
+		};
+		457C0F0530816E2500878743 /* Exceptions for "Packages" folder in "SceneSprocketsDemo" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				SceneSprocketsDemos,
+			);
+			target = 45C80D302E84475800136D6D /* SceneSprocketsDemo */;
+		};
+		45CFGEXC2F64AAB2005F944D /* Exceptions for "Configuration" folder in "SceneSprocketsDemo" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"SceneSprocketsDemo-Debug.xcconfig",
+				"SceneSprocketsDemo-Release.xcconfig",
+				"SceneSprocketsDemo-Shared.xcconfig",
+				"Project-Debug.xcconfig",
+				"Project-Release.xcconfig",
+				"Project-Shared.xcconfig",
+			);
+			target = 45C80D302E84475800136D6D /* SceneSprocketsDemo */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		457C0F0430816E2400878743 /* Packages */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				457C0F0530816E2500878743 /* Exceptions for "Packages" folder in "SceneSprocketsDemo" target */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		45C80D332E84475800136D6D /* SceneSprocketsDemo */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				4528E8B42EF5FDDB00EC19C3 /* Exceptions for "SceneSprocketsDemo" folder in "SceneSprocketsDemo" target */,
+			);
+			path = SceneSprocketsDemo;
+			sourceTree = "<group>";
+		};
+		45CFGGRP2F64AA9A005F944D /* Configuration */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				45CFGEXC2F64AAB2005F944D /* Exceptions for "Configuration" folder in "SceneSprocketsDemo" target */,
+			);
+			path = Configuration;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		45C80D2E2E84475800136D6D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				457C0F3430816E8300878743 /* SceneSprocketsDemos in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		45C80D282E84475800136D6D = {
+			isa = PBXGroup;
+			children = (
+				45CFGGRP2F64AA9A005F944D /* Configuration */,
+				45C80D332E84475800136D6D /* SceneSprocketsDemo */,
+				457C0F0430816E2400878743 /* Packages */,
+				45C80D322E84475800136D6D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		45C80D322E84475800136D6D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				45C80D312E84475800136D6D /* SceneSprocketsDemo.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		45C80D302E84475800136D6D /* SceneSprocketsDemo */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 45C80D3C2E84475800136D6D /* Build configuration list for PBXNativeTarget "SceneSprocketsDemo" */;
+			buildPhases = (
+				45C80D2D2E84475800136D6D /* Sources */,
+				45C80D2E2E84475800136D6D /* Frameworks */,
+				45C80D2F2E84475800136D6D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				457C0F0430816E2400878743 /* Packages */,
+				45C80D332E84475800136D6D /* SceneSprocketsDemo */,
+				45CFGGRP2F64AA9A005F944D /* Configuration */,
+			);
+			name = SceneSprocketsDemo;
+			packageProductDependencies = (
+				457C0F3330816E8300878743 /* SceneSprocketsDemos */,
+			);
+			productName = SceneSprocketsDemo;
+			productReference = 45C80D312E84475800136D6D /* SceneSprocketsDemo.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		45C80D292E84475800136D6D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					45C80D302E84475800136D6D = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
+				};
+			};
+			buildConfigurationList = 45C80D2C2E84475800136D6D /* Build configuration list for PBXProject "SceneSprocketsDemo" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 45C80D282E84475800136D6D;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				457C0F3230816E8300878743 /* XCLocalSwiftPackageReference "Packages/SceneSprocketsDemos" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 45C80D322E84475800136D6D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				45C80D302E84475800136D6D /* SceneSprocketsDemo */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		45C80D2F2E84475800136D6D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		45C80D2D2E84475800136D6D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		45C80D3A2E84475800136D6D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 45CFGGRP2F64AA9A005F944D /* Configuration */;
+			baseConfigurationReferenceRelativePath = "Project-Debug.xcconfig";
+			buildSettings = {
+				DEVELOPMENT_TEAM = XXXXXXXXXX;
+			};
+			name = Debug;
+		};
+		45C80D3B2E84475800136D6D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 45CFGGRP2F64AA9A005F944D /* Configuration */;
+			baseConfigurationReferenceRelativePath = "Project-Release.xcconfig";
+			buildSettings = {
+				DEVELOPMENT_TEAM = XXXXXXXXXX;
+			};
+			name = Release;
+		};
+		45C80D3D2E84475800136D6D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 45CFGGRP2F64AA9A005F944D /* Configuration */;
+			baseConfigurationReferenceRelativePath = "SceneSprocketsDemo-Debug.xcconfig";
+			buildSettings = {
+				INFOPLIST_KEY_NSCameraUsageDescription = "This app uses the camera for augmented reality.";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+			};
+			name = Debug;
+		};
+		45C80D3E2E84475800136D6D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 45CFGGRP2F64AA9A005F944D /* Configuration */;
+			baseConfigurationReferenceRelativePath = "SceneSprocketsDemo-Release.xcconfig";
+			buildSettings = {
+				INFOPLIST_KEY_NSCameraUsageDescription = "This app uses the camera for augmented reality.";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		45C80D2C2E84475800136D6D /* Build configuration list for PBXProject "SceneSprocketsDemo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				45C80D3A2E84475800136D6D /* Debug */,
+				45C80D3B2E84475800136D6D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		45C80D3C2E84475800136D6D /* Build configuration list for PBXNativeTarget "SceneSprocketsDemo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				45C80D3D2E84475800136D6D /* Debug */,
+				45C80D3E2E84475800136D6D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		457C0F3230816E8300878743 /* XCLocalSwiftPackageReference "Packages/SceneSprocketsDemos" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/SceneSprocketsDemos;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		457C0F3330816E8300878743 /* SceneSprocketsDemos */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SceneSprocketsDemos;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 45C80D292E84475800136D6D /* Project object */;
+}
