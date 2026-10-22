@@ -3044,10 +3044,12 @@ Rename the package and its products to SceneSprocket. Scope to decide: package n
 ## 151: Demos for every supported feature
 
 +++
-status: new
+status: closed
 priority: medium
 kind: task
 created: 2026-10-22T01:40:08Z
+updated: 2026-10-22T14:05:29Z
+closed: 2026-10-22T14:05:29Z
 +++
 
 Every feature should have a demo: a standalone demo, a keynote slide, or a clearly labeled part of a larger demo (Dice, Gears, Shadows, SceneKit Features). glTF loading and particles are out of scope here.
@@ -3208,16 +3210,19 @@ Check an item when a demo shows it. Items marked "(keynote)" are partly shown on
 - [ ] Tap handling with hit-test category mask
 - [ ] External camera binding
 
+- `2026-10-22T14:05:29Z`: Superseded by Documentation/Features.md.
+
 ---
 
 ## 152: Feature gaps vs. SceneKit, RealityKit, three.js and others
 
 +++
-status: new
+status: closed
 priority: low
 kind: task
 created: 2026-10-22T01:42:26Z
-updated: 2026-10-22T01:46:33Z
+updated: 2026-10-22T14:05:30Z
+closed: 2026-10-22T14:05:30Z
 +++
 
 Features in SceneKit, RealityKit, three.js, Babylon.js, Godot and Filament that MetalSprocketsSceneGraph does not have. Compiled from what those libraries document plus Documentation/SceneKitComparison.md; not a commitment to build all of it. Glance at each item and either file its own issue, link the existing one, or strike it.
@@ -3293,6 +3298,8 @@ Already tracked elsewhere: HDR, tone mapping, bloom, depth of field (#45); save/
 - [ ] Asset metadata: up axis, units, frame rate
 - [ ] Spatial audio with occlusion and reverb (RealityKit)
 - [ ] Accessibility for 3D content (RealityKit accessibility components)
+
+- `2026-10-22T14:05:30Z`: Superseded by Documentation/Features.md.
 
 ---
 
