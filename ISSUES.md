@@ -3331,3 +3331,28 @@ Suggested start: a Quaternius character with Kenney's Platformer Kit.
 Related: #151 (demos for every feature), #152 (feature gaps: character controller, contact callbacks, follow camera).
 
 ---
+
+## 154: Manipulation widgets: transform gizmos for moving, rotating and scaling nodes
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-10-22T14:49:36Z
++++
+
+Add on-screen manipulators for editing nodes in a SceneView, like three.js TransformControls, RealityKit's installGestures, Unity and Godot gizmos.
+
+Want:
+- Translate (axis arrows, plane handles, free), rotate (axis rings, trackball), scale (axis and uniform) handles.
+- World or local space; snapping to a grid, angle step or scale step.
+- Handles drawn on top of the scene at a constant screen size, highlighted on hover.
+- Picking via hit testing; dragging along a constrained axis or plane in screen space.
+- Undo-friendly change callbacks (begin, change, end).
+- Touch gestures (drag, pinch, rotate) on iOS and visionOS, mouse on macOS.
+
+Uses: the demo inspector, a future scene editor, and save/load round trips (#52).
+
+Related: Documentation/Features.md rows 'Gestures and transform gizmos' and 'Scene inspector and editor'.
+
+---

@@ -226,7 +226,7 @@ RealityKit, three.js, Babylon.js, Godot, Unity, Unreal, GameplayKit, Filament, J
 | ✅ | Ray and segment hit tests with options | | SceneKit | |
 | ✅ | Project and unproject points, frustum queries | | SceneKit | |
 | ✅ | SwiftUI `SceneView`: camera control, taps, delegates | | SceneKit | |
-| ⬜ | Gestures and transform gizmos | | RealityKit, three.js | |
+| ⬜ | Gestures and transform gizmos | #154 | RealityKit, three.js | |
 
 ## Assets
 
