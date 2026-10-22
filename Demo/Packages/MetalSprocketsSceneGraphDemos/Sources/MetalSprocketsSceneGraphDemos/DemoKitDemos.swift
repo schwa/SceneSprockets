@@ -10,6 +10,7 @@ public enum SceneGraphDemos {
             SceneKitFeaturesDemoView.self,
             ShadowsDemoView.self,
             DiceDemoView.self,
+            GearsDemoView.self,
         ]
     }
 
@@ -51,6 +52,10 @@ struct KeynoteDemoView: CatalogDemoView {
 
 struct SceneKitFeaturesDemoView: CatalogDemoView {
     nonisolated static let demo = Demo(id: "scenekit-features", title: "SceneKit Features", systemImage: "sparkles", section: .basics, summary: "Shapes and text, lights and shadows, actions, constraints, implicit animation, fog, custom shaders and category masks in one scene.") { SceneKitFeaturesDemo() }
+}
+
+struct GearsDemoView: CatalogDemoView {
+    nonisolated static let demo = Demo(id: "gears", title: "Gears", systemImage: "gearshape.2", section: .basics, summary: "A train of meshing spur gears generated with any number of teeth, in brass, steel and copper.") { GearsDemo() }
 }
 
 struct DiceDemoView: CatalogDemoView {

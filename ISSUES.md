@@ -3027,3 +3027,16 @@ created: 2026-10-22T01:05:11Z
 DiceGeometry numbers faces with a simple scheme: opposite faces add up to n + 1 (n - 1 for the D10, numbered 0 to 9), but the arrangement around each corner is arbitrary. Store-bought dice follow conventions (for example, a D6 with 1, 2, 3 meeting counterclockwise at a corner; a balanced D20). Done when each die kind matches a standard layout.
 
 ---
+
+## 150: Rename MetalSprocketsSceneGraph to SceneSprocket
+
++++
+status: new
+priority: medium
+kind: task
+created: 2026-10-22T01:29:01Z
++++
+
+Rename the package and its products to SceneSprocket. Scope to decide: package name, library/module names (MetalSprocketsSceneGraph, MetalSprocketsSceneGraphPBR, ...BlinnPhong, ...ShaderMaterial, ...Physics, ...Shaders), the demo package and app, the repository, documentation, and dependents (MetalSprocketsParticles demos, others that import these modules).
+
+---

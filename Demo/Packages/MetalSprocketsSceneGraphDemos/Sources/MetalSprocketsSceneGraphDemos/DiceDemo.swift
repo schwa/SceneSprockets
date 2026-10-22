@@ -63,6 +63,8 @@ final class DiceDemo: DemoScene {
         ("D6", [.d6]),
         ("D&D Set", [.d4, .d6, .d8, .d10, .d12, .d20]),
         ("D20", [.d20]),
+        // No dice: metal gears instead.
+        ("Gears", []),
     ]
     private var generator = SystemRandomNumberGenerator()
 
@@ -136,7 +138,7 @@ final class DiceDemo: DemoScene {
         rolledSet = Int(self[value: "Dice Set"])
         let kinds = Self.sets[min(max(rolledSet, 0), Self.sets.count - 1)].kinds
         dice = DiceStyle.allCases.enumerated().compactMap { index, style in
-            guard let die = Self.makeDie(kinds[index % kinds.count], style: style) else {
+            guard let die = kinds.isEmpty ? Self.makeGear(index) : Self.makeDie(kinds[index % kinds.count], style: style) else {
                 return nil
             }
             die.physicsBody = nil
@@ -160,7 +162,7 @@ final class DiceDemo: DemoScene {
         let styles = rolledStyle == 0 ? DiceStyle.allCases.shuffled(using: &generator) : [DiceStyle.allCases[min(rolledStyle - 1, DiceStyle.allCases.count - 1)]]
         dice = (0..<count).compactMap { index in
             // A set's kinds take turns, so six dice of the D&D set are one of each.
-            guard let die = Self.makeDie(kinds[index % kinds.count], style: styles[index % styles.count]) else {
+            guard let die = kinds.isEmpty ? Self.makeGear(index) : Self.makeDie(kinds[index % kinds.count], style: styles[index % styles.count]) else {
                 return nil
             }
             let position = SIMD3<Float>(
@@ -253,6 +255,25 @@ final class DiceDemo: DemoScene {
     enum Kind: String, CaseIterable {
         case d4 = "D4", d6 = "D6", d8 = "D8", d10 = "D10", d12 = "D12", d20 = "D20"
     }
+
+    // Gear mode: sizes and metals cycle with `index`. In the dice's units (a D6 is 8 across), so they share the scale.
+    private static func makeGear(_ index: Int) -> SceneGraph.Node? {
+        let teeth = [12, 18, 10, 24, 14][index % 5]
+        let spec = GearSpec(teeth: teeth, module: 0.55, thickness: 2.4, holeRadius: 1.1)
+        if gearMeshes[spec] == nil {
+            gearMeshes[spec] = MetalMesh(mesh: .gear(spec), device: demoDevice, label: "Gear \(teeth)")
+        }
+        let metals: [(SIMD4<Float>, Float)] = [([0.85, 0.65, 0.3, 1], 0.3), ([0.75, 0.76, 0.78, 1], 0.22), ([0.9, 0.5, 0.35, 1], 0.35), ([0.35, 0.36, 0.4, 1], 0.45)]
+        let metal = metals[index % metals.count]
+        guard let mesh = gearMeshes[spec], let material = try? PBRSceneMaterial(device: demoDevice, baseColor: metal.0, metallic: 1, roughness: metal.1) else {
+            return nil
+        }
+        let gear = SceneGraph.Node(label: "Gear \(teeth)", content: .mesh(mesh, material: material))
+        gear.physicsBody = .init(type: .dynamic, shape: .convexHull, friction: 0.5, restitution: 0.3)
+        return gear
+    }
+
+    private static var gearMeshes: [GearSpec: MetalMesh] = [:]
 
     // One die of `kind` in `style`, colliding as the convex hull of its mesh. Nil when the assets do not load.
     private static func makeDie(_ kind: Kind, style: DiceStyle) -> SceneGraph.Node? {
