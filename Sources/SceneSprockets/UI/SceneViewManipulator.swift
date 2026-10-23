@@ -57,6 +57,28 @@ public protocol SceneViewManipulator: AnyObject {
     func beginDrag(at point: SIMD2<Float>, viewport: SceneViewport)
     func drag(to point: SIMD2<Float>, viewport: SceneViewport)
     func endDrag()
+    // Two-finger pinch and twist (iOS, visionOS). A gesture starting where `claimsTwoFingerGesture` is true goes here,
+    // and camera control does not zoom with it. `scale` is relative to the start; `rotation` is radians, clockwise
+    // on screen.
+    func claimsTwoFingerGesture(at point: SIMD2<Float>, viewport: SceneViewport) -> Bool
+    func beginTwoFingerGesture(viewport: SceneViewport)
+    func twoFingerGesture(scale: Float, rotation: Float, viewport: SceneViewport)
+    func endTwoFingerGesture()
+}
+
+public extension SceneViewManipulator {
+    func claimsTwoFingerGesture(at point: SIMD2<Float>, viewport: SceneViewport) -> Bool {
+        false
+    }
+
+    func beginTwoFingerGesture(viewport: SceneViewport) {
+    }
+
+    func twoFingerGesture(scale: Float, rotation: Float, viewport: SceneViewport) {
+    }
+
+    func endTwoFingerGesture() {
+    }
 }
 
 // The manipulator's overlay over the finished scene: keeps the color, clears depth so it is never hidden.

@@ -71,6 +71,8 @@ public final class TransformGizmo: SceneViewManipulator {
     public var onEnd: ((SceneGraph.Node) -> Void)?
 
     private var drag: DragState?
+    // The target's scale and world orientation when a pinch or twist started.
+    private var twoFingerStart: (scale: SIMD3<Float>, orientation: simd_quatf, cameraForward: SIMD3<Float>)?
 
     public init(target: SceneGraph.Node? = nil, mode: Mode = .translate, space: Space = .world) {
         self.target = target
@@ -380,6 +382,44 @@ public final class TransformGizmo: SceneViewManipulator {
             target.trs.scale = scale
         }
         onChange?(target)
+    }
+
+    // MARK: Two-finger gestures
+
+    // Pinches and twists that start within the gizmo's reach on screen (its handle length) scale and turn the
+    // target, whatever the mode.
+    public func claimsTwoFingerGesture(at point: SIMD2<Float>, viewport: SceneViewport) -> Bool {
+        guard target != nil, let frame = frame(viewport: viewport), let center = viewport.project(frame.origin)?.xy else {
+            return false
+        }
+        return simd_distance(point, center) <= size
+    }
+
+    public func beginTwoFingerGesture(viewport: SceneViewport) {
+        guard let target, let frame = frame(viewport: viewport) else {
+            return
+        }
+        twoFingerStart = (target.trs.scale, target.worldOrientation, frame.cameraForward)
+        onBegin?(target)
+    }
+
+    // Scales uniformly by `scale` and turns about the view direction by `rotation` (clockwise on screen, as seen from
+    // the camera), each snapped like the handles.
+    public func twoFingerGesture(scale: Float, rotation: Float, viewport: SceneViewport) {
+        guard let target, let start = twoFingerStart else {
+            return
+        }
+        target.trs.scale = start.scale * Self.snap(max(scale, 0.001), step: snapping.scale)
+        let angle = Self.snap(rotation, step: snapping.rotation)
+        target.worldOrientation = simd_normalize(simd_quatf(angle: angle, axis: start.cameraForward) * start.orientation)
+        onChange?(target)
+    }
+
+    public func endTwoFingerGesture() {
+        if let target, twoFingerStart != nil {
+            onEnd?(target)
+        }
+        twoFingerStart = nil
     }
 
     // Free rotation from a drag in view points (y down): dragging right turns the near side right, dragging down turns

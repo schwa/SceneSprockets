@@ -3843,15 +3843,18 @@ Blocked on Interaction3D #38 and #173.
 ## 178: Transform gizmo: pinch and rotate gestures on iOS and visionOS
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:ui, effort:m
 created: 2026-10-23T13:13:51Z
-updated: 2026-10-23T13:22:41Z
+updated: 2026-10-23T14:28:06Z
+closed: 2026-10-23T14:28:06Z
 +++
 
 Follow-up to #154. On iOS and visionOS: pinch to scale and two-finger rotate to rotate the selected node. Touch drag on handles is #173; trackball rotation is #168.
+
+- `2026-10-23T14:28:06Z`: Implemented: SceneViewManipulator gets two-finger hooks (claimsTwoFingerGesture/begin/change/end, default no-op). On iOS/visionOS SceneView adds a simultaneous Magnify+Rotate gesture; gestures starting within the gizmo's size of its center go to TransformGizmo (uniform scale, twist about the view direction, snapped), and Interaction3D's interactionMagnifyFilter keeps the camera from zooming with them. Test pinchAndTwistScaleAndTurnTheTarget. Not verified on iOS: the iOS build fails earlier in dependencies (#181); the gesture code was type-checked by enabling it on macOS temporarily.
 
 ---
 
@@ -3890,5 +3893,19 @@ Split from #164 (PBR texture transforms are done there).
 - Mip levels: only level 0 is stored; levels are regenerated on load. Store authored mips (for example from KTX2).
 - Cube and 3D textures, and compressed formats (ASTC, BC): SceneArchiveContext.encode(texture:) throws for them.
 - Float textures are raw bytes; consider EXR.
+
+---
+
+## 181: iOS build fails in MetalSprocketsPBR (Float16 unavailable)
+
++++
+status: new
+priority: medium
+kind: bug
+labels: area:build, effort:s
+created: 2026-10-23T14:27:56Z
++++
+
+Found while working on #178. `xcb build -d ios` (generic/platform=iOS) fails before reaching SceneSprockets: MetalSprocketsPBR PBREnvironment.swift:26 and PBRHDROutput.swift:23 report "Float16 is unavailable in macOS", then MetalSprocketsGLTF and SceneSprocketsPBR cannot resolve MetalSprocketsPBR. The "macOS" in the message suggests an x86_64 macOS slice (Float16 is unavailable on Intel Macs) is being built. The simulator build fails anyway (no Metal 4). So the iOS-only code in SceneView (#178 two-finger gestures) has not been compiled for iOS.
 
 ---

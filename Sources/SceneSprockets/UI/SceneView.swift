@@ -63,6 +63,8 @@ public struct SceneView: View {
     @Environment(\.displayScale) private var displayScale
     // Decided at the first change of each drag: whether it started on the manipulator.
     @State private var manipulatorDragClaim: Bool?
+    // The same for two-finger pinch and twist (iOS, visionOS).
+    @State private var twoFingerClaim: Bool?
 
     @State private var internalCameraMatrix: simd_float4x4?
     @State private var viewSize: CGSize = .zero
@@ -171,6 +173,10 @@ public struct SceneView: View {
         .modifier(CameraControl(isEnabled: options.contains(.allowsCameraControl), cameraMatrix: cameraBinding, target: cameraTarget ?? orbitTarget ?? viewpoint.target))
         // Camera control leaves drags that start on the manipulator alone.
         .interactionDragFilter { location in !manipulatorHit(at: location) }
+        .interactionMagnifyFilter { location in !manipulatorClaimsTwoFingers(at: location) }
+        #if os(iOS) || os(visionOS)
+        .simultaneousGesture(twoFingerGesture, including: manipulator != nil ? .all : .subviews)
+        #endif
         .onAppear {
             orbitTarget = viewpoint.target
         }
@@ -233,6 +239,43 @@ public struct SceneView: View {
                 manipulatorDragClaim = nil
             }
     }
+
+    private func manipulatorClaimsTwoFingers(at location: CGPoint) -> Bool {
+        guard let manipulator, let viewport = viewport() else {
+            return false
+        }
+        return manipulator.claimsTwoFingerGesture(at: [Float(location.x), Float(location.y)], viewport: viewport)
+    }
+
+    #if os(iOS) || os(visionOS)
+    private var twoFingerGesture: some Gesture {
+        MagnifyGesture().simultaneously(with: RotateGesture())
+            .onChanged { value in
+                guard let manipulator, let viewport = viewport() else {
+                    return
+                }
+                if twoFingerClaim == nil {
+                    guard let start = value.first?.startLocation else {
+                        return
+                    }
+                    let claimed = manipulatorClaimsTwoFingers(at: start)
+                    twoFingerClaim = claimed
+                    if claimed {
+                        manipulator.beginTwoFingerGesture(viewport: viewport)
+                    }
+                }
+                if twoFingerClaim == true {
+                    manipulator.twoFingerGesture(scale: Float(value.first?.magnification ?? 1), rotation: Float(value.second?.rotation.radians ?? 0), viewport: viewport)
+                }
+            }
+            .onEnded { _ in
+                if twoFingerClaim == true {
+                    manipulator?.endTwoFingerGesture()
+                }
+                twoFingerClaim = nil
+            }
+    }
+    #endif
 
     private func manipulatorHit(at location: CGPoint) -> Bool {
         guard let manipulator, let viewport = viewport() else {

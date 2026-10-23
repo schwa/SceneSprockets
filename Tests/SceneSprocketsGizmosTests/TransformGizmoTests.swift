@@ -141,6 +141,24 @@ struct TransformGizmoTests {
         #expect(pixels[offset + 2] > 200 && Int(pixels[offset + 2]) - Int(pixels[offset + 1]) > 80, "\(pixels[offset ..< offset + 4])")
     }
 
+    // #178: pinch and twist on the gizmo scale and turn the target.
+    @Test
+    func pinchAndTwistScaleAndTurnTheTarget() throws {
+        let (gizmo, node) = makeGizmo()
+        #expect(gizmo.claimsTwoFingerGesture(at: screen(.zero) + [20, 20], viewport: viewport))
+        #expect(!gizmo.claimsTwoFingerGesture(at: screen(.zero) + [gizmo.size + 10, 0], viewport: viewport))
+        var events: [String] = []
+        gizmo.onBegin = { _ in events.append("begin") }
+        gizmo.onEnd = { _ in events.append("end") }
+        gizmo.beginTwoFingerGesture(viewport: viewport)
+        gizmo.twoFingerGesture(scale: 2, rotation: .pi / 2, viewport: viewport)
+        gizmo.endTwoFingerGesture()
+        #expect(events == ["begin", "end"])
+        #expect(simd_distance(node.trs.scale, [2, 2, 2]) < 0.0001)
+        // A clockwise quarter turn on screen, seen from +Z: +X turns to -Y.
+        #expect(simd_distance(node.worldOrientation.act([1, 0, 0]), [0, -1, 0]) < 0.01)
+    }
+
     // #168: the view ring turns about the view direction.
     @Test
     func viewRingRotatesAboutTheViewDirection() throws {
