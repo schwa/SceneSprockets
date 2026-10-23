@@ -3011,7 +3011,9 @@ Package.swift and the demo package use branch main because the 0.0.1 tag depends
 status: new
 priority: low
 kind: enhancement
+labels: deferred, area:demo
 created: 2026-10-22T01:05:11Z
+updated: 2026-10-23T13:00:40Z
 +++
 
 DiceGeometry builds dice with sharp edges. Real dice (and the old Dice by PCalc models) have rounded edges, which catch highlights and read as solid objects, especially on the metal and glass styles. Bevel or chamfer each edge in DiceGeometry, keeping per-face texture coordinates and the convex hull used for physics. Done when the dice show rounded edges in the Dice demo and the numbers still sit on their faces.
@@ -3024,7 +3026,9 @@ DiceGeometry builds dice with sharp edges. Real dice (and the old Dice by PCalc 
 status: new
 priority: low
 kind: enhancement
+labels: deferred, area:demo
 created: 2026-10-22T01:05:11Z
+updated: 2026-10-23T13:00:40Z
 +++
 
 DiceGeometry numbers faces with a simple scheme: opposite faces add up to n + 1 (n - 1 for the D10, numbered 0 to 9), but the arrangement around each corner is arbitrary. Store-bought dice follow conventions (for example, a D6 with 1, 2, 3 meeting counterclockwise at a corner; a balanced D20). Done when each die kind matches a standard layout.
@@ -3316,7 +3320,9 @@ Already tracked elsewhere: HDR, tone mapping, bloom, depth of field (#45); save/
 status: new
 priority: low
 kind: feature
+labels: deferred, area:demo
 created: 2026-10-22T01:56:58Z
+updated: 2026-10-23T13:00:40Z
 +++
 
 A small playable platformer, in the spirit of Apple's SceneKit Fox demo, to exercise the engine as a whole.
@@ -3511,7 +3517,9 @@ Part of #52. Not saved yet: sampler states (textures load with linear repeat), P
 status: new
 priority: low
 kind: feature
+labels: deferred, area:demo
 created: 2026-10-22T16:11:23Z
+updated: 2026-10-23T13:00:40Z
 +++
 
 Part of #52. Register a UTType for .scenesprocketsd (a package) and add open/save to the demo app, for example with DocumentGroup, so archives can be inspected and edited. Today only scenesprockets-demos --save writes them, and nothing reads them except tests.
@@ -3585,7 +3593,9 @@ Follow-up to #154. Ring halves behind the gizmo's center draw like the front hal
 status: new
 priority: low
 kind: enhancement
+labels: deferred, area:demo
 created: 2026-10-22T18:03:49Z
+updated: 2026-10-23T13:00:41Z
 +++
 
 Follow-up to #154. TransformGizmo has onBegin/onChange/onEnd, but the demo app does not record undo steps or show the selected node's transform. Register undo with the window's UndoManager on onBegin/onEnd, and show position, rotation and scale in the inspector.
