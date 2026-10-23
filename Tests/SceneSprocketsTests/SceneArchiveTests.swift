@@ -137,6 +137,79 @@ struct SceneArchiveTests {
         #expect(warnings.contains { $0.contains("Generated") && $0.contains("#158") })
     }
 
+    // #163
+    func pbrScene() throws -> (SceneGraph, PBRMaterialUniforms) {
+        let material = try PBRSceneMaterial(device: device, baseColor: [0.9, 0.7, 0.2, 0.5], metallic: 0.25, roughness: 0.75)
+        var uniforms = material.pbrMaterial.uniforms
+        uniforms.emissiveFactor = [1, 0.5, 0]
+        uniforms.ior = 1.7
+        uniforms.clearcoatFactor = 0.4
+        uniforms.unlit = 1
+        uniforms.alphaMode = .mask
+        uniforms.normal.enabled = 1
+        uniforms.normal.texCoord = 1
+        uniforms.normal.transform = simd_float3x3(columns: ([2, 0, 0], [0, 3, 0], [0.5, 0.25, 1]))
+        material.pbrMaterial.uniforms = uniforms
+        let root = SceneGraph.Node()
+        _ = SceneGraph.Node(parent: root, label: "Sphere", shape: .sphere(), material: material, device: device)
+        return (SceneGraph(root: root), material.pbrMaterial.uniforms)
+    }
+
+    func loadedUniforms(_ url: URL) throws -> PBRMaterialUniforms {
+        let (loaded, _) = try archive.read(from: url, device: device)
+        guard case let .mesh(_, materials, _, _) = loaded.root.children.first?.content, let pbr = materials.first as? PBRSceneMaterial else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        return pbr.pbrMaterial.uniforms
+    }
+
+    @Test
+    func pbrUniformsAreStoredByName() throws {
+        let url = temporaryURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let (scene, uniforms) = try pbrScene()
+        try archive.write(scene, to: url)
+        let json = try sceneJSON(url)
+        #expect(json.contains(#""metallicFactor" : 0.25"#))
+        #expect(json.contains(#""alphaMode" : "mask""#))
+        #expect(!json.contains(#""uniformsSize""#))
+        let loaded = try loadedUniforms(url)
+        #expect(loaded.baseColorFactor == uniforms.baseColorFactor)
+        #expect(loaded.metallicFactor == 0.25 && loaded.roughnessFactor == 0.75)
+        #expect(loaded.emissiveFactor == [1, 0.5, 0] && loaded.ior == 1.7 && loaded.clearcoatFactor == 0.4)
+        #expect(loaded.unlit == 1 && loaded.alphaMode == .mask)
+        #expect(loaded.normal.enabled == 1 && loaded.normal.texCoord == 1 && loaded.normal.transform == uniforms.normal.transform)
+        #expect(loaded.baseColor.enabled == uniforms.baseColor.enabled)
+    }
+
+    // Archives from before #163 stored the raw bytes.
+    @Test
+    func rawPBRUniformsStillRead() throws {
+        let url = temporaryURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let (scene, uniforms) = try pbrScene()
+        try archive.write(scene, to: url)
+        let sceneURL = url.appendingPathComponent("scene.json")
+        var object = try #require(try JSONSerialization.jsonObject(with: Data(contentsOf: sceneURL)) as? [String: Any])
+        var root = try #require(object["root"] as? [String: Any])
+        var child = try #require((root["children"] as? [[String: Any]])?.first)
+        var mesh = try #require(child["mesh"] as? [String: Any])
+        var material = try #require((mesh["materials"] as? [[String: Any]])?.first)
+        var value = try #require(material["value"] as? [String: Any])
+        let bytes = withUnsafeBytes(of: uniforms) { Data($0) }
+        value["parameters"] = nil
+        value["uniforms"] = bytes.base64EncodedString()
+        value["uniformsSize"] = bytes.count
+        material["value"] = value
+        mesh["materials"] = [material]
+        child["mesh"] = mesh
+        root["children"] = [child]
+        object["root"] = root
+        try JSONSerialization.data(withJSONObject: object).write(to: sceneURL)
+        let loaded = try loadedUniforms(url)
+        #expect(loaded.ior == 1.7 && loaded.alphaMode == .mask && loaded.normal.transform == uniforms.normal.transform)
+    }
+
     // #159
     @Test
     func sceneJSONIsReadable() throws {

@@ -4,23 +4,21 @@ import MetalSprocketsPBR
 import MetalSprocketsPBRShaders
 import SceneSprockets
 
-// Saved by SceneArchive. The uniforms are stored as their raw bytes (a plain C struct), checked against the size
-// when read, so an archive only loads with the same MetalSprocketsPBR layout. Samplers and animatable texture
-// transforms are not saved; textures load with the placeholder's linear, repeating sampler.
+// Saved by SceneArchive. The uniforms are stored field by field (see PBRUniformsArchive); archives from before that
+// stored raw bytes, which still read when the layout matches. Samplers and animatable texture transforms are not
+// saved; textures load with the placeholder's linear, repeating sampler.
 extension PBRSceneMaterial: ArchivableMaterial {
     public static let archiveTypeName = "pbr"
 
     enum ArchiveKeys: String, CodingKey {
-        case name, uniforms, uniformsSize, doubleSided, textures, blendMode, depthTest, depthWrite, colorWriteMask, fillMode
+        case name, uniforms, uniformsSize, parameters, doubleSided, textures, blendMode, depthTest, depthWrite, colorWriteMask, fillMode
     }
 
     public func encode(to encoder: Encoder) throws {
         let context = try encoder.sceneArchive
         var container = encoder.container(keyedBy: ArchiveKeys.self)
         try container.encodeIfPresent(pbrMaterial.name, forKey: .name)
-        let uniforms = withUnsafeBytes(of: pbrMaterial.uniforms) { Data($0) }
-        try container.encode(uniforms, forKey: .uniforms)
-        try container.encode(uniforms.count, forKey: .uniformsSize)
+        try PBRUniformsArchive.encode(pbrMaterial.uniforms, to: container.superEncoder(forKey: .parameters))
         try container.encode(pbrMaterial.doubleSided, forKey: .doubleSided)
         // One entry per PBRMaterialTextureIndex; nil for the placeholder.
         let textures = try pbrMaterial.textureBindings.map { binding in
@@ -42,13 +40,11 @@ extension PBRSceneMaterial: ArchivableMaterial {
         let context = try decoder.sceneArchive
         let device = try context.device
         let container = try decoder.container(keyedBy: ArchiveKeys.self)
-        let bytes = try container.decode(Data.self, forKey: .uniforms)
-        guard bytes.count == MemoryLayout<PBRMaterialUniforms>.size, try container.decode(Int.self, forKey: .uniformsSize) == bytes.count else {
-            throw DecodingError.dataCorruptedError(forKey: .uniforms, in: container, debugDescription: "PBR uniforms are \(bytes.count) bytes; this MetalSprocketsPBR expects \(MemoryLayout<PBRMaterialUniforms>.size)")
-        }
-        var uniforms = PBRMaterialUniforms.defaults()
-        withUnsafeMutableBytes(of: &uniforms) { destination in
-            bytes.withUnsafeBytes { destination.copyMemory(from: $0) }
+        let uniforms: PBRMaterialUniforms
+        if container.contains(.parameters) {
+            uniforms = try PBRUniformsArchive.decode(from: container.superDecoder(forKey: .parameters))
+        } else {
+            uniforms = try Self.decodeRawUniforms(container)
         }
         let placeholder = try PBRMaterial.placeholderBinding(device: device)
         let references = try container.decode([SceneArchiveContext.TextureReference?].self, forKey: .textures)
@@ -67,6 +63,19 @@ extension PBRSceneMaterial: ArchivableMaterial {
             fillMode: try container.decode(String.self, forKey: .fillMode) == "lines" ? .lines : .fill
         )
         self.init(material)
+    }
+
+    // Archives from before #163.
+    private static func decodeRawUniforms(_ container: KeyedDecodingContainer<ArchiveKeys>) throws -> PBRMaterialUniforms {
+        let bytes = try container.decode(Data.self, forKey: .uniforms)
+        guard bytes.count == MemoryLayout<PBRMaterialUniforms>.size, try container.decode(Int.self, forKey: .uniformsSize) == bytes.count else {
+            throw DecodingError.dataCorruptedError(forKey: .uniforms, in: container, debugDescription: "PBR uniforms are \(bytes.count) bytes; this MetalSprocketsPBR expects \(MemoryLayout<PBRMaterialUniforms>.size)")
+        }
+        var uniforms = PBRMaterialUniforms.defaults()
+        withUnsafeMutableBytes(of: &uniforms) { destination in
+            bytes.withUnsafeBytes { destination.copyMemory(from: $0) }
+        }
+        return uniforms
     }
 
     private static func isPlaceholder(_ texture: MTLTexture) -> Bool {

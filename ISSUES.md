@@ -3518,15 +3518,18 @@ Part of #52. Node features not saved yet: morph targets and weights, skins and s
 ## 163: Scene archive: store PBR uniforms field by field
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: effort:s, area:document
 created: 2026-10-22T16:11:22Z
-updated: 2026-10-23T13:22:40Z
+updated: 2026-10-23T14:10:35Z
+closed: 2026-10-23T14:10:35Z
 +++
 
 Part of #52. PBRSceneMaterial saves PBRMaterialUniforms as raw bytes with a size check, so archives break whenever MetalSprocketsPBR changes the struct layout. Encode the fields by name (factors, texture slots with transforms and texCoord sets, extension parameters) so archives survive layout changes and are readable.
+
+- `2026-10-23T14:10:35Z`: Fixed: PBR uniforms saved by name under 'parameters' (factors, flags, alpha mode, texture slots with transform/texCoord/enabled); missing fields keep defaults. Mesh-derived flags (hasTangents, hasNormals, isPointOrLine) are set at draw time and not saved. Old raw-byte archives still read. Tests pbrUniformsAreStoredByName, rawPBRUniformsStillRead.
 
 ---
 
