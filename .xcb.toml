@@ -4,10 +4,10 @@ container = "SceneSprockets"
 skip_plugin_validation = true
 
 [defaults.build]
-scheme = "SceneSprocketsDemo"
+scheme = "SceneSprocketsComposer"
 
 [defaults.test]
 scheme = "SceneSprockets"
 
 [defaults.run]
-scheme = "SceneSprocketsDemo"
+scheme = "SceneSprocketsComposer"
