@@ -3611,3 +3611,79 @@ Decide the behavior, and maybe make it an option:
 Related: #154 (transform gizmo).
 
 ---
+
+## 172: SelectionOutline draws over objects in front of the selection
+
++++
+status: new
+priority: medium
+kind: bug
+labels: area:ui
+created: 2026-10-22T21:55:34Z
++++
+
+The selection outline (SelectionOutline, #166) shows through objects that are in front of the selected node. Seen in SceneSprocketsComposer.
+
+Cause: SelectionOutline draws JumpFloodOutlineRenderPipeline with `.always` (x-ray). SceneView uses memoryless depth when there are no post passes, so the overlay passes cannot depth-test against the scene.
+
+Fix options:
+- Keep the scene depth when an overlay needs it (store depth, private storage, like the post passes), and draw the outline with `.greaterEqual` (reversed depth). The mask carries depth in its green channel, so the mask texture must be `.rg32Float`.
+- Make x-ray an option (Blender shows hidden parts fainter).
+
+MetalSprocketsAddOns JumpFloodOutlineDemoView shows the depth-tested setup.
+
+---
+
+## 173: Gizmo handles need a hover before a click works
+
++++
+status: new
+priority: medium
+kind: bug
+labels: area:ui
+created: 2026-10-22T21:55:34Z
+updated: 2026-10-22T21:58:03Z
++++
+
+Clicking a TransformGizmo handle without moving the pointer over it first does not drag the handle. You have to hover, then press. Seen in SceneSprocketsComposer.
+
+Cause: SceneView enables the manipulator drag only when `isHoveringManipulator` is true (set by `onContinuousHover`), with `highPriorityGesture(..., including: hovering ? .gesture : .subviews)`. If the press comes before a hover update, or on touch devices (no hover), the drag goes to camera control instead. Turning on `.gesture` while hovering was also how the camera was kept off the gizmo drag.
+
+Fix:
+- Attach the manipulator drag as a simultaneous gesture, always enabled. At drag start, hit-test the manipulator at `startLocation`; if it misses, ignore the rest of the drag.
+- Tell Interaction3D camera control to ignore drags that start on the manipulator, with the drag filter from Interaction3D #38. No hover gating, no gesture masks.
+- Works the same on iOS and visionOS.
+
+Blocked on Interaction3D #38. Related: #154.
+
+---
+
+## 174: Move the transform gizmo to Interaction3D
+
++++
+status: new
+priority: low
+kind: task
+labels: area:ui, deferred
+created: 2026-10-22T22:00:05Z
+updated: 2026-10-23T12:56:22Z
++++
+
+TransformGizmo (SceneSprocketsGizmos, #154) is mostly not about scene graphs: handle layout, picking, drag math along axes, planes and rings, snapping, and screen-size scaling. Other MetalSprockets apps could use it. Interaction3D is the home for 3D interaction (camera controls, rotation widget), so move the gizmo there, and keep a thin SceneSprockets adapter.
+
+What ties it to SceneSprockets now:
+- `target: SceneGraph.Node` and `onBegin/onChange/onEnd(SceneGraph.Node)`. Replace with a transform the caller owns: a `Binding<Transform3D>` or get/set closures, plus the parent world transform for local space.
+- `SceneViewport`: camera matrix, projection, view and drawable size, `ray(through:)`, `project`, `worldSizeOfPoint`. Interaction3D needs its own small viewport type (GeometryLite3D has ViewProjection), or the gizmo takes one.
+- `SceneViewManipulator` conformance and `overlay(viewport:) -> AnyElement`: keep in SceneSprockets as the adapter.
+
+Drawing: the gizmo draws with MetalSprocketsAddOns GraphicsContext3D. Interaction3D does not depend on MetalSprockets. Options:
+- Interaction3D owns the geometry (handle outlines as 3D polylines, colors, hover and active state); SceneSprockets (or AddOns) draws them.
+- Or draw with SwiftUI Canvas over the view in Interaction3D: no Metal, but no depth.
+
+Gestures: do this together with Interaction3D #38 (drag filter), so the gizmo and camera control share one gesture model with simultaneous gestures. Then SceneView's hover gating goes away (#173).
+
+After the move: SceneSprocketsGizmos keeps SelectionOutline (or it moves too), and the demo app and SceneSprocketsComposer use the Interaction3D gizmo through the adapter.
+
+- `2026-10-23T12:56:17Z`: Deferred. Leaning toward: rendering moves to MetalSprocketsAddOns (AddOns depends on Interaction3D; Interaction3D owns gizmo geometry/math, no Metal). Gesture model still undecided (see #38, #173).
+
+---
