@@ -46,7 +46,8 @@ public struct SceneViewport {
 }
 
 // Something a SceneView draws on top of the scene and that can take pointer drags before camera control does, such
-// as a transform gizmo. SceneView asks `hitTest` while the pointer hovers; a hit routes the next drag here.
+// as a transform gizmo. SceneView asks `hitTest` at the start of each drag; a hit routes that drag here
+// and keeps camera control off it. It also asks while the pointer hovers, for highlighting.
 @MainActor
 public protocol SceneViewManipulator: AnyObject {
     // Drawn after the scene, in its own render pass that loads the scene's color and clears depth to 1 (standard).

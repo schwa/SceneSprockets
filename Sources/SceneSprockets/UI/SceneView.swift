@@ -59,9 +59,8 @@ public struct SceneView: View {
     private let overlay: ((SceneViewport) throws -> AnyElement?)?
 
     @Environment(\.displayScale) private var displayScale
-    // The pointer is over the manipulator, so drags go to it instead of camera control.
-    @State private var isHoveringManipulator = false
-    @State private var isManipulating = false
+    // Decided at the first change of each drag: whether it started on the manipulator.
+    @State private var manipulatorDragClaim: Bool?
 
     @State private var internalCameraMatrix: simd_float4x4?
     @State private var viewSize: CGSize = .zero
@@ -159,22 +158,25 @@ public struct SceneView: View {
         .metalDepthStencilAttachmentTextureUsage(needsPostPasses ? [.renderTarget, .shaderRead] : [.renderTarget])
         .metalDepthStencilStorageMode(needsPostPasses ? .private : .memoryless)
         .modifier(CameraControl(isEnabled: options.contains(.allowsCameraControl), cameraMatrix: cameraBinding, target: orbitTarget ?? viewpoint.target))
+        // Camera control leaves drags that start on the manipulator alone.
+        .interactionDragFilter { location in !manipulatorHit(at: location) }
         .onAppear {
             orbitTarget = viewpoint.target
         }
         .onGeometryChange(for: CGSize.self) { $0.size } action: { viewSize = $0 }
         .onContinuousHover { phase in
-            guard let manipulator, !isManipulating, let viewport = viewport() else {
+            // Hover only updates highlighting; drags are routed at drag start.
+            guard manipulatorDragClaim != true else {
                 return
             }
             switch phase {
             case .active(let location):
-                isHoveringManipulator = manipulator.hitTest([Float(location.x), Float(location.y)], viewport: viewport)
+                _ = manipulatorHit(at: location)
             case .ended:
-                isHoveringManipulator = manipulator.hitTest([-1_000_000, -1_000_000], viewport: viewport)
+                _ = manipulatorHit(at: CGPoint(x: -1_000_000, y: -1_000_000))
             }
         }
-        .highPriorityGesture(manipulatorDrag, including: manipulator != nil && (isHoveringManipulator || isManipulating) ? .all : .subviews)
+        .simultaneousGesture(manipulatorDrag, including: manipulator != nil ? .all : .subviews)
         .onTapGesture { location in
             guard let onTap else {
                 return
@@ -202,16 +204,30 @@ public struct SceneView: View {
                 guard let manipulator, let viewport = viewport() else {
                     return
                 }
-                if !isManipulating {
-                    isManipulating = true
-                    manipulator.beginDrag(at: [Float(value.startLocation.x), Float(value.startLocation.y)], viewport: viewport)
+                if manipulatorDragClaim == nil {
+                    let claimed = manipulatorHit(at: value.startLocation)
+                    manipulatorDragClaim = claimed
+                    if claimed {
+                        manipulator.beginDrag(at: [Float(value.startLocation.x), Float(value.startLocation.y)], viewport: viewport)
+                    }
                 }
-                manipulator.drag(to: [Float(value.location.x), Float(value.location.y)], viewport: viewport)
+                if manipulatorDragClaim == true {
+                    manipulator.drag(to: [Float(value.location.x), Float(value.location.y)], viewport: viewport)
+                }
             }
             .onEnded { _ in
-                manipulator?.endDrag()
-                isManipulating = false
+                if manipulatorDragClaim == true {
+                    manipulator?.endDrag()
+                }
+                manipulatorDragClaim = nil
             }
+    }
+
+    private func manipulatorHit(at location: CGPoint) -> Bool {
+        guard let manipulator, let viewport = viewport() else {
+            return false
+        }
+        return manipulator.hitTest([Float(location.x), Float(location.y)], viewport: viewport)
     }
 
     private func manipulatorOverlay(drawableSize: CGSize) -> AnyElement? {

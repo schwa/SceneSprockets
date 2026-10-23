@@ -1,5 +1,5 @@
 {
-  "originHash" : "e02bdc81dd8e0768527f332af5e82627280421f260b52ed701a7e7103b21b06f",
+  "originHash" : "6844a9814ef664e2a771170ae6816e27dfcd3105787131f9e16aa0fbba8cd965",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -34,7 +34,7 @@
       "location" : "https://github.com/schwa/GeometryLite3D",
       "state" : {
         "branch" : "main",
-        "revision" : "3a206f518d934ea5a1de9e3a7579f48156bd0448"
+        "revision" : "4e91b6e3455e2b71d3495ffeb35f2aca30d39f33"
       }
     },
     {
@@ -52,7 +52,7 @@
       "location" : "https://github.com/schwa/Interaction3D",
       "state" : {
         "branch" : "main",
-        "revision" : "0518b2f92ca97f9d12e776eab122d1adbb1e274d"
+        "revision" : "3696a8f1e9f1e018fbdea5fd4c48030775dbd43e"
       }
     },
     {
@@ -79,7 +79,7 @@
       "location" : "https://github.com/schwa/MetalSprocketsAddOns",
       "state" : {
         "branch" : "main",
-        "revision" : "79ae7f93cc7887280f03e90e5ce478d1a2eed207"
+        "revision" : "670d194f929a45c2e56e2bb19bf4a4f2491bc598"
       }
     },
     {
@@ -157,10 +157,10 @@
     {
       "identity" : "swift-collections",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-collections",
+      "location" : "https://github.com/apple/swift-collections.git",
       "state" : {
-        "revision" : "35a1edcb8ebd2bfe251d587f0b69e62af28f508c",
-        "version" : "1.7.3"
+        "revision" : "844289ac455816e193f1dbbe014f3c4dbe429410",
+        "version" : "1.7.4"
       }
     },
     {

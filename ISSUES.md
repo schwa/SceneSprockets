@@ -3687,12 +3687,13 @@ MetalSprocketsAddOns JumpFloodOutlineDemoView shows the depth-tested setup.
 ## 173: Gizmo handles need a hover before a click works
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:ui, effort:s
 created: 2026-10-22T21:55:34Z
-updated: 2026-10-23T13:22:40Z
+updated: 2026-10-23T13:32:43Z
+closed: 2026-10-23T13:32:43Z
 +++
 
 Clicking a TransformGizmo handle without moving the pointer over it first does not drag the handle. You have to hover, then press. Seen in SceneSprocketsComposer.
@@ -3705,6 +3706,8 @@ Fix:
 - Works the same on iOS and visionOS.
 
 Blocked on Interaction3D #38. Related: #154.
+
+- `2026-10-23T13:32:43Z`: Fixed: manipulator drag is a simultaneous gesture that hit-tests at drag start; camera control uses interactionDragFilter (Interaction3D #38). No unit test: SwiftUI gesture routing isn't reachable from unit tests; verify by hand in the composer/demo (click a handle without hovering first, and on iOS).
 
 ---
 
