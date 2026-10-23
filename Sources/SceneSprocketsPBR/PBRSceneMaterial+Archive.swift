@@ -5,13 +5,13 @@ import MetalSprocketsPBRShaders
 import SceneSprockets
 
 // Saved by SceneArchive. The uniforms are stored field by field (see PBRUniformsArchive); archives from before that
-// stored raw bytes, which still read when the layout matches. Samplers and animatable texture transforms are not
-// saved; textures load with the placeholder's linear, repeating sampler.
+// stored raw bytes, which still read when the layout matches. Animatable texture transforms are stored by their
+// slot's name. Samplers are not saved; textures load with the placeholder's linear, repeating sampler.
 extension PBRSceneMaterial: ArchivableMaterial {
     public static let archiveTypeName = "pbr"
 
     enum ArchiveKeys: String, CodingKey {
-        case name, uniforms, uniformsSize, parameters, doubleSided, textures, blendMode, depthTest, depthWrite, colorWriteMask, fillMode
+        case name, uniforms, uniformsSize, parameters, textureTransforms, doubleSided, textures, blendMode, depthTest, depthWrite, colorWriteMask, fillMode
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -31,9 +31,7 @@ extension PBRSceneMaterial: ArchivableMaterial {
         try container.encode(Self.name(state.depthWrite), forKey: .depthWrite)
         try container.encode(state.colorWriteMask.rawValue, forKey: .colorWriteMask)
         try container.encode(state.fillMode == .lines ? "lines" : "fill", forKey: .fillMode)
-        if !pbrMaterial.textureTransforms.isEmpty {
-            context.warn("PBR material \(pbrMaterial.name ?? ""): animatable texture transforms not saved")
-        }
+        try encodeTextureTransforms(into: &container, context: context)
     }
 
     public init(from decoder: Decoder) throws {
@@ -62,7 +60,48 @@ extension PBRSceneMaterial: ArchivableMaterial {
             colorWriteMask: PBRRenderState.ColorWriteMask(rawValue: try container.decode(UInt8.self, forKey: .colorWriteMask)),
             fillMode: try container.decode(String.self, forKey: .fillMode) == "lines" ? .lines : .fill
         )
+        material.textureTransforms = try Self.decodeTextureTransforms(container, context: context)
         self.init(material)
+    }
+
+    enum TransformKeys: String, CodingKey {
+        case slot, offset, rotation, scale
+    }
+
+    private func encodeTextureTransforms(into container: inout KeyedEncodingContainer<ArchiveKeys>, context: SceneArchiveContext) throws {
+        guard !pbrMaterial.textureTransforms.isEmpty else {
+            return
+        }
+        var transforms = container.nestedContainer(keyedBy: PBRUniformsArchive.Key.self, forKey: .textureTransforms)
+        for (name, transform) in pbrMaterial.textureTransforms.sorted(by: { $0.key < $1.key }) {
+            guard let slot = PBRUniformsArchive.slots.first(where: { $0.1 == transform.slot })?.0 else {
+                context.warn("PBR material \(pbrMaterial.name ?? ""): texture transform \"\(name)\" has an unknown slot; skipped")
+                continue
+            }
+            var item = transforms.nestedContainer(keyedBy: TransformKeys.self, forKey: PBRUniformsArchive.Key(name))
+            try item.encode(slot, forKey: .slot)
+            try item.encode(transform.offset, forKey: .offset)
+            try item.encode(transform.rotation, forKey: .rotation)
+            try item.encode(transform.scale, forKey: .scale)
+        }
+    }
+
+    private static func decodeTextureTransforms(_ container: KeyedDecodingContainer<ArchiveKeys>, context: SceneArchiveContext) throws -> [String: PBRMaterial.TextureTransform] {
+        guard container.contains(.textureTransforms) else {
+            return [:]
+        }
+        let transforms = try container.nestedContainer(keyedBy: PBRUniformsArchive.Key.self, forKey: .textureTransforms)
+        var result: [String: PBRMaterial.TextureTransform] = [:]
+        for key in transforms.allKeys {
+            let item = try transforms.nestedContainer(keyedBy: TransformKeys.self, forKey: key)
+            let slotName = try item.decode(String.self, forKey: .slot)
+            guard let slot = PBRUniformsArchive.slots.first(where: { $0.0 == slotName })?.1 else {
+                context.warn("PBR texture transform \"\(key.stringValue)\": unknown slot \"\(slotName)\"; skipped")
+                continue
+            }
+            result[key.stringValue] = PBRMaterial.TextureTransform(slot: slot, offset: try item.decode(SIMD2<Float>.self, forKey: .offset), rotation: try item.decode(Float.self, forKey: .rotation), scale: try item.decode(SIMD2<Float>.self, forKey: .scale))
+        }
+        return result
     }
 
     // Archives from before #163.

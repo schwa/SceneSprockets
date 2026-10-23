@@ -182,6 +182,29 @@ struct SceneArchiveTests {
         #expect(loaded.baseColor.enabled == uniforms.baseColor.enabled)
     }
 
+    // #164
+    @Test
+    func pbrTextureTransformsRoundTrip() throws {
+        let url = temporaryURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let (scene, _) = try pbrScene()
+        guard case let .mesh(_, materials, _, _) = scene.root.children[0].content, let pbr = materials.first as? PBRSceneMaterial else {
+            Issue.record("expected a PBR mesh")
+            return
+        }
+        pbr.pbrMaterial.textureTransforms = ["normalTexture": .init(slot: \.normal, offset: [0.25, 0.5], rotation: 0.3, scale: [2, 3])]
+        let warnings = try archive.write(scene, to: url)
+        #expect(!warnings.contains { $0.contains("texture transform") })
+        let (loaded, _) = try archive.read(from: url, device: device)
+        guard case let .mesh(_, loadedMaterials, _, _) = loaded.root.children.first?.content, let loadedPBR = loadedMaterials.first as? PBRSceneMaterial else {
+            Issue.record("expected a PBR mesh")
+            return
+        }
+        let transform = try #require(loadedPBR.pbrMaterial.textureTransforms["normalTexture"])
+        #expect(transform.slot == \PBRMaterialUniforms.normal)
+        #expect(transform.offset == [0.25, 0.5] && transform.rotation == 0.3 && transform.scale == [2, 3])
+    }
+
     // Archives from before #163 stored the raw bytes.
     @Test
     func rawPBRUniformsStillRead() throws {

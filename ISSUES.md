@@ -3536,15 +3536,18 @@ Part of #52. PBRSceneMaterial saves PBRMaterialUniforms as raw bytes with a size
 ## 164: Scene archive: samplers, texture transforms and more texture formats
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: effort:m, area:document
 created: 2026-10-22T16:11:23Z
-updated: 2026-10-23T13:22:40Z
+updated: 2026-10-23T14:14:45Z
+closed: 2026-10-23T14:14:45Z
 +++
 
 Part of #52. Not saved yet: sampler states (textures load with linear repeat), PBR animatable texture transforms, mip levels (regenerated, not stored), cube and 3D textures, compressed formats (ASTC, BC). Float textures are raw bytes; consider EXR.
+
+- `2026-10-23T14:14:45Z`: PBR animatable texture transforms done: stored by name with their slot name, offset, rotation and scale (test pbrTextureTransformsRoundTrip). Samplers, stored mips, cube/3D, compressed formats and EXR split to #180 (samplers need their descriptor kept; MTLSamplerState cannot be read back).
 
 ---
 
@@ -3863,5 +3866,24 @@ Split from #161 (constraints are done there).
 - Animation: AnimationClip and AnimationPlayer are not tied to nodes in the graph (players are owned by the caller), so decide what a saved scene holds: clips with node-path targets (like constraints in #161), and which players auto-play on load.
 
 Seen in shadows and scenekit-features (spinning torus).
+
+---
+
+## 180: Scene archive: samplers, stored mip levels, cube/3D and compressed textures
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:document, effort:m
+created: 2026-10-23T14:14:45Z
++++
+
+Split from #164 (PBR texture transforms are done there).
+
+- Samplers: MTLSamplerState cannot be read back, so saving one needs its MTLSamplerDescriptor kept with it. Probably MetalSprocketsPBR (PBRMaterial.Binding) and Blinn-Phong textures keep the descriptor; then store filters and address modes. Textures load with linear repeat today.
+- Mip levels: only level 0 is stored; levels are regenerated on load. Store authored mips (for example from KTX2).
+- Cube and 3D textures, and compressed formats (ASTC, BC): SceneArchiveContext.encode(texture:) throws for them.
+- Float textures are raw bytes; consider EXR.
 
 ---
