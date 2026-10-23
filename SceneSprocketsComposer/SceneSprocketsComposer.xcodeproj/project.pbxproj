@@ -1,0 +1,540 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		451594952F64AAE8005F944D /* SceneSprocketsComposerSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 451594942F64AAE8005F944D /* SceneSprocketsComposerSupport */; };
+		4594F5CD308A691C00A7E100 /* Quartz.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4594F5CC308A691C00A7E100 /* Quartz.framework */; };
+		4594F5D9308A691C00A7E100 /* SceneSprocketsQuickLook.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 4594F5CA308A691C00A7E100 /* SceneSprocketsQuickLook.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		4594F5E0308A691C00A7E100 /* SceneSprocketsComposerSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 4594F5DF308A691C00A7E100 /* SceneSprocketsComposerSupport */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		4594F5D7308A691C00A7E100 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4515943F2F64A8DC005F944D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4594F5C9308A691C00A7E100;
+			remoteInfo = SceneSprocketsQuickLook;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		4594F5DE308A691C00A7E100 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				4594F5D9308A691C00A7E100 /* SceneSprocketsQuickLook.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		451594472F64A8DC005F944D /* SceneSprocketsComposer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SceneSprocketsComposer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4594F5CA308A691C00A7E100 /* SceneSprocketsQuickLook.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SceneSprocketsQuickLook.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		4594F5CC308A691C00A7E100 /* Quartz.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Quartz.framework; path = System/Library/Frameworks/Quartz.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		4515947D2F64AAA7005F944D /* Exceptions for "Packages" folder in "SceneSprocketsComposer" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				SceneSprocketsComposerSupport,
+			);
+			target = 451594462F64A8DC005F944D /* SceneSprocketsComposer */;
+		};
+		451594922F64AAB2005F944D /* Exceptions for "Configuration" folder in "SceneSprocketsComposer" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				"Project-Debug.xcconfig",
+				"Project-Release.xcconfig",
+				"Project-Shared.xcconfig",
+				"SceneSprocketsComposer-Debug.xcconfig",
+				"SceneSprocketsComposer-Release.xcconfig",
+				"SceneSprocketsComposer-Shared.xcconfig",
+			);
+			target = 451594462F64A8DC005F944D /* SceneSprocketsComposer */;
+		};
+		4594F5DD308A691C00A7E100 /* Exceptions for "SceneSprocketsQuickLook" folder in "SceneSprocketsQuickLook" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 4594F5C9308A691C00A7E100 /* SceneSprocketsQuickLook */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		451594492F64A8DC005F944D /* SceneSprocketsComposer */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SceneSprocketsComposer;
+			sourceTree = "<group>";
+		};
+		451594742F64AA9A005F944D /* Configuration */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				451594922F64AAB2005F944D /* Exceptions for "Configuration" folder in "SceneSprocketsComposer" target */,
+			);
+			path = Configuration;
+			sourceTree = "<group>";
+		};
+		4515947C2F64AAA6005F944D /* Packages */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				4515947D2F64AAA7005F944D /* Exceptions for "Packages" folder in "SceneSprocketsComposer" target */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		4594F5CE308A691C00A7E100 /* SceneSprocketsQuickLook */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				4594F5DD308A691C00A7E100 /* Exceptions for "SceneSprocketsQuickLook" folder in "SceneSprocketsQuickLook" target */,
+			);
+			path = SceneSprocketsQuickLook;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		451594442F64A8DC005F944D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				451594952F64AAE8005F944D /* SceneSprocketsComposerSupport in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4594F5C7308A691C00A7E100 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4594F5CD308A691C00A7E100 /* Quartz.framework in Frameworks */,
+				4594F5E0308A691C00A7E100 /* SceneSprocketsComposerSupport in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		4515943E2F64A8DC005F944D = {
+			isa = PBXGroup;
+			children = (
+				451594742F64AA9A005F944D /* Configuration */,
+				4515947C2F64AAA6005F944D /* Packages */,
+				451594492F64A8DC005F944D /* SceneSprocketsComposer */,
+				4594F5CE308A691C00A7E100 /* SceneSprocketsQuickLook */,
+				4594F5CB308A691C00A7E100 /* Frameworks */,
+				451594482F64A8DC005F944D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		451594482F64A8DC005F944D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				451594472F64A8DC005F944D /* SceneSprocketsComposer.app */,
+				4594F5CA308A691C00A7E100 /* SceneSprocketsQuickLook.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		4594F5CB308A691C00A7E100 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				4594F5CC308A691C00A7E100 /* Quartz.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		451594462F64A8DC005F944D /* SceneSprocketsComposer */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 451594522F64A8DD005F944D /* Build configuration list for PBXNativeTarget "SceneSprocketsComposer" */;
+			buildPhases = (
+				451594432F64A8DC005F944D /* Sources */,
+				451594442F64A8DC005F944D /* Frameworks */,
+				451594452F64A8DC005F944D /* Resources */,
+				4594F5DE308A691C00A7E100 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				4594F5D8308A691C00A7E100 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				451594492F64A8DC005F944D /* SceneSprocketsComposer */,
+				451594742F64AA9A005F944D /* Configuration */,
+				4515947C2F64AAA6005F944D /* Packages */,
+			);
+			name = SceneSprocketsComposer;
+			packageProductDependencies = (
+				451594942F64AAE8005F944D /* SceneSprocketsComposerSupport */,
+			);
+			productName = SceneSprocketsComposer;
+			productReference = 451594472F64A8DC005F944D /* SceneSprocketsComposer.app */;
+			productType = "com.apple.product-type.application";
+		};
+		4594F5C9308A691C00A7E100 /* SceneSprocketsQuickLook */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4594F5DA308A691C00A7E100 /* Build configuration list for PBXNativeTarget "SceneSprocketsQuickLook" */;
+			buildPhases = (
+				4594F5C6308A691C00A7E100 /* Sources */,
+				4594F5C7308A691C00A7E100 /* Frameworks */,
+				4594F5C8308A691C00A7E100 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				4594F5CE308A691C00A7E100 /* SceneSprocketsQuickLook */,
+			);
+			name = SceneSprocketsQuickLook;
+			packageProductDependencies = (
+				4594F5DF308A691C00A7E100 /* SceneSprocketsComposerSupport */,
+			);
+			productName = SceneSprocketsQuickLook;
+			productReference = 4594F5CA308A691C00A7E100 /* SceneSprocketsQuickLook.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		4515943F2F64A8DC005F944D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2640;
+				TargetAttributes = {
+					451594462F64A8DC005F944D = {
+						CreatedOnToolsVersion = 26.4;
+					};
+					4594F5C9308A691C00A7E100 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+				};
+			};
+			buildConfigurationList = 451594422F64A8DC005F944D /* Build configuration list for PBXProject "SceneSprocketsComposer" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 4515943E2F64A8DC005F944D;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 451594482F64A8DC005F944D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				451594462F64A8DC005F944D /* SceneSprocketsComposer */,
+				4594F5C9308A691C00A7E100 /* SceneSprocketsQuickLook */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		451594452F64A8DC005F944D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4594F5C8308A691C00A7E100 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		451594432F64A8DC005F944D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4594F5C6308A691C00A7E100 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		4594F5D8308A691C00A7E100 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4594F5C9308A691C00A7E100 /* SceneSprocketsQuickLook */;
+			targetProxy = 4594F5D7308A691C00A7E100 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		451594502F64A8DD005F944D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 451594742F64AA9A005F944D /* Configuration */;
+			baseConfigurationReferenceRelativePath = "Project-Debug.xcconfig";
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		451594512F64A8DD005F944D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 451594742F64AA9A005F944D /* Configuration */;
+			baseConfigurationReferenceRelativePath = "Project-Release.xcconfig";
+			buildSettings = {
+			};
+			name = Release;
+		};
+		451594532F64A8DD005F944D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 451594742F64AA9A005F944D /* Configuration */;
+			baseConfigurationReferenceRelativePath = "SceneSprocketsComposer-Debug.xcconfig";
+			buildSettings = {
+				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportsDocumentBrowser = YES;
+			};
+			name = Debug;
+		};
+		451594542F64A8DD005F944D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 451594742F64AA9A005F944D /* Configuration */;
+			baseConfigurationReferenceRelativePath = "SceneSprocketsComposer-Release.xcconfig";
+			buildSettings = {
+				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportsDocumentBrowser = YES;
+			};
+			name = Release;
+		};
+		4594F5DB308A691C00A7E100 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SceneSprocketsQuickLook/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SceneSprocketsQuickLook;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.3;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = io.schwa.SceneSprocketsComposer.SceneSprocketsQuickLook;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		4594F5DC308A691C00A7E100 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SceneSprocketsQuickLook/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SceneSprocketsQuickLook;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.3;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = io.schwa.SceneSprocketsComposer.SceneSprocketsQuickLook;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		451594422F64A8DC005F944D /* Build configuration list for PBXProject "SceneSprocketsComposer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				451594502F64A8DD005F944D /* Debug */,
+				451594512F64A8DD005F944D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		451594522F64A8DD005F944D /* Build configuration list for PBXNativeTarget "SceneSprocketsComposer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				451594532F64A8DD005F944D /* Debug */,
+				451594542F64A8DD005F944D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4594F5DA308A691C00A7E100 /* Build configuration list for PBXNativeTarget "SceneSprocketsQuickLook" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4594F5DB308A691C00A7E100 /* Debug */,
+				4594F5DC308A691C00A7E100 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		451594942F64AAE8005F944D /* SceneSprocketsComposerSupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SceneSprocketsComposerSupport;
+		};
+		4594F5DF308A691C00A7E100 /* SceneSprocketsComposerSupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SceneSprocketsComposerSupport;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 4515943F2F64A8DC005F944D /* Project object */;
+}

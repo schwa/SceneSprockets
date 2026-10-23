@@ -1,0 +1,50 @@
+// swift-tools-version: 6.2
+
+import PackageDescription
+
+let package = Package(
+    name: "SceneSprocketsComposerSupport",
+    platforms: [
+        .iOS(.v26),
+        .macOS(.v26),
+        .visionOS(.v26)
+    ],
+    products: [
+        .library(name: "SceneSprocketsComposerSupport", targets: ["SceneSprocketsComposerSupport"]),
+    ],
+    dependencies: [
+        // Local checkout so editor and engine can change together. SwiftPM names it after its folder.
+        .package(path: "../../.."),
+        .package(url: "https://github.com/schwa/GeometryLite3D", branch: "main"),
+        .package(url: "https://github.com/schwa/Interaction3D", branch: "main"),
+        .package(url: "https://github.com/schwa/MetalSprockets", branch: "main"),
+        .package(url: "https://github.com/schwa/MetalSprocketsAddOns", branch: "main"),
+        .package(url: "https://github.com/schwa/MetalSprocketsPBR", branch: "main"),
+        .package(url: "https://github.com/schwa/MetalSupport", branch: "main"),
+        .package(url: "https://github.com/schwa/SwiftMesh", branch: "main"),
+    ],
+    targets: [
+        .target(
+            name: "SceneSprocketsComposerSupport",
+            dependencies: [
+                .product(name: "SceneSprockets", package: "SceneSprockets"),
+                .product(name: "SceneSprocketsBlinnPhong", package: "SceneSprockets"),
+                .product(name: "SceneSprocketsGizmos", package: "SceneSprockets"),
+                .product(name: "SceneSprocketsPBR", package: "SceneSprockets"),
+                .product(name: "GeometryLite3D", package: "GeometryLite3D"),
+                .product(name: "Interaction3D", package: "Interaction3D"),
+                .product(name: "MetalSprockets", package: "MetalSprockets"),
+                .product(name: "MetalSprocketsUI", package: "MetalSprockets"),
+                .product(name: "MetalSprocketsAddOns", package: "MetalSprocketsAddOns"),
+                .product(name: "MetalSprocketsPBR", package: "MetalSprocketsPBR"),
+                .product(name: "MetalSupport", package: "MetalSupport"),
+                .product(name: "SwiftMesh", package: "SwiftMesh"),
+            ]
+        ),
+        .testTarget(
+            name: "SceneSprocketsComposerSupportTests",
+            dependencies: ["SceneSprocketsComposerSupport"]
+        ),
+    ],
+    swiftLanguageModes: [.v6]
+)

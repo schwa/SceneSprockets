@@ -3699,3 +3699,63 @@ After the move: SceneSprocketsGizmos keeps SelectionOutline (or it moves too), a
 - `2026-10-23T12:56:17Z`: Deferred. Leaning toward: rendering moves to MetalSprocketsAddOns (AddOns depends on Interaction3D; Interaction3D owns gizmo geometry/math, no Metal). Gesture model still undecided (see #38, #173).
 
 ---
+
+## 175: Composer: save a preview PNG inside the document bundle
+
++++
+status: new
+priority: medium
+kind: feature
+labels: area:composer, area:document
+created: 2026-10-23T13:03:28Z
++++
+
+When saving a .scenesprocketsd bundle, render the scene offscreen and write a PNG into the bundle (for example `Preview.png`).
+
+The Quick Look preview extension and a future thumbnail extension can then show the PNG directly. They do not need to load the scene or start Metal rendering, which is slow and heavy in an extension.
+
+- Render at a fixed size (for example 1024 px on the longest side) from the editor camera, or from the scene camera if there is one.
+- Quick Look: show the PNG if it exists. If it does not, fall back to `QuickLookPreviewView` (a live render).
+- Add a thumbnail extension (`com.apple.quicklook.thumbnail`) that returns the PNG.
+
+Blocked on #52 (save and load a scene graph).
+
+---
+
+## 176: Composer: Render tab camera settings should override the scene camera node
+
++++
+status: new
+priority: medium
+kind: bug
+labels: area:composer, area:preview
+created: 2026-10-23T13:03:28Z
++++
+
+The Render tab field of view and near/far clip apply only when the scene has no camera node. If the scene has a camera node, SceneView uses that camera's projection, and the settings do nothing. They should always apply in the editor preview: the editor camera is our own orbit camera, not the scene camera.
+
+Needs a SceneView change: it picks the projection from the first camera node (or `pointOfView`) in drawing, `viewport()` and hit testing, and falls back to `defaultCamera` only when there is none. Add a way to force the projection, for example: when `cameraMatrix` is set without `.allowsCameraControl` (a free camera), use `defaultCamera`; or add a `projection` override parameter.
+
+Also remove the "Used when the scene has no camera node." note from the Render tab.
+
+---
+
+## 177: Composer: use Interaction3D camera control instead of OrbitCamera gestures
+
++++
+status: new
+priority: medium
+kind: task
+labels: area:composer, area:preview
+created: 2026-10-23T13:03:28Z
++++
+
+ScenePreviewView has its own orbit, pan and zoom gestures (OrbitCamera), because SceneView's Interaction3D camera control beat the gizmo's drag. Once Interaction3D can ignore drags that start on the gizmo (Interaction3D #38) and SceneView uses it (#173), go back to Interaction3D:
+
+- SceneView `.allowsCameraControl` with our `cameraMatrix` binding, or `interactiveCamera(cameraMatrix:)` on the preview.
+- Keep Frame Selection and Reset: they set the camera matrix (and orbit target).
+- Remove OrbitCamera's gesture code, and the scroll wheel and magnify handlers in ScenePreviewView.
+
+Blocked on Interaction3D #38 and #173.
+
+---
