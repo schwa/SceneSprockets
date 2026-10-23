@@ -141,6 +141,34 @@ struct TransformGizmoTests {
         #expect(pixels[offset + 2] > 200 && Int(pixels[offset + 2]) - Int(pixels[offset + 1]) > 80, "\(pixels[offset ..< offset + 4])")
     }
 
+    // #168: the view ring turns about the view direction.
+    @Test
+    func viewRingRotatesAboutTheViewDirection() throws {
+        let (gizmo, node) = makeGizmo(.rotate)
+        let frame = try #require(gizmo.frame(viewport: viewport))
+        let start = screen(frame.origin + frame.cameraRight * frame.length * 1.1)
+        #expect(gizmo.handle(at: start, viewport: viewport) == .view)
+        gizmo.beginDrag(at: start, viewport: viewport)
+        gizmo.drag(to: screen(frame.origin + frame.cameraUp * frame.length * 1.1), viewport: viewport)
+        gizmo.endDrag()
+        // A quarter turn counterclockwise on screen: +X turns to +Y.
+        #expect(simd_distance(node.worldOrientation.act([1, 0, 0]), [0, 1, 0]) < 0.01)
+    }
+
+    // #168: dragging inside the rings turns the node freely.
+    @Test
+    func trackballTurnsTheNearSideWithTheDrag() throws {
+        let (gizmo, node) = makeGizmo(.rotate)
+        let center = screen(.zero)
+        #expect(gizmo.handle(at: center + [5, 5], viewport: viewport) == .center)
+        gizmo.beginDrag(at: center + [5, 5], viewport: viewport)
+        // pi / 2 radians at 0.01 radians per point.
+        gizmo.drag(to: center + [5 + Float.pi / 2 / 0.01, 5], viewport: viewport)
+        gizmo.endDrag()
+        // The side facing the camera (+Z) turned right (+X).
+        #expect(simd_distance(node.worldOrientation.act([0, 0, 1]), [1, 0, 0]) < 0.01)
+    }
+
     // #169: the camera looks down -Z, so the Z axis points at it and the XY plane faces it.
     @Test
     func handlesPointingAtTheCameraFade() throws {

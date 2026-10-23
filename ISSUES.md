@@ -3612,17 +3612,19 @@ Follow-up to #154. SceneView routes a drag to the manipulator only when the poin
 ## 168: Transform gizmo: view-aligned rotate ring and trackball
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: effort:m, area:ui
 created: 2026-10-22T18:03:48Z
-updated: 2026-10-23T13:22:41Z
+updated: 2026-10-23T14:17:56Z
+closed: 2026-10-23T14:17:56Z
 +++
 
 Follow-up to #154. Rotate mode has the three axis rings only. Add a ring facing the camera (rotate about the view axis) and free trackball rotation inside the rings, like three.js TransformControls and Blender.
 
 - `2026-10-23T13:22:41Z`: Related: #178 (touch pinch/rotate) was split off; trackball stays here.
+- `2026-10-23T14:17:57Z`: Fixed: rotate mode has a white view-aligned ring (1.1x radius) that turns about the view direction, and a trackball inside the rings (.center) that turns freely with the drag (0.01 rad/point, not snapped). The inner 60% of the rings is always the trackball, since edge-on rings project through the center. Tests viewRingRotatesAboutTheViewDirection, trackballTurnsTheNearSideWithTheDrag.
 
 ---
 

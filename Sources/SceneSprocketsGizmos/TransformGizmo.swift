@@ -36,8 +36,10 @@ public final class TransformGizmo: SceneViewManipulator {
         case axis(Axis)
         // The plane perpendicular to the axis.
         case plane(Axis)
-        // Translate: in the view plane. Scale: uniform.
+        // Translate: in the view plane. Scale: uniform. Rotate: free (trackball) rotation inside the rings.
         case center
+        // Rotate: the ring facing the camera, about the view direction.
+        case view
     }
 
     public struct Snapping: Sendable {
@@ -86,6 +88,8 @@ public final class TransformGizmo: SceneViewManipulator {
         // World length of an axis handle.
         var length: Float
         var cameraForward: SIMD3<Float>
+        var cameraRight: SIMD3<Float> = [1, 0, 0]
+        var cameraUp: SIMD3<Float> = [0, 1, 0]
 
         func axis(_ axis: Axis) -> SIMD3<Float> {
             axes[axis.rawValue]
@@ -103,7 +107,7 @@ public final class TransformGizmo: SceneViewManipulator {
         case .local: [world.columns.0.xyz, world.columns.1.xyz, world.columns.2.xyz].map { simd_length($0) > 0 ? simd_normalize($0) : [0, 0, 0] }
         }
         let forward = -simd_normalize(viewport.cameraMatrix.columns.2.xyz)
-        return Frame(origin: origin, axes: axes, length: size * viewport.worldSizeOfPoint(at: origin), cameraForward: forward)
+        return Frame(origin: origin, axes: axes, length: size * viewport.worldSizeOfPoint(at: origin), cameraForward: forward, cameraRight: simd_normalize(viewport.cameraMatrix.columns.0.xyz), cameraUp: simd_normalize(viewport.cameraMatrix.columns.1.xyz))
     }
 
     // World polylines for each handle, for drawing and hit testing. Planes are closed quads.
@@ -122,15 +126,20 @@ public final class TransformGizmo: SceneViewManipulator {
             }
             return result
         case .rotate:
-            return Axis.allCases.map { axis in
+            var result: [(Handle, [SIMD3<Float>])] = Axis.allCases.map { axis in
                 let u = frame.axis(Axis(rawValue: (axis.rawValue + 1) % 3)!)
                 let v = frame.axis(Axis(rawValue: (axis.rawValue + 2) % 3)!)
-                let points = (0 ... 64).map { index -> SIMD3<Float> in
-                    let angle = Float(index) / 64 * 2 * .pi
-                    return o + (u * cos(angle) + v * sin(angle)) * length * 0.9
-                }
-                return (.axis(axis), points)
+                return (.axis(axis), Self.circle(center: o, u: u, v: v, radius: length * 0.9))
             }
+            result.append((.view, Self.circle(center: o, u: frame.cameraRight, v: frame.cameraUp, radius: length * 1.1)))
+            return result
+        }
+    }
+
+    static func circle(center: SIMD3<Float>, u: SIMD3<Float>, v: SIMD3<Float>, radius: Float) -> [SIMD3<Float>] {
+        (0 ... 64).map { index in
+            let angle = Float(index) / 64 * 2 * .pi
+            return center + (u * cos(angle) + v * sin(angle)) * radius
         }
     }
 
@@ -139,7 +148,7 @@ public final class TransformGizmo: SceneViewManipulator {
     func opacity(of handle: Handle, frame: Frame) -> Float {
         let facing: Float
         switch (mode, handle) {
-        case (.rotate, _), (_, .center):
+        case (.rotate, _), (_, .center), (_, .view):
             return 1
         case (_, .axis(let axis)):
             facing = 1 - abs(simd_dot(frame.axis(axis), frame.cameraForward))
@@ -180,6 +189,10 @@ public final class TransformGizmo: SceneViewManipulator {
         if let center = viewport.project(frame.origin), simd_distance(center.xy, point) < reach * 1.4, mode != .rotate {
             return .center
         }
+        // Rings seen edge-on project to lines through the center; near the center the trackball wins over them.
+        if mode == .rotate, let distance = trackballDistance(point, frame: frame, viewport: viewport), distance < 0.6 {
+            return .center
+        }
         var best: (handle: Handle, score: Float)?
         for (handle, points) in outlines(frame) where opacity(of: handle, frame: frame) > 0 {
             let projected = points.compactMap { viewport.project($0)?.xy }
@@ -202,7 +215,18 @@ public final class TransformGizmo: SceneViewManipulator {
                 best = (handle, score)
             }
         }
+        if best == nil, mode == .rotate, let distance = trackballDistance(point, frame: frame, viewport: viewport), distance < 1 {
+            return .center
+        }
         return best?.handle
+    }
+
+    // Distance of `point` from the gizmo's center on screen, as a fraction of the axis rings' radius.
+    private func trackballDistance(_ point: SIMD2<Float>, frame: Frame, viewport: SceneViewport) -> Float? {
+        guard let center = viewport.project(frame.origin)?.xy, let edge = viewport.project(frame.origin + frame.cameraRight * frame.length * 0.9)?.xy else {
+            return nil
+        }
+        return simd_distance(point, center) / max(simd_distance(edge, center), 1)
     }
 
     static func distance(_ point: SIMD2<Float>, segment: (SIMD2<Float>, SIMD2<Float>)) -> Float {
@@ -270,11 +294,15 @@ public final class TransformGizmo: SceneViewManipulator {
         switch (mode, handle) {
         case (.rotate, .axis(let axis)):
             return Self.intersect(ray, planeOrigin: frame.origin, normal: frame.axis(axis))
+        case (.rotate, .view):
+            return Self.intersect(ray, planeOrigin: frame.origin, normal: frame.cameraForward)
+        case (.rotate, .center):
+            return nil
         case (_, .axis(let axis)):
             return Self.closestParameter(origin: frame.origin, direction: frame.axis(axis), ray: ray).map { frame.origin + frame.axis(axis) * $0 }
         case (_, .plane(let axis)):
             return Self.intersect(ray, planeOrigin: frame.origin, normal: frame.axis(axis))
-        case (_, .center):
+        case (_, .center), (_, .view):
             return Self.intersect(ray, planeOrigin: frame.origin, normal: frame.cameraForward)
         }
     }
@@ -310,10 +338,22 @@ public final class TransformGizmo: SceneViewManipulator {
             }
             target.worldPosition = drag.startWorldPosition + delta
         case .rotate:
-            guard case let .axis(axis) = drag.handle, let start = drag.startHit, let current = hit(drag.handle, frame: frame, point: point, viewport: viewport) else {
+            if drag.handle == .center {
+                target.worldOrientation = simd_normalize(Self.trackballRotation(from: drag.startPoint, to: point, frame: frame) * drag.startWorldOrientation)
+                break
+            }
+            let normal: SIMD3<Float>
+            switch drag.handle {
+            case .axis(let axis):
+                normal = frame.axis(axis)
+            case .view:
+                normal = frame.cameraForward
+            case .plane, .center:
                 return
             }
-            let normal = frame.axis(axis)
+            guard let start = drag.startHit, let current = hit(drag.handle, frame: frame, point: point, viewport: viewport) else {
+                return
+            }
             let a = start - frame.origin, b = current - frame.origin
             let angle = Self.snap(atan2(simd_dot(simd_cross(a, b), normal), simd_dot(a, b)), step: snapping.rotation)
             target.worldOrientation = simd_normalize(simd_quatf(angle: angle, axis: normal) * drag.startWorldOrientation)
@@ -330,7 +370,7 @@ public final class TransformGizmo: SceneViewManipulator {
                 }
                 let factor = Self.snap(simd_dot(current - frame.origin, frame.axis(axis)) / startDistance, step: snapping.scale)
                 scale[axis.rawValue] = drag.startScale[axis.rawValue] * factor
-            case .center, .plane:
+            case .center, .plane, .view:
                 guard let center = viewport.project(frame.origin)?.xy, simd_distance(drag.startPoint, center) > 1 else {
                     return
                 }
@@ -340,6 +380,18 @@ public final class TransformGizmo: SceneViewManipulator {
             target.trs.scale = scale
         }
         onChange?(target)
+    }
+
+    // Free rotation from a drag in view points (y down): dragging right turns the near side right, dragging down turns
+    // it down. Not snapped.
+    static func trackballRotation(from start: SIMD2<Float>, to end: SIMD2<Float>, frame: Frame) -> simd_quatf {
+        let delta = end - start
+        let axis = frame.cameraUp * delta.x + frame.cameraRight * delta.y
+        guard simd_length(axis) > 1e-6 else {
+            return simd_quatf(ix: 0, iy: 0, iz: 0, r: 1)
+        }
+        let radiansPerPoint: Float = 0.01
+        return simd_quatf(angle: simd_length(delta) * radiansPerPoint, axis: simd_normalize(axis))
     }
 
     public func endDrag() {
@@ -393,9 +445,22 @@ public final class TransformGizmo: SceneViewManipulator {
             case .plane(let axis):
                 path.closeSubpath()
                 context.fill(path, with: (isHighlighted ? Color.yellow : Self.axisColors[axis.rawValue]).opacity((isHighlighted ? 0.7 : 0.4) * opacity))
+            case .view:
+                context.stroke(path, with: (isHighlighted ? Color.yellow : Color.white).opacity(isHighlighted ? 1 : 0.6), lineWidth: isHighlighted ? 5 : 3)
             case .center:
                 break
             }
+        }
+        if mode == .rotate, highlighted == .center {
+            // The trackball area inside the rings.
+            var disc = Path3D()
+            let points = Self.circle(center: frame.origin, u: frame.cameraRight, v: frame.cameraUp, radius: frame.length * 0.9)
+            disc.move(to: points[0])
+            for point in points.dropFirst() {
+                disc.addLine(to: point)
+            }
+            disc.closeSubpath()
+            context.fill(disc, with: Color.white.opacity(0.12))
         }
         if mode != .rotate {
             // A small square facing the camera.
