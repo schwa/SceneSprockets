@@ -2351,9 +2351,9 @@ Each demo must be added in two places: DemoCatalog.demos (used by the CLI, DemoS
 status: closed
 priority: low
 kind: enhancement
-labels: demo, effort:s, area:demo
+labels: effort:s, area:demo
 created: 2026-10-15T21:15:13Z
-updated: 2026-10-15T21:28:05Z
+updated: 2026-10-23T13:22:41Z
 closed: 2026-10-15T21:28:05Z
 +++
 
@@ -2378,9 +2378,9 @@ Expected: gummies look soft and translucent, with brighter, more saturated thin 
 status: closed
 priority: medium
 kind: bug
-labels: rendering
+labels: area:renderer
 created: 2026-10-15T21:15:56Z
-updated: 2026-10-15T21:18:26Z
+updated: 2026-10-23T13:22:41Z
 closed: 2026-10-15T21:18:26Z
 +++
 
@@ -2421,9 +2421,9 @@ Want: 2D text in the scene graph using Slug from MetalSprocketsAddOns.
 status: closed
 priority: medium
 kind: bug
-labels: rendering
+labels: area:renderer
 created: 2026-10-15T21:22:03Z
-updated: 2026-10-16T01:58:26Z
+updated: 2026-10-23T13:22:41Z
 closed: 2026-10-16T01:58:26Z
 +++
 
@@ -3008,12 +3008,12 @@ Package.swift and the demo package use branch main because the 0.0.1 tag depends
 ## 148: Dice demo: bevel die edges
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
-labels: deferred, area:demo
+labels: deferred, area:demo, effort:s
 created: 2026-10-22T01:05:11Z
-updated: 2026-10-23T13:00:40Z
+updated: 2026-10-23T13:22:39Z
 +++
 
 DiceGeometry builds dice with sharp edges. Real dice (and the old Dice by PCalc models) have rounded edges, which catch highlights and read as solid objects, especially on the metal and glass styles. Bevel or chamfer each edge in DiceGeometry, keeping per-face texture coordinates and the convex hull used for physics. Done when the dice show rounded edges in the Dice demo and the numbers still sit on their faces.
@@ -3023,12 +3023,12 @@ DiceGeometry builds dice with sharp edges. Real dice (and the old Dice by PCalc 
 ## 149: Dice demo: use real-world face numbering
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
-labels: deferred, area:demo
+labels: deferred, area:demo, effort:xs
 created: 2026-10-22T01:05:11Z
-updated: 2026-10-23T13:00:40Z
+updated: 2026-10-23T13:22:39Z
 +++
 
 DiceGeometry numbers faces with a simple scheme: opposite faces add up to n + 1 (n - 1 for the D10, numbered 0 to 9), but the arrangement around each corner is arbitrary. Store-bought dice follow conventions (for example, a D6 with 1, 2, 3 meeting counterclockwise at a corner; a balanced D20). Done when each die kind matches a standard layout.
@@ -3317,12 +3317,12 @@ Already tracked elsewhere: HDR, tone mapping, bloom, depth of field (#45); save/
 ## 153: Game demo: 3D platformer like SceneKit's Fox
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
-labels: deferred, area:demo
+labels: deferred, area:demo, effort:xl
 created: 2026-10-22T01:56:58Z
-updated: 2026-10-23T13:00:40Z
+updated: 2026-10-23T13:22:39Z
 +++
 
 A small playable platformer, in the spirit of Apple's SceneKit Fox demo, to exercise the engine as a whole.
@@ -3348,10 +3348,12 @@ Related: #151 (demos for every feature), #152 (feature gaps: character controlle
 ## 154: Manipulation widgets: transform gizmos for moving, rotating and scaling nodes
 
 +++
-status: new
+status: closed
 priority: medium
 kind: feature
 created: 2026-10-22T14:49:36Z
+updated: 2026-10-23T13:13:51Z
+closed: 2026-10-23T13:13:51Z
 +++
 
 Add on-screen manipulators for editing nodes in a SceneView, like three.js TransformControls, RealityKit's installGestures, Unity and Godot gizmos.
@@ -3368,16 +3370,19 @@ Uses: the demo inspector, a future scene editor, and save/load round trips (#52)
 
 Related: Documentation/Features.md rows 'Gestures and transform gizmos' and 'Scene inspector and editor'.
 
+- `2026-10-23T13:13:51Z`: Done in SceneSprocketsGizmos (TransformGizmo). Remaining: trackball and pinch/rotate (#178), touch drag (#173).
+
 ---
 
 ## 155: Make scene graph changes observable to SwiftUI
 
 +++
-status: new
+status: open
 priority: medium
 kind: enhancement
-labels: area:ui
+labels: effort:m, area:scenegraph
 created: 2026-10-22T15:22:08Z
+updated: 2026-10-23T13:22:39Z
 +++
 
 SceneGraph and SceneGraph.Node are plain classes. SwiftUI views that read them (for example an outline of the node tree, or an inspector showing a node's label or transform) do not update when the graph changes.
@@ -3410,10 +3415,12 @@ Part of #52. Write and read a .scenesprocketsd package directory with scene.json
 ## 157: Scene archive: keep glTF content by reference
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
+labels: effort:l, area:document
 created: 2026-10-22T15:28:24Z
+updated: 2026-10-23T13:22:39Z
 +++
 
 Part of #52. When a glTF is loaded into a scene, tag each imported node with its source asset and glTF node index. Writing a scene copies the original glTF (with its buffers and images) into the package; scene.json refers to it (asset, node index) instead of storing meshes or materials. Reading runs the glTF loader and splices the nodes back in. Transform and visibility changes on imported nodes are stored as overrides in scene.json; decide what to do for material or mesh changes (override or fall back to writing the mesh as generated). Done when a scene with a loaded glTF round-trips, including a moved imported node.
@@ -3423,10 +3430,12 @@ Part of #52. When a glTF is loaded into a scene, tag each imported node with its
 ## 158: Scene archive: write generated meshes as glTF
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
+labels: effort:m, area:document
 created: 2026-10-22T15:28:25Z
+updated: 2026-10-23T13:22:39Z
 +++
 
 Part of #52. Meshes built in code (MetalMesh from SwiftMesh: dice, gears, hand-built geometry) are written into the package as glTF, with their materials and textures (read back from the GPU), and scene.json refers to them. SwiftGLTF main can build documents from scratch (public initializers, settable Document, Container(document:binaryBuffer:url:), see its AuthoringTests). Done when a scene with generated dice round-trips.
@@ -3436,10 +3445,12 @@ Part of #52. Meshes built in code (MetalMesh from SwiftMesh: dice, gears, hand-b
 ## 159: Scene archive: make scene.json easier to read
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
+labels: effort:s, area:document
 created: 2026-10-22T16:11:22Z
+updated: 2026-10-23T13:22:40Z
 +++
 
 Part of #52. Synthesized Codable writes enums as objects ({"directional": {}}, {"none": {}}) and SIMD vectors and matrices one number per line. Write simple enums as strings and vectors as compact arrays, keeping the format stable for reading. See ~/Desktop/shadows.scenesprocketsd (scenesprockets-demos --save shadows).
@@ -3449,10 +3460,12 @@ Part of #52. Synthesized Codable writes enums as objects ({"directional": {}}, {
 ## 160: Scene archive: save ShaderMaterial
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
+labels: effort:m, area:document
 created: 2026-10-22T16:11:22Z
+updated: 2026-10-23T13:22:40Z
 +++
 
 Part of #52. ShaderMaterial is not archivable: its shaders are compiled functions. Save a reference to the shader (library and function names, or source) plus parameters (floats, vectors, matrices, textures via the archive context; buffers as data). Seen in scenekit-features: 'Red Pane'.
@@ -3462,10 +3475,12 @@ Part of #52. ShaderMaterial is not archivable: its shaders are compiled function
 ## 161: Scene archive: save animation, constraints and actions
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
+labels: effort:l, area:document
 created: 2026-10-22T16:11:22Z
+updated: 2026-10-23T13:22:39Z
 +++
 
 Part of #52. Not saved yet: animation clips and players, constraints, running actions. Closure-based ones (Constraint.transform, Action.custom/run, custom animation properties) cannot be saved; decide whether to skip them with a warning or replace them with named, registered behaviors. Seen in shadows and scenekit-features (spinning torus, look-at constraints).
@@ -3475,10 +3490,12 @@ Part of #52. Not saved yet: animation clips and players, constraints, running ac
 ## 162: Scene archive: save morph targets, skins, physics, particles, audio, levels of detail
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
+labels: effort:l, area:document
 created: 2026-10-22T16:11:22Z
+updated: 2026-10-23T13:22:39Z
 +++
 
 Part of #52. Node features not saved yet: morph targets and weights, skins and skin vertices, physics bodies, particle systems (MetalSprocketsParticles' ParticleSystem is already Codable), audio players, levels of detail. Each warns today.
@@ -3488,10 +3505,12 @@ Part of #52. Node features not saved yet: morph targets and weights, skins and s
 ## 163: Scene archive: store PBR uniforms field by field
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
+labels: effort:s, area:document
 created: 2026-10-22T16:11:22Z
+updated: 2026-10-23T13:22:40Z
 +++
 
 Part of #52. PBRSceneMaterial saves PBRMaterialUniforms as raw bytes with a size check, so archives break whenever MetalSprocketsPBR changes the struct layout. Encode the fields by name (factors, texture slots with transforms and texCoord sets, extension parameters) so archives survive layout changes and are readable.
@@ -3501,10 +3520,12 @@ Part of #52. PBRSceneMaterial saves PBRMaterialUniforms as raw bytes with a size
 ## 164: Scene archive: samplers, texture transforms and more texture formats
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
+labels: effort:m, area:document
 created: 2026-10-22T16:11:23Z
+updated: 2026-10-23T13:22:40Z
 +++
 
 Part of #52. Not saved yet: sampler states (textures load with linear repeat), PBR animatable texture transforms, mip levels (regenerated, not stored), cube and 3D textures, compressed formats (ASTC, BC). Float textures are raw bytes; consider EXR.
@@ -3514,12 +3535,12 @@ Part of #52. Not saved yet: sampler states (textures load with linear repeat), P
 ## 165: Open and save .scenesprocketsd documents in the demo app
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
-labels: deferred, area:demo
+labels: deferred, area:demo, effort:s
 created: 2026-10-22T16:11:23Z
-updated: 2026-10-23T13:00:40Z
+updated: 2026-10-23T13:22:40Z
 +++
 
 Part of #52. Register a UTType for .scenesprocketsd (a package) and add open/save to the demo app, for example with DocumentGroup, so archives can be inspected and edited. Today only scenesprockets-demos --save writes them, and nothing reads them except tests.
@@ -3529,10 +3550,12 @@ Part of #52. Register a UTType for .scenesprocketsd (a package) and add open/sav
 ## 166: Geometry highlighting: show selected and hovered nodes in a SceneView
 
 +++
-status: new
+status: closed
 priority: medium
 kind: feature
 created: 2026-10-22T17:48:50Z
+updated: 2026-10-23T13:24:20Z
+closed: 2026-10-23T13:24:20Z
 +++
 
 Add a way to highlight nodes in a SceneView, for selection and hover feedback in an editor (like Reality Composer, Unity and Godot).
@@ -3546,41 +3569,53 @@ Want:
 
 Uses: SceneSprocketsComposer (selection in the scene tree and preview), the demo inspector, and the hover highlight that the transform gizmos need (#154).
 
+- `2026-10-23T13:24:20Z`: Done: SelectionOutline (SceneSprocketsGizmos). Depth bug tracked in #172.
+
 ---
 
 ## 167: Transform gizmo: touch support on iOS and visionOS
 
 +++
-status: new
+status: closed
 priority: medium
 kind: feature
 created: 2026-10-22T18:03:48Z
+updated: 2026-10-23T13:13:16Z
+closed: 2026-10-23T13:13:16Z
 +++
 
 Follow-up to #154. SceneView routes a drag to the manipulator only when the pointer hovers over a handle (onContinuousHover), so on touch screens without a pointer the gizmo cannot be dragged and camera control takes the drag. Decide at touch-down instead (hit test the start location, then suppress camera control for that gesture), and add pinch/rotate gestures for scale and rotate.
+
+- `2026-10-23T13:13:16Z`: Covered by #173 (decide at press, not hover).
 
 ---
 
 ## 168: Transform gizmo: view-aligned rotate ring and trackball
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
+labels: effort:m, area:ui
 created: 2026-10-22T18:03:48Z
+updated: 2026-10-23T13:22:41Z
 +++
 
 Follow-up to #154. Rotate mode has the three axis rings only. Add a ring facing the camera (rotate about the view axis) and free trackball rotation inside the rings, like three.js TransformControls and Blender.
+
+- `2026-10-23T13:22:41Z`: Related: #178 (touch pinch/rotate) was split off; trackball stays here.
 
 ---
 
 ## 169: Transform gizmo: dim hidden ring halves and handles pointing at the camera
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
+labels: effort:s, area:ui
 created: 2026-10-22T18:03:49Z
+updated: 2026-10-23T13:22:40Z
 +++
 
 Follow-up to #154. Ring halves behind the gizmo's center draw like the front halves, and an axis pointing at the camera collapses to a dot that is hard to grab. Draw back halves dimmer and hide or fade handles that face the camera.
@@ -3590,12 +3625,12 @@ Follow-up to #154. Ring halves behind the gizmo's center draw like the front hal
 ## 170: Demo: undo for gizmo edits and a transform inspector
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
-labels: deferred, area:demo
+labels: deferred, area:demo, effort:m
 created: 2026-10-22T18:03:49Z
-updated: 2026-10-23T13:00:41Z
+updated: 2026-10-23T13:22:40Z
 +++
 
 Follow-up to #154. TransformGizmo has onBegin/onChange/onEnd, but the demo app does not record undo steps or show the selected node's transform. Register undo with the window's UndoManager on onBegin/onEnd, and show position, rotation and scale in the inspector.
@@ -3605,10 +3640,12 @@ Follow-up to #154. TransformGizmo has onBegin/onChange/onEnd, but the demo app d
 ## 171: TransformGizmo sizing: constant screen size vs scaling with the camera
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
+labels: effort:s, area:ui
 created: 2026-10-22T18:51:28Z
+updated: 2026-10-23T13:22:40Z
 +++
 
 TransformGizmo keeps a constant size on screen: `size` (110 view points) is converted to world units each frame with `SceneViewport.worldSizeOfPoint`. So the gizmo does not change size when the camera zooms or moves. This is what Unity, Godot and Blender do.
@@ -3627,11 +3664,12 @@ Related: #154 (transform gizmo).
 ## 172: SelectionOutline draws over objects in front of the selection
 
 +++
-status: new
+status: open
 priority: medium
 kind: bug
-labels: area:ui
+labels: area:ui, effort:m
 created: 2026-10-22T21:55:34Z
+updated: 2026-10-23T13:22:40Z
 +++
 
 The selection outline (SelectionOutline, #166) shows through objects that are in front of the selected node. Seen in SceneSprocketsComposer.
@@ -3649,12 +3687,12 @@ MetalSprocketsAddOns JumpFloodOutlineDemoView shows the depth-tested setup.
 ## 173: Gizmo handles need a hover before a click works
 
 +++
-status: new
+status: open
 priority: medium
 kind: bug
-labels: area:ui
+labels: area:ui, effort:s
 created: 2026-10-22T21:55:34Z
-updated: 2026-10-22T21:58:03Z
+updated: 2026-10-23T13:22:40Z
 +++
 
 Clicking a TransformGizmo handle without moving the pointer over it first does not drag the handle. You have to hover, then press. Seen in SceneSprocketsComposer.
@@ -3673,12 +3711,12 @@ Blocked on Interaction3D #38. Related: #154.
 ## 174: Move the transform gizmo to Interaction3D
 
 +++
-status: new
+status: open
 priority: low
 kind: task
-labels: area:ui, deferred
+labels: area:ui, deferred, effort:l
 created: 2026-10-22T22:00:05Z
-updated: 2026-10-23T12:56:22Z
+updated: 2026-10-23T13:22:40Z
 +++
 
 TransformGizmo (SceneSprocketsGizmos, #154) is mostly not about scene graphs: handle layout, picking, drag math along axes, planes and rings, snapping, and screen-size scaling. Other MetalSprockets apps could use it. Interaction3D is the home for 3D interaction (camera controls, rotation widget), so move the gizmo there, and keep a thin SceneSprockets adapter.
@@ -3703,11 +3741,12 @@ After the move: SceneSprocketsGizmos keeps SelectionOutline (or it moves too), a
 ## 175: Composer: save a preview PNG inside the document bundle
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
-labels: area:composer, area:document
+labels: area:composer, area:document, effort:m
 created: 2026-10-23T13:03:28Z
+updated: 2026-10-23T13:22:41Z
 +++
 
 When saving a .scenesprocketsd bundle, render the scene offscreen and write a PNG into the bundle (for example `Preview.png`).
@@ -3725,11 +3764,12 @@ Blocked on #52 (save and load a scene graph).
 ## 176: Composer: Render tab camera settings should override the scene camera node
 
 +++
-status: new
+status: open
 priority: medium
 kind: bug
-labels: area:composer, area:preview
+labels: area:composer, area:preview, effort:s
 created: 2026-10-23T13:03:28Z
+updated: 2026-10-23T13:22:41Z
 +++
 
 The Render tab field of view and near/far clip apply only when the scene has no camera node. If the scene has a camera node, SceneView uses that camera's projection, and the settings do nothing. They should always apply in the editor preview: the editor camera is our own orbit camera, not the scene camera.
@@ -3743,11 +3783,12 @@ Also remove the "Used when the scene has no camera node." note from the Render t
 ## 177: Composer: use Interaction3D camera control instead of OrbitCamera gestures
 
 +++
-status: new
+status: open
 priority: medium
 kind: task
-labels: area:composer, area:preview
+labels: area:composer, area:preview, effort:s
 created: 2026-10-23T13:03:28Z
+updated: 2026-10-23T13:22:41Z
 +++
 
 ScenePreviewView has its own orbit, pan and zoom gestures (OrbitCamera), because SceneView's Interaction3D camera control beat the gizmo's drag. Once Interaction3D can ignore drags that start on the gizmo (Interaction3D #38) and SceneView uses it (#173), go back to Interaction3D:
@@ -3757,5 +3798,20 @@ ScenePreviewView has its own orbit, pan and zoom gestures (OrbitCamera), because
 - Remove OrbitCamera's gesture code, and the scroll wheel and magnify handlers in ScenePreviewView.
 
 Blocked on Interaction3D #38 and #173.
+
+---
+
+## 178: Transform gizmo: pinch and rotate gestures on iOS and visionOS
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:ui, effort:m
+created: 2026-10-23T13:13:51Z
+updated: 2026-10-23T13:22:41Z
++++
+
+Follow-up to #154. On iOS and visionOS: pinch to scale and two-finger rotate to rotate the selected node. Touch drag on handles is #173; trackball rotation is #168.
 
 ---
