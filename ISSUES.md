@@ -3423,10 +3423,12 @@ priority: medium
 kind: feature
 labels: effort:l, area:document
 created: 2026-10-22T15:28:24Z
-updated: 2026-10-23T13:22:39Z
+updated: 2026-10-23T13:45:09Z
 +++
 
 Part of #52. When a glTF is loaded into a scene, tag each imported node with its source asset and glTF node index. Writing a scene copies the original glTF (with its buffers and images) into the package; scene.json refers to it (asset, node index) instead of storing meshes or materials. Reading runs the glTF loader and splices the nodes back in. Transform and visibility changes on imported nodes are stored as overrides in scene.json; decide what to do for material or mesh changes (override or fall back to writing the mesh as generated). Done when a scene with a loaded glTF round-trips, including a moved imported node.
+
+- `2026-10-23T13:45:09Z`: Punted by auto-issue-fixer. Read GLTFSceneGraph.swift and the archive code. Punting: needs decisions. (1) Same as #158: the core archive has no glTF dependency, so this needs a content hook on SceneArchive implemented in SceneSprocketsPBR — best designed once for #157 and #158 together. (2) The issue leaves open what to do when an imported node's material or mesh is edited (override vs fall back to #158's generated-mesh path). (3) One glTF node can become several scene nodes (GLTFSceneGraphBuilder.node(_:) returns [Node], e.g. multi-material or instanced meshes), so the reference needs a sub-index or a rule. Unblocker: decide the hook design (see #158 comment) and pick the override rule; then this is implementable.
 
 ---
 
@@ -3438,10 +3440,12 @@ priority: medium
 kind: feature
 labels: effort:m, area:document
 created: 2026-10-22T15:28:25Z
-updated: 2026-10-23T13:22:39Z
+updated: 2026-10-23T13:44:43Z
 +++
 
 Part of #52. Meshes built in code (MetalMesh from SwiftMesh: dice, gears, hand-built geometry) are written into the package as glTF, with their materials and textures (read back from the GPU), and scene.json refers to them. SwiftGLTF main can build documents from scratch (public initializers, settable Document, Container(document:binaryBuffer:url:), see its AuthoringTests). Done when a scene with generated dice round-trips.
+
+- `2026-10-23T13:44:43Z`: Punted by auto-issue-fixer. Looked at SceneGraph+Archive.swift (the mesh-not-a-shape branch) and target deps. Punting: needs two design decisions. (1) Where the glTF writer lives: the core SceneSprockets target has no SwiftGLTF dependency (only SceneSprocketsPBR does). Options: add SwiftGLTF to core, or add a mesh-codec hook to SceneArchive (like materialTypes) and implement it in SceneSprocketsPBR. (2) Materials: the issue says write materials and textures into the glTF, but scene.json already archives Blinn-Phong/PBR materials and textures. Should the glTF carry geometry only (materials stay in scene.json), or also materials? My suggestion: hook in SceneSprocketsPBR, geometry-only glTF (MetalMesh -> Mesh -> glTF primitives per submesh).
 
 ---
 
