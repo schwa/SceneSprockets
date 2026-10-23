@@ -1,4 +1,6 @@
 import Foundation
+import GeometryLite3D
+import simd
 import SceneSprockets
 @testable import SceneSprocketsComposerSupport
 import Testing
@@ -41,4 +43,15 @@ import UniformTypeIdentifiers
     try wrapper.write(to: url, options: [], originalContentsURL: nil)
     let loaded = try ComposerDocument(contentsOf: url)
     #expect(loaded.sceneGraph.root.children.map(\.label) == ["Floor", "Box", "Sun"])
+}
+
+// #177: framing keeps the view direction and orbits the framed center.
+@Test func framingKeepsViewDirection() {
+    var camera = EditorCamera()
+    let direction = simd_normalize(camera.matrix.columns.2)
+    camera.frame(BoundingBox3D(min: [9, -1, -1], max: [11, 1, 1]), fieldOfView: 60)
+    #expect(camera.target == [10, 0, 0])
+    #expect(simd_distance(simd_normalize(camera.matrix.columns.2), direction) < 0.0001)
+    let position = SIMD3<Float>(camera.matrix.columns.3.x, camera.matrix.columns.3.y, camera.matrix.columns.3.z)
+    #expect(abs(simd_distance(position, camera.target) - simd_length(SIMD3<Float>(1, 1, 1)) / sin(Float.pi / 6) * 1.1) < 0.001)
 }

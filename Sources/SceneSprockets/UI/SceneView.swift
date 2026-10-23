@@ -57,6 +57,7 @@ public struct SceneView: View {
     private let decorations: ((SceneGraphRenderContext, SIMD2<Float>) throws -> AnyElement?)?
     private let defaultCamera: Camera
     private let cameraOverride: Camera?
+    private let cameraTarget: SIMD3<Float>?
     private let overlay: ((SceneViewport) throws -> AnyElement?)?
 
     @Environment(\.displayScale) private var displayScale
@@ -90,6 +91,8 @@ public struct SceneView: View {
         shadows: SceneGraphShadows? = nil,
         audio: SceneAudio? = nil,
         cameraMatrix: Binding<simd_float4x4?>? = nil,
+        // The point camera control orbits; nil: the scene's center when the view appears.
+        cameraTarget: SIMD3<Float>? = nil,
         hitTestCategoryBitMask: UInt = .max,
         // Used when the scene has no camera node.
         defaultCamera: Camera = SceneView.defaultCamera,
@@ -108,6 +111,7 @@ public struct SceneView: View {
         self.decorations = decorations
         self.defaultCamera = defaultCamera
         self.cameraOverride = camera
+        self.cameraTarget = cameraTarget
         self.sceneGraph = sceneGraph
         self.pointOfView = pointOfView
         self.options = options
@@ -164,7 +168,7 @@ public struct SceneView: View {
         .metalFramebufferOnly(!needsPostPasses && !options.contains(.disablesFramebufferOnly))
         .metalDepthStencilAttachmentTextureUsage(needsPostPasses ? [.renderTarget, .shaderRead] : [.renderTarget])
         .metalDepthStencilStorageMode(needsPostPasses || overlay != nil ? .private : .memoryless)
-        .modifier(CameraControl(isEnabled: options.contains(.allowsCameraControl), cameraMatrix: cameraBinding, target: orbitTarget ?? viewpoint.target))
+        .modifier(CameraControl(isEnabled: options.contains(.allowsCameraControl), cameraMatrix: cameraBinding, target: cameraTarget ?? orbitTarget ?? viewpoint.target))
         // Camera control leaves drags that start on the manipulator alone.
         .interactionDragFilter { location in !manipulatorHit(at: location) }
         .onAppear {

@@ -3799,12 +3799,13 @@ Also remove the "Used when the scene has no camera node." note from the Render t
 ## 177: Composer: use Interaction3D camera control instead of OrbitCamera gestures
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: area:composer, area:preview, effort:s
 created: 2026-10-23T13:03:28Z
-updated: 2026-10-23T13:22:41Z
+updated: 2026-10-23T13:50:27Z
+closed: 2026-10-23T13:50:27Z
 +++
 
 ScenePreviewView has its own orbit, pan and zoom gestures (OrbitCamera), because SceneView's Interaction3D camera control beat the gizmo's drag. Once Interaction3D can ignore drags that start on the gizmo (Interaction3D #38) and SceneView uses it (#173), go back to Interaction3D:
@@ -3814,6 +3815,8 @@ ScenePreviewView has its own orbit, pan and zoom gestures (OrbitCamera), because
 - Remove OrbitCamera's gesture code, and the scroll wheel and magnify handlers in ScenePreviewView.
 
 Blocked on Interaction3D #38 and #173.
+
+- `2026-10-23T13:50:27Z`: Fixed: ScenePreviewView uses SceneView .allowsCameraControl (Interaction3D) with a cameraMatrix binding and the new SceneView cameraTarget; OrbitCamera replaced by EditorCamera (framing only); custom drag/magnify/scroll handlers removed. Gesture behavior needs a manual check in the app.
 
 ---
 

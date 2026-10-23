@@ -22,7 +22,7 @@ public final class EditorModel {
     public var gizmoSpace = TransformGizmo.Space.world {
         didSet { gizmo.space = gizmoSpace }
     }
-    var camera = OrbitCamera()
+    var camera = EditorCamera()
     var renderSettings = RenderSettings()
     // Bumped while the gizmo drags, so views that show transforms refresh. Nodes are not observable (SceneSprockets #155).
     public private(set) var transformRevision = 0
