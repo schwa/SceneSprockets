@@ -1,6 +1,6 @@
 // A light's color and shape, like SCNLight. Its node places it: lights point down their node's -Z axis.
 public struct Light: Sendable, Equatable, Codable {
-    public enum LightType: Sendable, Equatable, Codable {
+    public enum LightType: String, Sendable, Equatable, CaseIterable, Codable {
         // Parallel rays along the node's -Z; position does not matter.
         case directional
         case point

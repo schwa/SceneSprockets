@@ -137,6 +137,54 @@ struct SceneArchiveTests {
         #expect(warnings.contains { $0.contains("Generated") && $0.contains("#158") })
     }
 
+    // #159
+    @Test
+    func sceneJSONIsReadable() throws {
+        let url = temporaryURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let root = SceneGraph.Node()
+        _ = SceneGraph.Node(parent: root, transform: .init(diagonal: [1, 2, 3, 1]), content: .light(Light(type: .directional)))
+        try archive.write(try makeScene(), to: url)
+        let json = try sceneJSON(url)
+        #expect(json.contains(#""background" : "none""#) || json.contains(#""background" : {"#))
+        #expect(json.contains(#""blendMode" : "add""#))
+        #expect(!json.contains(#": {\n\n"#))
+        // Number arrays are on one line.
+        #expect(json.range(of: #"\[\s*-?\d[^\]]*\n"#, options: .regularExpression) == nil)
+        let url2 = temporaryURL()
+        defer { try? FileManager.default.removeItem(at: url2) }
+        try archive.write(SceneGraph(root: root), to: url2)
+        let lightJSON = try sceneJSON(url2)
+        #expect(lightJSON.contains(#""type" : "directional""#))
+        #expect(lightJSON.contains(#""background" : "none""#))
+        #expect(lightJSON.contains("[1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 3, 0, 0, 0, 0, 1]"))
+        let (loaded, _) = try archive.read(from: url2, device: device)
+        #expect(loaded.root.children.first?.transform == .init(diagonal: [1, 2, 3, 1]))
+    }
+
+    // #159: archives written before it used synthesized enum objects.
+    @Test
+    func oldEnumFormatStillReads() throws {
+        let decoder = JSONDecoder()
+        #expect(try decoder.decode(Light.LightType.self, from: Data(#"{"spot": {}}"#.utf8)) == .spot)
+        #expect(try decoder.decode(Light.LightType.self, from: Data(#""point""#.utf8)) == .point)
+        #expect(try decoder.decode(MaterialRenderState.BlendMode.self, from: Data(#"{"screen": {}}"#.utf8)) == .screen)
+        guard case .none = try decoder.decode(SceneGraph.Environment.Background.self, from: Data(#"{"none": {}}"#.utf8)) else {
+            Issue.record("expected .none")
+            return
+        }
+        guard case let .color(color) = try decoder.decode(SceneGraph.Environment.Background.self, from: Data(#"{"color": {"_0": [1, 0, 0, 1]}}"#.utf8)) else {
+            Issue.record("expected .color")
+            return
+        }
+        #expect(color == [1, 0, 0, 1])
+        guard case let .environment(blur) = try decoder.decode(SceneGraph.Environment.Background.self, from: Data(#"{"environment": {"blur": 0.5}}"#.utf8)) else {
+            Issue.record("expected .environment")
+            return
+        }
+        #expect(blur == 0.5)
+    }
+
     // #161
     @Test
     func constraintsRoundTripWithNodeReferences() throws {

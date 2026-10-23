@@ -3452,15 +3452,18 @@ Part of #52. Meshes built in code (MetalMesh from SwiftMesh: dice, gears, hand-b
 ## 159: Scene archive: make scene.json easier to read
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: effort:s, area:document
 created: 2026-10-22T16:11:22Z
-updated: 2026-10-23T13:22:40Z
+updated: 2026-10-23T14:07:13Z
+closed: 2026-10-23T14:07:13Z
 +++
 
 Part of #52. Synthesized Codable writes enums as objects ({"directional": {}}, {"none": {}}) and SIMD vectors and matrices one number per line. Write simple enums as strings and vectors as compact arrays, keeping the format stable for reading. See ~/Desktop/shadows.scenesprocketsd (scenesprockets-demos --save shadows).
+
+- `2026-10-23T14:07:13Z`: Fixed: LightType and BlendMode are String-raw enums written as strings; Background .none is "none"; number arrays (vectors, matrices) are compacted onto one line after encoding. Old synthesized enum objects still decode. Tests sceneJSONIsReadable, oldEnumFormatStillReads.
 
 ---
 

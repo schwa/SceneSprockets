@@ -34,7 +34,8 @@ public struct SceneArchive {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.nonConformingFloatEncodingStrategy = .convertToString(positiveInfinity: "inf", negativeInfinity: "-inf", nan: "nan")
         encoder.userInfo[.sceneArchive] = context
-        try encoder.encode(sceneGraph).write(to: url.appendingPathComponent(Self.sceneFileName))
+        let json = try String(decoding: encoder.encode(sceneGraph), as: UTF8.self)
+        try Data(ArchiveFormatting.compactNumberArrays(json).utf8).write(to: url.appendingPathComponent(Self.sceneFileName))
         return context.warnings
     }
 

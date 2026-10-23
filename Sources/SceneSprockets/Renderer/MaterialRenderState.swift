@@ -6,7 +6,7 @@ import SwiftMesh
 // readsFromDepthBuffer/writesToDepthBuffer, colorBufferWriteMask and fillMode. Used by Blinn-Phong and ShaderMaterial.
 public struct MaterialRenderState: Sendable, Hashable {
     // Straight (not premultiplied) alpha.
-    public enum BlendMode: Sendable, Hashable, Codable {
+    public enum BlendMode: String, Sendable, Hashable, CaseIterable, Codable {
         // Over what is behind, by alpha. Blends only when the material is transparent.
         case alpha
         // Adds color times alpha.
