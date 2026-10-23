@@ -1,12 +1,14 @@
 import GeometryLite3D
+import Observation
 import SwiftMesh
 import simd
 
+@Observable
 public class SceneGraph {
     public var root: Node {
         didSet { rootRevision = Revision.next() }
     }
-    private var rootRevision = Revision.next()
+    @ObservationIgnored private var rootRevision = Revision.next()
     // Background and image-based lighting; read every frame, so changing it does not change `revision`.
     public var environment = Environment()
     // Nil: no fog. Read every frame, so changing it does not change `revision`.
@@ -185,7 +187,7 @@ public class SceneGraph {
         var cameras: [(node: Node, worldTransform: float4x4, camera: Camera)] = []
     }
 
-    private var flattenedCache: (revision: Revision, flattened: Flattened)?
+    @ObservationIgnored private var flattenedCache: (revision: Revision, flattened: Flattened)?
     // Number of full traversals done for queries; for tests.
     private(set) var traversalCount = 0
 

@@ -2,10 +2,14 @@ import GeometryLite3D
 import Metal
 import SceneSprocketsAudio
 import MetalSprocketsParticles
+import Observation
 import SwiftMesh
 import simd
 
 extension SceneGraph {
+    // Observable, so SwiftUI views that read a node update when it changes. Caches and revisions are ignored: the
+    // renderer writes them every frame.
+    @Observable
     public class Node: Identifiable {
         public enum Content {
             case empty
@@ -23,7 +27,7 @@ extension SceneGraph {
             ObjectIdentifier(self)
         }
 
-        public private(set) weak var parent: Node?
+        @ObservationIgnored public private(set) weak var parent: Node?
         public private(set) var children: [Node] = []
         public var label: String?
         public var localTransform: LocalTransform {
@@ -81,17 +85,17 @@ extension SceneGraph {
         }
 
         // Revision of this node's subtree; changes propagate to ancestors.
-        public private(set) var revision = Revision(structure: Revision.next(), transform: Revision.next())
+        @ObservationIgnored public private(set) var revision = Revision(structure: Revision.next(), transform: Revision.next())
 
         struct BoundsCache {
             var mesh: (revision: Int, bounds: BoundingBox3D?)?
             var subtree: (revision: Revision, bounds: BoundingBox3D?)?
         }
 
-        var boundsCache = BoundsCache()
-        var deformationCache: (revision: Revision, mesh: MetalMesh)?
-        var shapeStorage: (shape: Shape, device: MTLDevice)?
-        var runningActions: [RunningAction] = []
+        @ObservationIgnored var boundsCache = BoundsCache()
+        @ObservationIgnored var deformationCache: (revision: Revision, mesh: MetalMesh)?
+        @ObservationIgnored var shapeStorage: (shape: Shape, device: MTLDevice)?
+        @ObservationIgnored var runningActions: [RunningAction] = []
         // Multiplies the time this node's actions advance by; 0 pauses them. Not inherited by children.
         public var actionSpeed: Float = 1
         // Loop-subdivides this node's mesh, like SCNGeometry.subdivisionLevel; 0 restores the original. Triangle
@@ -104,7 +108,7 @@ extension SceneGraph {
                 applySubdivision()
             }
         }
-        var subdivisionBase: MetalMesh?
+        @ObservationIgnored var subdivisionBase: MetalMesh?
 
         func applySubdivision() {
             guard case let .mesh(mesh, materials, castsShadow, receivesShadow) = content else {
@@ -129,7 +133,7 @@ extension SceneGraph {
             didSet { accelerationStates = [:] }
         }
         // Smoothed position and velocity of each acceleration constraint, by index in `constraints`.
-        var accelerationStates: [Int: AccelerationState] = [:]
+        @ObservationIgnored var accelerationStates: [Int: AccelerationState] = [:]
         // Matched against camera, light and hit-test masks, like SCNNode.categoryBitMask. Not inherited by children.
         public var categoryBitMask: UInt = 1 {
             didSet { bump(structure: true) }
@@ -166,7 +170,7 @@ extension SceneGraph {
                 bump(structure: false)
             }
         }
-        private var pivotInverse: float4x4 = .identity
+        @ObservationIgnored private var pivotInverse: float4x4 = .identity
 
         // The local transform with the pivot applied; what world transforms and bounds are built from.
         public var composedTransform: float4x4 {

@@ -3377,12 +3377,13 @@ Related: Documentation/Features.md rows 'Gestures and transform gizmos' and 'Sce
 ## 155: Make scene graph changes observable to SwiftUI
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: effort:m, area:scenegraph
 created: 2026-10-22T15:22:08Z
-updated: 2026-10-23T13:22:39Z
+updated: 2026-10-23T13:43:56Z
+closed: 2026-10-23T13:43:56Z
 +++
 
 SceneGraph and SceneGraph.Node are plain classes. SwiftUI views that read them (for example an outline of the node tree, or an inspector showing a node's label or transform) do not update when the graph changes.
@@ -3392,6 +3393,8 @@ SceneSprocketsComposer needs this to show a live scene tree and inspector while 
 Expected: changing a node's children, label, content or transform invalidates SwiftUI views that read those properties. Options include `@Observable` on Node/SceneGraph, or a revision value that views can observe.
 
 Constraint: the renderer reads the graph every frame. Observation must not add noticeable per-frame cost (for example, from transform changes during animation or physics).
+
+- `2026-10-23T13:43:56Z`: Fixed: SceneGraph and SceneGraph.Node are @Observable; caches, revisions and parent are @ObservationIgnored so render-time reads/cache writes don't invalidate. Cost (Release, 1000 nodes, set every transform + traverse each frame): 0.11 -> 0.17 ms/frame. Composer's transformRevision workaround can now go.
 
 ---
 
