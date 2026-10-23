@@ -29,7 +29,7 @@ let package = Package(
         .package(url: "https://github.com/schwa/Interaction3D", branch: "main"),
         .package(url: "https://github.com/schwa/MetalCompilerPlugin", .upToNextMinor(from: "0.4.1")),
         .package(url: "https://github.com/schwa/SwiftJolt.git", branch: "main"),
-        .package(url: "https://github.com/schwa/MetalSprocketsParticles", branch: "main"),
+        .package(url: "https://github.com/schwa/MetalSprocketsParticles", .upToNextMinor(from: "0.0.2")),
         .package(url: "https://github.com/schwa/MetalSprocketsAddOns", branch: "main"),
     ],
     targets: [

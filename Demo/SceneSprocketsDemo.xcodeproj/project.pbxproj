@@ -32,12 +32,12 @@
 		45CFGEXC2F64AAB2005F944D /* Exceptions for "Configuration" folder in "SceneSprocketsDemo" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"SceneSprocketsDemo-Debug.xcconfig",
-				"SceneSprocketsDemo-Release.xcconfig",
-				"SceneSprocketsDemo-Shared.xcconfig",
 				"Project-Debug.xcconfig",
 				"Project-Release.xcconfig",
 				"Project-Shared.xcconfig",
+				"SceneSprocketsDemo-Debug.xcconfig",
+				"SceneSprocketsDemo-Release.xcconfig",
+				"SceneSprocketsDemo-Shared.xcconfig",
 			);
 			target = 45C80D302E84475800136D6D /* SceneSprocketsDemo */;
 		};

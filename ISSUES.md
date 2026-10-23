@@ -2993,10 +2993,12 @@ closed: 2026-10-21T17:53:15Z
 ## 147: Pin MetalSprocketsParticles by version
 
 +++
-status: new
+status: closed
 priority: low
 kind: task
 created: 2026-10-21T17:34:49Z
+updated: 2026-10-23T13:00:15Z
+closed: 2026-10-23T13:00:15Z
 +++
 
 Package.swift and the demo package use branch main because the 0.0.1 tag depends on MetalSprockets main (#530). Switch both to .upToNextMinor once MetalSprockets is released with #530 and Particles is re-tagged.

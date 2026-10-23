@@ -25,7 +25,7 @@ let package = Package(
         .package(url: "https://github.com/schwa/Interaction3D", branch: "main"),
         .package(url: "https://github.com/schwa/DemoKit", branch: "main"),
         .package(url: "https://github.com/schwa/GoldenImage", .upToNextMinor(from: "0.1.6")),
-        .package(url: "https://github.com/schwa/MetalSprocketsParticles", branch: "main"),
+        .package(url: "https://github.com/schwa/MetalSprocketsParticles", .upToNextMinor(from: "0.0.2")),
     ],
     targets: [
         .target(
