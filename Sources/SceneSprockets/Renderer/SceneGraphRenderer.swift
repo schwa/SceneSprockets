@@ -55,6 +55,8 @@ public struct SceneGraphElement: Element {
     var renderers: [any SceneGraphMaterialRenderer]
     var defaultCamera: Camera?
     var cameraOverride: Camera?
+    // Keep the scene depth for later passes (it must not be memoryless), such as depth-tested overlays.
+    var storesDepth: Bool
     var defaultLight: Light?
     var shadows: SceneGraphShadows?
     var decorations: ((SceneGraphRenderContext) throws -> AnyElement?)?
@@ -62,8 +64,9 @@ public struct SceneGraphElement: Element {
     @MSEnvironment(\.renderPassDescriptor)
     private var renderPassDescriptor
 
-    public init(sceneGraph: SceneGraph, camera: SceneGraph.Node? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any SceneGraphMaterialRenderer], defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, shadows: SceneGraphShadows? = nil, decorations: ((SceneGraphRenderContext) throws -> AnyElement?)? = nil) {
+    public init(sceneGraph: SceneGraph, camera: SceneGraph.Node? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any SceneGraphMaterialRenderer], defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, shadows: SceneGraphShadows? = nil, storesDepth: Bool = false, decorations: ((SceneGraphRenderContext) throws -> AnyElement?)? = nil) {
         self.cameraOverride = cameraOverride
+        self.storesDepth = storesDepth
         self.decorations = decorations
         self.sceneGraph = sceneGraph
         self.camera = camera
@@ -168,10 +171,10 @@ public struct SceneGraphElement: Element {
             let adjustsColor = postProcessing?.adjustsColor ?? false
             let hasPostPasses = shadowFrame != nil || fog != nil || ambientOcclusion != nil || adjustsColor
             let scenePass = try MetalSprockets.Group {
-                try makeScenePass(elements: elements, clearColor: clearColor, storesDepth: hasPostPasses || softParticleDepth != nil)
+                try makeScenePass(elements: elements, clearColor: clearColor, storesDepth: storesDepth || hasPostPasses || softParticleDepth != nil)
                 if let softParticleDepth {
                     ParticleDepthCopyPass(depthTexture: softParticleDepth.scene, output: softParticleDepth.copy)
-                    try makeParticlePass(elements: particleElements, storesDepth: hasPostPasses)
+                    try makeParticlePass(elements: particleElements, storesDepth: storesDepth || hasPostPasses)
                 }
             }
             guard let postTargets, hasPostPasses else {

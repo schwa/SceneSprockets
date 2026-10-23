@@ -3664,12 +3664,13 @@ Related: #154 (transform gizmo).
 ## 172: SelectionOutline draws over objects in front of the selection
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:ui, effort:m
 created: 2026-10-22T21:55:34Z
-updated: 2026-10-23T13:22:40Z
+updated: 2026-10-23T13:38:09Z
+closed: 2026-10-23T13:38:09Z
 +++
 
 The selection outline (SelectionOutline, #166) shows through objects that are in front of the selected node. Seen in SceneSprocketsComposer.
@@ -3681,6 +3682,8 @@ Fix options:
 - Make x-ray an option (Blender shows hidden parts fainter).
 
 MetalSprocketsAddOns JumpFloodOutlineDemoView shows the depth-tested setup.
+
+- `2026-10-23T13:38:10Z`: Fixed: SelectionOutline is depth-tested by default (xray option for the old behavior). Mask is .rg32Float with reversed-depth projection; outline pass loads scene depth and tests .greaterEqual. SceneView keeps depth (private, stored) when it has an overlay. Tests: SelectionOutlineTests.
 
 ---
 

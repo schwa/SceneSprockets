@@ -101,7 +101,7 @@ public struct SceneView: View {
         // After `onTap`, so a trailing closure still means `onTap`.
         decorations: ((SceneGraphRenderContext, SIMD2<Float>) throws -> AnyElement?)? = nil,
         // Passes after the scene and before the manipulator, such as selection outlines. They see the finished color
-        // but not depth (memoryless without post passes). Start passes that read the drawable with a barrier.
+        // and can load the scene depth (reversed: nearer is greater). Start passes that read the drawable with a barrier.
         overlay: ((SceneViewport) throws -> AnyElement?)? = nil
     ) {
         self.overlay = overlay
@@ -147,6 +147,7 @@ public struct SceneView: View {
                 cameraOverride: cameraOverride,
                 defaultLight: options.contains(.autoenablesDefaultLighting) ? Light(type: .directional, color: [1, 1, 1], intensity: 1) : nil,
                 shadows: shadows,
+                storesDepth: overlay != nil,
                 decorations: decorations.map { decorations in
                     { context in try decorations(context, SIMD2<Float>(Float(size.width), Float(size.height))) }
                 }
@@ -162,7 +163,7 @@ public struct SceneView: View {
         // Shadows and fog change the drawable from compute passes that also read depth.
         .metalFramebufferOnly(!needsPostPasses && !options.contains(.disablesFramebufferOnly))
         .metalDepthStencilAttachmentTextureUsage(needsPostPasses ? [.renderTarget, .shaderRead] : [.renderTarget])
-        .metalDepthStencilStorageMode(needsPostPasses ? .private : .memoryless)
+        .metalDepthStencilStorageMode(needsPostPasses || overlay != nil ? .private : .memoryless)
         .modifier(CameraControl(isEnabled: options.contains(.allowsCameraControl), cameraMatrix: cameraBinding, target: orbitTarget ?? viewpoint.target))
         // Camera control leaves drags that start on the manipulator alone.
         .interactionDragFilter { location in !manipulatorHit(at: location) }

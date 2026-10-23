@@ -5,13 +5,16 @@ import MetalSprocketsSupport
 import SceneSprockets
 import simd
 
-// Outlines nodes (and their descendants) with MetalSprocketsAddOns' jump flood outline (#166). Draws over everything
-// (x-ray): SceneView's depth is not kept after the scene pass. Use from SceneView's `overlay`. Keeps its mask and seed
-// textures between frames, so keep one instance per view.
+// Outlines nodes (and their descendants) with MetalSprocketsAddOns' jump flood outline (#166). Objects in front hide the
+// outline unless `xray`; that needs the scene depth kept after the scene pass (SceneView does this when it has an
+// `overlay`). Use from SceneView's `overlay`. Keeps its mask and seed textures between frames, so keep one instance per
+// view.
 public final class SelectionOutline {
     public var color: SIMD4<Float>
     // Pixels.
     public var width: Float
+    // Draw over everything instead of hiding behind objects in front.
+    public var xray = false
 
     private var mask: MTLTexture?
     private var seeds: MTLTexture?
@@ -32,11 +35,13 @@ public final class SelectionOutline {
         let (mask, seeds) = try textures(width: Int(viewport.drawableSize.x), height: Int(viewport.drawableSize.y))
         return OutlinePasses(
             instances: instances,
-            viewProjection: viewport.projectionMatrix * viewport.viewMatrix,
+            // The scene draws with reversed depth; the viewport's projection is standard.
+            viewProjection: .reversedDepth * viewport.projectionMatrix * viewport.viewMatrix,
             mask: mask,
             seeds: seeds,
             color: color,
-            width: width
+            width: width,
+            xray: xray
         )
         .eraseToAnyElement()
     }
@@ -61,7 +66,7 @@ public final class SelectionOutline {
         guard let device = MTLCreateSystemDefaultDevice() else {
             throw MetalSprocketsError.resourceCreationFailure("No Metal device for the selection outline")
         }
-        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .r8Unorm, width: width, height: height, mipmapped: false)
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rg32Float, width: width, height: height, mipmapped: false)
         descriptor.usage = [.renderTarget, .shaderRead]
         descriptor.storageMode = .private
         guard let mask = device.makeTexture(descriptor: descriptor) else {
@@ -83,6 +88,7 @@ private struct OutlinePasses: Element {
     var seeds: MTLTexture
     var color: SIMD4<Float>
     var width: Float
+    var xray: Bool
 
     var body: some Element {
         get throws {
@@ -101,11 +107,12 @@ private struct OutlinePasses: Element {
             // Waits for the mask (and, transitively, the scene pass) and makes the outline pass wait for it.
             JumpFloodPipeline(mask: mask, seeds: seeds, maximumDistance: width)
             try RenderPass(label: "Selection Outline") {
-                JumpFloodOutlineRenderPipeline(mask: mask, seeds: seeds, color: color, width: width)
+                // Reversed depth: nearer is greater.
+                JumpFloodOutlineRenderPipeline(mask: mask, seeds: seeds, color: color, width: width, depthCompareFunction: xray ? .always : .greaterEqual)
             }
-            .renderPassDescriptorModifier { descriptor in
+            .renderPassDescriptorModifier { [xray] descriptor in
                 descriptor.colorAttachments[0].loadAction = .load
-                descriptor.depthAttachment.loadAction = .clear
+                descriptor.depthAttachment.loadAction = xray ? .clear : .load
                 descriptor.depthAttachment.storeAction = .dontCare
             }
         }
