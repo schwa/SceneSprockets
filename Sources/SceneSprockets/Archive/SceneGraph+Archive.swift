@@ -101,6 +101,10 @@ extension SceneGraph.Node: Codable {
                         context.warn("\(nodeDescription): \(type(of: material)) is not archivable; skipped")
                         continue
                     }
+                    if let problem = archivable.archiveProblem(context: context) {
+                        context.warn("\(nodeDescription): \(problem); skipped")
+                        continue
+                    }
                     var item = list.nestedContainer(keyedBy: MaterialKeys.self)
                     try item.encode(type(of: archivable).archiveTypeName, forKey: .type)
                     try archivable.encode(to: item.superEncoder(forKey: .value))

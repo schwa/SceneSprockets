@@ -7,6 +7,7 @@ import MetalSprocketsPBR
 import SceneSprockets
 import SceneSprocketsBlinnPhong
 import SceneSprocketsPBR
+import SceneSprocketsShaderMaterial
 import UniformTypeIdentifiers
 
 // Renders a demo offscreen, without a window: steps it `frames` times at 60 Hz (update, actions, constraints) from
@@ -151,7 +152,7 @@ public enum DemoSnapshot {
             scene.sceneGraph.advanceActions(by: deltaTime)
             scene.sceneGraph.applyConstraints(pointOfView: scene.initialCameraMatrix, deltaTime: deltaTime)
         }
-        let archive = SceneArchive(materialTypes: [BlinnPhongSceneMaterial.self, PBRSceneMaterial.self], environmentMapTypes: [PBREnvironment.self])
+        let archive = SceneArchive(materialTypes: [BlinnPhongSceneMaterial.self, PBRSceneMaterial.self, ShaderMaterial.self], environmentMapTypes: [PBREnvironment.self])
         return try archive.write(scene.sceneGraph, to: url)
     }
 

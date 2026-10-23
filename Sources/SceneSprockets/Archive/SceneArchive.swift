@@ -15,10 +15,14 @@ public struct SceneArchive {
 
     public var materialTypes: [any ArchivableMaterial.Type]
     public var environmentMapTypes: [any ArchivableEnvironmentMap.Type]
+    // Metal libraries that saved shaders (ShaderMaterial) refer to by name. A compiled function does not say where
+    // its library came from, so the app names the libraries it uses.
+    public var shaderLibraries: [String: any MTLLibrary]
 
-    public init(materialTypes: [any ArchivableMaterial.Type] = [], environmentMapTypes: [any ArchivableEnvironmentMap.Type] = []) {
+    public init(materialTypes: [any ArchivableMaterial.Type] = [], environmentMapTypes: [any ArchivableEnvironmentMap.Type] = [], shaderLibraries: [String: any MTLLibrary] = [:]) {
         self.materialTypes = materialTypes
         self.environmentMapTypes = environmentMapTypes
+        self.shaderLibraries = shaderLibraries
     }
 
     // Replaces anything at `url`. Returns warnings for what could not be saved.
@@ -53,6 +57,15 @@ public struct SceneArchive {
 public protocol ArchivableMaterial: Material, Codable {
     // Stored in scene.json to find the type again; unique among registered types.
     static var archiveTypeName: String { get }
+    // Why this material cannot be saved with `context`, or nil. Checked before encoding; a reason skips the material
+    // with a warning instead of failing the whole archive.
+    func archiveProblem(context: SceneArchiveContext) -> String?
+}
+
+public extension ArchivableMaterial {
+    func archiveProblem(context: SceneArchiveContext) -> String? {
+        nil
+    }
 }
 
 // An environment map that can be saved. Environment maps are classes, so decoding is a static function.
@@ -147,6 +160,14 @@ public final class SceneArchiveContext: @unchecked Sendable {
             }
         }
         pendingConstraints = []
+    }
+
+    public func shaderLibraryName(for library: any MTLLibrary) -> String? {
+        archive.shaderLibraries.first { $0.value === library }?.key
+    }
+
+    public func shaderLibrary(named name: String) -> (any MTLLibrary)? {
+        archive.shaderLibraries[name]
     }
 
     public func warn(_ message: String) {

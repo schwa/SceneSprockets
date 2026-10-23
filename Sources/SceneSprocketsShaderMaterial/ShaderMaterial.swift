@@ -29,7 +29,7 @@ public struct ShaderMaterial: SceneSprockets.Material {
     public var fragmentShader: FragmentShader
     public var parameters: [String: Value]
     public var renderState: MaterialRenderState
-    private var alphaBlends: Bool
+    var alphaBlends: Bool
 
     // Alpha-blends over what is already drawn and does not write depth. Drawn after opaque meshes of the same
     // Node.renderingOrder, farthest first. Also true for blend modes that mix with what is behind (add, multiply...).
@@ -122,6 +122,9 @@ public struct ShaderMaterialRenderer: SceneGraphMaterialRenderer {
 }
 
 enum ShaderMaterialSampleLibrary {
+    // The name saved archives use for the sample shaders; registered with every SceneArchive.
+    static let archiveName = "SceneSprocketsShaderMaterialSamples"
+
     nonisolated(unsafe) private static var cached: ShaderNamespace?
     private static let lock = NSLock()
 

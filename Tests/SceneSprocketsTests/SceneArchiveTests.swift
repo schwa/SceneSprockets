@@ -1,6 +1,7 @@
 import Foundation
 import GeometryLite3D
 import Metal
+import MetalSprockets
 import MetalSprocketsPBR
 import SwiftMesh
 import Testing
@@ -8,6 +9,7 @@ import simd
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
 @testable import SceneSprocketsPBR
+import SceneSprocketsShaderMaterial
 
 // #156
 @MainActor
@@ -180,6 +182,66 @@ struct SceneArchiveTests {
         #expect(loaded.unlit == 1 && loaded.alphaMode == .mask)
         #expect(loaded.normal.enabled == 1 && loaded.normal.texCoord == 1 && loaded.normal.transform == uniforms.normal.transform)
         #expect(loaded.baseColor.enabled == uniforms.baseColor.enabled)
+    }
+
+    // #160
+    @Test
+    func shaderMaterialRoundTripsByReference() throws {
+        let url = temporaryURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        var material = try ShaderMaterial.rim(color: [1, 0.5, 0, 0.5])
+        material.parameters["tint"] = .float3([0.1, 0.2, 0.3])
+        material.parameters["matrix"] = .float4x4(.init(diagonal: [1, 2, 3, 4]))
+        material.parameters["texture"] = .texture(makeTexture())
+        material.parameters["bytes"] = .buffer(try #require(device.makeBuffer(bytes: [UInt8](arrayLiteral: 1, 2, 3, 4), length: 4, options: .storageModeShared)))
+        material.renderState = MaterialRenderState(blendMode: .add)
+        let root = SceneGraph.Node()
+        _ = SceneGraph.Node(parent: root, label: "Rim", shape: .sphere(), material: material, device: device)
+        let shaderArchive = SceneArchive(materialTypes: [ShaderMaterial.self])
+        let warnings = try shaderArchive.write(SceneGraph(root: root), to: url)
+        #expect(warnings.isEmpty, "\(warnings)")
+        let (loaded, readWarnings) = try shaderArchive.read(from: url, device: device)
+        #expect(readWarnings.isEmpty)
+        guard case let .mesh(_, materials, _, _) = loaded.root.children.first?.content, let shader = materials.first as? ShaderMaterial else {
+            Issue.record("expected a ShaderMaterial")
+            return
+        }
+        #expect(shader.vertexShader.reference.name == material.vertexShader.reference.name)
+        #expect(shader.fragmentShader.reference.name == material.fragmentShader.reference.name)
+        #expect(shader.isTransparent && shader.renderState.blendMode == .add)
+        guard case let .float4(color) = shader.parameters["color"], case let .float3(tint) = shader.parameters["tint"], case let .float4x4(matrix) = shader.parameters["matrix"], case let .texture(texture) = shader.parameters["texture"], case let .buffer(buffer) = shader.parameters["bytes"] else {
+            Issue.record("parameters missing: \(shader.parameters.keys.sorted())")
+            return
+        }
+        #expect(color == [1, 0.5, 0, 0.5] && tint == [0.1, 0.2, 0.3] && matrix == .init(diagonal: [1, 2, 3, 4]))
+        #expect(texture.width == 2 && buffer.length == 4 && buffer.contents().load(fromByteOffset: 3, as: UInt8.self) == 4)
+    }
+
+    @Test
+    func shaderMaterialFromAnUnregisteredLibraryIsSkipped() throws {
+        let url = temporaryURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let source = """
+        #include <metal_stdlib>
+        using namespace metal;
+        vertex float4 custom_vertex(uint id [[vertex_id]]) { return float4(0); }
+        fragment float4 custom_fragment() { return float4(1); }
+        """
+        let library = try device.makeLibrary(source: source, options: nil)
+        let material = ShaderMaterial(vertexShader: try VertexShader(ShaderFunction(library: library, name: "custom_vertex", type: .vertex)), fragmentShader: try FragmentShader(ShaderFunction(library: library, name: "custom_fragment", type: .fragment)))
+        let root = SceneGraph.Node()
+        _ = SceneGraph.Node(parent: root, label: "Custom", shape: .sphere(), material: material, device: device)
+        let unregistered = try SceneArchive(materialTypes: [ShaderMaterial.self]).write(SceneGraph(root: root), to: url)
+        #expect(unregistered.contains { $0.contains("Custom") && $0.contains("shaderLibraries") })
+        // Registered, it saves and reads back.
+        let registered = SceneArchive(materialTypes: [ShaderMaterial.self], shaderLibraries: ["custom": library])
+        #expect(try registered.write(SceneGraph(root: root), to: url).isEmpty)
+        let (loaded, _) = try registered.read(from: url, device: device)
+        guard case let .mesh(_, materials, _, _) = loaded.root.children.first?.content, let shader = materials.first as? ShaderMaterial else {
+            Issue.record("expected a ShaderMaterial")
+            return
+        }
+        #expect(shader.vertexShader.reference.name == "custom_vertex")
     }
 
     // #164

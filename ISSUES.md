@@ -3470,15 +3470,18 @@ Part of #52. Synthesized Codable writes enums as objects ({"directional": {}}, {
 ## 160: Scene archive: save ShaderMaterial
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: effort:m, area:document
 created: 2026-10-22T16:11:22Z
-updated: 2026-10-23T13:22:40Z
+updated: 2026-10-23T14:22:53Z
+closed: 2026-10-23T14:22:53Z
 +++
 
 Part of #52. ShaderMaterial is not archivable: its shaders are compiled functions. Save a reference to the shader (library and function names, or source) plus parameters (floats, vectors, matrices, textures via the archive context; buffers as data). Seen in scenekit-features: 'Red Pane'.
+
+- `2026-10-23T14:22:53Z`: Fixed: ShaderMaterial is ArchivableMaterial. Saves library name (SceneArchive.shaderLibraries, new; sample shaders built in), function names, parameters (floats, vectors, float4x4, textures, CPU-readable buffers), isTransparent and render state. Samplers warn (#180); specialized functions and unregistered libraries are skipped with a warning via new ArchivableMaterial.archiveProblem(context:). Demo save registers ShaderMaterial. Tests shaderMaterialRoundTripsByReference, shaderMaterialFromAnUnregisteredLibraryIsSkipped.
 
 ---
 
