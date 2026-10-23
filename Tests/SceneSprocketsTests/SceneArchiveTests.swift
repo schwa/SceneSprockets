@@ -136,4 +136,54 @@ struct SceneArchiveTests {
         let warnings = try archive.write(SceneGraph(root: root), to: url)
         #expect(warnings.contains { $0.contains("Generated") && $0.contains("#158") })
     }
+
+    // #161
+    @Test
+    func constraintsRoundTripWithNodeReferences() throws {
+        let url = temporaryURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let root = SceneGraph.Node(label: "Root")
+        let group = SceneGraph.Node(parent: root, label: "Group")
+        let target = SceneGraph.Node(parent: group, label: "Target")
+        let follower = SceneGraph.Node(parent: root, label: "Follower")
+        follower.constraints = [
+            .lookAt(target: target, worldUp: [0, 0, 1]),
+            SceneGraph.Constraint(.distance(target: target, minimum: 1, maximum: .infinity), influenceFactor: 0.5, isEnabled: false),
+            .replicator(target: target, orientation: false, orientationOffset: simd_quatf(angle: 1, axis: [0, 1, 0])),
+            .billboard(freeAxes: .y),
+            .inverseKinematics(chainRoot: root, target: target, iterations: 4),
+            .acceleration(damping: 0.25),
+            .transform { _, trs in trs },
+        ]
+        let warnings = try archive.write(SceneGraph(root: root), to: url)
+        #expect(warnings.contains { $0.contains("Follower") && $0.contains("transform constraints") })
+        let (loaded, readWarnings) = try archive.read(from: url, device: device)
+        #expect(readWarnings.isEmpty)
+        let loadedFollower = try #require(loaded.root.children.first { $0.label == "Follower" })
+        let loadedTarget = try #require(loaded.root.children.first { $0.label == "Group" }?.children.first)
+        #expect(loadedTarget.label == "Target")
+        let constraints = loadedFollower.constraints
+        try #require(constraints.count == 6)
+        guard case let .lookAt(lookAtTarget, worldUp, _) = constraints[0].kind else {
+            Issue.record("expected lookAt")
+            return
+        }
+        #expect(lookAtTarget === loadedTarget && worldUp == [0, 0, 1])
+        guard case let .distance(distanceTarget, minimum, maximum) = constraints[1].kind else {
+            Issue.record("expected distance")
+            return
+        }
+        #expect(distanceTarget === loadedTarget && minimum == 1 && maximum == .infinity)
+        #expect(constraints[1].influenceFactor == 0.5 && !constraints[1].isEnabled)
+        guard case let .replicator(_, _, orientation, _, _, orientationOffset, _) = constraints[2].kind else {
+            Issue.record("expected replicator")
+            return
+        }
+        #expect(!orientation && abs(orientationOffset.angle - 1) < 0.0001)
+        guard case let .billboard(freeAxes) = constraints[3].kind, case let .inverseKinematics(chainRoot, _, iterations, _) = constraints[4].kind, case let .acceleration(_, _, damping) = constraints[5].kind else {
+            Issue.record("expected billboard, inverseKinematics, acceleration")
+            return
+        }
+        #expect(freeAxes == .y && chainRoot === loaded.root && iterations == 4 && damping == 0.25)
+    }
 }

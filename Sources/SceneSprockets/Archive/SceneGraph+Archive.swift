@@ -15,6 +15,7 @@ extension SceneGraph: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: ArchiveKeys.self)
         try container.encode(SceneArchive.formatVersion, forKey: .formatVersion)
+        try encoder.sceneArchive.encodingRoot = root
         try container.encode(root, forKey: .root)
         try container.encode(environment, forKey: .environment)
         try container.encodeIfPresent(fog, forKey: .fog)
@@ -29,6 +30,7 @@ extension SceneGraph: Codable {
             throw SceneArchiveError.unsupportedFormatVersion(version)
         }
         root = try container.decode(Node.self, forKey: .root)
+        try decoder.sceneArchive.resolveConstraints(root: root)
         environment = try container.decode(Environment.self, forKey: .environment)
         fog = try container.decodeIfPresent(Fog.self, forKey: .fog)
         postProcessing = try container.decodeIfPresent(PostProcessing.self, forKey: .postProcessing)
@@ -40,7 +42,7 @@ extension SceneGraph: Codable {
 extension SceneGraph.Node: Codable {
     enum ArchiveKeys: String, CodingKey {
         case label, transform, pivot, isVisible, opacity, categoryBitMask, lightCategoryBitMask, renderingOrder
-        case subdivisionLevel, actionSpeed, mesh, light, camera, children
+        case subdivisionLevel, actionSpeed, mesh, light, camera, constraints, children
     }
 
     enum MeshKeys: String, CodingKey {
@@ -109,6 +111,7 @@ extension SceneGraph.Node: Codable {
             }
         }
         warnAboutUnsavedFeatures(context)
+        try encodeConstraints(into: &container, context: context)
         if !children.isEmpty {
             try container.encode(children, forKey: .children)
         }
@@ -155,10 +158,37 @@ extension SceneGraph.Node: Codable {
                 shapeStorage = (shape, device)
             }
         }
+        if let constraints = try container.decodeIfPresent([ArchivedConstraint].self, forKey: .constraints) {
+            context.pendingConstraints.append((self, constraints))
+        }
         // After the content, so subdivision applies to the shape's mesh.
         subdivisionLevel = try container.decodeIfPresent(Int.self, forKey: .subdivisionLevel) ?? 0
         for child in try container.decodeIfPresent([SceneGraph.Node].self, forKey: .children) ?? [] {
             addChild(child)
+        }
+    }
+
+    private func encodeConstraints(into container: inout KeyedEncodingContainer<ArchiveKeys>, context: SceneArchiveContext) throws {
+        guard !constraints.isEmpty else {
+            return
+        }
+        var root = self
+        while let parent = root.parent {
+            root = parent
+        }
+        root = context.encodingRoot ?? root
+        var archived: [ArchivedConstraint] = []
+        for constraint in constraints {
+            if let item = ArchivedConstraint(constraint, root: root) {
+                archived.append(item)
+            } else if case .transform = constraint.kind {
+                context.warn("\(nodeDescription): transform constraints are closures and cannot be saved; skipped")
+            } else {
+                context.warn("\(nodeDescription): constraint refers to a node outside the scene; skipped")
+            }
+        }
+        if !archived.isEmpty {
+            try container.encode(archived, forKey: .constraints)
         }
     }
 
@@ -171,7 +201,6 @@ extension SceneGraph.Node: Codable {
         let unsaved: [(String, Bool)] = [
             ("morph targets", !morphTargets.isEmpty),
             ("skin", skin != nil),
-            ("constraints", !constraints.isEmpty),
             ("physics body", physicsBody != nil),
             ("particle systems", !particleSystems.isEmpty),
             ("audio players", !audioPlayers.isEmpty),

@@ -118,6 +118,10 @@ public final class SceneArchiveContext: @unchecked Sendable {
     public private(set) var warnings: [String] = []
     private var writtenTextures: [ObjectIdentifier: TextureReference] = [:]
     private var readTextures: [String: MTLTexture] = [:]
+    // Constraints refer to nodes by path from this root.
+    var encodingRoot: SceneGraph.Node?
+    // Constraints read with their nodes, resolved once the whole tree is read.
+    var pendingConstraints: [(node: SceneGraph.Node, constraints: [ArchivedConstraint])] = []
 
     init(directory: URL, device: MTLDevice?, archive: SceneArchive) {
         self.directory = directory
@@ -129,6 +133,19 @@ public final class SceneArchiveContext: @unchecked Sendable {
         get throws {
             try readDevice.orThrow(SceneArchiveError.missingDevice)
         }
+    }
+
+    func resolveConstraints(root: SceneGraph.Node) {
+        for (node, constraints) in pendingConstraints {
+            node.constraints = constraints.compactMap { archived in
+                guard let constraint = archived.constraint(root: root) else {
+                    warn("\(node.label ?? "node"): constraint refers to a missing node; skipped")
+                    return nil
+                }
+                return constraint
+            }
+        }
+        pendingConstraints = []
     }
 
     public func warn(_ message: String) {

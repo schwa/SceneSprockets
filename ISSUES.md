@@ -3482,15 +3482,18 @@ Part of #52. ShaderMaterial is not archivable: its shaders are compiled function
 ## 161: Scene archive: save animation, constraints and actions
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: effort:l, area:document
 created: 2026-10-22T16:11:22Z
-updated: 2026-10-23T13:22:39Z
+updated: 2026-10-23T13:53:26Z
+closed: 2026-10-23T13:53:26Z
 +++
 
 Part of #52. Not saved yet: animation clips and players, constraints, running actions. Closure-based ones (Constraint.transform, Action.custom/run, custom animation properties) cannot be saved; decide whether to skip them with a warning or replace them with named, registered behaviors. Seen in shadows and scenekit-features (spinning torus, look-at constraints).
+
+- `2026-10-23T13:53:26Z`: Constraints done: saved in scene.json with node references as child-index paths from the root, resolved after the tree is read; .transform (closure) skipped with a warning. Test constraintsRoundTripWithNodeReferences. Animation and actions split to #179 (Action is closure-based; needs a data model).
 
 ---
 
@@ -3832,5 +3835,24 @@ updated: 2026-10-23T13:22:41Z
 +++
 
 Follow-up to #154. On iOS and visionOS: pinch to scale and two-finger rotate to rotate the selected node. Touch drag on handles is #173; trackball rotation is #168.
+
+---
+
+## 179: Scene archive: save animation clips and running actions
+
++++
+status: new
+priority: medium
+kind: feature
+labels: area:document, effort:l
+created: 2026-10-23T13:53:20Z
++++
+
+Split from #161 (constraints are done there).
+
+- Actions: SceneGraph.Action stores its behavior as runner closures (makeRunner), so no action can be saved today, not even move(by:). Saving them needs a data description of actions (a Codable tree of the built-in kinds: move, rotate, scale, fade, hide, sequence, group, repeat, wait, ...) that builds the runners, plus the running state (elapsed time, key). Action.custom/run and TimingMode.custom are closures: skip them with a warning, or replace them with named, registered behaviors.
+- Animation: AnimationClip and AnimationPlayer are not tied to nodes in the graph (players are owned by the caller), so decide what a saved scene holds: clips with node-path targets (like constraints in #161), and which players auto-play on load.
+
+Seen in shadows and scenekit-features (spinning torus).
 
 ---
