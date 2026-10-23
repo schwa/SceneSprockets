@@ -38,9 +38,6 @@ struct RenderSettingsView: View {
             }
             TextField("Near Clip", value: $model.renderSettings.nearClip, format: .number)
             TextField("Far Clip", value: $model.renderSettings.farClip, format: .number)
-            Text("Used when the scene has no camera node.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
     }
 }

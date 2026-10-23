@@ -45,6 +45,7 @@ public protocol SceneGraphPrePassRenderer {
 // Entries whose material type has no renderer are skipped.
 // The view comes from `camera` (default: the first camera node) unless `cameraMatrix` overrides its world transform.
 // With no camera node, `defaultCamera` is used at `cameraMatrix` (identity if nil).
+// `cameraOverride` replaces the camera node's camera (projection and masks) even when there is one, for editor cameras.
 // `defaultLight` is added at the camera when the scene has no lights, like SceneKit's autoenablesDefaultLighting.
 public struct SceneGraphElement: Element {
     var sceneGraph: SceneGraph
@@ -53,6 +54,7 @@ public struct SceneGraphElement: Element {
     var aspectRatio: Float
     var renderers: [any SceneGraphMaterialRenderer]
     var defaultCamera: Camera?
+    var cameraOverride: Camera?
     var defaultLight: Light?
     var shadows: SceneGraphShadows?
     var decorations: ((SceneGraphRenderContext) throws -> AnyElement?)?
@@ -60,7 +62,8 @@ public struct SceneGraphElement: Element {
     @MSEnvironment(\.renderPassDescriptor)
     private var renderPassDescriptor
 
-    public init(sceneGraph: SceneGraph, camera: SceneGraph.Node? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any SceneGraphMaterialRenderer], defaultCamera: Camera? = nil, defaultLight: Light? = nil, shadows: SceneGraphShadows? = nil, decorations: ((SceneGraphRenderContext) throws -> AnyElement?)? = nil) {
+    public init(sceneGraph: SceneGraph, camera: SceneGraph.Node? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any SceneGraphMaterialRenderer], defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, shadows: SceneGraphShadows? = nil, decorations: ((SceneGraphRenderContext) throws -> AnyElement?)? = nil) {
+        self.cameraOverride = cameraOverride
         self.decorations = decorations
         self.sceneGraph = sceneGraph
         self.camera = camera
@@ -74,7 +77,7 @@ public struct SceneGraphElement: Element {
 
     public var body: some Element {
         get throws {
-            guard var context = makeRenderContext(sceneGraph: sceneGraph, camera: camera, cameraMatrix: cameraMatrix, aspectRatio: aspectRatio, defaultCamera: defaultCamera, defaultLight: defaultLight) else {
+            guard var context = makeRenderContext(sceneGraph: sceneGraph, camera: camera, cameraMatrix: cameraMatrix, aspectRatio: aspectRatio, defaultCamera: defaultCamera, cameraOverride: cameraOverride, defaultLight: defaultLight) else {
                 return EmptyElement().eraseToAnyElement()
             }
             let cameraPosition = context.cameraMatrix.columns.3.xyz
@@ -282,11 +285,13 @@ public struct SceneGraphElement: Element {
     }
 }
 
-func makeRenderContext(sceneGraph: SceneGraph, camera: SceneGraph.Node?, cameraMatrix: simd_float4x4?, aspectRatio: Float, defaultCamera: Camera? = nil, defaultLight: Light? = nil) -> SceneGraphRenderContext? {
+func makeRenderContext(sceneGraph: SceneGraph, camera: SceneGraph.Node?, cameraMatrix: simd_float4x4?, aspectRatio: Float, defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil) -> SceneGraphRenderContext? {
     let cameras = sceneGraph.cameraNodes()
     let entry = camera.map { camera in cameras.first { $0.node === camera } } ?? cameras.first
     let resolved: (camera: Camera, worldTransform: simd_float4x4)
-    if let entry {
+    if let cameraOverride {
+        resolved = (cameraOverride, cameraMatrix ?? entry?.worldTransform ?? .identity)
+    } else if let entry {
         resolved = (entry.camera, cameraMatrix ?? entry.worldTransform)
     } else if let defaultCamera {
         resolved = (defaultCamera, cameraMatrix ?? .identity)

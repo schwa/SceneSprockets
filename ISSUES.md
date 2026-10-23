@@ -3767,12 +3767,13 @@ Blocked on #52 (save and load a scene graph).
 ## 176: Composer: Render tab camera settings should override the scene camera node
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:composer, area:preview, effort:s
 created: 2026-10-23T13:03:28Z
-updated: 2026-10-23T13:22:41Z
+updated: 2026-10-23T13:34:56Z
+closed: 2026-10-23T13:34:56Z
 +++
 
 The Render tab field of view and near/far clip apply only when the scene has no camera node. If the scene has a camera node, SceneView uses that camera's projection, and the settings do nothing. They should always apply in the editor preview: the editor camera is our own orbit camera, not the scene camera.
@@ -3780,6 +3781,8 @@ The Render tab field of view and near/far clip apply only when the scene has no 
 Needs a SceneView change: it picks the projection from the first camera node (or `pointOfView`) in drawing, `viewport()` and hit testing, and falls back to `defaultCamera` only when there is none. Add a way to force the projection, for example: when `cameraMatrix` is set without `.allowsCameraControl` (a free camera), use `defaultCamera`; or add a `projection` override parameter.
 
 Also remove the "Used when the scene has no camera node." note from the Render tab.
+
+- `2026-10-23T13:34:56Z`: Fixed: SceneView(camera:) / SceneGraphElement(cameraOverride:) replace the camera node's camera; the composer passes its Render tab camera. Test cameraOverrideReplacesCameraNodeProjection.
 
 ---
 

@@ -56,6 +56,7 @@ public struct SceneView: View {
     private let manipulator: (any SceneViewManipulator)?
     private let decorations: ((SceneGraphRenderContext, SIMD2<Float>) throws -> AnyElement?)?
     private let defaultCamera: Camera
+    private let cameraOverride: Camera?
     private let overlay: ((SceneViewport) throws -> AnyElement?)?
 
     @Environment(\.displayScale) private var displayScale
@@ -92,6 +93,9 @@ public struct SceneView: View {
         hitTestCategoryBitMask: UInt = .max,
         // Used when the scene has no camera node.
         defaultCamera: Camera = SceneView.defaultCamera,
+        // Replaces the camera node's camera (projection, masks), for editor cameras. The transform still comes from
+        // `cameraMatrix` or the node.
+        camera: Camera? = nil,
         manipulator: (any SceneViewManipulator)? = nil,
         onTap: ((SceneGraph.Hit?) -> Void)? = nil,
         // After `onTap`, so a trailing closure still means `onTap`.
@@ -103,6 +107,7 @@ public struct SceneView: View {
         self.overlay = overlay
         self.decorations = decorations
         self.defaultCamera = defaultCamera
+        self.cameraOverride = camera
         self.sceneGraph = sceneGraph
         self.pointOfView = pointOfView
         self.options = options
@@ -139,6 +144,7 @@ public struct SceneView: View {
                 aspectRatio: size.height > 0 ? Float(size.width / size.height) : 1,
                 renderers: renderers,
                 defaultCamera: defaultCamera,
+                cameraOverride: cameraOverride,
                 defaultLight: options.contains(.autoenablesDefaultLighting) ? Light(type: .directional, color: [1, 1, 1], intensity: 1) : nil,
                 shadows: shadows,
                 decorations: decorations.map { decorations in
@@ -242,13 +248,23 @@ public struct SceneView: View {
         guard viewSize.width > 0, viewSize.height > 0 else {
             return nil
         }
-        let cameras = sceneGraph.cameraNodes()
-        let entry = pointOfView.flatMap { node in cameras.first { $0.node === node } } ?? cameras.first
-        let projection = (entry?.camera ?? defaultCamera).projection
+        let projection = activeCamera.projection
         let size = SIMD2<Float>(Float(viewSize.width), Float(viewSize.height))
         let matrix = projection.projectionMatrix(aspectRatio: size.x / size.y)
         let drawable = drawableSize.map { SIMD2<Float>(Float($0.width), Float($0.height)) } ?? size * Float(displayScale)
         return SceneViewport(cameraMatrix: currentCameraMatrix, projectionMatrix: projection.isReversedDepth ? .reversedDepth * matrix : matrix, viewSize: size, drawableSize: drawable)
+    }
+
+    private var activeCameraNode: (node: SceneGraph.Node, camera: Camera, worldTransform: simd_float4x4)? {
+        let cameras = sceneGraph.cameraNodes()
+        guard let entry = pointOfView.flatMap({ node in cameras.first { $0.node === node } }) ?? cameras.first else {
+            return nil
+        }
+        return (entry.node, entry.camera, entry.worldTransform)
+    }
+
+    private var activeCamera: Camera {
+        cameraOverride ?? activeCameraNode?.camera ?? defaultCamera
     }
 
     // Read when SwiftUI updates the view; setting fog later needs a view update to take effect.
@@ -272,8 +288,7 @@ public struct SceneView: View {
     private var viewpoint: (matrix: simd_float4x4, target: SIMD3<Float>) {
         let bounds = sceneGraph.bounds
         let center = bounds.map { ($0.min + $0.max) / 2 } ?? .zero
-        let cameras = sceneGraph.cameraNodes()
-        if let entry = pointOfView.flatMap({ node in cameras.first { $0.node === node } }) ?? cameras.first {
+        if let entry = activeCameraNode {
             return (entry.worldTransform, center)
         }
         let radius = bounds.map { max(simd_length($0.max - $0.min) / 2, 0.5) } ?? 1
@@ -291,18 +306,15 @@ public struct SceneView: View {
         if usesFreeCamera {
             return cameraMatrix ?? viewpoint.matrix
         }
-        let cameras = sceneGraph.cameraNodes()
-        return (pointOfView.flatMap { node in cameras.first { $0.node === node } } ?? cameras.first)?.worldTransform ?? viewpoint.matrix
+        return activeCameraNode?.worldTransform ?? viewpoint.matrix
     }
 
     private func hit(at location: CGPoint) -> SceneGraph.Hit? {
         guard viewSize.width > 0, viewSize.height > 0 else {
             return nil
         }
-        let cameras = sceneGraph.cameraNodes()
-        let entry = pointOfView.flatMap { node in cameras.first { $0.node === node } } ?? cameras.first
-        let camera = entry?.camera ?? defaultCamera
-        let matrix = usesFreeCamera ? cameraMatrix ?? viewpoint.matrix : entry?.worldTransform ?? viewpoint.matrix
+        let camera = activeCamera
+        let matrix = currentCameraMatrix
         let size = SIMD2<Float>(Float(viewSize.width), Float(viewSize.height))
         let ray = ViewProjection(viewMatrix: matrix.inverse, projection: camera.projection, viewSize: size).ray(through: [Float(location.x), Float(location.y)])
         // Like SceneKit, taps only hit nodes the camera can see, further limited by hitTestCategoryBitMask.

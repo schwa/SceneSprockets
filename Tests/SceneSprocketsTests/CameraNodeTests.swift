@@ -31,6 +31,17 @@ func chosenCameraNodeIsUsed() throws {
     #expect(context.projectionMatrix == .reversedDepth * expected)
 }
 
+// #176: an editor camera must win over the scene's camera nodes.
+@Test
+func cameraOverrideReplacesCameraNodeProjection() throws {
+    let (sceneGraph, _, _) = makeScene()
+    let editorCamera = Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(20)))
+    let context = try #require(makeRenderContext(sceneGraph: sceneGraph, camera: nil, cameraMatrix: translation(7, 0, 0), aspectRatio: 1, cameraOverride: editorCamera))
+    let expected = PerspectiveProjection(verticalAngleOfView: .degrees(20)).projectionMatrix(aspectRatio: 1)
+    #expect(context.projectionMatrix == .reversedDepth * expected)
+    #expect(context.cameraMatrix.columns.3 == SIMD4<Float>(7, 0, 0, 1))
+}
+
 @Test
 func explicitCameraMatrixOverridesNode() throws {
     let (sceneGraph, _, _) = makeScene()

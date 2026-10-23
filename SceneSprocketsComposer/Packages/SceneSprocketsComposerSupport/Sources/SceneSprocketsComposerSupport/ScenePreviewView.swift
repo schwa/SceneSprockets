@@ -24,7 +24,7 @@ struct ScenePreviewView: View {
             renderers: model.renderers,
             shadows: settings.shadows,
             cameraMatrix: .constant(model.camera.matrix),
-            defaultCamera: settings.camera,
+            camera: settings.camera,
             manipulator: model.gizmo,
             onTap: { hit in
                 model.selection = hit?.node.id

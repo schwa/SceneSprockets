@@ -15,7 +15,7 @@ struct RenderSettings: Equatable {
     var outlinesSelection = true
     // Off keeps the drawable readable, for example to inspect it in a GPU capture.
     var isFramebufferOnly = true
-    // Vertical, in degrees. Used when the scene has no camera node.
+    // Vertical, in degrees. The editor camera's; overrides any camera node.
     var fieldOfView: Float = 60
     var nearClip: Float = 0.01
     var farClip: Float = 1_000
