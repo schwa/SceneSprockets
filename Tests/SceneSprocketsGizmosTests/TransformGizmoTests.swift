@@ -141,6 +141,39 @@ struct TransformGizmoTests {
         #expect(pixels[offset + 2] > 200 && Int(pixels[offset + 2]) - Int(pixels[offset + 1]) > 80, "\(pixels[offset ..< offset + 4])")
     }
 
+    // #169: the camera looks down -Z, so the Z axis points at it and the XY plane faces it.
+    @Test
+    func handlesPointingAtTheCameraFade() throws {
+        let (gizmo, _) = makeGizmo()
+        let frame = try #require(gizmo.frame(viewport: viewport))
+        #expect(gizmo.opacity(of: .axis(.z), frame: frame) == 0)
+        #expect(gizmo.opacity(of: .axis(.x), frame: frame) == 1)
+        #expect(gizmo.opacity(of: .plane(.z), frame: frame) == 1)
+        // The XZ and YZ planes are seen edge-on.
+        #expect(gizmo.opacity(of: .plane(.y), frame: frame) == 0)
+        // A faded handle cannot be picked: the Z axis projects onto the center, which wins anyway, so test a plane.
+        let yzCorner = frame.origin + (frame.axis(.y) + frame.axis(.z)) * frame.length * 0.25
+        #expect(gizmo.handle(at: screen(yzCorner), viewport: viewport) != .plane(.x))
+    }
+
+    @Test
+    func ringsSplitIntoFrontAndBackHalves() throws {
+        let (gizmo, _) = makeGizmo(.rotate)
+        let frame = try #require(gizmo.frame(viewport: viewport))
+        // The X ring (in the YZ plane) is seen edge-on: half in front of the center, half behind.
+        let ring = try #require(gizmo.outlines(frame).first { $0.handle == .axis(.x) }).points
+        let runs = TransformGizmo.ringRuns(ring, frame: frame)
+        #expect(runs.contains { $0.isFront } && runs.contains { !$0.isFront })
+        for run in runs {
+            for point in run.points.dropFirst().dropLast() {
+                #expect((simd_dot(point - frame.origin, frame.cameraForward) <= frame.length * 1e-4) == run.isFront)
+            }
+        }
+        // The Z ring faces the camera: all of it is in front (on the plane through the center).
+        let facing = try #require(gizmo.outlines(frame).first { $0.handle == .axis(.z) }).points
+        #expect(TransformGizmo.ringRuns(facing, frame: frame).allSatisfy { $0.isFront })
+    }
+
     @Test(.enabled(if: MTLCreateSystemDefaultDevice() != nil))
     func drawsItsHandles() throws {
         let (gizmo, _) = makeGizmo()

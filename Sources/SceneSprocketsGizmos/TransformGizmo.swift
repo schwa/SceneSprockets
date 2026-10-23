@@ -134,6 +134,43 @@ public final class TransformGizmo: SceneViewManipulator {
         }
     }
 
+    // 1 for a handle seen well; fades to 0 for an axis pointing at the camera (it collapses to a dot) and a plane seen
+    // edge-on. Rings stay visible: their back halves are dimmed instead (see `ringRuns`).
+    func opacity(of handle: Handle, frame: Frame) -> Float {
+        let facing: Float
+        switch (mode, handle) {
+        case (.rotate, _), (_, .center):
+            return 1
+        case (_, .axis(let axis)):
+            facing = 1 - abs(simd_dot(frame.axis(axis), frame.cameraForward))
+        case (_, .plane(let axis)):
+            facing = abs(simd_dot(frame.axis(axis), frame.cameraForward))
+        }
+        // Fully faded below 0.05, fully shown above 0.2.
+        return simd_clamp((facing - 0.05) / 0.15, 0, 1)
+    }
+
+    // A ring split into runs of consecutive points, each in front of the gizmo's center (towards the camera) or
+    // behind it.
+    static func ringRuns(_ points: [SIMD3<Float>], frame: Frame) -> [(isFront: Bool, points: [SIMD3<Float>])] {
+        var runs: [(isFront: Bool, points: [SIMD3<Float>])] = []
+        for point in points {
+            // A small tolerance keeps a ring facing the camera in one run despite rounding.
+            let isFront = simd_dot(point - frame.origin, frame.cameraForward) <= frame.length * 1e-4
+            if let last = runs.last, last.isFront == isFront {
+                runs[runs.count - 1].points.append(point)
+            } else {
+                // Share the boundary point so the runs meet.
+                var run = [point]
+                if let previous = runs.last?.points.last {
+                    run.insert(previous, at: 0)
+                }
+                runs.append((isFront, run))
+            }
+        }
+        return runs
+    }
+
     // The handle under `point` (view points), nearest first; nil when none is within reach.
     func handle(at point: SIMD2<Float>, viewport: SceneViewport) -> Handle? {
         guard let frame = frame(viewport: viewport) else {
@@ -144,7 +181,7 @@ public final class TransformGizmo: SceneViewManipulator {
             return .center
         }
         var best: (handle: Handle, score: Float)?
-        for (handle, points) in outlines(frame) {
+        for (handle, points) in outlines(frame) where opacity(of: handle, frame: frame) > 0 {
             let projected = points.compactMap { viewport.project($0)?.xy }
             guard projected.count == points.count else {
                 continue
@@ -325,6 +362,10 @@ public final class TransformGizmo: SceneViewManipulator {
         var context = GraphicsContext3D()
         for (handle, points) in outlines(frame) {
             let isHighlighted = handle == highlighted
+            let opacity = Double(opacity(of: handle, frame: frame))
+            guard opacity > 0 else {
+                continue
+            }
             var path = Path3D()
             path.move(to: points[0])
             for point in points.dropFirst() {
@@ -332,15 +373,26 @@ public final class TransformGizmo: SceneViewManipulator {
             }
             switch handle {
             case .axis(let axis):
-                let color = isHighlighted ? Color.yellow : Self.axisColors[axis.rawValue]
-                context.stroke(path, with: color, lineWidth: isHighlighted ? 6 : 4)
-                if mode != .rotate {
+                let color = (isHighlighted ? Color.yellow : Self.axisColors[axis.rawValue]).opacity(opacity)
+                let lineWidth: Float = isHighlighted ? 6 : 4
+                if mode == .rotate {
+                    // The half behind the center is dimmer, so the ring reads as a circle in depth.
+                    for run in Self.ringRuns(points, frame: frame) where run.points.count > 1 {
+                        var runPath = Path3D()
+                        runPath.move(to: run.points[0])
+                        for point in run.points.dropFirst() {
+                            runPath.addLine(to: point)
+                        }
+                        context.stroke(runPath, with: run.isFront || isHighlighted ? color : color.opacity(0.3), lineWidth: run.isFront ? lineWidth : lineWidth * 0.75)
+                    }
+                } else {
+                    context.stroke(path, with: color, lineWidth: lineWidth)
                     let tip = points[1]
                     context.fill(tipShape(tip: tip, direction: frame.axis(axis), frame: frame), with: color)
                 }
             case .plane(let axis):
                 path.closeSubpath()
-                context.fill(path, with: (isHighlighted ? Color.yellow : Self.axisColors[axis.rawValue]).opacity(isHighlighted ? 0.7 : 0.4))
+                context.fill(path, with: (isHighlighted ? Color.yellow : Self.axisColors[axis.rawValue]).opacity((isHighlighted ? 0.7 : 0.4) * opacity))
             case .center:
                 break
             }

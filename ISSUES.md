@@ -3626,15 +3626,18 @@ Follow-up to #154. Rotate mode has the three axis rings only. Add a ring facing 
 ## 169: Transform gizmo: dim hidden ring halves and handles pointing at the camera
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: effort:s, area:ui
 created: 2026-10-22T18:03:49Z
-updated: 2026-10-23T13:22:40Z
+updated: 2026-10-23T14:13:06Z
+closed: 2026-10-23T14:13:06Z
 +++
 
 Follow-up to #154. Ring halves behind the gizmo's center draw like the front halves, and an axis pointing at the camera collapses to a dot that is hard to grab. Draw back halves dimmer and hide or fade handles that face the camera.
+
+- `2026-10-23T14:13:06Z`: Fixed: rotate rings draw their back half (behind the center) dimmer and thinner; translate/scale axes pointing at the camera and planes seen edge-on fade out, and fully faded handles are not picked. Tests handlesPointingAtTheCameraFade, ringsSplitIntoFrontAndBackHalves. Look not checked by eye.
 
 ---
 
