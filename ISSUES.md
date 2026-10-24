@@ -4863,11 +4863,13 @@ Measure with the SwiftUI instrument during a drag.
 ## 225: Composer: option to hide individual axis lines (the green Y line)
 
 +++
-status: new
+status: closed
 priority: low
 kind: enhancement
 labels: area:composer, effort:xs
 created: 2026-10-24T22:18:31Z
+updated: 2026-10-24T22:26:57Z
+closed: 2026-10-24T22:26:57Z
 +++
 
 The Y axis line (green) runs straight up through the scene and gets in the way. Add per-axis toggles in Render > Show (X, Y, Z, or a 'Ground Axes Only' option that hides Y), saved in editor.json.
@@ -4881,7 +4883,7 @@ Depends on MetalSprocketsAddOns 'AxisLinesRenderPipeline: choose which axes to d
 status: new
 priority: low
 kind: enhancement
-labels: area:composer,effort:xs
+labels: area:composer, effort:xs
 created: 2026-10-24T22:22:44Z
 +++
 

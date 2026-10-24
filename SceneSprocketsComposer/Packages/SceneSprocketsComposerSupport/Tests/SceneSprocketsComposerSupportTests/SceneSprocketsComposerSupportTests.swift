@@ -1,6 +1,7 @@
 import CollaborationKit
 import CollaborationKitUI
 import CoreGraphics
+import MetalSprocketsAddOns
 import MetalSprocketsPBR
 import Metal
 import SceneSprocketsBlinnPhong
@@ -918,6 +919,18 @@ import UniformTypeIdentifiers
     #expect(order(group) == ["B", "A"])
     step { model.drop(a, onto: c) }
     #expect(order(root) == ["A", "C", "Group"])
+}
+
+// #225: per-axis toggles map to AxisLinesRenderPipeline.Axes and round-trip through editor.json.
+@Test func axisLineToggles() throws {
+    var settings = RenderSettings()
+    #expect(settings.axes == .all)
+    settings.showsYAxis = false
+    #expect(settings.axes == [.x, .z])
+    let decoded = try JSONDecoder().decode(RenderSettings.self, from: JSONEncoder().encode(settings))
+    #expect(!decoded.showsYAxis && decoded.showsXAxis && decoded.showsZAxis)
+    // Older files without the keys show all axes.
+    #expect(try JSONDecoder().decode(RenderSettings.self, from: Data("{}".utf8)).axes == .all)
 }
 
 // #177: framing keeps the view direction and orbits the framed center.

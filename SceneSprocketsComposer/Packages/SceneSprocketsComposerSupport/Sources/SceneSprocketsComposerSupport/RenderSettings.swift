@@ -8,6 +8,24 @@ import simd
 struct RenderSettings: Equatable {
     var showsGrid = true
     var showsAxes = true
+    // Which axis lines to draw when showsAxes is on (#225); the green Y line runs straight up through the scene.
+    var showsXAxis = true
+    var showsYAxis = true
+    var showsZAxis = true
+
+    var axes: AxisLinesRenderPipeline.Axes {
+        var axes: AxisLinesRenderPipeline.Axes = []
+        if showsXAxis {
+            axes.insert(.x)
+        }
+        if showsYAxis {
+            axes.insert(.y)
+        }
+        if showsZAxis {
+            axes.insert(.z)
+        }
+        return axes
+    }
     // A light at the camera when the scene has none.
     var usesDefaultLighting = true
     var showsShadows = false
@@ -77,12 +95,13 @@ struct RenderSettings: Equatable {
                     blendsWithBackground: true
                 )
             }
-            if showsAxes {
+            if showsAxes, !axes.isEmpty {
                 try AxisLinesRenderPipeline(
                     mvpMatrix: viewProjection,
                     viewMatrix: context.viewMatrix,
                     projectionMatrix: context.projectionMatrix,
-                    viewportSize: drawableSize
+                    viewportSize: drawableSize,
+                    axes: axes
                 )
                 .depthCompare(function: .greater, writes: false)
             }

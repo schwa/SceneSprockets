@@ -76,7 +76,7 @@ extension EditorState: Codable {
 
 extension RenderSettings: Codable {
     enum CodingKeys: String, CodingKey {
-        case showsGrid, showsAxes, usesDefaultLighting, showsShadows, showsStatistics, showsFrameTiming, showsLightsAndCameras, boundingBoxes, outlinesSelection, isFramebufferOnly, fieldOfView, nearClip, farClip, debugMode, materialChannel
+        case showsGrid, showsAxes, showsXAxis, showsYAxis, showsZAxis, usesDefaultLighting, showsShadows, showsStatistics, showsFrameTiming, showsLightsAndCameras, boundingBoxes, outlinesSelection, isFramebufferOnly, fieldOfView, nearClip, farClip, debugMode, materialChannel
     }
 
     init(from decoder: Decoder) throws {
@@ -89,6 +89,9 @@ extension RenderSettings: Codable {
         }
         try read(\.showsGrid, .showsGrid)
         try read(\.showsAxes, .showsAxes)
+        try read(\.showsXAxis, .showsXAxis)
+        try read(\.showsYAxis, .showsYAxis)
+        try read(\.showsZAxis, .showsZAxis)
         try read(\.usesDefaultLighting, .usesDefaultLighting)
         try read(\.showsShadows, .showsShadows)
         try read(\.showsStatistics, .showsStatistics)
@@ -108,6 +111,9 @@ extension RenderSettings: Codable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(showsGrid, forKey: .showsGrid)
         try container.encode(showsAxes, forKey: .showsAxes)
+        try container.encode(showsXAxis, forKey: .showsXAxis)
+        try container.encode(showsYAxis, forKey: .showsYAxis)
+        try container.encode(showsZAxis, forKey: .showsZAxis)
         try container.encode(usesDefaultLighting, forKey: .usesDefaultLighting)
         try container.encode(showsShadows, forKey: .showsShadows)
         try container.encode(showsStatistics, forKey: .showsStatistics)

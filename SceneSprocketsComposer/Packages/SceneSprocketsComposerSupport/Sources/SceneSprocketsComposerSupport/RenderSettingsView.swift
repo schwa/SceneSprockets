@@ -9,6 +9,16 @@ struct RenderSettingsView: View {
             Section("Show") {
                 Toggle("Grid", isOn: $model.renderSettings.showsGrid)
                 Toggle("Axes", isOn: $model.renderSettings.showsAxes)
+                if model.renderSettings.showsAxes {
+                    LabeledContent("Axis Lines") {
+                        HStack {
+                            Toggle("X", isOn: $model.renderSettings.showsXAxis)
+                            Toggle("Y", isOn: $model.renderSettings.showsYAxis)
+                            Toggle("Z", isOn: $model.renderSettings.showsZAxis)
+                        }
+                        .toggleStyle(.button)
+                    }
+                }
                 Toggle("Selection Outline", isOn: $model.renderSettings.outlinesSelection)
                 Toggle("Statistics", isOn: $model.renderSettings.showsStatistics)
                     .help("Meshes, triangles and lights")
