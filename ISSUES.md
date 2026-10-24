@@ -4143,6 +4143,8 @@ Subtask of #190. Add @CollaborationTools / @CollaborationTool methods so the mod
 
 Make edits through EditorModel so they can be undone and the UI refreshes. Batch the changes from one assistant turn into one undo group if possible.
 
+- `2026-10-24T15:05:09Z`: Punting: depends on #190, which is blocked. CollaborationKit needs swift-syntax 602.x and MetalSprockets needs 604.x, so the package cannot be added. Unblocker: a CollaborationKit release that accepts swift-syntax 604; then do #190 and this. Planned shape: @CollaborationTools on a small EditorModel adapter. Query: list nodes as path, label and kind; get a node's transform, content and bounds; get the selection and environment. Edit: add shape, light or camera, delete, rename, set transform, select. All edits go through the existing undoable EditorModel methods.
+
 ---
 
 ## 192: Composer: lock nodes
