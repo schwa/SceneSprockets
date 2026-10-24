@@ -3669,12 +3669,13 @@ Follow-up to #154. TransformGizmo has onBegin/onChange/onEnd, but the demo app d
 ## 171: TransformGizmo sizing: constant screen size vs scaling with the camera
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: effort:s, area:ui
 created: 2026-10-22T18:51:28Z
-updated: 2026-10-23T13:22:40Z
+updated: 2026-10-24T11:30:21Z
+closed: 2026-10-24T11:30:21Z
 +++
 
 TransformGizmo keeps a constant size on screen: `size` (110 view points) is converted to world units each frame with `SceneViewport.worldSizeOfPoint`. So the gizmo does not change size when the camera zooms or moves. This is what Unity, Godot and Blender do.
@@ -3687,6 +3688,8 @@ Decide the behavior, and maybe make it an option:
 - Hybrid: screen size, clamped to a world size range or scaled by a fraction of the target bounds.
 
 Related: #154 (transform gizmo).
+
+- `2026-10-24T11:30:21Z`: Added TransformGizmo.worldSize (opt-in, world units). Default stays screen size; Composer not switched. Hybrid (clamped) mode not added.
 
 ---
 

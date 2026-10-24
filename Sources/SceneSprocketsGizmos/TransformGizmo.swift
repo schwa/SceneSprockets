@@ -63,6 +63,8 @@ public final class TransformGizmo: SceneViewManipulator {
     public var snapping = Snapping()
     // Length of the axis handles in view points.
     public var size: Float = 110
+    // When set, the handles are this long in world units instead, so the gizmo scales with the camera like the scene.
+    public var worldSize: Float?
     public private(set) var hoveredHandle: Handle?
     public private(set) var activeHandle: Handle?
     // Called when a drag starts and ends, and with the node after each change, for undo and inspectors.
@@ -109,7 +111,7 @@ public final class TransformGizmo: SceneViewManipulator {
         case .local: [world.columns.0.xyz, world.columns.1.xyz, world.columns.2.xyz].map { simd_length($0) > 0 ? simd_normalize($0) : [0, 0, 0] }
         }
         let forward = -simd_normalize(viewport.cameraMatrix.columns.2.xyz)
-        return Frame(origin: origin, axes: axes, length: size * viewport.worldSizeOfPoint(at: origin), cameraForward: forward, cameraRight: simd_normalize(viewport.cameraMatrix.columns.0.xyz), cameraUp: simd_normalize(viewport.cameraMatrix.columns.1.xyz))
+        return Frame(origin: origin, axes: axes, length: worldSize ?? size * viewport.worldSizeOfPoint(at: origin), cameraForward: forward, cameraRight: simd_normalize(viewport.cameraMatrix.columns.0.xyz), cameraUp: simd_normalize(viewport.cameraMatrix.columns.1.xyz))
     }
 
     // World polylines for each handle, for drawing and hit testing. Planes are closed quads.
@@ -392,7 +394,8 @@ public final class TransformGizmo: SceneViewManipulator {
         guard target != nil, let frame = frame(viewport: viewport), let center = viewport.project(frame.origin)?.xy else {
             return false
         }
-        return simd_distance(point, center) <= size
+        let reach = worldSize.map { $0 / viewport.worldSizeOfPoint(at: frame.origin) } ?? size
+        return simd_distance(point, center) <= reach
     }
 
     public func beginTwoFingerGesture(viewport: SceneViewport) {

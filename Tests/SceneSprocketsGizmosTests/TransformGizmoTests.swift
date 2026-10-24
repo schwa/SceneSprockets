@@ -41,6 +41,20 @@ struct TransformGizmoTests {
         #expect(abs(length - gizmo.size) < 0.5)
     }
 
+    // #171
+    @Test
+    func worldSizeScalesWithTheCamera() throws {
+        let (gizmo, node) = makeGizmo()
+        gizmo.worldSize = 1.5
+        let near = try #require(gizmo.frame(viewport: viewport))
+        #expect(near.length == 1.5)
+        let nearReach = simd_distance(screen(near.origin), screen(near.origin + [near.length, 0, 0]))
+        #expect(gizmo.claimsTwoFingerGesture(at: screen(near.origin) + [nearReach - 1, 0], viewport: viewport))
+        node.worldPosition = [0, 0, -10]
+        #expect(try #require(gizmo.frame(viewport: viewport)).length == 1.5)
+        #expect(!gizmo.claimsTwoFingerGesture(at: screen(near.origin) + [nearReach - 1, 0], viewport: viewport))
+    }
+
     @Test
     func picksTheHandleUnderThePointer() throws {
         let (gizmo, _) = makeGizmo()
