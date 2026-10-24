@@ -11,14 +11,15 @@ import UniformTypeIdentifiers
 }
 
 @MainActor
-@Test func newDocumentHasStarterContent() {
+@Test func newDocumentIsEmpty() {
     let document = ComposerDocument()
-    #expect(document.sceneGraph.root.children.map(\.label) == ["Floor", "Box", "Sun"])
+    #expect(document.sceneGraph.root.children.isEmpty)
 }
 
 @MainActor
 @Test func transformChangeUndoes() throws {
     let model = EditorModel(sceneGraph: ComposerDocument().sceneGraph)
+    model.addShape(.box(), label: "Box")
     let undoManager = UndoManager()
     undoManager.groupsByEvent = false
     model.undoManager = undoManager
@@ -37,12 +38,13 @@ import UniformTypeIdentifiers
 @MainActor
 @Test func documentRoundTrips() throws {
     let document = ComposerDocument()
+    EditorModel(sceneGraph: document.sceneGraph).addShape(.box(), label: "Box")
     let wrapper = try document.snapshot(contentType: .sceneSprocketsDocument)
     let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("scenesprocketsd")
     defer { try? FileManager.default.removeItem(at: url) }
     try wrapper.write(to: url, options: [], originalContentsURL: nil)
     let loaded = try ComposerDocument(contentsOf: url)
-    #expect(loaded.sceneGraph.root.children.map(\.label) == ["Floor", "Box", "Sun"])
+    #expect(loaded.sceneGraph.root.children.map(\.label) == ["Box"])
 }
 
 // #177: framing keeps the view direction and orbits the framed center.
