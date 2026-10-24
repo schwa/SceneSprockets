@@ -38,8 +38,20 @@ public final class EditorModel {
 
     // Whether the default light is on and in effect: SceneView adds it only when the scene has no lights.
     var isDefaultLightingActive: Bool {
-        _ = transformRevision
-        return renderSettings.usesDefaultLighting && sceneGraph.lightNodes().isEmpty
+        _ = visibilityRevision
+        return renderSettings.usesDefaultLighting && !Self.containsShownLight(sceneGraph.root)
+    }
+
+    // Like !sceneGraph.lightNodes().isEmpty without computing world transforms, so observing it does not depend on
+    // every node's transform (#223).
+    private static func containsShownLight(_ node: SceneGraph.Node) -> Bool {
+        guard node.isShown else {
+            return false
+        }
+        if case .light = node.content {
+            return true
+        }
+        return node.children.contains(where: containsShownLight)
     }
     // Every selected node, including `selection` (#201). Change it with select(_:primary:).
     public private(set) var selectedIDs: Set<SceneGraph.Node.ID> = []
@@ -109,6 +121,9 @@ public final class EditorModel {
     @ObservationIgnored private var baseGizmoWorldSize: Float = 1
     // Bumped while the gizmo drags, so views that show transforms refresh. Nodes are not observable (SceneSprockets #155).
     public private(set) var transformRevision = 0
+    // Bumped by visibility and active changes. Tree rows read this, not transformRevision, so dragging does not
+    // re-render every row (#223).
+    public private(set) var visibilityRevision = 0
     // Set by the view from the document's environment; registering undo marks the document edited.
     @ObservationIgnored public weak var undoManager: UndoManager?
     // PBRMaterialRenderer caches GPU state, so keep one instance per editor.
@@ -277,7 +292,7 @@ public final class EditorModel {
             return
         }
         node.isVisible = isVisible
-        transformRevision += 1
+        visibilityRevision += 1
         undoManager?.registerUndo(withTarget: self) { model in
             model.setVisible(!isVisible, node)
         }
@@ -286,7 +301,7 @@ public final class EditorModel {
 
     // The node's own flag; reads the revision so views refresh. Nodes are not observable (#155).
     func isVisible(_ node: SceneGraph.Node) -> Bool {
-        _ = transformRevision
+        _ = visibilityRevision
         return node.isVisible
     }
 
@@ -296,7 +311,7 @@ public final class EditorModel {
             return
         }
         node.isActive = isActive
-        transformRevision += 1
+        visibilityRevision += 1
         undoManager?.registerUndo(withTarget: self) { model in
             model.setActive(!isActive, node)
         }
@@ -304,13 +319,13 @@ public final class EditorModel {
     }
 
     func isActive(_ node: SceneGraph.Node) -> Bool {
-        _ = transformRevision
+        _ = visibilityRevision
         return node.isActive
     }
 
     // Hidden or inactive, itself or through an ancestor.
     func isHidden(_ node: SceneGraph.Node) -> Bool {
-        _ = transformRevision
+        _ = visibilityRevision
         var current: SceneGraph.Node? = node
         while let candidate = current {
             if !candidate.isShown {
@@ -606,6 +621,49 @@ public final class EditorModel {
             return nil
         }
         return sceneGraph.nodesWithWorldTransforms(includeHidden: true).first { $0.node.id == selection }?.node
+    }
+}
+
+// A row in the scene tree: Scene, an editor row (#207), or a node.
+enum TreeItem: Hashable {
+    case scene
+    case editor(EditorItem)
+    case node(SceneGraph.Node.ID)
+}
+
+extension EditorModel {
+    // The scene tree's List selection, as a model property so the list gets a key-path binding SwiftUI can compare
+    // (#223); a Binding(get:set:) is new every time and re-renders the whole tree.
+    // Multiple selection (#201): choosing Scene, or nothing, clears the node selection. The primary node stays primary
+    // while it is still selected; otherwise the newly added node becomes primary. An editor row selects alone.
+    var treeSelection: Set<TreeItem> {
+        get {
+            if let editorItem {
+                return [.editor(editorItem)]
+            }
+            return selectedIDs.isEmpty ? [.scene] : Set(selectedIDs.map(TreeItem.node))
+        }
+        set {
+            let ids = newValue.compactMap { item -> SceneGraph.Node.ID? in
+                if case let .node(id) = item { id } else { nil }
+            }
+            guard !ids.isEmpty else {
+                let editorItem = newValue.lazy.compactMap { item -> EditorItem? in
+                    if case let .editor(editorItem) = item { editorItem } else { nil }
+                }.first
+                selection = nil
+                self.editorItem = editorItem
+                return
+            }
+            let added = ids.first { !selectedIDs.contains($0) }
+            select(ids, primary: added ?? selection)
+        }
+    }
+
+    // The camera matrix as SceneView takes it, for a key-path binding (#223).
+    var viewCameraMatrix: simd_float4x4? {
+        get { camera.matrix }
+        set { camera.matrix = newValue ?? camera.matrix }
     }
 }
 

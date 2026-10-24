@@ -4,49 +4,18 @@ import SwiftUI
 struct SceneTreeView: View {
     @Bindable var model: EditorModel
 
-    // The Scene row stands for "no node selected", which shows scene settings in the inspector.
-    // Default Camera and Default Lighting (#207) are editor rows next to Scene, not scene nodes.
-    private enum Item: Hashable {
-        case scene
-        case editor(EditorItem)
-        case node(SceneGraph.Node.ID)
-    }
-
-    // Multiple selection (#201). Choosing Scene, or nothing, clears the node selection. The primary node stays
-    // primary while it is still selected; otherwise the newly added node becomes primary.
-    private var listSelection: Binding<Set<Item>> {
-        Binding(get: {
-            if let editorItem = model.editorItem {
-                return [.editor(editorItem)]
-            }
-            return model.selectedIDs.isEmpty ? [.scene] : Set(model.selectedIDs.map(Item.node))
-        }, set: { items in
-            let ids = items.compactMap { item -> SceneGraph.Node.ID? in
-                if case let .node(id) = item { id } else { nil }
-            }
-            guard !ids.isEmpty else {
-                // An editor row selects alone; Scene or nothing clears everything.
-                let editorItem = items.lazy.compactMap { item -> EditorItem? in
-                    if case let .editor(editorItem) = item { editorItem } else { nil }
-                }.first
-                model.selection = nil
-                model.editorItem = editorItem
-                return
-            }
-            let added = ids.first { !model.selectedIDs.contains($0) }
-            model.select(ids, primary: added ?? model.selection)
-        })
-    }
-
+    // The Scene row stands for "no node selected", which shows scene settings in the inspector. Default Camera and
+    // Default Lighting (#207) are editor rows next to Scene, not scene nodes. The selection is a key-path binding to
+    // EditorModel.treeSelection (#223).
     var body: some View {
-        List(selection: listSelection) {
+        List(selection: $model.treeSelection) {
             Label("Scene", systemImage: "globe")
-                .tag(Item.scene)
+                .tag(TreeItem.scene)
             Label("Default Camera", systemImage: "camera.viewfinder")
-                .tag(Item.editor(.defaultCamera))
+                .tag(TreeItem.editor(.defaultCamera))
             Label("Default Lighting", systemImage: "lightbulb.max")
                 .foregroundStyle(model.isDefaultLightingActive ? .primary : .secondary)
-                .tag(Item.editor(.defaultLighting))
+                .tag(TreeItem.editor(.defaultLighting))
             OutlineGroup([model.sceneGraph.root], children: \.outlineChildren) { node in
                 HStack {
                     Label(node.displayName, systemImage: node.systemImage)
@@ -55,7 +24,7 @@ struct SceneTreeView: View {
                     visibilityButton(node)
                     lockButton(node)
                 }
-                .tag(Item.node(node.id))
+                .tag(TreeItem.node(node.id))
                 // Drag a row onto a group to move it inside, or onto any other row to move it before that row (#222).
                 .draggable(dragPayload(node))
                 .dropDestination(for: String.self) { _, _ in

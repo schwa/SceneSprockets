@@ -4807,11 +4807,13 @@ closed: 2026-10-24T19:40:01Z
 ## 223: Composer: closure-based Binding(get:set:) defeats SwiftUI diffing; views re-render every update
 
 +++
-status: new
+status: closed
 priority: high
 kind: bug
 labels: area:composer, area:ui, effort:m
 created: 2026-10-24T22:02:37Z
+updated: 2026-10-24T22:11:12Z
+closed: 2026-10-24T22:11:12Z
 +++
 
 Binding(get:set:) holds closures, which SwiftUI cannot compare. A child view that receives one is always seen as changed, so its body re-runs (and usually its children's) on every parent update. The Composer has 34 of them.
@@ -4833,5 +4835,25 @@ Fix direction:
 - Together with splitting transformRevision (#215), so rows and toggles stop depending on drag steps.
 
 Measure before and after with the SwiftUI instrument (body update counts during a gizmo drag) and DragPerformanceTests. Not verified yet; found by code inspection while investigating #215.
+
+- `2026-10-24T22:11:12Z`: Fixed the hot spots: the tree's List selection is a key-path binding (EditorModel.treeSelection), SceneView's camera binding is a key path (viewCameraMatrix), and tree rows and the Default Lighting row read visibilityRevision, so a drag step no longer reaches them (tested with withObservationTracking). The rest (inspector leaf views, SceneView's closures) is in a follow-up issue.
+
+---
+
+## 224: Composer: remaining closure bindings: inspector leaf views and SceneView's decorations and overlay closures
+
++++
+status: new
+priority: medium
+kind: enhancement
+labels: area:composer, area:ui, effort:m
+created: 2026-10-24T22:11:12Z
++++
+
+Follow-up to #223, which fixed the hot spots: the tree's List selection is now $model.treeSelection, SceneView's camera is $model.viewCameraMatrix, and tree rows read visibilityRevision instead of transformRevision.
+Left:
+- The inspector's Binding(get:set:) conversions (NodeInspectorView trs, component and eulerDegrees; MaterialSection; LightSection; MultipleSelectionSection). Move each into a small leaf view that takes the node and model and builds its binding inside, so only the leaf re-runs. The inspector must update during a drag anyway, so this matters less.
+- SceneView's decorations and overlay parameters are closures created in ScenePreviewView's body, so SceneView never compares equal and its body re-runs on every model change. Options: Equatable wrapper values keyed on what they capture (settings, selected ids, revisions), or overlay and decoration objects with identity held by the model.
+Measure with the SwiftUI instrument during a drag.
 
 ---

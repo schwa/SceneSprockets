@@ -1,9 +1,44 @@
 import Foundation
+import Observation
 import GeometryLite3D
 import SceneSprockets
 @testable import SceneSprocketsComposerSupport
 import simd
 import Testing
+
+// #223: tree rows (name, eye, lock, dimming) and the Default Lighting row must not depend on drag steps, or every row
+// re-renders on every frame of a drag.
+@MainActor
+@Test func treeRowStateIgnoresDrags() throws {
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    model.addShape(.box(), label: "Box")
+    let node = try #require(model.selectedNode)
+    nonisolated(unsafe) var changed = false
+    withObservationTracking {
+        _ = model.isHidden(node)
+        _ = model.isVisible(node)
+        _ = model.isActive(node)
+        _ = model.isLocked(node)
+        _ = model.isDefaultLightingActive
+        _ = model.treeSelection
+    } onChange: {
+        changed = true
+    }
+    model.beginGizmoDrag(node)
+    node.localTransform = .trs(.init(translation: [1, 0, 0]))
+    model.continueGizmoDrag(node)
+    model.endGizmoDrag(node)
+    #expect(!changed)
+
+    // Visibility changes still reach the rows.
+    withObservationTracking {
+        _ = model.isHidden(node)
+    } onChange: {
+        changed = true
+    }
+    model.setVisible(false, node)
+    #expect(changed)
+}
 
 // #215: what a gizmo drag costs on the main thread each frame, outside SwiftUI. Reports milliseconds per call so the
 // expensive parts stand out; the bound is generous and only catches regressions.

@@ -33,7 +33,8 @@ struct ScenePreviewView: View {
             options: settings.options.union(.allowsCameraControl),
             renderers: model.renderers,
             shadows: settings.shadows,
-            cameraMatrix: Binding(get: { model.camera.matrix }, set: { model.camera.matrix = $0 ?? model.camera.matrix }),
+            // A key-path binding, which SwiftUI can compare; a Binding(get:set:) is new on every pass (#223).
+            cameraMatrix: $model.viewCameraMatrix,
             cameraTarget: model.camera.target,
             camera: settings.camera,
             manipulator: model.gizmo,
