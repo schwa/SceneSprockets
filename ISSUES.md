@@ -4563,7 +4563,7 @@ Add a Render settings toggle 'Bounding Boxes' that draws world-space bounding bo
 status: new
 priority: high
 kind: bug
-labels: area:scenegraph,area:ui,effort:xs
+labels: area:scenegraph, area:ui, effort:xs
 created: 2026-10-24T18:07:22Z
 +++
 
@@ -4578,5 +4578,27 @@ Fix: mark traversalCount @ObservationIgnored. It is a diagnostics counter, not v
 Regression test: read sceneGraph.statistics inside withObservationTracking and check onChange does not fire. Better, observe the graph and call flattened() and check no change is reported.
 
 The other log lines (DetachedSignatures, ViewBridge error 18, NSColorPicker pasteboard, SmartNameSuggestions 'no importer for io.schwa.scenesprockets-document') look like system noise and are unrelated.
+
+---
+
+## 213: Composer: Insert Model File for a .gltf should explain and offer to pick the resource folder
+
++++
+status: new
+priority: high
+kind: bug
+labels: area:composer,effort:s
+created: 2026-10-24T18:29:52Z
++++
+
+Follow-up to #206. Picking a .gltf whose buffers and images are separate files gives no clue why its resources did not load. #206 sets isChoosingFolder = true right after the first file importer returns, to show a second, folder-only importer. In practice the user sees nothing useful. My guess, unverified: the second importer does not appear because it is presented while the first one is still dismissing. The insert then never happens, or happens without its resources.
+
+Wanted: right after the .gltf is picked, show an alert:
+- title: 'Allow Access to the Model's Folder'
+- message: '<file> loads <n> other files (buffers, textures) from its folder. macOS only lets the app read them if you choose that folder.'
+- buttons: 'Choose Folder…' (opens the folder importer in the file's folder, as now) and 'Cancel'
+On Cancel, either insert nothing, or insert with the missing resources and say clearly what was skipped. Choose one; skipping the insert is simpler and less surprising.
+
+Also: if the folder importer is cancelled or the wrong folder is chosen, say so in the alert instead of failing silently. Present the folder importer from the alert's button action, not the first importer's completion, so it cannot be swallowed. Count the referenced files with the same JSON scan as ModelFile.needsFolderAccess, so the message can give the number.
 
 ---
