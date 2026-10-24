@@ -89,9 +89,9 @@ final class SceneTools {
         return "Selected \(ids.joined(separator: ", "))."
     }
 
-    /// Use one call for repeated work: never call create several times for nodes of the same kind. Creates one or more nodes and returns their ids, comma separated. `kind` is a shape (box, sphere, plane, cylinder, cone, capsule, torus, tube, pyramid, floor, star), a light (directional, point, spot) or camera. For several at once give `count`, or per-node arrays (`translations` [[x, y, z], ...], `labels`, `colors` [[r, g, b], ...]), all the same length; count defaults to their length. Without `labels`, several nodes get numbered labels. Values for every node: label, parent id (default root), translation [x, y, z], rotationDegrees [pitch, yaw, roll], scale [x, y, z], color [r, g, b] in linear 0 to 1 (shapes only). Shapes are about 1 unit across, centered on their origin; spread several out with `translations`.
+    /// Use one call for repeated work: never call create several times for nodes of the same kind. Creates one or more nodes and returns their ids, comma separated. `kind` is a shape (box, sphere, plane, cylinder, cone, capsule, torus, tube, pyramid, floor, star), a light (directional, point, spot) or camera. For several at once give `count`, or per-node arrays (`translations` [[x, y, z], ...], `labels`, `colors` [[r, g, b], ...]), all the same length; count defaults to their length. Without `labels`, several nodes get numbered labels. Values for every node: label, parent id (default root), translation [x, y, z], rotationDegrees [pitch, yaw, roll], scale [x, y, z], color [r, g, b] in linear 0 to 1 (shapes only), preset (plastic, metal, rubber or glass; shapes only, PBR). Shapes are about 1 unit across, centered on their origin; spread several out with `translations`.
     @CollaborationTool
-    func create(kind: String, count: Int?, label: String?, parent: String?, translation: [Double]?, translations: [[Double]]?, rotationDegrees: [Double]?, scale: [Double]?, color: [Double]?, labels: [String]? = nil, colors: [[Double]]? = nil) throws -> String {
+    func create(kind: String, count: Int?, label: String?, parent: String?, translation: [Double]?, translations: [[Double]]?, rotationDegrees: [Double]?, scale: [Double]?, color: [Double]?, labels: [String]? = nil, colors: [[Double]]? = nil, preset: String? = nil) throws -> String {
         let total = count ?? translations?.count ?? labels?.count ?? colors?.count ?? 1
         guard (1 ... Self.maximumBatch).contains(total) else {
             throw ToolError("count must be from 1 to \(Self.maximumBatch).")
@@ -102,7 +102,7 @@ final class SceneTools {
         var ids: [String] = []
         for index in 0..<total {
             let numberedLabel = labels?[index] ?? (total > 1 ? label.map { "\($0) \(index + 1)" } : label)
-            ids.append(try createOne(kind: kind, label: numberedLabel, parent: parent, translation: translations?[index] ?? translation, rotationDegrees: rotationDegrees, scale: scale, color: colors?[index] ?? color))
+            ids.append(try createOne(kind: kind, label: numberedLabel, parent: parent, translation: translations?[index] ?? translation, rotationDegrees: rotationDegrees, scale: scale, color: colors?[index] ?? color, preset: preset))
         }
         return ids.joined(separator: ", ")
     }
@@ -115,7 +115,7 @@ final class SceneTools {
 
     static let maximumBatch = 1_000
 
-    private func createOne(kind: String, label: String?, parent: String?, translation: [Double]?, rotationDegrees: [Double]?, scale: [Double]?, color: [Double]?) throws -> String {
+    private func createOne(kind: String, label: String?, parent: String?, translation: [Double]?, rotationDegrees: [Double]?, scale: [Double]?, color: [Double]?, preset: String?) throws -> String {
         let model = try requireModel()
         let parentNode = try parent.map { try editableNode(id: $0) }
         let lowered = kind.lowercased()
@@ -137,13 +137,13 @@ final class SceneTools {
         if let parentNode {
             model.reparent(node, to: parentNode)
         }
-        try apply(to: node, model: model, translation: translation, rotationDegrees: rotationDegrees, scale: scale, color: color, metallic: nil, roughness: nil)
+        try apply(to: node, model: model, translation: translation, rotationDegrees: rotationDegrees, scale: scale, material: MaterialChange(color: color, preset: preset))
         return id(for: node)
     }
 
-    /// Use one call for repeated work: give every id at once instead of calling update per node. Changes one or more nodes; omitted fields are kept. Same value for every id: label, parent (id; keeps the local transform), translation [x, y, z], rotationDegrees [pitch, yaw, roll], scale [x, y, z], color [r, g, b] linear 0 to 1, metallic and roughness 0 to 1 (PBR), isVisible, isActive (inactive also stops animation). Different value per id, in the same order as ids: `translations` (align, distribute, arrange), `labels`, `colors`.
+    /// Use one call for repeated work: give every id at once instead of calling update per node. Changes one or more nodes; omitted fields are kept. Same value for every id: label, parent (id; keeps the local transform), translation [x, y, z], rotationDegrees [pitch, yaw, roll], scale [x, y, z], color [r, g, b] linear 0 to 1, metallic and roughness 0 to 1, transmission 0 to 1 and ior (index of refraction, 1.5 for glass, 1.33 for water), preset (plastic, metal, rubber or glass; for 'make it glass' use preset glass), isVisible, isActive (inactive also stops animation). Metallic, roughness, transmission, ior and presets switch Blinn-Phong materials to PBR. Different value per id, in the same order as ids: `translations` (align, distribute, arrange), `labels`, `colors`.
     @CollaborationTool
-    func update(ids: [String], label: String?, parent: String?, translation: [Double]?, translations: [[Double]]?, rotationDegrees: [Double]?, scale: [Double]?, color: [Double]?, metallic: Double?, roughness: Double?, isVisible: Bool?, isActive: Bool?, labels: [String]? = nil, colors: [[Double]]? = nil) throws -> String {
+    func update(ids: [String], label: String?, parent: String?, translation: [Double]?, translations: [[Double]]?, rotationDegrees: [Double]?, scale: [Double]?, color: [Double]?, metallic: Double?, roughness: Double?, isVisible: Bool?, isActive: Bool?, labels: [String]? = nil, colors: [[Double]]? = nil, transmission: Double? = nil, ior: Double? = nil, preset: String? = nil) throws -> String {
         let model = try requireModel()
         let nodes = try ids.map { try editableNode(id: $0) }
         let parentNode = try parent.map { try node(id: $0) }
@@ -159,7 +159,7 @@ final class SceneTools {
             if let parentNode, !model.reparent(node, to: parentNode) {
                 throw ToolError("\(id(for: node)) cannot move under \(parent ?? "") (it is the root, or that would make a cycle).")
             }
-            try apply(to: node, model: model, translation: translation, rotationDegrees: rotationDegrees, scale: scale, color: color, metallic: metallic, roughness: roughness)
+            try apply(to: node, model: model, translation: translation, rotationDegrees: rotationDegrees, scale: scale, material: MaterialChange(color: color, metallic: metallic, roughness: roughness, transmission: transmission, ior: ior, preset: preset))
             if let isVisible {
                 model.setVisible(isVisible, node)
             }
@@ -334,7 +334,30 @@ final class SceneTools {
         )
     }
 
+    // Material fields a tool call can set. Anything PBR-only switches a Blinn-Phong material to PBR first, keeping its
+    // color: Blinn-Phong has no metallic, roughness or transmission (#217).
+    struct MaterialChange {
+        var color: [Double]?
+        var metallic: Double?
+        var roughness: Double?
+        var transmission: Double?
+        var ior: Double?
+        var preset: String?
+
+        var isEmpty: Bool {
+            color == nil && !needsPBR
+        }
+
+        var needsPBR: Bool {
+            metallic != nil || roughness != nil || transmission != nil || ior != nil || preset != nil
+        }
+    }
+
     private func apply(to node: SceneGraph.Node, model: EditorModel, translation: [Double]?, rotationDegrees: [Double]?, scale: [Double]?, color: [Double]?, metallic: Double?, roughness: Double?) throws {
+        try apply(to: node, model: model, translation: translation, rotationDegrees: rotationDegrees, scale: scale, material: MaterialChange(color: color, metallic: metallic, roughness: roughness))
+    }
+
+    private func apply(to node: SceneGraph.Node, model: EditorModel, translation: [Double]?, rotationDegrees: [Double]?, scale: [Double]?, material change: MaterialChange) throws {
         if translation != nil || rotationDegrees != nil || scale != nil {
             let previous = node.localTransform
             var trs = previous.trs
@@ -349,37 +372,57 @@ final class SceneTools {
             }
             model.setTransform(.trs(trs), of: node, undoTo: previous)
         }
-        guard color != nil || metallic != nil || roughness != nil else {
+        guard !change.isEmpty else {
             return
         }
         let materials = model.materials(of: node)
         guard !materials.isEmpty else {
             throw ToolError("\(id(for: node)) has no mesh, so it has no material.")
         }
-        let newColor = try color.map { try Self.vector($0, name: "color") }
-        for (index, material) in materials.enumerated() {
+        let newColor = try change.color.map { try Self.vector($0, name: "color") }
+        let preset = try change.preset.map { name in
+            guard let preset = MaterialPreset.allCases.first(where: { $0.rawValue.lowercased() == name.lowercased() }) else {
+                throw ToolError("Unknown preset \(name). Use \(MaterialPreset.allCases.map { $0.rawValue.lowercased() }.joined(separator: ", ")).")
+            }
+            return preset
+        }
+        let device = systemDefaultDevice()
+        for (index, original) in materials.enumerated() {
+            var material = original
+            if let preset {
+                material = try preset.material(color: newColor ?? EditorModel.baseColor(of: material), device: device)
+            } else if change.needsPBR, material is BlinnPhongSceneMaterial {
+                material = try EditorModel.converted(material, to: .pbr, device: device)
+            }
             switch material {
             case var blinnPhong as BlinnPhongSceneMaterial:
                 if let newColor {
                     blinnPhong.diffuse = .color(newColor)
-                    model.setMaterial(blinnPhong, at: index, of: node)
                 }
+                material = blinnPhong
             case let pbr as PBRSceneMaterial:
-                let edited = try EditorModel.editedPBR(pbr, device: systemDefaultDevice()) { uniforms in
-                    if let newColor {
+                material = try EditorModel.editedPBR(pbr, device: device) { uniforms in
+                    // A preset already used the color, and glass keeps clear white.
+                    if let newColor, preset == nil {
                         uniforms.baseColorFactor = SIMD4(newColor, uniforms.baseColorFactor.w)
                     }
-                    if let metallic {
+                    if let metallic = change.metallic {
                         uniforms.metallicFactor = Float(metallic)
                     }
-                    if let roughness {
+                    if let roughness = change.roughness {
                         uniforms.roughnessFactor = Float(roughness)
                     }
+                    if let transmission = change.transmission {
+                        uniforms.transmissionFactor = Float(min(max(transmission, 0), 1))
+                    }
+                    if let ior = change.ior {
+                        uniforms.ior = Float(max(ior, 1))
+                    }
                 }
-                model.setMaterial(edited, at: index, of: node)
             default:
                 continue
             }
+            model.setMaterial(material, at: index, of: node)
         }
     }
 

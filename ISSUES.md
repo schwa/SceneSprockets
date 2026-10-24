@@ -4691,12 +4691,13 @@ closed: 2026-10-24T19:00:06Z
 ## 217: Telling assistant to make models into glass doesn't work
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:composer, effort:s
 created: 2026-10-24T18:34:16Z
-updated: 2026-10-24T18:51:14Z
+updated: 2026-10-24T19:08:24Z
+closed: 2026-10-24T19:08:24Z
 +++
 
 - `2026-10-24T18:51:13Z`: Triage reading: the assistant cannot set transmission or the glass preset. update and setMaterial only take color, metallic and roughness, and MaterialPreset.glass is not reachable from the tools. Fix: a material preset option (plastic, metal, rubber, glass) and transmission and ior fields on update.

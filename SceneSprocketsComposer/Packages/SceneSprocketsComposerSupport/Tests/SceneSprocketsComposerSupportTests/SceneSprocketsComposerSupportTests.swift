@@ -504,6 +504,33 @@ import UniformTypeIdentifiers
     #expect(update.description.hasPrefix("Use one call"))
 }
 
+// #217: 'make these glass' — presets and transmission/IOR through the tools, on Blinn-Phong and PBR nodes alike.
+@MainActor
+@Test func sceneToolsMakeThingsGlass() throws {
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    let tools = SceneTools(model: model)
+    // New shapes are Blinn-Phong, which has no transmission, so a preset must switch them to PBR.
+    let ids = try tools.create(kind: "sphere", count: 2, label: nil, parent: nil, translation: nil, translations: nil, rotationDegrees: nil, scale: nil, color: [1, 0, 0]).components(separatedBy: ", ")
+    _ = try tools.update(ids: ids, label: nil, parent: nil, translation: nil, translations: nil, rotationDegrees: nil, scale: nil, color: nil, metallic: nil, roughness: nil, isVisible: nil, isActive: nil, preset: "glass")
+    for id in ids {
+        let material = try #require(model.materials(of: try tools.node(id: id)).first as? PBRSceneMaterial)
+        #expect(material.pbrMaterial.uniforms.transmissionFactor == 1)
+    }
+    // Fine control: transmission and IOR directly.
+    _ = try tools.update(ids: [ids[0]], label: nil, parent: nil, translation: nil, translations: nil, rotationDegrees: nil, scale: nil, color: nil, metallic: nil, roughness: nil, isVisible: nil, isActive: nil, transmission: 0.5, ior: 1.33)
+    let water = try #require(model.materials(of: try tools.node(id: ids[0])).first as? PBRSceneMaterial)
+    #expect(water.pbrMaterial.uniforms.transmissionFactor == 0.5 && water.pbrMaterial.uniforms.ior == 1.33)
+    // Metal keeps the color.
+    _ = try tools.update(ids: [ids[1]], label: nil, parent: nil, translation: nil, translations: nil, rotationDegrees: nil, scale: nil, color: [0, 0, 1], metallic: nil, roughness: nil, isVisible: nil, isActive: nil, preset: "metal")
+    let metal = try #require(model.materials(of: try tools.node(id: ids[1])).first as? PBRSceneMaterial)
+    #expect(metal.pbrMaterial.uniforms.metallicFactor == 1 && metal.pbrMaterial.uniforms.baseColorFactor == [0, 0, 1, 1])
+    #expect(throws: ToolError.self) { try tools.update(ids: [ids[0]], label: nil, parent: nil, translation: nil, translations: nil, rotationDegrees: nil, scale: nil, color: nil, metallic: nil, roughness: nil, isVisible: nil, isActive: nil, preset: "jelly") }
+    // Presets are offered by create too.
+    let glass = try tools.create(kind: "box", count: nil, label: nil, parent: nil, translation: nil, translations: nil, rotationDegrees: nil, scale: nil, color: nil, preset: "glass")
+    let glassMaterial = try #require(model.materials(of: try tools.node(id: glass)).first as? PBRSceneMaterial)
+    #expect(glassMaterial.pbrMaterial.uniforms.transmissionFactor == 1)
+}
+
 // #203
 @MainActor
 @Test func assistantTurnIsOneUndoStep() throws {
