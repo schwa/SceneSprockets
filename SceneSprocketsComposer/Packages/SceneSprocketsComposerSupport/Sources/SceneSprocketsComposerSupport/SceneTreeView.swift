@@ -66,6 +66,17 @@ struct SceneTreeView: View {
                     Button(model.lockedNodes.contains(node.id) ? "Unlock" : "Lock", systemImage: model.lockedNodes.contains(node.id) ? "lock.open" : "lock") {
                         model.setLocked(!model.lockedNodes.contains(node.id), node)
                     }
+                    Button("Group Selection", systemImage: "square.on.square") {
+                        if !model.selectedIDs.contains(node.id) {
+                            model.selection = node.id
+                        }
+                        model.groupSelection()
+                    }
+                    Button("Ungroup", systemImage: "square.on.square.dashed") {
+                        model.selection = node.id
+                        model.ungroupSelection()
+                    }
+                    .disabled(node.children.isEmpty || model.isLocked(node))
                     Button("Drop to Floor", systemImage: "arrow.down.to.line") {
                         model.dropToFloor(node)
                     }

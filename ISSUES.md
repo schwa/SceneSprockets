@@ -4764,12 +4764,13 @@ closed: 2026-10-24T19:24:46Z
 ## 221: Group nodes
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: area:composer, effort:m
 created: 2026-10-24T18:37:26Z
-updated: 2026-10-24T18:51:14Z
+updated: 2026-10-24T19:28:42Z
+closed: 2026-10-24T19:28:42Z
 +++
 
 - `2026-10-24T18:51:13Z`: Triage reading: Group (Cmd-G) wraps the selected nodes in a new empty parent at their common parent, keeping world transforms; Ungroup (Shift-Cmd-G) moves the children up and removes the empty group. Undoable.

@@ -113,6 +113,14 @@ struct ScenePreviewView: View {
             targetPointer()
             model.dropSelectionToFloor()
         }
+        Button("Group") {
+            targetPointer()
+            model.groupSelection()
+        }
+        Button("Ungroup") {
+            targetPointer()
+            model.ungroupSelection()
+        }
         Divider()
         Button("Hide") {
             targetPointer()

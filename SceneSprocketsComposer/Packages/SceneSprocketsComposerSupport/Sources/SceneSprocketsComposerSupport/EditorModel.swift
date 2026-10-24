@@ -374,6 +374,86 @@ public final class EditorModel {
         undoManager?.setActionName(actionName)
     }
 
+    // Moves `node` under `newParent` at `index` and keeps where it is in the world. Undoable (#221).
+    @discardableResult
+    func reparentKeepingWorldTransform(_ node: SceneGraph.Node, to newParent: SceneGraph.Node, at index: Int? = nil) -> Bool {
+        let world = node.worldTransform
+        let previous = node.localTransform
+        guard reparent(node, to: newParent, at: index) else {
+            return false
+        }
+        node.worldTransform = world
+        let moved = node.localTransform
+        node.localTransform = previous
+        setTransform(moved, of: node, undoTo: previous)
+        return true
+    }
+
+    // The selected, unlocked nodes Group would take: not the root, and not under another of them.
+    private var groupableNodes: [SceneGraph.Node] {
+        let nodes = selectedNodes.filter { $0.parent != nil && !isLocked($0) }
+        return nodes.filter { node in !nodes.contains { $0 !== node && $0.isAncestor(of: node) } }
+    }
+
+    var canGroupSelection: Bool {
+        !groupableNodes.isEmpty
+    }
+
+    // Puts the selected nodes into a new empty "Group" node and selects it, as one undo step (#221). The group goes
+    // under the nodes' shared parent (the root when they differ), where the first one was, at the center of their
+    // bounds; the nodes keep their world transforms.
+    func groupSelection() {
+        let nodes = groupableNodes
+        guard let first = nodes.first, let firstParent = first.parent else {
+            return
+        }
+        let parent = nodes.allSatisfy { $0.parent === firstParent } ? firstParent : sceneGraph.root
+        let index = parent === firstParent ? parent.children.firstIndex { $0 === first } ?? parent.children.count : parent.children.count
+        let bounds = nodes.compactMap { sceneGraph.worldBounds(of: $0) }.reduce(nil as BoundingBox3D?) { result, bounds in
+            result.map { BoundingBox3D(min: simd_min($0.min, bounds.min), max: simd_max($0.max, bounds.max)) } ?? bounds
+        }
+        let group = SceneGraph.Node(label: "Group")
+        undoManager?.beginUndoGrouping()
+        insert(group, into: parent, at: index, actionName: "Group")
+        if let bounds {
+            var world = group.worldTransform
+            world.columns.3 = SIMD4((bounds.min + bounds.max) / 2, 1)
+            group.worldTransform = world
+        }
+        for node in nodes {
+            reparentKeepingWorldTransform(node, to: group)
+        }
+        selection = group.id
+        undoManager?.endUndoGrouping()
+        undoManager?.setActionName("Group")
+    }
+
+    // A selected, unlocked empty node with children.
+    var canUngroupSelection: Bool {
+        guard let node = selectedNode, node.parent != nil, !isLocked(node), !node.children.isEmpty, case .empty = node.content else {
+            return false
+        }
+        return true
+    }
+
+    // Moves the selected group's children up to its parent where the group was, keeping world transforms, deletes
+    // the group and selects the children. One undo step.
+    func ungroupSelection() {
+        guard canUngroupSelection, let group = selectedNode, let parent = group.parent else {
+            return
+        }
+        let index = parent.children.firstIndex { $0 === group } ?? parent.children.count
+        let children = group.children
+        undoManager?.beginUndoGrouping()
+        for (offset, child) in children.enumerated() {
+            reparentKeepingWorldTransform(child, to: parent, at: index + offset)
+        }
+        delete(group)
+        select(children.map(\.id))
+        undoManager?.endUndoGrouping()
+        undoManager?.setActionName("Ungroup")
+    }
+
     // Moves `node` under `newParent`, keeping its local transform. False when that would make a cycle or `node` is
     // the root. Undoable.
     @discardableResult

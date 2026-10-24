@@ -820,6 +820,54 @@ import UniformTypeIdentifiers
     #expect(model.node(at: [5, 5], viewSize: .zero) == nil)
 }
 
+// #221: group and ungroup keep world positions, undo as one step each, and skip nested picks.
+@MainActor
+@Test func groupAndUngroup() throws {
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    let tools = SceneTools(model: model)
+    let ids = try tools.create(kind: "box", count: 3, label: nil, parent: nil, translation: nil, translations: [[0, 0, 0], [4, 0, 0], [2, 2, 0]], rotationDegrees: nil, scale: nil, color: nil).components(separatedBy: ", ")
+    let nodes = try ids.map { try tools.node(id: $0) }
+    let worlds = nodes.map(\.worldTransform)
+    let undoManager = UndoManager()
+    undoManager.groupsByEvent = false
+    model.undoManager = undoManager
+
+    model.select([nodes[0].id, nodes[1].id])
+    undoManager.beginUndoGrouping()
+    model.groupSelection()
+    undoManager.endUndoGrouping()
+    let group = try #require(model.selectedNode)
+    #expect(group.label == "Group" && group.parent === model.sceneGraph.root)
+    #expect(group.children.map(\.id) == [nodes[0].id, nodes[1].id])
+    #expect(group.localTransform.trs.translation == [2, 0, 0])
+    #expect(model.sceneGraph.root.children.map(\.id) == [group.id, nodes[2].id])
+    for index in 0..<2 {
+        #expect(simd_distance(nodes[index].worldTransform.columns.3, worlds[index].columns.3) < 1e-5)
+    }
+
+    undoManager.undo()
+    #expect(model.sceneGraph.root.children.map(\.id) == nodes.map(\.id))
+    #expect(simd_distance(nodes[1].worldTransform.columns.3, worlds[1].columns.3) < 1e-5)
+    undoManager.redo()
+    #expect(nodes[0].parent?.label == "Group")
+
+    // Ungroup puts the children back where the group was, in order.
+    let redone = try #require(nodes[0].parent)
+    model.selection = redone.id
+    #expect(model.canUngroupSelection)
+    undoManager.beginUndoGrouping()
+    model.ungroupSelection()
+    undoManager.endUndoGrouping()
+    #expect(model.sceneGraph.root.children.map(\.id) == nodes.map(\.id))
+    #expect(model.selectedIDs == [nodes[0].id, nodes[1].id])
+    for index in 0..<3 {
+        #expect(simd_distance(nodes[index].worldTransform.columns.3, worlds[index].columns.3) < 1e-5)
+    }
+    // A box is not a group.
+    model.selection = nodes[0].id
+    #expect(!model.canUngroupSelection)
+}
+
 // #177: framing keeps the view direction and orbits the framed center.
 @Test func framingKeepsViewDirection() {
     var camera = EditorCamera()
