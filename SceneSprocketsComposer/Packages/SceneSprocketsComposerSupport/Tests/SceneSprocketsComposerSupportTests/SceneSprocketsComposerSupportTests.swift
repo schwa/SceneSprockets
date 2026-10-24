@@ -807,6 +807,19 @@ import UniformTypeIdentifiers
     #expect(FolderAccessRequest.wrongFolderMessage(file: file, folder: URL(fileURLWithPath: "/Other")) == "glass_of_water.gltf is not inside Other. Choose the folder that contains it.")
 }
 
+// #220: right-click picks what is under the pointer through the editor camera.
+@MainActor
+@Test func nodeUnderPointer() throws {
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    model.addShape(.box(), label: "Box")
+    let box = try #require(model.selectedNode)
+    model.camera.matrix = LookAt(position: [0, 0, 5], target: .zero, up: [0, 1, 0]).cameraMatrix
+    let size = SIMD2<Float>(800, 600)
+    #expect(model.node(at: size / 2, viewSize: size) === box)
+    #expect(model.node(at: [5, 5], viewSize: size) == nil)
+    #expect(model.node(at: [5, 5], viewSize: .zero) == nil)
+}
+
 // #177: framing keeps the view direction and orbits the framed center.
 @Test func framingKeepsViewDirection() {
     var camera = EditorCamera()

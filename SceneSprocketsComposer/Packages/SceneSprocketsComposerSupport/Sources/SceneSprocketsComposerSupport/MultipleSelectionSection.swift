@@ -1,3 +1,4 @@
+import GeometryLite3D
 import SceneSprockets
 import SceneSprocketsBlinnPhong
 import SceneSprocketsPBR
@@ -44,6 +45,24 @@ extension EditorModel {
         }
         undoManager?.endUndoGrouping()
         undoManager?.setActionName(actionName)
+    }
+
+    // The node under a point in the preview (view coordinates, origin top-left), as a click would pick it: light and
+    // camera shapes first when shown, then the nearest mesh. Uses the editor camera, like SceneView's own hit test
+    // (#220).
+    func node(at point: SIMD2<Float>, viewSize: SIMD2<Float>) -> SceneGraph.Node? {
+        guard viewSize.x > 0, viewSize.y > 0 else {
+            return nil
+        }
+        let camera = renderSettings.camera
+        if renderSettings.showsLightsAndCameras {
+            let viewport = SceneViewport(cameraMatrix: self.camera.matrix, projectionMatrix: camera.projection.projectionMatrix(aspectRatio: viewSize.x / viewSize.y), viewSize: viewSize, drawableSize: viewSize)
+            if let shape = DebugShapes.hitTest(point, sceneGraph: sceneGraph, viewport: viewport) {
+                return shape
+            }
+        }
+        let ray = ViewProjection(viewMatrix: self.camera.matrix.inverse, projection: camera.projection, viewSize: viewSize).ray(through: point)
+        return sceneGraph.hitTest(ray, categoryBitMask: camera.categoryBitMask).first?.node
     }
 
     // Moves `node` up or down so the bottom of its world bounds is at y = 0, keeping x and z (#210). Works for nested

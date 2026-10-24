@@ -4748,12 +4748,13 @@ Add an Import item to the File menu that imports glTF/GLB and other model format
 ## 220: Add right-click context menu to the main view
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: area:composer, effort:s
 created: 2026-10-24T18:37:26Z
-updated: 2026-10-24T18:51:14Z
+updated: 2026-10-24T19:24:46Z
+closed: 2026-10-24T19:24:46Z
 +++
 
 - `2026-10-24T18:51:13Z`: Triage reading: right-clicking in the 3D view should open a context menu for the node under the pointer (selecting it first): Drop to Floor, Hide, Lock, Delete, Frame; and Add when clicking empty space.

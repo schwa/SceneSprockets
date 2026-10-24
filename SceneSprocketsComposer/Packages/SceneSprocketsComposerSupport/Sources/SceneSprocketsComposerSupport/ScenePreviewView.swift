@@ -5,6 +5,11 @@ import SceneSprocketsGizmos
 import simd
 import SwiftUI
 
+final class PointerTracker {
+    var location: SIMD2<Float> = .zero
+    var viewSize: SIMD2<Float> = .zero
+}
+
 struct ScenePreviewView: View {
     @Bindable var model: EditorModel
     @Environment(\.self)
@@ -13,6 +18,9 @@ struct ScenePreviewView: View {
     private var displayScale
     // Focused on click so Edit > Delete (the Delete key) reaches onDeleteCommand.
     @FocusState private var isFocused: Bool
+    // The last pointer position and view size, for the context menu (#220). Not observed: it changes on every mouse
+    // move, and nothing should redraw for that.
+    @State private var pointer = PointerTracker()
 
     var body: some View {
         let settings = model.renderSettings
@@ -77,6 +85,60 @@ struct ScenePreviewView: View {
             model.deleteSelection()
         }
         #endif
+        .onContinuousHover { phase in
+            if case let .active(location) = phase {
+                pointer.location = [Float(location.x), Float(location.y)]
+            }
+        }
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { size in
+            pointer.viewSize = [Float(size.width), Float(size.height)]
+        }
+        .contextMenu {
+            contextMenuItems
+        }
+    }
+
+    // Right-click menu (#220). Each action first selects what is under the pointer, then acts on the selection, so it
+    // works on the clicked object, or on the current selection when clicking empty space.
+    @ViewBuilder
+    private var contextMenuItems: some View {
+        Button("Select") {
+            targetPointer()
+        }
+        Button("Frame Selection") {
+            targetPointer()
+            model.frameSelection()
+        }
+        Button("Drop to Floor") {
+            targetPointer()
+            model.dropSelectionToFloor()
+        }
+        Divider()
+        Button("Hide") {
+            targetPointer()
+            model.editSelection("Hide") { model, node in model.setVisible(false, node) }
+        }
+        Button("Lock") {
+            targetPointer()
+            model.editSelection("Lock") { model, node in model.setLocked(true, node) }
+        }
+        Button("Delete", role: .destructive) {
+            targetPointer()
+            model.deleteSelection()
+        }
+        Divider()
+        AddShapeMenu(model: model)
+    }
+
+    // Selects the node under the pointer, unless it is already part of the selection (keeps a multiple selection).
+    // Over empty space the selection stays as it is.
+    private func targetPointer() {
+        guard let node = model.node(at: pointer.location, viewSize: pointer.viewSize), !model.isLocked(node) else {
+            return
+        }
+        if !model.selectedIDs.contains(node.id) {
+            model.selection = node.id
+        }
     }
 
     // Read when the tap arrives; SceneView's tap callback has no modifier keys.
