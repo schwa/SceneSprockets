@@ -4730,3 +4730,14 @@ created: 2026-10-24T18:37:26Z
 +++
 
 ---
+
+## 221: Group nodes
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-10-24T18:37:26Z
++++
+
+---
