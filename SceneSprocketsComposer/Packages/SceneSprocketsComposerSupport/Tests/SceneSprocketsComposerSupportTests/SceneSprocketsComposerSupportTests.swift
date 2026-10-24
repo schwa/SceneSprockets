@@ -482,6 +482,28 @@ import UniformTypeIdentifiers
     }
 }
 
+// #216: per-node labels and colors, so varied repeated work also fits in one call; the schema exposes them and the
+// descriptions lead with batching.
+@MainActor
+@Test func sceneToolsBatchLabelsAndColors() throws {
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    let tools = SceneTools(model: model)
+    let ids = try tools.create(kind: "sphere", count: nil, label: nil, parent: nil, translation: nil, translations: [[0, 0, 0], [2, 0, 0], [4, 0, 0]], rotationDegrees: nil, scale: nil, color: nil, labels: ["Red", "Green", "Blue"], colors: [[1, 0, 0], [0, 1, 0], [0, 0, 1]]).components(separatedBy: ", ")
+    let nodes = try ids.map { try tools.node(id: $0) }
+    #expect(nodes.map(\.label) == ["Red", "Green", "Blue"])
+    #expect(try nodes.map { EditorModel.baseColor(of: try #require(model.materials(of: $0).first)) } == [[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    _ = try tools.update(ids: ids, label: nil, parent: nil, translation: nil, translations: nil, rotationDegrees: nil, scale: nil, color: nil, metallic: nil, roughness: nil, isVisible: nil, isActive: nil, labels: ["A", "B", "C"], colors: [[0, 0, 0], [0.5, 0.5, 0.5], [1, 1, 1]])
+    #expect(nodes.map(\.label) == ["A", "B", "C"])
+    #expect(throws: ToolError.self) { try tools.create(kind: "box", count: 2, label: nil, parent: nil, translation: nil, translations: nil, rotationDegrees: nil, scale: nil, color: nil, labels: ["Only one"], colors: nil) }
+
+    let create = try #require(tools.collaborationTools.first { $0.name == "create" })
+    let schema = String(describing: create.inputSchema)
+    #expect(schema.contains("labels") && schema.contains("colors"))
+    #expect(create.description.hasPrefix("Use one call"))
+    let update = try #require(tools.collaborationTools.first { $0.name == "update" })
+    #expect(update.description.hasPrefix("Use one call"))
+}
+
 // #203
 @MainActor
 @Test func assistantTurnIsOneUndoStep() throws {

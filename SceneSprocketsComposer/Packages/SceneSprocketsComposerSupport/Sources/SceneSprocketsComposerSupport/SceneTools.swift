@@ -89,22 +89,28 @@ final class SceneTools {
         return "Selected \(ids.joined(separator: ", "))."
     }
 
-    /// Create one or more nodes in one call and return their ids, comma separated. `kind` is a shape (box, sphere, plane, cylinder, cone, capsule, torus, tube, pyramid, floor, star), a light (directional, point, spot) or camera. For several at once give `count`, or `translations` with one [x, y, z] per node (count then defaults to its length); several nodes get numbered labels. Optional for all: label, parent id (default root), translation [x, y, z], rotationDegrees [pitch, yaw, roll], scale [x, y, z], color [r, g, b] in linear 0 to 1 (shapes only). Shapes are about 1 unit across, centered on their origin.
+    /// Use one call for repeated work: never call create several times for nodes of the same kind. Creates one or more nodes and returns their ids, comma separated. `kind` is a shape (box, sphere, plane, cylinder, cone, capsule, torus, tube, pyramid, floor, star), a light (directional, point, spot) or camera. For several at once give `count`, or per-node arrays (`translations` [[x, y, z], ...], `labels`, `colors` [[r, g, b], ...]), all the same length; count defaults to their length. Without `labels`, several nodes get numbered labels. Values for every node: label, parent id (default root), translation [x, y, z], rotationDegrees [pitch, yaw, roll], scale [x, y, z], color [r, g, b] in linear 0 to 1 (shapes only). Shapes are about 1 unit across, centered on their origin; spread several out with `translations`.
     @CollaborationTool
-    func create(kind: String, count: Int?, label: String?, parent: String?, translation: [Double]?, translations: [[Double]]?, rotationDegrees: [Double]?, scale: [Double]?, color: [Double]?) throws -> String {
-        let total = count ?? translations?.count ?? 1
+    func create(kind: String, count: Int?, label: String?, parent: String?, translation: [Double]?, translations: [[Double]]?, rotationDegrees: [Double]?, scale: [Double]?, color: [Double]?, labels: [String]? = nil, colors: [[Double]]? = nil) throws -> String {
+        let total = count ?? translations?.count ?? labels?.count ?? colors?.count ?? 1
         guard (1 ... Self.maximumBatch).contains(total) else {
             throw ToolError("count must be from 1 to \(Self.maximumBatch).")
         }
-        if let translations, translations.count != total {
-            throw ToolError("translations has \(translations.count) entries for \(total) nodes.")
-        }
+        try Self.checkLength(translations, "translations", total)
+        try Self.checkLength(labels, "labels", total)
+        try Self.checkLength(colors, "colors", total)
         var ids: [String] = []
         for index in 0..<total {
-            let numberedLabel = total > 1 ? label.map { "\($0) \(index + 1)" } : label
-            ids.append(try createOne(kind: kind, label: numberedLabel, parent: parent, translation: translations?[index] ?? translation, rotationDegrees: rotationDegrees, scale: scale, color: color))
+            let numberedLabel = labels?[index] ?? (total > 1 ? label.map { "\($0) \(index + 1)" } : label)
+            ids.append(try createOne(kind: kind, label: numberedLabel, parent: parent, translation: translations?[index] ?? translation, rotationDegrees: rotationDegrees, scale: scale, color: colors?[index] ?? color))
         }
         return ids.joined(separator: ", ")
+    }
+
+    private static func checkLength<Element>(_ values: [Element]?, _ name: String, _ count: Int) throws {
+        if let values, values.count != count {
+            throw ToolError("\(name) has \(values.count) entries for \(count) nodes.")
+        }
     }
 
     static let maximumBatch = 1_000
@@ -135,18 +141,19 @@ final class SceneTools {
         return id(for: node)
     }
 
-    /// Change one or more nodes in one call. Every given field is applied to each id; omitted fields are kept. Fields: label, parent (id; keeps the local transform), translation [x, y, z], rotationDegrees [pitch, yaw, roll], scale [x, y, z], color [r, g, b] linear 0 to 1, metallic and roughness 0 to 1 (PBR), isVisible, isActive (inactive also stops animation). For per-node positions, such as aligning or distributing, give `translations` with one [x, y, z] per id, in the same order.
+    /// Use one call for repeated work: give every id at once instead of calling update per node. Changes one or more nodes; omitted fields are kept. Same value for every id: label, parent (id; keeps the local transform), translation [x, y, z], rotationDegrees [pitch, yaw, roll], scale [x, y, z], color [r, g, b] linear 0 to 1, metallic and roughness 0 to 1 (PBR), isVisible, isActive (inactive also stops animation). Different value per id, in the same order as ids: `translations` (align, distribute, arrange), `labels`, `colors`.
     @CollaborationTool
-    func update(ids: [String], label: String?, parent: String?, translation: [Double]?, translations: [[Double]]?, rotationDegrees: [Double]?, scale: [Double]?, color: [Double]?, metallic: Double?, roughness: Double?, isVisible: Bool?, isActive: Bool?) throws -> String {
+    func update(ids: [String], label: String?, parent: String?, translation: [Double]?, translations: [[Double]]?, rotationDegrees: [Double]?, scale: [Double]?, color: [Double]?, metallic: Double?, roughness: Double?, isVisible: Bool?, isActive: Bool?, labels: [String]? = nil, colors: [[Double]]? = nil) throws -> String {
         let model = try requireModel()
         let nodes = try ids.map { try editableNode(id: $0) }
         let parentNode = try parent.map { try node(id: $0) }
-        if let translations, translations.count != ids.count {
-            throw ToolError("translations has \(translations.count) entries for \(ids.count) ids.")
-        }
+        try Self.checkLength(translations, "translations", ids.count)
+        try Self.checkLength(labels, "labels", ids.count)
+        try Self.checkLength(colors, "colors", ids.count)
         for (index, node) in nodes.enumerated() {
             let translation = translations?[index] ?? translation
-            if let label {
+            let color = colors?[index] ?? color
+            if let label = labels?[index] ?? label {
                 model.setLabel(label.isEmpty ? nil : label, of: node)
             }
             if let parentNode, !model.reparent(node, to: parentNode) {

@@ -4675,12 +4675,13 @@ Fix direction: keep drag updates out of SwiftUI's view graph (separate the drag 
 ## 216: Assistant batching isn't happening
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:composer, effort:s
 created: 2026-10-24T18:34:15Z
-updated: 2026-10-24T18:51:13Z
+updated: 2026-10-24T19:00:06Z
+closed: 2026-10-24T19:00:06Z
 +++
 
 - `2026-10-24T18:51:13Z`: Triage reading: the model still makes repeated single create and update calls (for example 8 creates) instead of create(count:) or translations / update(translations:), which exist since #200. Likely fix: say so in the tool descriptions and the system prompt (#218); maybe also accept per-node labels and colors.
