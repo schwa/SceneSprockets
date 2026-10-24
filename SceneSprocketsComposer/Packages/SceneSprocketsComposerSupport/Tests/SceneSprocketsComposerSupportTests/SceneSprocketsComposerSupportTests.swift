@@ -537,6 +537,36 @@ import UniformTypeIdentifiers
     #expect(many.last == "and 12 more (see the log)")
 }
 
+// #208: every parameter in the list edits through editedPBR, keeps textures, and leaves the original alone.
+@MainActor
+@Test func everyPBRParameterIsEditable() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let original = try PBRSceneMaterial(device: device)
+    for parameter in PBRParameters.scalars {
+        let before = original.pbrMaterial.uniforms[keyPath: parameter.keyPath]
+        let value = parameter.range.lowerBound + (parameter.range.upperBound - parameter.range.lowerBound) * 0.37
+        let edited = try EditorModel.editedPBR(original, device: device) { $0[keyPath: parameter.keyPath] = value }
+        #expect(edited.pbrMaterial.uniforms[keyPath: parameter.keyPath] == value, "\(parameter.name)")
+        #expect(original.pbrMaterial.uniforms[keyPath: parameter.keyPath] == before, "\(parameter.name)")
+        #expect(parameter.range.lowerBound < parameter.range.upperBound)
+    }
+    for parameter in PBRParameters.colors {
+        let edited = try EditorModel.editedPBR(original, device: device) { $0[keyPath: parameter.keyPath] = [0.1, 0.2, 0.3] }
+        #expect(edited.pbrMaterial.uniforms[keyPath: parameter.keyPath] == [0.1, 0.2, 0.3], "\(parameter.name)")
+    }
+    for parameter in PBRParameters.toggles {
+        let edited = try EditorModel.editedPBR(original, device: device) { $0[keyPath: parameter.keyPath] = 1 }
+        #expect(edited.pbrMaterial.uniforms[keyPath: parameter.keyPath] == 1, "\(parameter.name)")
+    }
+    let doubleSided = try EditorModel.editedPBR(original, device: device, doubleSided: !original.pbrMaterial.doubleSided)
+    #expect(doubleSided.pbrMaterial.doubleSided != original.pbrMaterial.doubleSided)
+    // Names are unique within the list, which the inspector's ForEach needs.
+    let names = PBRParameters.scalars.map(\.name) + PBRParameters.colors.map(\.name) + PBRParameters.toggles.map(\.name)
+    #expect(Set(names).count == names.count)
+    // 24 floats, 6 colors and 3 flags, plus base color, alpha mode, attenuation distance and double-sided in the view.
+    #expect((PBRParameters.scalars.count, PBRParameters.colors.count, PBRParameters.toggles.count) == (24, 6, 3))
+}
+
 // #177: framing keeps the view direction and orbits the framed center.
 @Test func framingKeepsViewDirection() {
     var camera = EditorCamera()

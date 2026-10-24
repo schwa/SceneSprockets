@@ -4476,12 +4476,13 @@ Selection: extend SceneTreeView's Item enum (scene, node) with defaultCamera and
 ## 208: Composer: edit every PBR material parameter in the inspector
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: area:composer, effort:m
 created: 2026-10-24T16:56:05Z
-updated: 2026-10-24T17:04:01Z
+updated: 2026-10-24T17:21:11Z
+closed: 2026-10-24T17:21:11Z
 +++
 
 The Material section (#198) edits only base color, metallic, roughness and emissive. Expose every PBRMaterialUniforms value (MetalSprocketsPBR PBRShaderTypes.h), grouped in disclosure groups so the common ones stay on top:
