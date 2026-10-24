@@ -4408,11 +4408,12 @@ Possible fix: capture what the save needs on the main actor ahead of time, and k
 ## 205: Composer: multiple selection follow-ups (gizmo, inspector, saving)
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
 labels: area:composer, effort:m
 created: 2026-10-24T16:33:01Z
+updated: 2026-10-24T17:04:01Z
 +++
 
 Follow-up to #201. Multiple selection works in the tree (Cmd and Shift click), in the viewport (Shift-click), for outlines, Delete and the assistant tools. Still single-node:
@@ -4425,11 +4426,12 @@ Follow-up to #201. Multiple selection works in the tree (Cmd and Shift click), i
 ## 206: Composer: inserting a .gltf fails in the sandbox (external .bin), and the warning alert overflows the screen
 
 +++
-status: new
+status: open
 priority: high
 kind: bug
 labels: area:composer, effort:m
 created: 2026-10-24T16:51:08Z
+updated: 2026-10-24T17:04:01Z
 +++
 
 Insert Model File… on a .gltf with an external buffer (gltf-research-scenes/scenes/glass-of-water/gltf/glass_of_water.gltf) loads none of its meshes. Every primitive is skipped with: NSCocoaErrorDomain 257 'The file glass_of_water.bin couldn't be opened because you don't have permission to view it' (NSPOSIXErrorDomain 1, Operation not permitted). Screenshot: ~/Desktop/Screenshot 2026-10-24 at 12.50.15@2x.png.
@@ -4443,16 +4445,19 @@ Fix options:
 
 Second problem in the same screenshot: the alert shows every warning in full, one per primitive with the whole NSError description, so it is taller than the screen and the OK button is off-screen. Show a summary instead: one line per distinct problem with a count (for example '17 meshes skipped: no permission to read glass_of_water.bin'), cap the list, and log the full text.
 
+- `2026-10-24T17:04:01Z`: Related: #197 (Insert Model File).
+
 ---
 
 ## 207: Composer: top-level Default Camera and Default Lighting rows in the scene tree
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
 labels: area:composer, effort:m
 created: 2026-10-24T16:53:27Z
+updated: 2026-10-24T17:04:01Z
 +++
 
 The scene tree has a top-level Scene row next to the root (scene settings). Add two more top-level rows: Default Camera and Default Lighting. They are editor objects, not nodes in the scene graph.
@@ -4469,11 +4474,12 @@ Selection: extend SceneTreeView's Item enum (scene, node) with defaultCamera and
 ## 208: Composer: edit every PBR material parameter in the inspector
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
-labels: area:composer,effort:m
+labels: area:composer, effort:m
 created: 2026-10-24T16:56:05Z
+updated: 2026-10-24T17:04:01Z
 +++
 
 The Material section (#198) edits only base color, metallic, roughness and emissive. Expose every PBRMaterialUniforms value (MetalSprocketsPBR PBRShaderTypes.h), grouped in disclosure groups so the common ones stay on top:
@@ -4491,5 +4497,7 @@ The Material section (#198) edits only base color, metallic, roughness and emiss
 Skip internal values: hasTangents, hasNormals, isPointOrLine and the texture slots.
 
 Use EditorModel.editedPBR so edits stay undoable and keep textures. Sliders need ranges from the glTF extension specs. Changing alphaMode or doubleSided may change PBRMaterial.renderState and batching. The assistant's update tool (#202) could take the same fields later. Scene archives already save uniforms field by field (#163).
+
+- `2026-10-24T17:04:01Z`: Related: #198 (basic material editing).
 
 ---
