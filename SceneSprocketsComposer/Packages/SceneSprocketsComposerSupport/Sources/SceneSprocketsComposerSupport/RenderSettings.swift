@@ -15,6 +15,8 @@ struct RenderSettings: Equatable {
     var showsFrameTiming = false
     // Line shapes for lights and cameras (#188).
     var showsLightsAndCameras = true
+    // Draws every mesh in this view instead of its material (#132).
+    var debugMode: SceneGraphDebugMode?
     var outlinesSelection = true
     // Off keeps the drawable readable, for example to inspect it in a GPU capture.
     var isFramebufferOnly = true

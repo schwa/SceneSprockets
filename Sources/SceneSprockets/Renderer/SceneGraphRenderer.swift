@@ -60,11 +60,14 @@ public struct SceneGraphElement: Element {
     var defaultLight: Light?
     var shadows: SceneGraphShadows?
     var decorations: ((SceneGraphRenderContext) throws -> AnyElement?)?
+    // Draws every mesh in this debug view instead of its material (#132).
+    var debugMode: SceneGraphDebugMode?
 
     @MSEnvironment(\.renderPassDescriptor)
     private var renderPassDescriptor
 
-    public init(sceneGraph: SceneGraph, camera: SceneGraph.Node? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any SceneGraphMaterialRenderer], defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, shadows: SceneGraphShadows? = nil, storesDepth: Bool = false, decorations: ((SceneGraphRenderContext) throws -> AnyElement?)? = nil) {
+    public init(sceneGraph: SceneGraph, camera: SceneGraph.Node? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any SceneGraphMaterialRenderer], defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, shadows: SceneGraphShadows? = nil, storesDepth: Bool = false, decorations: ((SceneGraphRenderContext) throws -> AnyElement?)? = nil, debugMode: SceneGraphDebugMode? = nil) {
+        self.debugMode = debugMode
         self.cameraOverride = cameraOverride
         self.storesDepth = storesDepth
         self.decorations = decorations
@@ -72,7 +75,8 @@ public struct SceneGraphElement: Element {
         self.camera = camera
         self.cameraMatrix = cameraMatrix
         self.aspectRatio = aspectRatio
-        self.renderers = renderers
+        // Kept with the debug renderer, so background renderers still draw.
+        self.renderers = debugMode == nil ? renderers : renderers + [SceneGraphDebugRenderer()]
         self.defaultCamera = defaultCamera
         self.defaultLight = defaultLight
         self.shadows = shadows
@@ -84,7 +88,14 @@ public struct SceneGraphElement: Element {
                 return EmptyElement().eraseToAnyElement()
             }
             let cameraPosition = context.cameraMatrix.columns.3.xyz
-            let entries = applyLevelsOfDetail(sceneGraph.meshEntries().filter { $0.node.categoryBitMask & context.categoryBitMask != 0 }, cameraPosition: cameraPosition)
+            var entries = applyLevelsOfDetail(sceneGraph.meshEntries().filter { $0.node.categoryBitMask & context.categoryBitMask != 0 }, cameraPosition: cameraPosition)
+            if let debugMode {
+                entries = entries.map { entry in
+                    var entry = entry
+                    entry.material = SceneGraphDebugMaterial(mode: debugMode)
+                    return entry
+                }
+            }
             // The shadow mask and fog passes read and write the view's textures, so they need the right usage.
             let postTargets: (color: MTLTexture, depth: MTLTexture)? = {
                 guard let color = renderPassDescriptor?.colorAttachments[0].texture, let depth = renderPassDescriptor?.depthAttachment.texture,

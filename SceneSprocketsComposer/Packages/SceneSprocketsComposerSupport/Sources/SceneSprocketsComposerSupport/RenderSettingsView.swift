@@ -1,3 +1,4 @@
+import SceneSprockets
 import SwiftUI
 
 struct RenderSettingsView: View {
@@ -23,6 +24,14 @@ struct RenderSettingsView: View {
             }
             cameraSection
             Section("Debug") {
+                Picker("View", selection: $model.renderSettings.debugMode) {
+                    Text("Materials").tag(SceneGraphDebugMode?.none)
+                    Divider()
+                    ForEach(SceneGraphDebugMode.allCases, id: \.self) { mode in
+                        Text(mode.name).tag(SceneGraphDebugMode?.some(mode))
+                    }
+                }
+                .help("Show every mesh as shape, normals, texture coordinates and so on, instead of its material")
                 Toggle("Framebuffer Only", isOn: $model.renderSettings.isFramebufferOnly)
                     .help("Turn off to keep the drawable readable, for example in a GPU capture")
             }

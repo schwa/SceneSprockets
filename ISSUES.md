@@ -2691,12 +2691,13 @@ Done when: a view modifier or flag turns the overlay on, and it shows live per-f
 ## 132: No built-in debug visualization modes for scene graph rendering
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: effort:l, area:renderer
 created: 2026-10-17T12:19:22Z
-updated: 2026-10-24T14:21:10Z
+updated: 2026-10-24T15:04:55Z
+closed: 2026-10-24T15:04:55Z
 +++
 
 SceneGraph has no standard way to view a scene in debug modes such as normals, UVs, tangents, world position or material channels. The only option is ShaderMaterial.normals(), which has to be set on each node by hand.
@@ -4191,5 +4192,19 @@ created: 2026-10-24T14:42:46Z
 +++
 
 Split from #175. Documents now contain Preview.png (DocumentPreview). Add a Quick Look thumbnail extension target (com.apple.quicklook.thumbnail, QLThumbnailProvider) that returns that PNG, so Finder icons show the scene. Needs a new Xcode target, which was not added in #175.
+
+---
+
+## 195: Debug views: PBR and Blinn-Phong material channels
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:renderer, effort:m
+created: 2026-10-24T15:04:55Z
++++
+
+Follow-up to #132. SceneGraphDebugMode covers geometry: shaded, normals, texture coordinates, UV checker, world position and wireframe. Material channels are not covered: base color, metallic, roughness, occlusion, emissive and others. MetalSprocketsPBR's PBRRenderer.debugView (PBRDebugView) already draws these for PBR. Pass a channel mode through SceneGraphRenderContext to PBRMaterialRenderer, and add a Blinn-Phong equivalent (diffuse, specular, shininess).
 
 ---

@@ -29,6 +29,7 @@ struct ScenePreviewView: View {
             cameraTarget: model.camera.target,
             camera: settings.camera,
             manipulator: model.gizmo,
+            debugMode: settings.debugMode,
             onTapAt: { point, viewport, hit in
                 isFocused = true
                 // Light and camera shapes are drawn on top, so they win over meshes behind them.
