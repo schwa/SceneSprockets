@@ -195,7 +195,8 @@ public struct SceneView: View {
         }
         .simultaneousGesture(manipulatorDrag, including: manipulator != nil ? .all : .subviews)
         .onTapGesture { location in
-            guard let onTap else {
+            // With a manipulator, its zero-distance drag wins over this tap; manipulatorDrag reports taps instead.
+            guard manipulator == nil, let onTap else {
                 return
             }
             onTap(hit(at: location))
@@ -232,9 +233,11 @@ public struct SceneView: View {
                     manipulator.drag(to: [Float(value.location.x), Float(value.location.y)], viewport: viewport)
                 }
             }
-            .onEnded { _ in
+            .onEnded { value in
                 if manipulatorDragClaim == true {
                     manipulator?.endDrag()
+                } else if let onTap, manipulator != nil, hypot(value.translation.width, value.translation.height) < 4 {
+                    onTap(hit(at: value.location))
                 }
                 manipulatorDragClaim = nil
             }
