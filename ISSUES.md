@@ -4560,12 +4560,13 @@ Add a Render settings toggle 'Bounding Boxes' that draws world-space bounding bo
 ## 212: SceneGraph.flattened() mutates an observed property, crashing SwiftUI when statistics are shown
 
 +++
-status: open
+status: closed
 priority: high
 kind: bug
 labels: area:scenegraph, area:ui, effort:xs
 created: 2026-10-24T18:07:22Z
-updated: 2026-10-24T18:32:38Z
+updated: 2026-10-24T18:35:44Z
+closed: 2026-10-24T18:35:44Z
 +++
 
 Composer crashed with 'AttributeGraph precondition failure: setting value during update' when the Statistics overlay was on.

@@ -200,8 +200,9 @@ public class SceneGraph {
     }
 
     @ObservationIgnored private var flattenedCache: (revision: Revision, flattened: Flattened)?
-    // Number of full traversals done for queries; for tests.
-    private(set) var traversalCount = 0
+    // Number of full traversals done for queries; for tests. Not observed: queries run during SwiftUI view updates,
+    // and writing an observed property then crashes SwiftUI (#212).
+    @ObservationIgnored private(set) var traversalCount = 0
 
     // One traversal fills every query. Cached until the revision changes when starting from identity.
     func flattened(worldTransform initialTransform: float4x4 = .identity) -> Flattened {

@@ -1,10 +1,30 @@
 import Metal
+import Observation
 import GeometryLite3D
 import SwiftMesh
 import Testing
 import simd
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
+
+// #212: SwiftUI reads statistics during a view update; a query that writes an observed property crashes it
+// ('setting value during update').
+@Test
+func queriesDoNotChangeObservedState() throws {
+    let sceneGraph = SceneGraph(root: SceneGraph.Node())
+    _ = SceneGraph.Node(parent: sceneGraph.root, content: .light(Light(type: .point)))
+    nonisolated(unsafe) var changed = false
+    withObservationTracking {
+        _ = sceneGraph.statistics
+        _ = sceneGraph.bounds
+    } onChange: {
+        changed = true
+    }
+    // A fresh traversal, as after any edit.
+    _ = sceneGraph.flattened(worldTransform: float4x4(diagonal: [2, 2, 2, 1]))
+    _ = sceneGraph.statistics
+    #expect(!changed)
+}
 
 @Test
 func queriesShareOneCachedTraversalUntilSomethingChanges() throws {
