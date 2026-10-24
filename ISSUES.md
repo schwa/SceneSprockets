@@ -4858,6 +4858,8 @@ Left:
 - SceneView's decorations and overlay parameters are closures created in ScenePreviewView's body, so SceneView never compares equal and its body re-runs on every model change. Options: Equatable wrapper values keyed on what they capture (settings, selected ids, revisions), or overlay and decoration objects with identity held by the model.
 Measure with the SwiftUI instrument during a drag.
 
+- `2026-10-24T23:49:33Z`: House-rules review adds to this issue: SceneInspectorView has 6 closure bindings (background, color, blur, rotation) and ComposerView has 2 alert isPresented bindings. Use .alert(_:isPresented:presenting:) or item-based alerts. Approach for the inspectors: writable computed properties on EditorModel (for example selectedLight, selectedMaterial(at:)), projected with Binding($model.optional) and key paths, instead of the binding(_:), trs, component and eulerDegrees helpers. Hiding a closure binding in a helper does not make it stable.
+
 ---
 
 ## 225: Composer: option to hide individual axis lines (the green Y line)
@@ -4942,10 +4944,78 @@ From a concurrency review. The SceneSprocketsComposer, SceneSprocketsQuickLook a
 status: new
 priority: low
 kind: bug
-labels: area:composer,effort:xs
+labels: area:composer, effort:xs
 created: 2026-10-24T22:32:51Z
 +++
 
 From a concurrency review. ComposerView's folder importer (#213) reports 'not inserted' on cancel from .onChange(of: isChoosingFolder) by starting Task { @MainActor in await Task.yield(); ... }, hoping the importer's completion has run by then. yield() does not guarantee that, so a successful pick can still show the cancel message first. Replace it with state: store the importer result, or drop the separate cancel message for the panel and keep only the alert's explicit Cancel. Avoid unstructured tasks for ordering.
+
+---
+
+## 231: SceneView: closure-based camera binding rebuilt every body pass
+
++++
+status: new
+priority: high
+kind: bug
+labels: area:ui, effort:s
+created: 2026-10-24T23:49:32Z
++++
+
+From a SwiftUI house-rules review. SceneView.cameraBinding (SceneView.swift around line 368) is a Binding(get:set:) rebuilt on every SceneView body pass and passed to CameraControl. SceneView re-runs whenever its parent changes (constantly in the Composer), and closure bindings break SwiftUI's diffing, so camera control and its gesture state get rebuilt. This is in the library, so it affects every app.
+Fix: keep one @State camera matrix as the source of truth in SceneView. Pass $camera to CameraControl. Sync the external binding with onChange in both directions, guarded against loops. Measure with the SwiftUI instrument during an orbit in the Composer before and after.
+
+---
+
+## 232: ComposerView recomputes editorState (a full graph walk) on every body pass
+
++++
+status: new
+priority: high
+kind: bug
+labels: area:composer, area:ui, effort:s
+created: 2026-10-24T23:49:33Z
++++
+
+From a SwiftUI house-rules review. ComposerView has .onChange(of: model.editorState, initial: true) { document.updateEditorState() }. editorState is computed: selectedNodes and lockedPaths each walk the whole graph. Measured at 1.36 ms per call with 500 nodes (DragPerformanceTests). It runs on every ComposerView body evaluation. Body must stay fast and side-effect free.
+Fix: add an editorStateRevision to EditorModel, bumped by every setter that changes saved editor state (camera, render settings, gizmo mode and space, selection, locks, inspector visibility, sidebar), and observe that instead. Or call document.updateEditorState() from those model methods through a callback.
+
+---
+
+## 233: SwiftUI structure: turn stateful private some View sections into View structs
+
++++
+status: new
+priority: medium
+kind: task
+labels: area:composer, area:demo, effort:s
+created: 2026-10-24T23:49:33Z
++++
+
+From a SwiftUI house-rules review ('private var foo: some View is generally an anti-pattern'). Extract into View structs, since these read several properties or have behavior:
+- Composer SceneInspectorView: backgroundSection, environmentSection become BackgroundSectionView, EnvironmentSectionView
+- Composer ScenePreviewView: contextMenuItems becomes ScenePreviewContextMenuView(model:pointer:)
+- Demo NodeInspectorView: generalSection, transformSection, contentSection, cameraSection become ...SectionView
+Leave as is: AssistantPanel.missingCredentials (static, no inputs) and SceneNodeRow.row (tiny fragment).
+
+---
+
+## 234: SwiftUI conventions cleanup: View suffixes, NSEvent, padding, previews
+
++++
+status: new
+priority: low
+kind: task
+labels: area:composer,area:demo,area:ui,effort:s
+created: 2026-10-24T23:49:33Z
++++
+
+From a SwiftUI house-rules review.
+- View suffix: MultipleSelectionSection, LightSection, MaterialSection, AssistantPanel, AddShapeMenu, GizmoToolbarContent (or make it a ToolbarContent type) in the Composer; SceneNodeRow, VectorRow, ColorRow in the Demo.
+- ScenePreviewView.isExtendingSelection reads NSEvent.modifierFlags. Use SwiftUI's onModifierKeysChanged to track EventModifiers instead: no AppKit and no #if.
+- Hard-coded spacing and padding: SceneView statistics overlay .padding(4) and .padding(8); ComposerView sidebar picker .padding(8); Demo NodeInspectorView HStack(spacing: 8) and (spacing: 6). Keep the color swatch frame. Comment why CodePanel forces a font size (slide code).
+- NodeInspectorView ForEach(0..<materialCount, id: \.self) over a range that changes size: iterate materials.indices or give slots stable ids.
+- Previews for leaf views: LightSection, MaterialSection, MultipleSelectionSection, DefaultCameraInspectorView, DefaultLightingInspectorView, Demo SceneNodeRow, VectorRow, ColorRow, CodePanel.
+The Task.yield hack is #230.
 
 ---
