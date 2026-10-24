@@ -19,6 +19,8 @@ public struct SceneGraphRenderContext {
     public internal(set) var shadow: SceneGraphShadows.Sampling?
     // Parallel to `lights` when `shadow` is set: each light's shadow map slices (empty for none).
     public internal(set) var lightShadowSlices: [Range<Int>] = []
+    // When set, renderers output this material value instead of lighting (#195).
+    public internal(set) var materialChannel: SceneGraphMaterialChannel?
 }
 
 // One renderer per material family. Add a family by conforming a new type; the scene graph core does not change.
@@ -62,12 +64,15 @@ public struct SceneGraphElement: Element {
     var decorations: ((SceneGraphRenderContext) throws -> AnyElement?)?
     // Draws every mesh in this debug view instead of its material (#132).
     var debugMode: SceneGraphDebugMode?
+    // Each renderer shows this material value instead of lighting (#195). Ignored while debugMode is set.
+    var materialChannel: SceneGraphMaterialChannel?
 
     @MSEnvironment(\.renderPassDescriptor)
     private var renderPassDescriptor
 
-    public init(sceneGraph: SceneGraph, camera: SceneGraph.Node? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any SceneGraphMaterialRenderer], defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, shadows: SceneGraphShadows? = nil, storesDepth: Bool = false, decorations: ((SceneGraphRenderContext) throws -> AnyElement?)? = nil, debugMode: SceneGraphDebugMode? = nil) {
+    public init(sceneGraph: SceneGraph, camera: SceneGraph.Node? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any SceneGraphMaterialRenderer], defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, shadows: SceneGraphShadows? = nil, storesDepth: Bool = false, decorations: ((SceneGraphRenderContext) throws -> AnyElement?)? = nil, debugMode: SceneGraphDebugMode? = nil, materialChannel: SceneGraphMaterialChannel? = nil) {
         self.debugMode = debugMode
+        self.materialChannel = materialChannel
         self.cameraOverride = cameraOverride
         self.storesDepth = storesDepth
         self.decorations = decorations
@@ -88,6 +93,7 @@ public struct SceneGraphElement: Element {
                 return EmptyElement().eraseToAnyElement()
             }
             let cameraPosition = context.cameraMatrix.columns.3.xyz
+            context.materialChannel = debugMode == nil ? materialChannel : nil
             var entries = applyLevelsOfDetail(sceneGraph.meshEntries().filter { $0.node.categoryBitMask & context.categoryBitMask != 0 }, cameraPosition: cameraPosition)
             if let debugMode {
                 entries = entries.map { entry in

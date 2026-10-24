@@ -32,6 +32,15 @@ struct RenderSettingsView: View {
                     }
                 }
                 .help("Show every mesh as shape, normals, texture coordinates and so on, instead of its material")
+                Picker("Channel", selection: $model.renderSettings.materialChannel) {
+                    Text("Lit").tag(SceneGraphMaterialChannel?.none)
+                    Divider()
+                    ForEach(SceneGraphMaterialChannel.allCases, id: \.self) { channel in
+                        Text(channel.name).tag(SceneGraphMaterialChannel?.some(channel))
+                    }
+                }
+                .disabled(model.renderSettings.debugMode != nil)
+                .help("Show one material value, such as base color or roughness, instead of lighting")
                 Toggle("Framebuffer Only", isOn: $model.renderSettings.isFramebufferOnly)
                     .help("Turn off to keep the drawable readable, for example in a GPU capture")
             }

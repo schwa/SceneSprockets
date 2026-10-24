@@ -63,6 +63,7 @@ public struct SceneView: View {
     private let cameraTarget: SIMD3<Float>?
     private let overlay: ((SceneViewport) throws -> AnyElement?)?
     private let debugMode: SceneGraphDebugMode?
+    private let materialChannel: SceneGraphMaterialChannel?
 
     @Environment(\.displayScale) private var displayScale
     // Decided at the first change of each drag: whether it started on the manipulator.
@@ -109,6 +110,8 @@ public struct SceneView: View {
         manipulator: (any SceneViewManipulator)? = nil,
         // Draws every mesh in a debug view instead of its material (#132).
         debugMode: SceneGraphDebugMode? = nil,
+        // Shows one material value instead of lighting (#195).
+        materialChannel: SceneGraphMaterialChannel? = nil,
         onTap: ((SceneGraph.Hit?) -> Void)? = nil,
         // Like `onTap`, with the tap point (view coordinates) and viewport, for callers that pick things the mesh hit
         // test cannot see, such as editor icons.
@@ -121,6 +124,7 @@ public struct SceneView: View {
     ) {
         self.overlay = overlay
         self.debugMode = debugMode
+        self.materialChannel = materialChannel
         self.decorations = decorations
         self.defaultCamera = defaultCamera
         self.cameraOverride = camera
@@ -169,7 +173,8 @@ public struct SceneView: View {
                 decorations: decorations.map { decorations in
                     { context in try decorations(context, SIMD2<Float>(Float(size.width), Float(size.height))) }
                 },
-                debugMode: debugMode
+                debugMode: debugMode,
+                materialChannel: materialChannel
             )
             if let overlay, let viewport = viewport(drawableSize: size), let element = try overlay(viewport) {
                 element

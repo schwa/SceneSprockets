@@ -69,7 +69,7 @@ extension EditorState: Codable {
 
 extension RenderSettings: Codable {
     enum CodingKeys: String, CodingKey {
-        case showsGrid, showsAxes, usesDefaultLighting, showsShadows, showsStatistics, showsFrameTiming, showsLightsAndCameras, outlinesSelection, isFramebufferOnly, fieldOfView, nearClip, farClip, debugMode
+        case showsGrid, showsAxes, usesDefaultLighting, showsShadows, showsStatistics, showsFrameTiming, showsLightsAndCameras, outlinesSelection, isFramebufferOnly, fieldOfView, nearClip, farClip, debugMode, materialChannel
     }
 
     init(from decoder: Decoder) throws {
@@ -93,6 +93,7 @@ extension RenderSettings: Codable {
         try read(\.nearClip, .nearClip)
         try read(\.farClip, .farClip)
         debugMode = try container.decodeIfPresent(SceneGraphDebugMode.self, forKey: .debugMode)
+        materialChannel = try container.decodeIfPresent(SceneGraphMaterialChannel.self, forKey: .materialChannel)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -110,6 +111,7 @@ extension RenderSettings: Codable {
         try container.encode(nearClip, forKey: .nearClip)
         try container.encode(farClip, forKey: .farClip)
         try container.encodeIfPresent(debugMode, forKey: .debugMode)
+        try container.encodeIfPresent(materialChannel, forKey: .materialChannel)
     }
 }
 

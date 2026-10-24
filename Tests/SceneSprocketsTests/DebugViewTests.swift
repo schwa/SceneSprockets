@@ -6,6 +6,7 @@ import SwiftMesh
 import Testing
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
+@testable import SceneSprocketsPBR
 
 // #132: debug views replace every mesh's material.
 private func render(_ mode: SceneGraphDebugMode?, mesh: MetalMesh) throws -> SIMD4<UInt8> {
@@ -41,6 +42,37 @@ func debugModesReplaceMaterials() throws {
         colors.insert(try render(mode, mesh: box))
     }
     #expect(colors.count == SceneGraphDebugMode.allCases.count - 1)
+}
+
+// #195: each renderer shows its own version of a material channel; values are unlit.
+@Test
+@MainActor
+func materialChannelsShowMaterialValues() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let box = MetalMesh(mesh: .box(), device: device)
+    func pixel(_ material: any SceneSprockets.Material, _ channel: SceneGraphMaterialChannel, renderer: any SceneGraphMaterialRenderer) throws -> SIMD4<UInt8> {
+        let root = SceneGraph.Node()
+        _ = SceneGraph.Node(parent: root, transform: simd_float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 4, 1])), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45)))))
+        _ = SceneGraph.Node(parent: root, content: .mesh(box, material: material))
+        let element = SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [renderer], materialChannel: channel)
+        let texture = try OffscreenRenderer(size: CGSize(width: 64, height: 64)).render(element).texture
+        var value = SIMD4<UInt8>.zero
+        texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(32, 32, 1, 1), mipmapLevel: 0)
+        return value
+    }
+    // No lights in the scene: lit output would be (nearly) black, channels are not.
+    let blinnPhong = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color([1, 0, 0]), specular: .color([0, 0, 1]), shininess: 2)
+    let red = try pixel(blinnPhong, .baseColor, renderer: BlinnPhongMaterialRenderer())
+    #expect(red.z > 200 && red.x < 20) // BGRA
+    let specular = try pixel(blinnPhong, .specular, renderer: BlinnPhongMaterialRenderer())
+    #expect(specular.x > 200 && specular.z < 20)
+    #expect(try pixel(blinnPhong, .metallic, renderer: BlinnPhongMaterialRenderer()).z < 5)
+
+    let pbr = try PBRSceneMaterial(device: device, baseColor: [0, 1, 0, 1], metallic: 1, roughness: 0.5)
+    let metallic = try pixel(pbr, .metallic, renderer: PBRMaterialRenderer(device: device))
+    #expect(metallic.x > 200 && metallic.y > 200 && metallic.z > 200)
+    let base = try pixel(pbr, .baseColor, renderer: PBRMaterialRenderer(device: device))
+    #expect(base.y > 150 && base.z < 40)
 }
 
 @Test

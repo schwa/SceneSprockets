@@ -34,6 +34,31 @@ public enum SceneGraphDebugMode: Int32, CaseIterable, Sendable, Codable {
     }
 }
 
+// Shows one material value instead of the lit result (#195). Unlike SceneGraphDebugMode it keeps each mesh's
+// material: every renderer shows its own version of the channel. Blinn-Phong has no metallic (black) and maps
+// shininess to roughness.
+public enum SceneGraphMaterialChannel: Int32, CaseIterable, Sendable, Codable {
+    // Diffuse for Blinn-Phong.
+    case baseColor = 1
+    case alpha = 2
+    case metallic = 3
+    case roughness = 4
+    // Specular color for Blinn-Phong, reflectance at normal incidence (F0) for PBR.
+    case specular = 5
+    case emission = 6
+
+    public var name: String {
+        switch self {
+        case .baseColor: "Base Color"
+        case .alpha: "Alpha"
+        case .metallic: "Metallic"
+        case .roughness: "Roughness"
+        case .specular: "Specular"
+        case .emission: "Emission"
+        }
+    }
+}
+
 // Stands in for each mesh's material while a debug view is on.
 struct SceneGraphDebugMaterial: Material {
     var mode: SceneGraphDebugMode

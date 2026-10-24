@@ -79,7 +79,7 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer {
         let viewProjection = context.projectionMatrix * context.viewMatrix
         let cameraPosition = context.cameraMatrix.columns.3.xyz
         let lights = blinnPhongLights(context.lights, shadowSlices: context.shadow == nil ? [] : context.lightShadowSlices)
-        let frame = BlinnPhongFrame(viewProjection: viewProjection, cameraPosition: cameraPosition, ambientLightColor: ambientLightColor, lightCount: Int32(lights.count))
+        let frame = BlinnPhongFrame(viewProjection: viewProjection, cameraPosition: cameraPosition, ambientLightColor: ambientLightColor, lightCount: Int32(lights.count), materialChannel: context.materialChannel?.rawValue ?? 0)
         // An empty array cannot be bound; the shader reads none of it when lightCount is 0.
         let lightValues = lights.isEmpty ? [BlinnPhongLight()] : lights
         // The shader has no morph or skin inputs, so those meshes are deformed on the CPU. They skip culling because

@@ -231,7 +231,21 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer {
             transmissionTarget: transmissionTarget
         )
         renderer.materialOverrides = try materialOverrides(for: entries, keys: keys)
+        if let channel = context.materialChannel {
+            renderer.debugView = Self.debugView(for: channel)
+        }
         return renderer
+    }
+
+    static func debugView(for channel: SceneGraphMaterialChannel) -> PBRDebugView {
+        switch channel {
+        case .baseColor: .baseColor
+        case .alpha: .alpha
+        case .metallic: .metallic
+        case .roughness: .roughness
+        case .specular: .specularF0
+        case .emission: .emissive
+        }
     }
 }
 

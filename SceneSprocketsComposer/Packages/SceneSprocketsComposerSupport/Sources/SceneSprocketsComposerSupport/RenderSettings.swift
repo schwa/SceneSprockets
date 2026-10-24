@@ -17,6 +17,8 @@ struct RenderSettings: Equatable {
     var showsLightsAndCameras = true
     // Draws every mesh in this view instead of its material (#132).
     var debugMode: SceneGraphDebugMode?
+    // One material value instead of lighting (#195); ignored while debugMode is set.
+    var materialChannel: SceneGraphMaterialChannel?
     var outlinesSelection = true
     // Off keeps the drawable readable, for example to inspect it in a GPU capture.
     var isFramebufferOnly = true

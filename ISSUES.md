@@ -4212,12 +4212,13 @@ Split from #175. Documents now contain Preview.png (DocumentPreview). Add a Quic
 ## 195: Debug views: PBR and Blinn-Phong material channels
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:renderer, effort:m
 created: 2026-10-24T15:04:55Z
-updated: 2026-10-24T15:35:19Z
+updated: 2026-10-24T15:52:21Z
+closed: 2026-10-24T15:52:21Z
 +++
 
 Follow-up to #132. SceneGraphDebugMode covers geometry: shaded, normals, texture coordinates, UV checker, world position and wireframe. Material channels are not covered: base color, metallic, roughness, occlusion, emissive and others. MetalSprocketsPBR's PBRRenderer.debugView (PBRDebugView) already draws these for PBR. Pass a channel mode through SceneGraphRenderContext to PBRMaterialRenderer, and add a Blinn-Phong equivalent (diffuse, specular, shininess).
