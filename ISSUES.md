@@ -4037,12 +4037,13 @@ The + menu adds only shapes. Add entries for directional, point and spot lights.
 ## 187: Composer: add cameras from the + menu
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: area:composer, effort:s
 created: 2026-10-24T14:13:23Z
-updated: 2026-10-24T14:18:19Z
+updated: 2026-10-24T14:28:14Z
+closed: 2026-10-24T14:28:14Z
 +++
 
 Add a Camera entry to the + menu. Add the new camera under the root, select it, and make it undoable, the same as EditorModel.addShape. Good default: place it at the current editor camera's transform so it looks at what the user sees. Related: choosing a scene camera as the preview's point of view.

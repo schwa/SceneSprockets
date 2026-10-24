@@ -83,3 +83,20 @@ import UniformTypeIdentifiers
     undoManager.undo()
     #expect(model.sceneGraph.root.children.count == 2)
 }
+
+// #187
+@MainActor
+@Test func addCameraUsesEditorCamera() throws {
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    let undoManager = UndoManager()
+    model.undoManager = undoManager
+    model.addCamera()
+    let node = try #require(model.selectedNode)
+    guard case .camera = node.content else {
+        Issue.record("not a camera")
+        return
+    }
+    #expect(node.localTransform.matrix == model.camera.matrix)
+    undoManager.undo()
+    #expect(model.sceneGraph.root.children.isEmpty)
+}

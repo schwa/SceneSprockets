@@ -75,8 +75,12 @@ struct AddShapeMenu: View {
                     model.addLight(type)
                 }
             }
+            Divider()
+            Button("Camera", systemImage: "camera") {
+                model.addCamera()
+            }
         }
-        .help("Add a shape or light")
+        .help("Add a shape, light or camera")
     }
 }
 

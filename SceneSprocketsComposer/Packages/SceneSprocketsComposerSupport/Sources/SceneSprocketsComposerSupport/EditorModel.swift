@@ -173,6 +173,12 @@ public final class EditorModel {
         insert(node, into: sceneGraph.root, at: sceneGraph.root.children.count, actionName: "Add \(label)")
     }
 
+    // Placed at the editor camera, so it sees what the user sees.
+    func addCamera() {
+        let node = SceneGraph.Node(label: "Camera", transform: camera.matrix, content: .camera(renderSettings.camera))
+        insert(node, into: sceneGraph.root, at: sceneGraph.root.children.count, actionName: "Add Camera")
+    }
+
     static func label(for type: Light.LightType) -> String {
         "\(type.rawValue.prefix(1).uppercased())\(type.rawValue.dropFirst()) Light"
     }
