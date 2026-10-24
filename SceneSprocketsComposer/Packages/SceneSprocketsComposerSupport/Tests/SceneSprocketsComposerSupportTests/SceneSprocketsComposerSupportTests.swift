@@ -523,6 +523,20 @@ import UniformTypeIdentifiers
     #expect(model.sceneGraph.root.children.isEmpty)
 }
 
+// #206: one line per distinct problem with a count, not one full NSError per primitive.
+@Test func insertWarningsAreSummarized() {
+    let error = #"Error Domain=NSCocoaErrorDomain Code=257 "The file “glass_of_water.bin” couldn’t be opened because you don’t have permission to view it." UserInfo={NSFilePath=/Users/x/glass_of_water.bin, NSUnderlyingError=0x7b40d5ec10 {Error Domain=NSPOSIXErrorDomain Code=1 "Operation not permitted"}}"#
+    let warnings = (0..<17).map { "Skipped \(String(format: "%02d", $0))_Water[0]: \(error)" } + ["No camera"]
+    let summary = InsertWarnings.summary(warnings)
+    #expect(summary.count == 2)
+    #expect(summary[0] == "17 \u{00D7} The file “glass_of_water.bin” couldn’t be opened because you don’t have permission to view it.")
+    #expect(summary[1] == "No camera")
+    // Capped, with a note for the rest.
+    let many = InsertWarnings.summary((0..<20).map { "Problem \($0)" })
+    #expect(many.count == InsertWarnings.maximumLines + 1)
+    #expect(many.last == "and 12 more (see the log)")
+}
+
 // #177: framing keeps the view direction and orbits the framed center.
 @Test func framingKeepsViewDirection() {
     var camera = EditorCamera()

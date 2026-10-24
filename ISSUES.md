@@ -4426,12 +4426,13 @@ Follow-up to #201. Multiple selection works in the tree (Cmd and Shift click), i
 ## 206: Composer: inserting a .gltf fails in the sandbox (external .bin), and the warning alert overflows the screen
 
 +++
-status: open
+status: closed
 priority: high
 kind: bug
 labels: area:composer, effort:m
 created: 2026-10-24T16:51:08Z
-updated: 2026-10-24T17:04:01Z
+updated: 2026-10-24T17:15:29Z
+closed: 2026-10-24T17:15:29Z
 +++
 
 Insert Model File… on a .gltf with an external buffer (gltf-research-scenes/scenes/glass-of-water/gltf/glass_of_water.gltf) loads none of its meshes. Every primitive is skipped with: NSCocoaErrorDomain 257 'The file glass_of_water.bin couldn't be opened because you don't have permission to view it' (NSPOSIXErrorDomain 1, Operation not permitted). Screenshot: ~/Desktop/Screenshot 2026-10-24 at 12.50.15@2x.png.
@@ -4446,6 +4447,7 @@ Fix options:
 Second problem in the same screenshot: the alert shows every warning in full, one per primitive with the whole NSError description, so it is taller than the screen and the OK button is off-screen. Show a summary instead: one line per distinct problem with a count (for example '17 meshes skipped: no permission to read glass_of_water.bin'), cap the list, and log the full text.
 
 - `2026-10-24T17:04:01Z`: Related: #197 (Insert Model File).
+- `2026-10-24T17:15:29Z`: Fixed the way the MetalSprocketsGLTF GLTFViewer demo does it: a .gltf whose buffers or images are separate files (ModelFile.needsFolderAccess) gets a second folder importer that opens in its folder, then loads with the folder's security scope. The alert now summarizes warnings (InsertWarnings), and the full text goes to the log. No unit test for the sandbox grant itself: tests do not run in the App Sandbox. The detection, folder check and summary are tested. Please check by inserting glass_of_water.gltf in the app.
 
 ---
 

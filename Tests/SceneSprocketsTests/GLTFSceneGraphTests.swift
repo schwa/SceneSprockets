@@ -452,4 +452,15 @@ func modelFileLoadsGLTFAndOBJ() throws {
     #expect(!SceneGraph(root: obj.node).meshEntries().isEmpty)
 
     #expect(throws: ModelFile.Failure.self) { try ModelFile.load(directory.appendingPathComponent("notes.txt"), device: device) }
+
+    // #206: a .gltf with a sibling .bin needs its folder; data URIs and other formats do not.
+    let external = directory.appendingPathComponent("External.gltf")
+    try #"{"asset":{"version":"2.0"},"buffers":[{"uri":"data.bin","byteLength":4}]}"#.write(to: external, atomically: true, encoding: .utf8)
+    let embedded = directory.appendingPathComponent("Embedded.gltf")
+    try #"{"asset":{"version":"2.0"},"buffers":[{"uri":"data:application/octet-stream;base64,AAAAAA==","byteLength":4}]}"#.write(to: embedded, atomically: true, encoding: .utf8)
+    #expect(try ModelFile.needsFolderAccess(external))
+    #expect(try !ModelFile.needsFolderAccess(embedded))
+    #expect(try !ModelFile.needsFolderAccess(objURL))
+    #expect(ModelFile.isFile(external, inside: directory))
+    #expect(!ModelFile.isFile(external, inside: directory.appendingPathComponent("Other")))
 }

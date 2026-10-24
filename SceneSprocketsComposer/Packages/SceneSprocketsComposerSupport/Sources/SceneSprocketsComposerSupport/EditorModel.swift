@@ -376,12 +376,14 @@ public final class EditorModel {
 
     // Adds the file's contents under the selected node (the root when nothing is selected or it is locked), selects
     // it and frames it, as one undo step (#197). Returns the loader's warnings.
+    // `scopedURL` is what the user granted: the file itself, or its folder for a .gltf with sibling files (#206).
     @discardableResult
-    func insertModel(from url: URL) throws -> [String] {
-        let isAccessing = url.startAccessingSecurityScopedResource()
+    func insertModel(from url: URL, scopedURL: URL? = nil) throws -> [String] {
+        let scopedURL = scopedURL ?? url
+        let isAccessing = scopedURL.startAccessingSecurityScopedResource()
         defer {
             if isAccessing {
-                url.stopAccessingSecurityScopedResource()
+                scopedURL.stopAccessingSecurityScopedResource()
             }
         }
         let (node, warnings) = try ModelFile.load(url, device: systemDefaultDevice())

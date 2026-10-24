@@ -25,6 +25,30 @@ public enum ModelFile {
         }
     }
 
+    // Whether `url` loads other files by relative URI (buffers or images that are not data URIs). In the App Sandbox
+    // the user must then grant its folder, as the MetalSprocketsGLTF GLTFViewer demo does (#206). .glb files are
+    // treated as self-contained.
+    public static func needsFolderAccess(_ url: URL) throws -> Bool {
+        guard url.pathExtension.lowercased() == "gltf" else {
+            return false
+        }
+        let json = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any] ?? [:]
+        let resources = (json["buffers"] as? [[String: Any]] ?? []) + (json["images"] as? [[String: Any]] ?? [])
+        return resources.contains { resource in
+            guard let uri = resource["uri"] as? String else {
+                return false
+            }
+            return !uri.hasPrefix("data:")
+        }
+    }
+
+    // Whether `file` is inside `folder`. Symlinks are resolved, because the two may reach the same place by different
+    // paths.
+    public static func isFile(_ file: URL, inside folder: URL) -> Bool {
+        let folderPath = folder.resolvingSymlinksInPath().standardizedFileURL.path
+        return file.resolvingSymlinksInPath().standardizedFileURL.path.hasPrefix(folderPath.hasSuffix("/") ? folderPath : folderPath + "/")
+    }
+
     // The file's scene under one node named after the file, detached from any scene graph. Animations are not kept.
     public static func load(_ url: URL, device: MTLDevice) throws -> (node: SceneGraph.Node, warnings: [String]) {
         let pathExtension = url.pathExtension.lowercased()

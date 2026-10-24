@@ -1,8 +1,11 @@
 import CollaborationKitUI
+import os
 import SceneSprockets
 import SceneSprocketsGizmos
 import SceneSprocketsPBR
 import SwiftUI
+
+private let insertLogger = Logger(subsystem: "io.schwa.SceneSprocketsComposer", category: "Insert")
 
 // Three panes: scene graph tree, preview, inspector.
 public struct ComposerView: View {
@@ -18,6 +21,9 @@ public struct ComposerView: View {
     @State private var assistantTurnUndo: AssistantTurnUndo?
     // An error or loader warnings from Insert Model File…
     @State private var insertMessage: String?
+    // A .gltf waiting for its folder to be granted (#206).
+    @State private var fileNeedingFolder: URL?
+    @State private var isChoosingFolder = false
     @Environment(\.undoManager)
     private var undoManager
 
@@ -28,6 +34,30 @@ public struct ComposerView: View {
         }
         self.document = document
         _model = State(initialValue: model)
+    }
+
+    private func needsFolderAccess(_ url: URL) throws -> Bool {
+        let isAccessing = url.startAccessingSecurityScopedResource()
+        defer {
+            if isAccessing {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+        return try ModelFile.needsFolderAccess(url)
+    }
+
+    private func insertModel(_ url: URL, scopedURL: URL) {
+        do {
+            let warnings = try model.insertModel(from: url, scopedURL: scopedURL)
+            // Scene archives cannot store imported meshes yet; saving keeps the nodes but drops the geometry. Loader
+            // warnings are summarized; the full text goes to the log (#206).
+            for warning in warnings {
+                insertLogger.warning("Insert \(url.lastPathComponent, privacy: .public): \(warning, privacy: .public)")
+            }
+            insertMessage = (["The model's meshes are not saved with the document yet (#157, #158)."] + InsertWarnings.summary(warnings)).joined(separator: "\n")
+        } catch {
+            insertMessage = error.localizedDescription
+        }
     }
 
     public var body: some View {
@@ -87,12 +117,35 @@ public struct ComposerView: View {
         .focusedSceneValue(\.editorModel, model)
         .fileImporter(isPresented: $model.isImportingModel, allowedContentTypes: ModelFile.contentTypes) { result in
             do {
-                let warnings = try model.insertModel(from: result.get())
-                // Scene archives cannot store imported meshes yet; saving keeps the nodes but drops the geometry.
-                insertMessage = (["The model's meshes are not saved with the document yet (#157, #158)."] + warnings).joined(separator: "\n")
+                let url = try result.get()
+                if try needsFolderAccess(url) {
+                    fileNeedingFolder = url
+                    isChoosingFolder = true
+                } else {
+                    insertModel(url, scopedURL: url)
+                }
             } catch {
-                insertMessage = String(describing: error)
+                insertMessage = error.localizedDescription
             }
+        }
+        .background {
+            // A second importer must live on another view; this one asks for the folder of a .gltf whose buffers and
+            // images are separate files, which the sandbox does not grant with the file (#206). As in the
+            // MetalSprocketsGLTF GLTFViewer demo.
+            Color.clear
+                .fileImporter(isPresented: $isChoosingFolder, allowedContentTypes: [.folder]) { result in
+                    if let file = fileNeedingFolder, case .success(let folder) = result {
+                        if ModelFile.isFile(file, inside: folder) {
+                            insertModel(file, scopedURL: folder)
+                        } else {
+                            insertMessage = "\(file.lastPathComponent) is not inside \(folder.lastPathComponent)."
+                        }
+                    }
+                    fileNeedingFolder = nil
+                }
+                .fileDialogMessage("\(fileNeedingFolder?.lastPathComponent ?? "This file") loads other files from its folder. Choose that folder to allow access.")
+                .fileDialogDefaultDirectory(fileNeedingFolder?.deletingLastPathComponent())
+                .fileDialogConfirmationLabel("Allow Access")
         }
         .alert("Insert Model File", isPresented: Binding(get: { insertMessage != nil }, set: { if !$0 { insertMessage = nil } })) {
             Button("OK") {
