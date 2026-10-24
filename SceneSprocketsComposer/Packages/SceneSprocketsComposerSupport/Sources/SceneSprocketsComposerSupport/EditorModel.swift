@@ -20,8 +20,26 @@ public final class EditorModel {
             if !isSettingSelection {
                 selectedIDs = selection.map { [$0] } ?? []
             }
+            if selection != nil {
+                editorItem = nil
+            }
             updateGizmoTarget()
         }
+    }
+    // A selected editor row (#207): the default camera or default lighting, which are not scene nodes. Selecting one
+    // clears the node selection, and selecting a node clears it.
+    var editorItem: EditorItem? {
+        didSet {
+            if editorItem != nil, selection != nil {
+                selection = nil
+            }
+        }
+    }
+
+    // Whether the default light is on and in effect: SceneView adds it only when the scene has no lights.
+    var isDefaultLightingActive: Bool {
+        _ = transformRevision
+        return renderSettings.usesDefaultLighting && sceneGraph.lightNodes().isEmpty
     }
     // Every selected node, including `selection` (#201). Change it with select(_:primary:).
     public private(set) var selectedIDs: Set<SceneGraph.Node.ID> = []
@@ -423,6 +441,11 @@ public final class EditorModel {
         }
         return sceneGraph.nodesWithWorldTransforms(includeHidden: true).first { $0.node.id == selection }?.node
     }
+}
+
+enum EditorItem: Hashable {
+    case defaultCamera
+    case defaultLighting
 }
 
 enum SidebarTab: Hashable {

@@ -17,12 +17,10 @@ struct RenderSettingsView: View {
                 Toggle("Frame Timing", isOn: $model.renderSettings.showsFrameTiming)
                     .help("Frame rate and CPU and GPU timings")
             }
+            // Default lighting and the camera are in the Default Lighting and Default Camera rows (#207).
             Section("Lighting") {
-                Toggle("Default Lighting", isOn: $model.renderSettings.usesDefaultLighting)
-                    .help("Adds a light at the camera when the scene has none")
                 Toggle("Shadows", isOn: $model.renderSettings.showsShadows)
             }
-            cameraSection
             Section("Debug") {
                 Picker("View", selection: $model.renderSettings.debugMode) {
                     Text("Materials").tag(SceneGraphDebugMode?.none)
@@ -48,18 +46,4 @@ struct RenderSettingsView: View {
         .formStyle(.grouped)
     }
 
-    private var cameraSection: some View {
-        Section("Camera") {
-            LabeledContent("Field of View") {
-                HStack {
-                    Slider(value: $model.renderSettings.fieldOfView, in: 10 ... 120)
-                    Text("\(Int(model.renderSettings.fieldOfView.rounded()))\u{00B0}")
-                        .monospacedDigit()
-                        .frame(minWidth: 36, alignment: .trailing)
-                }
-            }
-            TextField("Near Clip", value: $model.renderSettings.nearClip, format: .number)
-            TextField("Far Clip", value: $model.renderSettings.farClip, format: .number)
-        }
-    }
 }

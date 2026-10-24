@@ -64,6 +64,10 @@ struct NodeInspectorView: View {
             }
             .formStyle(.grouped)
             .cameraControlStyle(.compact)
+        } else if model.editorItem == .defaultCamera {
+            DefaultCameraInspectorView(model: model)
+        } else if model.editorItem == .defaultLighting {
+            DefaultLightingInspectorView(model: model)
         } else {
             SceneInspectorView(model: model)
         }

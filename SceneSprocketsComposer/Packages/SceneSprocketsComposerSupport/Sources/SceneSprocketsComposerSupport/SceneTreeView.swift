@@ -5,8 +5,10 @@ struct SceneTreeView: View {
     @Bindable var model: EditorModel
 
     // The Scene row stands for "no node selected", which shows scene settings in the inspector.
+    // Default Camera and Default Lighting (#207) are editor rows next to Scene, not scene nodes.
     private enum Item: Hashable {
         case scene
+        case editor(EditorItem)
         case node(SceneGraph.Node.ID)
     }
 
@@ -14,13 +16,21 @@ struct SceneTreeView: View {
     // primary while it is still selected; otherwise the newly added node becomes primary.
     private var listSelection: Binding<Set<Item>> {
         Binding(get: {
-            model.selectedIDs.isEmpty ? [.scene] : Set(model.selectedIDs.map(Item.node))
+            if let editorItem = model.editorItem {
+                return [.editor(editorItem)]
+            }
+            return model.selectedIDs.isEmpty ? [.scene] : Set(model.selectedIDs.map(Item.node))
         }, set: { items in
             let ids = items.compactMap { item -> SceneGraph.Node.ID? in
                 if case let .node(id) = item { id } else { nil }
             }
             guard !ids.isEmpty else {
+                // An editor row selects alone; Scene or nothing clears everything.
+                let editorItem = items.lazy.compactMap { item -> EditorItem? in
+                    if case let .editor(editorItem) = item { editorItem } else { nil }
+                }.first
                 model.selection = nil
+                model.editorItem = editorItem
                 return
             }
             let added = ids.first { !model.selectedIDs.contains($0) }
@@ -32,6 +42,11 @@ struct SceneTreeView: View {
         List(selection: listSelection) {
             Label("Scene", systemImage: "globe")
                 .tag(Item.scene)
+            Label("Default Camera", systemImage: "camera.viewfinder")
+                .tag(Item.editor(.defaultCamera))
+            Label("Default Lighting", systemImage: "lightbulb.max")
+                .foregroundStyle(model.isDefaultLightingActive ? .primary : .secondary)
+                .tag(Item.editor(.defaultLighting))
             OutlineGroup([model.sceneGraph.root], children: \.outlineChildren) { node in
                 HStack {
                     Label(node.displayName, systemImage: node.systemImage)

@@ -4454,12 +4454,13 @@ Second problem in the same screenshot: the alert shows every warning in full, on
 ## 207: Composer: top-level Default Camera and Default Lighting rows in the scene tree
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: area:composer, effort:m
 created: 2026-10-24T16:53:27Z
-updated: 2026-10-24T17:04:01Z
+updated: 2026-10-24T17:24:42Z
+closed: 2026-10-24T17:24:42Z
 +++
 
 The scene tree has a top-level Scene row next to the root (scene settings). Add two more top-level rows: Default Camera and Default Lighting. They are editor objects, not nodes in the scene graph.

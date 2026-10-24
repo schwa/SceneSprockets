@@ -567,6 +567,24 @@ import UniformTypeIdentifiers
     #expect((PBRParameters.scalars.count, PBRParameters.colors.count, PBRParameters.toggles.count) == (24, 6, 3))
 }
 
+// #207: editor rows and node selection exclude each other; default lighting is active only without scene lights.
+@MainActor
+@Test func defaultCameraAndLightingRows() throws {
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    model.addShape(.box(), label: "Box")
+    let box = try #require(model.selectedNode)
+    model.editorItem = .defaultCamera
+    #expect(model.selection == nil && model.selectedIDs.isEmpty)
+    model.selection = box.id
+    #expect(model.editorItem == nil)
+
+    #expect(model.isDefaultLightingActive)
+    model.addLight(.point)
+    #expect(!model.isDefaultLightingActive)
+    model.renderSettings.usesDefaultLighting = false
+    #expect(!model.isDefaultLightingActive)
+}
+
 // #177: framing keeps the view direction and orbits the framed center.
 @Test func framingKeepsViewDirection() {
     var camera = EditorCamera()
