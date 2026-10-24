@@ -4229,3 +4229,42 @@ created: 2026-10-24T15:12:57Z
 Split from #193. Hide/show (Node.isVisible) is done. A separate 'inactive' state, like Unity's SetActive, would also stop the subtree's actions, constraints, particles and physics, not just drawing. It needs a scene graph flag that advanceActions, applyConstraints, particles and SceneSprocketsPhysics respect. Decide whether inactive implies hidden.
 
 ---
+
+## 197: Composer: Insert Model File… (glTF, USDZ, OBJ)
+
++++
+status: new
+priority: medium
+kind: feature
+labels: area:composer, effort:m
+created: 2026-10-24T15:15:29Z
++++
+
+Add an Insert Model File… command (+ menu and Scene menu) that picks a file and adds its contents to the open scene under the selected node, or under the root when nothing is selected. Select the new subtree, and make it one undo step.
+
+Loaders already exist in SceneSprocketsPBR: GLTFSceneGraph for .gltf/.glb, and ModelIOSceneGraph for the formats Model I/O reads (.usdz, .usd, .obj, .ply, .stl). Optionally scale or frame the result to fit the scene.
+
+Saving: generated meshes are not saved yet (#158), and glTF by reference is #157. Until then, inserted meshes may be skipped with a warning when saving, so decide whether to block saving or warn. Related: #183 (explode imported glTF).
+
+---
+
+## 198: Composer: basic material editing in the inspector
+
++++
+status: new
+priority: high
+kind: feature
+labels: area:composer, effort:m
+created: 2026-10-24T15:15:46Z
+updated: 2026-10-24T15:15:55Z
++++
+
+Mesh nodes show no material in the inspector, and new shapes always get a plain grey Blinn-Phong material. Add a Material section for mesh nodes:
+- type picker: Blinn-Phong, PBR (and ShaderMaterial presets such as normals and rim, read-only)
+- Blinn-Phong: diffuse, ambient and specular colors, shininess
+- PBR: base color, metallic, roughness, emissive
+- a few presets (plastic, metal, rubber, glass) as a quick start
+
+Use ColorPicker with linear conversion, as SceneInspectorView's background color does. Edits are undoable and keep textures already on the material; editing textures is out of scope. For multi-material meshes, edit the material of each submesh.
+
+---
