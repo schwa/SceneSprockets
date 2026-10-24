@@ -3967,12 +3967,14 @@ Split from #162. Saving a scene still warns for these two node features. Audio p
 status: open
 priority: low
 kind: feature
-labels: effort:m, area:composer
+labels: effort:m, area:composer, blocked
 created: 2026-10-24T11:44:53Z
-updated: 2026-10-24T11:44:56Z
+updated: 2026-10-24T15:08:18Z
 +++
 
 Imported glTFs are kept as mostly complete units (#157), not edited in detail. Add an Explode command that converts an imported glTF node tree into plain scene graph nodes (meshes, materials, transforms), so they can be edited and are then saved as generated content (#158).
+
+- `2026-10-24T15:08:18Z`: Punting: nothing to explode yet. The Composer has no glTF import, and GLTFSceneGraph already turns a glTF into plain nodes. Explode only makes sense once #157 tags imported nodes as one glTF unit kept by reference, and #158 can save the exploded meshes as generated content. Unblocker: do #157 (and decide where the glTF writer lives for #158), plus a Composer 'Import glTF…' command. Explode then removes the tag from the imported subtree.
 
 ---
 
