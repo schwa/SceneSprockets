@@ -4684,3 +4684,25 @@ created: 2026-10-24T18:34:16Z
 +++
 
 ---
+
+## 218: Expand the assistant system prompt
+
++++
+status: new
+priority: medium
+kind: enhancement
+created: 2026-10-24T18:35:54Z
++++
+
+AssistantPanel.systemPrompt (SceneSprocketsComposerSupport/AssistantPanel.swift) is short. Expand it to cover:
+
+- The assistant's skills/tools and when to use each.
+- Lighting and shadows: how to light a scene well and use shadows.
+- Use the "drop to floor" feature when it makes sense, so models don't clip through the floor.
+- When creating many models, spread them out; don't stack them all at the origin.
+- Aim for creative, good-looking scenes (composition, color, materials).
+- Prefer PBR materials over other shaders.
+
+Related: #216 (batching), #217 (glass materials).
+
+---
