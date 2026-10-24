@@ -4153,12 +4153,13 @@ Make edits through EditorModel so they can be undone and the UI refreshes. Batch
 ## 192: Composer: lock nodes
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:composer, effort:m
 created: 2026-10-24T14:16:05Z
-updated: 2026-10-24T14:18:19Z
+updated: 2026-10-24T15:11:45Z
+closed: 2026-10-24T15:11:45Z
 +++
 
 Add a lock toggle per node, in the tree row and the inspector. A locked node cannot be picked in the viewport, moved by the gizmo, or edited in the inspector. It can still be selected in the tree. Decide if the lock also applies to children. Save it as editor state (#185) or in the scene; probably editor state.

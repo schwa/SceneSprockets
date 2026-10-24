@@ -154,6 +154,49 @@ import UniformTypeIdentifiers
     }
 }
 
+// #192
+@MainActor
+@Test func lockedNodesCannotBePickedMovedOrDeleted() throws {
+    let document = ComposerDocument()
+    let model = EditorModel(sceneGraph: document.sceneGraph)
+    document.editorModel = model
+    model.addShape(.box(), label: "Parent")
+    let undoManager = UndoManager()
+    undoManager.groupsByEvent = false
+    model.undoManager = undoManager
+    let parent = try #require(model.selectedNode)
+    let child = SceneGraph.Node(parent: parent, label: "Child")
+
+    undoManager.beginUndoGrouping()
+    model.setLocked(true, parent)
+    undoManager.endUndoGrouping()
+    #expect(model.isLocked(child))
+    // Selected in the tree, but the gizmo lets go and delete is refused.
+    #expect(model.gizmo.target == nil)
+    #expect(!model.canDeleteSelection)
+    model.deleteSelection()
+    #expect(parent.parent != nil)
+    // Viewport picks skip it.
+    model.pick(child)
+    #expect(model.selection == nil)
+    model.selection = child.id
+    #expect(model.gizmo.target == nil)
+
+    // Saved and restored by path.
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("scenesprocketsd")
+    defer { try? FileManager.default.removeItem(at: url) }
+    try document.snapshot(contentType: .sceneSprocketsDocument).write(to: url, options: [], originalContentsURL: nil)
+    let loaded = try ComposerDocument(contentsOf: url)
+    let reopened = EditorModel(sceneGraph: loaded.sceneGraph)
+    reopened.apply(try #require(loaded.editorState))
+    #expect(reopened.isLocked(try #require(loaded.sceneGraph.root.children.first)))
+
+    undoManager.undo()
+    #expect(!model.isLocked(child))
+    model.pick(child)
+    #expect(model.gizmo.target === child)
+}
+
 // #177: framing keeps the view direction and orbits the framed center.
 @Test func framingKeepsViewDirection() {
     var camera = EditorCamera()

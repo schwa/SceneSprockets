@@ -25,14 +25,21 @@ struct SceneTreeView: View {
             Label("Scene", systemImage: "globe")
                 .tag(Item.scene)
             OutlineGroup([model.sceneGraph.root], children: \.outlineChildren) { node in
-                Label(node.displayName, systemImage: node.systemImage)
-                    .tag(Item.node(node.id))
-                    .contextMenu {
-                        Button("Delete", systemImage: "trash") {
-                            model.delete(node)
-                        }
-                        .disabled(node.parent == nil)
+                HStack {
+                    Label(node.displayName, systemImage: node.systemImage)
+                    Spacer()
+                    lockButton(node)
+                }
+                .tag(Item.node(node.id))
+                .contextMenu {
+                    Button(model.lockedNodes.contains(node.id) ? "Unlock" : "Lock", systemImage: model.lockedNodes.contains(node.id) ? "lock.open" : "lock") {
+                        model.setLocked(!model.lockedNodes.contains(node.id), node)
                     }
+                    Button("Delete", systemImage: "trash") {
+                        model.delete(node)
+                    }
+                    .disabled(node.parent == nil || model.isLocked(node))
+                }
             }
         }
         #if os(macOS)
@@ -40,6 +47,20 @@ struct SceneTreeView: View {
             model.deleteSelection()
         }
         #endif
+    }
+
+    // Faint when unlocked, or when only an ancestor is locked.
+    private func lockButton(_ node: SceneGraph.Node) -> some View {
+        let isLockedItself = model.lockedNodes.contains(node.id)
+        let isLocked = model.isLocked(node)
+        return Button {
+            model.setLocked(!isLockedItself, node)
+        } label: {
+            Image(systemName: isLocked ? "lock.fill" : "lock.open")
+                .foregroundStyle(isLockedItself ? .primary : .tertiary)
+        }
+        .buttonStyle(.plain)
+        .help(isLockedItself ? "Unlock" : "Lock")
     }
 }
 

@@ -11,11 +11,19 @@ struct NodeInspectorView: View {
     var body: some View {
         if let node = model.selectedNode {
             Form {
+                let isLocked = model.isLocked(node)
                 Section("Node") {
                     TextField("Name", text: Binding(get: { node.label ?? "" }, set: { model.setLabel($0.isEmpty ? nil : $0, of: node) }), prompt: Text("Untitled"))
+                        .disabled(isLocked)
+                    Toggle("Locked", isOn: Binding(get: { model.lockedNodes.contains(node.id) }, set: { model.setLocked($0, node) }))
+                        .help("Locked nodes and their children cannot be picked in the viewport, moved or edited")
                     LabeledContent("Kind", value: node.kindName)
                 }
                 Section("Transform") {
+                    if isLocked {
+                        Text("Unlock to edit.")
+                            .foregroundStyle(.secondary)
+                    }
                     LabeledContent("Translation") {
                         vectorFields(trs(node, \.translation))
                     }
@@ -31,6 +39,7 @@ struct NodeInspectorView: View {
                         vectorFields(trs(node, \.scale))
                     }
                 }
+                .disabled(isLocked)
                 if let light = light(node), light.wrappedValue.type == .spot {
                     Section("Spot Cone") {
                         LabeledContent("Inner") {
@@ -40,6 +49,7 @@ struct NodeInspectorView: View {
                             AngleEditor(angle: angle(light, \.outerConeAngle), limit: .degrees(0) ... .degrees(90))
                         }
                     }
+                    .disabled(isLocked)
                 }
             }
             .formStyle(.grouped)

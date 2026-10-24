@@ -34,7 +34,7 @@ struct ScenePreviewView: View {
                 isFocused = true
                 // Light and camera shapes are drawn on top, so they win over meshes behind them.
                 let shapeHit = settings.showsLightsAndCameras ? DebugShapes.hitTest(point, sceneGraph: model.sceneGraph, viewport: viewport) : nil
-                model.selection = (shapeHit ?? hit?.node)?.id
+                model.pick(shapeHit ?? hit?.node)
             },
             decorations: { [selectedNode = model.selectedNode, sceneGraph = model.sceneGraph, displayScale] context, drawableSize in
                 let grid = try settings.decorations(context: context, drawableSize: drawableSize)

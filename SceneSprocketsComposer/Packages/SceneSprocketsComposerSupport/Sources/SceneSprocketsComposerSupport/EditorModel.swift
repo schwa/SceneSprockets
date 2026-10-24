@@ -14,7 +14,12 @@ import simd
 public final class EditorModel {
     public let sceneGraph: SceneGraph
     public var selection: SceneGraph.Node.ID? {
-        didSet { gizmo.target = selectedNode }
+        didSet { updateGizmoTarget() }
+    }
+    // Locked nodes and their descendants cannot be picked in the viewport, moved or edited (#192). Editor state, saved
+    // in editor.json.
+    private(set) var lockedNodes: Set<SceneGraph.Node.ID> = [] {
+        didSet { updateGizmoTarget() }
     }
     public var gizmoMode = TransformGizmo.Mode.translate {
         didSet { gizmo.mode = gizmoMode }
@@ -127,11 +132,55 @@ public final class EditorModel {
 
     // The root cannot be deleted.
     var canDeleteSelection: Bool {
-        selectedNode?.parent != nil
+        guard let node = selectedNode else {
+            return false
+        }
+        return node.parent != nil && !isLocked(node)
+    }
+
+    // Locked itself or through an ancestor.
+    func isLocked(_ node: SceneGraph.Node) -> Bool {
+        var current: SceneGraph.Node? = node
+        while let candidate = current {
+            if lockedNodes.contains(candidate.id) {
+                return true
+            }
+            current = candidate.parent
+        }
+        return false
+    }
+
+    func setLocked(_ isLocked: Bool, _ node: SceneGraph.Node) {
+        guard lockedNodes.contains(node.id) != isLocked else {
+            return
+        }
+        if isLocked {
+            lockedNodes.insert(node.id)
+        } else {
+            lockedNodes.remove(node.id)
+        }
+        undoManager?.registerUndo(withTarget: self) { model in
+            model.setLocked(!isLocked, node)
+        }
+        undoManager?.setActionName(isLocked ? "Lock" : "Unlock")
+    }
+
+    // From editor.json; not undoable.
+    func restoreLockedNodes(_ ids: Set<SceneGraph.Node.ID>) {
+        lockedNodes = ids
+    }
+
+    // Viewport picks skip locked nodes, which leaves nothing selected.
+    func pick(_ node: SceneGraph.Node?) {
+        selection = node.flatMap { isLocked($0) ? nil : $0.id }
+    }
+
+    private func updateGizmoTarget() {
+        gizmo.target = selectedNode.flatMap { isLocked($0) ? nil : $0 }
     }
 
     func deleteSelection() {
-        guard let node = selectedNode else {
+        guard canDeleteSelection, let node = selectedNode else {
             return
         }
         delete(node)
