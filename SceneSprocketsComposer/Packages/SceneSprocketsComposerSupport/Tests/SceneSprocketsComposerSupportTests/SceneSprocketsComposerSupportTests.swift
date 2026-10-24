@@ -197,6 +197,28 @@ import UniformTypeIdentifiers
     #expect(model.gizmo.target === child)
 }
 
+// #193
+@MainActor
+@Test func hidingRemovesSubtreeAndUndoes() throws {
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    model.addShape(.box(), label: "Parent")
+    let parent = try #require(model.selectedNode)
+    let child = SceneGraph.Node(parent: parent, label: "Child")
+    let undoManager = UndoManager()
+    undoManager.groupsByEvent = false
+    model.undoManager = undoManager
+
+    undoManager.beginUndoGrouping()
+    model.setVisible(false, parent)
+    undoManager.endUndoGrouping()
+    #expect(model.isHidden(child))
+    #expect(model.sceneGraph.bounds == nil)
+    #expect(model.sceneGraph.hitTest(Ray3D(origin: [0, 0, 5], direction: [0, 0, -1])).isEmpty)
+    undoManager.undo()
+    #expect(!model.isHidden(child))
+    #expect(model.sceneGraph.hitTest(Ray3D(origin: [0, 0, 5], direction: [0, 0, -1])).first?.node === parent)
+}
+
 // #177: framing keeps the view direction and orbits the framed center.
 @Test func framingKeepsViewDirection() {
     var camera = EditorCamera()

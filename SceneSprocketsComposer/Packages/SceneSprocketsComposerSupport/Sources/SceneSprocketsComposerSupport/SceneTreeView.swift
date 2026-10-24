@@ -27,11 +27,16 @@ struct SceneTreeView: View {
             OutlineGroup([model.sceneGraph.root], children: \.outlineChildren) { node in
                 HStack {
                     Label(node.displayName, systemImage: node.systemImage)
+                        .opacity(model.isHidden(node) ? 0.45 : 1)
                     Spacer()
+                    visibilityButton(node)
                     lockButton(node)
                 }
                 .tag(Item.node(node.id))
                 .contextMenu {
+                    Button(model.isVisible(node) ? "Hide" : "Show", systemImage: model.isVisible(node) ? "eye.slash" : "eye") {
+                        model.setVisible(!node.isVisible, node)
+                    }
                     Button(model.lockedNodes.contains(node.id) ? "Unlock" : "Lock", systemImage: model.lockedNodes.contains(node.id) ? "lock.open" : "lock") {
                         model.setLocked(!model.lockedNodes.contains(node.id), node)
                     }
@@ -47,6 +52,19 @@ struct SceneTreeView: View {
             model.deleteSelection()
         }
         #endif
+    }
+
+    // Faint when visible.
+    private func visibilityButton(_ node: SceneGraph.Node) -> some View {
+        let isVisible = model.isVisible(node)
+        return Button {
+            model.setVisible(!isVisible, node)
+        } label: {
+            Image(systemName: isVisible ? "eye" : "eye.slash")
+                .foregroundStyle(isVisible ? .tertiary : .primary)
+        }
+        .buttonStyle(.plain)
+        .help(isVisible ? "Hide" : "Show")
     }
 
     // Faint when unlocked, or when only an ancestor is locked.

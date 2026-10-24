@@ -165,6 +165,39 @@ public final class EditorModel {
         undoManager?.setActionName(isLocked ? "Lock" : "Unlock")
     }
 
+    // Scene data (Node.isVisible, saved in scene.json). A hidden node and its subtree are not drawn, lit by, hit or
+    // counted in bounds (#193).
+    func setVisible(_ isVisible: Bool, _ node: SceneGraph.Node) {
+        guard node.isVisible != isVisible else {
+            return
+        }
+        node.isVisible = isVisible
+        transformRevision += 1
+        undoManager?.registerUndo(withTarget: self) { model in
+            model.setVisible(!isVisible, node)
+        }
+        undoManager?.setActionName(isVisible ? "Show" : "Hide")
+    }
+
+    // The node's own flag; reads the revision so views refresh. Nodes are not observable (#155).
+    func isVisible(_ node: SceneGraph.Node) -> Bool {
+        _ = transformRevision
+        return node.isVisible
+    }
+
+    // Hidden itself or through an ancestor.
+    func isHidden(_ node: SceneGraph.Node) -> Bool {
+        _ = transformRevision
+        var current: SceneGraph.Node? = node
+        while let candidate = current {
+            if !candidate.isVisible {
+                return true
+            }
+            current = candidate.parent
+        }
+        return false
+    }
+
     // From editor.json; not undoable.
     func restoreLockedNodes(_ ids: Set<SceneGraph.Node.ID>) {
         lockedNodes = ids

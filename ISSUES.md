@@ -4172,12 +4172,13 @@ Add a lock toggle per node, in the tree row and the inspector. A locked node can
 ## 193: Composer: hide/show and enable/disable nodes
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:composer, effort:m
 created: 2026-10-24T14:16:05Z
-updated: 2026-10-24T14:18:19Z
+updated: 2026-10-24T15:12:57Z
+closed: 2026-10-24T15:12:57Z
 +++
 
 Add an eye toggle in the tree row and the inspector to hide and show nodes, using SceneGraph.Node.isVisible, which the archive already saves. Hidden nodes are not drawn and not hit-tested; show them dimmed in the tree. Decide if 'inactive' (also stops actions, constraints, particles and physics) is a separate state from 'hidden', like Unity's SetActive compared to a renderer toggle. Make changes undoable.
@@ -4212,5 +4213,19 @@ created: 2026-10-24T15:04:55Z
 +++
 
 Follow-up to #132. SceneGraphDebugMode covers geometry: shaded, normals, texture coordinates, UV checker, world position and wireframe. Material channels are not covered: base color, metallic, roughness, occlusion, emissive and others. MetalSprocketsPBR's PBRRenderer.debugView (PBRDebugView) already draws these for PBR. Pass a channel mode through SceneGraphRenderContext to PBRMaterialRenderer, and add a Blinn-Phong equivalent (diffuse, specular, shininess).
+
+---
+
+## 196: Composer: inactive nodes (pause actions, constraints, particles and physics)
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:composer, area:scenegraph, effort:m
+created: 2026-10-24T15:12:57Z
++++
+
+Split from #193. Hide/show (Node.isVisible) is done. A separate 'inactive' state, like Unity's SetActive, would also stop the subtree's actions, constraints, particles and physics, not just drawing. It needs a scene graph flag that advanceActions, applyConstraints, particles and SceneSprocketsPhysics respect. Decide whether inactive implies hidden.
 
 ---

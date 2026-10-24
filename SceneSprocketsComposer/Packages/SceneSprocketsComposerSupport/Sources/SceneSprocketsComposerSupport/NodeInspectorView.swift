@@ -15,6 +15,9 @@ struct NodeInspectorView: View {
                 Section("Node") {
                     TextField("Name", text: Binding(get: { node.label ?? "" }, set: { model.setLabel($0.isEmpty ? nil : $0, of: node) }), prompt: Text("Untitled"))
                         .disabled(isLocked)
+                    Toggle("Visible", isOn: Binding(get: { model.isVisible(node) }, set: { model.setVisible($0, node) }))
+                        .help("Hidden nodes and their children are not drawn, do not light the scene and cannot be clicked")
+                        .disabled(isLocked)
                     Toggle("Locked", isOn: Binding(get: { model.lockedNodes.contains(node.id) }, set: { model.setLocked($0, node) }))
                         .help("Locked nodes and their children cannot be picked in the viewport, moved or edited")
                     LabeledContent("Kind", value: node.kindName)
