@@ -3890,12 +3890,13 @@ Seen in shadows and scenekit-features (spinning torus).
 ## 180: Scene archive: samplers, stored mip levels, cube/3D and compressed textures
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:document, effort:m
 created: 2026-10-23T14:14:45Z
-updated: 2026-10-24T11:36:11Z
+updated: 2026-10-24T12:52:18Z
+closed: 2026-10-24T12:52:18Z
 +++
 
 Split from #164 (PBR texture transforms are done there).
@@ -3907,6 +3908,7 @@ Split from #164 (PBR texture transforms are done there).
 
 - `2026-10-24T11:44:53Z`: Decided: yes, keep sampler descriptors with textures so filters and address modes can be saved.
 - `2026-10-24T11:53:26Z`: Sampler part depends on MetalSprocketsPBR #21.
+- `2026-10-24T12:52:18Z`: Done: samplers (PBR via MetalSprocketsPBR #21; Blinn-Phong Source.texture now takes an MTLSamplerDescriptor), stored mip levels, 2D array/cube/cube array/3D textures, BC and ASTC compressed formats. Non-PNG textures are one .bin with every slice and level. Not done: EXR for float textures (still raw bytes, exact); file a new issue if wanted.
 
 ---
 

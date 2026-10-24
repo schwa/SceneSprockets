@@ -15,8 +15,8 @@ public struct BlinnPhongSceneMaterial: SceneSprockets.Material, SamplesShadowsIn
         // Linear RGB.
         case color(SIMD3<Float>)
         // Sampled at the mesh's first texture coordinates and multiplied by `tint`. A nil sampler uses linear
-        // filtering with repeat.
-        case texture(MTLTexture, sampler: MTLSamplerState? = nil, tint: SIMD3<Float> = .one)
+        // filtering with repeat. A descriptor, not a sampler state, so scenes can save it (#180).
+        case texture(MTLTexture, sampler: MTLSamplerDescriptor? = nil, tint: SIMD3<Float> = .one)
 
         public static func color(_ grey: Float) -> Self {
             .color(SIMD3(repeating: grey))
@@ -325,7 +325,7 @@ extension BlinnPhongSceneMaterial {
     // Textures missing from the material are bound as `placeholder`, and flagged off. The first texture's sampler
     // is used for all three.
     func resolved(placeholder: MTLTexture, defaultSampler: MTLSamplerState) -> Resolved {
-        func split(_ source: Source) -> (color: SIMD3<Float>, texture: MTLTexture?, sampler: MTLSamplerState?) {
+        func split(_ source: Source) -> (color: SIMD3<Float>, texture: MTLTexture?, sampler: MTLSamplerDescriptor?) {
             switch source {
             case .color(let color):
                 (color, nil, nil)
@@ -352,7 +352,8 @@ extension BlinnPhongSceneMaterial {
             hasEmissionTexture: emission.texture == nil ? 0 : 1,
             hasNormalMap: normalMap == nil ? 0 : 1
         )
-        let sampler = diffuse.sampler ?? ambient.sampler ?? specular.sampler ?? emission.sampler ?? defaultSampler
+        let samplerDescriptor = diffuse.sampler ?? ambient.sampler ?? specular.sampler ?? emission.sampler
+        let sampler = samplerDescriptor.flatMap { try? BlinnPhongShaders.samplerState(for: $0) } ?? defaultSampler
         return Resolved(uniforms: uniforms, ambientTexture: ambient.texture ?? placeholder, diffuseTexture: diffuse.texture ?? placeholder, specularTexture: specular.texture ?? placeholder, emissionTexture: emission.texture ?? placeholder, normalTexture: normalMap ?? placeholder, sampler: sampler)
     }
 }
@@ -559,6 +560,8 @@ struct BlinnPhongShaders {
     nonisolated(unsafe) private static var cached: BlinnPhongShaders?
     nonisolated(unsafe) private static var cachedPlaceholder: MTLTexture?
     nonisolated(unsafe) private static var cachedSampler: MTLSamplerState?
+    // By descriptor identity, so a material's sampler state is made once.
+    nonisolated(unsafe) private static var samplerStates: [ObjectIdentifier: (descriptor: MTLSamplerDescriptor, state: MTLSamplerState)] = [:]
     private static let lock = NSLock()
 
     static func shared() throws -> BlinnPhongShaders {
@@ -595,6 +598,20 @@ struct BlinnPhongShaders {
         texture.replace(region: MTLRegionMake2D(0, 0, 1, 1), mipmapLevel: 0, withBytes: [UInt8](repeating: 255, count: 4), bytesPerRow: 4)
         cachedPlaceholder = texture
         return texture
+    }
+
+    static func samplerState(for descriptor: MTLSamplerDescriptor) throws -> MTLSamplerState {
+        lock.lock()
+        defer { lock.unlock() }
+        if let cached = samplerStates[ObjectIdentifier(descriptor)] {
+            return cached.state
+        }
+        guard let state = _MTLCreateSystemDefaultDevice().makeSamplerState(descriptor: descriptor) else {
+            throw MetalSupportError.resourceCreationFailure("Failed to create Blinn-Phong sampler")
+        }
+        // The descriptor is kept so its identifier is not reused.
+        samplerStates[ObjectIdentifier(descriptor)] = (descriptor, state)
+        return state
     }
 
     static func defaultSampler() throws -> MTLSamplerState {

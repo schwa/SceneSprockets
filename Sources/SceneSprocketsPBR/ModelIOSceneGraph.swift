@@ -44,7 +44,6 @@ public struct ModelIOSceneGraph {
 
 enum ModelIOSceneGraphError: Error {
     case emptyAsset(URL)
-    case samplerCreationFailed
 }
 
 private struct ModelIOConverter {
@@ -52,7 +51,6 @@ private struct ModelIOConverter {
     let materialKind: ModelIOSceneGraph.MaterialKind
     let textureLoader: MTKTextureLoader
     let samplerDescriptor: MTLSamplerDescriptor
-    let sampler: MTLSamplerState
     let placeholder: PBRMaterial.Binding
     var channels: [SceneGraph.AnimationClip.Channel] = []
     var warnings: [String] = []
@@ -69,10 +67,6 @@ private struct ModelIOConverter {
         descriptor.mipFilter = .linear
         descriptor.sAddressMode = .repeat
         descriptor.tAddressMode = .repeat
-        guard let sampler = device.makeSamplerState(descriptor: descriptor) else {
-            throw ModelIOSceneGraphError.samplerCreationFailed
-        }
-        self.sampler = sampler
         samplerDescriptor = descriptor
         placeholder = try PBRMaterial.placeholderBinding(device: device)
     }
@@ -203,7 +197,7 @@ private struct ModelIOConverter {
             }
             result = PBRSceneMaterial(try PBRMaterial(name: source?.name, uniforms: uniforms, textureBindings: bindings, device: device))
         case .blinnPhong:
-            let diffuse: BlinnPhongSceneMaterial.Source = baseColorTexture.map { .texture($0, sampler: sampler) } ?? .color(SIMD3(baseColor.x, baseColor.y, baseColor.z))
+            let diffuse: BlinnPhongSceneMaterial.Source = baseColorTexture.map { .texture($0, sampler: samplerDescriptor) } ?? .color(SIMD3(baseColor.x, baseColor.y, baseColor.z))
             let specular = color(source?.property(with: .specular)).map { SIMD3($0.x, $0.y, $0.z) } ?? [0.2, 0.2, 0.2]
             let shininess = scalar(source?.property(with: .specularExponent)) ?? 32
             result = BlinnPhongSceneMaterial(ambient: .color(SIMD3(baseColor.x, baseColor.y, baseColor.z) * 0.1), diffuse: diffuse, specular: .color(specular), shininess: shininess)

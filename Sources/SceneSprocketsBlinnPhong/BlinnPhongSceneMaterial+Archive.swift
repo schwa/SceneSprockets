@@ -1,7 +1,8 @@
 import Metal
 import SceneSprockets
 
-// Saved by SceneArchive. Samplers are not saved: textures load with the default linear, repeating sampler.
+// Saved by SceneArchive. Samplers are saved with their textures (#180); without one, the default linear, repeating
+// sampler is used.
 extension BlinnPhongSceneMaterial: ArchivableMaterial {
     public static let archiveTypeName = "blinnPhong"
 
@@ -45,7 +46,7 @@ extension BlinnPhongSceneMaterial: ArchivableMaterial {
 
 extension BlinnPhongSceneMaterial.Source: Codable {
     enum ArchiveKeys: String, CodingKey {
-        case color, texture, tint
+        case color, texture, sampler, tint
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -53,8 +54,9 @@ extension BlinnPhongSceneMaterial.Source: Codable {
         switch self {
         case let .color(color):
             try container.encode(color, forKey: .color)
-        case let .texture(texture, _, tint):
+        case let .texture(texture, sampler, tint):
             try container.encode(try encoder.sceneArchive.encode(texture: texture), forKey: .texture)
+            try container.encodeIfPresent(sampler.map(SceneArchiveContext.SamplerReference.init), forKey: .sampler)
             try container.encode(tint, forKey: .tint)
         }
     }
@@ -62,7 +64,8 @@ extension BlinnPhongSceneMaterial.Source: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: ArchiveKeys.self)
         if let reference = try container.decodeIfPresent(SceneArchiveContext.TextureReference.self, forKey: .texture) {
-            self = .texture(try decoder.sceneArchive.texture(for: reference), tint: try container.decode(SIMD3<Float>.self, forKey: .tint))
+            let sampler = try container.decodeIfPresent(SceneArchiveContext.SamplerReference.self, forKey: .sampler)?.descriptor
+            self = .texture(try decoder.sceneArchive.texture(for: reference), sampler: sampler, tint: try container.decode(SIMD3<Float>.self, forKey: .tint))
         } else {
             self = .color(try container.decode(SIMD3<Float>.self, forKey: .color))
         }

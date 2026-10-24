@@ -186,6 +186,149 @@ struct SceneArchiveTests {
         #expect(try sceneJSON(first).contains(#""type" : "dynamic""#))
     }
 
+    // #180
+    func nearestClampSampler() -> MTLSamplerDescriptor {
+        let descriptor = MTLSamplerDescriptor()
+        descriptor.minFilter = .nearest
+        descriptor.magFilter = .nearest
+        descriptor.mipFilter = .notMipmapped
+        descriptor.sAddressMode = .clampToEdge
+        descriptor.tAddressMode = .mirrorRepeat
+        descriptor.maxAnisotropy = 4
+        return descriptor
+    }
+
+    func expectNearestClamp(_ descriptor: MTLSamplerDescriptor?) {
+        #expect(descriptor?.minFilter == .nearest && descriptor?.magFilter == .nearest && descriptor?.mipFilter == .notMipmapped)
+        #expect(descriptor?.sAddressMode == .clampToEdge && descriptor?.tAddressMode == .mirrorRepeat && descriptor?.maxAnisotropy == 4)
+    }
+
+    @Test
+    func samplersRoundTrip() throws {
+        let url = temporaryURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let root = SceneGraph.Node()
+        let placeholder = try PBRMaterial.placeholderBinding(device: device)
+        var bindings = Array(repeating: placeholder, count: Int(kPBRMaterialTextureCount.rawValue))
+        bindings[Int(kPBRTextureBaseColor.rawValue)] = try .init(texture: makeTexture(), samplerDescriptor: nearestClampSampler(), device: device)
+        var uniforms = PBRMaterialUniforms.defaults(baseColor: [1, 1, 1, 1], metallic: 0, roughness: 1)
+        uniforms.baseColor.enabled = 1
+        let pbr = PBRSceneMaterial(try PBRMaterial(uniforms: uniforms, textureBindings: bindings, device: device))
+        _ = SceneGraph.Node(parent: root, label: "PBR", shape: .box(), material: pbr, device: device)
+        let blinnPhong = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .texture(makeTexture(), sampler: nearestClampSampler()), specular: .color(0), shininess: 1)
+        _ = SceneGraph.Node(parent: root, label: "BlinnPhong", shape: .box(), material: blinnPhong, device: device)
+
+        let warnings = try archive.write(SceneGraph(root: root), to: url)
+        #expect(warnings.isEmpty, "\(warnings)")
+        let (loaded, _) = try archive.read(from: url, device: device)
+        guard case let .mesh(_, pbrMaterials, _, _) = loaded.root.children[0].content, let loadedPBR = pbrMaterials.first as? PBRSceneMaterial,
+              case let .mesh(_, blinnPhongMaterials, _, _) = loaded.root.children[1].content, let loadedBlinnPhong = blinnPhongMaterials.first as? BlinnPhongSceneMaterial,
+              case let .texture(_, blinnPhongSampler, _) = loadedBlinnPhong.diffuse
+        else {
+            Issue.record("materials lost")
+            return
+        }
+        expectNearestClamp(loadedPBR.pbrMaterial.textureBindings[Int(kPBRTextureBaseColor.rawValue)].samplerDescriptor)
+        expectNearestClamp(blinnPhongSampler)
+    }
+
+    // Distinct bytes for each `seed`, so every slice and level differs.
+    func pattern(_ count: Int, seed: Int) -> [UInt8] {
+        var result: [UInt8] = []
+        let offset = seed * 31
+        for index in 0 ..< count {
+            let value: Int = index * 7 + offset
+            result.append(UInt8(truncatingIfNeeded: value))
+        }
+        return result
+    }
+
+    // Saves `texture` as a Blinn-Phong diffuse map and reads it back.
+    func roundTrip(_ texture: MTLTexture) throws -> MTLTexture {
+        let url = temporaryURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let root = SceneGraph.Node()
+        let material = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .texture(texture), specular: .color(0), shininess: 1)
+        _ = SceneGraph.Node(parent: root, shape: .box(), material: material, device: device)
+        let warnings = try archive.write(SceneGraph(root: root), to: url)
+        #expect(warnings.isEmpty, "\(warnings)")
+        let (loaded, _) = try archive.read(from: url, device: device)
+        guard case let .mesh(_, materials, _, _) = loaded.root.children[0].content, let blinnPhong = materials.first as? BlinnPhongSceneMaterial, case let .texture(result, _, _) = blinnPhong.diffuse else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        return result
+    }
+
+    func bytes(of texture: MTLTexture, level: Int, slice: Int, bytesPerRow: Int, rows: Int, depth: Int = 1) -> [UInt8] {
+        var result = [UInt8](repeating: 0, count: bytesPerRow * rows * depth)
+        let width = max(texture.width >> level, 1), height = max(texture.height >> level, 1)
+        texture.getBytes(&result, bytesPerRow: bytesPerRow, bytesPerImage: bytesPerRow * rows, from: MTLRegionMake3D(0, 0, 0, width, height, depth), mipmapLevel: level, slice: slice)
+        return result
+    }
+
+    @Test
+    func storedMipLevelsRoundTrip() throws {
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba16Float, width: 4, height: 2, mipmapped: true)
+        descriptor.storageMode = .shared
+        let texture = try #require(device.makeTexture(descriptor: descriptor))
+        for level in 0 ..< texture.mipmapLevelCount {
+            let width = max(4 >> level, 1), height = max(2 >> level, 1)
+            texture.replace(region: MTLRegionMake2D(0, 0, width, height), mipmapLevel: level, withBytes: pattern(width * height * 8, seed: level), bytesPerRow: width * 8)
+        }
+        let loaded = try roundTrip(texture)
+        #expect(loaded.mipmapLevelCount == 3)
+        for level in 0 ..< 3 {
+            let width = max(4 >> level, 1), height = max(2 >> level, 1)
+            #expect(bytes(of: loaded, level: level, slice: 0, bytesPerRow: width * 8, rows: height) == pattern(width * height * 8, seed: level))
+        }
+    }
+
+    @Test
+    func cubeTexturesRoundTrip() throws {
+        let descriptor = MTLTextureDescriptor.textureCubeDescriptor(pixelFormat: .rgba8Unorm, size: 2, mipmapped: false)
+        descriptor.storageMode = .shared
+        let texture = try #require(device.makeTexture(descriptor: descriptor))
+        for face in 0 ..< 6 {
+            texture.replace(region: MTLRegionMake2D(0, 0, 2, 2), mipmapLevel: 0, slice: face, withBytes: pattern(16, seed: face), bytesPerRow: 8, bytesPerImage: 16)
+        }
+        let loaded = try roundTrip(texture)
+        #expect(loaded.textureType == .typeCube)
+        for face in 0 ..< 6 {
+            #expect(bytes(of: loaded, level: 0, slice: face, bytesPerRow: 8, rows: 2) == pattern(16, seed: face))
+        }
+    }
+
+    @Test
+    func volumeTexturesRoundTrip() throws {
+        let descriptor = MTLTextureDescriptor()
+        descriptor.textureType = .type3D
+        descriptor.pixelFormat = .r8Unorm
+        descriptor.width = 4
+        descriptor.height = 2
+        descriptor.depth = 3
+        descriptor.storageMode = .shared
+        let texture = try #require(device.makeTexture(descriptor: descriptor))
+        texture.replace(region: MTLRegionMake3D(0, 0, 0, 4, 2, 3), mipmapLevel: 0, slice: 0, withBytes: pattern(24, seed: 1), bytesPerRow: 4, bytesPerImage: 8)
+        let loaded = try roundTrip(texture)
+        #expect(loaded.textureType == .type3D && loaded.depth == 3)
+        #expect(bytes(of: loaded, level: 0, slice: 0, bytesPerRow: 4, rows: 2, depth: 3) == pattern(24, seed: 1))
+    }
+
+    @Test
+    func compressedTexturesRoundTrip() throws {
+        // BC1: 8 bytes per 4x4 block. 8x8 is 2x2 blocks; level 1 (4x4) is one block.
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bc1_rgba, width: 8, height: 8, mipmapped: false)
+        descriptor.mipmapLevelCount = 2
+        descriptor.storageMode = .shared
+        let texture = try #require(device.makeTexture(descriptor: descriptor))
+        texture.replace(region: MTLRegionMake2D(0, 0, 8, 8), mipmapLevel: 0, withBytes: pattern(32, seed: 0), bytesPerRow: 16)
+        texture.replace(region: MTLRegionMake2D(0, 0, 4, 4), mipmapLevel: 1, withBytes: pattern(8, seed: 1), bytesPerRow: 8)
+        let loaded = try roundTrip(texture)
+        #expect(loaded.pixelFormat == .bc1_rgba && loaded.mipmapLevelCount == 2)
+        #expect(bytes(of: loaded, level: 0, slice: 0, bytesPerRow: 16, rows: 2) == pattern(32, seed: 0))
+        #expect(bytes(of: loaded, level: 1, slice: 0, bytesPerRow: 8, rows: 1) == pattern(8, seed: 1))
+    }
+
     // #163
     func pbrScene() throws -> (SceneGraph, PBRMaterialUniforms) {
         let material = try PBRSceneMaterial(device: device, baseColor: [0.9, 0.7, 0.2, 0.5], metallic: 0.25, roughness: 0.75)

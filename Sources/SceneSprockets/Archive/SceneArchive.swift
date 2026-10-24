@@ -193,23 +193,112 @@ public final class SceneArchiveContext: @unchecked Sendable {
         public var width: Int
         public var height: Int
         public var mipmapped: Bool
+        // Only in .bin files (#180): nil for 2D, otherwise "2DArray", "cube", "cubeArray" or "3D".
+        public var type: String?
+        public var depth: Int?
+        public var arrayLength: Int?
+        // Mip levels stored in the file, every slice's levels in turn. Nil stores level 0 and regenerates the rest.
+        public var levels: Int?
     }
 
-    // Reads `texture` back from the GPU (level 0) and writes it once per archive: 8-bit RGBA and BGRA as PNG,
-    // other formats as raw bytes.
+    // A sampler's filters and address modes (#180), from the MTLSamplerDescriptor a material keeps.
+    public struct SamplerReference: Codable, Equatable, Sendable {
+        public var minFilter: String
+        public var magFilter: String
+        public var mipFilter: String
+        public var sAddressMode: String
+        public var tAddressMode: String
+        public var rAddressMode: String
+        public var maxAnisotropy: Int
+
+        public init(_ descriptor: MTLSamplerDescriptor) {
+            minFilter = Self.name(descriptor.minFilter)
+            magFilter = Self.name(descriptor.magFilter)
+            mipFilter = Self.name(descriptor.mipFilter)
+            sAddressMode = Self.name(descriptor.sAddressMode)
+            tAddressMode = Self.name(descriptor.tAddressMode)
+            rAddressMode = Self.name(descriptor.rAddressMode)
+            maxAnisotropy = descriptor.maxAnisotropy
+        }
+
+        public var descriptor: MTLSamplerDescriptor {
+            let descriptor = MTLSamplerDescriptor()
+            descriptor.minFilter = minFilter == "nearest" ? .nearest : .linear
+            descriptor.magFilter = magFilter == "nearest" ? .nearest : .linear
+            descriptor.mipFilter = switch mipFilter {
+            case "nearest": .nearest
+            case "linear": .linear
+            default: .notMipmapped
+            }
+            descriptor.sAddressMode = Self.addressMode(sAddressMode)
+            descriptor.tAddressMode = Self.addressMode(tAddressMode)
+            descriptor.rAddressMode = Self.addressMode(rAddressMode)
+            descriptor.maxAnisotropy = max(maxAnisotropy, 1)
+            return descriptor
+        }
+
+        private static func name(_ filter: MTLSamplerMinMagFilter) -> String {
+            filter == .nearest ? "nearest" : "linear"
+        }
+
+        private static func name(_ filter: MTLSamplerMipFilter) -> String {
+            switch filter {
+            case .nearest: "nearest"
+            case .linear: "linear"
+            default: "none"
+            }
+        }
+
+        private static let addressModes: [(String, MTLSamplerAddressMode)] = [
+            ("clampToEdge", .clampToEdge), ("mirrorClampToEdge", .mirrorClampToEdge), ("repeat", .repeat),
+            ("mirrorRepeat", .mirrorRepeat), ("clampToZero", .clampToZero), ("clampToBorderColor", .clampToBorderColor),
+        ]
+
+        private static func name(_ mode: MTLSamplerAddressMode) -> String {
+            addressModes.first { $0.1 == mode }?.0 ?? "clampToEdge"
+        }
+
+        private static func addressMode(_ name: String) -> MTLSamplerAddressMode {
+            addressModes.first { $0.0 == name }?.1 ?? .clampToEdge
+        }
+    }
+
+    // Reads `texture` back from the GPU and writes it once per archive. 2D 8-bit RGBA and BGRA textures are a PNG of
+    // level 0 (mips are regenerated on load); everything else is raw bytes of every slice and mip level.
     public func encode(texture: MTLTexture) throws -> TextureReference {
         if let reference = writtenTextures[ObjectIdentifier(texture)] {
             return reference
         }
-        guard texture.textureType == .type2D else {
+        guard let typeName = Self.textureTypeNames.first(where: { $0.value == texture.textureType })?.key else {
             throw SceneArchiveError.unsupportedTexture("type \(texture.textureType.rawValue)")
         }
-        guard let bytesPerPixel = Self.bytesPerPixel(texture.pixelFormat) else {
+        guard let layout = TextureLayout(texture.pixelFormat) else {
             throw SceneArchiveError.unsupportedTexture("pixel format \(texture.pixelFormat.rawValue)")
         }
-        var bytes = try Self.readBack(texture, bytesPerPixel: bytesPerPixel)
         let index = writtenTextures.count
-        let isPNG = Self.pngFormats.contains(texture.pixelFormat)
+        let isPNG = texture.textureType == .type2D && Self.pngFormats.contains(texture.pixelFormat)
+        guard isPNG else {
+            var bytes: [UInt8] = []
+            for slice in 0 ..< Self.sliceCount(texture.textureType, arrayLength: texture.arrayLength) {
+                for level in 0 ..< texture.mipmapLevelCount {
+                    bytes += try Self.readBack(texture, level: level, slice: slice, layout: layout)
+                }
+            }
+            let file = "\(SceneArchive.texturesDirectoryName)/\(index).bin"
+            let url = directory.appendingPathComponent(file)
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Data(bytes).write(to: url)
+            let reference = TextureReference(
+                file: file, pixelFormat: texture.pixelFormat.rawValue, width: texture.width, height: texture.height, mipmapped: texture.mipmapLevelCount > 1,
+                type: typeName == "2D" ? nil : typeName,
+                depth: texture.textureType == .type3D ? texture.depth : nil,
+                arrayLength: [.type2DArray, .typeCubeArray].contains(texture.textureType) ? texture.arrayLength : nil,
+                levels: texture.mipmapLevelCount
+            )
+            writtenTextures[ObjectIdentifier(texture)] = reference
+            return reference
+        }
+        var bytes = try Self.readBack(texture, level: 0, slice: 0, layout: layout)
         let file = "\(SceneArchive.texturesDirectoryName)/\(index).\(isPNG ? "png" : "bin")"
         let url = directory.appendingPathComponent(file)
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -240,9 +329,16 @@ public final class SceneArchiveContext: @unchecked Sendable {
         let device = try device
         let url = directory.appendingPathComponent(reference.file)
         let pixelFormat = MTLPixelFormat(rawValue: reference.pixelFormat) ?? .rgba8Unorm
-        guard let bytesPerPixel = Self.bytesPerPixel(pixelFormat) else {
+        guard let layout = TextureLayout(pixelFormat) else {
             throw SceneArchiveError.unsupportedTexture("pixel format \(reference.pixelFormat)")
         }
+        guard let textureType = Self.textureTypeNames[reference.type ?? "2D"] else {
+            throw SceneArchiveError.unsupportedTexture("type \(reference.type ?? "")")
+        }
+        if let levels = reference.levels {
+            return try readRawTexture(reference, pixelFormat: pixelFormat, textureType: textureType, levels: levels, layout: layout)
+        }
+        let bytesPerPixel = layout.bytesPerBlock
         // The recorded pixel format, so a texture saves back unchanged.
         var bytes: [UInt8]
         if url.pathExtension == "png" {
@@ -275,24 +371,99 @@ public final class SceneArchiveContext: @unchecked Sendable {
 
     private static let pngFormats: Set<MTLPixelFormat> = [.rgba8Unorm, .rgba8Unorm_srgb, .bgra8Unorm, .bgra8Unorm_srgb]
 
-    private static func bytesPerPixel(_ format: MTLPixelFormat) -> Int? {
-        switch format {
-        case .r8Unorm: 1
-        case .rg8Unorm, .r16Float: 2
-        case .rgba8Unorm, .rgba8Unorm_srgb, .bgra8Unorm, .bgra8Unorm_srgb, .r32Float, .rg16Float: 4
-        case .rgba16Float, .rg32Float: 8
-        case .rgba32Float: 16
-        default: nil
+    private static let textureTypeNames: [String: MTLTextureType] = ["2D": .type2D, "2DArray": .type2DArray, "cube": .typeCube, "cubeArray": .typeCubeArray, "3D": .type3D]
+
+    private static func sliceCount(_ type: MTLTextureType, arrayLength: Int) -> Int {
+        switch type {
+        case .type2DArray: arrayLength
+        case .typeCube: 6
+        case .typeCubeArray: 6 * arrayLength
+        default: 1
         }
     }
 
-    // Copies level 0 into a shared buffer when the texture is not CPU readable.
-    private static func readBack(_ texture: MTLTexture, bytesPerPixel: Int) throws -> [UInt8] {
-        let bytesPerRow = texture.width * bytesPerPixel
-        var bytes = [UInt8](repeating: 0, count: bytesPerRow * texture.height)
-        let region = MTLRegionMake2D(0, 0, texture.width, texture.height)
+    // Bytes per block of texels: 1x1 for plain formats, 4x4 and larger for compressed ones.
+    struct TextureLayout {
+        var blockWidth = 1
+        var blockHeight = 1
+        var bytesPerBlock: Int
+
+        init?(_ format: MTLPixelFormat) {
+            switch format {
+            case .r8Unorm: bytesPerBlock = 1
+            case .rg8Unorm, .r16Float: bytesPerBlock = 2
+            case .rgba8Unorm, .rgba8Unorm_srgb, .bgra8Unorm, .bgra8Unorm_srgb, .r32Float, .rg16Float: bytesPerBlock = 4
+            case .rgba16Float, .rg32Float: bytesPerBlock = 8
+            case .rgba32Float: bytesPerBlock = 16
+            case .bc1_rgba, .bc1_rgba_srgb, .bc4_rUnorm, .bc4_rSnorm:
+                (blockWidth, blockHeight, bytesPerBlock) = (4, 4, 8)
+            case .bc2_rgba, .bc2_rgba_srgb, .bc3_rgba, .bc3_rgba_srgb, .bc5_rgUnorm, .bc5_rgSnorm, .bc6H_rgbFloat, .bc6H_rgbuFloat, .bc7_rgbaUnorm, .bc7_rgbaUnorm_srgb,
+                 .astc_4x4_ldr, .astc_4x4_srgb, .astc_4x4_hdr:
+                (blockWidth, blockHeight, bytesPerBlock) = (4, 4, 16)
+            case .astc_5x5_ldr, .astc_5x5_srgb, .astc_5x5_hdr:
+                (blockWidth, blockHeight, bytesPerBlock) = (5, 5, 16)
+            case .astc_6x6_ldr, .astc_6x6_srgb, .astc_6x6_hdr:
+                (blockWidth, blockHeight, bytesPerBlock) = (6, 6, 16)
+            case .astc_8x8_ldr, .astc_8x8_srgb, .astc_8x8_hdr:
+                (blockWidth, blockHeight, bytesPerBlock) = (8, 8, 16)
+            default: return nil
+            }
+        }
+
+        // One mip level of one slice.
+        func size(of texture: (width: Int, height: Int, depth: Int), level: Int) -> (region: MTLRegion, bytesPerRow: Int, bytesPerImage: Int, count: Int) {
+            let width = max(texture.width >> level, 1)
+            let height = max(texture.height >> level, 1)
+            let depth = max(texture.depth >> level, 1)
+            let bytesPerRow = (width + blockWidth - 1) / blockWidth * bytesPerBlock
+            let bytesPerImage = bytesPerRow * ((height + blockHeight - 1) / blockHeight)
+            return (MTLRegionMake3D(0, 0, 0, width, height, depth), bytesPerRow, bytesPerImage, bytesPerImage * depth)
+        }
+    }
+
+    private func readRawTexture(_ reference: TextureReference, pixelFormat: MTLPixelFormat, textureType: MTLTextureType, levels: Int, layout: TextureLayout) throws -> MTLTexture {
+        let descriptor = MTLTextureDescriptor()
+        descriptor.textureType = textureType
+        descriptor.pixelFormat = pixelFormat
+        descriptor.width = reference.width
+        descriptor.height = reference.height
+        descriptor.depth = reference.depth ?? 1
+        descriptor.arrayLength = reference.arrayLength ?? 1
+        descriptor.mipmapLevelCount = max(levels, 1)
+        descriptor.usage = .shaderRead
+        descriptor.storageMode = .shared
+        let device = try device
+        guard let texture = device.makeTexture(descriptor: descriptor) else {
+            throw SceneArchiveError.unreadableTexture(reference.file)
+        }
+        let bytes = try data(for: reference)
+        var offset = 0
+        for slice in 0 ..< Self.sliceCount(textureType, arrayLength: descriptor.arrayLength) {
+            for level in 0 ..< descriptor.mipmapLevelCount {
+                let size = layout.size(of: (texture.width, texture.height, texture.depth), level: level)
+                guard offset + size.count <= bytes.count else {
+                    throw SceneArchiveError.unreadableTexture(reference.file)
+                }
+                bytes.withUnsafeBytes { buffer in
+                    texture.replace(region: size.region, mipmapLevel: level, slice: slice, withBytes: buffer.baseAddress! + offset, bytesPerRow: size.bytesPerRow, bytesPerImage: size.bytesPerImage)
+                }
+                offset += size.count
+            }
+        }
+        guard offset == bytes.count else {
+            throw SceneArchiveError.unreadableTexture(reference.file)
+        }
+        texture.label = reference.file
+        readTextures[reference.file] = texture
+        return texture
+    }
+
+    // One mip level of one slice; copied through a shared buffer when the texture is not CPU readable.
+    private static func readBack(_ texture: MTLTexture, level: Int, slice: Int, layout: TextureLayout) throws -> [UInt8] {
+        let size = layout.size(of: (texture.width, texture.height, texture.depth), level: level)
+        var bytes = [UInt8](repeating: 0, count: size.count)
         if texture.storageMode == .shared {
-            texture.getBytes(&bytes, bytesPerRow: bytesPerRow, from: region, mipmapLevel: 0)
+            texture.getBytes(&bytes, bytesPerRow: size.bytesPerRow, bytesPerImage: size.bytesPerImage, from: size.region, mipmapLevel: level, slice: slice)
             return bytes
         }
         let device = texture.device
@@ -303,7 +474,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
         else {
             throw SceneArchiveError.unsupportedTexture("could not read back \(texture.label ?? "texture")")
         }
-        blit.copy(from: texture, sourceSlice: 0, sourceLevel: 0, sourceOrigin: MTLOrigin(), sourceSize: MTLSize(width: texture.width, height: texture.height, depth: 1), to: buffer, destinationOffset: 0, destinationBytesPerRow: bytesPerRow, destinationBytesPerImage: bytes.count)
+        blit.copy(from: texture, sourceSlice: slice, sourceLevel: level, sourceOrigin: MTLOrigin(), sourceSize: size.region.size, to: buffer, destinationOffset: 0, destinationBytesPerRow: size.bytesPerRow, destinationBytesPerImage: size.bytesPerImage)
         blit.endEncoding()
         commandBuffer.commit()
         commandBuffer.waitUntilCompleted()

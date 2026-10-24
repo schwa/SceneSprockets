@@ -6,12 +6,12 @@ import SceneSprockets
 
 // Saved by SceneArchive. The uniforms are stored field by field (see PBRUniformsArchive); archives from before that
 // stored raw bytes, which still read when the layout matches. Animatable texture transforms are stored by their
-// slot's name. Samplers are not saved; textures load with the placeholder's linear, repeating sampler.
+// slot's name. Samplers are saved next to their textures (#180); older archives load with the placeholder's sampler.
 extension PBRSceneMaterial: ArchivableMaterial {
     public static let archiveTypeName = "pbr"
 
     enum ArchiveKeys: String, CodingKey {
-        case name, uniforms, uniformsSize, parameters, textureTransforms, doubleSided, textures, blendMode, depthTest, depthWrite, colorWriteMask, fillMode
+        case name, uniforms, uniformsSize, parameters, textureTransforms, doubleSided, textures, samplers, blendMode, depthTest, depthWrite, colorWriteMask, fillMode
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -25,6 +25,10 @@ extension PBRSceneMaterial: ArchivableMaterial {
             Self.isPlaceholder(binding.texture) ? nil : try context.encode(texture: binding.texture)
         }
         try container.encode(textures, forKey: .textures)
+        let samplers = pbrMaterial.textureBindings.map { binding in
+            Self.isPlaceholder(binding.texture) ? nil : SceneArchiveContext.SamplerReference(binding.samplerDescriptor)
+        }
+        try container.encode(samplers, forKey: .samplers)
         let state = pbrMaterial.renderState
         try container.encodeIfPresent(state.blendMode.map(Self.name), forKey: .blendMode)
         try container.encode(state.depthTest, forKey: .depthTest)
@@ -47,9 +51,11 @@ extension PBRSceneMaterial: ArchivableMaterial {
         let placeholder = try PBRMaterial.placeholderBinding(device: device)
         let references = try container.decode([SceneArchiveContext.TextureReference?].self, forKey: .textures)
         var bindings = Array(repeating: placeholder, count: Int(kPBRMaterialTextureCount.rawValue))
+        let samplers = try container.decodeIfPresent([SceneArchiveContext.SamplerReference?].self, forKey: .samplers) ?? []
         for (index, reference) in references.enumerated() where index < bindings.count {
             if let reference {
-                bindings[index] = try .init(texture: try context.texture(for: reference), samplerDescriptor: placeholder.samplerDescriptor, device: device)
+                let sampler = (index < samplers.count ? samplers[index] : nil)?.descriptor ?? placeholder.samplerDescriptor
+                bindings[index] = try .init(texture: try context.texture(for: reference), samplerDescriptor: sampler, device: device)
             }
         }
         let material = try PBRMaterial(name: try container.decodeIfPresent(String.self, forKey: .name), uniforms: uniforms, doubleSided: try container.decode(Bool.self, forKey: .doubleSided), textureBindings: bindings, device: device)
