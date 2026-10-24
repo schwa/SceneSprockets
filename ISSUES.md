@@ -4642,6 +4642,16 @@ Probably belongs partly in MetalSprockets: a missing frame-to-frame barrier for 
 Checked and looked fine: the manipulator pass barrier (its gizmo geometry is CPU-written buffers, made resident per submission); jump flood's own barriers (its first one waits for vertex, fragment, dispatch and blit, and the seeds texture is covered); the outline pass ordering after jump flood.
 Leaving open until you confirm the flicker is gone. If it is not, a capture of a bad frame (using-gpucapture) is next. Unverified: whether MTLStageFragment covers attachment load and store actions in Metal 4. If not, those barriers may need more stages.
 
+- `2026-10-24T21:23:27Z`: GPU capture analysis (~/Desktop/SceneSprocketsComposer.gputrace, 5 frames, M5 Max). The capture includes the a83c9a8c barriers. Per frame: Shadow Casters x7, PBR Transmission Scene, Transmission Mipmaps, scene pass, Selection Mask, JumpFlood, Selection Outline, Manipulator. Barriers decoded:
+- scene pass: after dispatch+fragment before vertex+fragment
+- Selection Mask: after dispatch+fragment before fragment
+- JumpFlood: after vertex+fragment+dispatch+blit before dispatch, ends with dispatch to fragment
+- Selection Outline: covered by JumpFlood's end barrier
+- Manipulator: after dispatch+fragment before fragment
+Shadow Casters have no start barrier, but shadow maps are per submission (depthTexture(forSubmission:)), so frames cannot collide there.
+Replayed images: the Manipulator output is pixel-identical in all 5 frames and the gizmo draws correctly. Replay serializes the GPU work, so a timing hazard would not show in it anyway.
+No remaining missing barrier found. Open questions: does the flicker still happen with this build? If so, when (always, on hover highlight, while dragging, when toggling overlays)? Next suspects are CPU-side: frames where manipulatorOverlay returns nil (viewport nil, or overlay(viewport:) throws, which is swallowed by try?), or @MSState being matched to the wrong GraphicsContext3DRenderPipeline when the decorations (DebugShapes, BoundingBoxes) appear or disappear and shift element positions.
+
 ---
 
 ## 215: Composer: frame rate drops sharply while dragging
