@@ -13,6 +13,14 @@ public struct ComposerCommands: Commands {
     public init() {}
 
     public var body: some Commands {
+        // File > Import (#219) runs the same flow as Insert Model File…: file importer, folder access for .gltf, warnings.
+        CommandGroup(replacing: .importExport) {
+            Button("Import Model\u{2026}") {
+                model?.isImportingModel = true
+            }
+            .keyboardShortcut("i", modifiers: [.command, .shift])
+            .disabled(model == nil)
+        }
         // ⌘1–3 pick the gizmo tool, so panels use ⌃⌘ (left) and ⌥⌘ (right), like Xcode's inspectors.
         CommandGroup(after: .sidebar) {
             Group {

@@ -4732,12 +4732,13 @@ Related: #216 (batching), #217 (glass materials).
 ## 219: Add File > Import menu for models
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: area:composer, effort:xs
 created: 2026-10-24T18:37:07Z
-updated: 2026-10-24T18:51:14Z
+updated: 2026-10-24T19:19:01Z
+closed: 2026-10-24T19:19:01Z
 +++
 
 Add an Import item to the File menu that imports glTF/GLB and other model formats into the open scene.
