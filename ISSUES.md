@@ -4451,7 +4451,7 @@ Second problem in the same screenshot: the alert shows every warning in full, on
 status: new
 priority: medium
 kind: feature
-labels: area:composer,effort:m
+labels: area:composer, effort:m
 created: 2026-10-24T16:53:27Z
 +++
 
@@ -4461,5 +4461,7 @@ The scene tree has a top-level Scene row next to the root (scene settings). Add 
 - Default Lighting: the light added at the camera when the scene has no lights (RenderSettings.usesDefaultLighting, SceneView .autoenablesDefaultLighting). Selecting it shows the on/off toggle and, if added, its intensity and color. It should say whether it is active (it turns off as soon as the scene has a light).
 
 Selection: extend SceneTreeView's Item enum (scene, node) with defaultCamera and defaultLighting, and make NodeInspectorView switch on it. Decide whether these settings leave the Render tab or appear in both places. Saved in editor.json like the other render settings.
+
+- `2026-10-24T16:54:07Z`: Decided: move the camera and default lighting settings out of the Render tab. They live only in the Default Camera and Default Lighting inspectors.
 
 ---
