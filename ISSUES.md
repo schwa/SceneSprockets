@@ -3429,6 +3429,7 @@ updated: 2026-10-23T13:45:09Z
 Part of #52. When a glTF is loaded into a scene, tag each imported node with its source asset and glTF node index. Writing a scene copies the original glTF (with its buffers and images) into the package; scene.json refers to it (asset, node index) instead of storing meshes or materials. Reading runs the glTF loader and splices the nodes back in. Transform and visibility changes on imported nodes are stored as overrides in scene.json; decide what to do for material or mesh changes (override or fall back to writing the mesh as generated). Done when a scene with a loaded glTF round-trips, including a moved imported node.
 
 - `2026-10-23T13:45:09Z`: Punted by auto-issue-fixer. Read GLTFSceneGraph.swift and the archive code. Punting: needs decisions. (1) Same as #158: the core archive has no glTF dependency, so this needs a content hook on SceneArchive implemented in SceneSprocketsPBR — best designed once for #157 and #158 together. (2) The issue leaves open what to do when an imported node's material or mesh is edited (override vs fall back to #158's generated-mesh path). (3) One glTF node can become several scene nodes (GLTFSceneGraphBuilder.node(_:) returns [Node], e.g. multi-material or instanced meshes), so the reference needs a sub-index or a rule. Unblocker: decide the hook design (see #158 comment) and pick the override rule; then this is implementable.
+- `2026-10-24T11:44:52Z`: Decided: the glTF stored in the package must be complete and match the current scene. Composer is not a detailed glTF editor: imported glTFs are treated as mostly complete units. Detailed edits go through a separate 'explode' feature that converts the glTF node tree into scene graph nodes (see new issue).
 
 ---
 
@@ -3447,6 +3448,7 @@ Part of #52. Meshes built in code (MetalMesh from SwiftMesh: dice, gears, hand-b
 
 - `2026-10-23T13:44:43Z`: Punted by auto-issue-fixer. Looked at SceneGraph+Archive.swift (the mesh-not-a-shape branch) and target deps. Punting: needs two design decisions. (1) Where the glTF writer lives: the core SceneSprockets target has no SwiftGLTF dependency (only SceneSprocketsPBR does). Options: add SwiftGLTF to core, or add a mesh-codec hook to SceneArchive (like materialTypes) and implement it in SceneSprocketsPBR. (2) Materials: the issue says write materials and textures into the glTF, but scene.json already archives Blinn-Phong/PBR materials and textures. Should the glTF carry geometry only (materials stay in scene.json), or also materials? My suggestion: hook in SceneSprocketsPBR, geometry-only glTF (MetalMesh -> Mesh -> glTF primitives per submesh).
 - `2026-10-24T11:26:48Z`: Punted again by auto-issue-fixer: the two design questions in the previous comment are still open. Unblocker: confirm 'mesh-codec hook in SceneSprocketsPBR, geometry-only glTF' (or pick another option).
+- `2026-10-24T11:44:52Z`: Decided: SwiftGLTF supports writing; the glTF carries materials too (not geometry only). Still open: where the writer lives (core vs hook in SceneSprocketsPBR).
 
 ---
 
@@ -3868,11 +3870,12 @@ Follow-up to #154. On iOS and visionOS: pinch to scale and two-finger rotate to 
 ## 179: Scene archive: save animation clips and running actions
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
-labels: area:document, effort:l
+labels: area:document, effort:l, deferred
 created: 2026-10-23T13:53:20Z
+updated: 2026-10-24T11:44:52Z
 +++
 
 Split from #161 (constraints are done there).
@@ -3887,11 +3890,12 @@ Seen in shadows and scenekit-features (spinning torus).
 ## 180: Scene archive: samplers, stored mip levels, cube/3D and compressed textures
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
 labels: area:document, effort:m
 created: 2026-10-23T14:14:45Z
+updated: 2026-10-24T11:36:11Z
 +++
 
 Split from #164 (PBR texture transforms are done there).
@@ -3901,33 +3905,56 @@ Split from #164 (PBR texture transforms are done there).
 - Cube and 3D textures, and compressed formats (ASTC, BC): SceneArchiveContext.encode(texture:) throws for them.
 - Float textures are raw bytes; consider EXR.
 
+- `2026-10-24T11:44:53Z`: Decided: yes, keep sampler descriptors with textures so filters and address modes can be saved.
+- `2026-10-24T11:53:26Z`: Sampler part depends on MetalSprocketsPBR #21.
+
 ---
 
 ## 181: iOS build fails in MetalSprocketsPBR (Float16 unavailable)
 
 +++
-status: new
+status: closed
 priority: medium
 kind: bug
 labels: area:build, effort:s
 created: 2026-10-23T14:27:56Z
+updated: 2026-10-24T11:41:33Z
+closed: 2026-10-24T11:41:33Z
 +++
 
 Found while working on #178. `xcb build -d ios` (generic/platform=iOS) fails before reaching SceneSprockets: MetalSprocketsPBR PBREnvironment.swift:26 and PBRHDROutput.swift:23 report "Float16 is unavailable in macOS", then MetalSprocketsGLTF and SceneSprocketsPBR cannot resolve MetalSprocketsPBR. The "macOS" in the message suggests an x86_64 macOS slice (Float16 is unavailable on Intel Macs) is being built. The simulator build fails anyway (no Metal 4). So the iOS-only code in SceneView (#178 two-finger gestures) has not been compiled for iOS.
+
+- `2026-10-24T11:41:33Z`: Not reproducible. SceneSprockets, SceneSprocketsPBR, SceneSprocketsGizmos and the SceneSprocketsDemo app all build for generic iOS. Likely cause: 'xcb build -d ios' uses the default scheme (SceneSprocketsComposer, a macOS app with a macOS Quick Look extension). To check iOS: xcb build "SceneSprocketsDemo.xcodeproj/SceneSprocketsDemo" -d ios
 
 ---
 
 ## 182: Scene archive: save audio players and levels of detail
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
-labels: effort:m, area:document
+labels: effort:m, area:document, deferred
 depends: 158
 created: 2026-10-24T11:29:39Z
+updated: 2026-10-24T11:44:53Z
 +++
 
 Split from #162. Saving a scene still warns for these two node features. Audio players hold an AVAudioPCMBuffer and live in SceneSprocketsAudio, so the core archive needs a hook (or the audio file kept by reference). Levels of detail hold MetalMesh values, so they need the generated-mesh path from #158.
+
+---
+
+## 183: Composer: explode an imported glTF into scene graph nodes
+
++++
+status: open
+priority: low
+kind: feature
+labels: effort:m, area:composer
+created: 2026-10-24T11:44:53Z
+updated: 2026-10-24T11:44:56Z
++++
+
+Imported glTFs are kept as mostly complete units (#157), not edited in detail. Add an Explode command that converts an imported glTF node tree into plain scene graph nodes (meshes, materials, transforms), so they can be edited and are then saved as generated content (#158).
 
 ---
