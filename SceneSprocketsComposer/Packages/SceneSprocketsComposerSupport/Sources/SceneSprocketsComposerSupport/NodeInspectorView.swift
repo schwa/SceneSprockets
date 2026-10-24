@@ -12,6 +12,9 @@ struct NodeInspectorView: View {
         if let node = model.selectedNode {
             Form {
                 let isLocked = model.isLocked(node)
+                if model.selectedIDs.count > 1 {
+                    MultipleSelectionSection(model: model)
+                }
                 Section("Node") {
                     TextField("Name", text: Binding(get: { node.label ?? "" }, set: { model.setLabel($0.isEmpty ? nil : $0, of: node) }), prompt: Text("Untitled"))
                         .disabled(isLocked)

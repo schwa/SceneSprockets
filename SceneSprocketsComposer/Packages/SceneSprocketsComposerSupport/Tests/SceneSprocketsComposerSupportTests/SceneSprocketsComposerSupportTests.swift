@@ -585,6 +585,54 @@ import UniformTypeIdentifiers
     #expect(!model.isDefaultLightingActive)
 }
 
+// #205
+@MainActor
+@Test func multipleSelectionGizmoInspectorAndSaving() throws {
+    let document = ComposerDocument()
+    let model = EditorModel(sceneGraph: document.sceneGraph)
+    document.editorModel = model
+    let tools = SceneTools(model: model)
+    let ids = try tools.create(kind: "box", count: 3, label: nil, parent: nil, translation: nil, translations: [[0, 0, 0], [2, 0, 0], [4, 0, 0]], rotationDegrees: nil, scale: nil, color: nil).components(separatedBy: ", ")
+    let nodes = try ids.map { try tools.node(id: $0) }
+    let undoManager = UndoManager()
+    undoManager.groupsByEvent = false
+    model.undoManager = undoManager
+    model.select([nodes[0].id, nodes[1].id], primary: nodes[0].id)
+
+    // Gizmo drag on the primary: the other selected node follows; the unselected one does not.
+    undoManager.beginUndoGrouping()
+    model.beginGizmoDrag(nodes[0])
+    nodes[0].localTransform = .trs(.init(translation: [0, 1, 0]))
+    model.continueGizmoDrag(nodes[0])
+    model.endGizmoDrag(nodes[0])
+    undoManager.endUndoGrouping()
+    #expect(nodes[1].localTransform.trs.translation == [2, 1, 0])
+    #expect(nodes[2].localTransform.trs.translation == [4, 0, 0])
+    undoManager.undo()
+    #expect(nodes[0].localTransform.trs.translation == .zero)
+    #expect(nodes[1].localTransform.trs.translation == [2, 0, 0])
+
+    // Shared inspector edits apply to every selected node as one step.
+    undoManager.beginUndoGrouping()
+    model.editSelection("Visibility") { model, node in model.setVisible(false, node) }
+    model.editSelection("Color") { model, node in model.setBaseColor([1, 0, 0], of: node) }
+    undoManager.endUndoGrouping()
+    #expect(!nodes[0].isVisible && !nodes[1].isVisible && nodes[2].isVisible)
+    #expect(EditorModel.baseColor(of: try #require(model.materials(of: nodes[1]).first)) == [1, 0, 0])
+
+    // The whole selection is saved, primary last.
+    model.select([nodes[0].id, nodes[2].id], primary: nodes[2].id)
+    document.updateEditorState()
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("scenesprocketsd")
+    defer { try? FileManager.default.removeItem(at: url) }
+    try document.snapshot(contentType: .sceneSprocketsDocument).write(to: url, options: [], originalContentsURL: nil)
+    let loaded = try ComposerDocument(contentsOf: url)
+    let reopened = EditorModel(sceneGraph: loaded.sceneGraph)
+    reopened.apply(try #require(loaded.editorState))
+    #expect(reopened.selectedIDs.count == 2)
+    #expect(reopened.selectedNode === loaded.sceneGraph.root.children[2])
+}
+
 // #177: framing keeps the view direction and orbits the framed center.
 @Test func framingKeepsViewDirection() {
     var camera = EditorCamera()

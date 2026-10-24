@@ -117,6 +117,46 @@ public final class EditorModel {
     // Keeps its textures between frames.
     @ObservationIgnored let selectionOutline = SelectionOutline()
     @ObservationIgnored private var transformBeforeDrag: SceneGraph.LocalTransform?
+    // The other selected nodes the gizmo carries along (#205), with their world and local transforms at drag start.
+    @ObservationIgnored private var draggedCompanions: [(node: SceneGraph.Node, world: simd_float4x4, local: SceneGraph.LocalTransform)] = []
+    @ObservationIgnored private var primaryWorldBeforeDrag = matrix_identity_float4x4
+
+    // The gizmo moves the primary node; the other selected, unlocked nodes follow with the same world-space change,
+    // so several nodes move, rotate and scale together around the primary one. Nodes under another dragged node are
+    // skipped, because they follow their parent anyway.
+    func beginGizmoDrag(_ node: SceneGraph.Node) {
+        transformBeforeDrag = node.localTransform
+        primaryWorldBeforeDrag = node.worldTransform
+        let others = selectedNodes.filter { $0 !== node && $0.parent != nil && !isLocked($0) }
+        let dragged = others + [node]
+        draggedCompanions = others
+            .filter { other in !dragged.contains { $0 !== other && $0.isAncestor(of: other) } }
+            .map { ($0, $0.worldTransform, $0.localTransform) }
+    }
+
+    func continueGizmoDrag(_ node: SceneGraph.Node) {
+        let change = node.worldTransform * primaryWorldBeforeDrag.inverse
+        for companion in draggedCompanions {
+            companion.node.worldTransform = change * companion.world
+        }
+        transformRevision += 1
+    }
+
+    // One undo step for the whole drag.
+    func endGizmoDrag(_ node: SceneGraph.Node) {
+        guard let before = transformBeforeDrag else {
+            return
+        }
+        transformBeforeDrag = nil
+        let companions = draggedCompanions
+        draggedCompanions = []
+        undoManager?.beginUndoGrouping()
+        setTransform(node.localTransform, of: node, undoTo: before)
+        for companion in companions {
+            setTransform(companion.node.localTransform, of: companion.node, undoTo: companion.local)
+        }
+        undoManager?.endUndoGrouping()
+    }
 
     public init(sceneGraph: SceneGraph, device: (any MTLDevice)? = nil) {
         self.sceneGraph = sceneGraph
@@ -126,17 +166,13 @@ public final class EditorModel {
         baseGizmoWorldSize = sceneGraph.bounds.map { max(simd_distance($0.min, $0.max) * 0.15, 0.01) } ?? 1
         gizmo.worldSize = baseGizmoWorldSize
         gizmo.onBegin = { [weak self] node in
-            self?.transformBeforeDrag = node.localTransform
+            self?.beginGizmoDrag(node)
         }
-        gizmo.onChange = { [weak self] _ in
-            self?.transformRevision += 1
+        gizmo.onChange = { [weak self] node in
+            self?.continueGizmoDrag(node)
         }
         gizmo.onEnd = { [weak self] node in
-            guard let self, let before = transformBeforeDrag else {
-                return
-            }
-            transformBeforeDrag = nil
-            setTransform(node.localTransform, of: node, undoTo: before)
+            self?.endGizmoDrag(node)
         }
     }
 

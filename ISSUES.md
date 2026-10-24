@@ -4408,12 +4408,13 @@ Possible fix: capture what the save needs on the main actor ahead of time, and k
 ## 205: Composer: multiple selection follow-ups (gizmo, inspector, saving)
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:composer, effort:m
 created: 2026-10-24T16:33:01Z
-updated: 2026-10-24T17:04:01Z
+updated: 2026-10-24T17:31:12Z
+closed: 2026-10-24T17:31:12Z
 +++
 
 Follow-up to #201. Multiple selection works in the tree (Cmd and Shift click), in the viewport (Shift-click), for outlines, Delete and the assistant tools. Still single-node:

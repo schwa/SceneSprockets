@@ -15,6 +15,9 @@ struct EditorState: Equatable {
     var gizmoSpace = TransformGizmo.Space.world
     // Child indices from the root; node ids do not survive a reload.
     var selectionPath: [Int]?
+    // Every selected node's path, the primary (`selectionPath`) last (#205). Empty in files from before multiple
+    // selection, which then restore just `selectionPath`.
+    var selectedPaths: [[Int]] = []
     var isInspectorPresented = true
     // Child-index paths of locked nodes (#192).
     var lockedPaths: [[Int]] = []
@@ -35,7 +38,7 @@ struct EditorState: Equatable {
 
 extension EditorState: Codable {
     enum CodingKeys: String, CodingKey {
-        case cameraMatrix, cameraTarget, renderSettings, gizmoMode, gizmoSpace, selectionPath, isInspectorPresented, lockedPaths
+        case cameraMatrix, cameraTarget, renderSettings, gizmoMode, gizmoSpace, selectionPath, selectedPaths, isInspectorPresented, lockedPaths
     }
 
     init(from decoder: Decoder) throws {
@@ -48,6 +51,7 @@ extension EditorState: Codable {
         gizmoMode = try container.decodeIfPresent(String.self, forKey: .gizmoMode).flatMap(TransformGizmo.Mode.init(rawValue:)) ?? defaults.gizmoMode
         gizmoSpace = try container.decodeIfPresent(String.self, forKey: .gizmoSpace).flatMap(TransformGizmo.Space.init(rawValue:)) ?? defaults.gizmoSpace
         selectionPath = try container.decodeIfPresent([Int].self, forKey: .selectionPath)
+        selectedPaths = try container.decodeIfPresent([[Int]].self, forKey: .selectedPaths) ?? []
         isInspectorPresented = try container.decodeIfPresent(Bool.self, forKey: .isInspectorPresented) ?? defaults.isInspectorPresented
         lockedPaths = try container.decodeIfPresent([[Int]].self, forKey: .lockedPaths) ?? []
     }
@@ -60,6 +64,9 @@ extension EditorState: Codable {
         try container.encode(gizmoMode.rawValue, forKey: .gizmoMode)
         try container.encode(gizmoSpace.rawValue, forKey: .gizmoSpace)
         try container.encodeIfPresent(selectionPath, forKey: .selectionPath)
+        if !selectedPaths.isEmpty {
+            try container.encode(selectedPaths, forKey: .selectedPaths)
+        }
         try container.encode(isInspectorPresented, forKey: .isInspectorPresented)
         if !lockedPaths.isEmpty {
             try container.encode(lockedPaths, forKey: .lockedPaths)
@@ -124,6 +131,7 @@ extension EditorModel {
             gizmoMode: gizmoMode,
             gizmoSpace: gizmoSpace,
             selectionPath: selectedNode.flatMap(Self.path(to:)),
+            selectedPaths: (selectedNodes.filter { $0 !== selectedNode } + [selectedNode].compactMap(\.self)).compactMap(Self.path(to:)),
             isInspectorPresented: isInspectorPresented,
             lockedPaths: sceneGraph.nodesWithWorldTransforms(includeHidden: true).map(\.node).filter { lockedNodes.contains($0.id) }.compactMap(Self.path(to:))
         )
@@ -137,7 +145,13 @@ extension EditorModel {
         gizmoSpace = state.gizmoSpace
         isInspectorPresented = state.isInspectorPresented
         restoreLockedNodes(Set(state.lockedPaths.compactMap(node(atPath:)).map(\.id)))
-        selection = state.selectionPath.flatMap(node(atPath:))?.id
+        let primary = state.selectionPath.flatMap(node(atPath:))?.id
+        let selected = state.selectedPaths.compactMap(node(atPath:)).map(\.id)
+        if selected.count > 1 {
+            select(selected, primary: primary)
+        } else {
+            selection = primary
+        }
     }
 
     private static func path(to node: SceneGraph.Node) -> [Int]? {
