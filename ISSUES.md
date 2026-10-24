@@ -4609,7 +4609,7 @@ Also: if the folder importer is cancelled or the wrong folder is chosen, say so 
 status: new
 priority: high
 kind: bug
-labels: area:renderer,area:ui,effort:m
+labels: area:renderer, area:ui, effort:m
 created: 2026-10-24T18:30:46Z
 +++
 
@@ -4627,5 +4627,29 @@ Things to check:
 How to confirm: capture a flickering frame (using-gpucapture) and look at the Manipulator pass inputs. Also try with the selection outline off, then with Lights and Cameras off and Bounding Boxes set to None, to see which overlay is involved. Turn on Metal API validation and the Metal 4 shader validation hazard checks if available.
 
 Probably belongs partly in MetalSprockets: a missing frame-to-frame barrier for persistent attachments in RenderView. Move or split the issue once the cause is known.
+
+---
+
+## 215: Composer: frame rate drops sharply while dragging
+
++++
+status: new
+priority: high
+kind: bug
+labels: area:composer,area:ui,effort:m
+created: 2026-10-24T18:31:12Z
++++
+
+The frame rate drops a lot while dragging, at least with the gizmo; camera orbit not checked yet. Cause not measured yet. Profile first (Instruments Time Profiler plus SwiftUI, and the Frame Timing overlay's CPU phases) before changing anything.
+
+Suspects from the code, unverified:
+- every gizmo onChange bumps EditorModel.transformRevision, which every inspector, tree row and helper reads (localTRS, isVisible, isHidden, materials...), so most of the UI re-evaluates each frame of the drag
+- ComposerView has .onChange(of: model.editorState) (#204), and editorState is computed: selectedNodes and lockedPaths each walk the whole graph (nodesWithWorldTransforms), plus path lookups. It runs on every body evaluation and then copies the state into the document under a lock
+- DebugShapes, BoundingBoxes and the selection outline rebuild their GraphicsContext3D geometry or jump-flood passes every frame while things move
+- multi-selection drags (#205) set worldTransform on companions every change, and each set walks parents
+- ScenePreviewView recreates the decorations and overlay closures every body pass
+- statistics (if on) flatten the whole graph every 0.5 s (#212)
+
+Fix direction: keep drag updates out of SwiftUI's view graph (separate the drag revision from the observed transformRevision, or throttle UI refresh during a drag), make editorState cheap or update it only on drag end, and cache geometry that does not change. Add a benchmark: N nodes, a simulated gizmo drag for M frames, measure main-thread time.
 
 ---
