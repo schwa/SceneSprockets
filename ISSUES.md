@@ -1231,9 +1231,9 @@ Not reproducible offscreen: DemoSnapshot renders one frame at a time and waits f
 status: open
 priority: medium
 kind: bug
-labels: area:renderer, effort:s, deferred
+labels: area:renderer, effort:s
 created: 2026-10-14T01:14:55Z
-updated: 2026-10-20T02:27:43Z
+updated: 2026-10-24T14:21:10Z
 +++
 
 Surfaces that face the light show a fine dotted shadow pattern, and shadow edges are stepped. It is clearly visible on the fox's head in the Imported Assets demo. It may also cause the random flicker in #59, because borderline texels flip between lit and shadowed.
@@ -1662,9 +1662,9 @@ SceneGraph.Shape has no segment counts, no box chamferRadius, no sphere isGeodes
 status: open
 priority: low
 kind: feature
-labels: effort:m, area:scenegraph, deferred
+labels: effort:m, area:scenegraph
 created: 2026-10-15T02:28:07Z
-updated: 2026-10-15T21:19:11Z
+updated: 2026-10-24T14:21:10Z
 +++
 
 SceneKit has SCNTube, SCNPyramid, SCNFloor (infinite, with optional reflections) and SCNShape (an extruded Bézier path). Shape has none of them. See docs/SceneKitComparison.md.
@@ -2693,9 +2693,9 @@ Done when: a view modifier or flag turns the overlay on, and it shows live per-f
 status: open
 priority: medium
 kind: feature
-labels: effort:l, area:renderer, deferred
+labels: effort:l, area:renderer
 created: 2026-10-17T12:19:22Z
-updated: 2026-10-20T02:27:43Z
+updated: 2026-10-24T14:21:10Z
 +++
 
 SceneGraph has no standard way to view a scene in debug modes such as normals, UVs, tangents, world position or material channels. The only option is ShaderMaterial.normals(), which has to be set on each node by hand.
@@ -2707,6 +2707,9 @@ Related debug shaders already exist in sibling packages:
 None of these can be turned on for a whole SceneGraph or SceneView, and Blinn-Phong has no equivalent.
 
 Requested (per user): make debug shaders a default part of this project, so any scene can be shown in a debug mode.
+
+- `2026-10-24T14:17:41Z`: Related: #188 (Composer debug shapes for lights and cameras).
+- `2026-10-24T14:18:20Z`: Related: #188 (Composer debug shapes for lights and cameras).
 
 ---
 
@@ -3561,15 +3564,18 @@ Part of #52. Not saved yet: sampler states (textures load with linear repeat), P
 ## 165: Open and save .scenesprocketsd documents in the demo app
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: deferred, area:demo, effort:s
 created: 2026-10-22T16:11:23Z
-updated: 2026-10-23T13:22:40Z
+updated: 2026-10-24T14:21:10Z
+closed: 2026-10-24T14:21:10Z
 +++
 
 Part of #52. Register a UTType for .scenesprocketsd (a package) and add open/save to the demo app, for example with DocumentGroup, so archives can be inspected and edited. Today only scenesprockets-demos --save writes them, and nothing reads them except tests.
+
+- `2026-10-24T14:21:10Z`: Closing: the Composer (DocumentGroup, .scenesprocketsd UTType) opens and saves these documents now.
 
 ---
 
@@ -3656,15 +3662,18 @@ Follow-up to #154. Ring halves behind the gizmo's center draw like the front hal
 ## 170: Demo: undo for gizmo edits and a transform inspector
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: deferred, area:demo, effort:m
 created: 2026-10-22T18:03:49Z
-updated: 2026-10-23T13:22:40Z
+updated: 2026-10-24T14:21:10Z
+closed: 2026-10-24T14:21:10Z
 +++
 
 Follow-up to #154. TransformGizmo has onBegin/onChange/onEnd, but the demo app does not record undo steps or show the selected node's transform. Register undo with the window's UndoManager on onBegin/onEnd, and show position, rotation and scale in the inspector.
+
+- `2026-10-24T14:21:10Z`: Closing: the Composer has undo for gizmo edits and an editable transform inspector now.
 
 ---
 
@@ -3784,9 +3793,9 @@ After the move: SceneSprocketsGizmos keeps SelectionOutline (or it moves too), a
 status: open
 priority: medium
 kind: feature
-labels: area:composer, area:document, effort:m, deferred
+labels: area:composer, area:document, effort:m
 created: 2026-10-23T13:03:28Z
-updated: 2026-10-24T11:35:22Z
+updated: 2026-10-24T14:21:09Z
 +++
 
 When saving a .scenesprocketsd bundle, render the scene offscreen and write a PNG into the bundle (for example `Preview.png`).
@@ -3800,6 +3809,7 @@ The Quick Look preview extension and a future thumbnail extension can then show 
 Blocked on #52 (save and load a scene graph).
 
 - `2026-10-24T11:27:01Z`: Punted by auto-issue-fixer: blocked on #52 (still open). Re-queued after #52 in this run.
+- `2026-10-24T14:21:10Z`: Undeferred: the Composer already saves and loads .scenesprocketsd bundles through SceneArchive, so the block on #52 no longer stops this.
 
 ---
 
@@ -3958,5 +3968,204 @@ updated: 2026-10-24T11:44:56Z
 +++
 
 Imported glTFs are kept as mostly complete units (#157), not edited in detail. Add an Explode command that converts an imported glTF node tree into plain scene graph nodes (meshes, materials, transforms), so they can be edited and are then saved as generated content (#158).
+
+---
+
+## 184: Composer: environment background looks closer than the grid
+
++++
+status: open
+priority: low
+kind: task
+labels: investigate, area:composer, effort:s
+created: 2026-10-24T14:09:41Z
+updated: 2026-10-24T14:18:19Z
++++
+
+With the Studio environment as background, the grid looks like it runs past and under the environment's walls, so the environment seems nearer than the grid.
+
+Checked so far: draw order is fine. SceneGraphRenderer adds the background first, and PBREnvironmentBackground draws with depth testing off, so the grid always draws over it.
+
+My guess is perception: the Studio map shows a small room (floor, wall, corner), but the grid is an infinite plane with no distance fade, so it runs to the horizon at full brightness.
+
+To investigate:
+- Does a distance fade on GridShader (MetalSprocketsAddOns) fix it? It may need adding there.
+- Does it still look wrong with an outdoor HDR?
+
+---
+
+## 185: Composer: save editor state in the document bundle next to scene.json
+
++++
+status: open
+priority: medium
+kind: feature
+labels: area:composer, area:document, effort:m
+created: 2026-10-24T14:12:32Z
+updated: 2026-10-24T14:18:19Z
++++
+
+The Composer loses its editor state when a document is closed. Save it in the .scenesprocketsd bundle as its own file (for example editor.json) next to scene.json, so SceneArchive and other readers can ignore it.
+
+Candidates:
+- editor camera (matrix and orbit target)
+- render settings (grid, axes, statistics, frame timing, shadows, field of view, clip planes)
+- gizmo mode and space
+- selection
+- inspector visibility
+
+ComposerDocument writes the bundle through SceneArchive into a temporary URL. The editor file can be added to that directory before the FileWrapper is made, and read back in init(configuration:). A missing or unreadable file must fall back to defaults.
+
+---
+
+## 186: Composer: add lights from the + menu
+
++++
+status: open
+priority: medium
+kind: feature
+labels: area:composer, effort:s
+created: 2026-10-24T14:13:22Z
+updated: 2026-10-24T14:18:19Z
++++
+
+The + menu adds only shapes. Add entries for directional, point and spot lights. Add the new light under the root, select it, and make it undoable, the same as EditorModel.addShape. Directional and spot lights point along the node's -Z, so give them a useful default rotation (for example angled down) and a useful default position.
+
+---
+
+## 187: Composer: add cameras from the + menu
+
++++
+status: open
+priority: medium
+kind: feature
+labels: area:composer, effort:s
+created: 2026-10-24T14:13:23Z
+updated: 2026-10-24T14:18:19Z
++++
+
+Add a Camera entry to the + menu. Add the new camera under the root, select it, and make it undoable, the same as EditorModel.addShape. Good default: place it at the current editor camera's transform so it looks at what the user sees. Related: choosing a scene camera as the preview's point of view.
+
+---
+
+## 188: Composer: draw debug shapes for lights and cameras
+
++++
+status: open
+priority: medium
+kind: feature
+labels: area:composer, effort:m
+created: 2026-10-24T14:13:23Z
+updated: 2026-10-24T14:18:19Z
++++
+
+Lights and cameras are invisible in the preview, so the user cannot see or click them. Draw debug shapes with MetalSprocketsAddOns' GraphicsContext3D / 3D canvas, as TransformGizmo does:
+- directional light: arrow along -Z
+- point light: small sphere or star, plus the range if it is finite
+- spot light: cone from innerConeAngle and outerConeAngle
+- camera: frustum from its projection
+
+Draw the selected node highlighted. Add a Render settings toggle. Clicking a debug shape should select its node; mesh hit testing does not find these nodes.
+
+- `2026-10-24T14:17:41Z`: Related: #132 (debug visualization modes in the renderer), #186 and #187 (adding lights and cameras; without these shapes they are invisible).
+- `2026-10-24T14:18:20Z`: Related: #132 (debug visualization modes in the renderer), #186 and #187 (adding lights and cameras; without these shapes they are invisible).
+
+---
+
+## 189: Composer: app Settings window with a gizmo size option (large/small)
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:composer, effort:s
+created: 2026-10-24T14:14:41Z
+updated: 2026-10-24T14:18:19Z
++++
+
+Add a Settings scene (Composer > Settings…) for app-wide preferences stored with @AppStorage, not in documents.
+
+First setting: transform gizmo size, Large or Small. EditorModel sets gizmo.worldSize from the scene bounds (#171). Apply a multiplier on top of that, or a screen size if TransformGizmo supports one.
+
+Later settings could include default render settings for new documents.
+
+- `2026-10-24T14:17:41Z`: Related: #190 (the CollaborationKit auth settings go in this Settings window).
+- `2026-10-24T14:18:20Z`: Related: #190 (the CollaborationKit auth settings go in this Settings window).
+
+---
+
+## 190: Composer: AI assistant panel in the sidebar with CollaborationKit
+
++++
+status: open
+priority: medium
+kind: feature
+labels: area:composer, effort:m
+created: 2026-10-24T14:16:04Z
+updated: 2026-10-24T14:18:19Z
++++
+
+Add CollaborationKit (github.com/schwa/CollaborationKit, local checkout at ~/Projects/Current/CollaborationKit) to the Composer:
+- CollaborationChatView in the left sidebar, for example as a tab or a split under the scene tree.
+- One ConversationStore / LLMSession per document.
+- CollaborationSettingsView in the app Settings window (#189) for sign-in and model choice. Credentials go in KeychainCredentialStore and are shared through CollaborationCredentials in the environment.
+
+Tools for the model are in a separate subtask.
+
+---
+
+## 191: Composer: CollaborationKit tools to query and edit the scene
+
++++
+status: open
+priority: medium
+kind: feature
+labels: area:composer, effort:l
+depends: 190
+created: 2026-10-24T14:16:04Z
+updated: 2026-10-24T14:18:19Z
++++
+
+Subtask of #190. Add @CollaborationTools / @CollaborationTool methods so the model can read and change the scene:
+- query: list nodes (tree, ids, labels, kinds), get a node's transform, content, material and bounds, get the selection and the environment
+- edit: add shapes, lights and cameras, delete, rename, set the transform, reparent, select, set environment and background
+
+Make edits through EditorModel so they can be undone and the UI refreshes. Batch the changes from one assistant turn into one undo group if possible.
+
+---
+
+## 192: Composer: lock nodes
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:composer, effort:m
+created: 2026-10-24T14:16:05Z
+updated: 2026-10-24T14:18:19Z
++++
+
+Add a lock toggle per node, in the tree row and the inspector. A locked node cannot be picked in the viewport, moved by the gizmo, or edited in the inspector. It can still be selected in the tree. Decide if the lock also applies to children. Save it as editor state (#185) or in the scene; probably editor state.
+
+- `2026-10-24T14:17:41Z`: Related: #193 (hide/show). Show both toggles in the tree row.
+- `2026-10-24T14:18:20Z`: Related: #193 (hide/show). Show both toggles in the tree row.
+
+---
+
+## 193: Composer: hide/show and enable/disable nodes
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:composer, effort:m
+created: 2026-10-24T14:16:05Z
+updated: 2026-10-24T14:18:19Z
++++
+
+Add an eye toggle in the tree row and the inspector to hide and show nodes, using SceneGraph.Node.isVisible, which the archive already saves. Hidden nodes are not drawn and not hit-tested; show them dimmed in the tree. Decide if 'inactive' (also stops actions, constraints, particles and physics) is a separate state from 'hidden', like Unity's SetActive compared to a renderer toggle. Make changes undoable.
+
+- `2026-10-24T14:17:41Z`: Related: #192 (lock nodes).
+- `2026-10-24T14:18:20Z`: Related: #192 (lock nodes).
 
 ---
