@@ -202,12 +202,30 @@ public final class EditorModel {
         return node.isVisible
     }
 
-    // Hidden itself or through an ancestor.
+    // Scene data (Node.isActive). Inactive also stops actions, constraints, particles and physics (#196).
+    func setActive(_ isActive: Bool, _ node: SceneGraph.Node) {
+        guard node.isActive != isActive else {
+            return
+        }
+        node.isActive = isActive
+        transformRevision += 1
+        undoManager?.registerUndo(withTarget: self) { model in
+            model.setActive(!isActive, node)
+        }
+        undoManager?.setActionName(isActive ? "Activate" : "Deactivate")
+    }
+
+    func isActive(_ node: SceneGraph.Node) -> Bool {
+        _ = transformRevision
+        return node.isActive
+    }
+
+    // Hidden or inactive, itself or through an ancestor.
     func isHidden(_ node: SceneGraph.Node) -> Bool {
         _ = transformRevision
         var current: SceneGraph.Node? = node
         while let candidate = current {
-            if !candidate.isVisible {
+            if !candidate.isShown {
                 return true
             }
             current = candidate.parent

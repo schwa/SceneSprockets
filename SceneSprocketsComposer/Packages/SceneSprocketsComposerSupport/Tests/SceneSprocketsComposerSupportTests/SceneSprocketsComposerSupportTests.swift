@@ -334,6 +334,26 @@ import UniformTypeIdentifiers
     #expect(model.selectedNode?.parent === model.sceneGraph.root)
 }
 
+// #196
+@MainActor
+@Test func deactivatingIsUndoableAndDimsTheSubtree() throws {
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    model.addShape(.box(), label: "Parent")
+    let parent = try #require(model.selectedNode)
+    let child = SceneGraph.Node(parent: parent, label: "Child")
+    let undoManager = UndoManager()
+    undoManager.groupsByEvent = false
+    model.undoManager = undoManager
+    undoManager.beginUndoGrouping()
+    model.setActive(false, parent)
+    undoManager.endUndoGrouping()
+    #expect(model.isHidden(child))
+    #expect(model.sceneGraph.bounds == nil)
+    undoManager.undo()
+    #expect(parent.isActive)
+    #expect(!model.isHidden(child))
+}
+
 // #177: framing keeps the view direction and orbits the framed center.
 @Test func framingKeepsViewDirection() {
     var camera = EditorCamera()

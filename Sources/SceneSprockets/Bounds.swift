@@ -48,7 +48,7 @@ extension SceneGraph.Node {
 
     // Bounds of this node and its descendants in the parent's space (this node's transform applied). Nil if hidden.
     public var subtreeBounds: BoundingBox3D? {
-        guard isVisible else {
+        guard isShown else {
             return nil
         }
         if let cache = boundsCache.subtree, cache.revision == revision {
@@ -76,7 +76,7 @@ extension SceneGraph {
     public func worldBounds(of node: Node) -> BoundingBox3D? {
         var ancestor = node.parent
         while let current = ancestor {
-            guard current.isVisible else {
+            guard current.isShown else {
                 return nil
             }
             ancestor = current.parent

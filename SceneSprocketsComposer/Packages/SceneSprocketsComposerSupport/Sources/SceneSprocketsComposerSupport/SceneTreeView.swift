@@ -37,6 +37,9 @@ struct SceneTreeView: View {
                     Button(model.isVisible(node) ? "Hide" : "Show", systemImage: model.isVisible(node) ? "eye.slash" : "eye") {
                         model.setVisible(!node.isVisible, node)
                     }
+                    Button(model.isActive(node) ? "Deactivate" : "Activate", systemImage: model.isActive(node) ? "pause.circle" : "play.circle") {
+                        model.setActive(!node.isActive, node)
+                    }
                     Button(model.lockedNodes.contains(node.id) ? "Unlock" : "Lock", systemImage: model.lockedNodes.contains(node.id) ? "lock.open" : "lock") {
                         model.setLocked(!model.lockedNodes.contains(node.id), node)
                     }

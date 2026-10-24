@@ -99,7 +99,7 @@ extension SceneGraph {
     // used by billboards. `deltaTime` (seconds since the last call) drives acceleration constraints.
     public func applyConstraints(pointOfView: simd_float4x4, deltaTime: Float = 0) {
         var constrained: [Node] = []
-        visit(includeHidden: true) { node, _ in
+        visitActive { node, _ in
             if !node.constraints.isEmpty {
                 constrained.append(node)
             }

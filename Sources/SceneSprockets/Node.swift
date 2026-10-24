@@ -47,6 +47,15 @@ extension SceneGraph {
         public var isVisible = true {
             didSet { bump(structure: true) }
         }
+        // False is hidden and also stops this subtree's actions, constraints, particles and physics, like Unity's
+        // GameObject.SetActive(false). Hidden-but-active nodes keep animating (#196).
+        public var isActive = true {
+            didSet { bump(structure: true) }
+        }
+        // Drawn, hit and counted in bounds, if its ancestors are too: visible and active.
+        public var isShown: Bool {
+            isVisible && isActive
+        }
         // 0 is invisible, 1 opaque; multiplies with the ancestors' opacity, like SCNNode.opacity. Applied by materials
         // with appliesNodeOpacity (Blinn-Phong, ShaderMaterial, PBR). Bumps the transform revision, not the structure
         // one, so fading does not rebuild renderer caches.
@@ -313,6 +322,7 @@ extension SceneGraph {
             copy.skin = skin
             copy.skinVertices = skinVertices
             copy.isVisible = isVisible
+            copy.isActive = isActive
             copy.opacity = opacity
             copy.physicsBody = physicsBody
             copy.constraints = constraints

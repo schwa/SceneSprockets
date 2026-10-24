@@ -12,7 +12,7 @@ extension SceneGraph.Node {
     public func flattenedClone() -> SceneGraph.Node? {
         var parts: [(mesh: MetalMesh, materials: [any Material], transform: simd_float4x4, castsShadow: Bool, receivesShadow: Bool)] = []
         func collect(_ node: SceneGraph.Node, transform: simd_float4x4) -> Bool {
-            guard node.isVisible else {
+            guard node.isShown else {
                 return true
             }
             if case let .mesh(mesh, materials, castsShadow, receivesShadow) = node.content {

@@ -246,7 +246,7 @@ extension SceneGraph {
     // Advances every running action in the graph, including on hidden nodes.
     public func advanceActions(by deltaTime: Float) {
         var nodes: [Node] = []
-        visit(includeHidden: true) { node, _ in
+        visitActive { node, _ in
             if !node.runningActions.isEmpty {
                 nodes.append(node)
             }

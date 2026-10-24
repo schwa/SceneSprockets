@@ -4228,12 +4228,13 @@ Follow-up to #132. SceneGraphDebugMode covers geometry: shaded, normals, texture
 ## 196: Composer: inactive nodes (pause actions, constraints, particles and physics)
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:composer, area:scenegraph, effort:m
 created: 2026-10-24T15:12:57Z
-updated: 2026-10-24T15:35:19Z
+updated: 2026-10-24T15:55:08Z
+closed: 2026-10-24T15:55:08Z
 +++
 
 Split from #193. Hide/show (Node.isVisible) is done. A separate 'inactive' state, like Unity's SetActive, would also stop the subtree's actions, constraints, particles and physics, not just drawing. It needs a scene graph flag that advanceActions, applyConstraints, particles and SceneSprocketsPhysics respect. Decide whether inactive implies hidden.

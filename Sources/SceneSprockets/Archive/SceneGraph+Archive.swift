@@ -42,7 +42,7 @@ extension SceneGraph: Codable {
 
 extension SceneGraph.Node: Codable {
     enum ArchiveKeys: String, CodingKey {
-        case label, transform, pivot, isVisible, opacity, categoryBitMask, lightCategoryBitMask, renderingOrder
+        case label, transform, pivot, isVisible, isActive, opacity, categoryBitMask, lightCategoryBitMask, renderingOrder
         case subdivisionLevel, actionSpeed, mesh, light, camera, constraints, children
         case morphTargets, morphWeights, skin, skinVertices, physicsBody, particleSystems
     }
@@ -65,6 +65,9 @@ extension SceneGraph.Node: Codable {
         }
         if !isVisible {
             try container.encode(isVisible, forKey: .isVisible)
+        }
+        if !isActive {
+            try container.encode(isActive, forKey: .isActive)
         }
         if opacity != 1 {
             try container.encode(opacity, forKey: .opacity)
@@ -134,6 +137,7 @@ extension SceneGraph.Node: Codable {
             pivot = try float4x4(archiveValues: values)
         }
         isVisible = try container.decodeIfPresent(Bool.self, forKey: .isVisible) ?? true
+        isActive = try container.decodeIfPresent(Bool.self, forKey: .isActive) ?? true
         opacity = try container.decodeIfPresent(Float.self, forKey: .opacity) ?? 1
         categoryBitMask = try container.decodeIfPresent(UInt.self, forKey: .categoryBitMask) ?? 1
         lightCategoryBitMask = try container.decodeIfPresent(UInt.self, forKey: .lightCategoryBitMask) ?? .max

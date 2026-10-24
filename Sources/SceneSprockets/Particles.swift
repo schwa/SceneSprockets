@@ -131,7 +131,8 @@ extension SceneGraph {
                 visible.insert(ObjectIdentifier(node))
             }
         }
-        visit(includeHidden: true) { node, worldTransform in
+        // Inactive subtrees freeze.
+        visitActive { node, worldTransform in
             for system in node.particleSystems {
                 system.advance(by: deltaTime, worldTransform: worldTransform, isHidden: !visible.contains(ObjectIdentifier(node)))
             }
@@ -146,7 +147,7 @@ extension SceneGraph {
     func allParticleSystems() -> [SceneParticleSystem] {
         var seen = Set<ObjectIdentifier>()
         var systems: [SceneParticleSystem] = []
-        visit(includeHidden: true) { node, _ in
+        visitActive { node, _ in
             for system in node.particleSystems where seen.insert(ObjectIdentifier(system)).inserted {
                 systems.append(system)
             }

@@ -63,6 +63,38 @@ struct SceneArchiveTests {
         try String(contentsOf: url.appendingPathComponent("scene.json"), encoding: .utf8)
     }
 
+    // #196: an inactive subtree is hidden and stops simulating; the flag is saved.
+    @Test
+    func inactiveSubtreesStopAndAreSaved() throws {
+        let root = SceneGraph.Node(label: "Root")
+        let parent = SceneGraph.Node(parent: root, label: "Parent", shape: .box(), material: BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color(0.8), specular: .color(0), shininess: 1), device: device)
+        let child = SceneGraph.Node(parent: parent, label: "Child")
+        child.run(.move(by: [1, 0, 0], duration: 1))
+        let sceneGraph = SceneGraph(root: root)
+
+        parent.isActive = false
+        sceneGraph.advanceActions(by: 0.5)
+        #expect(child.localTransform.trs.translation == .zero)
+        #expect(sceneGraph.bounds == nil)
+        #expect(sceneGraph.meshEntries().isEmpty)
+        // Still reachable for editors.
+        #expect(sceneGraph.nodesWithWorldTransforms(includeHidden: true).contains { $0.node === child })
+
+        let url = temporaryURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        try archive.write(sceneGraph, to: url)
+        let (loaded, _) = try archive.read(from: url, device: device)
+        #expect(loaded.root.children.first?.isActive == false)
+
+        parent.isActive = true
+        sceneGraph.advanceActions(by: 0.5)
+        #expect(child.localTransform.trs.translation.x > 0.4)
+        // Hidden but active nodes keep animating.
+        parent.isVisible = false
+        sceneGraph.advanceActions(by: 0.25)
+        #expect(child.localTransform.trs.translation.x > 0.7)
+    }
+
     @Test
     func roundTripKeepsEverythingItSaves() throws {
         let first = temporaryURL()

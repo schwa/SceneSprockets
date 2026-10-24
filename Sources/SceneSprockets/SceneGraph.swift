@@ -42,7 +42,19 @@ public class SceneGraph {
         return result
     }
 
-    /// Recursive depth-first traversal, accumulating world transforms. Skips hidden subtrees unless `includeHidden`.
+    // Every node except inactive subtrees, hidden or not, for simulation: actions, constraints and particles (#196).
+    func visitActive(_ visitor: (Node, float4x4) throws -> Void) rethrows {
+        try traverse(includeHidden: true) { node, worldTransform in
+            guard node.isActive else {
+                return .skipChildren
+            }
+            try visitor(node, worldTransform)
+            return .continue
+        }
+    }
+
+    /// Recursive depth-first traversal, accumulating world transforms. Skips hidden and inactive subtrees unless
+    /// `includeHidden`.
     public func visit(worldTransform initialTransform: float4x4 = .identity, includeHidden: Bool = false, _ visitor: (Node, float4x4) throws -> Void) rethrows {
         try Self.visit(node: root, parentTransform: initialTransform, includeHidden: includeHidden, visitor)
     }
@@ -62,7 +74,7 @@ public class SceneGraph {
 
     // Returns false when the traversal stopped.
     private static func traverse(node: Node, parentTransform: float4x4, includeHidden: Bool, _ visitor: (Node, float4x4) throws -> VisitResult) rethrows -> Bool {
-        guard includeHidden || node.isVisible else {
+        guard includeHidden || node.isShown else {
             return true
         }
         let worldTransform = parentTransform * node.composedTransform
@@ -80,7 +92,7 @@ public class SceneGraph {
     }
 
     private static func visit(node: Node, parentTransform: float4x4, includeHidden: Bool, _ visitor: (Node, float4x4) throws -> Void) rethrows {
-        guard includeHidden || node.isVisible else {
+        guard includeHidden || node.isShown else {
             return
         }
         let worldTransform = parentTransform * node.composedTransform
