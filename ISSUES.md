@@ -4672,3 +4672,14 @@ created: 2026-10-24T18:34:15Z
 +++
 
 ---
+
+## 217: Telling assistant to make models into glass doesn't work
+
++++
+status: new
+priority: medium
+kind: bug
+created: 2026-10-24T18:34:16Z
++++
+
+---
