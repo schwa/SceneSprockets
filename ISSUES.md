@@ -4556,3 +4556,27 @@ Add a Render settings toggle 'Bounding Boxes' that draws world-space bounding bo
 - `2026-10-24T17:50:16Z`: Related: #188 (DebugShapes draws the same way).
 
 ---
+
+## 212: SceneGraph.flattened() mutates an observed property, crashing SwiftUI when statistics are shown
+
++++
+status: new
+priority: high
+kind: bug
+labels: area:scenegraph,area:ui,effort:xs
+created: 2026-10-24T18:07:22Z
++++
+
+Composer crashed with 'AttributeGraph precondition failure: setting value during update' when the Statistics overlay was on.
+
+Stack: SceneView.body, the statistics TimelineView closure (SceneView.swift:237), then SceneGraph.statistics (Queries.swift:22), then SceneGraph.flattened(initialTransform:), then SceneGraph.traversalCount.modify, then ObservationRegistrar.willSet, then GraphHost.flushTransactions, then AG precondition_failure.
+
+Cause: SceneGraph is @Observable, and traversalCount (SceneGraph.swift:204, incremented at :213) is a tracked stored property. flattened() bumps it on every traversal, so any SwiftUI view that reads statistics or flattens the graph during a view update writes an observed property mid-update. SwiftUI forbids that.
+
+Fix: mark traversalCount @ObservationIgnored. It is a diagnostics counter, not view state. Check for other bookkeeping properties on SceneGraph or Node that change while being read (caches, revision counters touched from getters) and do the same.
+
+Regression test: read sceneGraph.statistics inside withObservationTracking and check onChange does not fire. Better, observe the graph and call flattened() and check no change is reported.
+
+The other log lines (DetachedSignatures, ViewBridge error 18, NSColorPicker pasteboard, SmartNameSuggestions 'no importer for io.schwa.scenesprockets-document') look like system noise and are unrelated.
+
+---
