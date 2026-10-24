@@ -1,3 +1,4 @@
+import Foundation
 import Metal
 import SwiftMesh
 import Testing
@@ -18,12 +19,47 @@ private var material: BlinnPhongSceneMaterial {
     (.cone(topRadius: 0.5, bottomRadius: 1, height: 3), SIMD3<Float>(2, 3, 2)),
     (.capsule(capRadius: 0.5, height: 3), SIMD3<Float>(1, 3, 1)),
     (.torus(ringRadius: 1, pipeRadius: 0.25), SIMD3<Float>(2.5, 0.5, 2.5)),
+    (.tube(innerRadius: 0.5, outerRadius: 1, height: 2), SIMD3<Float>(2, 2, 2)),
+    (.pyramid(width: 2, height: 3, length: 4), SIMD3<Float>(2, 3, 4)),
+    (.floor(width: 10, length: 20), SIMD3<Float>(10, 0, 20)),
+    (.extrudedPath("0 0 m 2 0 l 2 1 l 0 1 l h", extrusionDepth: 0.5), SIMD3<Float>(2, 1, 0.5)),
 ])
 func shapeSizes(shape: SceneGraph.Shape, size: SIMD3<Float>) throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let node = SceneGraph.Node(shape: shape, material: material, device: device)
     let bounds = try #require(node.meshBounds)
     #expect(simd_distance(bounds.max - bounds.min, size) < 0.02)
+}
+
+// #81: closed shapes enclose positive volume (faces point outward) close to the analytic volume; the floor faces up.
+@Test(arguments: [
+    (SceneGraph.Shape.tube(innerRadius: 0.5, outerRadius: 1, height: 2), Float.pi * (1 - 0.25) * 2),
+    (.pyramid(width: 2, height: 3, length: 4), Float(2 * 3 * 4) / 3),
+    (.extrudedPath("0 0 m 2 0 l 2 1 l 0 1 l h", extrusionDepth: 0.5), 1),
+])
+func newShapesFaceOutward(shape: SceneGraph.Shape, volume: Float) {
+    let mesh = shape.mesh().triangulated()
+    var signedVolume: Float = 0
+    for face in mesh.topology.faces {
+        let corners = mesh.topology.halfEdgeLoop(for: face.id).map { mesh.positions[mesh.topology.halfEdges[$0.raw].origin.raw] }
+        signedVolume += simd_dot(corners[0], simd_cross(corners[1], corners[2])) / 6
+    }
+    #expect(abs(signedVolume - volume) / volume < 0.02)
+}
+
+@Test
+func floorFacesUp() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let normals = try #require(SceneGraph.Shape.floor().metalMesh(device: device).float3Values(.normal))
+    #expect(normals.allSatisfy { simd_distance($0, [0, 1, 0]) < 1e-4 })
+}
+
+@Test
+func newShapesRoundTripThroughCodable() throws {
+    for shape in [SceneGraph.Shape.tube(), .pyramid(), .floor(), .extrudedPath("0 0 m 1 0 l 0 1 l h")] {
+        let data = try JSONEncoder().encode(shape)
+        #expect(try JSONDecoder().decode(SceneGraph.Shape.self, from: data) == shape)
+    }
 }
 
 @Test

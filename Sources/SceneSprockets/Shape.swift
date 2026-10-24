@@ -2,6 +2,7 @@ import CoreGraphics
 import GeometryLite3D
 import Metal
 import SwiftMesh
+import SwiftUI
 import simd
 
 extension SceneGraph {
@@ -18,6 +19,15 @@ extension SceneGraph {
         case capsule(capRadius: Float = 0.25, height: Float = 1)
         case torus(ringRadius: Float = 0.5, pipeRadius: Float = 0.25)
         case text(String, fontName: String = "Helvetica", fontSize: Float = 1, extrusionDepth: Float = 0.1)
+        // A cylinder with a round hole along its axis, like SCNTube.
+        case tube(innerRadius: Float = 0.25, outerRadius: Float = 0.5, height: Float = 1)
+        // A rectangular base at y = -height/2 and an apex at y = height/2, like SCNPyramid but centered.
+        case pyramid(width: Float = 1, height: Float = 1, length: Float = 1)
+        // A large flat XZ plane facing +y, a finite stand-in for SCNFloor (no reflections).
+        case floor(width: Float = 100, length: Float = 100)
+        // A path extruded along +z from z = 0, like SCNShape. `path` is a SwiftUI Path description
+        // (Path(_: String)), so the shape stays Codable; y points up as on screen.
+        case extrudedPath(String, extrusionDepth: Float = 0.1)
 
         public func mesh() -> Mesh {
             // SwiftMesh defaults to flat normals; curved shapes need smooth ones (#118).
@@ -40,7 +50,49 @@ extension SceneGraph {
             case let .text(string, fontName, fontSize, extrusionDepth):
                 // SwiftMesh leaves hole corners of n-gon caps without normals, so triangulate before adding them (#101).
                 Mesh.extrudedText(string, fontName: fontName, size: CGFloat(fontSize), depth: extrusionDepth, attributes: []).triangulated().withFlatNormals()
+            case let .tube(innerRadius, outerRadius, height):
+                Self.tube(innerRadius: innerRadius, outerRadius: outerRadius, height: height)
+            case let .pyramid(width, height, length):
+                Self.pyramid(width: width, height: height, length: length)
+            case let .floor(width, length):
+                Mesh(positions: [[-width / 2, 0, -length / 2], [-width / 2, 0, length / 2], [width / 2, 0, length / 2], [width / 2, 0, -length / 2]], faces: [[0, 1, 2, 3]]).withFlatNormals()
+            case let .extrudedPath(description, extrusionDepth):
+                // Same as text: triangulate the n-gon caps before adding normals (#101).
+                Mesh.extruded(SwiftUI.Path(description) ?? SwiftUI.Path(), depth: extrusionDepth, attributes: []).triangulated().withFlatNormals()
             }
+        }
+
+        // Faces wind counter-clockwise seen from outside.
+        private static func tube(innerRadius: Float, outerRadius: Float, height: Float, segments: Int = 48) -> Mesh {
+            let halfHeight = height / 2
+            var positions: [SIMD3<Float>] = []
+            // Rings: outer bottom, outer top, inner bottom, inner top.
+            for (radius, y) in [(outerRadius, -halfHeight), (outerRadius, halfHeight), (innerRadius, -halfHeight), (innerRadius, halfHeight)] {
+                for segment in 0..<segments {
+                    let angle = 2 * Float.pi * Float(segment) / Float(segments)
+                    positions.append([radius * cos(angle), y, radius * sin(angle)])
+                }
+            }
+            func index(_ ring: Int, _ segment: Int) -> Int {
+                ring * segments + segment % segments
+            }
+            var faces: [[Int]] = []
+            for segment in 0..<segments {
+                let next = segment + 1
+                faces.append([index(0, segment), index(1, segment), index(1, next), index(0, next)])
+                faces.append([index(2, segment), index(2, next), index(3, next), index(3, segment)])
+                faces.append([index(1, segment), index(3, segment), index(3, next), index(1, next)])
+                faces.append([index(0, segment), index(0, next), index(2, next), index(2, segment)])
+            }
+            // Smooth round walls, hard rims.
+            return Mesh(positions: positions, faces: faces).withSmoothNormals(creaseAngle: .pi / 4)
+        }
+
+        private static func pyramid(width: Float, height: Float, length: Float) -> Mesh {
+            let (x, y, z) = (width / 2, height / 2, length / 2)
+            let positions: [SIMD3<Float>] = [[-x, -y, -z], [x, -y, -z], [x, -y, z], [-x, -y, z], [0, y, 0]]
+            let faces = [[0, 1, 2, 3], [3, 2, 4], [2, 1, 4], [1, 0, 4], [0, 3, 4]]
+            return Mesh(positions: positions, faces: faces).withFlatNormals()
         }
 
         // Always has texture coordinates (renderers such as Blinn-Phong need them); text gets a planar XY mapping.
@@ -68,6 +120,10 @@ extension SceneGraph {
             case .capsule: "Capsule"
             case .torus: "Torus"
             case .text(let string, _, _, _): "Text \"\(string)\""
+            case .tube: "Tube"
+            case .pyramid: "Pyramid"
+            case .floor: "Floor"
+            case .extrudedPath: "Extruded Path"
             }
         }
     }

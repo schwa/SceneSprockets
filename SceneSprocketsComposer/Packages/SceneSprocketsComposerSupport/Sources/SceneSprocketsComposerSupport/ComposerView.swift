@@ -98,7 +98,7 @@ struct AddShapeMenu: View {
 }
 
 enum ShapeKind: CaseIterable, Identifiable {
-    case box, sphere, plane, cylinder, cone, capsule, torus
+    case box, sphere, plane, cylinder, cone, capsule, torus, tube, pyramid, floor, star
 
     var id: Self { self }
 
@@ -111,6 +111,10 @@ enum ShapeKind: CaseIterable, Identifiable {
         case .cone: "Cone"
         case .capsule: "Capsule"
         case .torus: "Torus"
+        case .tube: "Tube"
+        case .pyramid: "Pyramid"
+        case .floor: "Floor"
+        case .star: "Star"
         }
     }
 
@@ -123,6 +127,10 @@ enum ShapeKind: CaseIterable, Identifiable {
         case .cone: "cone"
         case .capsule: "capsule"
         case .torus: "circle.circle"
+        case .tube: "circle.dotted.circle"
+        case .pyramid: "pyramid"
+        case .floor: "square.bottomhalf.filled"
+        case .star: "star"
         }
     }
 
@@ -135,8 +143,22 @@ enum ShapeKind: CaseIterable, Identifiable {
         case .cone: .cone()
         case .capsule: .capsule()
         case .torus: .torus()
+        case .tube: .tube()
+        case .pyramid: .pyramid()
+        case .floor: .floor()
+        case .star: .extrudedPath(Self.starPath, extrusionDepth: 0.2)
         }
     }
+
+    // A five-pointed star, 1 unit across, as a SwiftUI Path description.
+    private static let starPath: String = {
+        let points = (0..<10).map { index in
+            let angle = Float.pi / 2 + Float(index) * .pi / 5
+            let radius: Float = index.isMultiple(of: 2) ? 0.5 : 0.2
+            return "\(radius * cos(angle)) \(radius * sin(angle))"
+        }
+        return "\(points[0]) m " + points.dropFirst().map { "\($0) l" }.joined(separator: " ") + " h"
+    }()
 }
 
 struct GizmoToolbarContent: View {

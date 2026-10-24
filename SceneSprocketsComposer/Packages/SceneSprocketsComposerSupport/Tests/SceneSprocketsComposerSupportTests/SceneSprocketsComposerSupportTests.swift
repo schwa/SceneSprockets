@@ -147,6 +147,13 @@ import UniformTypeIdentifiers
     #expect(model.gizmo.worldSize == small)
 }
 
+// #81: every + menu shape builds geometry; the star's path string must parse.
+@Test func everyAddMenuShapeHasGeometry() {
+    for kind in ShapeKind.allCases {
+        #expect(!kind.shape.mesh().positions.isEmpty, "\(kind.label)")
+    }
+}
+
 // #177: framing keeps the view direction and orbits the framed center.
 @Test func framingKeepsViewDirection() {
     var camera = EditorCamera()

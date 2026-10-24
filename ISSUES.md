@@ -1660,12 +1660,13 @@ SceneGraph.Shape has no segment counts, no box chamferRadius, no sphere isGeodes
 ## 81: New shapes: tube, pyramid, floor, extruded Bézier path
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: effort:m, area:scenegraph
 created: 2026-10-15T02:28:07Z
-updated: 2026-10-24T14:21:10Z
+updated: 2026-10-24T15:07:59Z
+closed: 2026-10-24T15:07:59Z
 +++
 
 SceneKit has SCNTube, SCNPyramid, SCNFloor (infinite, with optional reflections) and SCNShape (an extruded Bézier path). Shape has none of them. See docs/SceneKitComparison.md.
