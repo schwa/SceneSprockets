@@ -4465,3 +4465,31 @@ Selection: extend SceneTreeView's Item enum (scene, node) with defaultCamera and
 - `2026-10-24T16:54:07Z`: Decided: move the camera and default lighting settings out of the Render tab. They live only in the Default Camera and Default Lighting inspectors.
 
 ---
+
+## 208: Composer: edit every PBR material parameter in the inspector
+
++++
+status: new
+priority: medium
+kind: feature
+labels: area:composer,effort:m
+created: 2026-10-24T16:56:05Z
++++
+
+The Material section (#198) edits only base color, metallic, roughness and emissive. Expose every PBRMaterialUniforms value (MetalSprocketsPBR PBRShaderTypes.h), grouped in disclosure groups so the common ones stay on top:
+- Base: base color with alpha, metallic, roughness, emissive color and emissiveStrength, unlit
+- Alpha: alphaMode (opaque, mask, blend) and alphaCutoff; doubleSided
+- Maps: normalScale, occlusionStrength (only matter with textures)
+- Transmission and volume: transmissionFactor, thicknessFactor, attenuationDistance (infinity toggle), attenuationColor, ior, dispersion, volumeScatter, multiscatterColorFactor
+- Diffuse transmission: diffuseTransmissionFactor, diffuseTransmissionColorFactor
+- Specular: specularFactor, specularColorFactor
+- Clearcoat: clearcoatFactor, clearcoatRoughnessFactor, clearcoatNormalScale
+- Sheen: sheenColorFactor, sheenRoughnessFactor
+- Iridescence: iridescenceFactor, iridescenceIor, iridescenceThicknessMinimum and Maximum (nm)
+- Anisotropy: anisotropyStrength, anisotropyRotation (degrees in the UI)
+- Other: retroreflectionFactor; specularGlossiness and glossinessFactor (legacy KHR_materials_pbrSpecularGlossiness)
+Skip internal values: hasTangents, hasNormals, isPointOrLine and the texture slots.
+
+Use EditorModel.editedPBR so edits stay undoable and keep textures. Sliders need ranges from the glTF extension specs. Changing alphaMode or doubleSided may change PBRMaterial.renderState and batching. The assistant's update tool (#202) could take the same fields later. Scene archives already save uniforms field by field (#163).
+
+---
