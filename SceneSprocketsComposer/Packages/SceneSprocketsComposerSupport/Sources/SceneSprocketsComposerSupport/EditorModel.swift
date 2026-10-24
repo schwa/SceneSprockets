@@ -118,6 +118,72 @@ public final class EditorModel {
         undoManager?.setActionName("Transform")
     }
 
+    // The root cannot be deleted.
+    var canDeleteSelection: Bool {
+        selectedNode?.parent != nil
+    }
+
+    func deleteSelection() {
+        guard let node = selectedNode else {
+            return
+        }
+        delete(node)
+    }
+
+    func delete(_ node: SceneGraph.Node) {
+        guard let parent = node.parent, let index = parent.children.firstIndex(where: { $0 === node }) else {
+            return
+        }
+        node.removeFromParent()
+        if selection == node.id {
+            selection = nil
+        }
+        undoManager?.registerUndo(withTarget: self) { model in
+            model.insert(node, into: parent, at: index, actionName: "Delete")
+        }
+        undoManager?.setActionName("Delete")
+    }
+
+    private func insert(_ node: SceneGraph.Node, into parent: SceneGraph.Node, at index: Int, actionName: String) {
+        parent.insertChild(node, at: min(index, parent.children.count))
+        selection = node.id
+        undoManager?.registerUndo(withTarget: self) { model in
+            model.delete(node)
+        }
+        undoManager?.setActionName(actionName)
+    }
+
+    // Adds under the root and selects it.
+    func addShape(_ shape: SceneGraph.Shape, label: String) {
+        let material = BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color(0.8), specular: .color(0.5), shininess: 32)
+        let node = SceneGraph.Node(parent: nil, label: label, shape: shape, material: material, device: systemDefaultDevice())
+        insert(node, into: sceneGraph.root, at: sceneGraph.root.children.count, actionName: "Add \(label)")
+    }
+
+    func setLabel(_ label: String?, of node: SceneGraph.Node) {
+        let previous = node.label
+        guard label != previous else {
+            return
+        }
+        node.label = label
+        undoManager?.registerUndo(withTarget: self) { model in
+            model.setLabel(previous, of: node)
+        }
+        undoManager?.setActionName("Rename")
+    }
+
+    func setLight(_ light: Light, of node: SceneGraph.Node) {
+        guard case .light(let previous) = node.content else {
+            return
+        }
+        node.content = .light(light)
+        transformRevision += 1
+        undoManager?.registerUndo(withTarget: self) { model in
+            model.setLight(previous, of: node)
+        }
+        undoManager?.setActionName("Light")
+    }
+
     public var selectedNode: SceneGraph.Node? {
         guard let selection else {
             return nil
@@ -128,13 +194,7 @@ public final class EditorModel {
 
 extension SceneGraph {
     // Content for new documents.
-    static func starter(device: any MTLDevice) -> SceneGraph {
-        let root = Self.Node(label: "Root")
-        let material = BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color([0.8, 0.4, 0.3]), specular: .color(0.5), shininess: 32)
-        let floorMaterial = BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color(0.6), specular: .color(0.1), shininess: 8)
-        _ = Self.Node(parent: root, label: "Floor", shape: .box(width: 10, height: 0.1, length: 10), material: floorMaterial, device: device, trs: .init(translation: [0, -0.05, 0]))
-        _ = Self.Node(parent: root, label: "Box", shape: .box(), material: material, device: device, trs: .init(translation: [0, 0.5, 0]))
-        _ = Self.Node(parent: root, label: "Sun", trs: .init(rotation: simd_quatf(from: [0, 0, -1], to: simd_normalize([-3, -5, -4]))), content: .light(Light(type: .directional, intensity: 2)))
-        return SceneGraph(root: root)
+    static func empty() -> SceneGraph {
+        SceneGraph(root: Self.Node(label: "Root"))
     }
 }

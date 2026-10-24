@@ -4,12 +4,42 @@ import SwiftUI
 struct SceneTreeView: View {
     @Bindable var model: EditorModel
 
+    // The Scene row stands for "no node selected", which shows scene settings in the inspector.
+    private enum Item: Hashable {
+        case scene
+        case node(SceneGraph.Node.ID)
+    }
+
+    private var listSelection: Binding<Item?> {
+        Binding(get: { model.selection.map(Item.node) ?? .scene }, set: { item in
+            if case let .node(id) = item {
+                model.selection = id
+            } else {
+                model.selection = nil
+            }
+        })
+    }
+
     var body: some View {
-        List(selection: $model.selection) {
+        List(selection: listSelection) {
+            Label("Scene", systemImage: "globe")
+                .tag(Item.scene)
             OutlineGroup([model.sceneGraph.root], children: \.outlineChildren) { node in
                 Label(node.displayName, systemImage: node.systemImage)
+                    .tag(Item.node(node.id))
+                    .contextMenu {
+                        Button("Delete", systemImage: "trash") {
+                            model.delete(node)
+                        }
+                        .disabled(node.parent == nil)
+                    }
             }
         }
+        #if os(macOS)
+        .onDeleteCommand {
+            model.deleteSelection()
+        }
+        #endif
     }
 }
 

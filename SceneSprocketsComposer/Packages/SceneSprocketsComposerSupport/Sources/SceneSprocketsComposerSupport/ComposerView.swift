@@ -1,3 +1,4 @@
+import SceneSprockets
 import SceneSprocketsGizmos
 import SwiftUI
 
@@ -30,19 +31,87 @@ public struct ComposerView: View {
                     .inspectorColumnWidth(min: 240, ideal: 300)
                 }
                 .toolbar {
-                    GizmoToolbarContent(model: model)
-                    Button("Frame Selection", systemImage: "viewfinder") {
-                        model.frameSelection()
+                    ToolbarItemGroup(placement: .principal) {
+                        AddShapeMenu(model: model)
+                        GizmoToolbarContent(model: model)
+                        Button("Frame Selection", systemImage: "viewfinder") {
+                            model.frameSelection()
+                        }
+                        .keyboardShortcut("f", modifiers: [])
+                        .help("Frame the selected node, or the whole scene (F)")
+                        Button("Delete", systemImage: "trash") {
+                            model.deleteSelection()
+                        }
+                        .disabled(!model.canDeleteSelection)
+                        .help("Delete the selected node")
                     }
-                    .keyboardShortcut("f", modifiers: [])
-                    .help("Frame the selected node, or the whole scene (F)")
-                    Button("Inspector", systemImage: "sidebar.trailing") {
-                        isInspectorPresented.toggle()
+                    ToolbarItem {
+                        Button("Inspector", systemImage: "sidebar.trailing") {
+                            isInspectorPresented.toggle()
+                        }
                     }
                 }
         }
+        .focusedSceneValue(\.editorModel, model)
         .onChange(of: undoManager, initial: true) {
             model.undoManager = undoManager
+        }
+    }
+}
+
+struct AddShapeMenu: View {
+    var model: EditorModel
+
+    var body: some View {
+        Menu("Add", systemImage: "plus") {
+            ForEach(ShapeKind.allCases) { kind in
+                Button(kind.label, systemImage: kind.systemImage) {
+                    model.addShape(kind.shape, label: kind.label)
+                }
+            }
+        }
+        .help("Add a shape")
+    }
+}
+
+enum ShapeKind: CaseIterable, Identifiable {
+    case box, sphere, plane, cylinder, cone, capsule, torus
+
+    var id: Self { self }
+
+    var label: String {
+        switch self {
+        case .box: "Box"
+        case .sphere: "Sphere"
+        case .plane: "Plane"
+        case .cylinder: "Cylinder"
+        case .cone: "Cone"
+        case .capsule: "Capsule"
+        case .torus: "Torus"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .box: "cube"
+        case .sphere: "circle"
+        case .plane: "square"
+        case .cylinder: "cylinder"
+        case .cone: "cone"
+        case .capsule: "capsule"
+        case .torus: "circle.circle"
+        }
+    }
+
+    var shape: SceneGraph.Shape {
+        switch self {
+        case .box: .box()
+        case .sphere: .sphere()
+        case .plane: .plane()
+        case .cylinder: .cylinder()
+        case .cone: .cone()
+        case .capsule: .capsule()
+        case .torus: .torus()
         }
     }
 }

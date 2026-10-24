@@ -7,5 +7,8 @@ struct SceneSprocketsComposerApp: App {
         DocumentGroup(newDocument: { ComposerDocument() }, editor: { configuration in
             ComposerView(document: configuration.document)
         })
+        .commands {
+            ComposerCommands()
+        }
     }
 }

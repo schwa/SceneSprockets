@@ -8,6 +8,8 @@ struct ScenePreviewView: View {
     @Bindable var model: EditorModel
     @Environment(\.self)
     private var environment
+    // Focused on click so Edit > Delete (the Delete key) reaches onDeleteCommand.
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         let settings = model.renderSettings
@@ -25,6 +27,7 @@ struct ScenePreviewView: View {
             camera: settings.camera,
             manipulator: model.gizmo,
             onTap: { hit in
+                isFocused = true
                 model.selection = hit?.node.id
             },
             decorations: { context, drawableSize in
@@ -39,5 +42,13 @@ struct ScenePreviewView: View {
                 return try outline.element(nodes: [selectedNode], sceneGraph: sceneGraph, viewport: viewport)
             }
         )
+        .focusable()
+        .focusEffectDisabled()
+        .focused($isFocused)
+        #if os(macOS)
+        .onDeleteCommand {
+            model.deleteSelection()
+        }
+        #endif
     }
 }

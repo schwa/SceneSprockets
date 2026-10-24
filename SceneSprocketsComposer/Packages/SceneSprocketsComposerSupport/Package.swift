@@ -22,6 +22,7 @@ let package = Package(
         .package(url: "https://github.com/schwa/MetalSprocketsPBR", branch: "main"),
         .package(url: "https://github.com/schwa/MetalSupport", branch: "main"),
         .package(url: "https://github.com/schwa/SwiftMesh", branch: "main"),
+        .package(url: "https://github.com/schwa/SwiftFields", branch: "main"),
     ],
     targets: [
         .target(
@@ -39,6 +40,7 @@ let package = Package(
                 .product(name: "MetalSprocketsPBR", package: "MetalSprocketsPBR"),
                 .product(name: "MetalSupport", package: "MetalSupport"),
                 .product(name: "SwiftMesh", package: "SwiftMesh"),
+                .product(name: "SwiftFields", package: "SwiftFields"),
             ]
         ),
         .testTarget(

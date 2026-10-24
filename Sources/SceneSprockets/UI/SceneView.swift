@@ -35,8 +35,10 @@ public struct SceneView: View {
         public static let allowsCameraControl = Options(rawValue: 1 << 0)
         // Adds a white directional light at the camera when the scene has no lights.
         public static let autoenablesDefaultLighting = Options(rawValue: 1 << 1)
-        // Overlays frame rate and scene statistics, like SCNView.showsStatistics.
+        // Overlays scene statistics (meshes, triangles, lights), like SCNView.showsStatistics.
         public static let showsStatistics = Options(rawValue: 1 << 2)
+        // Overlays MetalSprocketsUI's frame timing readout.
+        public static let showsFrameTiming = Options(rawValue: 1 << 4)
         // Keeps the drawable readable (framebufferOnly false) even without post passes, for example to inspect it in a
         // GPU capture. Costs some bandwidth.
         public static let disablesFramebufferOnly = Options(rawValue: 1 << 3)
@@ -72,6 +74,7 @@ public struct SceneView: View {
     // move far away (for example a body falling forever).
     @State private var orbitTarget: SIMD3<Float>?
     @State private var clock = SceneClock()
+    @State private var frameTimingStatistics: FrameTimingStatistics?
 
     // `pointOfView` defaults to the first camera node; with no camera node a camera framing the scene is used.
     // `renderers` draw the material families, e.g. BlinnPhongMaterialRenderer (SceneSprocketsBlinnPhong) or
@@ -201,11 +204,23 @@ public struct SceneView: View {
             }
             onTap(hit(at: location))
         }
+        .onFrameTimingChange { statistics in
+            // Only stored while shown; otherwise every frame would update the view.
+            if options.contains(.showsFrameTiming) {
+                frameTimingStatistics = statistics
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            if options.contains(.showsFrameTiming), let frameTimingStatistics {
+                FrameTimingView(statistics: frameTimingStatistics, options: .all)
+                    .padding()
+            }
+        }
         .overlay(alignment: .bottomLeading) {
             if options.contains(.showsStatistics) {
                 TimelineView(.periodic(from: .now, by: 0.5)) { _ in
                     let statistics = sceneGraph.statistics
-                    Text("\(clock.framesPerSecond, format: .number.precision(.fractionLength(0))) fps \u{00B7} \(statistics.meshCount) meshes \u{00B7} \(statistics.triangleCount) triangles \u{00B7} \(statistics.lightCount) lights")
+                    Text("\(statistics.meshCount) meshes \u{00B7} \(statistics.triangleCount) triangles \u{00B7} \(statistics.lightCount) lights")
                         .font(.caption.monospacedDigit())
                         .padding(4)
                         .background(.black.opacity(0.6), in: .rect(cornerRadius: 4))
@@ -377,14 +392,9 @@ public struct SceneView: View {
 final class SceneClock {
     private var lastFrameTime: Float?
     private var time: Float = 0
-    // Smoothed from real frame intervals, paused or not.
-    private(set) var framesPerSecond: Double = 0
 
     func advance(to frameTime: Float, isPaused: Bool) -> (time: Float, deltaTime: Float) {
         let interval = max(frameTime - (lastFrameTime ?? frameTime), 0)
-        if interval > 0 {
-            framesPerSecond = framesPerSecond == 0 ? 1 / Double(interval) : framesPerSecond * 0.9 + 0.1 / Double(interval)
-        }
         // Clamped, so a stall does not jump animations.
         let deltaTime = isPaused ? 0 : min(interval, 1.0 / 15)
         lastFrameTime = frameTime

@@ -1,5 +1,5 @@
 {
-  "originHash" : "a13fd59e3dd39c3c2d7cadd2d1d405e202ed7f1b563dc9eaca725bb6a68393b8",
+  "originHash" : "fa74d677caa4164c66928e8dfec1d4b6ec2a1e7a4e37c85cb917174df8bc92aa",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -61,7 +61,7 @@
       "location" : "https://github.com/schwa/MetalSprocketsAddOns",
       "state" : {
         "branch" : "main",
-        "revision" : "670d194f929a45c2e56e2bb19bf4a4f2491bc598"
+        "revision" : "fc5949acd6bd04a5fb9f57edb53b2d7eeaaa345d"
       }
     },
     {
@@ -161,6 +161,15 @@
       "state" : {
         "revision" : "050f1a346fbbac0ca2cfb15a95274f7bd1cf0ccf",
         "version" : "604.0.0"
+      }
+    },
+    {
+      "identity" : "swiftfields",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/SwiftFields",
+      "state" : {
+        "branch" : "main",
+        "revision" : "bddc98293dbec451f16daf9baa9f30c59167aaca"
       }
     },
     {

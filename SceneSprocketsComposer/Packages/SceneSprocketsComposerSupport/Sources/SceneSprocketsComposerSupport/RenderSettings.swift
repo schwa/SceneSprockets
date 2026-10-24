@@ -12,6 +12,7 @@ struct RenderSettings: Equatable {
     var usesDefaultLighting = true
     var showsShadows = false
     var showsStatistics = false
+    var showsFrameTiming = false
     var outlinesSelection = true
     // Off keeps the drawable readable, for example to inspect it in a GPU capture.
     var isFramebufferOnly = true
@@ -29,6 +30,9 @@ struct RenderSettings: Equatable {
         }
         if showsStatistics {
             result.insert(.showsStatistics)
+        }
+        if showsFrameTiming {
+            result.insert(.showsFrameTiming)
         }
         if !isFramebufferOnly {
             result.insert(.disablesFramebufferOnly)

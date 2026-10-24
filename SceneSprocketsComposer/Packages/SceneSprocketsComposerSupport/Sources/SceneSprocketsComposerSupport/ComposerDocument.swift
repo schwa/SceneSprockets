@@ -33,7 +33,7 @@ public final class ComposerDocument: ReferenceFileDocument, @unchecked Sendable 
     }
 
     public convenience init() {
-        self.init(sceneGraph: .starter(device: systemDefaultDevice()))
+        self.init(sceneGraph: .empty())
     }
 
     public convenience init(configuration: ReadConfiguration) throws {
