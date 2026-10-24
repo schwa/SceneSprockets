@@ -4288,12 +4288,13 @@ Use ColorPicker with linear conversion, as SceneInspectorView's background color
 ## 199: Composer assistant: environment, reparenting and one undo step per turn
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:composer, effort:s
 created: 2026-10-24T15:44:27Z
-updated: 2026-10-24T16:12:44Z
+updated: 2026-10-24T16:34:30Z
+closed: 2026-10-24T16:34:30Z
 +++
 
 Follow-up to #191. SceneTools does not cover these yet:

@@ -49,6 +49,18 @@ final class SceneTools {
     struct Scene: Encodable {
         var selection: [String]
         var nodes: [NodeInfo]
+        var environment: EnvironmentInfo
+    }
+
+    struct EnvironmentInfo: Encodable {
+        // none, color or environment.
+        var background: String
+        var backgroundColor: [Float]?
+        var backgroundBlur: Float?
+        // default, studio or custom (an image the user chose).
+        var map: String
+        var intensity: Float
+        var rotationDegrees: Float
     }
 
     /// Read the whole scene: every node depth first with id, parent id, label, kind (Empty, Mesh, Light, Camera), shape, light, visibility, active, lock, local transform (translation, rotation as pitch/yaw/roll degrees, scale), main material color and world bounds; plus the ids of the selected nodes. +Y is up; units are meters.
@@ -62,7 +74,7 @@ final class SceneTools {
         }
         visit(model.sceneGraph.root)
         let selection = model.selectedNodes.map { id(for: $0) }
-        return try Self.json(Scene(selection: selection, nodes: nodes))
+        return try Self.json(Scene(selection: selection, nodes: nodes, environment: Self.environmentInfo(model.environment)))
     }
 
     /// Select nodes by id in the editor; an empty list clears the selection. The last id becomes the primary selection, which the inspector shows and the gizmo moves. Requests like "align the selected objects" act on query's `selection`.
@@ -149,6 +161,75 @@ final class SceneTools {
             }
         }
         return "Updated \(ids.joined(separator: ", "))."
+    }
+
+    /// Change the scene's environment; omitted fields are kept. background: none, color or environment (draws the environment map behind the scene). backgroundColor [r, g, b] linear 0 to 1 (sets background to color). backgroundBlur 0 (sharp) to 1. map: default or studio, the image-based lighting source (images can only be chosen by the user). intensity: image-based lighting strength, 1 is normal. rotationDegrees: turns the environment about +Y.
+    @CollaborationTool
+    func setEnvironment(background: String?, backgroundColor: [Double]?, backgroundBlur: Double?, map: String?, intensity: Double?, rotationDegrees: Double?) throws -> String {
+        let model = try requireModel()
+        var environment = model.environment
+        if let backgroundColor {
+            let color = try Self.vector(backgroundColor, name: "backgroundColor")
+            environment.background = .color(SIMD4(color, 1))
+        } else if let background {
+            switch background.lowercased() {
+            case "none":
+                environment.background = .none
+            case "color":
+                if case .color = environment.background {
+                    break
+                }
+                environment.background = .color([0.2, 0.2, 0.22, 1])
+            case "environment":
+                environment.background = .environment(blur: Float(backgroundBlur ?? 0))
+            default:
+                throw ToolError("Unknown background \(background). Use none, color or environment.")
+            }
+        }
+        if let backgroundBlur {
+            guard case .environment = environment.background else {
+                throw ToolError("backgroundBlur needs the environment background.")
+            }
+            environment.background = .environment(blur: Float(min(max(backgroundBlur, 0), 1)))
+        }
+        if let map {
+            switch map.lowercased() {
+            case "default":
+                environment.map = nil
+            case "studio":
+                environment.map = PBREnvironment.studio
+            default:
+                throw ToolError("Unknown map \(map). Use default or studio; the user can choose an image in the scene inspector.")
+            }
+        }
+        if let intensity {
+            environment.intensity = Float(max(intensity, 0))
+        }
+        if let rotationDegrees {
+            environment.rotation = Float(rotationDegrees) * .pi / 180
+        }
+        model.setEnvironment(environment, actionName: "Environment")
+        return try Self.json(Self.environmentInfo(environment))
+    }
+
+    private static func environmentInfo(_ environment: SceneGraph.Environment) -> EnvironmentInfo {
+        var info = EnvironmentInfo(background: "none", map: "custom", intensity: environment.intensity, rotationDegrees: environment.rotation * 180 / .pi)
+        switch environment.background {
+        case .none:
+            break
+        case let .color(color):
+            info.background = "color"
+            info.backgroundColor = [color.x, color.y, color.z]
+        case let .environment(blur):
+            info.background = "environment"
+            info.backgroundBlur = blur
+        }
+        if environment.map == nil {
+            info.map = "default"
+        } else if let map = environment.map as? PBREnvironment, map === PBREnvironment.studio {
+            info.map = "studio"
+        }
+        return info
     }
 
     /// Delete nodes and their children by id.

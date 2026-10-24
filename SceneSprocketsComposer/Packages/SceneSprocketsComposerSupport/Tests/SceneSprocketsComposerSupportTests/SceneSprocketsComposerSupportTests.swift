@@ -1,6 +1,7 @@
 import CollaborationKit
 import CollaborationKitUI
 import CoreGraphics
+import MetalSprocketsPBR
 import Metal
 import SceneSprocketsBlinnPhong
 import SceneSprocketsPBR
@@ -243,7 +244,7 @@ import UniformTypeIdentifiers
 @Test func sceneToolsQueryAndEditTheScene() async throws {
     let model = EditorModel(sceneGraph: SceneGraph.empty())
     let tools = SceneTools(model: model)
-    #expect(Set(tools.collaborationTools.map(\.name)) == ["query", "select", "create", "update", "delete"])
+    #expect(Set(tools.collaborationTools.map(\.name)) == ["query", "select", "create", "update", "delete", "setEnvironment"])
 
     let group = try tools.create(kind: "Box", count: nil, label: "Group", parent: nil, translation: [0, 1, 0], translations: nil, rotationDegrees: nil, scale: nil, color: nil)
     let ball = try tools.create(kind: "sphere", count: nil, label: "Ball", parent: group, translation: [1, 2, 3], translations: nil, rotationDegrees: [0, 30, 0], scale: nil, color: [1, 0, 0])
@@ -441,6 +442,44 @@ import UniformTypeIdentifiers
     model.deleteSelection()
     #expect(model.sceneGraph.root.children.map(\.label) == [nodes[2].label])
     #expect(model.selectedIDs.isEmpty && model.selection == nil)
+}
+
+// #199
+@MainActor
+@Test func sceneToolsReadAndSetTheEnvironment() throws {
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    let undoManager = UndoManager()
+    undoManager.groupsByEvent = false
+    model.undoManager = undoManager
+    let tools = SceneTools(model: model)
+    #expect(try tools.query().contains(#""environment":{"#))
+
+    undoManager.beginUndoGrouping()
+    _ = try tools.setEnvironment(background: nil, backgroundColor: [0, 0, 1], backgroundBlur: nil, map: "studio", intensity: 2, rotationDegrees: 90)
+    undoManager.endUndoGrouping()
+    guard case let .color(color) = model.environment.background else {
+        Issue.record("expected a color background")
+        return
+    }
+    #expect(color == [0, 0, 1, 1])
+    #expect(model.environment.map === PBREnvironment.studio)
+    #expect(model.environment.intensity == 2)
+    #expect(abs(model.environment.rotation - .pi / 2) < 1e-5)
+    #expect(try tools.query().contains(#""map":"studio""#))
+
+    undoManager.beginUndoGrouping()
+    _ = try tools.setEnvironment(background: "environment", backgroundColor: nil, backgroundBlur: 0.5, map: nil, intensity: nil, rotationDegrees: nil)
+    undoManager.endUndoGrouping()
+    #expect(try tools.query().contains(#""backgroundBlur":0.5"#))
+    #expect(throws: ToolError.self) { try tools.setEnvironment(background: "sky", backgroundColor: nil, backgroundBlur: nil, map: nil, intensity: nil, rotationDegrees: nil) }
+    #expect(throws: ToolError.self) { try tools.setEnvironment(background: nil, backgroundColor: nil, backgroundBlur: nil, map: "/tmp/x.hdr", intensity: nil, rotationDegrees: nil) }
+
+    undoManager.undo()
+    undoManager.undo()
+    guard case .none = model.environment.background else {
+        Issue.record("undo should restore the default background")
+        return
+    }
 }
 
 // #203
