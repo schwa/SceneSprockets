@@ -53,16 +53,8 @@ struct NodeInspectorView: View {
                 ForEach(0..<materialCount, id: \.self) { index in
                     MaterialSection(model: model, node: node, index: index, count: materialCount, isLocked: isLocked)
                 }
-                if let light = light(node), light.wrappedValue.type == .spot {
-                    Section("Spot Cone") {
-                        LabeledContent("Inner") {
-                            AngleEditor(angle: angle(light, \.innerConeAngle), limit: .degrees(0) ... .degrees(90))
-                        }
-                        LabeledContent("Outer") {
-                            AngleEditor(angle: angle(light, \.outerConeAngle), limit: .degrees(0) ... .degrees(90))
-                        }
-                    }
-                    .disabled(isLocked)
+                if let light = light(node) {
+                    LightSection(model: model, node: node, light: light, isLocked: isLocked)
                 }
             }
             .formStyle(.grouped)
@@ -104,16 +96,13 @@ struct NodeInspectorView: View {
         })
     }
 
-    private func light(_ node: SceneGraph.Node) -> Binding<Light>? {
+    // Reads the revision so the section refreshes after edits.
+    private func light(_ node: SceneGraph.Node) -> Light? {
         _ = model.localTRS(of: node)
         guard case .light(let light) = node.content else {
             return nil
         }
-        return Binding(get: { light }, set: { model.setLight($0, of: node) })
-    }
-
-    private func angle(_ light: Binding<Light>, _ keyPath: WritableKeyPath<Light, Float>) -> Binding<Angle> {
-        Binding(get: { .radians(Double(light.wrappedValue[keyPath: keyPath])) }, set: { light.wrappedValue[keyPath: keyPath] = Float($0.radians) })
+        return light
     }
 }
 

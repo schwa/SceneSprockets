@@ -4510,12 +4510,13 @@ Use EditorModel.editedPBR so edits stay undoable and keep textures. Sliders need
 ## 209: Composer: light inspector
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: area:composer, effort:s
 created: 2026-10-24T17:47:53Z
-updated: 2026-10-24T17:50:16Z
+updated: 2026-10-24T17:53:00Z
+closed: 2026-10-24T17:53:00Z
 +++
 
 Selecting a light node shows only Node and Transform, plus spot cone angles for spot lights. Add a Light section that edits every Light field: type (directional, point, spot), color (linear, ColorPicker), intensity, range (with an infinite toggle; point and spot only), and inner and outer cone angles (spot only, keep the existing AngleEditor). Also show the light's categoryBitMask if lights use one. Edits go through EditorModel.setLight, so they stay undoable. Inner cone must stay at or below outer. Disabled when the node is locked. Possibly add 'casts shadows' if SceneGraphShadows gets per-light settings (#88).

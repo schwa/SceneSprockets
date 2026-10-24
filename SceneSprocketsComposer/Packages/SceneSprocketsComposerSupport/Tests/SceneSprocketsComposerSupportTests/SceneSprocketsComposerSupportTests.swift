@@ -633,6 +633,47 @@ import UniformTypeIdentifiers
     #expect(reopened.selectedNode === loaded.sceneGraph.root.children[2])
 }
 
+// #209: light edits are undoable; the cone angles keep inner at or below outer.
+@MainActor
+@Test func lightEditing() throws {
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    model.addLight(.spot)
+    let node = try #require(model.selectedNode)
+    let undoManager = UndoManager()
+    undoManager.groupsByEvent = false
+    model.undoManager = undoManager
+    guard case .light(let original) = node.content else {
+        Issue.record("not a light")
+        return
+    }
+    var edited = original
+    edited.color = [1, 0.5, 0]
+    edited.intensity = 7
+    edited.range = 12
+    undoManager.beginUndoGrouping()
+    model.setLight(edited, of: node)
+    undoManager.endUndoGrouping()
+    guard case .light(let stored) = node.content else {
+        Issue.record("not a light")
+        return
+    }
+    #expect(stored == edited)
+    undoManager.undo()
+    guard case .light(let restored) = node.content else {
+        Issue.record("not a light")
+        return
+    }
+    #expect(restored == original)
+
+    let cone = Light.spot(innerConeAngle: 0.2, outerConeAngle: 0.4)
+    let widerInner = LightEditing.settingCone(\.innerConeAngle, to: 0.6, of: cone)
+    #expect(widerInner.innerConeAngle == 0.6 && widerInner.outerConeAngle == 0.6)
+    let narrowerOuter = LightEditing.settingCone(\.outerConeAngle, to: 0.1, of: cone)
+    #expect(narrowerOuter.innerConeAngle == 0.1 && narrowerOuter.outerConeAngle == 0.1)
+    let fine = LightEditing.settingCone(\.outerConeAngle, to: 0.5, of: cone)
+    #expect(fine.innerConeAngle == 0.2 && fine.outerConeAngle == 0.5)
+}
+
 // #177: framing keeps the view direction and orbits the framed center.
 @Test func framingKeepsViewDirection() {
     var camera = EditorCamera()
