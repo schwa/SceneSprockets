@@ -4194,15 +4194,18 @@ Add an eye toggle in the tree row and the inspector to hide and show nodes, usin
 ## 194: Composer: Quick Look thumbnail extension that returns Preview.png
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:composer, effort:s
 created: 2026-10-24T14:42:46Z
-updated: 2026-10-24T15:35:18Z
+updated: 2026-10-24T15:49:29Z
+closed: 2026-10-24T15:49:29Z
 +++
 
 Split from #175. Documents now contain Preview.png (DocumentPreview). Add a Quick Look thumbnail extension target (com.apple.quicklook.thumbnail, QLThumbnailProvider) that returns that PNG, so Finder icons show the scene. Needs a new Xcode target, which was not added in #175.
+
+- `2026-10-24T15:49:29Z`: Added the SceneSprocketsThumbnail extension target (QLThumbnailProvider that draws Preview.png, aspect-fit). It builds, is embedded in the app and is sandboxed. No unit test: extension targets have no test target, and the code only reads the PNG with DocumentPreview.image (tested in #175) and draws it. Not checked at runtime: pluginkit -a did not register the DerivedData build, and qlmanage -t hung. To check: launch the built app once, then look at a saved .scenesprocketsd in Finder.
 
 ---
 

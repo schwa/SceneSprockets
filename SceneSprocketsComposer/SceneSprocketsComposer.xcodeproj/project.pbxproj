@@ -11,6 +11,8 @@
 		4594F5CD308A691C00A7E100 /* Quartz.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4594F5CC308A691C00A7E100 /* Quartz.framework */; };
 		4594F5D9308A691C00A7E100 /* SceneSprocketsQuickLook.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 4594F5CA308A691C00A7E100 /* SceneSprocketsQuickLook.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		4594F5E0308A691C00A7E100 /* SceneSprocketsComposerSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 4594F5DF308A691C00A7E100 /* SceneSprocketsComposerSupport */; };
+		4594F601308A691C00A7E100 /* SceneSprocketsThumbnail.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 4594F607308A691C00A7E100 /* SceneSprocketsThumbnail.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		4594F603308A691C00A7E100 /* SceneSprocketsComposerSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 4594F604308A691C00A7E100 /* SceneSprocketsComposerSupport */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -20,6 +22,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 4594F5C9308A691C00A7E100;
 			remoteInfo = SceneSprocketsQuickLook;
+		};
+		4594F605308A691C00A7E100 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4515943F2F64A8DC005F944D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4594F613308A691C00A7E100;
+			remoteInfo = SceneSprocketsThumbnail;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -31,6 +40,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				4594F5D9308A691C00A7E100 /* SceneSprocketsQuickLook.appex in Embed Foundation Extensions */,
+				4594F601308A691C00A7E100 /* SceneSprocketsThumbnail.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -41,6 +51,7 @@
 		451594472F64A8DC005F944D /* SceneSprocketsComposer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SceneSprocketsComposer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4594F5CA308A691C00A7E100 /* SceneSprocketsQuickLook.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SceneSprocketsQuickLook.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		4594F5CC308A691C00A7E100 /* Quartz.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Quartz.framework; path = System/Library/Frameworks/Quartz.framework; sourceTree = SDKROOT; };
+		4594F607308A691C00A7E100 /* SceneSprocketsThumbnail.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SceneSprocketsThumbnail.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -70,6 +81,13 @@
 				Info.plist,
 			);
 			target = 4594F5C9308A691C00A7E100 /* SceneSprocketsQuickLook */;
+		};
+		4594F608308A691C00A7E100 /* Exceptions for "SceneSprocketsThumbnail" folder in "SceneSprocketsThumbnail" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 4594F613308A691C00A7E100 /* SceneSprocketsThumbnail */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -103,6 +121,14 @@
 			path = SceneSprocketsQuickLook;
 			sourceTree = "<group>";
 		};
+		4594F609308A691C00A7E100 /* SceneSprocketsThumbnail */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				4594F608308A691C00A7E100 /* Exceptions for "SceneSprocketsThumbnail" folder in "SceneSprocketsThumbnail" target */,
+			);
+			path = SceneSprocketsThumbnail;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -123,6 +149,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		4594F610308A691C00A7E100 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4594F603308A691C00A7E100 /* SceneSprocketsComposerSupport in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -133,6 +167,7 @@
 				4515947C2F64AAA6005F944D /* Packages */,
 				451594492F64A8DC005F944D /* SceneSprocketsComposer */,
 				4594F5CE308A691C00A7E100 /* SceneSprocketsQuickLook */,
+				4594F609308A691C00A7E100 /* SceneSprocketsThumbnail */,
 				4594F5CB308A691C00A7E100 /* Frameworks */,
 				451594482F64A8DC005F944D /* Products */,
 			);
@@ -143,6 +178,7 @@
 			children = (
 				451594472F64A8DC005F944D /* SceneSprocketsComposer.app */,
 				4594F5CA308A691C00A7E100 /* SceneSprocketsQuickLook.appex */,
+				4594F607308A691C00A7E100 /* SceneSprocketsThumbnail.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -171,6 +207,7 @@
 			);
 			dependencies = (
 				4594F5D8308A691C00A7E100 /* PBXTargetDependency */,
+				4594F606308A691C00A7E100 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				451594492F64A8DC005F944D /* SceneSprocketsComposer */,
@@ -208,6 +245,29 @@
 			productReference = 4594F5CA308A691C00A7E100 /* SceneSprocketsQuickLook.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		4594F613308A691C00A7E100 /* SceneSprocketsThumbnail */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4594F614308A691C00A7E100 /* Build configuration list for PBXNativeTarget "SceneSprocketsThumbnail" */;
+			buildPhases = (
+				4594F611308A691C00A7E100 /* Sources */,
+				4594F610308A691C00A7E100 /* Frameworks */,
+				4594F612308A691C00A7E100 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				4594F609308A691C00A7E100 /* SceneSprocketsThumbnail */,
+			);
+			name = SceneSprocketsThumbnail;
+			packageProductDependencies = (
+				4594F604308A691C00A7E100 /* SceneSprocketsComposerSupport */,
+			);
+			productName = SceneSprocketsThumbnail;
+			productReference = 4594F607308A691C00A7E100 /* SceneSprocketsThumbnail.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -222,6 +282,9 @@
 						CreatedOnToolsVersion = 26.4;
 					};
 					4594F5C9308A691C00A7E100 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					4594F613308A691C00A7E100 = {
 						CreatedOnToolsVersion = 27.0;
 					};
 				};
@@ -242,6 +305,7 @@
 			targets = (
 				451594462F64A8DC005F944D /* SceneSprocketsComposer */,
 				4594F5C9308A691C00A7E100 /* SceneSprocketsQuickLook */,
+				4594F613308A691C00A7E100 /* SceneSprocketsThumbnail */,
 			);
 		};
 /* End PBXProject section */
@@ -255,6 +319,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		4594F5C8308A691C00A7E100 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4594F612308A691C00A7E100 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -278,6 +349,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		4594F611308A691C00A7E100 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -285,6 +363,11 @@
 			isa = PBXTargetDependency;
 			target = 4594F5C9308A691C00A7E100 /* SceneSprocketsQuickLook */;
 			targetProxy = 4594F5D7308A691C00A7E100 /* PBXContainerItemProxy */;
+		};
+		4594F606308A691C00A7E100 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4594F613308A691C00A7E100 /* SceneSprocketsThumbnail */;
+			targetProxy = 4594F605308A691C00A7E100 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -519,6 +602,64 @@
 			};
 			name = Release;
 		};
+		4594F615308A691C00A7E100 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SceneSprocketsThumbnail/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SceneSprocketsThumbnail;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.3;
+				MARKETING_VERSION = 1.0;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = io.schwa.SceneSprocketsComposer.SceneSprocketsThumbnail;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		4594F616308A691C00A7E100 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SceneSprocketsThumbnail/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SceneSprocketsThumbnail;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.3;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.schwa.SceneSprocketsComposer.SceneSprocketsThumbnail;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -549,6 +690,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		4594F614308A691C00A7E100 /* Build configuration list for PBXNativeTarget "SceneSprocketsThumbnail" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4594F615308A691C00A7E100 /* Debug */,
+				4594F616308A691C00A7E100 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -557,6 +707,10 @@
 			productName = SceneSprocketsComposerSupport;
 		};
 		4594F5DF308A691C00A7E100 /* SceneSprocketsComposerSupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SceneSprocketsComposerSupport;
+		};
+		4594F604308A691C00A7E100 /* SceneSprocketsComposerSupport */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = SceneSprocketsComposerSupport;
 		};
