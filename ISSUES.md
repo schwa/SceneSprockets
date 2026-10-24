@@ -3791,12 +3791,13 @@ After the move: SceneSprocketsGizmos keeps SelectionOutline (or it moves too), a
 ## 175: Composer: save a preview PNG inside the document bundle
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: area:composer, area:document, effort:m
 created: 2026-10-23T13:03:28Z
-updated: 2026-10-24T14:21:09Z
+updated: 2026-10-24T14:42:46Z
+closed: 2026-10-24T14:42:46Z
 +++
 
 When saving a .scenesprocketsd bundle, render the scene offscreen and write a PNG into the bundle (for example `Preview.png`).
@@ -3811,6 +3812,7 @@ Blocked on #52 (save and load a scene graph).
 
 - `2026-10-24T11:27:01Z`: Punted by auto-issue-fixer: blocked on #52 (still open). Re-queued after #52 in this run.
 - `2026-10-24T14:21:10Z`: Undeferred: the Composer already saves and loads .scenesprocketsd bundles through SceneArchive, so the block on #52 no longer stops this.
+- `2026-10-24T14:42:46Z`: Done: saving writes Preview.png (1024×768, from the first camera node or a framed default camera), and Quick Look shows it, falling back to the live render. The thumbnail extension is split out into its own issue, because it needs a new Xcode target.
 
 ---
 
@@ -4170,5 +4172,19 @@ Add an eye toggle in the tree row and the inspector to hide and show nodes, usin
 
 - `2026-10-24T14:17:41Z`: Related: #192 (lock nodes).
 - `2026-10-24T14:18:20Z`: Related: #192 (lock nodes).
+
+---
+
+## 194: Composer: Quick Look thumbnail extension that returns Preview.png
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:composer, effort:s
+created: 2026-10-24T14:42:46Z
++++
+
+Split from #175. Documents now contain Preview.png (DocumentPreview). Add a Quick Look thumbnail extension target (com.apple.quicklook.thumbnail, QLThumbnailProvider) that returns that PNG, so Finder icons show the scene. Needs a new Xcode target, which was not added in #175.
 
 ---

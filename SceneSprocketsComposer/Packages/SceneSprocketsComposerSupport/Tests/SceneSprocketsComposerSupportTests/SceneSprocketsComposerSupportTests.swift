@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import GeometryLite3D
 import simd
@@ -45,6 +46,26 @@ import UniformTypeIdentifiers
     try wrapper.write(to: url, options: [], originalContentsURL: nil)
     let loaded = try ComposerDocument(contentsOf: url)
     #expect(loaded.sceneGraph.root.children.map(\.label) == ["Box"])
+}
+
+// #175
+@MainActor
+@Test func savingWritesPreviewImage() throws {
+    let document = ComposerDocument()
+    EditorModel(sceneGraph: document.sceneGraph).addShape(.box(), label: "Box")
+    let wrapper = try document.snapshot(contentType: .sceneSprocketsDocument)
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("scenesprocketsd")
+    defer { try? FileManager.default.removeItem(at: url) }
+    try wrapper.write(to: url, options: [], originalContentsURL: nil)
+    let image = try #require(DocumentPreview.image(inBundleAt: url))
+    #expect(image.width == 1024)
+    #expect(image.height == 768)
+    // The box is in the middle; the clear color is black.
+    let pixel = try #require(image.cropping(to: CGRect(x: 512, y: 384, width: 1, height: 1)))
+    var bytes = [UInt8](repeating: 0, count: 4)
+    let context = try #require(CGContext(data: &bytes, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+    context.draw(pixel, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+    #expect(Int(bytes[0]) + Int(bytes[1]) + Int(bytes[2]) > 30)
 }
 
 // #177: framing keeps the view direction and orbits the framed center.

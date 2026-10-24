@@ -56,6 +56,14 @@ public final class ComposerDocument: ReferenceFileDocument, @unchecked Sendable 
         let url = try Self.makeTemporaryURL()
         defer { try? FileManager.default.removeItem(at: url) }
         Self.log(try SceneArchive.composer.write(sceneGraph, to: url))
+        // Saving still works without a preview.
+        do {
+            try MainActor.assumeIsolated {
+                try DocumentPreview.write(sceneGraph, into: url, device: systemDefaultDevice())
+            }
+        } catch {
+            logger.warning("Could not write the preview: \(error, privacy: .public)")
+        }
         return try FileWrapper(url: url, options: .immediate)
     }
 
