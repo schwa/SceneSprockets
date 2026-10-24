@@ -4279,3 +4279,78 @@ Mesh nodes show no material in the inspector, and new shapes always get a plain 
 Use ColorPicker with linear conversion, as SceneInspectorView's background color does. Edits are undoable and keep textures already on the material; editing textures is out of scope. For multi-material meshes, edit the material of each submesh.
 
 ---
+
+## 199: Composer assistant: environment, reparenting and one undo step per turn
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:composer, effort:s
+created: 2026-10-24T15:44:27Z
++++
+
+Follow-up to #191. SceneTools does not cover these yet:
+- get and set the environment and background (SceneGraph.Environment: background kind and color, map, intensity, rotation)
+- reparent a node (needs an undoable EditorModel move)
+- group everything the assistant changes in one turn into a single undo step (ConversationStore turn start and end, or snapshotProvider as Phosphor uses it for rollback)
+
+---
+
+## 200: AI mode: batch repeated operations into one job
+
++++
+status: new
+priority: medium
+kind: enhancement
+created: 2026-10-24T15:47:44Z
++++
+
+Requests like "make 8 spheres" currently run 8 separate make-node tool calls. AI mode needs a way to batch jobs (e.g. a count/array parameter or a batch tool) so repeated operations run as one call.
+
+---
+
+## 201: AI mode: support selection-aware edits like "align the selected objects"
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-10-24T15:48:37Z
++++
+
+AI mode should handle requests that act on the current selection, e.g. "align the selected objects". Needs: (1) tools to read the app's UI selection, (2) tools to edit existing nodes (transforms etc.), not just create them.
+
+---
+
+## 202: AI mode: minimal composable tool set (query/select/create/update/delete)
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-10-24T15:49:26Z
++++
+
+Keep AI tools few and composable instead of one tool per operation. Proposed set:
+- query: read scene graph + current selection (names, types, transforms, bounds)
+- select: set selection by node IDs
+- create: add nodes; supports count/array for batching (#200)
+- update: set properties on one or more nodes (transform, material, name, parent, visibility)
+- delete: remove nodes
+The model composes these for align/distribute/grid/recolor etc. Add specialized helpers only if the model struggles with a common op. Related: #200, #201.
+
+---
+
+## 203: AI mode: each AI turn is a single undo step
+
++++
+status: new
+priority: medium
+kind: enhancement
+created: 2026-10-24T15:49:27Z
++++
+
+All edits made by one AI response should be grouped into a single undo action, so one Undo reverts the whole request (e.g. "make 8 spheres" or "align selected"). Related: #200.
+
+---
