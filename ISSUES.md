@@ -4845,11 +4845,12 @@ Measure before and after with the SwiftUI instrument (body update counts during 
 ## 224: Composer: remaining closure bindings: inspector leaf views and SceneView's decorations and overlay closures
 
 +++
-status: new
+status: open
 priority: medium
 kind: enhancement
 labels: area:composer, area:ui, effort:m
 created: 2026-10-24T22:11:12Z
+updated: 2026-10-24T23:51:37Z
 +++
 
 Follow-up to #223, which fixed the hot spots: the tree's List selection is now $model.treeSelection, SceneView's camera is $model.viewCameraMatrix, and tree rows read visibilityRevision instead of transformRevision.
@@ -4859,6 +4860,7 @@ Left:
 Measure with the SwiftUI instrument during a drag.
 
 - `2026-10-24T23:49:33Z`: House-rules review adds to this issue: SceneInspectorView has 6 closure bindings (background, color, blur, rotation) and ComposerView has 2 alert isPresented bindings. Use .alert(_:isPresented:presenting:) or item-based alerts. Approach for the inspectors: writable computed properties on EditorModel (for example selectedLight, selectedMaterial(at:)), projected with Binding($model.optional) and key paths, instead of the binding(_:), trs, component and eulerDegrees helpers. Hiding a closure binding in a helper does not make it stable.
+- `2026-10-24T23:51:39Z`: Related: #231 (SceneView's camera binding; this issue covers its decorations and overlay closures) and #233 (struct extraction, which can carry the leaf-binding work).
 
 ---
 
@@ -4882,11 +4884,12 @@ Depends on MetalSprocketsAddOns 'AxisLinesRenderPipeline: choose which axes to d
 ## 226: Composer: show bounding box min, max and size in the inspector
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
 labels: area:composer, effort:xs
 created: 2026-10-24T22:22:44Z
+updated: 2026-10-24T23:51:38Z
 +++
 
 Selecting a node shows no size information. Add a Bounds section (or rows under Transform) with world-space min [x, y, z], max [x, y, z] and size (max - min), from SceneGraph.worldBounds(of:); also the center. Read-only, with 3 decimals. 'None' for nodes without bounds (empty, light, camera, hidden or inactive). With several nodes selected (#205), show the combined bounds. Must refresh while dragging, so it reads transformRevision; keep it in its own leaf view so it does not make the rest of the inspector depend on drags (#223, #224). Optionally also local-space bounds (Node.subtreeBounds).
@@ -4896,27 +4899,31 @@ Selecting a node shows no size information. Add a Bounds section (or rows under 
 ## 227: ComposerDocument.snapshot reads and renders the live scene graph off the main thread
 
 +++
-status: new
+status: open
 priority: high
 kind: bug
 labels: area:composer, area:document, effort:m
 created: 2026-10-24T22:32:50Z
+updated: 2026-10-24T23:51:38Z
 +++
 
 From a concurrency review. ComposerDocument is @unchecked Sendable, and snapshot(contentType:) runs on a background queue when saving on quit (#204). There it encodes sceneGraph (an @Observable class the main actor mutates) with SceneArchive, and renders it with DocumentPreview. It is safe today only because AppKit blocks the main thread during that save; the types do not guarantee it, and other save paths (autosave, Save As while editing) are unverified.
 Fix: capture an immutable snapshot on the main actor whenever an undoable edit lands, or right before saving (the encoded bundle data and textures plus the preview PNG), behind the existing lock pattern used for the editor state (updateEditorState). snapshot then only builds the FileWrapper from that capture and never touches the live graph. This needs SceneArchive to encode to data or a temporary directory on the main actor.
 Test: change the scene, call snapshot from a detached task while the main actor keeps mutating the graph; with Thread Sanitizer, no race is reported and the saved scene matches the captured state.
 
+- `2026-10-24T23:51:40Z`: Related: #232 (editor state copied on every body pass).
+
 ---
 
 ## 228: AnimatedMaterial is @unchecked Sendable mutable state without a lock
 
 +++
-status: new
+status: open
 priority: medium
 kind: bug
 labels: area:scenegraph, area:assets, effort:s
 created: 2026-10-24T22:32:50Z
+updated: 2026-10-24T23:51:38Z
 +++
 
 From a concurrency review. SceneSprocketsPBR/GLTFSceneGraph.swift:387: AnimatedMaterial has 'var state' and is mutated from AnimationClip.Property.set, which writes state and material.uniforms. Property is Sendable with @Sendable get and set closures, so clips can cross threads, and two players applying the same material at once race on state and uniforms.
@@ -4927,11 +4934,12 @@ Options: (a) protect state with Mutex<PBRMaterial.AnimatedState> and write unifo
 ## 229: Composer app and extensions build in Swift 5 language mode
 
 +++
-status: new
+status: open
 priority: medium
 kind: task
 labels: area:composer, effort:s
 created: 2026-10-24T22:32:50Z
+updated: 2026-10-24T23:51:38Z
 +++
 
 From a concurrency review. The SceneSprocketsComposer, SceneSprocketsQuickLook and SceneSprocketsThumbnail targets use SWIFT_VERSION = 5.0 (pbxproj and SceneSprocketsComposer-Shared.xcconfig), while the packages they use build in Swift 6 mode. Swift 6 data-race checking is off for the app entry point, PreviewViewController and ThumbnailProvider. Set SWIFT_VERSION = 6.0 for all three targets, fix any diagnostics, and keep SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor for the app.
@@ -4941,55 +4949,65 @@ From a concurrency review. The SceneSprocketsComposer, SceneSprocketsQuickLook a
 ## 230: Composer: replace the Task.yield ordering hack in the folder importer
 
 +++
-status: new
+status: open
 priority: low
 kind: bug
 labels: area:composer, effort:xs
 created: 2026-10-24T22:32:51Z
+updated: 2026-10-24T23:51:38Z
 +++
 
 From a concurrency review. ComposerView's folder importer (#213) reports 'not inserted' on cancel from .onChange(of: isChoosingFolder) by starting Task { @MainActor in await Task.yield(); ... }, hoping the importer's completion has run by then. yield() does not guarantee that, so a successful pick can still show the cancel message first. Replace it with state: store the importer result, or drop the separate cancel message for the panel and keep only the alert's explicit Cancel. Avoid unstructured tasks for ordering.
+
+- `2026-10-24T23:51:40Z`: Related: #213 (introduced the hack).
 
 ---
 
 ## 231: SceneView: closure-based camera binding rebuilt every body pass
 
 +++
-status: new
+status: open
 priority: high
 kind: bug
 labels: area:ui, effort:s
 created: 2026-10-24T23:49:32Z
+updated: 2026-10-24T23:51:38Z
 +++
 
 From a SwiftUI house-rules review. SceneView.cameraBinding (SceneView.swift around line 368) is a Binding(get:set:) rebuilt on every SceneView body pass and passed to CameraControl. SceneView re-runs whenever its parent changes (constantly in the Composer), and closure bindings break SwiftUI's diffing, so camera control and its gesture state get rebuilt. This is in the library, so it affects every app.
 Fix: keep one @State camera matrix as the source of truth in SceneView. Pass $camera to CameraControl. Sync the external binding with onChange in both directions, guarded against loops. Measure with the SwiftUI instrument during an orbit in the Composer before and after.
+
+- `2026-10-24T23:51:39Z`: Related: #224 (SceneView's decorations and overlay closures).
 
 ---
 
 ## 232: ComposerView recomputes editorState (a full graph walk) on every body pass
 
 +++
-status: new
+status: open
 priority: high
 kind: bug
 labels: area:composer, area:ui, effort:s
 created: 2026-10-24T23:49:33Z
+updated: 2026-10-24T23:51:39Z
 +++
 
 From a SwiftUI house-rules review. ComposerView has .onChange(of: model.editorState, initial: true) { document.updateEditorState() }. editorState is computed: selectedNodes and lockedPaths each walk the whole graph. Measured at 1.36 ms per call with 500 nodes (DragPerformanceTests). It runs on every ComposerView body evaluation. Body must stay fast and side-effect free.
 Fix: add an editorStateRevision to EditorModel, bumped by every setter that changes saved editor state (camera, render settings, gizmo mode and space, selection, locks, inspector visibility, sidebar), and observe that instead. Or call document.updateEditorState() from those model methods through a callback.
+
+- `2026-10-24T23:51:39Z`: Related: #227. Both are about how editor and scene state reach the document; one capture point on the main actor could serve both.
 
 ---
 
 ## 233: SwiftUI structure: turn stateful private some View sections into View structs
 
 +++
-status: new
+status: open
 priority: medium
 kind: task
 labels: area:composer, area:demo, effort:s
 created: 2026-10-24T23:49:33Z
+updated: 2026-10-24T23:51:39Z
 +++
 
 From a SwiftUI house-rules review ('private var foo: some View is generally an anti-pattern'). Extract into View structs, since these read several properties or have behavior:
@@ -4998,16 +5016,19 @@ From a SwiftUI house-rules review ('private var foo: some View is generally an a
 - Demo NodeInspectorView: generalSection, transformSection, contentSection, cameraSection become ...SectionView
 Leave as is: AssistantPanel.missingCredentials (static, no inputs) and SceneNodeRow.row (tiny fragment).
 
+- `2026-10-24T23:51:40Z`: Related: #224 and #234 (conventions cleanup in the same files).
+
 ---
 
 ## 234: SwiftUI conventions cleanup: View suffixes, NSEvent, padding, previews
 
 +++
-status: new
+status: open
 priority: low
 kind: task
-labels: area:composer,area:demo,area:ui,effort:s
+labels: area:composer, area:demo, area:ui, effort:s
 created: 2026-10-24T23:49:33Z
+updated: 2026-10-24T23:51:39Z
 +++
 
 From a SwiftUI house-rules review.
