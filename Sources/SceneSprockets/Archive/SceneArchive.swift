@@ -136,6 +136,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
     var encodingRoot: SceneGraph.Node?
     // Constraints read with their nodes, resolved once the whole tree is read.
     var pendingConstraints: [(node: SceneGraph.Node, constraints: [ArchivedConstraint])] = []
+    var pendingSkins: [(node: SceneGraph.Node, skin: ArchivedSkin)] = []
 
     init(directory: URL, device: MTLDevice?, archive: SceneArchive) {
         self.directory = directory

@@ -14,7 +14,7 @@ extension SceneGraph {
         }
 
         // Sizes are in the node's local space; the node's world scale is applied when the body is created.
-        public enum Shape: Sendable, Equatable {
+        public enum Shape: Sendable, Equatable, Codable {
             case box(size: SIMD3<Float>)
             case sphere(radius: Float)
             // Along local Y. `height` includes the caps.

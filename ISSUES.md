@@ -3507,12 +3507,13 @@ Part of #52. Not saved yet: animation clips and players, constraints, running ac
 ## 162: Scene archive: save morph targets, skins, physics, particles, audio, levels of detail
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: effort:l, area:document
 created: 2026-10-22T16:11:22Z
-updated: 2026-10-23T13:22:39Z
+updated: 2026-10-24T11:29:39Z
+closed: 2026-10-24T11:29:39Z
 +++
 
 Part of #52. Node features not saved yet: morph targets and weights, skins and skin vertices, physics bodies, particle systems (MetalSprocketsParticles' ParticleSystem is already Codable), audio players, levels of detail. Each warns today.
@@ -3910,5 +3911,20 @@ created: 2026-10-23T14:27:56Z
 +++
 
 Found while working on #178. `xcb build -d ios` (generic/platform=iOS) fails before reaching SceneSprockets: MetalSprocketsPBR PBREnvironment.swift:26 and PBRHDROutput.swift:23 report "Float16 is unavailable in macOS", then MetalSprocketsGLTF and SceneSprocketsPBR cannot resolve MetalSprocketsPBR. The "macOS" in the message suggests an x86_64 macOS slice (Float16 is unavailable on Intel Macs) is being built. The simulator build fails anyway (no Metal 4). So the iOS-only code in SceneView (#178 two-finger gestures) has not been compiled for iOS.
+
+---
+
+## 182: Scene archive: save audio players and levels of detail
+
++++
+status: new
+priority: medium
+kind: feature
+labels: effort:m, area:document
+depends: 158
+created: 2026-10-24T11:29:39Z
++++
+
+Split from #162. Saving a scene still warns for these two node features. Audio players hold an AVAudioPCMBuffer and live in SceneSprocketsAudio, so the core archive needs a hook (or the audio file kept by reference). Levels of detail hold MetalMesh values, so they need the generated-mesh path from #158.
 
 ---

@@ -31,6 +31,7 @@ extension SceneGraph: Codable {
         }
         root = try container.decode(Node.self, forKey: .root)
         try decoder.sceneArchive.resolveConstraints(root: root)
+        try decoder.sceneArchive.resolveSkins(root: root)
         environment = try container.decode(Environment.self, forKey: .environment)
         fog = try container.decodeIfPresent(Fog.self, forKey: .fog)
         postProcessing = try container.decodeIfPresent(PostProcessing.self, forKey: .postProcessing)
@@ -43,6 +44,7 @@ extension SceneGraph.Node: Codable {
     enum ArchiveKeys: String, CodingKey {
         case label, transform, pivot, isVisible, opacity, categoryBitMask, lightCategoryBitMask, renderingOrder
         case subdivisionLevel, actionSpeed, mesh, light, camera, constraints, children
+        case morphTargets, morphWeights, skin, skinVertices, physicsBody, particleSystems
     }
 
     enum MeshKeys: String, CodingKey {
@@ -116,6 +118,7 @@ extension SceneGraph.Node: Codable {
         }
         warnAboutUnsavedFeatures(context)
         try encodeConstraints(into: &container, context: context)
+        try encodeNodeFeatures(into: &container, context: context)
         if !children.isEmpty {
             try container.encode(children, forKey: .children)
         }
@@ -165,6 +168,18 @@ extension SceneGraph.Node: Codable {
         if let constraints = try container.decodeIfPresent([ArchivedConstraint].self, forKey: .constraints) {
             context.pendingConstraints.append((self, constraints))
         }
+        morphTargets = try container.decodeIfPresent([SceneGraph.MorphTarget].self, forKey: .morphTargets) ?? []
+        morphWeights = try container.decodeIfPresent([Float].self, forKey: .morphWeights) ?? []
+        if let skin = try container.decodeIfPresent(ArchivedSkin.self, forKey: .skin) {
+            context.pendingSkins.append((self, skin))
+        }
+        skinVertices = try container.decodeIfPresent([SceneGraph.SkinVertex].self, forKey: .skinVertices) ?? []
+        physicsBody = try container.decodeIfPresent(SceneGraph.PhysicsBody.self, forKey: .physicsBody)
+        particleSystems = try (container.decodeIfPresent([ArchivedParticleSystem].self, forKey: .particleSystems) ?? []).map {
+            let system = SceneParticleSystem($0.system, seed: $0.seed)
+            system.usesNodeTransform = $0.usesNodeTransform ?? true
+            return system
+        }
         // After the content, so subdivision applies to the shape's mesh.
         subdivisionLevel = try container.decodeIfPresent(Int.self, forKey: .subdivisionLevel) ?? 0
         for child in try container.decodeIfPresent([SceneGraph.Node].self, forKey: .children) ?? [] {
@@ -196,6 +211,34 @@ extension SceneGraph.Node: Codable {
         }
     }
 
+    private func encodeNodeFeatures(into container: inout KeyedEncodingContainer<ArchiveKeys>, context: SceneArchiveContext) throws {
+        if !morphTargets.isEmpty {
+            try container.encode(morphTargets, forKey: .morphTargets)
+        }
+        if !morphWeights.isEmpty {
+            try container.encode(morphWeights, forKey: .morphWeights)
+        }
+        if let skin {
+            let root = context.encodingRoot ?? self
+            let paths = skin.joints.map { $0.archivePath(from: root) }
+            if paths.contains(where: { $0 == nil }) {
+                context.warn("\(nodeDescription): skin joint outside the scene; skin skipped")
+            } else {
+                try container.encode(ArchivedSkin(joints: paths.compactMap(\.self), inverseBindMatrices: skin.inverseBindMatrices.map(\.archiveValues)), forKey: .skin)
+            }
+        }
+        if !skinVertices.isEmpty {
+            try container.encode(skinVertices, forKey: .skinVertices)
+        }
+        try container.encodeIfPresent(physicsBody, forKey: .physicsBody)
+        if !particleSystems.isEmpty {
+            let archived = particleSystems.map {
+                ArchivedParticleSystem(system: $0.system, seed: $0.seed, usesNodeTransform: $0.usesNodeTransform ? nil : false)
+            }
+            try container.encode(archived, forKey: .particleSystems)
+        }
+    }
+
     private var nodeDescription: String {
         label.map { "\"\($0)\"" } ?? "unnamed node"
     }
@@ -203,10 +246,6 @@ extension SceneGraph.Node: Codable {
     // Later steps of #52.
     private func warnAboutUnsavedFeatures(_ context: SceneArchiveContext) {
         let unsaved: [(String, Bool)] = [
-            ("morph targets", !morphTargets.isEmpty),
-            ("skin", skin != nil),
-            ("physics body", physicsBody != nil),
-            ("particle systems", !particleSystems.isEmpty),
             ("audio players", !audioPlayers.isEmpty),
             ("levels of detail", !levelsOfDetail.isEmpty),
             ("running actions", !runningActions.isEmpty),

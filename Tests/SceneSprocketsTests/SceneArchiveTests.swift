@@ -2,6 +2,7 @@ import Foundation
 import GeometryLite3D
 import Metal
 import MetalSprockets
+import MetalSprocketsParticles
 import MetalSprocketsPBR
 import SwiftMesh
 import Testing
@@ -137,6 +138,52 @@ struct SceneArchiveTests {
         _ = SceneGraph.Node(parent: root, label: "Generated", content: .mesh(MetalMesh(mesh: .box(), device: device), material: material))
         let warnings = try archive.write(SceneGraph(root: root), to: url)
         #expect(warnings.contains { $0.contains("Generated") && $0.contains("#158") })
+    }
+
+    // #162
+    @Test
+    func nodeFeaturesRoundTrip() throws {
+        let first = temporaryURL()
+        let second = temporaryURL()
+        defer {
+            try? FileManager.default.removeItem(at: first)
+            try? FileManager.default.removeItem(at: second)
+        }
+        let root = SceneGraph.Node()
+        let material = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color([1, 0, 0]), specular: .color(0), shininess: 1)
+        let box = SceneGraph.Node(parent: root, label: "Box", shape: .box(), material: material, device: device)
+        let jointA = SceneGraph.Node(parent: root, label: "A")
+        let jointB = SceneGraph.Node(parent: jointA, label: "B")
+        box.morphTargets = [.init(name: "Squash", positionDeltas: [[0, -1, 0], [0, 1, 0]], normalDeltas: [[1, 0, 0]])]
+        box.morphWeights = [0.25]
+        box.skin = .init(joints: [jointA, jointB], inverseBindMatrices: [.init(diagonal: [1, 1, 1, 1]), .init(diagonal: [2, 2, 2, 1])])
+        box.skinVertices = [.init(joints: [0, 1, 0, 0], weights: [0.75, 0.25, 0, 0])]
+        box.physicsBody = .init(type: .dynamic, shape: .capsule(height: 2, radius: 0.5), mass: 3, friction: 0.2, restitution: 0.6)
+        jointA.physicsBody = .init(type: .static, shape: .convexHull)
+        jointB.particleSystems = [SceneParticleSystem(ParticleSystem("Glow") { EmitterDescription("Glow") { RateModule(birthRate: 10) } }, seed: 7)]
+        jointB.particleSystems[0].usesNodeTransform = false
+
+        let warnings = try archive.write(SceneGraph(root: root), to: first)
+        #expect(warnings.isEmpty, "\(warnings)")
+        let (loaded, readWarnings) = try archive.read(from: first, device: device)
+        #expect(readWarnings.isEmpty, "\(readWarnings)")
+        try archive.write(loaded, to: second)
+        #expect(try sceneJSON(first) == sceneJSON(second))
+
+        let loadedBox = loaded.root.children[0]
+        let loadedA = loaded.root.children[1]
+        let loadedB = try #require(loadedA.children.first)
+        #expect(loadedBox.morphTargets == box.morphTargets)
+        #expect(loadedBox.morphWeights == [0.25])
+        let skin = try #require(loadedBox.skin)
+        #expect(skin.joints.count == 2 && skin.joints[0] === loadedA && skin.joints[1] === loadedB)
+        #expect(skin.inverseBindMatrices == box.skin?.inverseBindMatrices)
+        #expect(loadedBox.skinVertices == box.skinVertices)
+        #expect(loadedBox.physicsBody == box.physicsBody)
+        #expect(loadedA.physicsBody == jointA.physicsBody)
+        let particles = try #require(loadedB.particleSystems.first)
+        #expect(particles.seed == 7 && !particles.usesNodeTransform && particles.system.name == "Glow")
+        #expect(try sceneJSON(first).contains(#""type" : "dynamic""#))
     }
 
     // #163
