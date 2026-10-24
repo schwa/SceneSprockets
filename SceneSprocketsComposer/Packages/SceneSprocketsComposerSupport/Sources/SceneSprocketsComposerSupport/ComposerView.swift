@@ -23,6 +23,8 @@ public struct ComposerView: View {
     @State private var insertMessage: String?
     // A .gltf waiting for its folder to be granted (#206).
     @State private var fileNeedingFolder: URL?
+    // Shown first, explaining why the folder is needed (#213).
+    @State private var folderAccessRequest: FolderAccessRequest?
     @State private var isChoosingFolder = false
     @Environment(\.undoManager)
     private var undoManager
@@ -36,14 +38,14 @@ public struct ComposerView: View {
         _model = State(initialValue: model)
     }
 
-    private func needsFolderAccess(_ url: URL) throws -> Bool {
+    private func externalFiles(_ url: URL) throws -> [String] {
         let isAccessing = url.startAccessingSecurityScopedResource()
         defer {
             if isAccessing {
                 url.stopAccessingSecurityScopedResource()
             }
         }
-        return try ModelFile.needsFolderAccess(url)
+        return try ModelFile.externalFiles(url)
     }
 
     private func insertModel(_ url: URL, scopedURL: URL) {
@@ -118,9 +120,10 @@ public struct ComposerView: View {
         .fileImporter(isPresented: $model.isImportingModel, allowedContentTypes: ModelFile.contentTypes) { result in
             do {
                 let url = try result.get()
-                if try needsFolderAccess(url) {
-                    fileNeedingFolder = url
-                    isChoosingFolder = true
+                let files = try externalFiles(url)
+                if !files.isEmpty {
+                    // Explain first; the folder importer opens from the alert's button (#213).
+                    folderAccessRequest = FolderAccessRequest(file: url, externalFileCount: files.count)
                 } else {
                     insertModel(url, scopedURL: url)
                 }
@@ -134,18 +137,46 @@ public struct ComposerView: View {
             // MetalSprocketsGLTF GLTFViewer demo.
             Color.clear
                 .fileImporter(isPresented: $isChoosingFolder, allowedContentTypes: [.folder]) { result in
-                    if let file = fileNeedingFolder, case .success(let folder) = result {
-                        if ModelFile.isFile(file, inside: folder) {
+                    if let file = fileNeedingFolder {
+                        switch result {
+                        case .success(let folder) where ModelFile.isFile(file, inside: folder):
                             insertModel(file, scopedURL: folder)
-                        } else {
-                            insertMessage = "\(file.lastPathComponent) is not inside \(folder.lastPathComponent)."
+                        case .success(let folder):
+                            insertMessage = FolderAccessRequest.wrongFolderMessage(file: file, folder: folder)
+                        case .failure:
+                            insertMessage = FolderAccessRequest.cancelledMessage(file: file)
                         }
                     }
                     fileNeedingFolder = nil
                 }
+                .onChange(of: isChoosingFolder) { _, isChoosing in
+                    // Cancel may report no result, so say what happened. Checked a turn later, because the completion
+                    // above may run after this when a folder was chosen; it clears fileNeedingFolder.
+                    guard !isChoosing else {
+                        return
+                    }
+                    Task { @MainActor in
+                        await Task.yield()
+                        if !isChoosingFolder, let file = fileNeedingFolder {
+                            insertMessage = FolderAccessRequest.cancelledMessage(file: file)
+                            fileNeedingFolder = nil
+                        }
+                    }
+                }
                 .fileDialogMessage("\(fileNeedingFolder?.lastPathComponent ?? "This file") loads other files from its folder. Choose that folder to allow access.")
                 .fileDialogDefaultDirectory(fileNeedingFolder?.deletingLastPathComponent())
                 .fileDialogConfirmationLabel("Allow Access")
+        }
+        .alert(FolderAccessRequest.title, isPresented: Binding(get: { folderAccessRequest != nil }, set: { if !$0 { folderAccessRequest = nil } }), presenting: folderAccessRequest) { request in
+            Button("Choose Folder\u{2026}") {
+                fileNeedingFolder = request.file
+                isChoosingFolder = true
+            }
+            Button("Cancel", role: .cancel) {
+                insertMessage = FolderAccessRequest.cancelledMessage(file: request.file)
+            }
+        } message: { request in
+            Text(request.message)
         }
         .alert("Insert Model File", isPresented: Binding(get: { insertMessage != nil }, set: { if !$0 { insertMessage = nil } })) {
             Button("OK") {

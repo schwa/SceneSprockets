@@ -4586,12 +4586,13 @@ The other log lines (DetachedSignatures, ViewBridge error 18, NSColorPicker past
 ## 213: Composer: Insert Model File for a .gltf should explain and offer to pick the resource folder
 
 +++
-status: open
+status: closed
 priority: high
 kind: bug
 labels: area:composer, effort:s
 created: 2026-10-24T18:29:52Z
-updated: 2026-10-24T18:32:38Z
+updated: 2026-10-24T18:39:44Z
+closed: 2026-10-24T18:39:44Z
 +++
 
 Follow-up to #206. Picking a .gltf whose buffers and images are separate files gives no clue why its resources did not load. #206 sets isChoosingFolder = true right after the first file importer returns, to show a second, folder-only importer. In practice the user sees nothing useful. My guess, unverified: the second importer does not appear because it is presented while the first one is still dismissing. The insert then never happens, or happens without its resources.
@@ -4605,6 +4606,7 @@ On Cancel, either insert nothing, or insert with the missing resources and say c
 Also: if the folder importer is cancelled or the wrong folder is chosen, say so in the alert instead of failing silently. Present the folder importer from the alert's button action, not the first importer's completion, so it cannot be swallowed. Count the referenced files with the same JSON scan as ModelFile.needsFolderAccess, so the message can give the number.
 
 - `2026-10-24T18:32:38Z`: Related: #206 (folder access).
+- `2026-10-24T18:39:44Z`: Done: after picking a .gltf with separate files, an alert ('Allow Access to the Model's Folder') says how many files it loads. Choose Folder… opens the folder importer from the alert's button. Cancel, a cancelled panel and a wrong folder each give a clear message, and nothing is inserted. Tested: ModelFile.externalFiles and the alert texts. The alert and importer sequence is UI and untested; please try it with glass_of_water.gltf. Unverified: whether SwiftUI calls the folder importer's completion on cancel. The cancel message is checked a turn later to cover both orders.
 
 ---
 

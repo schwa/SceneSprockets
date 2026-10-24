@@ -29,16 +29,23 @@ public enum ModelFile {
     // the user must then grant its folder, as the MetalSprocketsGLTF GLTFViewer demo does (#206). .glb files are
     // treated as self-contained.
     public static func needsFolderAccess(_ url: URL) throws -> Bool {
+        try !externalFiles(url).isEmpty
+    }
+
+    // The distinct relative URIs of the buffers and images a .gltf loads from other files, in order (#213). Empty for
+    // other formats and for data URIs.
+    public static func externalFiles(_ url: URL) throws -> [String] {
         guard url.pathExtension.lowercased() == "gltf" else {
-            return false
+            return []
         }
         let json = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any] ?? [:]
         let resources = (json["buffers"] as? [[String: Any]] ?? []) + (json["images"] as? [[String: Any]] ?? [])
-        return resources.contains { resource in
-            guard let uri = resource["uri"] as? String else {
-                return false
+        var seen = Set<String>()
+        return resources.compactMap { resource in
+            guard let uri = resource["uri"] as? String, !uri.hasPrefix("data:"), seen.insert(uri).inserted else {
+                return nil
             }
-            return !uri.hasPrefix("data:")
+            return uri.removingPercentEncoding ?? uri
         }
     }
 

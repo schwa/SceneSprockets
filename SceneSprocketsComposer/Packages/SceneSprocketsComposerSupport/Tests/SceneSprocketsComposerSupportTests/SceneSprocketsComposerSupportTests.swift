@@ -736,6 +736,15 @@ import UniformTypeIdentifiers
     #expect(all.map(\.isSelected) == [true, false])
 }
 
+// #213
+@Test func folderAccessMessages() {
+    let file = URL(fileURLWithPath: "/Models/glass_of_water.gltf")
+    #expect(FolderAccessRequest(file: file, externalFileCount: 2).message == "glass_of_water.gltf loads 2 other files (buffers, textures) from its folder. macOS lets the app read them only if you choose that folder.")
+    #expect(FolderAccessRequest(file: file, externalFileCount: 1).message.contains("1 other file "))
+    #expect(FolderAccessRequest.cancelledMessage(file: file) == "glass_of_water.gltf was not inserted: its folder was not chosen.")
+    #expect(FolderAccessRequest.wrongFolderMessage(file: file, folder: URL(fileURLWithPath: "/Other")) == "glass_of_water.gltf is not inside Other. Choose the folder that contains it.")
+}
+
 // #177: framing keeps the view direction and orbits the framed center.
 @Test func framingKeepsViewDirection() {
     var camera = EditorCamera()

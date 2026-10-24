@@ -459,6 +459,11 @@ func modelFileLoadsGLTFAndOBJ() throws {
     let embedded = directory.appendingPathComponent("Embedded.gltf")
     try #"{"asset":{"version":"2.0"},"buffers":[{"uri":"data:application/octet-stream;base64,AAAAAA==","byteLength":4}]}"#.write(to: embedded, atomically: true, encoding: .utf8)
     #expect(try ModelFile.needsFolderAccess(external))
+    // #213: the alert says how many files, counting each distinct one once.
+    let twoFiles = directory.appendingPathComponent("TwoFiles.gltf")
+    try #"{"asset":{"version":"2.0"},"buffers":[{"uri":"a.bin","byteLength":4}],"images":[{"uri":"color.png"},{"uri":"color.png"},{"uri":"data:image/png;base64,AA=="}]}"#.write(to: twoFiles, atomically: true, encoding: .utf8)
+    #expect(try ModelFile.externalFiles(twoFiles) == ["a.bin", "color.png"])
+    #expect(try ModelFile.externalFiles(embedded).isEmpty)
     #expect(try !ModelFile.needsFolderAccess(embedded))
     #expect(try !ModelFile.needsFolderAccess(objURL))
     #expect(ModelFile.isFile(external, inside: directory))
