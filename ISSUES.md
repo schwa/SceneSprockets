@@ -4082,12 +4082,13 @@ Draw the selected node highlighted. Add a Render settings toggle. Clicking a deb
 ## 189: Composer: app Settings window with a gizmo size option (large/small)
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:composer, effort:s
 created: 2026-10-24T14:14:41Z
-updated: 2026-10-24T14:18:19Z
+updated: 2026-10-24T14:52:21Z
+closed: 2026-10-24T14:52:21Z
 +++
 
 Add a Settings scene (Composer > Settings…) for app-wide preferences stored with @AppStorage, not in documents.

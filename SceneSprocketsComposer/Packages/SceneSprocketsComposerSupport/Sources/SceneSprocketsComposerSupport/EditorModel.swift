@@ -25,6 +25,11 @@ public final class EditorModel {
     var camera = EditorCamera()
     var renderSettings = RenderSettings()
     var isInspectorPresented = true
+    // From the app's Gizmo Size setting (#189).
+    var gizmoSize = GizmoSize.small {
+        didSet { gizmo.worldSize = baseGizmoWorldSize * gizmoSize.scale }
+    }
+    @ObservationIgnored private var baseGizmoWorldSize: Float = 1
     // Bumped while the gizmo drags, so views that show transforms refresh. Nodes are not observable (SceneSprockets #155).
     public private(set) var transformRevision = 0
     // Set by the view from the document's environment; registering undo marks the document edited.
@@ -41,7 +46,8 @@ public final class EditorModel {
         renderers = [BlinnPhongMaterialRenderer(), PBRMaterialRenderer(device: device ?? systemDefaultDevice())]
         frameAll()
         // Scales with the camera like the scene (#171), sized from the scene so it suits small and large scenes.
-        gizmo.worldSize = sceneGraph.bounds.map { max(simd_distance($0.min, $0.max) * 0.15, 0.01) } ?? 1
+        baseGizmoWorldSize = sceneGraph.bounds.map { max(simd_distance($0.min, $0.max) * 0.15, 0.01) } ?? 1
+        gizmo.worldSize = baseGizmoWorldSize
         gizmo.onBegin = { [weak self] node in
             self?.transformBeforeDrag = node.localTransform
         }

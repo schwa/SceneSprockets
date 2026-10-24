@@ -6,6 +6,8 @@ import SwiftUI
 public struct ComposerView: View {
     @State private var model: EditorModel
     private let document: ComposerDocument
+    @AppStorage(GizmoSize.storageKey)
+    private var gizmoSize = GizmoSize.small
     @Environment(\.undoManager)
     private var undoManager
 
@@ -60,6 +62,9 @@ public struct ComposerView: View {
         .focusedSceneValue(\.editorModel, model)
         .onAppear {
             document.editorModel = model
+        }
+        .onChange(of: gizmoSize, initial: true) {
+            model.gizmoSize = gizmoSize
         }
         .onChange(of: undoManager, initial: true) {
             model.undoManager = undoManager

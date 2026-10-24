@@ -136,6 +136,17 @@ import UniformTypeIdentifiers
     #expect(try DebugShapes.element(sceneGraph: cameraOnly, selection: camera, viewport: viewport) != nil)
 }
 
+// #189
+@MainActor
+@Test func largeGizmoScalesWorldSize() throws {
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    let small = try #require(model.gizmo.worldSize)
+    model.gizmoSize = .large
+    #expect(model.gizmo.worldSize == small * GizmoSize.large.scale)
+    model.gizmoSize = .small
+    #expect(model.gizmo.worldSize == small)
+}
+
 // #177: framing keeps the view direction and orbits the framed center.
 @Test func framingKeepsViewDirection() {
     var camera = EditorCamera()

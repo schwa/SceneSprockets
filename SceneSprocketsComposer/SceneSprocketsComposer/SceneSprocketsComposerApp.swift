@@ -10,5 +10,10 @@ struct SceneSprocketsComposerApp: App {
         .commands {
             ComposerCommands()
         }
+        #if os(macOS)
+        Settings {
+            ComposerSettingsView()
+        }
+        #endif
     }
 }
