@@ -13,6 +13,8 @@ struct RenderSettings: Equatable {
     var showsShadows = false
     var showsStatistics = false
     var showsFrameTiming = false
+    // Line shapes for lights and cameras (#188).
+    var showsLightsAndCameras = true
     var outlinesSelection = true
     // Off keeps the drawable readable, for example to inspect it in a GPU capture.
     var isFramebufferOnly = true

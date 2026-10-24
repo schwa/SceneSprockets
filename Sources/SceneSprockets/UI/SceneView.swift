@@ -54,6 +54,7 @@ public struct SceneView: View {
     private let audio: SceneAudio?
     private let externalCameraMatrix: Binding<simd_float4x4?>?
     private let onTap: ((SceneGraph.Hit?) -> Void)?
+    private let onTapAt: ((SIMD2<Float>, SceneViewport, SceneGraph.Hit?) -> Void)?
     private let hitTestCategoryBitMask: UInt
     private let manipulator: (any SceneViewManipulator)?
     private let decorations: ((SceneGraphRenderContext, SIMD2<Float>) throws -> AnyElement?)?
@@ -106,6 +107,9 @@ public struct SceneView: View {
         camera: Camera? = nil,
         manipulator: (any SceneViewManipulator)? = nil,
         onTap: ((SceneGraph.Hit?) -> Void)? = nil,
+        // Like `onTap`, with the tap point (view coordinates) and viewport, for callers that pick things the mesh hit
+        // test cannot see, such as editor icons.
+        onTapAt: ((SIMD2<Float>, SceneViewport, SceneGraph.Hit?) -> Void)? = nil,
         // After `onTap`, so a trailing closure still means `onTap`.
         decorations: ((SceneGraphRenderContext, SIMD2<Float>) throws -> AnyElement?)? = nil,
         // Passes after the scene and before the manipulator, such as selection outlines. They see the finished color
@@ -127,6 +131,7 @@ public struct SceneView: View {
         self.audio = audio
         self.externalCameraMatrix = cameraMatrix
         self.onTap = onTap
+        self.onTapAt = onTapAt
         self.hitTestCategoryBitMask = hitTestCategoryBitMask
         self.manipulator = manipulator
     }
@@ -199,10 +204,10 @@ public struct SceneView: View {
         .simultaneousGesture(manipulatorDrag, including: manipulator != nil ? .all : .subviews)
         .onTapGesture { location in
             // With a manipulator, its zero-distance drag wins over this tap; manipulatorDrag reports taps instead.
-            guard manipulator == nil, let onTap else {
+            guard manipulator == nil else {
                 return
             }
-            onTap(hit(at: location))
+            reportTap(at: location)
         }
         .onFrameTimingChange { statistics in
             // Only stored while shown; otherwise every frame would update the view.
@@ -231,6 +236,17 @@ public struct SceneView: View {
         }
     }
 
+    private func reportTap(at location: CGPoint) {
+        guard onTap != nil || onTapAt != nil else {
+            return
+        }
+        let hit = hit(at: location)
+        onTap?(hit)
+        if let onTapAt, let viewport = viewport() {
+            onTapAt([Float(location.x), Float(location.y)], viewport, hit)
+        }
+    }
+
     private var manipulatorDrag: some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
@@ -251,8 +267,8 @@ public struct SceneView: View {
             .onEnded { value in
                 if manipulatorDragClaim == true {
                     manipulator?.endDrag()
-                } else if let onTap, manipulator != nil, hypot(value.translation.width, value.translation.height) < 4 {
-                    onTap(hit(at: value.location))
+                } else if manipulator != nil, hypot(value.translation.width, value.translation.height) < 4 {
+                    reportTap(at: value.location)
                 }
                 manipulatorDragClaim = nil
             }

@@ -4057,12 +4057,13 @@ Add a Camera entry to the + menu. Add the new camera under the root, select it, 
 ## 188: Composer: draw debug shapes for lights and cameras
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: area:composer, effort:m
 created: 2026-10-24T14:13:23Z
-updated: 2026-10-24T14:18:19Z
+updated: 2026-10-24T14:50:29Z
+closed: 2026-10-24T14:50:29Z
 +++
 
 Lights and cameras are invisible in the preview, so the user cannot see or click them. Draw debug shapes with MetalSprocketsAddOns' GraphicsContext3D / 3D canvas, as TransformGizmo does:

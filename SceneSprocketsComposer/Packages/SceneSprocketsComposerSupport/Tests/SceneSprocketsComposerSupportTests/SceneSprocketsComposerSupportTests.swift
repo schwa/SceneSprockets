@@ -108,6 +108,34 @@ import UniformTypeIdentifiers
     #expect(partial.gizmoMode == .translate)
 }
 
+// #188
+@MainActor
+@Test func debugShapesDrawAndPickLightsAndCameras() throws {
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    for type in Light.LightType.allCases {
+        model.addLight(type)
+    }
+    model.addCamera()
+    let viewport = SceneViewport(
+        cameraMatrix: LookAt(position: [0, 0, 20], target: .zero, up: [0, 1, 0]).cameraMatrix,
+        projectionMatrix: PerspectiveProjection(verticalAngleOfView: .degrees(60)).projectionMatrix(aspectRatio: 1),
+        viewSize: [400, 400],
+        drawableSize: [800, 800]
+    )
+    let shapes = DebugShapes.shapes(sceneGraph: model.sceneGraph, viewport: viewport)
+    #expect(shapes.count == 4)
+    #expect(shapes.allSatisfy { !$0.lines.isEmpty })
+
+    // Only a camera, at the origin facing -Z (away from the viewer): its frustum outline surrounds the center.
+    let cameraOnly = SceneGraph.empty()
+    let camera = SceneGraph.Node(parent: cameraOnly.root, label: "Camera", content: .camera(SceneView.defaultCamera))
+    let shape = try #require(DebugShapes.shapes(sceneGraph: cameraOnly, viewport: viewport).first)
+    let projected = try #require(viewport.project(shape.lines[1][1]))
+    #expect(DebugShapes.hitTest(projected.xy, sceneGraph: cameraOnly, viewport: viewport) === camera)
+    #expect(DebugShapes.hitTest([5, 5], sceneGraph: cameraOnly, viewport: viewport) == nil)
+    #expect(try DebugShapes.element(sceneGraph: cameraOnly, selection: camera, viewport: viewport) != nil)
+}
+
 // #177: framing keeps the view direction and orbits the framed center.
 @Test func framingKeepsViewDirection() {
     var camera = EditorCamera()

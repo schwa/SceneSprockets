@@ -11,6 +11,8 @@ struct RenderSettingsView: View {
                 Toggle("Selection Outline", isOn: $model.renderSettings.outlinesSelection)
                 Toggle("Statistics", isOn: $model.renderSettings.showsStatistics)
                     .help("Meshes, triangles and lights")
+                Toggle("Lights and Cameras", isOn: $model.renderSettings.showsLightsAndCameras)
+                    .help("Draw and click shapes for lights and cameras")
                 Toggle("Frame Timing", isOn: $model.renderSettings.showsFrameTiming)
                     .help("Frame rate and CPU and GPU timings")
             }
