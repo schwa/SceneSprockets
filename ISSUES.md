@@ -4636,6 +4636,12 @@ How to confirm: capture a flickering frame (using-gpucapture) and look at the Ma
 
 Probably belongs partly in MetalSprockets: a missing frame-to-frame barrier for persistent attachments in RenderView. Move or split the issue once the cause is known.
 
+- `2026-10-24T18:42:53Z`: Found and fixed two missing barriers by reading the code; no GPU capture yet.
+1. The scene pass waited only for dispatch before clearing the depth texture shared by all frames in flight. The previous frame's selection outline and manipulator passes use that depth attachment in the fragment stage, so a new frame could clear depth while the gizmo was still depth-testing. That is gizmo flicker; it applies whenever depth is stored, and the Composer always stores it because it sets an overlay. The barrier now waits for [.dispatch, .fragment].
+2. The Selection Mask pass had no barrier while clearing and writing the mask texture, which is kept between frames and still read by the previous frame's jump flood (dispatch) and outline (fragment). That is outline flicker. Added QueueBarrier(after: [.dispatch, .fragment], before: .fragment).
+Checked and looked fine: the manipulator pass barrier (its gizmo geometry is CPU-written buffers, made resident per submission); jump flood's own barriers (its first one waits for vertex, fragment, dispatch and blit, and the seeds texture is covered); the outline pass ordering after jump flood.
+Leaving open until you confirm the flicker is gone. If it is not, a capture of a bad frame (using-gpucapture) is next. Unverified: whether MTLStageFragment covers attachment load and store actions in Metal 4. If not, those barriers may need more stages.
+
 ---
 
 ## 215: Composer: frame rate drops sharply while dragging

@@ -93,6 +93,9 @@ private struct OutlinePasses: Element {
     var body: some Element {
         get throws {
             try RenderPass(label: "Selection Mask") {
+                // `mask` is kept between frames: the previous frame's jump flood (dispatch) and outline (fragment)
+                // may still read it while this pass clears and writes it. Metal 4 does not order passes (#214).
+                QueueBarrier(after: [.dispatch, .fragment], before: .fragment)
                 SilhouetteMaskRenderPipeline(instances: instances, viewProjection: viewProjection)
             }
             .renderPassDescriptorModifier { descriptor in

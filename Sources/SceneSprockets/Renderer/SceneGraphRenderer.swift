@@ -283,8 +283,10 @@ public struct SceneGraphElement: Element {
             if storesDepth {
                 // The view's depth texture is shared by every frame in flight, and Metal 4 does not track hazards:
                 // without this, the previous frame's shadow mask pass can still be reading depth while this pass
-                // clears it, and that frame's shadow disappears.
-                QueueBarrier(after: .dispatch, before: [.vertex, .fragment])
+                // clears it, and that frame's shadow disappears. The previous frame's render passes after the scene
+                // (selection outline, manipulator) use the same depth attachment in the fragment stage, so wait for
+                // those too (#214).
+                QueueBarrier(after: [.dispatch, .fragment], before: [.vertex, .fragment])
             }
             ForEach(Array(elements.enumerated()), id: \.offset) { _, element in
                 element
