@@ -4741,3 +4741,14 @@ created: 2026-10-24T18:37:26Z
 +++
 
 ---
+
+## 222: Reorder nodes
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-10-24T18:37:27Z
++++
+
+---
