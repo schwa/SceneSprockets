@@ -1,0 +1,60 @@
+{
+  "fill": {
+    "linear-gradient": [
+      "srgb:0.08000,0.14000,0.28000,1.00000",
+      "srgb:0.02500,0.04000,0.11000,1.00000"
+    ]
+  },
+  "groups": [
+    {
+      "name": "Scene plane",
+      "layers": [
+        {
+          "image-name": "Scene Grid.svg",
+          "name": "Perspective construction grid",
+          "glass": false
+        }
+      ],
+      "shadow": {
+        "kind": "none",
+        "opacity": 0
+      },
+      "specular": false,
+      "translucency": {
+        "enabled": false,
+        "value": 0
+      }
+    },
+    {
+      "name": "Scene geometry",
+      "layers": [
+        {
+          "image-name": "Scene Cube.png",
+          "name": "Glass cube",
+          "glass": false,
+          "position": {
+            "scale": 0.76,
+            "translation-in-points": [
+              0,
+              0
+            ]
+          }
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.4
+      },
+      "specular": false,
+      "translucency": {
+        "enabled": false,
+        "value": 0
+      }
+    }
+  ],
+  "supported-platforms": {
+    "squares": [
+      "macOS"
+    ]
+  }
+}
