@@ -4706,3 +4706,16 @@ AssistantPanel.systemPrompt (SceneSprocketsComposerSupport/AssistantPanel.swift)
 Related: #216 (batching), #217 (glass materials).
 
 ---
+
+## 219: Add File > Import menu for models
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-10-24T18:37:07Z
++++
+
+Add an Import item to the File menu that imports glTF/GLB and other model formats into the open scene.
+
+---
