@@ -4866,11 +4866,25 @@ Measure with the SwiftUI instrument during a drag.
 status: new
 priority: low
 kind: enhancement
-labels: area:composer,effort:xs
+labels: area:composer, effort:xs
 created: 2026-10-24T22:18:31Z
 +++
 
 The Y axis line (green) runs straight up through the scene and gets in the way. Add per-axis toggles in Render > Show (X, Y, Z, or a 'Ground Axes Only' option that hides Y), saved in editor.json.
 Depends on MetalSprocketsAddOns 'AxisLinesRenderPipeline: choose which axes to draw'. Until then it can pass yAxisColor with alpha 0, because the shader discards alpha-0 fragments, from RenderSettings.decorations.
+
+---
+
+## 226: Composer: show bounding box min, max and size in the inspector
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:composer,effort:xs
+created: 2026-10-24T22:22:44Z
++++
+
+Selecting a node shows no size information. Add a Bounds section (or rows under Transform) with world-space min [x, y, z], max [x, y, z] and size (max - min), from SceneGraph.worldBounds(of:); also the center. Read-only, with 3 decimals. 'None' for nodes without bounds (empty, light, camera, hidden or inactive). With several nodes selected (#205), show the combined bounds. Must refresh while dragging, so it reads transformRevision; keep it in its own leaf view so it does not make the rest of the inspector depend on drags (#223, #224). Optionally also local-space bounds (Node.subtreeBounds).
 
 ---
