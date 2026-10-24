@@ -1,5 +1,5 @@
 {
-  "originHash" : "fa74d677caa4164c66928e8dfec1d4b6ec2a1e7a4e37c85cb917174df8bc92aa",
+  "originHash" : "d269414e89e408d5eb6e23af41c5c39ab9056eb53f70ef1b31697ef8908d7650",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "002f03eae0e1b0cbb0f3deb3fed1ab2b5290b5a4",
         "version" : "0.0.3"
+      }
+    },
+    {
+      "identity" : "collaborationkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/CollaborationKit",
+      "state" : {
+        "revision" : "7636d0ea09faf8d26e2ccd3f3a36dd2aba5abf09",
+        "version" : "0.2.5"
       }
     },
     {

@@ -1,3 +1,4 @@
+import CollaborationKitUI
 import SwiftUI
 
 // App-wide preferences, stored in user defaults rather than in documents (#189).
@@ -31,15 +32,23 @@ public struct ComposerSettingsView: View {
 
     public init() {}
 
+    // Needs CollaborationCredentials in the environment for the Assistant tab.
     public var body: some View {
-        Form {
-            Picker("Gizmo Size", selection: $gizmoSize) {
-                ForEach(GizmoSize.allCases) { size in
-                    Text(size.label).tag(size)
+        TabView {
+            Tab("General", systemImage: "gearshape") {
+                Form {
+                    Picker("Gizmo Size", selection: $gizmoSize) {
+                        ForEach(GizmoSize.allCases) { size in
+                            Text(size.label).tag(size)
+                        }
+                    }
                 }
+                .formStyle(.grouped)
+            }
+            Tab("Assistant", systemImage: "bubble.left.and.text.bubble.right") {
+                CollaborationSettingsView()
             }
         }
-        .formStyle(.grouped)
-        .frame(width: 360)
+        .frame(minWidth: 520, minHeight: 420)
     }
 }

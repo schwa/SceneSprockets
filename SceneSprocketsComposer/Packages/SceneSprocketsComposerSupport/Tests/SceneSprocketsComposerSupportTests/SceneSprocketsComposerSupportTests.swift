@@ -1,3 +1,5 @@
+import CollaborationKit
+import CollaborationKitUI
 import CoreGraphics
 import Foundation
 import GeometryLite3D
@@ -217,6 +219,17 @@ import UniformTypeIdentifiers
     undoManager.undo()
     #expect(!model.isHidden(child))
     #expect(model.sceneGraph.hitTest(Ray3D(origin: [0, 0, 5], direction: [0, 0, -1])).first?.node === parent)
+}
+
+// #190: a conversation only with credentials for the selected backend.
+@MainActor
+@Test func assistantNeedsCredentials() {
+    let signedOut = CollaborationCredentials(store: InMemoryCredentialStore(), backends: [.anthropicAPI], defaultsKey: nil)
+    #expect(ComposerAssistant.makeStore(credentials: signedOut) == nil)
+    let signedIn = CollaborationCredentials(store: InMemoryCredentialStore(anthropicAPIKey: "test-key"), backends: [.anthropicAPI], defaultsKey: nil)
+    let store = ComposerAssistant.makeStore(credentials: signedIn)
+    #expect(store != nil)
+    store?.cancel()
 }
 
 // #177: framing keeps the view direction and orbits the framed center.

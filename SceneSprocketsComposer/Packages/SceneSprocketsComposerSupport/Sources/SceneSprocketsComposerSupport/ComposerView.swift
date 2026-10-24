@@ -1,3 +1,4 @@
+import CollaborationKitUI
 import SceneSprockets
 import SceneSprocketsGizmos
 import SwiftUI
@@ -8,6 +9,16 @@ public struct ComposerView: View {
     private let document: ComposerDocument
     @AppStorage(GizmoSize.storageKey)
     private var gizmoSize = GizmoSize.small
+    @Environment(CollaborationCredentials.self)
+    private var credentials
+    @State private var sidebarTab = SidebarTab.scene
+    // This document's conversation; kept here so it survives sidebar tab switches.
+    @State private var assistantStore: ConversationStore?
+
+    private enum SidebarTab {
+        case scene
+        case assistant
+    }
     @Environment(\.undoManager)
     private var undoManager
 
@@ -22,8 +33,23 @@ public struct ComposerView: View {
 
     public var body: some View {
         NavigationSplitView {
-            SceneTreeView(model: model)
-                .navigationSplitViewColumnWidth(min: 180, ideal: 240)
+            VStack(spacing: 0) {
+                Picker("Sidebar", selection: $sidebarTab) {
+                    Label("Scene", systemImage: "list.bullet.indent").tag(SidebarTab.scene)
+                    Label("Assistant", systemImage: "bubble.left.and.text.bubble.right").tag(SidebarTab.assistant)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .padding(8)
+                switch sidebarTab {
+                case .scene:
+                    SceneTreeView(model: model)
+
+                case .assistant:
+                    AssistantPanel(store: assistantStore)
+                }
+            }
+            .navigationSplitViewColumnWidth(min: 180, ideal: 300)
         } detail: {
             ScenePreviewView(model: model)
                 .inspector(isPresented: $model.isInspectorPresented) {
@@ -62,6 +88,17 @@ public struct ComposerView: View {
         .focusedSceneValue(\.editorModel, model)
         .onAppear {
             document.editorModel = model
+            if assistantStore == nil {
+                assistantStore = ComposerAssistant.makeStore(credentials: credentials)
+            }
+        }
+        // A new conversation for the current provider after signing in or out, or switching backend or model.
+        .onChange(of: "\(credentials.backend.id)-\(credentials.selectedModel)-\(credentials.hasCredentials)") {
+            assistantStore?.cancel()
+            assistantStore = ComposerAssistant.makeStore(credentials: credentials)
+        }
+        .onDisappear {
+            assistantStore?.cancel()
         }
         .onChange(of: gizmoSize, initial: true) {
             model.gizmoSize = gizmoSize
