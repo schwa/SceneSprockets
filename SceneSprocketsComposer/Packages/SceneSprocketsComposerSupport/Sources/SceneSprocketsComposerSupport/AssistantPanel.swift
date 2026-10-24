@@ -16,16 +16,19 @@ public enum ComposerAssistant {
 
     static let systemPrompt = """
     You are the assistant in SceneSprockets Composer, a macOS editor for 3D scene graphs. The user builds scenes from \
-    shapes, lights and cameras, and edits their transforms and materials. Answer questions about the scene and about \
-    3D scene composition. Be concise.
+    shapes, lights and cameras, and edits their transforms and materials. Use the tools to read and change the open \
+    scene: call listNodes first to learn node paths, and call it again after adding or deleting nodes because paths \
+    change. +Y is up and units are meters; shapes are about 1 unit across. Every change you make can be undone by \
+    the user. Be concise.
     """
 
     @MainActor
-    static func makeStore(credentials: CollaborationCredentials) -> ConversationStore? {
+    static func makeStore(credentials: CollaborationCredentials, model: EditorModel) -> ConversationStore? {
         guard credentials.hasCredentials, let provider = try? credentials.makeProvider() else {
             return nil
         }
-        return ConversationStore(session: LLMSession(provider: provider, system: systemPrompt))
+        let tools = SceneTools(model: model)
+        return ConversationStore(session: LLMSession(provider: provider, system: systemPrompt, tools: tools.collaborationTools))
     }
 }
 

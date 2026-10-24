@@ -228,11 +228,44 @@ import UniformTypeIdentifiers
 @MainActor
 @Test func assistantNeedsCredentials() {
     let signedOut = CollaborationCredentials(store: InMemoryCredentialStore(), backends: [.anthropicAPI], defaultsKey: nil)
-    #expect(ComposerAssistant.makeStore(credentials: signedOut) == nil)
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    #expect(ComposerAssistant.makeStore(credentials: signedOut, model: model) == nil)
     let signedIn = CollaborationCredentials(store: InMemoryCredentialStore(anthropicAPIKey: "test-key"), backends: [.anthropicAPI], defaultsKey: nil)
-    let store = ComposerAssistant.makeStore(credentials: signedIn)
+    let store = ComposerAssistant.makeStore(credentials: signedIn, model: model)
     #expect(store != nil)
     store?.cancel()
+}
+
+// #191: the scene tools, called directly as the model would.
+@MainActor
+@Test func sceneToolsQueryAndEditTheScene() async throws {
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    let tools = SceneTools(model: model)
+    #expect(Set(tools.collaborationTools.map(\.name)).isSuperset(of: ["listNodes", "getNode", "addShape", "setTransform", "deleteNode", "setMaterial"]))
+
+    let path = try tools.addShape(kind: "Sphere", label: "Ball")
+    #expect(path == "0")
+    #expect(try tools.listNodes().contains(#""label":"Ball""#))
+    _ = try tools.setTransform(path: path, translation: [1, 2, 3], rotationDegrees: [0, 30, 0], scale: nil)
+    let node = try #require(model.sceneGraph.root.children.first)
+    #expect(node.localTransform.trs.translation == [1, 2, 3])
+    #expect(abs(SceneTools.eulerDegrees(node.localTransform.trs.rotation).y - 30) < 0.01)
+    // At gimbal lock the angles must stay finite, or getNode's JSON fails.
+    let locked = SceneTools.eulerDegrees(SceneTools.rotation(eulerDegrees: [0, 90, 0]))
+    #expect(locked.x.isFinite && locked.y.isFinite && locked.z.isFinite)
+    _ = try tools.setMaterial(path: path, color: [1, 0, 0], metallic: nil, roughness: nil)
+    #expect(EditorModel.baseColor(of: try #require(model.materials(of: node).first)) == [1, 0, 0])
+    let details = try tools.getNode(path: path)
+    #expect(details.contains("sphere(radius"))
+    #expect(details.contains(#""translation":[1,2,3]"#))
+
+    #expect(throws: ToolError.self) { try tools.getNode(path: "5") }
+    #expect(throws: ToolError.self) { try tools.addShape(kind: "dodecahedron", label: nil) }
+    model.setLocked(true, node)
+    #expect(throws: ToolError.self) { try tools.renameNode(path: path, label: "Nope") }
+    model.setLocked(false, node)
+    _ = try tools.deleteNode(path: path)
+    #expect(model.sceneGraph.root.children.isEmpty)
 }
 
 // #198

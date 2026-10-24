@@ -4132,13 +4132,14 @@ Tools for the model are in a separate subtask.
 ## 191: Composer: CollaborationKit tools to query and edit the scene
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: area:composer, effort:l
 depends: 190
 created: 2026-10-24T14:16:04Z
-updated: 2026-10-24T14:18:19Z
+updated: 2026-10-24T15:44:19Z
+closed: 2026-10-24T15:44:19Z
 +++
 
 Subtask of #190. Add @CollaborationTools / @CollaborationTool methods so the model can read and change the scene:

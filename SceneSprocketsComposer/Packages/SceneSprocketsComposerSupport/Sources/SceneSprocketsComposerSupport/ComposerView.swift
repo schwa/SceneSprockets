@@ -102,13 +102,13 @@ public struct ComposerView: View {
         .onAppear {
             document.editorModel = model
             if assistantStore == nil {
-                assistantStore = ComposerAssistant.makeStore(credentials: credentials)
+                assistantStore = ComposerAssistant.makeStore(credentials: credentials, model: model)
             }
         }
         // A new conversation for the current provider after signing in or out, or switching backend or model.
         .onChange(of: "\(credentials.backend.id)-\(credentials.selectedModel)-\(credentials.hasCredentials)") {
             assistantStore?.cancel()
-            assistantStore = ComposerAssistant.makeStore(credentials: credentials)
+            assistantStore = ComposerAssistant.makeStore(credentials: credentials, model: model)
         }
         .onDisappear {
             assistantStore?.cancel()
