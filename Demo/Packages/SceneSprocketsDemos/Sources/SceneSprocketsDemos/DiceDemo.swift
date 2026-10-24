@@ -212,9 +212,14 @@ final class DiceDemo: DemoScene {
                 return BlinnPhongSceneMaterial.plastic([0.3, 0.1, 0.05], shininess: 24)
             }
             var bindings = Array(repeating: placeholder, count: Int(kPBRMaterialTextureCount.rawValue))
-            bindings[Int(kPBRTextureBaseColor.rawValue)] = .init(texture: color, sampler: placeholder.sampler)
-            bindings[Int(kPBRTextureNormal.rawValue)] = .init(texture: normal, sampler: placeholder.sampler)
-            bindings[Int(kPBRTextureMetallicRoughness.rawValue)] = .init(texture: metallicRoughness, sampler: placeholder.sampler)
+            let device = demoDevice
+            func binding(_ texture: MTLTexture) -> PBRMaterial.Binding {
+                // swiftlint:disable:next force_try
+                try! .init(texture: texture, samplerDescriptor: placeholder.samplerDescriptor, device: device)
+            }
+            bindings[Int(kPBRTextureBaseColor.rawValue)] = binding(color)
+            bindings[Int(kPBRTextureNormal.rawValue)] = binding(normal)
+            bindings[Int(kPBRTextureMetallicRoughness.rawValue)] = binding(metallicRoughness)
             var uniforms = PBRMaterialUniforms.defaults(baseColor: [1, 1, 1, 1], metallic: 1, roughness: 1)
             uniforms.baseColor.enabled = 1
             uniforms.normal.enabled = 1

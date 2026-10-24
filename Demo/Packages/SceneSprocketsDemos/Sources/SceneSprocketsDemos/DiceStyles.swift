@@ -64,19 +64,18 @@ enum DiceStyle: String, CaseIterable {
     // The material for one die kind in this style. `mask` is the kind's numbers texture, `normal` its bumps.
     func material(mask: CGImage, normal: MTLTexture) throws -> PBRSceneMaterial {
         let placeholder = try PBRMaterial.placeholderBinding(device: demoDevice)
-        let sampler = placeholder.sampler
         var bindings = Array(repeating: placeholder, count: Int(kPBRMaterialTextureCount.rawValue))
-        func bind(_ index: PBRMaterialTextureIndex, _ texture: MTLTexture) {
-            bindings[Int(index.rawValue)] = .init(texture: texture, sampler: sampler)
+        func bind(_ index: PBRMaterialTextureIndex, _ texture: MTLTexture) throws {
+            bindings[Int(index.rawValue)] = try .init(texture: texture, samplerDescriptor: placeholder.samplerDescriptor, device: demoDevice)
         }
         var uniforms = PBRMaterialUniforms.defaults(baseColor: [1, 1, 1, 1], metallic: 1, roughness: 1)
         let body = body, numbers = numbers
-        bind(kPBRTextureBaseColor, try Self.split(mask, sRGB: true, body: self == .marble ? .marble : .color(Self.sRGB(body.color)), numbers: Self.sRGB(numbers.color)))
+        try bind(kPBRTextureBaseColor, Self.split(mask, sRGB: true, body: self == .marble ? .marble : .color(Self.sRGB(body.color)), numbers: Self.sRGB(numbers.color)))
         uniforms.baseColor.enabled = 1
         // Roughness in green, metalness in blue.
-        bind(kPBRTextureMetallicRoughness, try Self.split(mask, sRGB: false, body: .color([0, body.roughness, body.metallic]), numbers: [0, numbers.roughness, numbers.metallic]))
+        try bind(kPBRTextureMetallicRoughness, Self.split(mask, sRGB: false, body: .color([0, body.roughness, body.metallic]), numbers: [0, numbers.roughness, numbers.metallic]))
         uniforms.metallicRoughness.enabled = 1
-        bind(kPBRTextureNormal, normal)
+        try bind(kPBRTextureNormal, normal)
         uniforms.normal.enabled = 1
 
         switch self {
@@ -85,7 +84,7 @@ enum DiceStyle: String, CaseIterable {
             uniforms.clearcoatRoughnessFactor = 0.2
         case .rubyGlass, .crystal:
             // The body transmits; the numbers are opaque inlays.
-            bind(kPBRTextureTransmission, try Self.split(mask, sRGB: false, body: .color([1, 1, 1]), numbers: [0, 0, 0]))
+            try bind(kPBRTextureTransmission, Self.split(mask, sRGB: false, body: .color([1, 1, 1]), numbers: [0, 0, 0]))
             uniforms.transmission.enabled = 1
             uniforms.transmissionFactor = 1
             uniforms.thicknessFactor = 0.4
@@ -112,7 +111,7 @@ enum DiceStyle: String, CaseIterable {
             uniforms.clearcoatRoughnessFactor = 0.08
         case .glow:
             // Glowing paint in the numbers only.
-            bind(kPBRTextureEmissive, try Self.split(mask, sRGB: true, body: .color([0, 0, 0]), numbers: Self.sRGB(numbers.color)))
+            try bind(kPBRTextureEmissive, Self.split(mask, sRGB: true, body: .color([0, 0, 0]), numbers: Self.sRGB(numbers.color)))
             uniforms.emissive.enabled = 1
             uniforms.emissiveFactor = [1, 1, 1]
             uniforms.emissiveStrength = 6

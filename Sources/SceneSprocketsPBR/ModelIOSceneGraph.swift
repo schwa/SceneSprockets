@@ -51,6 +51,7 @@ private struct ModelIOConverter {
     let device: MTLDevice
     let materialKind: ModelIOSceneGraph.MaterialKind
     let textureLoader: MTKTextureLoader
+    let samplerDescriptor: MTLSamplerDescriptor
     let sampler: MTLSamplerState
     let placeholder: PBRMaterial.Binding
     var channels: [SceneGraph.AnimationClip.Channel] = []
@@ -72,7 +73,12 @@ private struct ModelIOConverter {
             throw ModelIOSceneGraphError.samplerCreationFailed
         }
         self.sampler = sampler
+        samplerDescriptor = descriptor
         placeholder = try PBRMaterial.placeholderBinding(device: device)
+    }
+
+    func binding(_ texture: MTLTexture) throws -> PBRMaterial.Binding {
+        try PBRMaterial.Binding(texture: texture, samplerDescriptor: samplerDescriptor, device: device)
     }
 
     mutating func visit(_ object: MDLObject, parent: SceneGraph.Node) throws {
@@ -164,22 +170,22 @@ private struct ModelIOConverter {
             uniforms.emissiveFactor = emission
             var bindings = Array(repeating: placeholder, count: Int(kPBRMaterialTextureCount.rawValue))
             if let baseColorTexture {
-                bindings[Int(kPBRTextureBaseColor.rawValue)] = .init(texture: baseColorTexture, sampler: sampler)
+                bindings[Int(kPBRTextureBaseColor.rawValue)] = try binding(baseColorTexture)
                 uniforms.baseColor.enabled = 1
             }
             if let emissionTexture {
-                bindings[Int(kPBRTextureEmissive.rawValue)] = .init(texture: emissionTexture, sampler: sampler)
+                bindings[Int(kPBRTextureEmissive.rawValue)] = try binding(emissionTexture)
                 uniforms.emissive.enabled = 1
                 if emission == .zero {
                     uniforms.emissiveFactor = [1, 1, 1]
                 }
             }
             if let normalTexture = try texture(source?.property(with: .tangentSpaceNormal), sRGB: false) {
-                bindings[Int(kPBRTextureNormal.rawValue)] = .init(texture: normalTexture, sampler: sampler)
+                bindings[Int(kPBRTextureNormal.rawValue)] = try binding(normalTexture)
                 uniforms.normal.enabled = 1
             }
             if let occlusionTexture = try texture(source?.property(with: .ambientOcclusion), sRGB: false) {
-                bindings[Int(kPBRTextureOcclusion.rawValue)] = .init(texture: occlusionTexture, sampler: sampler)
+                bindings[Int(kPBRTextureOcclusion.rawValue)] = try binding(occlusionTexture)
                 uniforms.occlusion.enabled = 1
             }
             // Model I/O has separate metallic and roughness maps; PBR reads roughness from green and metallic from
@@ -187,7 +193,7 @@ private struct ModelIOConverter {
             let metallicMap = textureSource(source?.property(with: .metallic))
             let roughnessMap = textureSource(source?.property(with: .roughness))
             if metallicMap != nil || roughnessMap != nil, let packed = packMetallicRoughness(metallic: metallicMap, roughness: roughnessMap) {
-                bindings[Int(kPBRTextureMetallicRoughness.rawValue)] = .init(texture: packed, sampler: sampler)
+                bindings[Int(kPBRTextureMetallicRoughness.rawValue)] = try binding(packed)
                 uniforms.metallicRoughness.enabled = 1
                 uniforms.metallicFactor = metallicMap == nil ? metallic : 1
                 uniforms.roughnessFactor = roughnessMap == nil ? roughness : 1

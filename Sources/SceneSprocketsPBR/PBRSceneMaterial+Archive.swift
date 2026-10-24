@@ -49,7 +49,7 @@ extension PBRSceneMaterial: ArchivableMaterial {
         var bindings = Array(repeating: placeholder, count: Int(kPBRMaterialTextureCount.rawValue))
         for (index, reference) in references.enumerated() where index < bindings.count {
             if let reference {
-                bindings[index] = .init(texture: try context.texture(for: reference), sampler: placeholder.sampler)
+                bindings[index] = try .init(texture: try context.texture(for: reference), samplerDescriptor: placeholder.samplerDescriptor, device: device)
             }
         }
         let material = try PBRMaterial(name: try container.decodeIfPresent(String.self, forKey: .name), uniforms: uniforms, doubleSided: try container.decode(Bool.self, forKey: .doubleSided), textureBindings: bindings, device: device)

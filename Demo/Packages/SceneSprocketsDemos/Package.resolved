@@ -88,7 +88,7 @@
       "location" : "https://github.com/schwa/MetalSprocketsGLTF",
       "state" : {
         "branch" : "main",
-        "revision" : "a91b13c06fa6d29a6b4b75420d45019f32c663c2"
+        "revision" : "d1a4603a36de11b363341f436528914e5bdd7fc0"
       }
     },
     {
@@ -106,7 +106,7 @@
       "location" : "https://github.com/schwa/MetalSprocketsPBR",
       "state" : {
         "branch" : "main",
-        "revision" : "fa2caff8d1b69b4a8a6a498085126d98ebb8c5b4"
+        "revision" : "385b1895ed7863f6de60618bbf1ad578ee233632"
       }
     },
     {

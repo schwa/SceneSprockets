@@ -102,7 +102,7 @@ enum PBRExtensionMaterials {
         commandBuffer.commit()
         commandBuffer.waitUntilCompleted()
         let placeholder = try! PBRMaterial.placeholderBinding(device: demoDevice)
-        return PBRMaterial.Binding(texture: texture, sampler: placeholder.sampler)
+        return try! PBRMaterial.Binding(texture: texture, samplerDescriptor: placeholder.samplerDescriptor, device: demoDevice)
     }
 
     // Tileable smooth value noise on a 64x64 lattice.
