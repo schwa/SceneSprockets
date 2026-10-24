@@ -4675,32 +4675,42 @@ Fix direction: keep drag updates out of SwiftUI's view graph (separate the drag 
 ## 216: Assistant batching isn't happening
 
 +++
-status: new
+status: open
 priority: medium
 kind: bug
+labels: area:composer, effort:s
 created: 2026-10-24T18:34:15Z
+updated: 2026-10-24T18:51:13Z
 +++
+
+- `2026-10-24T18:51:13Z`: Triage reading: the model still makes repeated single create and update calls (for example 8 creates) instead of create(count:) or translations / update(translations:), which exist since #200. Likely fix: say so in the tool descriptions and the system prompt (#218); maybe also accept per-node labels and colors.
 
 ---
 
 ## 217: Telling assistant to make models into glass doesn't work
 
 +++
-status: new
+status: open
 priority: medium
 kind: bug
+labels: area:composer, effort:s
 created: 2026-10-24T18:34:16Z
+updated: 2026-10-24T18:51:14Z
 +++
+
+- `2026-10-24T18:51:13Z`: Triage reading: the assistant cannot set transmission or the glass preset. update and setMaterial only take color, metallic and roughness, and MaterialPreset.glass is not reachable from the tools. Fix: a material preset option (plastic, metal, rubber, glass) and transmission and ior fields on update.
 
 ---
 
 ## 218: Expand the assistant system prompt
 
 +++
-status: new
+status: open
 priority: medium
 kind: enhancement
+labels: area:composer, effort:s
 created: 2026-10-24T18:35:54Z
+updated: 2026-10-24T18:51:14Z
 +++
 
 AssistantPanel.systemPrompt (SceneSprocketsComposerSupport/AssistantPanel.swift) is short. Expand it to cover:
@@ -4719,10 +4729,12 @@ Related: #216 (batching), #217 (glass materials).
 ## 219: Add File > Import menu for models
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
+labels: area:composer, effort:xs
 created: 2026-10-24T18:37:07Z
+updated: 2026-10-24T18:51:14Z
 +++
 
 Add an Import item to the File menu that imports glTF/GLB and other model formats into the open scene.
@@ -4732,32 +4744,44 @@ Add an Import item to the File menu that imports glTF/GLB and other model format
 ## 220: Add right-click context menu to the main view
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
+labels: area:composer, effort:s
 created: 2026-10-24T18:37:26Z
+updated: 2026-10-24T18:51:14Z
 +++
+
+- `2026-10-24T18:51:13Z`: Triage reading: right-clicking in the 3D view should open a context menu for the node under the pointer (selecting it first): Drop to Floor, Hide, Lock, Delete, Frame; and Add when clicking empty space.
 
 ---
 
 ## 221: Group nodes
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
+labels: area:composer, effort:m
 created: 2026-10-24T18:37:26Z
+updated: 2026-10-24T18:51:14Z
 +++
+
+- `2026-10-24T18:51:13Z`: Triage reading: Group (Cmd-G) wraps the selected nodes in a new empty parent at their common parent, keeping world transforms; Ungroup (Shift-Cmd-G) moves the children up and removes the empty group. Undoable.
 
 ---
 
 ## 222: Reorder nodes
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
+labels: area:composer, effort:m
 created: 2026-10-24T18:37:27Z
+updated: 2026-10-24T18:51:14Z
 +++
+
+- `2026-10-24T18:51:13Z`: Triage reading: drag rows in the scene tree to reorder siblings and to reparent, through EditorModel.reparent with an index (undoable, cycles refused, world transform kept). Maybe also Move Up/Down commands.
 
 ---
