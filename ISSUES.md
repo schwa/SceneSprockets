@@ -4661,3 +4661,14 @@ Fix direction: keep drag updates out of SwiftUI's view graph (separate the drag 
 - `2026-10-24T18:32:38Z`: Related: #212 (statistics flatten the graph) and #214 (overlays rebuilt every frame).
 
 ---
+
+## 216: Assistant batching isn't happening
+
++++
+status: new
+priority: medium
+kind: bug
+created: 2026-10-24T18:34:15Z
++++
+
+---
