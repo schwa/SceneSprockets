@@ -245,9 +245,9 @@ import UniformTypeIdentifiers
     let tools = SceneTools(model: model)
     #expect(Set(tools.collaborationTools.map(\.name)) == ["query", "select", "create", "update", "delete"])
 
-    let group = try tools.create(kind: "Box", label: "Group", parent: nil, translation: [0, 1, 0], rotationDegrees: nil, scale: nil, color: nil)
-    let ball = try tools.create(kind: "sphere", label: "Ball", parent: group, translation: [1, 2, 3], rotationDegrees: [0, 30, 0], scale: nil, color: [1, 0, 0])
-    let lamp = try tools.create(kind: "point light", label: nil, parent: nil, translation: nil, rotationDegrees: nil, scale: nil, color: nil)
+    let group = try tools.create(kind: "Box", count: nil, label: "Group", parent: nil, translation: [0, 1, 0], translations: nil, rotationDegrees: nil, scale: nil, color: nil)
+    let ball = try tools.create(kind: "sphere", count: nil, label: "Ball", parent: group, translation: [1, 2, 3], translations: nil, rotationDegrees: [0, 30, 0], scale: nil, color: [1, 0, 0])
+    let lamp = try tools.create(kind: "point light", count: nil, label: nil, parent: nil, translation: nil, translations: nil, rotationDegrees: nil, scale: nil, color: nil)
     #expect([group, ball, lamp] == ["n1", "n2", "n3"])
     let ballNode = try tools.node(id: ball)
     #expect(ballNode.parent === (try tools.node(id: group)))
@@ -262,16 +262,16 @@ import UniformTypeIdentifiers
     #expect(locked.x.isFinite && locked.y.isFinite && locked.z.isFinite)
 
     // Several nodes at once; reparenting to the root.
-    _ = try tools.update(ids: [group, ball], label: nil, parent: nil, translation: nil, rotationDegrees: nil, scale: [2, 2, 2], color: nil, metallic: nil, roughness: nil, isVisible: false, isActive: nil)
+    _ = try tools.update(ids: [group, ball], label: nil, parent: nil, translation: nil, translations: nil, rotationDegrees: nil, scale: [2, 2, 2], color: nil, metallic: nil, roughness: nil, isVisible: false, isActive: nil)
     #expect(ballNode.localTransform.trs.scale == [2, 2, 2] && !ballNode.isVisible)
-    _ = try tools.update(ids: [ball], label: nil, parent: "root", translation: nil, rotationDegrees: nil, scale: nil, color: nil, metallic: nil, roughness: nil, isVisible: nil, isActive: nil)
+    _ = try tools.update(ids: [ball], label: nil, parent: "root", translation: nil, translations: nil, rotationDegrees: nil, scale: nil, color: nil, metallic: nil, roughness: nil, isVisible: nil, isActive: nil)
     #expect(ballNode.parent === model.sceneGraph.root)
     _ = try tools.select(ids: [ball])
     #expect(model.selectedNode === ballNode)
 
-    #expect(throws: ToolError.self) { try tools.update(ids: [group], label: nil, parent: group, translation: nil, rotationDegrees: nil, scale: nil, color: nil, metallic: nil, roughness: nil, isVisible: nil, isActive: nil) }
-    #expect(throws: ToolError.self) { try tools.create(kind: "dodecahedron", label: nil, parent: nil, translation: nil, rotationDegrees: nil, scale: nil, color: nil) }
-    #expect(throws: ToolError.self) { try tools.update(ids: [lamp], label: nil, parent: nil, translation: nil, rotationDegrees: nil, scale: nil, color: [1, 1, 1], metallic: nil, roughness: nil, isVisible: nil, isActive: nil) }
+    #expect(throws: ToolError.self) { try tools.update(ids: [group], label: nil, parent: group, translation: nil, translations: nil, rotationDegrees: nil, scale: nil, color: nil, metallic: nil, roughness: nil, isVisible: nil, isActive: nil) }
+    #expect(throws: ToolError.self) { try tools.create(kind: "dodecahedron", count: nil, label: nil, parent: nil, translation: nil, translations: nil, rotationDegrees: nil, scale: nil, color: nil) }
+    #expect(throws: ToolError.self) { try tools.update(ids: [lamp], label: nil, parent: nil, translation: nil, translations: nil, rotationDegrees: nil, scale: nil, color: [1, 1, 1], metallic: nil, roughness: nil, isVisible: nil, isActive: nil) }
     model.setLocked(true, ballNode)
     #expect(throws: ToolError.self) { try tools.delete(ids: [ball]) }
     model.setLocked(false, ballNode)
@@ -388,6 +388,29 @@ import UniformTypeIdentifiers
     #expect(DocumentPreview.image(inBundleAt: url) != nil)
 }
 
+// #200: repeated work in one call.
+@MainActor
+@Test func sceneToolsBatchCreateAndUpdate() throws {
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    let tools = SceneTools(model: model)
+    let ids = try tools.create(kind: "sphere", count: 8, label: "Ball", parent: nil, translation: nil, translations: nil, rotationDegrees: nil, scale: nil, color: [0, 0, 1]).components(separatedBy: ", ")
+    #expect(ids.count == 8)
+    #expect(model.sceneGraph.root.children.map(\.label) == (1...8).map { "Ball \($0)" })
+
+    // Distribute along x with one call.
+    let positions = (0..<8).map { [Double($0) * 2, 0, 0] }
+    _ = try tools.update(ids: ids, label: nil, parent: nil, translation: nil, translations: positions, rotationDegrees: nil, scale: nil, color: nil, metallic: nil, roughness: nil, isVisible: nil, isActive: nil)
+    #expect(model.sceneGraph.root.children.map { $0.localTransform.trs.translation.x } == [0, 2, 4, 6, 8, 10, 12, 14])
+
+    // translations alone sets the count.
+    let row = try tools.create(kind: "box", count: nil, label: nil, parent: nil, translation: nil, translations: [[0, 3, 0], [1, 3, 0]], rotationDegrees: nil, scale: nil, color: nil)
+    #expect(row.components(separatedBy: ", ").count == 2)
+
+    #expect(throws: ToolError.self) { try tools.create(kind: "box", count: 3, label: nil, parent: nil, translation: nil, translations: [[0, 0, 0]], rotationDegrees: nil, scale: nil, color: nil) }
+    #expect(throws: ToolError.self) { try tools.create(kind: "box", count: 0, label: nil, parent: nil, translation: nil, translations: nil, rotationDegrees: nil, scale: nil, color: nil) }
+    #expect(throws: ToolError.self) { try tools.update(ids: ids, label: nil, parent: nil, translation: nil, translations: [[0, 0, 0]], rotationDegrees: nil, scale: nil, color: nil, metallic: nil, roughness: nil, isVisible: nil, isActive: nil) }
+}
+
 // #203
 @MainActor
 @Test func assistantTurnIsOneUndoStep() throws {
@@ -402,9 +425,9 @@ import UniformTypeIdentifiers
     turn.begin()
     var ids: [String] = []
     for _ in 0..<3 {
-        ids.append(try tools.create(kind: "box", label: nil, parent: nil, translation: nil, rotationDegrees: nil, scale: nil, color: nil))
+        ids.append(try tools.create(kind: "box", count: nil, label: nil, parent: nil, translation: nil, translations: nil, rotationDegrees: nil, scale: nil, color: nil))
     }
-    _ = try tools.update(ids: [ids[0]], label: nil, parent: nil, translation: [1, 0, 0], rotationDegrees: nil, scale: nil, color: nil, metallic: nil, roughness: nil, isVisible: nil, isActive: nil)
+    _ = try tools.update(ids: [ids[0]], label: nil, parent: nil, translation: [1, 0, 0], translations: nil, rotationDegrees: nil, scale: nil, color: nil, metallic: nil, roughness: nil, isVisible: nil, isActive: nil)
     turn.end()
     undoManager.endUndoGrouping()
     #expect(model.undoManager === undoManager)

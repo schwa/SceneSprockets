@@ -4309,12 +4309,13 @@ Follow-up to #191. SceneTools does not cover these yet:
 ## 200: AI mode: batch repeated operations into one job
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: area:composer, effort:s
 created: 2026-10-24T15:47:44Z
-updated: 2026-10-24T16:12:44Z
+updated: 2026-10-24T16:29:46Z
+closed: 2026-10-24T16:29:46Z
 +++
 
 Requests like "make 8 spheres" currently run 8 separate make-node tool calls. AI mode needs a way to batch jobs (e.g. a count/array parameter or a batch tool) so repeated operations run as one call.
