@@ -4428,7 +4428,7 @@ Follow-up to #201. Multiple selection works in the tree (Cmd and Shift click), i
 status: new
 priority: high
 kind: bug
-labels: area:composer,effort:m
+labels: area:composer, effort:m
 created: 2026-10-24T16:51:08Z
 +++
 
@@ -4442,5 +4442,24 @@ Fix options:
 - or copy the .gltf and its referenced files with a folder-scoped grant
 
 Second problem in the same screenshot: the alert shows every warning in full, one per primitive with the whole NSError description, so it is taller than the screen and the OK button is off-screen. Show a summary instead: one line per distinct problem with a count (for example '17 meshes skipped: no permission to read glass_of_water.bin'), cap the list, and log the full text.
+
+---
+
+## 207: Composer: top-level Default Camera and Default Lighting rows in the scene tree
+
++++
+status: new
+priority: medium
+kind: feature
+labels: area:composer,effort:m
+created: 2026-10-24T16:53:27Z
++++
+
+The scene tree has a top-level Scene row next to the root (scene settings). Add two more top-level rows: Default Camera and Default Lighting. They are editor objects, not nodes in the scene graph.
+
+- Default Camera: the editor camera (EditorModel.camera, RenderSettings field of view and clip planes). Selecting it shows those settings in the inspector, and could also show the camera's transform and a 'Frame All' button. Today they are split between the Render tab and camera control.
+- Default Lighting: the light added at the camera when the scene has no lights (RenderSettings.usesDefaultLighting, SceneView .autoenablesDefaultLighting). Selecting it shows the on/off toggle and, if added, its intensity and color. It should say whether it is active (it turns off as soon as the scene has a light).
+
+Selection: extend SceneTreeView's Item enum (scene, node) with defaultCamera and defaultLighting, and make NodeInspectorView switch on it. Decide whether these settings leave the Render tab or appear in both places. Saved in editor.json like the other render settings.
 
 ---
