@@ -39,6 +39,8 @@ public final class EditorModel {
         self.sceneGraph = sceneGraph
         renderers = [BlinnPhongMaterialRenderer(), PBRMaterialRenderer(device: device ?? systemDefaultDevice())]
         frameAll()
+        // Scales with the camera like the scene (#171), sized from the scene so it suits small and large scenes.
+        gizmo.worldSize = sceneGraph.bounds.map { max(simd_distance($0.min, $0.max) * 0.15, 0.01) } ?? 1
         gizmo.onBegin = { [weak self] node in
             self?.transformBeforeDrag = node.localTransform
         }

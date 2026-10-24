@@ -3782,9 +3782,9 @@ After the move: SceneSprocketsGizmos keeps SelectionOutline (or it moves too), a
 status: open
 priority: medium
 kind: feature
-labels: area:composer, area:document, effort:m
+labels: area:composer, area:document, effort:m, deferred
 created: 2026-10-23T13:03:28Z
-updated: 2026-10-23T13:22:41Z
+updated: 2026-10-24T11:35:22Z
 +++
 
 When saving a .scenesprocketsd bundle, render the scene offscreen and write a PNG into the bundle (for example `Preview.png`).
