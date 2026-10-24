@@ -277,6 +277,22 @@ public final class EditorModel {
         undoManager?.setActionName(actionName)
     }
 
+    // Moves `node` under `newParent`, keeping its local transform. False when that would make a cycle or `node` is
+    // the root. Undoable.
+    @discardableResult
+    func reparent(_ node: SceneGraph.Node, to newParent: SceneGraph.Node, at index: Int? = nil) -> Bool {
+        guard let oldParent = node.parent, let oldIndex = oldParent.children.firstIndex(where: { $0 === node }), newParent.canAddChild(node) else {
+            return false
+        }
+        newParent.insertChild(node, at: min(index ?? newParent.children.count, newParent.children.count))
+        transformRevision += 1
+        undoManager?.registerUndo(withTarget: self) { model in
+            model.reparent(node, to: oldParent, at: oldIndex)
+        }
+        undoManager?.setActionName("Move")
+        return true
+    }
+
     // Adds under the root and selects it.
     func addShape(_ shape: SceneGraph.Shape, label: String) {
         let material = BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color(0.8), specular: .color(0.5), shininess: 32)

@@ -238,36 +238,46 @@ import UniformTypeIdentifiers
     store?.cancel()
 }
 
-// #191: the scene tools, called directly as the model would.
+// #191, #202: the scene tools, called directly as the model would.
 @MainActor
 @Test func sceneToolsQueryAndEditTheScene() async throws {
     let model = EditorModel(sceneGraph: SceneGraph.empty())
     let tools = SceneTools(model: model)
-    #expect(Set(tools.collaborationTools.map(\.name)).isSuperset(of: ["listNodes", "getNode", "addShape", "setTransform", "deleteNode", "setMaterial"]))
+    #expect(Set(tools.collaborationTools.map(\.name)) == ["query", "select", "create", "update", "delete"])
 
-    let path = try tools.addShape(kind: "Sphere", label: "Ball")
-    #expect(path == "0")
-    #expect(try tools.listNodes().contains(#""label":"Ball""#))
-    _ = try tools.setTransform(path: path, translation: [1, 2, 3], rotationDegrees: [0, 30, 0], scale: nil)
-    let node = try #require(model.sceneGraph.root.children.first)
-    #expect(node.localTransform.trs.translation == [1, 2, 3])
-    #expect(abs(SceneTools.eulerDegrees(node.localTransform.trs.rotation).y - 30) < 0.01)
-    // At gimbal lock the angles must stay finite, or getNode's JSON fails.
+    let group = try tools.create(kind: "Box", label: "Group", parent: nil, translation: [0, 1, 0], rotationDegrees: nil, scale: nil, color: nil)
+    let ball = try tools.create(kind: "sphere", label: "Ball", parent: group, translation: [1, 2, 3], rotationDegrees: [0, 30, 0], scale: nil, color: [1, 0, 0])
+    let lamp = try tools.create(kind: "point light", label: nil, parent: nil, translation: nil, rotationDegrees: nil, scale: nil, color: nil)
+    #expect([group, ball, lamp] == ["n1", "n2", "n3"])
+    let ballNode = try tools.node(id: ball)
+    #expect(ballNode.parent === (try tools.node(id: group)))
+    #expect(ballNode.localTransform.trs.translation == [1, 2, 3])
+    #expect(abs(SceneTools.eulerDegrees(ballNode.localTransform.trs.rotation).y - 30) < 0.01)
+    #expect(EditorModel.baseColor(of: try #require(model.materials(of: ballNode).first)) == [1, 0, 0])
+
+    let scene = try tools.query()
+    #expect(scene.contains(#""id":"n2""#) && scene.contains(#""parent":"n1""#) && scene.contains(#""selection":["n3"]"#))
+    // At gimbal lock the angles must stay finite, or query's JSON fails.
     let locked = SceneTools.eulerDegrees(SceneTools.rotation(eulerDegrees: [0, 90, 0]))
     #expect(locked.x.isFinite && locked.y.isFinite && locked.z.isFinite)
-    _ = try tools.setMaterial(path: path, color: [1, 0, 0], metallic: nil, roughness: nil)
-    #expect(EditorModel.baseColor(of: try #require(model.materials(of: node).first)) == [1, 0, 0])
-    let details = try tools.getNode(path: path)
-    #expect(details.contains("sphere(radius"))
-    #expect(details.contains(#""translation":[1,2,3]"#))
 
-    #expect(throws: ToolError.self) { try tools.getNode(path: "5") }
-    #expect(throws: ToolError.self) { try tools.addShape(kind: "dodecahedron", label: nil) }
-    model.setLocked(true, node)
-    #expect(throws: ToolError.self) { try tools.renameNode(path: path, label: "Nope") }
-    model.setLocked(false, node)
-    _ = try tools.deleteNode(path: path)
-    #expect(model.sceneGraph.root.children.isEmpty)
+    // Several nodes at once; reparenting to the root.
+    _ = try tools.update(ids: [group, ball], label: nil, parent: nil, translation: nil, rotationDegrees: nil, scale: [2, 2, 2], color: nil, metallic: nil, roughness: nil, isVisible: false, isActive: nil)
+    #expect(ballNode.localTransform.trs.scale == [2, 2, 2] && !ballNode.isVisible)
+    _ = try tools.update(ids: [ball], label: nil, parent: "root", translation: nil, rotationDegrees: nil, scale: nil, color: nil, metallic: nil, roughness: nil, isVisible: nil, isActive: nil)
+    #expect(ballNode.parent === model.sceneGraph.root)
+    _ = try tools.select(ids: [ball])
+    #expect(model.selectedNode === ballNode)
+
+    #expect(throws: ToolError.self) { try tools.update(ids: [group], label: nil, parent: group, translation: nil, rotationDegrees: nil, scale: nil, color: nil, metallic: nil, roughness: nil, isVisible: nil, isActive: nil) }
+    #expect(throws: ToolError.self) { try tools.create(kind: "dodecahedron", label: nil, parent: nil, translation: nil, rotationDegrees: nil, scale: nil, color: nil) }
+    #expect(throws: ToolError.self) { try tools.update(ids: [lamp], label: nil, parent: nil, translation: nil, rotationDegrees: nil, scale: nil, color: [1, 1, 1], metallic: nil, roughness: nil, isVisible: nil, isActive: nil) }
+    model.setLocked(true, ballNode)
+    #expect(throws: ToolError.self) { try tools.delete(ids: [ball]) }
+    model.setLocked(false, ballNode)
+    _ = try tools.delete(ids: [ball, lamp])
+    #expect(throws: ToolError.self) { try tools.node(id: ball) }
+    #expect(model.sceneGraph.root.children.count == 1)
 }
 
 // #198
@@ -390,10 +400,11 @@ import UniformTypeIdentifiers
 
     undoManager.beginUndoGrouping()
     turn.begin()
+    var ids: [String] = []
     for _ in 0..<3 {
-        _ = try tools.addShape(kind: "box", label: nil)
+        ids.append(try tools.create(kind: "box", label: nil, parent: nil, translation: nil, rotationDegrees: nil, scale: nil, color: nil))
     }
-    _ = try tools.setTransform(path: "0", translation: [1, 0, 0], rotationDegrees: nil, scale: nil)
+    _ = try tools.update(ids: [ids[0]], label: nil, parent: nil, translation: [1, 0, 0], rotationDegrees: nil, scale: nil, color: nil, metallic: nil, roughness: nil, isVisible: nil, isActive: nil)
     turn.end()
     undoManager.endUndoGrouping()
     #expect(model.undoManager === undoManager)
@@ -412,7 +423,7 @@ import UniformTypeIdentifiers
     // A turn that changes nothing adds no step.
     undoManager.redo()
     turn.begin()
-    _ = try tools.listNodes()
+    _ = try tools.query()
     turn.end()
     undoManager.undo()
     #expect(model.sceneGraph.root.children.isEmpty)

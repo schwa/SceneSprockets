@@ -4302,6 +4302,7 @@ Follow-up to #191. SceneTools does not cover these yet:
 - group everything the assistant changes in one turn into a single undo step (ConversationStore turn start and end, or snapshotProvider as Phosphor uses it for rollback)
 
 - `2026-10-24T16:12:44Z`: Narrowed by triage: reparenting is in #202 (update parent) and one undo step per turn is #203. What is left here is the environment and background tools.
+- `2026-10-24T16:27:43Z`: #202 added update(parent:) for reparenting (EditorModel.reparent, undoable). Only the environment and background tools are left here.
 
 ---
 
@@ -4342,12 +4343,13 @@ AI mode should handle requests that act on the current selection, e.g. "align th
 ## 202: AI mode: minimal composable tool set (query/select/create/update/delete)
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: area:composer, effort:m
 created: 2026-10-24T15:49:26Z
-updated: 2026-10-24T16:12:44Z
+updated: 2026-10-24T16:27:43Z
+closed: 2026-10-24T16:27:43Z
 +++
 
 Keep AI tools few and composable instead of one tool per operation. Proposed set:
