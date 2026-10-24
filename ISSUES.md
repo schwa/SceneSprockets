@@ -4288,11 +4288,12 @@ Use ColorPicker with linear conversion, as SceneInspectorView's background color
 ## 199: Composer assistant: environment, reparenting and one undo step per turn
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
 labels: area:composer, effort:s
 created: 2026-10-24T15:44:27Z
+updated: 2026-10-24T16:12:44Z
 +++
 
 Follow-up to #191. SceneTools does not cover these yet:
@@ -4300,41 +4301,53 @@ Follow-up to #191. SceneTools does not cover these yet:
 - reparent a node (needs an undoable EditorModel move)
 - group everything the assistant changes in one turn into a single undo step (ConversationStore turn start and end, or snapshotProvider as Phosphor uses it for rollback)
 
+- `2026-10-24T16:12:44Z`: Narrowed by triage: reparenting is in #202 (update parent) and one undo step per turn is #203. What is left here is the environment and background tools.
+
 ---
 
 ## 200: AI mode: batch repeated operations into one job
 
 +++
-status: new
+status: open
 priority: medium
 kind: enhancement
+labels: area:composer, effort:s
 created: 2026-10-24T15:47:44Z
+updated: 2026-10-24T16:12:44Z
 +++
 
 Requests like "make 8 spheres" currently run 8 separate make-node tool calls. AI mode needs a way to batch jobs (e.g. a count/array parameter or a batch tool) so repeated operations run as one call.
+
+- `2026-10-24T16:12:44Z`: Depends on #202: batching is the create tool's count/array parameter there. Do #202 first.
 
 ---
 
 ## 201: AI mode: support selection-aware edits like "align the selected objects"
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
+labels: area:composer, effort:l
 created: 2026-10-24T15:48:37Z
+updated: 2026-10-24T16:12:44Z
 +++
 
 AI mode should handle requests that act on the current selection, e.g. "align the selected objects". Needs: (1) tools to read the app's UI selection, (2) tools to edit existing nodes (transforms etc.), not just create them.
+
+- `2026-10-24T16:12:44Z`: The Composer has single selection only (EditorModel.selection is one node ID). 'Selected objects' needs multiple selection in the tree, the viewport (shift-click) and the gizmo first, then tools that read and set the selection set. Related: #202 (select tool).
 
 ---
 
 ## 202: AI mode: minimal composable tool set (query/select/create/update/delete)
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
+labels: area:composer, effort:m
 created: 2026-10-24T15:49:26Z
+updated: 2026-10-24T16:12:44Z
 +++
 
 Keep AI tools few and composable instead of one tool per operation. Proposed set:
@@ -4350,24 +4363,29 @@ The model composes these for align/distribute/grid/recolor etc. Add specialized 
 ## 203: AI mode: each AI turn is a single undo step
 
 +++
-status: new
+status: open
 priority: medium
 kind: enhancement
+labels: area:composer, effort:s
 created: 2026-10-24T15:49:27Z
+updated: 2026-10-24T16:12:44Z
 +++
 
 All edits made by one AI response should be grouped into a single undo action, so one Undo reverts the whole request (e.g. "make 8 spheres" or "align selected"). Related: #200.
+
+- `2026-10-24T16:12:44Z`: Overlaps #199 (third point), which now points here.
 
 ---
 
 ## 204: Composer: crash when saving on quit (MainActor.assumeIsolated in snapshot)
 
 +++
-status: new
+status: open
 priority: critical
 kind: bug
-labels: area:composer,area:document,effort:s
+labels: area:composer, area:document, effort:s
 created: 2026-10-24T16:07:51Z
+updated: 2026-10-24T16:12:43Z
 +++
 
 Quitting with unsaved changes crashes with EXC_BREAKPOINT in dispatch_assert_queue, from ComposerDocument.snapshot(contentType:) at ComposerDocument.swift:70.
