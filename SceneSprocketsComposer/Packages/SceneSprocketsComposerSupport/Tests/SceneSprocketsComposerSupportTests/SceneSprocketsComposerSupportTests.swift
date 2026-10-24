@@ -378,6 +378,46 @@ import UniformTypeIdentifiers
     #expect(DocumentPreview.image(inBundleAt: url) != nil)
 }
 
+// #203
+@MainActor
+@Test func assistantTurnIsOneUndoStep() throws {
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    let undoManager = UndoManager()
+    undoManager.groupsByEvent = false
+    model.undoManager = undoManager
+    let tools = SceneTools(model: model)
+    let turn = AssistantTurnUndo(model: model)
+
+    undoManager.beginUndoGrouping()
+    turn.begin()
+    for _ in 0..<3 {
+        _ = try tools.addShape(kind: "box", label: nil)
+    }
+    _ = try tools.setTransform(path: "0", translation: [1, 0, 0], rotationDegrees: nil, scale: nil)
+    turn.end()
+    undoManager.endUndoGrouping()
+    #expect(model.undoManager === undoManager)
+    #expect(model.sceneGraph.root.children.count == 3)
+    #expect(undoManager.undoActionName == AssistantTurnUndo.actionName)
+
+    undoManager.undo()
+    #expect(model.sceneGraph.root.children.isEmpty)
+    #expect(!undoManager.canUndo)
+    undoManager.redo()
+    #expect(model.sceneGraph.root.children.count == 3)
+    #expect(model.sceneGraph.root.children.first?.localTransform.trs.translation == [1, 0, 0])
+    undoManager.undo()
+    #expect(model.sceneGraph.root.children.isEmpty)
+
+    // A turn that changes nothing adds no step.
+    undoManager.redo()
+    turn.begin()
+    _ = try tools.listNodes()
+    turn.end()
+    undoManager.undo()
+    #expect(model.sceneGraph.root.children.isEmpty)
+}
+
 // #177: framing keeps the view direction and orbits the framed center.
 @Test func framingKeepsViewDirection() {
     var camera = EditorCamera()

@@ -4363,12 +4363,13 @@ The model composes these for align/distribute/grid/recolor etc. Add specialized 
 ## 203: AI mode: each AI turn is a single undo step
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: area:composer, effort:s
 created: 2026-10-24T15:49:27Z
-updated: 2026-10-24T16:12:44Z
+updated: 2026-10-24T16:24:36Z
+closed: 2026-10-24T16:24:36Z
 +++
 
 All edits made by one AI response should be grouped into a single undo action, so one Undo reverts the whole request (e.g. "make 8 spheres" or "align selected"). Related: #200.

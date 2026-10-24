@@ -14,6 +14,8 @@ public struct ComposerView: View {
     private var credentials
     // This document's conversation; kept here so it survives sidebar tab switches.
     @State private var assistantStore: ConversationStore?
+    // Makes each assistant turn one undo step (#203).
+    @State private var assistantTurnUndo: AssistantTurnUndo?
     // An error or loader warnings from Insert Model File…
     @State private var insertMessage: String?
     @Environment(\.undoManager)
@@ -102,6 +104,16 @@ public struct ComposerView: View {
         // Saving can run off the main actor, so the document keeps its own copy of the editor state (#204).
         .onChange(of: model.editorState, initial: true) {
             document.updateEditorState()
+        }
+        .onChange(of: assistantStore?.isGenerating ?? false) { _, isGenerating in
+            if assistantTurnUndo == nil {
+                assistantTurnUndo = AssistantTurnUndo(model: model)
+            }
+            if isGenerating {
+                assistantTurnUndo?.begin()
+            } else {
+                assistantTurnUndo?.end()
+            }
         }
         .onAppear {
             document.editorModel = model
