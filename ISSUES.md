@@ -4890,3 +4890,62 @@ created: 2026-10-24T22:22:44Z
 Selecting a node shows no size information. Add a Bounds section (or rows under Transform) with world-space min [x, y, z], max [x, y, z] and size (max - min), from SceneGraph.worldBounds(of:); also the center. Read-only, with 3 decimals. 'None' for nodes without bounds (empty, light, camera, hidden or inactive). With several nodes selected (#205), show the combined bounds. Must refresh while dragging, so it reads transformRevision; keep it in its own leaf view so it does not make the rest of the inspector depend on drags (#223, #224). Optionally also local-space bounds (Node.subtreeBounds).
 
 ---
+
+## 227: ComposerDocument.snapshot reads and renders the live scene graph off the main thread
+
++++
+status: new
+priority: high
+kind: bug
+labels: area:composer, area:document, effort:m
+created: 2026-10-24T22:32:50Z
++++
+
+From a concurrency review. ComposerDocument is @unchecked Sendable, and snapshot(contentType:) runs on a background queue when saving on quit (#204). There it encodes sceneGraph (an @Observable class the main actor mutates) with SceneArchive, and renders it with DocumentPreview. It is safe today only because AppKit blocks the main thread during that save; the types do not guarantee it, and other save paths (autosave, Save As while editing) are unverified.
+Fix: capture an immutable snapshot on the main actor whenever an undoable edit lands, or right before saving (the encoded bundle data and textures plus the preview PNG), behind the existing lock pattern used for the editor state (updateEditorState). snapshot then only builds the FileWrapper from that capture and never touches the live graph. This needs SceneArchive to encode to data or a temporary directory on the main actor.
+Test: change the scene, call snapshot from a detached task while the main actor keeps mutating the graph; with Thread Sanitizer, no race is reported and the saved scene matches the captured state.
+
+---
+
+## 228: AnimatedMaterial is @unchecked Sendable mutable state without a lock
+
++++
+status: new
+priority: medium
+kind: bug
+labels: area:scenegraph, area:assets, effort:s
+created: 2026-10-24T22:32:50Z
++++
+
+From a concurrency review. SceneSprocketsPBR/GLTFSceneGraph.swift:387: AnimatedMaterial has 'var state' and is mutated from AnimationClip.Property.set, which writes state and material.uniforms. Property is Sendable with @Sendable get and set closures, so clips can cross threads, and two players applying the same material at once race on state and uniforms.
+Options: (a) protect state with Mutex<PBRMaterial.AnimatedState> and write uniforms from the locked result; (b) if animation is only applied on one thread (main or render), drop Sendable and @Sendable from AnimationClip.Property. Its closures take a non-Sendable Node, so @Sendable adds no safety, and it is what forces @unchecked here. (b) is more honest; check every caller of Property.get and set and AnimationPlayer before choosing.
+
+---
+
+## 229: Composer app and extensions build in Swift 5 language mode
+
++++
+status: new
+priority: medium
+kind: task
+labels: area:composer, effort:s
+created: 2026-10-24T22:32:50Z
++++
+
+From a concurrency review. The SceneSprocketsComposer, SceneSprocketsQuickLook and SceneSprocketsThumbnail targets use SWIFT_VERSION = 5.0 (pbxproj and SceneSprocketsComposer-Shared.xcconfig), while the packages they use build in Swift 6 mode. Swift 6 data-race checking is off for the app entry point, PreviewViewController and ThumbnailProvider. Set SWIFT_VERSION = 6.0 for all three targets, fix any diagnostics, and keep SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor for the app.
+
+---
+
+## 230: Composer: replace the Task.yield ordering hack in the folder importer
+
++++
+status: new
+priority: low
+kind: bug
+labels: area:composer,effort:xs
+created: 2026-10-24T22:32:51Z
++++
+
+From a concurrency review. ComposerView's folder importer (#213) reports 'not inserted' on cancel from .onChange(of: isChoosingFolder) by starting Task { @MainActor in await Task.yield(); ... }, hoping the importer's completion has run by then. yield() does not guarantee that, so a successful pick can still show the cancel message first. Replace it with state: store the importer result, or drop the separate cancel message for the panel and keep only the alert's explicit Cancel. Avoid unstructured tasks for ordering.
+
+---
