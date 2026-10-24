@@ -4642,7 +4642,7 @@ Probably belongs partly in MetalSprockets: a missing frame-to-frame barrier for 
 Checked and looked fine: the manipulator pass barrier (its gizmo geometry is CPU-written buffers, made resident per submission); jump flood's own barriers (its first one waits for vertex, fragment, dispatch and blit, and the seeds texture is covered); the outline pass ordering after jump flood.
 Leaving open until you confirm the flicker is gone. If it is not, a capture of a bad frame (using-gpucapture) is next. Unverified: whether MTLStageFragment covers attachment load and store actions in Metal 4. If not, those barriers may need more stages.
 
-- `2026-10-24T21:23:27Z`: GPU capture analysis (~/Desktop/SceneSprocketsComposer.gputrace, 5 frames, M5 Max). The capture includes the a83c9a8c barriers. Per frame: Shadow Casters x7, PBR Transmission Scene, Transmission Mipmaps, scene pass, Selection Mask, JumpFlood, Selection Outline, Manipulator. Barriers decoded:
+\- `2026-10-24T21:23:27Z`: GPU capture analysis (~/Desktop/SceneSprocketsComposer.gputrace, 5 frames, M5 Max). The capture includes the a83c9a8c barriers. Per frame: Shadow Casters x7, PBR Transmission Scene, Transmission Mipmaps, scene pass, Selection Mask, JumpFlood, Selection Outline, Manipulator. Barriers decoded:
 - scene pass: after dispatch+fragment before vertex+fragment
 - Selection Mask: after dispatch+fragment before fragment
 - JumpFlood: after vertex+fragment+dispatch+blit before dispatch, ends with dispatch to fragment
@@ -4679,6 +4679,7 @@ Fix direction: keep drag updates out of SwiftUI's view graph (separate the drag 
 
 - `2026-10-24T18:32:38Z`: Related: #212 (statistics flatten the graph) and #214 (overlays rebuilt every frame).
 - `2026-10-24T18:44:45Z`: Measured the model-side work of one drag frame (DragPerformanceTests.dragFrameCosts; debug build, 500 boxes, 3 selected), in ms per call: continueGizmoDrag 0.005, editorState 1.36 (ComposerView recomputes it on every body pass via onChange(of: model.editorState)), selectedNodes 0.28, isHidden x500 0.11, DebugShapes 0.008, bounding boxes All 1.18, statistics 0.22. About 3 ms in total, so it does not explain a precipitous drop. The likely cost is SwiftUI: every drag step bumps transformRevision, which the tree rows (isHidden, isVisible, lock), the inspector and the decorations closures all read, so the whole sidebar List and inspector re-render every frame. That needs an Instruments trace to confirm. Punting until then. Unblocker: an Instruments trace (SwiftUI and Time Profiler templates) of a 5-second gizmo drag in a scene of about 100 nodes, or permission to change transformRevision into a separate drag counter that only the inspector's transform fields read. Also worth doing anyway: make editorState cheaper (1.4 ms per body pass).
+- `2026-10-24T22:02:37Z`: Related: the new issue on closure-based Binding(get:set:) defeating diffing. The tree's List(selection:) and SceneView's camera binding are the likely hot spots.
 
 ---
 
@@ -4800,5 +4801,37 @@ closed: 2026-10-24T19:40:01Z
 +++
 
 - `2026-10-24T18:51:13Z`: Triage reading: drag rows in the scene tree to reorder siblings and to reparent, through EditorModel.reparent with an index (undoable, cycles refused, world transform kept). Maybe also Move Up/Down commands.
+
+---
+
+## 223: Composer: closure-based Binding(get:set:) defeats SwiftUI diffing; views re-render every update
+
++++
+status: new
+priority: high
+kind: bug
+labels: area:composer, area:ui, effort:m
+created: 2026-10-24T22:02:37Z
++++
+
+Binding(get:set:) holds closures, which SwiftUI cannot compare. A child view that receives one is always seen as changed, so its body re-runs (and usually its children's) on every parent update. The Composer has 34 of them.
+
+Per file, and whether it is likely hot during a drag:
+- MaterialSection.swift: 9, yes (the inspector re-renders on transformRevision)
+- NodeInspectorView.swift: 7, yes (name; visible, active and locked toggles; transform fields via trs and component and eulerDegrees)
+- SceneInspectorView.swift: 6, no (only with nothing selected)
+- MultipleSelectionSection.swift: 4, yes with several nodes selected
+- LightSection.swift: 4, yes when a light is selected
+- ComposerView.swift: 2, alert presentation only
+- SceneTreeView.swift: 1, HOT: List(selection: listSelection) gets a new closure binding every body pass, and every row also reads transformRevision (isHidden, isVisible, isLocked), so the whole tree likely re-runs every drag frame
+- ScenePreviewView.swift: 1, HOT: SceneView(cameraMatrix: Binding(get: { model.camera.matrix }, set: ...)). The decorations and overlay closures passed to SceneView likewise make SceneView's body (and RenderView setup) re-run on every model change
+
+Fix direction:
+- Bind directly to stored model properties with @Bindable key paths (.camera.matrix; a stored list selection set synced with selectedIDs) instead of computed closure bindings. Key-path bindings compare equal.
+- Keep unavoidable conversion bindings (degrees, colors, Euler angles, per-component vectors) inside small leaf views, so only the leaf re-runs.
+- For SceneView: let its closure parameters be stable (an Equatable wrapper keyed on settings and selection), or move decorations and overlay into objects with identity.
+- Together with splitting transformRevision (#215), so rows and toggles stop depending on drag steps.
+
+Measure before and after with the SwiftUI instrument (body update counts during a gizmo drag) and DragPerformanceTests. Not verified yet; found by code inspection while investigating #215.
 
 ---
