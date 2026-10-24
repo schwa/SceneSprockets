@@ -72,6 +72,7 @@ public struct SceneView: View {
     @State private var twoFingerClaim: Bool?
 
     @State private var internalCameraMatrix: simd_float4x4?
+    @State private var controlledCameraMatrix: simd_float4x4 = matrix_identity_float4x4
     @State private var viewSize: CGSize = .zero
     // Fixed when the view appears: recomputing it from the bounds every frame makes the camera chase objects that
     // move far away (for example a body falling forever).
@@ -188,7 +189,23 @@ public struct SceneView: View {
         .metalFramebufferOnly(!needsPostPasses && !options.contains(.disablesFramebufferOnly))
         .metalDepthStencilAttachmentTextureUsage(needsPostPasses ? [.renderTarget, .shaderRead] : [.renderTarget])
         .metalDepthStencilStorageMode(needsPostPasses || overlay != nil ? .private : .memoryless)
-        .modifier(CameraControl(isEnabled: options.contains(.allowsCameraControl), cameraMatrix: cameraBinding, target: cameraTarget ?? orbitTarget ?? viewpoint.target))
+        .modifier(CameraControl(isEnabled: options.contains(.allowsCameraControl), cameraMatrix: $controlledCameraMatrix, target: cameraTarget ?? orbitTarget ?? viewpoint.target))
+        // Camera control edits a stable @State; these keep it and the source in step (#231).
+        .onChange(of: cameraMatrix ?? viewpoint.matrix, initial: true) { _, newValue in
+            if controlledCameraMatrix != newValue {
+                controlledCameraMatrix = newValue
+            }
+        }
+        .onChange(of: controlledCameraMatrix) { _, newValue in
+            guard newValue != (cameraMatrix ?? viewpoint.matrix) else {
+                return
+            }
+            if let externalCameraMatrix {
+                externalCameraMatrix.wrappedValue = newValue
+            } else {
+                internalCameraMatrix = newValue
+            }
+        }
         // Camera control leaves drags that start on the manipulator alone.
         .interactionDragFilter { location in !manipulatorHit(at: location) }
         .interactionMagnifyFilter { location in !manipulatorClaimsTwoFingers(at: location) }
@@ -362,16 +379,6 @@ public struct SceneView: View {
     // Read when SwiftUI updates the view; setting fog later needs a view update to take effect.
     private var needsPostPasses: Bool {
         shadows != nil || sceneGraph.fog != nil || sceneGraph.postProcessing != nil
-    }
-
-    private var cameraBinding: Binding<simd_float4x4> {
-        Binding(get: { cameraMatrix ?? viewpoint.matrix }, set: { newValue in
-            if let externalCameraMatrix {
-                externalCameraMatrix.wrappedValue = newValue
-            } else {
-                internalCameraMatrix = newValue
-            }
-        })
     }
 
     public static let defaultCamera = Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(60), depthMode: .standard(zClip: 0.01 ... 1000)))

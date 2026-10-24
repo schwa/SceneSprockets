@@ -4966,18 +4966,20 @@ From a concurrency review. ComposerView's folder importer (#213) reports 'not in
 ## 231: SceneView: closure-based camera binding rebuilt every body pass
 
 +++
-status: open
+status: closed
 priority: high
 kind: bug
 labels: area:ui, effort:s
 created: 2026-10-24T23:49:32Z
-updated: 2026-10-24T23:51:38Z
+updated: 2026-10-24T23:58:47Z
+closed: 2026-10-24T23:58:47Z
 +++
 
 From a SwiftUI house-rules review. SceneView.cameraBinding (SceneView.swift around line 368) is a Binding(get:set:) rebuilt on every SceneView body pass and passed to CameraControl. SceneView re-runs whenever its parent changes (constantly in the Composer), and closure bindings break SwiftUI's diffing, so camera control and its gesture state get rebuilt. This is in the library, so it affects every app.
 Fix: keep one @State camera matrix as the source of truth in SceneView. Pass $camera to CameraControl. Sync the external binding with onChange in both directions, guarded against loops. Measure with the SwiftUI instrument during an orbit in the Composer before and after.
 
 - `2026-10-24T23:51:39Z`: Related: #224 (SceneView's decorations and overlay closures).
+- `2026-10-24T23:58:47Z`: Fixed: CameraControl now takes $controlledCameraMatrix (a stable @State). Two onChange handlers sync it with the external or internal camera, guarded against echo loops. No unit test: binding identity across SwiftUI body passes can't be reached from a unit test. Verified by building the core, the Composer and the Demo, and by the existing test suites.
 
 ---
 
