@@ -244,7 +244,7 @@ import UniformTypeIdentifiers
 @Test func sceneToolsQueryAndEditTheScene() async throws {
     let model = EditorModel(sceneGraph: SceneGraph.empty())
     let tools = SceneTools(model: model)
-    #expect(Set(tools.collaborationTools.map(\.name)) == ["query", "select", "create", "update", "delete", "setEnvironment"])
+    #expect(Set(tools.collaborationTools.map(\.name)) == ["query", "select", "create", "update", "delete", "setEnvironment", "dropToFloor"])
 
     let group = try tools.create(kind: "Box", count: nil, label: "Group", parent: nil, translation: [0, 1, 0], translations: nil, rotationDegrees: nil, scale: nil, color: nil)
     let ball = try tools.create(kind: "sphere", count: nil, label: "Ball", parent: group, translation: [1, 2, 3], translations: nil, rotationDegrees: [0, 30, 0], scale: nil, color: [1, 0, 0])
@@ -672,6 +672,46 @@ import UniformTypeIdentifiers
     #expect(narrowerOuter.innerConeAngle == 0.1 && narrowerOuter.outerConeAngle == 0.1)
     let fine = LightEditing.settingCone(\.outerConeAngle, to: 0.5, of: cone)
     #expect(fine.innerConeAngle == 0.2 && fine.outerConeAngle == 0.5)
+}
+
+// #210: bottoms land on y = 0, including rotated and nested nodes; one undo step; children of dropped nodes skipped.
+@MainActor
+@Test func dropToFloor() throws {
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    let tools = SceneTools(model: model)
+    let ids = try tools.create(kind: "box", count: 2, label: nil, parent: nil, translation: nil, translations: [[0, 3, 0], [2, -1, 0]], rotationDegrees: nil, scale: nil, color: nil).components(separatedBy: ", ")
+    // A tilted box inside a raised, scaled parent.
+    let parent = try tools.create(kind: "box", count: nil, label: "Parent", parent: nil, translation: [5, 4, 0], translations: nil, rotationDegrees: nil, scale: [2, 2, 2], color: nil)
+    let child = try tools.create(kind: "box", count: nil, label: "Child", parent: parent, translation: [0, 1, 0], translations: nil, rotationDegrees: [45, 0, 0], scale: nil, color: nil)
+    let nodes = try (ids + [parent, child]).map { try tools.node(id: $0) }
+    let undoManager = UndoManager()
+    undoManager.groupsByEvent = false
+    model.undoManager = undoManager
+
+    model.select([nodes[0].id, nodes[1].id, nodes[3].id])
+    undoManager.beginUndoGrouping()
+    model.dropSelectionToFloor()
+    undoManager.endUndoGrouping()
+    for node in [nodes[0], nodes[1], nodes[3]] {
+        let bounds = try #require(model.sceneGraph.worldBounds(of: node))
+        #expect(abs(bounds.min.y) < 1e-4, "\(node.label ?? "")")
+    }
+    #expect(nodes[0].localTransform.trs.translation.x == 0 && nodes[1].localTransform.trs.translation.x == 2)
+    #expect(nodes[2].localTransform.trs.translation == [5, 4, 0])
+    undoManager.undo()
+    #expect(nodes[0].localTransform.trs.translation == [0, 3, 0])
+    #expect(nodes[3].localTransform.trs.translation == [0, 1, 0])
+
+    // Selecting the parent and its child drops the parent only; the child moves with it.
+    model.select([nodes[2].id, nodes[3].id])
+    undoManager.beginUndoGrouping()
+    model.dropSelectionToFloor()
+    undoManager.endUndoGrouping()
+    #expect(nodes[3].localTransform.trs.translation == [0, 1, 0])
+    #expect(abs(try #require(model.sceneGraph.worldBounds(of: nodes[2])).min.y) < 1e-4)
+    undoManager.beginUndoGrouping()
+    #expect(try tools.dropToFloor(ids: [ids[0]]).hasPrefix("Dropped"))
+    undoManager.endUndoGrouping()
 }
 
 // #177: framing keeps the view direction and orbits the framed center.

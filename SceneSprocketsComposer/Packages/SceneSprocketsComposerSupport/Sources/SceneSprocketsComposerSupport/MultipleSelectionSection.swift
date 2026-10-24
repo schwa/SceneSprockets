@@ -46,6 +46,40 @@ extension EditorModel {
         undoManager?.setActionName(actionName)
     }
 
+    // Moves `node` up or down so the bottom of its world bounds is at y = 0, keeping x and z (#210). Works for nested
+    // and rotated nodes by changing the world transform. False for nodes without bounds (empty, lights, cameras,
+    // hidden). Undoable.
+    @discardableResult
+    func dropToFloor(_ node: SceneGraph.Node) -> Bool {
+        guard node.parent != nil, let bounds = sceneGraph.worldBounds(of: node), abs(bounds.min.y) > 1e-6 else {
+            return false
+        }
+        let previous = node.localTransform
+        var world = node.worldTransform
+        world.columns.3.y -= bounds.min.y
+        node.worldTransform = world
+        let dropped = node.localTransform
+        node.localTransform = previous
+        setTransform(dropped, of: node, undoTo: previous)
+        return true
+    }
+
+    // Drops every selected, unlocked node as one undo step. A node under another selected node is skipped, because
+    // it moves with that node.
+    func dropSelectionToFloor() {
+        let nodes = selectedNodes.filter { !isLocked($0) }
+        undoManager?.beginUndoGrouping()
+        for node in nodes where !nodes.contains(where: { $0 !== node && $0.isAncestor(of: node) }) {
+            dropToFloor(node)
+        }
+        undoManager?.endUndoGrouping()
+        undoManager?.setActionName("Drop to Floor")
+    }
+
+    var canDropSelectionToFloor: Bool {
+        selectedNodes.contains { !isLocked($0) && sceneGraph.worldBounds(of: $0) != nil }
+    }
+
     // The main color of each of the node's materials: Blinn-Phong diffuse or PBR base color. Textured channels keep
     // their texture.
     func setBaseColor(_ color: SIMD3<Float>, of node: SceneGraph.Node) {

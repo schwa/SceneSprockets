@@ -66,6 +66,10 @@ struct SceneTreeView: View {
                     Button(model.lockedNodes.contains(node.id) ? "Unlock" : "Lock", systemImage: model.lockedNodes.contains(node.id) ? "lock.open" : "lock") {
                         model.setLocked(!model.lockedNodes.contains(node.id), node)
                     }
+                    Button("Drop to Floor", systemImage: "arrow.down.to.line") {
+                        model.dropToFloor(node)
+                    }
+                    .disabled(model.isLocked(node) || model.sceneGraph.worldBounds(of: node) == nil)
                     Button("Delete", systemImage: "trash") {
                         model.delete(node)
                     }

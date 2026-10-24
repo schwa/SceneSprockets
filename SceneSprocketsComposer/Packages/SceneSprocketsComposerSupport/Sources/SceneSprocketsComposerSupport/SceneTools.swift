@@ -232,6 +232,15 @@ final class SceneTools {
         return info
     }
 
+    /// Move nodes straight up or down so the bottom of each one's world bounds rests at y = 0 (the floor), keeping x and z. Nodes without bounds (empty, lights, cameras) are left alone.
+    @CollaborationTool
+    func dropToFloor(ids: [String]) throws -> String {
+        let model = try requireModel()
+        let nodes = try ids.map { try editableNode(id: $0) }
+        let dropped = nodes.filter { model.dropToFloor($0) }.map { id(for: $0) }
+        return dropped.isEmpty ? "Nothing to move." : "Dropped \(dropped.joined(separator: ", "))."
+    }
+
     /// Delete nodes and their children by id.
     @CollaborationTool
     func delete(ids: [String]) throws -> String {

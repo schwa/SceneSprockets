@@ -49,6 +49,11 @@ public struct ComposerCommands: Commands {
                 Button("Frame Selection") {
                     model.frameSelection()
                 }
+                Button("Drop to Floor") {
+                    model.dropSelectionToFloor()
+                }
+                .keyboardShortcut("d", modifiers: [.command, .option])
+                .disabled(!model.canDropSelectionToFloor)
                 Divider()
                 AddShapeMenu(model: model)
             } else {
