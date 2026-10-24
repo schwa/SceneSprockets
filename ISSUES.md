@@ -4021,12 +4021,13 @@ ComposerDocument writes the bundle through SceneArchive into a temporary URL. Th
 ## 186: Composer: add lights from the + menu
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: area:composer, effort:s
 created: 2026-10-24T14:13:22Z
-updated: 2026-10-24T14:18:19Z
+updated: 2026-10-24T14:27:53Z
+closed: 2026-10-24T14:27:53Z
 +++
 
 The + menu adds only shapes. Add entries for directional, point and spot lights. Add the new light under the root, select it, and make it undoable, the same as EditorModel.addShape. Directional and spot lights point along the node's -Z, so give them a useful default rotation (for example angled down) and a useful default position.

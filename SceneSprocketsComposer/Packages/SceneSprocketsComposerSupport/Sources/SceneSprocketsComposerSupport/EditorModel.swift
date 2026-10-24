@@ -160,6 +160,23 @@ public final class EditorModel {
         insert(node, into: sceneGraph.root, at: sceneGraph.root.children.count, actionName: "Add \(label)")
     }
 
+    // Directional and spot lights shine along -Z, so they start above and aimed at the origin.
+    func addLight(_ type: Light.LightType) {
+        let label = Self.label(for: type)
+        var transform = LookAt(position: [3, 5, 3], target: .zero, up: [0, 1, 0]).cameraMatrix
+        if type == .point {
+            transform = matrix_identity_float4x4
+            transform.columns.3 = [0, 3, 0, 1]
+        }
+        let range: Float = type == .point ? 10 : .infinity
+        let node = SceneGraph.Node(label: label, transform: transform, content: .light(Light(type: type, range: range)))
+        insert(node, into: sceneGraph.root, at: sceneGraph.root.children.count, actionName: "Add \(label)")
+    }
+
+    static func label(for type: Light.LightType) -> String {
+        "\(type.rawValue.prefix(1).uppercased())\(type.rawValue.dropFirst()) Light"
+    }
+
     func setLabel(_ label: String?, of node: SceneGraph.Node) {
         let previous = node.label
         guard label != previous else {

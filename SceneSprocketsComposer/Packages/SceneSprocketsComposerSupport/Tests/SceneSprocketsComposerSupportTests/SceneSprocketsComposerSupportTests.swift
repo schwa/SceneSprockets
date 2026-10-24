@@ -55,3 +55,31 @@ import UniformTypeIdentifiers
     let position = SIMD3<Float>(camera.matrix.columns.3.x, camera.matrix.columns.3.y, camera.matrix.columns.3.z)
     #expect(abs(simd_distance(position, camera.target) - simd_length(SIMD3<Float>(1, 1, 1)) / sin(Float.pi / 6) * 1.1) < 0.001)
 }
+
+// #186
+@MainActor
+@Test func addLightSelectsAndUndoes() throws {
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    let undoManager = UndoManager()
+    undoManager.groupsByEvent = false
+    model.undoManager = undoManager
+    for type in Light.LightType.allCases {
+        undoManager.beginUndoGrouping()
+        model.addLight(type)
+        undoManager.endUndoGrouping()
+        let node = try #require(model.selectedNode)
+        guard case .light(let light) = node.content else {
+            Issue.record("not a light")
+            return
+        }
+        #expect(light.type == type)
+        #expect(node.parent === model.sceneGraph.root)
+        if type != .point {
+            // Aimed down.
+            #expect(node.localTransform.matrix.columns.2.y > 0)
+        }
+    }
+    #expect(model.sceneGraph.root.children.count == 3)
+    undoManager.undo()
+    #expect(model.sceneGraph.root.children.count == 2)
+}

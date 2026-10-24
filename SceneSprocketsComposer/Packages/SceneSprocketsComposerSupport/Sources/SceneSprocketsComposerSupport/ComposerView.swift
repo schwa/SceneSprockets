@@ -69,8 +69,14 @@ struct AddShapeMenu: View {
                     model.addShape(kind.shape, label: kind.label)
                 }
             }
+            Divider()
+            ForEach(Light.LightType.allCases, id: \.self) { type in
+                Button(EditorModel.label(for: type), systemImage: type == .point ? "lightbulb" : "sun.max") {
+                    model.addLight(type)
+                }
+            }
         }
-        .help("Add a shape")
+        .help("Add a shape or light")
     }
 }
 
