@@ -4120,6 +4120,8 @@ Add CollaborationKit (github.com/schwa/CollaborationKit, local checkout at ~/Pro
 
 Tools for the model are in a separate subtask.
 
+- `2026-10-24T14:58:23Z`: Tried: added CollaborationKit 0.2.4 to SceneSprocketsComposerSupport, with an Assistant tab in the sidebar, a per-document ConversationStore and CollaborationSettingsView in Settings. Punting: SwiftPM cannot resolve the packages. CollaborationKit (0.2.4 and main) requires swift-syntax 602.x for its macros, and MetalSprockets requires swift-syntax 604.x. Unblocker: release a CollaborationKit that accepts swift-syntax 604 (for example from: "602.0.0" changed to "602.0.0"..<"605.0.0", or move to 604). Then this is mostly ready: the code was about 150 lines (AssistantPanel, settings tab, sidebar picker).
+
 ---
 
 ## 191: Composer: CollaborationKit tools to query and edit the scene
