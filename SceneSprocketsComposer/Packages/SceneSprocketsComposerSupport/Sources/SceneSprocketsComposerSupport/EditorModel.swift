@@ -289,6 +289,11 @@ public final class EditorModel {
         "\(type.rawValue.prefix(1).uppercased())\(type.rawValue.dropFirst()) Light"
     }
 
+    // For edits outside this file that views showing node data must see.
+    func bumpRevision() {
+        transformRevision += 1
+    }
+
     func setLabel(_ label: String?, of node: SceneGraph.Node) {
         let previous = node.label
         guard label != previous else {

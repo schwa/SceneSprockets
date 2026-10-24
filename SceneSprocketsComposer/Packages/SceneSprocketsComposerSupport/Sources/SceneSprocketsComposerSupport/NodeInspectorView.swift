@@ -43,6 +43,10 @@ struct NodeInspectorView: View {
                     }
                 }
                 .disabled(isLocked)
+                let materialCount = model.materials(of: node).count
+                ForEach(0..<materialCount, id: \.self) { index in
+                    MaterialSection(model: model, node: node, index: index, count: materialCount, isLocked: isLocked)
+                }
                 if let light = light(node), light.wrappedValue.type == .spot {
                     Section("Spot Cone") {
                         LabeledContent("Inner") {

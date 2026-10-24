@@ -1,6 +1,9 @@
 import CollaborationKit
 import CollaborationKitUI
 import CoreGraphics
+import Metal
+import SceneSprocketsBlinnPhong
+import SceneSprocketsPBR
 import Foundation
 import GeometryLite3D
 import simd
@@ -230,6 +233,41 @@ import UniformTypeIdentifiers
     let store = ComposerAssistant.makeStore(credentials: signedIn)
     #expect(store != nil)
     store?.cancel()
+}
+
+// #198
+@MainActor
+@Test func materialEditsReplaceAndUndo() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    model.addShape(.box(), label: "Box")
+    let node = try #require(model.selectedNode)
+    let undoManager = UndoManager()
+    undoManager.groupsByEvent = false
+    model.undoManager = undoManager
+    let original = try #require(model.materials(of: node).first as? BlinnPhongSceneMaterial)
+
+    // Blinn-Phong to PBR keeps the color.
+    undoManager.beginUndoGrouping()
+    model.setMaterial(try EditorModel.converted(original, to: .pbr, device: device), at: 0, of: node)
+    undoManager.endUndoGrouping()
+    let pbr = try #require(model.materials(of: node).first as? PBRSceneMaterial)
+    #expect(EditorModel.baseColor(of: pbr) == EditorModel.baseColor(of: original))
+
+    // PBR edits make a copy that keeps the textures and leaves the original alone.
+    let edited = try EditorModel.editedPBR(pbr, device: device) { $0.roughnessFactor = 0.9 }
+    #expect(edited.pbrMaterial.uniforms.roughnessFactor == 0.9)
+    #expect(pbr.pbrMaterial.uniforms.roughnessFactor == 0.5)
+    #expect(zip(edited.pbrMaterial.textureBindings, pbr.pbrMaterial.textureBindings).allSatisfy { $0.texture === $1.texture })
+
+    // Presets.
+    let metal = try MaterialPreset.metal.material(color: [1, 0, 0], device: device)
+    #expect(metal.pbrMaterial.uniforms.metallicFactor == 1)
+    #expect(metal.pbrMaterial.uniforms.baseColorFactor == [1, 0, 0, 1])
+    #expect(try MaterialPreset.glass.material(color: [1, 0, 0], device: device).pbrMaterial.uniforms.transmissionFactor == 1)
+
+    undoManager.undo()
+    #expect(model.materials(of: node).first is BlinnPhongSceneMaterial)
 }
 
 // #177: framing keeps the view direction and orbits the framed center.

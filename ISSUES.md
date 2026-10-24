@@ -4259,12 +4259,13 @@ Saving: generated meshes are not saved yet (#158), and glTF by reference is #157
 ## 198: Composer: basic material editing in the inspector
 
 +++
-status: open
+status: closed
 priority: high
 kind: feature
 labels: area:composer, effort:m
 created: 2026-10-24T15:15:46Z
-updated: 2026-10-24T15:35:19Z
+updated: 2026-10-24T15:37:48Z
+closed: 2026-10-24T15:37:48Z
 +++
 
 Mesh nodes show no material in the inspector, and new shapes always get a plain grey Blinn-Phong material. Add a Material section for mesh nodes:
