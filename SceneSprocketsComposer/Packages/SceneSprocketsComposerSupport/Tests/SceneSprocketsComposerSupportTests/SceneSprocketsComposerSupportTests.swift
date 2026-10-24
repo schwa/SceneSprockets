@@ -868,6 +868,58 @@ import UniformTypeIdentifiers
     #expect(!model.canUngroupSelection)
 }
 
+// #222: reorder among siblings, move before a node in another parent or into a group; world positions kept; undo
+// restores the exact order (reparent's undo used to put a node one slot off within the same parent).
+@MainActor
+@Test func reorderNodes() throws {
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    let tools = SceneTools(model: model)
+    let ids = try tools.create(kind: "box", count: 3, label: nil, parent: nil, translation: nil, translations: [[0, 0, 0], [2, 0, 0], [4, 0, 0]], rotationDegrees: nil, scale: nil, color: nil, labels: ["A", "B", "C"]).components(separatedBy: ", ")
+    let (a, b, c) = (try tools.node(id: ids[0]), try tools.node(id: ids[1]), try tools.node(id: ids[2]))
+    let root = model.sceneGraph.root
+    func order(_ node: SceneGraph.Node) -> [String] {
+        node.children.compactMap(\.label)
+    }
+    let undoManager = UndoManager()
+    undoManager.groupsByEvent = false
+    model.undoManager = undoManager
+    func step(_ work: () -> Void) {
+        undoManager.beginUndoGrouping()
+        work()
+        undoManager.endUndoGrouping()
+    }
+
+    step { model.move(c, before: a) }
+    #expect(order(root) == ["C", "A", "B"])
+    undoManager.undo()
+    #expect(order(root) == ["A", "B", "C"])
+
+    model.selection = a.id
+    step { model.moveSelection(by: 1) }
+    #expect(order(root) == ["B", "A", "C"])
+    step { model.moveSelection(by: -1) }
+    #expect(order(root) == ["A", "B", "C"])
+    step { model.moveSelection(by: -1) }
+    #expect(order(root) == ["A", "B", "C"])
+
+    // Into a group, and out again before a root node; world positions kept.
+    model.select([b.id])
+    step { model.groupSelection() }
+    let group = try #require(b.parent)
+    step { model.move(c, into: group) }
+    #expect(order(group) == ["B", "C"])
+    #expect(abs(c.worldTransform.columns.3.x - 4) < 1e-5)
+    step { model.move(c, before: a) }
+    #expect(order(root) == ["C", "A", "Group"])
+    // No cycles: a group cannot go before its own child.
+    #expect(!model.move(group, before: b))
+    // Tree drops: onto a group goes inside, onto anything else goes before it.
+    step { model.drop(a, onto: group) }
+    #expect(order(group) == ["B", "A"])
+    step { model.drop(a, onto: c) }
+    #expect(order(root) == ["A", "C", "Group"])
+}
+
 // #177: framing keeps the view direction and orbits the framed center.
 @Test func framingKeepsViewDirection() {
     var camera = EditorCamera()

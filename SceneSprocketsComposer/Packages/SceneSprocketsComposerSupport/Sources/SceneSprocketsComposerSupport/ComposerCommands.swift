@@ -72,6 +72,16 @@ public struct ComposerCommands: Commands {
                 }
                 .keyboardShortcut("g", modifiers: [.command, .shift])
                 .disabled(!model.canUngroupSelection)
+                Button("Move Up") {
+                    model.moveSelection(by: -1)
+                }
+                .keyboardShortcut(.upArrow, modifiers: [.command, .option])
+                .disabled(model.selectedNode?.parent == nil)
+                Button("Move Down") {
+                    model.moveSelection(by: 1)
+                }
+                .keyboardShortcut(.downArrow, modifiers: [.command, .option])
+                .disabled(model.selectedNode?.parent == nil)
                 Divider()
                 AddShapeMenu(model: model)
             } else {

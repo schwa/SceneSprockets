@@ -4780,12 +4780,13 @@ closed: 2026-10-24T19:28:42Z
 ## 222: Reorder nodes
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: area:composer, effort:m
 created: 2026-10-24T18:37:27Z
-updated: 2026-10-24T18:51:14Z
+updated: 2026-10-24T19:40:01Z
+closed: 2026-10-24T19:40:01Z
 +++
 
 - `2026-10-24T18:51:13Z`: Triage reading: drag rows in the scene tree to reorder siblings and to reparent, through EditorModel.reparent with an index (undoable, cycles refused, world transform kept). Maybe also Move Up/Down commands.

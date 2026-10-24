@@ -56,6 +56,15 @@ struct SceneTreeView: View {
                     lockButton(node)
                 }
                 .tag(Item.node(node.id))
+                // Drag a row onto a group to move it inside, or onto any other row to move it before that row (#222).
+                .draggable(dragPayload(node))
+                .dropDestination(for: String.self) { _, _ in
+                    guard let dragged = model.draggedNode else {
+                        return false
+                    }
+                    model.draggedNode = nil
+                    return model.drop(dragged, onto: node)
+                }
                 .contextMenu {
                     Button(model.isVisible(node) ? "Hide" : "Show", systemImage: model.isVisible(node) ? "eye.slash" : "eye") {
                         model.setVisible(!node.isVisible, node)
@@ -93,6 +102,12 @@ struct SceneTreeView: View {
             model.deleteSelection()
         }
         #endif
+    }
+
+    // Called when the drag starts (the payload is an autoclosure); the model keeps the node.
+    private func dragPayload(_ node: SceneGraph.Node) -> String {
+        model.draggedNode = node
+        return node.displayName
     }
 
     // Faint when visible.

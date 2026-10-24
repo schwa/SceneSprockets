@@ -389,6 +389,52 @@ public final class EditorModel {
         return true
     }
 
+    // The node being dragged in the scene tree. Drag payloads are strings, so the node itself stays here.
+    @ObservationIgnored weak var draggedNode: SceneGraph.Node?
+
+    // A tree drop on `target` (#222): into it when it is a group (an empty node with children), otherwise just before
+    // it.
+    @discardableResult
+    func drop(_ node: SceneGraph.Node, onto target: SceneGraph.Node) -> Bool {
+        if case .empty = target.content, !target.children.isEmpty || target.parent == nil {
+            return move(node, into: target)
+        }
+        return move(node, before: target)
+    }
+
+    // Moves `node` just before `target`, under `target`'s parent, keeping its world transform (#222). False for the
+    // root, locked nodes, or a move that would put a node inside itself.
+    @discardableResult
+    func move(_ node: SceneGraph.Node, before target: SceneGraph.Node) -> Bool {
+        guard node !== target, let parent = target.parent, !isLocked(node), let index = parent.children.firstIndex(where: { $0 === target }) else {
+            return false
+        }
+        return reparentKeepingWorldTransform(node, to: parent, at: index)
+    }
+
+    // Moves `node` to the end of `group`'s children, keeping its world transform.
+    @discardableResult
+    func move(_ node: SceneGraph.Node, into group: SceneGraph.Node) -> Bool {
+        guard node !== group, !isLocked(node) else {
+            return false
+        }
+        return reparentKeepingWorldTransform(node, to: group)
+    }
+
+    // Moves the primary selection `offset` places among its siblings (negative is up), clamped to the ends.
+    func moveSelection(by offset: Int) {
+        guard let node = selectedNode, let parent = node.parent, !isLocked(node), let index = parent.children.firstIndex(where: { $0 === node }) else {
+            return
+        }
+        let destination = min(max(index + offset, 0), parent.children.count - 1)
+        guard destination != index else {
+            return
+        }
+        // insertChild inserts before the node currently at an index, so moving down needs one past the target slot.
+        reparent(node, to: parent, at: destination > index ? destination + 1 : destination)
+        undoManager?.setActionName(offset < 0 ? "Move Up" : "Move Down")
+    }
+
     // The selected, unlocked nodes Group would take: not the root, and not under another of them.
     private var groupableNodes: [SceneGraph.Node] {
         let nodes = selectedNodes.filter { $0.parent != nil && !isLocked($0) }
@@ -464,7 +510,11 @@ public final class EditorModel {
         newParent.insertChild(node, at: min(index ?? newParent.children.count, newParent.children.count))
         transformRevision += 1
         undoManager?.registerUndo(withTarget: self) { model in
-            model.reparent(node, to: oldParent, at: oldIndex)
+            // insertChild inserts before the node at an index after taking this one out; to land back at oldIndex
+            // when the node now sits earlier in the same parent, pass one more (#222).
+            let current = oldParent.children.firstIndex { $0 === node }
+            let index = current.map { $0 < oldIndex ? oldIndex + 1 : oldIndex } ?? oldIndex
+            model.reparent(node, to: oldParent, at: index)
         }
         undoManager?.setActionName("Move")
         return true
