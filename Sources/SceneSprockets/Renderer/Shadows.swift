@@ -39,6 +39,9 @@ public final class SceneGraphShadows {
     public var resolution: Int
     public var depthBias: Float
     public var slopeScale: Float
+    // World-space push of directional-light casters away from the light, in shadow map texels. The hardware
+    // constant bias is tiny with depth32Float, so this is what stops acne on lit faces (#60).
+    public var depthOffsetTexels: Float
     // Lights that cast no shadow in the last frame because their views did not fit in the 8 slices.
     public private(set) var droppedLightCount = 0
 
@@ -48,7 +51,8 @@ public final class SceneGraphShadows {
     // One per frame in flight, like the shadow map's depth textures.
     private var receiverMasks: [MTLTexture] = []
 
-    public init(intensity: Float = 0.6, color: SIMD3<Float> = .zero, softness: Int = 1, resolution: Int = 2_048, depthBias: Float = 2, slopeScale: Float = 2) {
+    public init(intensity: Float = 0.6, color: SIMD3<Float> = .zero, softness: Int = 1, resolution: Int = 2_048, depthBias: Float = 2, slopeScale: Float = 2, depthOffsetTexels: Float = 1.5) {
+        self.depthOffsetTexels = depthOffsetTexels
         self.intensity = intensity
         self.color = color
         self.softness = softness
@@ -80,6 +84,8 @@ public final class SceneGraphShadows {
     struct Frame {
         var shadowMap: SceneGraphShadowMap
         var casters: [Caster]
+        // Parallel to the shadow map's light view-projections, with the caster depth offset applied.
+        var casterViewProjections: [simd_float4x4] = []
         // Meshes the screen-space mask skips (non-receivers and in-shader shadowing); nil when there are none.
         var nonReceivers: (casters: [Caster], masks: [MTLTexture])?
         // Parallel to the context's lights: each light's shadow map slices.
@@ -154,10 +160,27 @@ public final class SceneGraphShadows {
         shadowMap.slopeScale = slopeScale
         shadowMap.lightViewProjectionMatrices = views
         self.shadowMap = shadowMap
+        let casterViews = views.map(casterViewProjection)
         guard !nonReceivers.isEmpty, let viewSize else {
-            return Frame(shadowMap: shadowMap, casters: casters, lightSlices: slices, masksEverything: masksEverything)
+            return Frame(shadowMap: shadowMap, casters: casters, casterViewProjections: casterViews, lightSlices: slices, masksEverything: masksEverything)
         }
-        return Frame(shadowMap: shadowMap, casters: casters, nonReceivers: (nonReceivers, try receiverMasks(width: viewSize.width, height: viewSize.height, count: shadowMap.depthTextures.count)), lightSlices: slices, masksEverything: masksEverything)
+        return Frame(shadowMap: shadowMap, casters: casters, casterViewProjections: casterViews, nonReceivers: (nonReceivers, try receiverMasks(width: viewSize.width, height: viewSize.height, count: shadowMap.depthTextures.count)), lightSlices: slices, masksEverything: masksEverything)
+    }
+
+    // `view` with caster depth pushed `depthOffsetTexels` texels away from the light. Only orthographic (directional)
+    // views; perspective views are returned unchanged and rely on the hardware bias.
+    func casterViewProjection(_ view: simd_float4x4) -> simd_float4x4 {
+        let rowW = SIMD3(view[0][3], view[1][3], view[2][3])
+        guard simd_length(rowW) < 1e-6, depthOffsetTexels != 0 else {
+            return view
+        }
+        let rowX = SIMD3(view[0][0], view[1][0], view[2][0])
+        let rowZ = SIMD3(view[0][2], view[1][2], view[2][2])
+        let texel = 2 / simd_length(rowX) / Float(resolution)
+        // Reversed depth: further from the light is smaller z.
+        var offset = matrix_identity_float4x4
+        offset[3][2] = -depthOffsetTexels * texel * simd_length(rowZ)
+        return offset * view
     }
 
     private func receiverMasks(width: Int, height: Int, count: Int) throws -> [MTLTexture] {
@@ -312,7 +335,7 @@ struct ShadowCasterDepthPass: Element {
             let staticCasters = frame.casters.filter { if case .model = $0.placement { true } else { false } }
             let skinnedCasters = frame.casters.filter { if case .skinned = $0.placement { true } else { false } }
             return ForEach(Array(0..<shadowMap.lightCount), id: \.self) { lightIndex in
-                let lightViewProjection = shadowMap.lightViewProjectionMatrices[lightIndex]
+                let lightViewProjection = frame.casterViewProjections.indices.contains(lightIndex) ? frame.casterViewProjections[lightIndex] : shadowMap.lightViewProjectionMatrices[lightIndex]
                 try RenderPass(label: "Shadow Casters [\(lightIndex)]") {
                     if !staticCasters.isEmpty {
                         try pipeline("Shadow Casters", vertexShader: shaders.staticVertex, fragmentShader: shaders.fragment, vertexDescriptor: shaders.staticDescriptor, casters: staticCasters, lightViewProjection: lightViewProjection)

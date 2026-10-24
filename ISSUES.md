@@ -1228,12 +1228,13 @@ Not reproducible offscreen: DemoSnapshot renders one frame at a time and waits f
 ## 60: Shadow acne on lit surfaces (depth bias ineffective)
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:renderer, effort:s
 created: 2026-10-14T01:14:55Z
-updated: 2026-10-24T14:21:10Z
+updated: 2026-10-24T14:28:15Z
+closed: 2026-10-24T14:28:15Z
 +++
 
 Surfaces that face the light show a fine dotted shadow pattern, and shadow edges are stepped. It is clearly visible on the fox's head in the Imported Assets demo. It may also cause the random flicker in #59, because borderline texels flip between lit and shadowed.

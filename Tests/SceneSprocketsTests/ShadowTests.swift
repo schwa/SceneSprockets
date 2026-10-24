@@ -268,3 +268,20 @@ func nonCastersCastNoShadow() throws {
     let withShadows = try brightness(sceneGraph, at: pixel, shadows: SceneGraphShadows(intensity: 0.8))
     #expect(abs(withShadows - lit) <= 3)
 }
+
+// #60: casters are pushed away from a directional light by `depthOffsetTexels` shadow map texels in world space.
+@Test
+func directionalCasterDepthOffsetIsWorldSpace() throws {
+    let shadows = SceneGraphShadows(resolution: 1_024, depthOffsetTexels: 2)
+    let bounds = BoundingBox3D(min: [-3, -3, -3], max: [3, 3, 3])
+    let light = (pose(eye: [0, 10, 0], target: .zero), Light(type: .directional))
+    let view = try #require(shadows.shadowViews(lights: [light], bounds: bounds).first)
+    let biased = shadows.casterViewProjection(view)
+    let texel = 2 / simd_length(SIMD3(view[0][0], view[1][0], view[2][0])) / 1_024
+    let point = SIMD4<Float>(0.5, 0.2, -0.3, 1)
+    let biasedDepth = (biased * point).z / (biased * point).w
+    // Unbiased depth of the same point moved 2 texels further from the light (light points down -y).
+    let moved = view * (point + SIMD4(0, -2 * texel, 0, 0))
+    #expect(abs(biasedDepth - moved.z / moved.w) < 1e-6)
+    #expect(biasedDepth < (view * point).z) // Reversed depth: further is smaller.
+}
