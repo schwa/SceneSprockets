@@ -4707,12 +4707,13 @@ closed: 2026-10-24T19:08:24Z
 ## 218: Expand the assistant system prompt
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: area:composer, effort:s
 created: 2026-10-24T18:35:54Z
-updated: 2026-10-24T18:51:14Z
+updated: 2026-10-24T19:12:31Z
+closed: 2026-10-24T19:12:31Z
 +++
 
 AssistantPanel.systemPrompt (SceneSprocketsComposerSupport/AssistantPanel.swift) is short. Expand it to cover:

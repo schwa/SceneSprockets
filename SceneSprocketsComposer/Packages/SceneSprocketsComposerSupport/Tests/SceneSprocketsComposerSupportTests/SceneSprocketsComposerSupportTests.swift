@@ -531,6 +531,19 @@ import UniformTypeIdentifiers
     #expect(glassMaterial.pbrMaterial.uniforms.transmissionFactor == 1)
 }
 
+// #218: the system prompt names every tool and covers the points the issue asks for.
+@MainActor
+@Test func systemPromptCoversToolsAndGuidance() {
+    let prompt = ComposerAssistant.systemPrompt
+    let tools = SceneTools(model: EditorModel(sceneGraph: SceneGraph.empty()))
+    for name in tools.collaborationTools.map(\.name) {
+        #expect(prompt.contains("- \(name):"), "\(name) is not described")
+    }
+    for topic in ["dropToFloor after", "never stack them", "prefer PBR", "preset glass", "key light", "Shadows", "one call"] {
+        #expect(prompt.contains(topic), "\(topic)")
+    }
+}
+
 // #203
 @MainActor
 @Test func assistantTurnIsOneUndoStep() throws {
