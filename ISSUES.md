@@ -4238,12 +4238,13 @@ Split from #193. Hide/show (Node.isVisible) is done. A separate 'inactive' state
 ## 197: Composer: Insert Model File… (glTF, USDZ, OBJ)
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: area:composer, effort:m
 created: 2026-10-24T15:15:29Z
-updated: 2026-10-24T15:35:19Z
+updated: 2026-10-24T15:40:48Z
+closed: 2026-10-24T15:40:48Z
 +++
 
 Add an Insert Model File… command (+ menu and Scene menu) that picks a file and adds its contents to the open scene under the selected node, or under the root when nothing is selected. Select the new subtree, and make it one undo step.

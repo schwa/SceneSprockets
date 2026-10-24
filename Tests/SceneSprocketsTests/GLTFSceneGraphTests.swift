@@ -429,3 +429,27 @@ func gltfMaterialVariantsSwitchInPlace() throws {
     #expect(try pbrMaterial(of: node).pbrMaterial.uniforms.baseColorFactor == [1, 1, 1, 1])
     #expect(throws: (any Error).self) { try result.selectVariant(5) }
 }
+
+// #197: ModelFile picks the loader by extension and returns one subtree named after the file.
+@Test
+func modelFileLoadsGLTFAndOBJ() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+
+    let gltfURL = directory.appendingPathComponent("Rig.gltf")
+    try FileManager.default.copyItem(at: try makeSceneFile(), to: gltfURL)
+    let gltf = try ModelFile.load(gltfURL, device: device)
+    #expect(gltf.node.label == "Rig")
+    #expect(gltf.node.parent == nil)
+    #expect(gltf.node.children.map(\.label).contains("Mesh"))
+
+    let objURL = directory.appendingPathComponent("Triangle.obj")
+    try "v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n".write(to: objURL, atomically: true, encoding: .utf8)
+    let obj = try ModelFile.load(objURL, device: device)
+    #expect(obj.node.label == "Triangle")
+    #expect(!SceneGraph(root: obj.node).meshEntries().isEmpty)
+
+    #expect(throws: ModelFile.Failure.self) { try ModelFile.load(directory.appendingPathComponent("notes.txt"), device: device) }
+}

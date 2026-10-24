@@ -1,6 +1,7 @@
 import CollaborationKitUI
 import SceneSprockets
 import SceneSprocketsGizmos
+import SceneSprocketsPBR
 import SwiftUI
 
 // Three panes: scene graph tree, preview, inspector.
@@ -13,6 +14,8 @@ public struct ComposerView: View {
     private var credentials
     // This document's conversation; kept here so it survives sidebar tab switches.
     @State private var assistantStore: ConversationStore?
+    // An error or loader warnings from Insert Model File…
+    @State private var insertMessage: String?
     @Environment(\.undoManager)
     private var undoManager
 
@@ -80,6 +83,22 @@ public struct ComposerView: View {
                 }
         }
         .focusedSceneValue(\.editorModel, model)
+        .fileImporter(isPresented: $model.isImportingModel, allowedContentTypes: ModelFile.contentTypes) { result in
+            do {
+                let warnings = try model.insertModel(from: result.get())
+                // Scene archives cannot store imported meshes yet; saving keeps the nodes but drops the geometry.
+                insertMessage = (["The model's meshes are not saved with the document yet (#157, #158)."] + warnings).joined(separator: "\n")
+            } catch {
+                insertMessage = String(describing: error)
+            }
+        }
+        .alert("Insert Model File", isPresented: Binding(get: { insertMessage != nil }, set: { if !$0 { insertMessage = nil } })) {
+            Button("OK") {
+                insertMessage = nil
+            }
+        } message: {
+            Text(insertMessage ?? "")
+        }
         .onAppear {
             document.editorModel = model
             if assistantStore == nil {
@@ -123,8 +142,12 @@ struct AddShapeMenu: View {
             Button("Camera", systemImage: "camera") {
                 model.addCamera()
             }
+            Divider()
+            Button("Insert Model File\u{2026}", systemImage: "square.and.arrow.down") {
+                model.isImportingModel = true
+            }
         }
-        .help("Add a shape, light or camera")
+        .help("Add a shape, light, camera or model file")
     }
 }
 

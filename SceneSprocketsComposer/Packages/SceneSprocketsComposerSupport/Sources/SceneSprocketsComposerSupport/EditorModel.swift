@@ -294,6 +294,26 @@ public final class EditorModel {
         transformRevision += 1
     }
 
+    // Set by the Insert Model File… commands; ComposerView shows the file importer.
+    var isImportingModel = false
+
+    // Adds the file's contents under the selected node (the root when nothing is selected or it is locked), selects
+    // it and frames it, as one undo step (#197). Returns the loader's warnings.
+    @discardableResult
+    func insertModel(from url: URL) throws -> [String] {
+        let isAccessing = url.startAccessingSecurityScopedResource()
+        defer {
+            if isAccessing {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+        let (node, warnings) = try ModelFile.load(url, device: systemDefaultDevice())
+        let parent = selectedNode.flatMap { isLocked($0) ? nil : $0 } ?? sceneGraph.root
+        insert(node, into: parent, at: parent.children.count, actionName: "Insert \(node.displayName)")
+        frameSelection()
+        return warnings
+    }
+
     func setLabel(_ label: String?, of node: SceneGraph.Node) {
         let previous = node.label
         guard label != previous else {

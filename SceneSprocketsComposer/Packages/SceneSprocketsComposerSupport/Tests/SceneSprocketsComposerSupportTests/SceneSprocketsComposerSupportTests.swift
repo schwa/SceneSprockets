@@ -270,6 +270,37 @@ import UniformTypeIdentifiers
     #expect(model.materials(of: node).first is BlinnPhongSceneMaterial)
 }
 
+// #197
+@MainActor
+@Test func insertModelAddsUnderSelectionAsOneUndoStep() throws {
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    model.addShape(.box(), label: "Box")
+    let box = try #require(model.selectedNode)
+    let undoManager = UndoManager()
+    undoManager.groupsByEvent = false
+    model.undoManager = undoManager
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).obj")
+    defer { try? FileManager.default.removeItem(at: url) }
+    try "v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n".write(to: url, atomically: true, encoding: .utf8)
+
+    undoManager.beginUndoGrouping()
+    try model.insertModel(from: url)
+    undoManager.endUndoGrouping()
+    let inserted = try #require(model.selectedNode)
+    #expect(inserted.parent === box)
+    #expect(inserted.label == url.deletingPathExtension().lastPathComponent)
+    undoManager.undo()
+    #expect(box.children.isEmpty)
+
+    // A locked selection sends it to the root instead.
+    model.selection = box.id
+    undoManager.beginUndoGrouping()
+    model.setLocked(true, box)
+    try model.insertModel(from: url)
+    undoManager.endUndoGrouping()
+    #expect(model.selectedNode?.parent === model.sceneGraph.root)
+}
+
 // #177: framing keeps the view direction and orbits the framed center.
 @Test func framingKeepsViewDirection() {
     var camera = EditorCamera()
