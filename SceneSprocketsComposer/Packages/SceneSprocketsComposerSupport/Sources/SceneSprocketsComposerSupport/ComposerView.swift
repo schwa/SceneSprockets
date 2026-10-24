@@ -5,12 +5,17 @@ import SwiftUI
 // Three panes: scene graph tree, preview, inspector.
 public struct ComposerView: View {
     @State private var model: EditorModel
-    @State private var isInspectorPresented = true
+    private let document: ComposerDocument
     @Environment(\.undoManager)
     private var undoManager
 
     public init(document: ComposerDocument) {
-        _model = State(initialValue: EditorModel(sceneGraph: document.sceneGraph))
+        let model = EditorModel(sceneGraph: document.sceneGraph)
+        if let state = document.editorState {
+            model.apply(state)
+        }
+        self.document = document
+        _model = State(initialValue: model)
     }
 
     public var body: some View {
@@ -19,7 +24,7 @@ public struct ComposerView: View {
                 .navigationSplitViewColumnWidth(min: 180, ideal: 240)
         } detail: {
             ScenePreviewView(model: model)
-                .inspector(isPresented: $isInspectorPresented) {
+                .inspector(isPresented: $model.isInspectorPresented) {
                     TabView {
                         Tab("Inspector", systemImage: "slider.horizontal.3") {
                             NodeInspectorView(model: model)
@@ -47,12 +52,15 @@ public struct ComposerView: View {
                     }
                     ToolbarItem {
                         Button("Inspector", systemImage: "sidebar.trailing") {
-                            isInspectorPresented.toggle()
+                            model.isInspectorPresented.toggle()
                         }
                     }
                 }
         }
         .focusedSceneValue(\.editorModel, model)
+        .onAppear {
+            document.editorModel = model
+        }
         .onChange(of: undoManager, initial: true) {
             model.undoManager = undoManager
         }

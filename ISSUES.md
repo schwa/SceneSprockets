@@ -4000,12 +4000,13 @@ To investigate:
 ## 185: Composer: save editor state in the document bundle next to scene.json
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: area:composer, area:document, effort:m
 created: 2026-10-24T14:12:32Z
-updated: 2026-10-24T14:18:19Z
+updated: 2026-10-24T14:45:11Z
+closed: 2026-10-24T14:45:11Z
 +++
 
 The Composer loses its editor state when a document is closed. Save it in the .scenesprocketsd bundle as its own file (for example editor.json) next to scene.json, so SceneArchive and other readers can ignore it.

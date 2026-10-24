@@ -24,6 +24,7 @@ public final class EditorModel {
     }
     var camera = EditorCamera()
     var renderSettings = RenderSettings()
+    var isInspectorPresented = true
     // Bumped while the gizmo drags, so views that show transforms refresh. Nodes are not observable (SceneSprockets #155).
     public private(set) var transformRevision = 0
     // Set by the view from the document's environment; registering undo marks the document edited.

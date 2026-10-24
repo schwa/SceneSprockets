@@ -68,6 +68,46 @@ import UniformTypeIdentifiers
     #expect(Int(bytes[0]) + Int(bytes[1]) + Int(bytes[2]) > 30)
 }
 
+// #185
+@MainActor
+@Test func editorStateRoundTrips() throws {
+    let document = ComposerDocument()
+    let model = EditorModel(sceneGraph: document.sceneGraph)
+    document.editorModel = model
+    model.addShape(.box(), label: "A")
+    model.addShape(.sphere(), label: "B")
+    model.camera.matrix = .init(diagonal: [1, 2, 3, 1])
+    model.camera.target = [4, 5, 6]
+    model.renderSettings.showsGrid = false
+    model.renderSettings.fieldOfView = 42
+    model.gizmoMode = .scale
+    model.gizmoSpace = .local
+    model.isInspectorPresented = false
+    // addShape selected B.
+    let saved = model.editorState
+
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("scenesprocketsd")
+    defer { try? FileManager.default.removeItem(at: url) }
+    try document.snapshot(contentType: .sceneSprocketsDocument).write(to: url, options: [], originalContentsURL: nil)
+    let loaded = try ComposerDocument(contentsOf: url)
+    #expect(loaded.editorState == saved)
+    let reopened = EditorModel(sceneGraph: loaded.sceneGraph)
+    reopened.apply(try #require(loaded.editorState))
+    #expect(reopened.selectedNode?.label == "B")
+    #expect(reopened.camera.target == [4, 5, 6])
+    #expect(reopened.gizmo.mode == .scale)
+    #expect(reopened.renderSettings.fieldOfView == 42)
+
+    // A broken file falls back to nil (defaults); a partial one keeps what it has.
+    try Data("not json".utf8).write(to: url.appendingPathComponent("editor.json"))
+    #expect(try ComposerDocument(contentsOf: url).editorState == nil)
+    try Data(#"{"renderSettings": {"showsGrid": false}}"#.utf8).write(to: url.appendingPathComponent("editor.json"))
+    let partial = try #require(try ComposerDocument(contentsOf: url).editorState)
+    #expect(partial.renderSettings.showsGrid == false)
+    #expect(partial.renderSettings.showsAxes == true)
+    #expect(partial.gizmoMode == .translate)
+}
+
 // #177: framing keeps the view direction and orbits the framed center.
 @Test func framingKeepsViewDirection() {
     var camera = EditorCamera()
