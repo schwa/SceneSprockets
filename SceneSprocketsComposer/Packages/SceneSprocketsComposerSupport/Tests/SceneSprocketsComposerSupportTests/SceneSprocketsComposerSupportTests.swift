@@ -714,6 +714,28 @@ import UniformTypeIdentifiers
     undoManager.endUndoGrouping()
 }
 
+// #211
+@MainActor
+@Test func boundingBoxes() throws {
+    let edges = BoundingBoxes.edges(BoundingBox3D(min: [0, 0, 0], max: [1, 2, 3]))
+    #expect(edges.count == 12)
+    #expect(edges.allSatisfy { start, end in (0..<3).filter { start[$0] != end[$0] }.count == 1 })
+
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    let tools = SceneTools(model: model)
+    let ids = try tools.create(kind: "box", count: 3, label: nil, parent: nil, translation: nil, translations: nil, rotationDegrees: nil, scale: nil, color: nil).components(separatedBy: ", ")
+    model.addLight(.point)
+    let nodes = try ids.map { try tools.node(id: $0) }
+    nodes[2].isVisible = false
+    let selected: Set = [nodes[0].id]
+    #expect(BoundingBoxes.nodes(mode: .none, sceneGraph: model.sceneGraph, selected: selected).isEmpty)
+    #expect(BoundingBoxes.nodes(mode: .selected, sceneGraph: model.sceneGraph, selected: selected).map(\.node.id) == [nodes[0].id])
+    // All meshes, but not lights or hidden nodes.
+    let all = BoundingBoxes.nodes(mode: .all, sceneGraph: model.sceneGraph, selected: selected)
+    #expect(all.map(\.node.id) == [nodes[0].id, nodes[1].id])
+    #expect(all.map(\.isSelected) == [true, false])
+}
+
 // #177: framing keeps the view direction and orbits the framed center.
 @Test func framingKeepsViewDirection() {
     var camera = EditorCamera()

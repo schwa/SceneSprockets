@@ -4542,12 +4542,13 @@ Add a 'Drop to Floor' command (Scene menu, node context menu, maybe a shortcut) 
 ## 211: Composer: show bounding boxes
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:composer, effort:s
 created: 2026-10-24T17:47:54Z
-updated: 2026-10-24T17:50:16Z
+updated: 2026-10-24T17:58:33Z
+closed: 2026-10-24T17:58:33Z
 +++
 
 Add a Render settings toggle 'Bounding Boxes' that draws world-space bounding boxes as wireframe boxes: for the selected nodes (always, or with the toggle), and optionally for every mesh node. Draw with MetalSprocketsAddOns GraphicsContext3D in the scene pass decorations, as DebugShapes does (#188). Use SceneGraph.worldBounds(of:); hidden or inactive nodes have none. Selected boxes in the accent color, others faint. Saved in editor.json with the other render settings.

@@ -14,6 +14,12 @@ struct RenderSettingsView: View {
                     .help("Meshes, triangles and lights")
                 Toggle("Lights and Cameras", isOn: $model.renderSettings.showsLightsAndCameras)
                     .help("Draw and click shapes for lights and cameras")
+                Picker("Bounding Boxes", selection: $model.renderSettings.boundingBoxes) {
+                    ForEach(BoundingBoxes.Mode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .help("Draw world-space bounding boxes for the selection, or for every mesh")
                 Toggle("Frame Timing", isOn: $model.renderSettings.showsFrameTiming)
                     .help("Frame rate and CPU and GPU timings")
             }

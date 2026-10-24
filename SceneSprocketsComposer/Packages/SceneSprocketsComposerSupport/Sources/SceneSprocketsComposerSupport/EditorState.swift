@@ -76,7 +76,7 @@ extension EditorState: Codable {
 
 extension RenderSettings: Codable {
     enum CodingKeys: String, CodingKey {
-        case showsGrid, showsAxes, usesDefaultLighting, showsShadows, showsStatistics, showsFrameTiming, showsLightsAndCameras, outlinesSelection, isFramebufferOnly, fieldOfView, nearClip, farClip, debugMode, materialChannel
+        case showsGrid, showsAxes, usesDefaultLighting, showsShadows, showsStatistics, showsFrameTiming, showsLightsAndCameras, boundingBoxes, outlinesSelection, isFramebufferOnly, fieldOfView, nearClip, farClip, debugMode, materialChannel
     }
 
     init(from decoder: Decoder) throws {
@@ -94,6 +94,7 @@ extension RenderSettings: Codable {
         try read(\.showsStatistics, .showsStatistics)
         try read(\.showsFrameTiming, .showsFrameTiming)
         try read(\.showsLightsAndCameras, .showsLightsAndCameras)
+        try read(\.boundingBoxes, .boundingBoxes)
         try read(\.outlinesSelection, .outlinesSelection)
         try read(\.isFramebufferOnly, .isFramebufferOnly)
         try read(\.fieldOfView, .fieldOfView)
@@ -112,6 +113,7 @@ extension RenderSettings: Codable {
         try container.encode(showsStatistics, forKey: .showsStatistics)
         try container.encode(showsFrameTiming, forKey: .showsFrameTiming)
         try container.encode(showsLightsAndCameras, forKey: .showsLightsAndCameras)
+        try container.encode(boundingBoxes, forKey: .boundingBoxes)
         try container.encode(outlinesSelection, forKey: .outlinesSelection)
         try container.encode(isFramebufferOnly, forKey: .isFramebufferOnly)
         try container.encode(fieldOfView, forKey: .fieldOfView)

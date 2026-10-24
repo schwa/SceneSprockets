@@ -38,20 +38,24 @@ struct ScenePreviewView: View {
                 // Shift-click adds to or removes from the selection (#201).
                 model.pick(shapeHit ?? hit?.node, extending: Self.isExtendingSelection)
             },
-            decorations: { [selectedIDs = model.selectedIDs, sceneGraph = model.sceneGraph, displayScale] context, drawableSize in
+            decorations: { [selectedIDs = model.selectedIDs, sceneGraph = model.sceneGraph, displayScale, accentColor = Color(.sRGB, red: Double(outlineColor.x), green: Double(outlineColor.y), blue: Double(outlineColor.z))] context, drawableSize in
                 let grid = try settings.decorations(context: context, drawableSize: drawableSize)
-                guard settings.showsLightsAndCameras else {
-                    return grid
-                }
                 // Sized in view points, like hit testing. The scene's reversed depth does not change x and y.
                 let viewport = SceneViewport(cameraMatrix: context.cameraMatrix, projectionMatrix: context.projectionMatrix, viewSize: drawableSize / Float(displayScale), drawableSize: drawableSize)
-                let shapes = try DebugShapes.element(sceneGraph: sceneGraph, selected: selectedIDs, viewport: viewport)
+                let shapes = settings.showsLightsAndCameras ? try DebugShapes.element(sceneGraph: sceneGraph, selected: selectedIDs, viewport: viewport) : nil
+                let boxes = try BoundingBoxes.element(mode: settings.boundingBoxes, sceneGraph: sceneGraph, selected: selectedIDs, selectedColor: accentColor, viewProjection: viewport.projectionMatrix * viewport.viewMatrix, drawableSize: drawableSize)
+                guard shapes != nil || boxes != nil else {
+                    return grid
+                }
                 return try MetalSprockets.Group {
                     if let grid {
                         grid
                     }
                     if let shapes {
                         shapes
+                    }
+                    if let boxes {
+                        boxes
                     }
                 }
                 .eraseToAnyElement()

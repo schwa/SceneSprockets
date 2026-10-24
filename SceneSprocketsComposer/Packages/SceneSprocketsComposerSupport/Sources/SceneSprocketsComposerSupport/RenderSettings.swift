@@ -15,6 +15,8 @@ struct RenderSettings: Equatable {
     var showsFrameTiming = false
     // Line shapes for lights and cameras (#188).
     var showsLightsAndCameras = true
+    // Wireframe world bounds (#211).
+    var boundingBoxes = BoundingBoxes.Mode.none
     // Draws every mesh in this view instead of its material (#132).
     var debugMode: SceneGraphDebugMode?
     // One material value instead of lighting (#195); ignored while debugMode is set.
