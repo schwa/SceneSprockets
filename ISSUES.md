@@ -4657,12 +4657,13 @@ No remaining missing barrier found. Open questions: does the flicker still happe
 ## 215: Composer: frame rate drops sharply while dragging
 
 +++
-status: open
+status: closed
 priority: high
 kind: bug
 labels: area:composer, area:ui, effort:m
 created: 2026-10-24T18:31:12Z
-updated: 2026-10-24T18:32:38Z
+updated: 2026-10-24T22:13:29Z
+closed: 2026-10-24T22:13:29Z
 +++
 
 The frame rate drops a lot while dragging, at least with the gizmo; camera orbit not checked yet. Cause not measured yet. Profile first (Instruments Time Profiler plus SwiftUI, and the Frame Timing overlay's CPU phases) before changing anything.
@@ -4680,6 +4681,7 @@ Fix direction: keep drag updates out of SwiftUI's view graph (separate the drag 
 - `2026-10-24T18:32:38Z`: Related: #212 (statistics flatten the graph) and #214 (overlays rebuilt every frame).
 - `2026-10-24T18:44:45Z`: Measured the model-side work of one drag frame (DragPerformanceTests.dragFrameCosts; debug build, 500 boxes, 3 selected), in ms per call: continueGizmoDrag 0.005, editorState 1.36 (ComposerView recomputes it on every body pass via onChange(of: model.editorState)), selectedNodes 0.28, isHidden x500 0.11, DebugShapes 0.008, bounding boxes All 1.18, statistics 0.22. About 3 ms in total, so it does not explain a precipitous drop. The likely cost is SwiftUI: every drag step bumps transformRevision, which the tree rows (isHidden, isVisible, lock), the inspector and the decorations closures all read, so the whole sidebar List and inspector re-render every frame. That needs an Instruments trace to confirm. Punting until then. Unblocker: an Instruments trace (SwiftUI and Time Profiler templates) of a 5-second gizmo drag in a scene of about 100 nodes, or permission to change transformRevision into a separate drag counter that only the inspector's transform fields read. Also worth doing anyway: make editorState cheaper (1.4 ms per body pass).
 - `2026-10-24T22:02:37Z`: Related: the new issue on closure-based Binding(get:set:) defeating diffing. The tree's List(selection:) and SceneView's camera binding are the likely hot spots.
+- `2026-10-24T22:13:29Z`: Confirmed fixed by the user after ed10afff (#223): the tree List's closure selection binding and the rows' dependency on transformRevision were the cause. #224 has the remaining, smaller re-render sources.
 
 ---
 
