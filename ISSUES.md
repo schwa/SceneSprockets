@@ -4193,11 +4193,12 @@ Add an eye toggle in the tree row and the inspector to hide and show nodes, usin
 ## 194: Composer: Quick Look thumbnail extension that returns Preview.png
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
 labels: area:composer, effort:s
 created: 2026-10-24T14:42:46Z
+updated: 2026-10-24T15:35:18Z
 +++
 
 Split from #175. Documents now contain Preview.png (DocumentPreview). Add a Quick Look thumbnail extension target (com.apple.quicklook.thumbnail, QLThumbnailProvider) that returns that PNG, so Finder icons show the scene. Needs a new Xcode target, which was not added in #175.
@@ -4207,11 +4208,12 @@ Split from #175. Documents now contain Preview.png (DocumentPreview). Add a Quic
 ## 195: Debug views: PBR and Blinn-Phong material channels
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:m
 created: 2026-10-24T15:04:55Z
+updated: 2026-10-24T15:35:19Z
 +++
 
 Follow-up to #132. SceneGraphDebugMode covers geometry: shaded, normals, texture coordinates, UV checker, world position and wireframe. Material channels are not covered: base color, metallic, roughness, occlusion, emissive and others. MetalSprocketsPBR's PBRRenderer.debugView (PBRDebugView) already draws these for PBR. Pass a channel mode through SceneGraphRenderContext to PBRMaterialRenderer, and add a Blinn-Phong equivalent (diffuse, specular, shininess).
@@ -4221,11 +4223,12 @@ Follow-up to #132. SceneGraphDebugMode covers geometry: shaded, normals, texture
 ## 196: Composer: inactive nodes (pause actions, constraints, particles and physics)
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
 labels: area:composer, area:scenegraph, effort:m
 created: 2026-10-24T15:12:57Z
+updated: 2026-10-24T15:35:19Z
 +++
 
 Split from #193. Hide/show (Node.isVisible) is done. A separate 'inactive' state, like Unity's SetActive, would also stop the subtree's actions, constraints, particles and physics, not just drawing. It needs a scene graph flag that advanceActions, applyConstraints, particles and SceneSprocketsPhysics respect. Decide whether inactive implies hidden.
@@ -4235,11 +4238,12 @@ Split from #193. Hide/show (Node.isVisible) is done. A separate 'inactive' state
 ## 197: Composer: Insert Model File… (glTF, USDZ, OBJ)
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
 labels: area:composer, effort:m
 created: 2026-10-24T15:15:29Z
+updated: 2026-10-24T15:35:19Z
 +++
 
 Add an Insert Model File… command (+ menu and Scene menu) that picks a file and adds its contents to the open scene under the selected node, or under the root when nothing is selected. Select the new subtree, and make it one undo step.
@@ -4248,17 +4252,19 @@ Loaders already exist in SceneSprocketsPBR: GLTFSceneGraph for .gltf/.glb, and M
 
 Saving: generated meshes are not saved yet (#158), and glTF by reference is #157. Until then, inserted meshes may be skipped with a warning when saving, so decide whether to block saving or warn. Related: #183 (explode imported glTF).
 
+- `2026-10-24T15:35:19Z`: Related: #183 (explode), #157 (glTF by reference) and #158 (write generated meshes).
+
 ---
 
 ## 198: Composer: basic material editing in the inspector
 
 +++
-status: new
+status: open
 priority: high
 kind: feature
 labels: area:composer, effort:m
 created: 2026-10-24T15:15:46Z
-updated: 2026-10-24T15:15:55Z
+updated: 2026-10-24T15:35:19Z
 +++
 
 Mesh nodes show no material in the inspector, and new shapes always get a plain grey Blinn-Phong material. Add a Material section for mesh nodes:
