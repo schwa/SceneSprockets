@@ -4380,12 +4380,13 @@ All edits made by one AI response should be grouped into a single undo action, s
 ## 204: Composer: crash when saving on quit (MainActor.assumeIsolated in snapshot)
 
 +++
-status: open
+status: closed
 priority: critical
 kind: bug
 labels: area:composer, area:document, effort:s
 created: 2026-10-24T16:07:51Z
-updated: 2026-10-24T16:12:43Z
+updated: 2026-10-24T16:17:25Z
+closed: 2026-10-24T16:17:25Z
 +++
 
 Quitting with unsaved changes crashes with EXC_BREAKPOINT in dispatch_assert_queue, from ComposerDocument.snapshot(contentType:) at ComposerDocument.swift:70.

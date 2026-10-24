@@ -1,4 +1,5 @@
 import CoreGraphics
+import GeometryLite3D
 import Foundation
 import ImageIO
 import Metal
@@ -17,8 +18,8 @@ public enum DocumentPreview {
         case imageCreationFailed
     }
 
-    // From the first camera node, or a default editor camera framing the scene.
-    @MainActor
+    // From the first camera node, or a default editor camera framing the scene. Runs on any thread: saving on quit
+    // calls it from a background queue (#204).
     static func render(_ sceneGraph: SceneGraph, device: any MTLDevice) throws -> CGImage {
         let width = Int(size.width)
         let height = Int(size.height)
@@ -33,7 +34,8 @@ public enum DocumentPreview {
             aspectRatio: Float(width) / Float(height),
             renderers: [BlinnPhongMaterialRenderer(), PBRMaterialRenderer(device: device)],
             // Without a camera node the element draws nothing unless it has a default camera.
-            defaultCamera: SceneView.defaultCamera,
+            // Like SceneView.defaultCamera, which is main-actor isolated.
+            defaultCamera: Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(60), depthMode: .standard(zClip: 0.01 ... 1000))),
             defaultLight: Light(type: .directional, color: [1, 1, 1], intensity: 1)
         )
         let texture = try renderer.render(element).texture
@@ -51,7 +53,6 @@ public enum DocumentPreview {
         return image
     }
 
-    @MainActor
     static func write(_ sceneGraph: SceneGraph, into bundle: URL, device: any MTLDevice) throws {
         let image = try render(sceneGraph, device: device)
         let url = bundle.appendingPathComponent(fileName)

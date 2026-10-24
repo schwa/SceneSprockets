@@ -29,8 +29,21 @@ public final class ComposerDocument: ReferenceFileDocument, @unchecked Sendable 
     public let sceneGraph: SceneGraph
     // Read from editor.json; nil for new documents or when the file is missing or unreadable.
     let editorState: EditorState?
-    // The open editor, whose state is saved with the document.
+    // The open editor. Only main-actor code reads it; saving uses `savedEditorState`.
     weak var editorModel: EditorModel?
+    // The editor state to save, copied from the editor on the main actor. snapshot can run on any thread (#204).
+    private let savedEditorStateLock = OSAllocatedUnfairLock<EditorState?>(initialState: nil)
+
+    var savedEditorState: EditorState? {
+        savedEditorStateLock.withLock { $0 } ?? editorState
+    }
+
+    // Call when the editor state changes.
+    @MainActor
+    func updateEditorState() {
+        let state = editorModel?.editorState
+        savedEditorStateLock.withLock { $0 = state }
+    }
 
     public init(sceneGraph: SceneGraph) {
         self.sceneGraph = sceneGraph
@@ -61,23 +74,23 @@ public final class ComposerDocument: ReferenceFileDocument, @unchecked Sendable 
         self.init(sceneGraph: result.sceneGraph, editorState: EditorState.read(fromBundleAt: url))
     }
 
-    // The bundle is built here, on the main actor, so writing never touches the live scene graph.
+    // The bundle is built here. SwiftUI usually calls this on the main actor, but AppKit calls it on a background
+    // queue when saving on quit, with the main thread blocked (#204). So it must not use the main actor: the editor
+    // state comes from `savedEditorState`.
     public func snapshot(contentType _: UTType) throws -> FileWrapper {
         let url = try Self.makeTemporaryURL()
         defer { try? FileManager.default.removeItem(at: url) }
         Self.log(try SceneArchive.composer.write(sceneGraph, to: url))
         // Saving still works without a preview or editor state.
-        MainActor.assumeIsolated {
-            do {
-                try (editorModel?.editorState ?? editorState)?.write(toBundleAt: url)
-            } catch {
-                logger.warning("Could not write the editor state: \(error, privacy: .public)")
-            }
-            do {
-                try DocumentPreview.write(sceneGraph, into: url, device: systemDefaultDevice())
-            } catch {
-                logger.warning("Could not write the preview: \(error, privacy: .public)")
-            }
+        do {
+            try savedEditorState?.write(toBundleAt: url)
+        } catch {
+            logger.warning("Could not write the editor state: \(error, privacy: .public)")
+        }
+        do {
+            try DocumentPreview.write(sceneGraph, into: url, device: systemDefaultDevice())
+        } catch {
+            logger.warning("Could not write the preview: \(error, privacy: .public)")
         }
         return try FileWrapper(url: url, options: .immediate)
     }

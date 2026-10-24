@@ -99,8 +99,13 @@ public struct ComposerView: View {
         } message: {
             Text(insertMessage ?? "")
         }
+        // Saving can run off the main actor, so the document keeps its own copy of the editor state (#204).
+        .onChange(of: model.editorState, initial: true) {
+            document.updateEditorState()
+        }
         .onAppear {
             document.editorModel = model
+            document.updateEditorState()
             if assistantStore == nil {
                 assistantStore = ComposerAssistant.makeStore(credentials: credentials, model: model)
             }

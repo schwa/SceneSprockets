@@ -90,6 +90,7 @@ import UniformTypeIdentifiers
     model.isInspectorPresented = false
     // addShape selected B.
     let saved = model.editorState
+    document.updateEditorState()
 
     let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("scenesprocketsd")
     defer { try? FileManager.default.removeItem(at: url) }
@@ -188,6 +189,7 @@ import UniformTypeIdentifiers
     #expect(model.gizmo.target == nil)
 
     // Saved and restored by path.
+    document.updateEditorState()
     let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("scenesprocketsd")
     defer { try? FileManager.default.removeItem(at: url) }
     try document.snapshot(contentType: .sceneSprocketsDocument).write(to: url, options: [], originalContentsURL: nil)
@@ -352,6 +354,28 @@ import UniformTypeIdentifiers
     undoManager.undo()
     #expect(parent.isActive)
     #expect(!model.isHidden(child))
+}
+
+// #204: AppKit takes the snapshot on a background queue when saving on quit.
+@MainActor
+@Test func snapshotWorksOffTheMainThread() async throws {
+    let document = ComposerDocument()
+    let model = EditorModel(sceneGraph: document.sceneGraph)
+    model.addShape(.box(), label: "Box")
+    model.renderSettings.showsGrid = false
+    document.editorModel = model
+    document.updateEditorState()
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("scenesprocketsd")
+    defer { try? FileManager.default.removeItem(at: url) }
+    let wasOffMain = try await Task.detached {
+        let wrapper = try document.snapshot(contentType: .sceneSprocketsDocument)
+        try wrapper.write(to: url, options: [], originalContentsURL: nil)
+        return pthread_main_np() == 0
+    }.value
+    #expect(wasOffMain)
+    let loaded = try ComposerDocument(contentsOf: url)
+    #expect(loaded.editorState?.renderSettings.showsGrid == false)
+    #expect(DocumentPreview.image(inBundleAt: url) != nil)
 }
 
 // #177: framing keeps the view direction and orbits the framed center.
