@@ -4587,7 +4587,7 @@ The other log lines (DetachedSignatures, ViewBridge error 18, NSColorPicker past
 status: new
 priority: high
 kind: bug
-labels: area:composer,effort:s
+labels: area:composer, effort:s
 created: 2026-10-24T18:29:52Z
 +++
 
@@ -4600,5 +4600,32 @@ Wanted: right after the .gltf is picked, show an alert:
 On Cancel, either insert nothing, or insert with the missing resources and say clearly what was skipped. Choose one; skipping the insert is simpler and less surprising.
 
 Also: if the folder importer is cancelled or the wrong folder is chosen, say so in the alert instead of failing silently. Present the folder importer from the alert's button action, not the first importer's completion, so it cannot be swallowed. Count the referenced files with the same JSON scan as ModelFile.needsFolderAccess, so the message can give the number.
+
+---
+
+## 214: Gizmo and overlays flicker: probably a Metal 4 synchronization problem (barriers)
+
++++
+status: new
+priority: high
+kind: bug
+labels: area:renderer,area:ui,effort:m
+created: 2026-10-24T18:30:46Z
++++
+
+The transform gizmo started flickering in the Composer. Likely a Metal 4 hazard: Metal 4 does not track resource hazards or order passes, so every read-after-write between passes, and between frames, needs an explicit barrier. Not confirmed yet; needs a GPU capture of a bad frame. Ruled out so far: GraphicsContext3DRenderPipeline makes new buffers instead of rewriting them, and ParameterSet retains (makes resident) bound buffers per submission (ParameterSet.swift:244). Uniforms are bound by value.
+
+Per-frame pass order in SceneView: shadow and post passes (compute), then the scene pass (meshes plus decorations: grid, axes, light/camera shapes #188, bounding boxes #211, all GraphicsContext3D or mesh-shader draws), then the overlay hook (SelectionOutline: JumpFloodOutlinePipeline, compute passes over the scene depth, then compositing into the drawable), then ManipulatorOverlayPass (gizmo, mesh shaders, loads drawable color).
+
+Things to check:
+1. ManipulatorOverlayPass (SceneViewManipulator.swift:93) has QueueBarrier(after: [.fragment, .dispatch], before: .fragment). The gizmo strokes are mesh-shader draws (object and mesh stages) and the fills are vertex draws. Do color attachment loads, or anything before .fragment, need covering? Should 'before' include .vertex, .object and .mesh?
+2. Selection outline to manipulator: JumpFloodOutlinePipeline ends with .barrierAfterPass(after: .dispatch, beforeQueueStages: [.fragment]). Check that the composite into the drawable is fully ordered before the manipulator's load. A blit or render stage might be missing from 'after'.
+3. Across frames: when an overlay is set, the scene depth texture is .private and stored (SceneView: metalDepthStencilStorageMode(needsPostPasses || overlay != nil ? .private : .memoryless)). The same depth texture is reused every frame, so frame N+1's scene pass may clear and write it while frame N's outline compute still reads it. Metal 4 does not order separate command buffers on one texture. Needs a barrier or fence at frame start, or a depth texture per frame in flight. The same applies to any other persistent textures: shadow maps, the SelectionOutline jump-flood textures (kept between frames), post-processing targets.
+4. Scene-pass decorations draw with depthCompare .always; check none of them read a texture written earlier in the frame without a barrier.
+5. Do MetalSprockets' MeshRenderPipeline stages count in QueueBarrier's stage sets (MTLStages .object and .mesh)?
+
+How to confirm: capture a flickering frame (using-gpucapture) and look at the Manipulator pass inputs. Also try with the selection outline off, then with Lights and Cameras off and Bounding Boxes set to None, to see which overlay is involved. Turn on Metal API validation and the Metal 4 shader validation hazard checks if available.
+
+Probably belongs partly in MetalSprockets: a missing frame-to-frame barrier for persistent attachments in RenderView. Move or split the issue once the cause is known.
 
 ---
