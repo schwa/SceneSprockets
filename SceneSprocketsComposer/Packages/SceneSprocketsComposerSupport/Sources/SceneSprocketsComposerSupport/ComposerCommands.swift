@@ -13,6 +13,21 @@ public struct ComposerCommands: Commands {
     public init() {}
 
     public var body: some Commands {
+        // ⌘1–3 pick the gizmo tool, so panels use ⌃⌘ (left) and ⌥⌘ (right), like Xcode's inspectors.
+        CommandGroup(after: .sidebar) {
+            Group {
+                Button("Show Scene") { model?.show(SidebarTab.scene) }
+                    .keyboardShortcut("1", modifiers: [.control, .command])
+                Button("Show Assistant") { model?.show(SidebarTab.assistant) }
+                    .keyboardShortcut("2", modifiers: [.control, .command])
+                Divider()
+                Button("Show Inspector") { model?.show(InspectorTab.inspector) }
+                    .keyboardShortcut("1", modifiers: [.option, .command])
+                Button("Show Render Settings") { model?.show(InspectorTab.render) }
+                    .keyboardShortcut("2", modifiers: [.option, .command])
+            }
+            .disabled(model == nil)
+        }
         CommandMenu("Scene") {
             if let model {
                 @Bindable var model = model

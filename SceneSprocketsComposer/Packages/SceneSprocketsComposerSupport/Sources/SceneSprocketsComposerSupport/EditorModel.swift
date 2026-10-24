@@ -3,6 +3,7 @@ import GeometryLite3D
 import Metal
 import MetalSprocketsPBR
 import Observation
+import SwiftUI
 import SceneSprockets
 import SceneSprocketsBlinnPhong
 import SceneSprocketsGizmos
@@ -30,6 +31,22 @@ public final class EditorModel {
     var camera = EditorCamera()
     var renderSettings = RenderSettings()
     var isInspectorPresented = true
+    var sidebarVisibility = NavigationSplitViewVisibility.automatic
+    var sidebarTab = SidebarTab.scene
+    var inspectorTab = InspectorTab.inspector
+
+    // Shows the tab, opening its panel if hidden. For the View menu's shortcuts.
+    func show(_ tab: SidebarTab) {
+        sidebarTab = tab
+        if sidebarVisibility == .detailOnly {
+            sidebarVisibility = .all
+        }
+    }
+
+    func show(_ tab: InspectorTab) {
+        inspectorTab = tab
+        isInspectorPresented = true
+    }
     // From the app's Gizmo Size setting (#189).
     var gizmoSize = GizmoSize.small {
         didSet { gizmo.worldSize = baseGizmoWorldSize * gizmoSize.scale }
@@ -302,6 +319,16 @@ public final class EditorModel {
         }
         return sceneGraph.nodesWithWorldTransforms(includeHidden: true).first { $0.node.id == selection }?.node
     }
+}
+
+enum SidebarTab: Hashable {
+    case scene
+    case assistant
+}
+
+enum InspectorTab: Hashable {
+    case inspector
+    case render
 }
 
 extension SceneGraph {

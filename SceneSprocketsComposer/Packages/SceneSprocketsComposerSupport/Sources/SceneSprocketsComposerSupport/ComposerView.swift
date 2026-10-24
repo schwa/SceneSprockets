@@ -11,14 +11,8 @@ public struct ComposerView: View {
     private var gizmoSize = GizmoSize.small
     @Environment(CollaborationCredentials.self)
     private var credentials
-    @State private var sidebarTab = SidebarTab.scene
     // This document's conversation; kept here so it survives sidebar tab switches.
     @State private var assistantStore: ConversationStore?
-
-    private enum SidebarTab {
-        case scene
-        case assistant
-    }
     @Environment(\.undoManager)
     private var undoManager
 
@@ -32,16 +26,16 @@ public struct ComposerView: View {
     }
 
     public var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $model.sidebarVisibility) {
             VStack(spacing: 0) {
-                Picker("Sidebar", selection: $sidebarTab) {
+                Picker("Sidebar", selection: $model.sidebarTab) {
                     Label("Scene", systemImage: "list.bullet.indent").tag(SidebarTab.scene)
                     Label("Assistant", systemImage: "bubble.left.and.text.bubble.right").tag(SidebarTab.assistant)
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 .padding(8)
-                switch sidebarTab {
+                switch model.sidebarTab {
                 case .scene:
                     SceneTreeView(model: model)
 
@@ -53,11 +47,11 @@ public struct ComposerView: View {
         } detail: {
             ScenePreviewView(model: model)
                 .inspector(isPresented: $model.isInspectorPresented) {
-                    TabView {
-                        Tab("Inspector", systemImage: "slider.horizontal.3") {
+                    TabView(selection: $model.inspectorTab) {
+                        Tab("Inspector", systemImage: "slider.horizontal.3", value: InspectorTab.inspector) {
                             NodeInspectorView(model: model)
                         }
-                        Tab("Render", systemImage: "camera.aperture") {
+                        Tab("Render", systemImage: "camera.aperture", value: InspectorTab.render) {
                             RenderSettingsView(model: model)
                         }
                     }
