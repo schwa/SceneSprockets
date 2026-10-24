@@ -10,13 +10,21 @@ struct SceneTreeView: View {
         case node(SceneGraph.Node.ID)
     }
 
-    private var listSelection: Binding<Item?> {
-        Binding(get: { model.selection.map(Item.node) ?? .scene }, set: { item in
-            if case let .node(id) = item {
-                model.selection = id
-            } else {
-                model.selection = nil
+    // Multiple selection (#201). Choosing Scene, or nothing, clears the node selection. The primary node stays
+    // primary while it is still selected; otherwise the newly added node becomes primary.
+    private var listSelection: Binding<Set<Item>> {
+        Binding(get: {
+            model.selectedIDs.isEmpty ? [.scene] : Set(model.selectedIDs.map(Item.node))
+        }, set: { items in
+            let ids = items.compactMap { item -> SceneGraph.Node.ID? in
+                if case let .node(id) = item { id } else { nil }
             }
+            guard !ids.isEmpty else {
+                model.selection = nil
+                return
+            }
+            let added = ids.first { !model.selectedIDs.contains($0) }
+            model.select(ids, primary: added ?? model.selection)
         })
     }
 

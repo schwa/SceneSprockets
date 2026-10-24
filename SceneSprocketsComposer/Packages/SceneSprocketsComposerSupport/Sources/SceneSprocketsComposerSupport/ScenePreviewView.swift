@@ -35,16 +35,17 @@ struct ScenePreviewView: View {
                 isFocused = true
                 // Light and camera shapes are drawn on top, so they win over meshes behind them.
                 let shapeHit = settings.showsLightsAndCameras ? DebugShapes.hitTest(point, sceneGraph: model.sceneGraph, viewport: viewport) : nil
-                model.pick(shapeHit ?? hit?.node)
+                // Shift-click adds to or removes from the selection (#201).
+                model.pick(shapeHit ?? hit?.node, extending: Self.isExtendingSelection)
             },
-            decorations: { [selectedNode = model.selectedNode, sceneGraph = model.sceneGraph, displayScale] context, drawableSize in
+            decorations: { [selectedIDs = model.selectedIDs, sceneGraph = model.sceneGraph, displayScale] context, drawableSize in
                 let grid = try settings.decorations(context: context, drawableSize: drawableSize)
                 guard settings.showsLightsAndCameras else {
                     return grid
                 }
                 // Sized in view points, like hit testing. The scene's reversed depth does not change x and y.
                 let viewport = SceneViewport(cameraMatrix: context.cameraMatrix, projectionMatrix: context.projectionMatrix, viewSize: drawableSize / Float(displayScale), drawableSize: drawableSize)
-                let shapes = try DebugShapes.element(sceneGraph: sceneGraph, selection: selectedNode, viewport: viewport)
+                let shapes = try DebugShapes.element(sceneGraph: sceneGraph, selected: selectedIDs, viewport: viewport)
                 return try MetalSprockets.Group {
                     if let grid {
                         grid
@@ -55,13 +56,13 @@ struct ScenePreviewView: View {
                 }
                 .eraseToAnyElement()
             },
-            overlay: { [selectedNode = model.selectedNode, outline = model.selectionOutline, sceneGraph = model.sceneGraph] viewport in
-                guard settings.outlinesSelection, let selectedNode else {
+            overlay: { [selectedNodes = model.selectedNodes, outline = model.selectionOutline, sceneGraph = model.sceneGraph] viewport in
+                guard settings.outlinesSelection, !selectedNodes.isEmpty else {
                     return nil
                 }
                 outline.color = outlineColor
                 outline.width = 6
-                return try outline.element(nodes: [selectedNode], sceneGraph: sceneGraph, viewport: viewport)
+                return try outline.element(nodes: selectedNodes, sceneGraph: sceneGraph, viewport: viewport)
             }
         )
         .focusable()
@@ -71,6 +72,15 @@ struct ScenePreviewView: View {
         .onDeleteCommand {
             model.deleteSelection()
         }
+        #endif
+    }
+
+    // Read when the tap arrives; SceneView's tap callback has no modifier keys.
+    private static var isExtendingSelection: Bool {
+        #if os(macOS)
+        NSEvent.modifierFlags.contains(.shift)
+        #else
+        false
         #endif
     }
 }

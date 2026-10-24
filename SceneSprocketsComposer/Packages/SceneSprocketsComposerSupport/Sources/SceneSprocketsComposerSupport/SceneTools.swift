@@ -61,20 +61,20 @@ final class SceneTools {
             node.children.forEach(visit)
         }
         visit(model.sceneGraph.root)
-        let selection = model.selectedNode.map { [id(for: $0)] } ?? []
+        let selection = model.selectedNodes.map { id(for: $0) }
         return try Self.json(Scene(selection: selection, nodes: nodes))
     }
 
-    /// Select nodes by id in the editor; an empty list clears the selection. The editor shows one selected node at a time for now, so only the first id is used.
+    /// Select nodes by id in the editor; an empty list clears the selection. The last id becomes the primary selection, which the inspector shows and the gizmo moves. Requests like "align the selected objects" act on query's `selection`.
     @CollaborationTool
     func select(ids: [String]) throws -> String {
         let model = try requireModel()
-        guard let first = ids.first else {
+        guard !ids.isEmpty else {
             model.selection = nil
             return "Cleared the selection."
         }
-        model.selection = try node(id: first).id
-        return "Selected \(first)."
+        model.select(try ids.map { try node(id: $0).id })
+        return "Selected \(ids.joined(separator: ", "))."
     }
 
     /// Create one or more nodes in one call and return their ids, comma separated. `kind` is a shape (box, sphere, plane, cylinder, cone, capsule, torus, tube, pyramid, floor, star), a light (directional, point, spot) or camera. For several at once give `count`, or `translations` with one [x, y, z] per node (count then defaults to its length); several nodes get numbered labels. Optional for all: label, parent id (default root), translation [x, y, z], rotationDegrees [pitch, yaw, roll], scale [x, y, z], color [r, g, b] in linear 0 to 1 (shapes only). Shapes are about 1 unit across, centered on their origin.

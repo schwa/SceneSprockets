@@ -139,7 +139,7 @@ import UniformTypeIdentifiers
     let projected = try #require(viewport.project(shape.lines[1][1]))
     #expect(DebugShapes.hitTest(projected.xy, sceneGraph: cameraOnly, viewport: viewport) === camera)
     #expect(DebugShapes.hitTest([5, 5], sceneGraph: cameraOnly, viewport: viewport) == nil)
-    #expect(try DebugShapes.element(sceneGraph: cameraOnly, selection: camera, viewport: viewport) != nil)
+    #expect(try DebugShapes.element(sceneGraph: cameraOnly, selected: [camera.id], viewport: viewport) != nil)
 }
 
 // #189
@@ -409,6 +409,38 @@ import UniformTypeIdentifiers
     #expect(throws: ToolError.self) { try tools.create(kind: "box", count: 3, label: nil, parent: nil, translation: nil, translations: [[0, 0, 0]], rotationDegrees: nil, scale: nil, color: nil) }
     #expect(throws: ToolError.self) { try tools.create(kind: "box", count: 0, label: nil, parent: nil, translation: nil, translations: nil, rotationDegrees: nil, scale: nil, color: nil) }
     #expect(throws: ToolError.self) { try tools.update(ids: ids, label: nil, parent: nil, translation: nil, translations: [[0, 0, 0]], rotationDegrees: nil, scale: nil, color: nil, metallic: nil, roughness: nil, isVisible: nil, isActive: nil) }
+}
+
+// #201: multiple selection in the model, the tools and delete; "align the selected objects" in two calls.
+@MainActor
+@Test func multipleSelectionForSelectionAwareEdits() throws {
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    let tools = SceneTools(model: model)
+    let ids = try tools.create(kind: "box", count: 3, label: nil, parent: nil, translation: nil, translations: [[0, 0, 0], [2, 1, 0], [4, 3, 0]], rotationDegrees: nil, scale: nil, color: nil).components(separatedBy: ", ")
+    let nodes = try ids.map { try tools.node(id: $0) }
+
+    // Click, then shift-click twice: the last one is primary; shift-clicking it again removes it.
+    model.pick(nodes[0])
+    model.pick(nodes[2], extending: true)
+    #expect(model.selectedIDs == [nodes[0].id, nodes[2].id] && model.selection == nodes[2].id)
+    #expect(model.gizmo.target === nodes[2])
+    model.pick(nodes[2], extending: true)
+    #expect(model.selectedIDs == [nodes[0].id] && model.selection == nodes[0].id)
+    // A plain click replaces it.
+    model.pick(nodes[1])
+    #expect(model.selectedIDs == [nodes[1].id])
+
+    // The assistant sees and sets the whole selection; aligning is one update.
+    _ = try tools.select(ids: [ids[0], ids[1], ids[2]])
+    #expect(try tools.query().contains(#""selection":["n1","n2","n3"]"#))
+    _ = try tools.update(ids: ids, label: nil, parent: nil, translation: nil, translations: nodes.map { [Double($0.localTransform.trs.translation.x), 0, 0] }, rotationDegrees: nil, scale: nil, color: nil, metallic: nil, roughness: nil, isVisible: nil, isActive: nil)
+    #expect(nodes.allSatisfy { $0.localTransform.trs.translation.y == 0 })
+
+    // Delete removes every selected node.
+    model.select([nodes[0].id, nodes[1].id])
+    model.deleteSelection()
+    #expect(model.sceneGraph.root.children.map(\.label) == [nodes[2].label])
+    #expect(model.selectedIDs.isEmpty && model.selection == nil)
 }
 
 // #203

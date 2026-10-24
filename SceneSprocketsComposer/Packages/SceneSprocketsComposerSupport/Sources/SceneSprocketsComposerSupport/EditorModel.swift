@@ -14,8 +14,45 @@ import simd
 @Observable
 public final class EditorModel {
     public let sceneGraph: SceneGraph
+    // The primary selected node: the inspector shows it and the gizmo moves it. Setting it selects only that node.
     public var selection: SceneGraph.Node.ID? {
-        didSet { updateGizmoTarget() }
+        didSet {
+            if !isSettingSelection {
+                selectedIDs = selection.map { [$0] } ?? []
+            }
+            updateGizmoTarget()
+        }
+    }
+    // Every selected node, including `selection` (#201). Change it with select(_:primary:).
+    public private(set) var selectedIDs: Set<SceneGraph.Node.ID> = []
+    @ObservationIgnored private var isSettingSelection = false
+
+    // Selects `ids`; `primary` (default: the last id) becomes `selection`.
+    func select(_ ids: [SceneGraph.Node.ID], primary: SceneGraph.Node.ID? = nil) {
+        isSettingSelection = true
+        selectedIDs = Set(ids)
+        selection = primary.flatMap { ids.contains($0) ? $0 : nil } ?? ids.last
+        isSettingSelection = false
+    }
+
+    // Adds or removes one node, keeping the rest, as shift-click does.
+    func toggleSelection(_ id: SceneGraph.Node.ID) {
+        var ids = Array(selectedIDs)
+        if let index = ids.firstIndex(of: id) {
+            ids.remove(at: index)
+            select(ids, primary: selection == id ? ids.last : selection)
+        } else {
+            ids.append(id)
+            select(ids, primary: id)
+        }
+    }
+
+    // The selected nodes in tree order.
+    var selectedNodes: [SceneGraph.Node] {
+        guard !selectedIDs.isEmpty else {
+            return []
+        }
+        return sceneGraph.nodesWithWorldTransforms(includeHidden: true).map(\.node).filter { selectedIDs.contains($0.id) }
     }
     // Locked nodes and their descendants cannot be picked in the viewport, moved or edited (#192). Editor state, saved
     // in editor.json.
@@ -149,10 +186,7 @@ public final class EditorModel {
 
     // The root cannot be deleted.
     var canDeleteSelection: Bool {
-        guard let node = selectedNode else {
-            return false
-        }
-        return node.parent != nil && !isLocked(node)
+        selectedNodes.contains { $0.parent != nil && !isLocked($0) }
     }
 
     // Locked itself or through an ancestor.
@@ -239,19 +273,28 @@ public final class EditorModel {
     }
 
     // Viewport picks skip locked nodes, which leaves nothing selected.
-    func pick(_ node: SceneGraph.Node?) {
-        selection = node.flatMap { isLocked($0) ? nil : $0.id }
+    // `extending` (shift-click) adds or removes the node instead of replacing the selection.
+    func pick(_ node: SceneGraph.Node?, extending: Bool = false) {
+        let id = node.flatMap { isLocked($0) ? nil : $0.id }
+        if extending {
+            if let id {
+                toggleSelection(id)
+            }
+        } else {
+            selection = id
+        }
     }
 
     private func updateGizmoTarget() {
         gizmo.target = selectedNode.flatMap { isLocked($0) ? nil : $0 }
     }
 
+    // Deletes every selected node that can be; descendants of another selected node go with it.
     func deleteSelection() {
-        guard canDeleteSelection, let node = selectedNode else {
-            return
+        let nodes = selectedNodes.filter { $0.parent != nil && !isLocked($0) }
+        for node in nodes where !nodes.contains(where: { $0 !== node && $0.isAncestor(of: node) }) {
+            delete(node)
         }
-        delete(node)
     }
 
     func delete(_ node: SceneGraph.Node) {
@@ -259,8 +302,8 @@ public final class EditorModel {
             return
         }
         node.removeFromParent()
-        if selection == node.id {
-            selection = nil
+        if selectedIDs.contains(node.id) {
+            select(selectedIDs.filter { $0 != node.id }.map(\.self), primary: selection == node.id ? nil : selection)
         }
         undoManager?.registerUndo(withTarget: self) { model in
             model.insert(node, into: parent, at: index, actionName: "Delete")

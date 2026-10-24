@@ -84,7 +84,7 @@ enum DebugShapes {
     }
 
     @MainActor
-    static func element(sceneGraph: SceneGraph, selection: SceneGraph.Node?, viewport: SceneViewport) throws -> AnyElement? {
+    static func element(sceneGraph: SceneGraph, selected: Set<SceneGraph.Node.ID>, viewport: SceneViewport) throws -> AnyElement? {
         let shapes = shapes(sceneGraph: sceneGraph, viewport: viewport)
         guard !shapes.isEmpty else {
             return nil
@@ -99,7 +99,7 @@ enum DebugShapes {
                     }
                 }
             }
-            let isSelected = shape.node === selection
+            let isSelected = selected.contains(shape.node.id)
             context.stroke(path, with: isSelected ? Color.yellow : Color.white.opacity(0.8), lineWidth: isSelected ? 3 : 2)
         }
         return GraphicsContext3DRenderPipeline(context: context, viewProjection: viewport.projectionMatrix * viewport.viewMatrix, viewport: viewport.drawableSize, depthCompareFunction: .always, writesDepth: false).eraseToAnyElement()

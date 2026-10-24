@@ -4327,12 +4327,13 @@ Requests like "make 8 spheres" currently run 8 separate make-node tool calls. AI
 ## 201: AI mode: support selection-aware edits like "align the selected objects"
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: area:composer, effort:l
 created: 2026-10-24T15:48:37Z
-updated: 2026-10-24T16:12:44Z
+updated: 2026-10-24T16:33:02Z
+closed: 2026-10-24T16:33:02Z
 +++
 
 AI mode should handle requests that act on the current selection, e.g. "align the selected objects". Needs: (1) tools to read the app's UI selection, (2) tools to edit existing nodes (transforms etc.), not just create them.
@@ -4400,5 +4401,22 @@ Cause: snapshot calls MainActor.assumeIsolated to write editor.json (#185) and P
 Note: the scene archive write in the same function also reads the live scene graph off the main thread. The comment 'on the main actor' is wrong in this path.
 
 Possible fix: capture what the save needs on the main actor ahead of time, and keep snapshot free of main-actor access. For example, update a stored editor state and a rendered preview image when the document changes or on the save action. Or render the preview on a background-safe path (DocumentPreview uses Metal only, plus SceneGraph reads). Regression test: call snapshot(contentType:) from a detached task or background queue and check that it returns.
+
+---
+
+## 205: Composer: multiple selection follow-ups (gizmo, inspector, saving)
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:composer, effort:m
+created: 2026-10-24T16:33:01Z
++++
+
+Follow-up to #201. Multiple selection works in the tree (Cmd and Shift click), in the viewport (Shift-click), for outlines, Delete and the assistant tools. Still single-node:
+- the gizmo moves only the primary selection; it should move all selected nodes around a shared pivot
+- the inspector shows only the primary node; it could edit shared fields (visibility, material color) for all of them
+- editor.json saves only the primary selection (selectionPath); save all as paths
 
 ---
