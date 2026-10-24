@@ -4421,3 +4421,26 @@ Follow-up to #201. Multiple selection works in the tree (Cmd and Shift click), i
 - editor.json saves only the primary selection (selectionPath); save all as paths
 
 ---
+
+## 206: Composer: inserting a .gltf fails in the sandbox (external .bin), and the warning alert overflows the screen
+
++++
+status: new
+priority: high
+kind: bug
+labels: area:composer,effort:m
+created: 2026-10-24T16:51:08Z
++++
+
+Insert Model File… on a .gltf with an external buffer (gltf-research-scenes/scenes/glass-of-water/gltf/glass_of_water.gltf) loads none of its meshes. Every primitive is skipped with: NSCocoaErrorDomain 257 'The file glass_of_water.bin couldn't be opened because you don't have permission to view it' (NSPOSIXErrorDomain 1, Operation not permitted). Screenshot: ~/Desktop/Screenshot 2026-10-24 at 12.50.15@2x.png.
+
+Cause: the app is sandboxed (ENABLE_USER_SELECTED_FILES = readonly). The file importer grants access only to the chosen .gltf, not to the .bin and textures next to it. .glb works because it is one file.
+
+Fix options:
+- ask for the folder: when a .gltf refers to files outside its own bytes, show an open panel for its folder (or let the importer pick folders) and read within that security scope
+- declare the sibling types as related items (NSIsRelatedItemType in CFBundleDocumentTypes) and open them through NSFileCoordinator with a file presenter (primaryPresentedItemURL); Apple's documented approach for sidecar files
+- or copy the .gltf and its referenced files with a folder-scoped grant
+
+Second problem in the same screenshot: the alert shows every warning in full, one per primitive with the whole NSError description, so it is taller than the screen and the OK button is off-screen. Show a summary instead: one line per distinct problem with a count (for example '17 meshes skipped: no permission to read glass_of_water.bin'), cap the list, and log the full text.
+
+---
