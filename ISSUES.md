@@ -4636,7 +4636,7 @@ How to confirm: capture a flickering frame (using-gpucapture) and look at the Ma
 
 Probably belongs partly in MetalSprockets: a missing frame-to-frame barrier for persistent attachments in RenderView. Move or split the issue once the cause is known.
 
-- `2026-10-24T18:42:53Z`: Found and fixed two missing barriers by reading the code; no GPU capture yet.
+\- `2026-10-24T18:42:53Z`: Found and fixed two missing barriers by reading the code; no GPU capture yet.
 1. The scene pass waited only for dispatch before clearing the depth texture shared by all frames in flight. The previous frame's selection outline and manipulator passes use that depth attachment in the fragment stage, so a new frame could clear depth while the gizmo was still depth-testing. That is gizmo flicker; it applies whenever depth is stored, and the Composer always stores it because it sets an overlay. The barrier now waits for [.dispatch, .fragment].
 2. The Selection Mask pass had no barrier while clearing and writing the mask texture, which is kept between frames and still read by the previous frame's jump flood (dispatch) and outline (fragment). That is outline flicker. Added QueueBarrier(after: [.dispatch, .fragment], before: .fragment).
 Checked and looked fine: the manipulator pass barrier (its gizmo geometry is CPU-written buffers, made resident per submission); jump flood's own barriers (its first one waits for vertex, fragment, dispatch and blit, and the seeds texture is covered); the outline pass ordering after jump flood.
@@ -4668,6 +4668,7 @@ Suspects from the code, unverified:
 Fix direction: keep drag updates out of SwiftUI's view graph (separate the drag revision from the observed transformRevision, or throttle UI refresh during a drag), make editorState cheap or update it only on drag end, and cache geometry that does not change. Add a benchmark: N nodes, a simulated gizmo drag for M frames, measure main-thread time.
 
 - `2026-10-24T18:32:38Z`: Related: #212 (statistics flatten the graph) and #214 (overlays rebuilt every frame).
+- `2026-10-24T18:44:45Z`: Measured the model-side work of one drag frame (DragPerformanceTests.dragFrameCosts; debug build, 500 boxes, 3 selected), in ms per call: continueGizmoDrag 0.005, editorState 1.36 (ComposerView recomputes it on every body pass via onChange(of: model.editorState)), selectedNodes 0.28, isHidden x500 0.11, DebugShapes 0.008, bounding boxes All 1.18, statistics 0.22. About 3 ms in total, so it does not explain a precipitous drop. The likely cost is SwiftUI: every drag step bumps transformRevision, which the tree rows (isHidden, isVisible, lock), the inspector and the decorations closures all read, so the whole sidebar List and inspector re-render every frame. That needs an Instruments trace to confirm. Punting until then. Unblocker: an Instruments trace (SwiftUI and Time Profiler templates) of a 5-second gizmo drag in a scene of about 100 nodes, or permission to change transformRevision into a separate drag counter that only the inspector's transform fields read. Also worth doing anyway: make editorState cheaper (1.4 ms per body pass).
 
 ---
 
