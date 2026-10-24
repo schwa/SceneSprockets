@@ -4359,3 +4359,23 @@ created: 2026-10-24T15:49:27Z
 All edits made by one AI response should be grouped into a single undo action, so one Undo reverts the whole request (e.g. "make 8 spheres" or "align selected"). Related: #200.
 
 ---
+
+## 204: Composer: crash when saving on quit (MainActor.assumeIsolated in snapshot)
+
++++
+status: new
+priority: critical
+kind: bug
+labels: area:composer,area:document,effort:s
+created: 2026-10-24T16:07:51Z
++++
+
+Quitting with unsaved changes crashes with EXC_BREAKPOINT in dispatch_assert_queue, from ComposerDocument.snapshot(contentType:) at ComposerDocument.swift:70.
+
+Cause: snapshot calls MainActor.assumeIsolated to write editor.json (#185) and Preview.png (#175). That assumes SwiftUI always takes the snapshot on the main thread, which is wrong. When saving on quit, AppKit runs -[NSDocument writeSafelyToURL:...] on a background queue (com.apple.root.default-qos), and ReferenceFileDocumentBox.snapshotForSerialization calls snapshot there. The main thread is blocked meanwhile in NSDocument _waitForUserInteractionUnblocking, so hopping to the main actor synchronously would deadlock.
+
+Note: the scene archive write in the same function also reads the live scene graph off the main thread. The comment 'on the main actor' is wrong in this path.
+
+Possible fix: capture what the save needs on the main actor ahead of time, and keep snapshot free of main-actor access. For example, update a stored editor state and a rendered preview image when the document changes or on the save action. Or render the preview on a background-safe path (DocumentPreview uses Metal only, plus SceneGraph reads). Regression test: call snapshot(contentType:) from a detached task or background queue and check that it returns.
+
+---
