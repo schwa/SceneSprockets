@@ -4506,3 +4506,45 @@ Use EditorModel.editedPBR so edits stay undoable and keep textures. Sliders need
 - `2026-10-24T17:04:01Z`: Related: #198 (basic material editing).
 
 ---
+
+## 209: Composer: light inspector
+
++++
+status: new
+priority: medium
+kind: feature
+labels: area:composer, effort:s
+created: 2026-10-24T17:47:53Z
++++
+
+Selecting a light node shows only Node and Transform, plus spot cone angles for spot lights. Add a Light section that edits every Light field: type (directional, point, spot), color (linear, ColorPicker), intensity, range (with an infinite toggle; point and spot only), and inner and outer cone angles (spot only, keep the existing AngleEditor). Also show the light's categoryBitMask if lights use one. Edits go through EditorModel.setLight, so they stay undoable. Inner cone must stay at or below outer. Disabled when the node is locked. Possibly add 'casts shadows' if SceneGraphShadows gets per-light settings (#88).
+
+---
+
+## 210: Composer: Drop to Floor command
+
++++
+status: new
+priority: medium
+kind: feature
+labels: area:composer, effort:s
+created: 2026-10-24T17:47:53Z
++++
+
+Add a 'Drop to Floor' command (Scene menu, node context menu, maybe a shortcut) that moves each selected node down or up so the bottom of its world bounds sits at y = 0. Keep x and z. Use SceneGraph.worldBounds(of:) and adjust the local translation through the parent's world transform, so nested and rotated nodes land correctly. Apply it to every selected, unlocked node in one undo step (EditorModel.editSelection). Skip nodes without bounds (empty nodes, lights, cameras). Optional later: drop onto the nearest mesh below with a downward hit test instead of y = 0. Also expose it to the assistant (an update option or its own tool).
+
+---
+
+## 211: Composer: show bounding boxes
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:composer,effort:s
+created: 2026-10-24T17:47:54Z
++++
+
+Add a Render settings toggle 'Bounding Boxes' that draws world-space bounding boxes as wireframe boxes: for the selected nodes (always, or with the toggle), and optionally for every mesh node. Draw with MetalSprocketsAddOns GraphicsContext3D in the scene pass decorations, as DebugShapes does (#188). Use SceneGraph.worldBounds(of:); hidden or inactive nodes have none. Selected boxes in the accent color, others faint. Saved in editor.json with the other render settings.
+
+---
