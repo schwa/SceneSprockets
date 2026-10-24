@@ -4560,11 +4560,12 @@ Add a Render settings toggle 'Bounding Boxes' that draws world-space bounding bo
 ## 212: SceneGraph.flattened() mutates an observed property, crashing SwiftUI when statistics are shown
 
 +++
-status: new
+status: open
 priority: high
 kind: bug
 labels: area:scenegraph, area:ui, effort:xs
 created: 2026-10-24T18:07:22Z
+updated: 2026-10-24T18:32:38Z
 +++
 
 Composer crashed with 'AttributeGraph precondition failure: setting value during update' when the Statistics overlay was on.
@@ -4584,11 +4585,12 @@ The other log lines (DetachedSignatures, ViewBridge error 18, NSColorPicker past
 ## 213: Composer: Insert Model File for a .gltf should explain and offer to pick the resource folder
 
 +++
-status: new
+status: open
 priority: high
 kind: bug
 labels: area:composer, effort:s
 created: 2026-10-24T18:29:52Z
+updated: 2026-10-24T18:32:38Z
 +++
 
 Follow-up to #206. Picking a .gltf whose buffers and images are separate files gives no clue why its resources did not load. #206 sets isChoosingFolder = true right after the first file importer returns, to show a second, folder-only importer. In practice the user sees nothing useful. My guess, unverified: the second importer does not appear because it is presented while the first one is still dismissing. The insert then never happens, or happens without its resources.
@@ -4601,16 +4603,19 @@ On Cancel, either insert nothing, or insert with the missing resources and say c
 
 Also: if the folder importer is cancelled or the wrong folder is chosen, say so in the alert instead of failing silently. Present the folder importer from the alert's button action, not the first importer's completion, so it cannot be swallowed. Count the referenced files with the same JSON scan as ModelFile.needsFolderAccess, so the message can give the number.
 
+- `2026-10-24T18:32:38Z`: Related: #206 (folder access).
+
 ---
 
 ## 214: Gizmo and overlays flicker: probably a Metal 4 synchronization problem (barriers)
 
 +++
-status: new
+status: open
 priority: high
 kind: bug
 labels: area:renderer, area:ui, effort:m
 created: 2026-10-24T18:30:46Z
+updated: 2026-10-24T18:32:38Z
 +++
 
 The transform gizmo started flickering in the Composer. Likely a Metal 4 hazard: Metal 4 does not track resource hazards or order passes, so every read-after-write between passes, and between frames, needs an explicit barrier. Not confirmed yet; needs a GPU capture of a bad frame. Ruled out so far: GraphicsContext3DRenderPipeline makes new buffers instead of rewriting them, and ParameterSet retains (makes resident) bound buffers per submission (ParameterSet.swift:244). Uniforms are bound by value.
@@ -4633,11 +4638,12 @@ Probably belongs partly in MetalSprockets: a missing frame-to-frame barrier for 
 ## 215: Composer: frame rate drops sharply while dragging
 
 +++
-status: new
+status: open
 priority: high
 kind: bug
-labels: area:composer,area:ui,effort:m
+labels: area:composer, area:ui, effort:m
 created: 2026-10-24T18:31:12Z
+updated: 2026-10-24T18:32:38Z
 +++
 
 The frame rate drops a lot while dragging, at least with the gizmo; camera orbit not checked yet. Cause not measured yet. Profile first (Instruments Time Profiler plus SwiftUI, and the Frame Timing overlay's CPU phases) before changing anything.
@@ -4651,5 +4657,7 @@ Suspects from the code, unverified:
 - statistics (if on) flatten the whole graph every 0.5 s (#212)
 
 Fix direction: keep drag updates out of SwiftUI's view graph (separate the drag revision from the observed transformRevision, or throttle UI refresh during a drag), make editorState cheap or update it only on drag end, and cache geometry that does not change. Add a benchmark: N nodes, a simulated gizmo drag for M frames, measure main-thread time.
+
+- `2026-10-24T18:32:38Z`: Related: #212 (statistics flatten the graph) and #214 (overlays rebuilt every frame).
 
 ---
