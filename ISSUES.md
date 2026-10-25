@@ -4960,17 +4960,19 @@ From a concurrency review. The SceneSprocketsComposer, SceneSprocketsQuickLook a
 ## 230: Composer: replace the Task.yield ordering hack in the folder importer
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:composer, effort:xs
 created: 2026-10-24T22:32:51Z
-updated: 2026-10-24T23:51:38Z
+updated: 2026-10-25T00:11:39Z
+closed: 2026-10-25T00:11:39Z
 +++
 
 From a concurrency review. ComposerView's folder importer (#213) reports 'not inserted' on cancel from .onChange(of: isChoosingFolder) by starting Task { @MainActor in await Task.yield(); ... }, hoping the importer's completion has run by then. yield() does not guarantee that, so a successful pick can still show the cancel message first. Replace it with state: store the importer result, or drop the separate cancel message for the panel and keep only the alert's explicit Cancel. Avoid unstructured tasks for ordering.
 
 - `2026-10-24T23:51:40Z`: Related: #213 (introduced the hack).
+- `2026-10-25T00:11:39Z`: Fixed with fileImporter's onCancellation callback (the allowsMultipleSelection variant) instead of onChange + Task.yield. No unit test: the file panel can't be driven from tests. Verify by hand: insert a .gltf with external buffers, choose Cancel in the folder panel; then repeat and pick the right folder (no cancel message should appear).
 
 ---
 

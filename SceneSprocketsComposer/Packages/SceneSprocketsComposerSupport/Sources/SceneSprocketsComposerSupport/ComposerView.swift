@@ -136,32 +136,24 @@ public struct ComposerView: View {
             // images are separate files, which the sandbox does not grant with the file (#206). As in the
             // MetalSprocketsGLTF GLTFViewer demo.
             Color.clear
-                .fileImporter(isPresented: $isChoosingFolder, allowedContentTypes: [.folder]) { result in
+                // onCancellation reports Cancel directly, so no ordering against the completion is needed (#230).
+                .fileImporter(isPresented: $isChoosingFolder, allowedContentTypes: [.folder], allowsMultipleSelection: false) { result in
                     if let file = fileNeedingFolder {
-                        switch result {
-                        case .success(let folder) where ModelFile.isFile(file, inside: folder):
+                        switch result.map(\.first) {
+                        case .success(let folder?) where ModelFile.isFile(file, inside: folder):
                             insertModel(file, scopedURL: folder)
-                        case .success(let folder):
+                        case .success(let folder?):
                             insertMessage = FolderAccessRequest.wrongFolderMessage(file: file, folder: folder)
-                        case .failure:
+                        case .success(nil), .failure:
                             insertMessage = FolderAccessRequest.cancelledMessage(file: file)
                         }
                     }
                     fileNeedingFolder = nil
-                }
-                .onChange(of: isChoosingFolder) { _, isChoosing in
-                    // Cancel may report no result, so say what happened. Checked a turn later, because the completion
-                    // above may run after this when a folder was chosen; it clears fileNeedingFolder.
-                    guard !isChoosing else {
-                        return
+                } onCancellation: {
+                    if let file = fileNeedingFolder {
+                        insertMessage = FolderAccessRequest.cancelledMessage(file: file)
                     }
-                    Task { @MainActor in
-                        await Task.yield()
-                        if !isChoosingFolder, let file = fileNeedingFolder {
-                            insertMessage = FolderAccessRequest.cancelledMessage(file: file)
-                            fileNeedingFolder = nil
-                        }
-                    }
+                    fileNeedingFolder = nil
                 }
                 .fileDialogMessage("\(fileNeedingFolder?.lastPathComponent ?? "This file") loads other files from its folder. Choose that folder to allow access.")
                 .fileDialogDefaultDirectory(fileNeedingFolder?.deletingLastPathComponent())
