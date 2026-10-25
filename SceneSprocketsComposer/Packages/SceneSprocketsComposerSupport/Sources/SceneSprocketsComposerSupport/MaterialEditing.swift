@@ -92,12 +92,32 @@ extension EditorModel {
 
     // The same color as the other kind. Textures are not carried over.
     static func converted(_ material: any SceneSprockets.Material, to kind: MaterialKind, device: MTLDevice) throws -> any SceneSprockets.Material {
-        let color = baseColor(of: material)
+        try converted(color: baseColor(of: material), to: kind, device: device)
+    }
+
+    static func converted(color: SIMD3<Float>, to kind: MaterialKind, device: MTLDevice) throws -> any SceneSprockets.Material {
         switch kind {
         case .blinnPhong:
             return BlinnPhongSceneMaterial(ambient: .color(color * 0.1), diffuse: .color(color), specular: .color(0.5), shininess: 32)
         case .pbr:
             return try PBRSceneMaterial(device: device, baseColor: SIMD4(color, 1), metallic: 0, roughness: 0.5)
+        }
+    }
+
+    // Applies `edits` to material `index` of `node`, or to every material when `index` is nil, as one undo step
+    // (#239). Materials an edit does not fit (another type, a textured channel) are left as they are. Throws before
+    // changing anything if a material cannot be built.
+    func editMaterials(of node: SceneGraph.Node, at index: Int? = nil, actionName: String, _ edits: [MaterialEdit]) throws {
+        let materials = materials(of: node)
+        let indices = index.map { materials.indices.contains($0) ? [$0] : [] } ?? Array(materials.indices)
+        let device = systemDefaultDevice()
+        let edited = try indices.compactMap { index in
+            try MaterialEdit.applying(edits, to: materials[index], device: device).map { (index, $0) }
+        }
+        transaction(actionName) {
+            for (index, material) in edited {
+                setMaterial(material, at: index, of: node, actionName: actionName)
+            }
         }
     }
 

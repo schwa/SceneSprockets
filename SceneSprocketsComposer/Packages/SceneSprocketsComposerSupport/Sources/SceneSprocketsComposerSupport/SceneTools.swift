@@ -375,8 +375,7 @@ final class SceneTools {
         guard !change.isEmpty else {
             return
         }
-        let materials = model.materials(of: node)
-        guard !materials.isEmpty else {
+        guard !model.materials(of: node).isEmpty else {
             throw ToolError("\(id(for: node)) has no mesh, so it has no material.")
         }
         let newColor = try change.color.map { try Self.vector($0, name: "color") }
@@ -386,44 +385,31 @@ final class SceneTools {
             }
             return preset
         }
-        let device = systemDefaultDevice()
-        for (index, original) in materials.enumerated() {
-            var material = original
-            if let preset {
-                material = try preset.material(color: newColor ?? EditorModel.baseColor(of: material), device: device)
-            } else if change.needsPBR, material is BlinnPhongSceneMaterial {
-                material = try EditorModel.converted(material, to: .pbr, device: device)
-            }
-            switch material {
-            case var blinnPhong as BlinnPhongSceneMaterial:
-                if let newColor {
-                    blinnPhong.diffuse = .color(newColor)
-                }
-                material = blinnPhong
-            case let pbr as PBRSceneMaterial:
-                material = try EditorModel.editedPBR(pbr, device: device) { uniforms in
-                    // A preset already used the color, and glass keeps clear white.
-                    if let newColor, preset == nil {
-                        uniforms.baseColorFactor = SIMD4(newColor, uniforms.baseColorFactor.w)
-                    }
-                    if let metallic = change.metallic {
-                        uniforms.metallicFactor = Float(metallic)
-                    }
-                    if let roughness = change.roughness {
-                        uniforms.roughnessFactor = Float(roughness)
-                    }
-                    if let transmission = change.transmission {
-                        uniforms.transmissionFactor = Float(min(max(transmission, 0), 1))
-                    }
-                    if let ior = change.ior {
-                        uniforms.ior = Float(max(ior, 1))
-                    }
-                }
-            default:
-                continue
-            }
-            model.setMaterial(material, at: index, of: node)
+        var edits: [MaterialEdit] = []
+        // A preset takes the new color (glass keeps clear white); otherwise the color is set directly.
+        if let newColor {
+            edits.append(.baseColor(newColor))
         }
+        if let preset {
+            edits.append(.preset(preset))
+        } else if change.needsPBR {
+            edits.append(.kind(.pbr))
+        }
+        edits.append(.uniforms { uniforms in
+            if let metallic = change.metallic {
+                uniforms.metallicFactor = Float(metallic)
+            }
+            if let roughness = change.roughness {
+                uniforms.roughnessFactor = Float(roughness)
+            }
+            if let transmission = change.transmission {
+                uniforms.transmissionFactor = Float(min(max(transmission, 0), 1))
+            }
+            if let ior = change.ior {
+                uniforms.ior = Float(max(ior, 1))
+            }
+        })
+        try model.editMaterials(of: node, actionName: "Material", edits)
     }
 
     private static func vector(_ values: [Double], name: String) throws -> SIMD3<Float> {

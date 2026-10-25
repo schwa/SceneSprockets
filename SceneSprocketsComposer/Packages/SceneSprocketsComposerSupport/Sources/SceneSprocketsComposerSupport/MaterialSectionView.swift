@@ -26,7 +26,9 @@ struct MaterialSectionView: View {
                         Menu("Presets") {
                             ForEach(MaterialPreset.allCases) { preset in
                                 Button(preset.rawValue) {
-                                    applyPreset(preset, to: material)
+                                    if let node = model.selectedNode {
+                                        try? model.editMaterials(of: node, at: index, actionName: "\(preset.rawValue) Material", [.preset(preset)])
+                                    }
                                 }
                             }
                         }
@@ -48,13 +50,6 @@ struct MaterialSectionView: View {
             }
             .disabled(isLocked)
         }
-    }
-
-    private func applyPreset(_ preset: MaterialPreset, to material: any SceneSprockets.Material) {
-        guard let node = model.selectedNode, let replacement = try? preset.material(color: EditorModel.baseColor(of: material), device: systemDefaultDevice()) else {
-            return
-        }
-        model.setMaterial(replacement, at: index, of: node, actionName: "\(preset.rawValue) Material")
     }
 
     @ViewBuilder

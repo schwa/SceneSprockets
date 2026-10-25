@@ -118,7 +118,7 @@ extension EditorModel {
         get { self[material: index] as? BlinnPhongSceneMaterial }
         set {
             if let node = selectedNode, let newValue {
-                setMaterial(newValue, at: index, of: node, actionName: actionName)
+                try? editMaterials(of: node, at: index, actionName: actionName, [.blinnPhong { $0 = newValue }])
             }
         }
     }
@@ -126,11 +126,8 @@ extension EditorModel {
     subscript(pbrUniforms index: Int, actionName actionName: String) -> PBRMaterialUniforms? {
         get { (self[material: index] as? PBRSceneMaterial)?.pbrMaterial.uniforms }
         set {
-            guard let node = selectedNode, let newValue, let material = self[material: index] as? PBRSceneMaterial else {
-                return
-            }
-            if let edited = try? Self.editedPBR(material, device: systemDefaultDevice(), { $0 = newValue }) {
-                setMaterial(edited, at: index, of: node, actionName: actionName)
+            if let node = selectedNode, let newValue {
+                try? editMaterials(of: node, at: index, actionName: actionName, [.uniforms { $0 = newValue }])
             }
         }
     }
@@ -138,11 +135,8 @@ extension EditorModel {
     subscript(pbrDoubleSided index: Int) -> Bool {
         get { (self[material: index] as? PBRSceneMaterial)?.pbrMaterial.doubleSided ?? false }
         set {
-            guard let node = selectedNode, let material = self[material: index] as? PBRSceneMaterial else {
-                return
-            }
-            if let edited = try? Self.editedPBR(material, device: systemDefaultDevice(), doubleSided: newValue) {
-                setMaterial(edited, at: index, of: node, actionName: "Double Sided")
+            if let node = selectedNode {
+                try? editMaterials(of: node, at: index, actionName: "Double Sided", [.doubleSided(newValue)])
             }
         }
     }
@@ -150,11 +144,8 @@ extension EditorModel {
     subscript(materialKind index: Int) -> MaterialKind? {
         get { self[material: index].flatMap(MaterialKind.init) }
         set {
-            guard let node = selectedNode, let newValue, let material = self[material: index] else {
-                return
-            }
-            if let converted = try? Self.converted(material, to: newValue, device: systemDefaultDevice()) {
-                setMaterial(converted, at: index, of: node, actionName: "Material Type")
+            if let node = selectedNode, let newValue {
+                try? editMaterials(of: node, at: index, actionName: "Material Type", [.kind(newValue)])
             }
         }
     }

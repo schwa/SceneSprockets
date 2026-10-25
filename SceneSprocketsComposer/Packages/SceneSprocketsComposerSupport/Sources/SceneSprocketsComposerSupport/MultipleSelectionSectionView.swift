@@ -87,22 +87,7 @@ extension EditorModel {
     // The main color of each of the node's materials: Blinn-Phong diffuse or PBR base color. Textured channels keep
     // their texture.
     func setBaseColor(_ color: SIMD3<Float>, of node: SceneGraph.Node) {
-        for (index, material) in materials(of: node).enumerated() {
-            switch material {
-            case var blinnPhong as BlinnPhongSceneMaterial:
-                guard case .color = blinnPhong.diffuse else {
-                    continue
-                }
-                blinnPhong.diffuse = .color(color)
-                setMaterial(blinnPhong, at: index, of: node, actionName: "Color")
-            case let pbr as PBRSceneMaterial:
-                if let edited = try? EditorModel.editedPBR(pbr, device: systemDefaultDevice(), { $0.baseColorFactor = SIMD4(color, $0.baseColorFactor.w) }) {
-                    setMaterial(edited, at: index, of: node, actionName: "Color")
-                }
-            default:
-                continue
-            }
-        }
+        try? editMaterials(of: node, actionName: "Color", [.baseColor(color)])
     }
 }
 

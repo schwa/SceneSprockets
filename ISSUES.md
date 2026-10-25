@@ -5184,12 +5184,13 @@ Tests: offMainSnapshotSavesTheCapturedScene (failed before the fix: saved the li
 ## 239: Architecture: one material editing module (PBR rebuild, kinds, presets, parameters)
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:composer, area:materials, architecture, effort:m
 created: 2026-10-25T00:27:38Z
-updated: 2026-10-25T00:33:41Z
+updated: 2026-10-25T00:54:19Z
+closed: 2026-10-25T00:54:19Z
 +++
 
 From an architecture review (deepening candidate 4).
@@ -5198,6 +5199,14 @@ Problem: the PBR material is a class whose uniforms are mutated in place and sha
 Dependency category: local-substitutable (system default Metal device).
 Direction: a material editing module that takes value-level edits (property, kind, preset, color) and returns or applies the rebuilt material through the edit/undo path.
 Tests: replace the separate material-type, preset, PBR-edit and glass tests with one 'edit material property, check the result and undo' suite.
+
+\- `2026-10-25T00:54:18Z`: Design and implementation: edits are values, applied in one place.
+- MaterialEdit enum: kind, preset, baseColor, uniforms (closure), doubleSided, blinnPhong (closure). MaterialEdit.applying(_ edits:to:device:) applies a list to one material and returns the new material, or nil if nothing applied.
+- It works on a draft, so PBR uniform and double-sided changes pile up and the PBRMaterial is rebuilt once, keeping textures and render state. Edits that don't fit (uniforms on Blinn-Phong, color on a textured diffuse, kind already set) are skipped.
+- EditorModel.editMaterials(of:at:actionName:_:) throws, builds every edited material first, then sets them in one transaction (one undo step, nothing changed on error).
+- Callers moved: inspector material subscripts (kind, uniforms, double-sided, Blinn-Phong), the preset menu, setBaseColor (multiple selection) and SceneTools' material update (previously ~40 lines of its own conversion and rebuild logic). Only MaterialEdit calls editedPBR and converted now.
+Behavior: SceneTools applying a preset and metallic/roughness now rebuilds the PBR material once instead of twice. Kind on the same kind is a no-op, where it used to rebuild PBR and drop textures.
+Tests: materialEditsApplyAsValues replaces materialEditsReplaceAndUndo (kind, skip rules, combined PBR edits that keep textures, presets with color, glass). A preset+uniforms case was added to the edit/undo boundary test. Existing PBR-parameter and glass tests pass unchanged.
 
 ---
 

@@ -53,6 +53,7 @@ struct SceneEditBoundaryTests {
             model.setLight(value, of: light)
         },
         Edit(actionName: "Color") { model, _ in model.editSelection("Color") { model, node in model.setBaseColor([1, 0, 0], of: node) } },
+        Edit(actionName: "Metal Material") { model, node in try? model.editMaterials(of: node, at: 0, actionName: "Metal Material", [.preset(.metal), .uniforms { $0.roughnessFactor = 0.6 }]) },
         Edit(actionName: "Environment Rotation") { model, _ in model[environment: "Environment Rotation"].rotationDegrees = 45 },
         Edit(actionName: "Drop to Floor") { model, _ in model.dropSelectionToFloor() },
     ]
@@ -405,37 +406,36 @@ struct SceneEditBoundaryTests {
 
 // #198
 @MainActor
-@Test func materialEditsReplaceAndUndo() throws {
+@Test func materialEditsApplyAsValues() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
-    let model = EditorModel(sceneGraph: SceneGraph.empty())
-    model.addShape(.box(), label: "Box")
-    let node = try #require(model.selectedNode)
-    let undoManager = UndoManager()
-    undoManager.groupsByEvent = false
-    model.undoManager = undoManager
-    let original = try #require(model.materials(of: node).first as? BlinnPhongSceneMaterial)
+    let blinnPhong = BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color([0.2, 0.4, 0.6]), specular: .color(0.5), shininess: 32)
 
-    // Blinn-Phong to PBR keeps the color.
-    undoManager.beginUndoGrouping()
-    model.setMaterial(try EditorModel.converted(original, to: .pbr, device: device), at: 0, of: node)
-    undoManager.endUndoGrouping()
-    let pbr = try #require(model.materials(of: node).first as? PBRSceneMaterial)
-    #expect(EditorModel.baseColor(of: pbr) == EditorModel.baseColor(of: original))
+    // Kind: converts keeping the color; no change when already that kind.
+    let pbr = try #require(try MaterialEdit.applying([.kind(.pbr)], to: blinnPhong, device: device) as? PBRSceneMaterial)
+    #expect(EditorModel.baseColor(of: pbr) == [0.2, 0.4, 0.6])
+    #expect(try MaterialEdit.applying([.kind(.blinnPhong)], to: blinnPhong, device: device) == nil)
 
-    // PBR edits make a copy that keeps the textures and leaves the original alone.
-    let edited = try EditorModel.editedPBR(pbr, device: device) { $0.roughnessFactor = 0.9 }
+    // Edits that do not fit the material are skipped.
+    #expect(try MaterialEdit.applying([.uniforms { $0.roughnessFactor = 1 }, .doubleSided(true)], to: blinnPhong, device: device) == nil)
+    var textured = blinnPhong
+    textured.diffuse = .texture(try #require(device.makeTexture(descriptor: .texture2DDescriptor(pixelFormat: .rgba8Unorm, width: 1, height: 1, mipmapped: false))))
+    #expect(try MaterialEdit.applying([.baseColor([1, 0, 0])], to: textured, device: device) == nil)
+
+    // Several PBR edits make one copy that keeps the textures and leaves the original alone.
+    let edited = try #require(try MaterialEdit.applying([.uniforms { $0.roughnessFactor = 0.9 }, .doubleSided(true), .baseColor([1, 0, 0])], to: pbr, device: device) as? PBRSceneMaterial)
     #expect(edited.pbrMaterial.uniforms.roughnessFactor == 0.9)
+    #expect(edited.pbrMaterial.doubleSided)
+    #expect(edited.pbrMaterial.uniforms.baseColorFactor == [1, 0, 0, 1])
     #expect(pbr.pbrMaterial.uniforms.roughnessFactor == 0.5)
     #expect(zip(edited.pbrMaterial.textureBindings, pbr.pbrMaterial.textureBindings).allSatisfy { $0.texture === $1.texture })
 
-    // Presets.
-    let metal = try MaterialPreset.metal.material(color: [1, 0, 0], device: device)
+    // Presets use the color set before them; glass stays clear white.
+    let metal = try #require(try MaterialEdit.applying([.baseColor([1, 0, 0]), .preset(.metal)], to: blinnPhong, device: device) as? PBRSceneMaterial)
     #expect(metal.pbrMaterial.uniforms.metallicFactor == 1)
     #expect(metal.pbrMaterial.uniforms.baseColorFactor == [1, 0, 0, 1])
-    #expect(try MaterialPreset.glass.material(color: [1, 0, 0], device: device).pbrMaterial.uniforms.transmissionFactor == 1)
-
-    undoManager.undo()
-    #expect(model.materials(of: node).first is BlinnPhongSceneMaterial)
+    let glass = try #require(try MaterialEdit.applying([.baseColor([1, 0, 0]), .preset(.glass)], to: blinnPhong, device: device) as? PBRSceneMaterial)
+    #expect(glass.pbrMaterial.uniforms.transmissionFactor == 1)
+    #expect(glass.pbrMaterial.uniforms.baseColorFactor == [1, 1, 1, 1])
 }
 
 // #197
