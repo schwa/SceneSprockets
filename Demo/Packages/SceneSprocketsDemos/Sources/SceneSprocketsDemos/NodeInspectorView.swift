@@ -51,10 +51,10 @@ private struct TransformSectionView: View {
 
     var body: some View {
         Section("Transform") {
-            VectorRow(label: "Position", value: transform.columns.3.xyz)
-            VectorRow(label: "X Axis", value: transform.columns.0.xyz)
-            VectorRow(label: "Y Axis", value: transform.columns.1.xyz)
-            VectorRow(label: "Z Axis", value: transform.columns.2.xyz)
+            VectorRowView(label: "Position", value: transform.columns.3.xyz)
+            VectorRowView(label: "X Axis", value: transform.columns.0.xyz)
+            VectorRowView(label: "Y Axis", value: transform.columns.1.xyz)
+            VectorRowView(label: "Z Axis", value: transform.columns.2.xyz)
         }
     }
 }
@@ -65,7 +65,7 @@ private struct LightSectionView: View {
     var body: some View {
         Section("Light") {
             LabeledContent("Type", value: typeName)
-            ColorRow(label: "Color", value: light.color)
+            ColorRowView(label: "Color", value: light.color)
             LabeledContent("Intensity") { Text(light.intensity, format: .number.precision(.fractionLength(1))) }
             LabeledContent("Range") { Text(light.range, format: .number.precision(.fractionLength(1))) }
         }
@@ -107,7 +107,7 @@ private struct MeshSectionView: View {
     private func colorSourceRow(label: String, source: BlinnPhongSceneMaterial.Source) -> some View {
         switch source {
         case .color(let color):
-            ColorRow(label: label, value: color)
+            ColorRowView(label: label, value: color)
         default:
             LabeledContent(label, value: "Texture")
         }
@@ -116,13 +116,13 @@ private struct MeshSectionView: View {
 
 // MARK: - Supporting Views
 
-private struct VectorRow: View {
+private struct VectorRowView: View {
     var label: String
     var value: SIMD3<Float>
 
     var body: some View {
         LabeledContent(label) {
-            HStack(spacing: 8) {
+            HStack {
                 Text("X \(value.x, specifier: "%.2f")")
                 Text("Y \(value.y, specifier: "%.2f")")
                 Text("Z \(value.z, specifier: "%.2f")")
@@ -133,13 +133,13 @@ private struct VectorRow: View {
     }
 }
 
-private struct ColorRow: View {
+private struct ColorRowView: View {
     var label: String
     var value: SIMD3<Float>
 
     var body: some View {
         LabeledContent(label) {
-            HStack(spacing: 6) {
+            HStack {
                 RoundedRectangle(cornerRadius: 3)
                     .fill(Color(red: Double(value.x), green: Double(value.y), blue: Double(value.z)))
                     .frame(width: 16, height: 16)
@@ -150,4 +150,12 @@ private struct ColorRow: View {
             }
         }
     }
+}
+
+#Preview {
+    Form {
+        VectorRowView(label: "Position", value: [1, 2.5, -3])
+        ColorRowView(label: "Color", value: [0.9, 0.4, 0.1])
+    }
+    .formStyle(.grouped)
 }

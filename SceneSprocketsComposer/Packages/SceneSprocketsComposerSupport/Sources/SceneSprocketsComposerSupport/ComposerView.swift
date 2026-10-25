@@ -71,13 +71,13 @@ public struct ComposerView: View {
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
-                .padding(8)
+                .padding()
                 switch model.sidebarTab {
                 case .scene:
                     SceneTreeView(model: model)
 
                 case .assistant:
-                    AssistantPanel(store: assistantStore)
+                    AssistantPanelView(store: assistantStore)
                 }
             }
             .navigationSplitViewColumnWidth(min: 180, ideal: 300)
@@ -96,8 +96,8 @@ public struct ComposerView: View {
                 }
                 .toolbar {
                     ToolbarItemGroup(placement: .principal) {
-                        AddShapeMenu(model: model)
-                        GizmoToolbarContent(model: model)
+                        AddShapeMenuView(model: model)
+                        GizmoToolbarContentView(model: model)
                         Button("Frame Selection", systemImage: "viewfinder") {
                             model.frameSelection()
                         }
@@ -211,7 +211,7 @@ public struct ComposerView: View {
     }
 }
 
-struct AddShapeMenu: View {
+struct AddShapeMenuView: View {
     var model: EditorModel
 
     var body: some View {
@@ -304,7 +304,7 @@ enum ShapeKind: CaseIterable, Identifiable {
     }()
 }
 
-struct GizmoToolbarContent: View {
+struct GizmoToolbarContentView: View {
     @Bindable var model: EditorModel
 
     var body: some View {

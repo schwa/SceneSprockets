@@ -254,10 +254,11 @@ public struct SceneView: View {
                     let statistics = sceneGraph.statistics
                     Text("\(statistics.meshCount) meshes \u{00B7} \(statistics.triangleCount) triangles \u{00B7} \(statistics.lightCount) lights")
                         .font(.caption.monospacedDigit())
+                        // A tight badge inset; the default padding is too large for caption text.
                         .padding(4)
                         .background(.black.opacity(0.6), in: .rect(cornerRadius: 4))
                         .foregroundStyle(.white)
-                        .padding(8)
+                        .padding()
                 }
             }
         }

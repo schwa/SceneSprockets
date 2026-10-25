@@ -5,7 +5,7 @@ import SwiftUI
 
 // The inspector's Light section (#209): every Light field. `light` writes through EditorModel.setLight, so edits are
 // undoable.
-struct LightSection: View {
+struct LightSectionView: View {
     @Binding var light: Light
     var isLocked: Bool
 
@@ -57,4 +57,20 @@ enum LightEditing {
         }
         return light
     }
+}
+
+#Preview("Spot") {
+    @Previewable @State var light = Light(type: .spot, color: [1, 0.9, 0.8], intensity: 4)
+    Form {
+        LightSectionView(light: $light, isLocked: false)
+    }
+    .formStyle(.grouped)
+}
+
+#Preview("Locked") {
+    @Previewable @State var light = Light(type: .point, color: [1, 1, 1], intensity: 1)
+    Form {
+        LightSectionView(light: $light, isLocked: true)
+    }
+    .formStyle(.grouped)
 }

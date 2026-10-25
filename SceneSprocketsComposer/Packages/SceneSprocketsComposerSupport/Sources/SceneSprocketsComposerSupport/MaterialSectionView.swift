@@ -7,7 +7,7 @@ import SwiftUI
 
 // One inspector section per submesh material of the selected node (#198): kind, presets, colors and the main
 // factors. Textures are kept but not edited; channels that use a texture say so instead of showing a color.
-struct MaterialSection: View {
+struct MaterialSectionView: View {
     @Bindable var model: EditorModel
     var index: Int
     var count: Int
@@ -165,4 +165,13 @@ struct MaterialSection: View {
             }
         }
     }
+}
+
+#Preview {
+    let model = EditorModel(sceneGraph: ComposerDocument().sceneGraph)
+    model.addShape(.box(), label: "Box")
+    return Form {
+        MaterialSectionView(model: model, index: 0, count: 1, isLocked: false)
+    }
+    .formStyle(.grouped)
 }

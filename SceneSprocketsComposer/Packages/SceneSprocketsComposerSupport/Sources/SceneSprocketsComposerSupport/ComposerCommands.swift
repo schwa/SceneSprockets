@@ -83,7 +83,7 @@ public struct ComposerCommands: Commands {
                 .keyboardShortcut(.downArrow, modifiers: [.command, .option])
                 .disabled(model.selectedNode?.parent == nil)
                 Divider()
-                AddShapeMenu(model: model)
+                AddShapeMenuView(model: model)
             } else {
                 Text("No Document")
             }

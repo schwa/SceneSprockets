@@ -57,6 +57,7 @@ private struct CodePanelView: View {
     var fontSize: CGFloat
 
     var body: some View {
+        // A fixed size on purpose: the panel is a slide element scaled to the slide, not UI text.
         Text(SwiftHighlighter.highlight(code))
             .font(.system(size: fontSize, design: .monospaced))
             .multilineTextAlignment(.leading)
@@ -139,4 +140,9 @@ enum SwiftHighlighter {
         }
         return result
     }
+}
+
+#Preview {
+    CodePanelView(code: "let scene = SceneGraph()\nfor node in scene.root.children {\n    print(node)\n}", fontSize: 14)
+        .padding()
 }

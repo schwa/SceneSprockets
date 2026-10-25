@@ -5041,12 +5041,13 @@ Leave as is: AssistantPanel.missingCredentials (static, no inputs) and SceneNode
 ## 234: SwiftUI conventions cleanup: View suffixes, NSEvent, padding, previews
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:composer, area:demo, area:ui, effort:s
 created: 2026-10-24T23:49:33Z
-updated: 2026-10-24T23:51:39Z
+updated: 2026-10-25T00:15:49Z
+closed: 2026-10-25T00:15:49Z
 +++
 
 From a SwiftUI house-rules review.
@@ -5056,6 +5057,8 @@ From a SwiftUI house-rules review.
 - NodeInspectorView ForEach(0..<materialCount, id: \.self) over a range that changes size: iterate materials.indices or give slots stable ids.
 - Previews for leaf views: LightSection, MaterialSection, MultipleSelectionSection, DefaultCameraInspectorView, DefaultLightingInspectorView, Demo SceneNodeRow, VectorRow, ColorRow, CodePanel.
 The Task.yield hack is #230.
+
+- `2026-10-25T00:15:49Z`: Done. Renamed 9 types plus their files to add the View suffix (word-boundary sed). NSEvent replaced with onModifierKeysChanged, stored in the unobserved PointerTracker. Outer paddings now use the default; the statistics badge keeps its 4 pt inset, with a comment. Demo spacings dropped. CodePanel's font size is commented. The materials ForEach uses indices. Previews added: LightSectionView, MaterialSectionView, MultipleSelectionSectionView, DefaultCamera and DefaultLighting inspectors, Demo VectorRow and ColorRow, CodePanelView. Skipped: SceneNodeRowView (needs a DemoScene) and a FolderAccessRequest preview (alert content). Check by hand that Shift-click still extends the selection: onModifierKeysChanged may need the view to be focused.
 
 ---
 

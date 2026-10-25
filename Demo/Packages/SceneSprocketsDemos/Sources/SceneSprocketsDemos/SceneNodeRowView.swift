@@ -2,7 +2,7 @@ import SceneSprockets
 import SwiftUI
 
 // One node in the scene outline, with its children in a disclosure group.
-struct SceneNodeRow: View {
+struct SceneNodeRowView: View {
     var node: SceneGraph.Node
     var scene: DemoScene
     @Binding var selectedNodeID: SceneGraph.Node.ID?
@@ -13,7 +13,7 @@ struct SceneNodeRow: View {
         } else {
             DisclosureGroup {
                 ForEach(node.children) { child in
-                    SceneNodeRow(node: child, scene: scene, selectedNodeID: $selectedNodeID)
+                    SceneNodeRowView(node: child, scene: scene, selectedNodeID: $selectedNodeID)
                 }
             } label: {
                 row

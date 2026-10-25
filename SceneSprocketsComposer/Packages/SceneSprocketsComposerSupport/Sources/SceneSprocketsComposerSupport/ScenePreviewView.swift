@@ -8,6 +8,8 @@ import SwiftUI
 final class PointerTracker {
     var location: SIMD2<Float> = .zero
     var viewSize: SIMD2<Float> = .zero
+    // Held modifier keys; SceneView's tap callback has none.
+    var modifiers: EventModifiers = []
 }
 
 struct ScenePreviewView: View {
@@ -45,7 +47,7 @@ struct ScenePreviewView: View {
                 // Light and camera shapes are drawn on top, so they win over meshes behind them.
                 let shapeHit = settings.showsLightsAndCameras ? DebugShapes.hitTest(point, sceneGraph: model.sceneGraph, viewport: viewport) : nil
                 // Shift-click adds to or removes from the selection (#201).
-                model.pick(shapeHit ?? hit?.node, extending: Self.isExtendingSelection)
+                model.pick(shapeHit ?? hit?.node, extending: pointer.modifiers.contains(.shift))
             },
             decorations: { [selectedIDs = model.selectedIDs, sceneGraph = model.sceneGraph, displayScale, accentColor = Color(.sRGB, red: Double(outlineColor.x), green: Double(outlineColor.y), blue: Double(outlineColor.z))] context, drawableSize in
                 let grid = try settings.decorations(context: context, drawableSize: drawableSize)
@@ -86,6 +88,9 @@ struct ScenePreviewView: View {
             model.deleteSelection()
         }
         #endif
+        .onModifierKeysChanged { _, modifiers in
+            pointer.modifiers = modifiers
+        }
         .onContinuousHover { phase in
             if case let .active(location) = phase {
                 pointer.location = [Float(location.x), Float(location.y)]
@@ -99,14 +104,6 @@ struct ScenePreviewView: View {
         }
     }
 
-    // Read when the tap arrives; SceneView's tap callback has no modifier keys.
-    private static var isExtendingSelection: Bool {
-        #if os(macOS)
-        NSEvent.modifierFlags.contains(.shift)
-        #else
-        false
-        #endif
-    }
 }
 
 // Right-click menu (#220). Each action first selects what is under the pointer, then acts on the selection, so it
@@ -149,7 +146,7 @@ private struct ScenePreviewContextMenuView: View {
             model.deleteSelection()
         }
         Divider()
-        AddShapeMenu(model: model)
+        AddShapeMenuView(model: model)
     }
 
     // Selects the node under the pointer, unless it is already part of the selection (keeps a multiple selection).

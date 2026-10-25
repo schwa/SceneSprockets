@@ -17,7 +17,7 @@ struct DemoInspectorView: View {
             Section("Scene") {
                 // Reading the revision refreshes the outline when the demo changes the hierarchy or visibility.
                 let _ = scene.outlineRevision
-                SceneNodeRow(node: scene.sceneGraph.root, scene: scene, selectedNodeID: $scene.selectedNodeID)
+                SceneNodeRowView(node: scene.sceneGraph.root, scene: scene, selectedNodeID: $scene.selectedNodeID)
             }
             if let node = selectedNode {
                 NodeInspectorView(node: node)

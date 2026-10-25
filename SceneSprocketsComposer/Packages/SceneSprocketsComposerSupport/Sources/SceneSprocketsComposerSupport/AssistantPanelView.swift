@@ -65,7 +65,7 @@ public enum ComposerAssistant {
     }
 }
 
-struct AssistantPanel: View {
+struct AssistantPanelView: View {
     let store: ConversationStore?
     @Environment(CollaborationCredentials.self)
     private var credentials

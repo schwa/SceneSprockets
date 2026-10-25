@@ -13,7 +13,7 @@ struct NodeInspectorView: View {
             Form {
                 let isLocked = model.isLocked(node)
                 if model.selectedIDs.count > 1 {
-                    MultipleSelectionSection(model: model)
+                    MultipleSelectionSectionView(model: model)
                 }
                 Section("Node") {
                     TextField("Name", text: $model.selectedLabel, prompt: Text("Untitled"))
@@ -50,12 +50,12 @@ struct NodeInspectorView: View {
                 }
                 .disabled(isLocked)
                 BoundsSectionView(model: model)
-                let materialCount = model.materials(of: node).count
-                ForEach(0..<materialCount, id: \.self) { index in
-                    MaterialSection(model: model, index: index, count: materialCount, isLocked: isLocked)
+                let materials = model.materials(of: node)
+                ForEach(materials.indices, id: \.self) { index in
+                    MaterialSectionView(model: model, index: index, count: materials.count, isLocked: isLocked)
                 }
                 if let light = Binding($model.selectedLight) {
-                    LightSection(light: light, isLocked: isLocked)
+                    LightSectionView(light: light, isLocked: isLocked)
                 }
             }
             .formStyle(.grouped)

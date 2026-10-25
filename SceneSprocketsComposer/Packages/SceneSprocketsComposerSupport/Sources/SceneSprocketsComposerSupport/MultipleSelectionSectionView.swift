@@ -7,7 +7,7 @@ import SwiftUI
 
 // Shared fields for every selected node (#205), above the primary node's own sections. A toggle shows on when all
 // nodes have it on; setting it sets all of them, as one undo step. Locked nodes are left alone.
-struct MultipleSelectionSection: View {
+struct MultipleSelectionSectionView: View {
     @Bindable var model: EditorModel
 
     var body: some View {
@@ -106,4 +106,15 @@ extension EditorModel {
             }
         }
     }
+}
+
+#Preview {
+    let model = EditorModel(sceneGraph: ComposerDocument().sceneGraph)
+    model.addShape(.box(), label: "A")
+    model.addShape(.sphere(), label: "B")
+    model.select(model.sceneGraph.root.children.map(\.id), primary: nil)
+    return Form {
+        MultipleSelectionSectionView(model: model)
+    }
+    .formStyle(.grouped)
 }

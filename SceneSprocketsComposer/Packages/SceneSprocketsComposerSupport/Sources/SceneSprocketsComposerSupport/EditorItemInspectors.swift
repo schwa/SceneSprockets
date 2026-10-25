@@ -66,3 +66,11 @@ struct DefaultLightingInspectorView: View {
         }
     }
 }
+
+#Preview("Default Camera") {
+    DefaultCameraInspectorView(model: EditorModel(sceneGraph: ComposerDocument().sceneGraph))
+}
+
+#Preview("Default Lighting") {
+    DefaultLightingInspectorView(model: EditorModel(sceneGraph: ComposerDocument().sceneGraph))
+}
