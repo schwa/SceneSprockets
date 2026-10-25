@@ -4912,6 +4912,11 @@ Fix: capture an immutable snapshot on the main actor whenever an undoable edit l
 Test: change the scene, call snapshot from a detached task while the main actor keeps mutating the graph; with Thread Sanitizer, no race is reported and the saved scene matches the captured state.
 
 - `2026-10-24T23:51:40Z`: Related: #232 (editor state copied on every body pass).
+- `2026-10-25T00:01:03Z`: Punted (auto-issue-fixer). Investigated: snapshot builds the whole bundle (SceneArchive.write to a temp dir, including copied model files and textures) and renders Preview.png on the GPU. A capture taken on the main actor therefore costs a full save plus a render. The quit-save path calls snapshot off-main with the main thread blocked (#204), so snapshot cannot hop to the main actor without deadlocking, and SwiftUI has no clean 'about to save' hook to capture just before. Options:
+(a) Capture the full bundle and preview on the main actor after each undo group closes, coalesced to once per runloop turn. Safe and simple, but every edit pays a save plus a render, which is slow for big glTF scenes.
+(b) Build live when snapshot runs on the main thread (normal Save and autosave). Use the last capture from (a) only off-main, so captures are needed only when an app quit might happen; still per-edit cost unless lazily dirtied.
+(c) Capture only the cheap parts (encoded scene JSON plus editor state) per edit, and copy model files and textures and render the preview in snapshot from immutable inputs. Needs SceneArchive split into encode on main and write files anywhere, plus a preview built from a copied graph.
+Unblocker: which trade-off do you want? I suggest (c), it's the most work but has no per-edit GPU cost.
 
 ---
 
