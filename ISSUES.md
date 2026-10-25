@@ -5124,12 +5124,13 @@ Not done: SceneTools and InspectorProperties already go through the setters, so 
 ## 237: Architecture: scene change observation instead of manual revision counters
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: area:composer, area:scenegraph, architecture, effort:l
 created: 2026-10-25T00:27:38Z
-updated: 2026-10-25T00:33:41Z
+updated: 2026-10-25T00:49:49Z
+closed: 2026-10-25T00:49:49Z
 +++
 
 From an architecture review (deepening candidate 2).
@@ -5140,7 +5141,13 @@ Direction: a deep change-tracking module, either in the library (observable or r
 Tests: replace the counter-bump tests and parts of DragPerformanceTests with 'change X, readers of X see it, readers of Y don't re-run' tests.
 Related: #155.
 
-- `2026-10-25T00:33:42Z`: Related: #236.
+\- `2026-10-25T00:33:42Z`: Related: #236.
+\- `2026-10-25T00:49:49Z`: Design call: the change tracking lives in the editor, not the library.
+Why not observable nodes in SceneSprockets (#155): the renderer reads node properties for every node every frame. Observation registrar calls on those hot paths cost something for every app, and nothing outside the editor needs it. After #236 every undoable edit goes through EditorModel.perform, so the editor can be the single owner of change notification.
+Implemented: one private revision per SceneAspects aspect (transform, visibility, label, content, structure, environment). observe(_ aspects:) is the only reader and notify(_ aspects:) the only writer. The '_ = transformRevision' and '_ = localTRS' reads are gone; readers say what they depend on: localTRS .transform; materials and selectedLight .content; isVisible, isActive and isDefaultLighting .visibility (plus structure and content where needed); bounds transform+visibility+content+structure; the tree observes .structure via outlineRoots and labels via displayName(of:).
+Fixes along the way: the tree now refreshes on add, delete and move and on rename (before, it relied on the selection changing). Material and light edits no longer re-run views that only show transforms.
+Remaining direct mutations: gizmo drags (notify(.transform) in continueGizmoDrag) and the temporary set-and-restore in reparentKeepingWorldTransform and dropToFloor (restored before returning).
+Tests: SceneEditBoundaryTests now checks notification through withObservationTracking. New observersOnlySeeTheirAspect. treeRowStateIgnoresDrags still passes.
 
 ---
 

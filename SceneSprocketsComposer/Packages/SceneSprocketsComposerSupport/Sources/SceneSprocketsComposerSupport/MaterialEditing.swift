@@ -54,9 +54,9 @@ enum MaterialPreset: String, CaseIterable, Identifiable {
 }
 
 extension EditorModel {
-    // One per submesh; empty for nodes without a mesh. Reads the revision so views refresh after edits.
+    // One per submesh; empty for nodes without a mesh. Observed, so views refresh after edits.
     func materials(of node: SceneGraph.Node) -> [any SceneSprockets.Material] {
-        _ = transformRevision
+        observe(.content)
         guard case let .mesh(_, materials, _, _) = node.content else {
             return []
         }

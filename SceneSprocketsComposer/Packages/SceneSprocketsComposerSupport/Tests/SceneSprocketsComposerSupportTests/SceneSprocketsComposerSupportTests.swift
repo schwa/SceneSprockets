@@ -75,21 +75,48 @@ struct SceneEditBoundaryTests {
         undoManager.groupsByEvent = false
         model.undoManager = undoManager
         let before = try sceneJSON(model)
-        let revisions = (model.transformRevision, model.visibilityRevision)
+        nonisolated(unsafe) var notified = false
+        withObservationTracking {
+            model.observe([.transform, .visibility, .label, .content, .structure, .environment])
+        } onChange: {
+            notified = true
+        }
         undoManager.beginUndoGrouping()
         edit.apply(model, box)
         undoManager.endUndoGrouping()
         let after = try sceneJSON(model)
         #expect(after != before)
         #expect(undoManager.undoActionName == edit.actionName)
-        // Environment edits are read through model.environment, not the node revisions.
-        if edit.actionName != "Environment Rotation" {
-            #expect(revisions != (model.transformRevision, model.visibilityRevision))
-        }
+        #expect(notified)
         undoManager.undo()
         #expect(try sceneJSON(model) == before)
         undoManager.redo()
         #expect(try sceneJSON(model) == after)
+    }
+
+    // #237: observers of one aspect are not told about others.
+    @Test
+    func observersOnlySeeTheirAspect() throws {
+        let model = EditorModel(sceneGraph: ComposerDocument().sceneGraph)
+        model.addShape(.box(), label: "Box")
+        let box = try #require(model.selectedNode)
+        nonisolated(unsafe) var notified: [String] = []
+        func track(_ name: String, _ aspects: SceneAspects) {
+            withObservationTracking {
+                model.observe(aspects)
+            } onChange: {
+                notified.append(name)
+            }
+        }
+        track("label", .label)
+        track("transform", .transform)
+        track("tree", [.visibility, .label, .structure])
+        model.setTransform(.trs(.init(translation: [1, 0, 0])), of: box, undoTo: box.localTransform)
+        #expect(notified == ["transform"])
+        notified = []
+        track("transform", .transform)
+        model.setLabel("Renamed", of: box)
+        #expect(Set(notified) == ["label", "tree"])
     }
 }
 

@@ -38,7 +38,7 @@ public final class EditorModel {
 
     // Whether the default light is on and in effect: SceneView adds it only when the scene has no lights.
     var isDefaultLightingActive: Bool {
-        _ = visibilityRevision
+        observe([.visibility, .structure, .content])
         return renderSettings.usesDefaultLighting && !Self.containsShownLight(sceneGraph.root)
     }
 
@@ -119,25 +119,45 @@ public final class EditorModel {
         didSet { gizmo.worldSize = baseGizmoWorldSize * gizmoSize.scale }
     }
     @ObservationIgnored private var baseGizmoWorldSize: Float = 1
-    // Nodes are not observable (SceneSprockets #155), so views read these revisions. Only notify(_:) bumps them.
-    // Transforms, node content and structure; bumped while the gizmo drags.
-    public private(set) var transformRevision = 0
-    // What tree rows show: visibility, active, label and structure. Tree rows read this, not transformRevision, so
-    // dragging does not re-render every row (#223).
-    public private(set) var visibilityRevision = 0
+    // Nodes are not observable (SceneSprockets #155), and every edit goes through perform (#236), so the model tracks
+    // scene changes itself: one revision per aspect, read by observe(_:) and bumped by notify(_:) only (#237). A view
+    // that observes .visibility does not re-run while the gizmo drags (#223).
+    private var transformRevision = 0
+    private var visibilityRevision = 0
+    private var labelRevision = 0
+    private var contentRevision = 0
+    private var structureRevision = 0
     private var environmentRevision = 0
 
-    // Tells views that read `aspects` of the scene that they changed.
+    // Makes the current Observation tracking (a view body, withObservationTracking) depend on `aspects`.
+    func observe(_ aspects: SceneAspects) {
+        if aspects.contains(.transform) { _ = transformRevision }
+        if aspects.contains(.visibility) { _ = visibilityRevision }
+        if aspects.contains(.label) { _ = labelRevision }
+        if aspects.contains(.content) { _ = contentRevision }
+        if aspects.contains(.structure) { _ = structureRevision }
+        if aspects.contains(.environment) { _ = environmentRevision }
+    }
+
+    // Tells observers of `aspects` that they changed.
     func notify(_ aspects: SceneAspects) {
-        if !aspects.isDisjoint(with: [.transform, .content, .structure]) {
-            transformRevision += 1
-        }
-        if !aspects.isDisjoint(with: [.visibility, .label, .structure]) {
-            visibilityRevision += 1
-        }
-        if aspects.contains(.environment) {
-            environmentRevision += 1
-        }
+        if aspects.contains(.transform) { transformRevision += 1 }
+        if aspects.contains(.visibility) { visibilityRevision += 1 }
+        if aspects.contains(.label) { labelRevision += 1 }
+        if aspects.contains(.content) { contentRevision += 1 }
+        if aspects.contains(.structure) { structureRevision += 1 }
+        if aspects.contains(.environment) { environmentRevision += 1 }
+    }
+
+    // The scene tree's top level; observing it refreshes the tree when nodes are added, removed or moved.
+    var outlineRoots: [SceneGraph.Node] {
+        observe(.structure)
+        return [sceneGraph.root]
+    }
+
+    func displayName(of node: SceneGraph.Node) -> String {
+        observe(.label)
+        return node.displayName
     }
 
     // The one way to change the scene undoably (#236). Runs `change`, notifies readers of `aspects`, and registers
@@ -243,7 +263,7 @@ public final class EditorModel {
 
     // The scene graph is not observable, so views read the environment through here.
     var environment: SceneGraph.Environment {
-        _ = environmentRevision
+        observe(.environment)
         return sceneGraph.environment
     }
     func setEnvironment(_ environment: SceneGraph.Environment, actionName: String) {
@@ -266,9 +286,9 @@ public final class EditorModel {
         setEnvironment(updated, actionName: "Environment Image")
     }
 
-    // Reads `transformRevision`, so callers refresh while the gizmo drags.
+    // Observes transforms, so callers refresh while the gizmo drags.
     func localTRS(of node: SceneGraph.Node) -> Transform3D {
-        _ = transformRevision
+        observe(.transform)
         return node.localTransform.trs
     }
 
@@ -323,9 +343,9 @@ public final class EditorModel {
         perform(isVisible ? "Show" : "Hide", affecting: .visibility, { _ in node.isVisible = isVisible }, revert: { _ in node.isVisible = !isVisible })
     }
 
-    // The node's own flag; reads the revision so views refresh. Nodes are not observable (#155).
+    // The node's own flag, observed.
     func isVisible(_ node: SceneGraph.Node) -> Bool {
-        _ = visibilityRevision
+        observe(.visibility)
         return node.isVisible
     }
 
@@ -338,13 +358,14 @@ public final class EditorModel {
     }
 
     func isActive(_ node: SceneGraph.Node) -> Bool {
-        _ = visibilityRevision
+        observe(.visibility)
         return node.isActive
     }
 
     // Hidden or inactive, itself or through an ancestor.
     func isHidden(_ node: SceneGraph.Node) -> Bool {
-        _ = visibilityRevision
+        // Moving a node under a hidden parent hides it too.
+        observe([.visibility, .structure])
         var current: SceneGraph.Node? = node
         while let candidate = current {
             if !candidate.isShown {

@@ -5,9 +5,9 @@ import SwiftUI
 
 extension EditorModel {
     // World-space bounds of every selected node, combined (#226). Nil when none has bounds (empty, light, camera,
-    // hidden). Reads transformRevision, so it follows drags.
+    // hidden). Observes transforms, so it follows drags.
     var selectionWorldBounds: BoundingBox3D? {
-        _ = transformRevision
+        observe([.transform, .visibility, .content, .structure])
         return selectedNodes.compactMap(sceneGraph.worldBounds(of:)).reduce(nil) { combined, bounds in
             guard let combined else {
                 return bounds

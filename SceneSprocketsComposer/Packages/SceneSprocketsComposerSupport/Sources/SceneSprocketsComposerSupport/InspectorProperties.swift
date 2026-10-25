@@ -11,7 +11,10 @@ import SwiftUI
 // of building Binding(get:set:) in body (#224). Node properties act on the selected node.
 extension EditorModel {
     var selectedLabel: String {
-        get { selectedNode?.label ?? "" }
+        get {
+            observe(.label)
+            return selectedNode?.label ?? ""
+        }
         set {
             if let node = selectedNode {
                 setLabel(newValue.isEmpty ? nil : newValue, of: node)
@@ -57,13 +60,12 @@ extension EditorModel {
         }
     }
 
-    // Reads the revision (through localTRS) so the inspector refreshes after edits.
     var selectedLight: Light? {
         get {
             guard let node = selectedNode else {
                 return nil
             }
-            _ = localTRS(of: node)
+            observe(.content)
             guard case .light(let light) = node.content else {
                 return nil
             }

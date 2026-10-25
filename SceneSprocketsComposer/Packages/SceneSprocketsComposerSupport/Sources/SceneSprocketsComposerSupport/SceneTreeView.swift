@@ -16,9 +16,9 @@ struct SceneTreeView: View {
             Label("Default Lighting", systemImage: "lightbulb.max")
                 .foregroundStyle(model.isDefaultLightingActive ? .primary : .secondary)
                 .tag(TreeItem.editor(.defaultLighting))
-            OutlineGroup([model.sceneGraph.root], children: \.outlineChildren) { node in
+            OutlineGroup(model.outlineRoots, children: \.outlineChildren) { node in
                 HStack {
-                    Label(node.displayName, systemImage: node.systemImage)
+                    Label(model.displayName(of: node), systemImage: node.systemImage)
                         .opacity(model.isHidden(node) ? 0.45 : 1)
                     Spacer()
                     visibilityButton(node)
