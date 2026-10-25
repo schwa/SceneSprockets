@@ -488,6 +488,58 @@ struct SceneEditBoundaryTests {
     #expect(vertexCounts == [3])
 }
 
+// #157: an inserted glTF is one unit: its inside is locked, a click picks the model, and saving keeps the file.
+@MainActor
+@Test func insertedGLTFIsKeptByReference() throws {
+    let positions: [Float] = [0, 0, 0, 1, 0, 0, 0, 1, 0]
+    let indices: [UInt16] = [0, 1, 2, 0]
+    let buffer = (positions.withUnsafeBytes { Data($0) } + indices.withUnsafeBytes { Data($0) }).base64EncodedString()
+    let json = """
+    {"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],"nodes":[{"name":"Tri","mesh":0}],
+    "meshes":[{"primitives":[{"attributes":{"POSITION":0},"indices":1}]}],
+    "accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3","max":[1,1,0],"min":[0,0,0]},
+    {"bufferView":1,"componentType":5123,"count":3,"type":"SCALAR"}],
+    "bufferViews":[{"buffer":0,"byteLength":36},{"buffer":0,"byteOffset":36,"byteLength":6}],
+    "buffers":[{"byteLength":44,"uri":"data:application/octet-stream;base64,\(buffer)"}]}
+    """
+    let gltf = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
+    defer { try? FileManager.default.removeItem(at: gltf) }
+    try json.write(to: gltf, atomically: true, encoding: .utf8)
+
+    let document = ComposerDocument()
+    let model = EditorModel(sceneGraph: document.sceneGraph)
+    try model.insertModel(from: gltf)
+    let root = try #require(model.selectedNode)
+    #expect(root.modelSource != nil)
+    let inside = try #require(model.sceneGraph.nodesWithWorldTransforms(includeHidden: true).map(\.node).first { $0 !== root && root.isAncestor(of: $0) })
+    #expect(model.isLocked(inside))
+    #expect(!model.isLocked(root))
+    model.selection = nil
+    model.pick(inside)
+    #expect(model.selectedNode === root)
+    // Nothing can be added inside the model, which is saved as its file.
+    #expect(!model.canAddChildren(to: root))
+    model.addShape(.box(), label: "Box")
+    let box = try #require(model.selectedNode)
+    #expect(!model.reparent(box, to: root))
+    model.selection = root.id
+    try model.insertModel(from: gltf)
+    #expect(model.selectedNode?.parent === model.sceneGraph.root)
+    model.delete(try #require(model.selectedNode))
+    model.delete(box)
+    root.trs.translation = [2, 0, 0]
+
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("scenesprocketsd")
+    defer { try? FileManager.default.removeItem(at: url) }
+    try document.snapshot(contentType: .sceneSprocketsDocument).write(to: url, options: [], originalContentsURL: nil)
+    #expect(FileManager.default.fileExists(atPath: url.appendingPathComponent("models/0/\(gltf.lastPathComponent)").path))
+    let loaded = try ComposerDocument(contentsOf: url)
+    let loadedRoot = try #require(loaded.sceneGraph.root.children.first)
+    #expect(loadedRoot.modelSource != nil)
+    #expect(loadedRoot.trs.translation == [2, 0, 0])
+    #expect(loaded.sceneGraph.meshEntries().count == 1)
+}
+
 // #196
 @MainActor
 @Test func deactivatingIsUndoableAndDimsTheSubtree() throws {

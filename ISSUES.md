@@ -1046,6 +1046,7 @@ Want: a file format for the node tree, transforms, content, materials, animation
 - `2026-10-13T20:45:21Z`: Looked at the model. Punting: this needs design decisions that the code cannot answer. (1) Materials are 'any Material' and projections 'any ProjectionProtocol' (open protocols), so decoding needs a type registry or a closed set of types. (2) Textures (MTLTexture inside PBRMaterial/BlinnPhongMaterial) and PBREnvironment maps have no source data to write back. (3) Container format: one JSON file with base64 mesh data, a package directory (scene.json + .bin buffers + images), or glTF export instead of a new format. Proposal: a package directory: scene.json (Codable nodes, TRS, skins by node id, morphs, clips, environment settings), one .bin per MetalMesh (vertex/index buffers + descriptor), PNG/EXR for textures read back from the GPU, and a MaterialCodec registry that renderer modules register (PBR, Blinn-Phong). Unblocker: OK this design (or prefer glTF export), and say if reading textures back from the GPU is acceptable.
 - `2026-10-13T20:50:31Z`: Deferred: scene graphs are built by hand (or imported) for now.
 - `2026-10-22T15:28:24Z`: Design decided: a package directory (.scenesprocketsd) with scene.json for the graph; glTF content by reference (the original file copied into the package); generated meshes written as glTF too (needs SwiftGLTF builder APIs). Core first: node tree, transforms, flags, shapes, materials, lights, cameras, environment/fog/post. Animations, skins, morphs, constraints, physics, particles later. Split into the issues below.
+- `2026-10-25T01:34:52Z`: #157 (glTF kept by reference) and #158 (generated meshes as glTF) are done.
 
 ---
 
@@ -3424,19 +3425,26 @@ Part of #52. Write and read a .scenesprocketsd package directory with scene.json
 ## 157: Scene archive: keep glTF content by reference
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: effort:l, area:document
 created: 2026-10-22T15:28:24Z
-updated: 2026-10-23T13:45:09Z
+updated: 2026-10-25T01:34:52Z
+closed: 2026-10-25T01:34:52Z
 +++
 
 Part of #52. When a glTF is loaded into a scene, tag each imported node with its source asset and glTF node index. Writing a scene copies the original glTF (with its buffers and images) into the package; scene.json refers to it (asset, node index) instead of storing meshes or materials. Reading runs the glTF loader and splices the nodes back in. Transform and visibility changes on imported nodes are stored as overrides in scene.json; decide what to do for material or mesh changes (override or fall back to writing the mesh as generated). Done when a scene with a loaded glTF round-trips, including a moved imported node.
 
-- `2026-10-23T13:45:09Z`: Punted by auto-issue-fixer. Read GLTFSceneGraph.swift and the archive code. Punting: needs decisions. (1) Same as #158: the core archive has no glTF dependency, so this needs a content hook on SceneArchive implemented in SceneSprocketsPBR — best designed once for #157 and #158 together. (2) The issue leaves open what to do when an imported node's material or mesh is edited (override vs fall back to #158's generated-mesh path). (3) One glTF node can become several scene nodes (GLTFSceneGraphBuilder.node(_:) returns [Node], e.g. multi-material or instanced meshes), so the reference needs a sub-index or a rule. Unblocker: decide the hook design (see #158 comment) and pick the override rule; then this is implementable.
-- `2026-10-24T11:44:52Z`: Decided: the glTF stored in the package must be complete and match the current scene. Composer is not a detailed glTF editor: imported glTFs are treated as mostly complete units. Detailed edits go through a separate 'explode' feature that converts the glTF node tree into scene graph nodes (see new issue).
-- `2026-10-25T01:01:53Z`: Decision (user): the glTF writer lives in SceneSprocketsPBR, as GLTFSceneGraph+Export.swift next to the importer GLTFSceneGraph.swift. SwiftGLTF already does file-level writing (Codable Document, GLTFWriter.glbData, Container.write(to:embedResources:)), so the new code only maps a SceneGraph to a glTF Document: meshes to accessors and buffer views, PBR and Blinn-Phong materials, nodes, KHR lights and cameras. Keeping both directions in one target allows read-write-read round-trip tests. Both may later move together into a SceneSprocketsGLTF target if they grow.
+\- `2026-10-23T13:45:09Z`: Punted by auto-issue-fixer. Read GLTFSceneGraph.swift and the archive code. Punting: needs decisions. (1) Same as #158: the core archive has no glTF dependency, so this needs a content hook on SceneArchive implemented in SceneSprocketsPBR — best designed once for #157 and #158 together. (2) The issue leaves open what to do when an imported node's material or mesh is edited (override vs fall back to #158's generated-mesh path). (3) One glTF node can become several scene nodes (GLTFSceneGraphBuilder.node(_:) returns [Node], e.g. multi-material or instanced meshes), so the reference needs a sub-index or a rule. Unblocker: decide the hook design (see #158 comment) and pick the override rule; then this is implementable.
+\- `2026-10-24T11:44:52Z`: Decided: the glTF stored in the package must be complete and match the current scene. Composer is not a detailed glTF editor: imported glTFs are treated as mostly complete units. Detailed edits go through a separate 'explode' feature that converts the glTF node tree into scene graph nodes (see new issue).
+\- `2026-10-25T01:01:53Z`: Decision (user): the glTF writer lives in SceneSprocketsPBR, as GLTFSceneGraph+Export.swift next to the importer GLTFSceneGraph.swift. SwiftGLTF already does file-level writing (Codable Document, GLTFWriter.glbData, Container.write(to:embedResources:)), so the new code only maps a SceneGraph to a glTF Document: meshes to accessors and buffer views, PBR and Blinn-Phong materials, nodes, KHR lights and cameras. Keeping both directions in one target allows read-write-read round-trip tests. Both may later move together into a SceneSprocketsGLTF target if they grow.
+\- `2026-10-25T01:34:52Z`: Done.
+- Core: SceneGraph.ModelSource holds a model file and the files it loads, as Data, so saving works in the App Sandbox after access has ended. It is stored on Node.modelSource (copied by clone()). The new ArchivableModelLoader hook on SceneArchive (modelLoader): a node with a modelSource is saved as {"model": "models/N/<file>"} plus its own fields (label, transform, visibility...); its content and subtree are not written. Identical sources share one folder. Reading loads the file with the loader, splices its content and children under the saved node, and rebuilds modelSource from the package folder, so re-saving keeps the reference. Without a loader, the subtree is saved like any other (meshes through #158's codec).
+- SceneSprocketsPBR: ModelFile.load sets modelSource on glTF roots (main file + external buffers and images). ModelFileLoader implements the hook.
+- Composer (per the 'mostly complete units' decision): nodes inside an imported model are locked. A click or context-menu pick inside one picks the model root. Nothing can be inserted, created or moved into a model (reparent refuses; insert falls back to the root; assistant tools explain why). Editing inside is #183 (explode).
+- Not covered: Model I/O formats (USDZ, OBJ...) are not kept by reference; their meshes are saved through #158. glTF animations are still not imported (ModelFile.load drops them).
+Tests: ModelReferenceArchiveTests.loadedGLTFIsKeptByReference (gltf + external .bin copied, moved root kept, mesh count, modelSource equal, re-save gives identical scene.json) and withoutALoaderTheSubtreeIsSaved; Composer insertedGLTFIsKeptByReference.
 
 ---
 
@@ -3987,6 +3995,7 @@ Imported glTFs are kept as mostly complete units (#157), not edited in detail. A
 
 - `2026-10-24T15:08:18Z`: Punting: nothing to explode yet. The Composer has no glTF import, and GLTFSceneGraph already turns a glTF into plain nodes. Explode only makes sense once #157 tags imported nodes as one glTF unit kept by reference, and #158 can save the exploded meshes as generated content. Unblocker: do #157 (and decide where the glTF writer lives for #158), plus a Composer 'Import glTF…' command. Explode then removes the tag from the imported subtree.
 - `2026-10-25T01:01:54Z`: Unblocked: #157/#158 now have a decided writer location (SceneSprocketsPBR).
+- `2026-10-25T01:34:52Z`: Unblocked: #157 and #158 are done. Explode = clear the model root's modelSource (with undo); its subtree then saves as scene nodes with meshes through the glTF mesh codec (#158).
 
 ---
 

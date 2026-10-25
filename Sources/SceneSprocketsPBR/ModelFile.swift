@@ -57,6 +57,8 @@ public enum ModelFile {
     }
 
     // The file's scene under one node named after the file, detached from any scene graph. Animations are not kept.
+    // A glTF root keeps the file and the buffers and images it loads as its modelSource, so a scene archive can store
+    // the file instead of the subtree (#157).
     public static func load(_ url: URL, device: MTLDevice) throws -> (node: SceneGraph.Node, warnings: [String]) {
         let pathExtension = url.pathExtension.lowercased()
         let root: SceneGraph.Node
@@ -65,6 +67,7 @@ public enum ModelFile {
             let result = try GLTFAsset(url: url, device: device).makeSceneGraph(device: device)
             root = result.sceneGraph.root
             warnings = result.warnings
+            root.modelSource = try SceneGraph.ModelSource(url: url, relatedFiles: externalFiles(url))
         } else if modelIOExtensions.contains(pathExtension) {
             let result = try ModelIOSceneGraph(url: url, device: device)
             root = result.sceneGraph.root
@@ -74,5 +77,14 @@ public enum ModelFile {
         }
         root.label = url.deletingPathExtension().lastPathComponent
         return (root, warnings)
+    }
+}
+
+// Reads models kept by reference in a scene package (#157).
+public struct ModelFileLoader: ArchivableModelLoader {
+    public init() {}
+
+    public func load(_ url: URL, context: SceneArchiveContext) throws -> (node: SceneGraph.Node, warnings: [String]) {
+        try ModelFile.load(url, device: context.device)
     }
 }

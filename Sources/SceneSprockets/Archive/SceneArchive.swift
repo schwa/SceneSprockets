@@ -19,15 +19,19 @@ public struct SceneArchive {
     // Saves meshes that are not shapes, such as generated geometry. Without one they are skipped with a warning
     // (#158).
     public var meshCodec: (any ArchivableMeshCodec)?
+    // Loads model files kept by reference (#157). Nodes with a modelSource are saved as their file only when the
+    // archive has one; otherwise their subtree is saved like any other.
+    public var modelLoader: (any ArchivableModelLoader)?
     // Metal libraries that saved shaders (ShaderMaterial) refer to by name. A compiled function does not say where
     // its library came from, so the app names the libraries it uses.
     public var shaderLibraries: [String: any MTLLibrary]
 
-    public init(materialTypes: [any ArchivableMaterial.Type] = [], environmentMapTypes: [any ArchivableEnvironmentMap.Type] = [], shaderLibraries: [String: any MTLLibrary] = [:], meshCodec: (any ArchivableMeshCodec)? = nil) {
+    public init(materialTypes: [any ArchivableMaterial.Type] = [], environmentMapTypes: [any ArchivableEnvironmentMap.Type] = [], shaderLibraries: [String: any MTLLibrary] = [:], meshCodec: (any ArchivableMeshCodec)? = nil, modelLoader: (any ArchivableModelLoader)? = nil) {
         self.materialTypes = materialTypes
         self.environmentMapTypes = environmentMapTypes
         self.shaderLibraries = shaderLibraries
         self.meshCodec = meshCodec
+        self.modelLoader = modelLoader
     }
 
     // Replaces anything at `url`. Returns warnings for what could not be saved.
@@ -115,6 +119,12 @@ public struct SceneArchive {
         let sceneGraph = try decoder.decode(SceneGraph.self, from: Data(contentsOf: url.appendingPathComponent(Self.sceneFileName)))
         return (sceneGraph, context.warnings)
     }
+}
+
+// Loads a model file kept by reference in the package (#157), for example a glTF.
+public protocol ArchivableModelLoader {
+    // The file's subtree under one root node, and loader warnings.
+    func load(_ url: URL, context: SceneArchiveContext) throws -> (node: SceneGraph.Node, warnings: [String])
 }
 
 // Writes and reads meshes that are not shapes as files in the package (#158). Materials stay in scene.json; a codec
@@ -237,6 +247,42 @@ public final class SceneArchiveContext: @unchecked Sendable {
     // Files already written for meshes, by the identity of their GPU buffers; and meshes already read, by file.
     var meshFiles: [[ObjectIdentifier]: String] = [:]
     var decodedMeshes: [String: MetalMesh] = [:]
+    // Model files already copied into the package, by source, so shared ones are written once.
+    var modelFiles: [SceneGraph.ModelSource: String] = [:]
+
+    public var modelLoader: (any ArchivableModelLoader)? {
+        archive.modelLoader
+    }
+
+    // Copies `source` into its own folder under models/ and returns the main file's path.
+    func addModel(_ source: SceneGraph.ModelSource) -> String {
+        if let path = modelFiles[source] {
+            return path
+        }
+        let folder = "models/\(modelFiles.count)"
+        for (path, data) in source.files {
+            addFile("\(folder)/\(path)", data: data)
+        }
+        let path = "\(folder)/\(source.mainFile)"
+        modelFiles[source] = path
+        return path
+    }
+
+    // The model at `path` in the package, with every file in its folder.
+    func modelSource(atPath path: String) throws -> SceneGraph.ModelSource {
+        let main = try url(forPath: path)
+        let folder = main.deletingLastPathComponent()
+        var files: [String: Data] = [:]
+        let enumerator = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: [.isRegularFileKey])
+        while let file = enumerator?.nextObject() as? URL {
+            guard try file.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile == true else {
+                continue
+            }
+            let relative = String(file.standardizedFileURL.path.dropFirst(folder.standardizedFileURL.path.count + 1))
+            files[relative] = try Data(contentsOf: file)
+        }
+        return SceneGraph.ModelSource(mainFile: main.lastPathComponent, files: files)
+    }
 
     func meshKey(_ mesh: MetalMesh) -> [ObjectIdentifier] {
         mesh.vertexBuffers.sorted { $0.key < $1.key }.map { ObjectIdentifier($0.value) } + mesh.submeshes.map { ObjectIdentifier($0.indexBuffer) }

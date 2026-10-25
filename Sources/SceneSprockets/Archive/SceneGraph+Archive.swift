@@ -43,7 +43,7 @@ extension SceneGraph: Codable {
 extension SceneGraph.Node: Codable {
     enum ArchiveKeys: String, CodingKey {
         case label, transform, pivot, isVisible, isActive, opacity, categoryBitMask, lightCategoryBitMask, renderingOrder
-        case subdivisionLevel, actionSpeed, mesh, light, camera, constraints, children
+        case subdivisionLevel, actionSpeed, mesh, light, camera, constraints, children, model
         case morphTargets, morphWeights, skin, skinVertices, physicsBody, particleSystems
     }
 
@@ -87,6 +87,11 @@ extension SceneGraph.Node: Codable {
         }
         if actionSpeed != 1 {
             try container.encode(actionSpeed, forKey: .actionSpeed)
+        }
+        // A loaded model: its file stands for the node's content and subtree (#157).
+        if let modelSource, context.modelLoader != nil {
+            try container.encode(context.addModel(modelSource), forKey: .model)
+            return
         }
         switch content {
         case .empty:
@@ -154,6 +159,22 @@ extension SceneGraph.Node: Codable {
         lightCategoryBitMask = try container.decodeIfPresent(UInt.self, forKey: .lightCategoryBitMask) ?? .max
         renderingOrder = try container.decodeIfPresent(Int.self, forKey: .renderingOrder) ?? 0
         actionSpeed = try container.decodeIfPresent(Float.self, forKey: .actionSpeed) ?? 1
+        if let path = try container.decodeIfPresent(String.self, forKey: .model) {
+            guard let loader = context.modelLoader else {
+                context.warn("\(label ?? "node"): no model loader to read \(path); model dropped")
+                return
+            }
+            let loaded = try loader.load(context.url(forPath: path), context: context)
+            for warning in loaded.warnings {
+                context.warn("\(label ?? "node"): \(warning)")
+            }
+            content = loaded.node.content
+            for child in loaded.node.children {
+                addChild(child)
+            }
+            modelSource = try context.modelSource(atPath: path)
+            return
+        }
         if let light = try container.decodeIfPresent(Light.self, forKey: .light) {
             content = .light(light)
         } else if let camera = try container.decodeIfPresent(Camera.self, forKey: .camera) {

@@ -15,8 +15,8 @@ extension UTType {
 
 extension SceneArchive {
     static var composer: SceneArchive {
-        // Meshes that are not shapes (imported or generated) are saved as glTF in the package (#158).
-        SceneArchive(materialTypes: [BlinnPhongSceneMaterial.self, PBRSceneMaterial.self], environmentMapTypes: [PBREnvironment.self], meshCodec: GLTFMeshCodec())
+        // Imported glTF files are kept as they are (#157); other meshes that are not shapes are saved as glTF (#158).
+        SceneArchive(materialTypes: [BlinnPhongSceneMaterial.self, PBRSceneMaterial.self], environmentMapTypes: [PBREnvironment.self], meshCodec: GLTFMeshCodec(), modelLoader: ModelFileLoader())
     }
 }
 

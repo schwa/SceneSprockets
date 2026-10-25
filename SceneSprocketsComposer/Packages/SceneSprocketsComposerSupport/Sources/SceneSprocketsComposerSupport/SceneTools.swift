@@ -118,6 +118,9 @@ final class SceneTools {
     private func createOne(kind: String, label: String?, parent: String?, translation: [Double]?, rotationDegrees: [Double]?, scale: [Double]?, color: [Double]?, preset: String?) throws -> String {
         let model = try requireModel()
         let parentNode = try parent.map { try editableNode(id: $0) }
+        if let parent, let parentNode, !model.canAddChildren(to: parentNode) {
+            throw ToolError("\(parent) is an imported model, saved as its original file, so it cannot take new children.")
+        }
         let lowered = kind.lowercased()
         if let shapeKind = ShapeKind.allCases.first(where: { $0.label.lowercased() == lowered }) {
             model.addShape(shapeKind.shape, label: label ?? shapeKind.label)
@@ -292,7 +295,11 @@ final class SceneTools {
 
     private func editableNode(id: String) throws -> SceneGraph.Node {
         let node = try node(id: id)
-        guard try !requireModel().isLocked(node) else {
+        let model = try requireModel()
+        if let modelRoot = model.modelRoot(containing: node), modelRoot !== node {
+            throw ToolError("\(id) is inside the imported model \(self.id(for: modelRoot)), which is saved as its original file. Edit the model as a whole.")
+        }
+        guard !model.isLocked(node) else {
             throw ToolError("\(id) is locked. Ask the user to unlock it.")
         }
         return node

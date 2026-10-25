@@ -129,6 +129,9 @@ extension SceneGraph {
             content = .mesh(result, materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
         }
 
+        // The model file this node's subtree was loaded from. A scene archive then stores the file instead of the
+        // subtree, so the subtree should not be edited (#157).
+        @ObservationIgnored public var modelSource: ModelSource?
         // Particle effects at this node; see SceneParticleSystem. Shared, not copied, by clone().
         public var particleSystems: [SceneParticleSystem] = []
         // Sounds that play from this node; see SceneAudio. Not copied by clone().
@@ -334,6 +337,7 @@ extension SceneGraph {
             copy.subdivisionBase = subdivisionBase
             copy.subdivisionLevel = subdivisionLevel
             copy.actionSpeed = actionSpeed
+            copy.modelSource = modelSource
             copy.shapeStorage = shapeStorage
             for child in children {
                 copy.addChild(child.clone())

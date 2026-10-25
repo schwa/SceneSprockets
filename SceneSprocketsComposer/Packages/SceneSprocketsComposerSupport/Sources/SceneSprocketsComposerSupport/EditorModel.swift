@@ -301,8 +301,12 @@ public final class EditorModel {
         selectedNodes.contains { $0.parent != nil && !isLocked($0) }
     }
 
-    // Locked itself or through an ancestor.
+    // Locked itself or through an ancestor. Nodes inside an imported model are locked too: the document stores the
+    // model's file, so edits inside it would be lost. Move the model as a whole (#157), or explode it to edit (#183).
     func isLocked(_ node: SceneGraph.Node) -> Bool {
+        if modelRoot(containing: node) !== node, modelRoot(containing: node) != nil {
+            return true
+        }
         var current: SceneGraph.Node? = node
         while let candidate = current {
             if lockedNodes.contains(candidate.id) {
@@ -311,6 +315,24 @@ public final class EditorModel {
             current = candidate.parent
         }
         return false
+    }
+
+    // Not locked and not part of an imported model, whose saved file would not include new children (#157).
+    func canAddChildren(to node: SceneGraph.Node) -> Bool {
+        !isLocked(node) && modelRoot(containing: node) == nil
+    }
+
+    // The outermost imported model `node` is part of (itself if it is one), or nil.
+    func modelRoot(containing node: SceneGraph.Node) -> SceneGraph.Node? {
+        var result: SceneGraph.Node?
+        var current: SceneGraph.Node? = node
+        while let candidate = current {
+            if candidate.modelSource != nil {
+                result = candidate
+            }
+            current = candidate.parent
+        }
+        return result
     }
 
     func setLocked(_ isLocked: Bool, _ node: SceneGraph.Node) {
@@ -384,6 +406,8 @@ public final class EditorModel {
     // Viewport picks skip locked nodes, which leaves nothing selected.
     // `extending` (shift-click) adds or removes the node instead of replacing the selection.
     func pick(_ node: SceneGraph.Node?, extending: Bool = false) {
+        // A click inside an imported model picks the model (#157).
+        let node = node.map { modelRoot(containing: $0) ?? $0 }
         let id = node.flatMap { isLocked($0) ? nil : $0.id }
         if extending {
             if let id {
@@ -565,7 +589,8 @@ public final class EditorModel {
     // the root. Undoable.
     @discardableResult
     func reparent(_ node: SceneGraph.Node, to newParent: SceneGraph.Node, at index: Int? = nil) -> Bool {
-        guard let oldParent = node.parent, let oldIndex = oldParent.children.firstIndex(where: { $0 === node }), newParent.canAddChild(node) else {
+        // Within one parent (reordering) is fine; moving into an imported model is not.
+        guard let oldParent = node.parent, let oldIndex = oldParent.children.firstIndex(where: { $0 === node }), newParent.canAddChild(node), newParent === oldParent || modelRoot(containing: newParent) == nil else {
             return false
         }
         perform("Move", affecting: [.transform, .structure], { _ in
@@ -626,7 +651,7 @@ public final class EditorModel {
             }
         }
         let (node, warnings) = try ModelFile.load(url, device: systemDefaultDevice())
-        let parent = selectedNode.flatMap { isLocked($0) ? nil : $0 } ?? sceneGraph.root
+        let parent = selectedNode.flatMap { canAddChildren(to: $0) ? $0 : nil } ?? sceneGraph.root
         insert(node, into: parent, at: parent.children.count, actionName: "Insert \(node.displayName)")
         frameSelection()
         return warnings

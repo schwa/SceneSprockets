@@ -44,11 +44,12 @@ extension EditorModel {
     // The node under a point (view coordinates, origin top-left), as a click picks it: light and camera shapes first
     // when shown, because they are drawn on top, then the nearest mesh the camera can see. Clicks and the context
     // menu both use this (#220, #240).
+    // A hit inside an imported model is the model (#157).
     func node(at point: SIMD2<Float>, in viewport: SceneViewport) -> SceneGraph.Node? {
         if renderSettings.showsLightsAndCameras, let shape = DebugShapes.hitTest(point, sceneGraph: sceneGraph, viewport: viewport) {
-            return shape
+            return modelRoot(containing: shape) ?? shape
         }
-        return sceneGraph.hitTest(viewport.ray(through: point), categoryBitMask: renderSettings.camera.categoryBitMask).first?.node
+        return sceneGraph.hitTest(viewport.ray(through: point), categoryBitMask: renderSettings.camera.categoryBitMask).first.map { modelRoot(containing: $0.node) ?? $0.node }
     }
 
     func node(at point: SIMD2<Float>, viewSize: SIMD2<Float>) -> SceneGraph.Node? {
