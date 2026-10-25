@@ -4944,12 +4944,13 @@ Options: (a) protect state with Mutex<PBRMaterial.AnimatedState> and write unifo
 ## 229: Composer app and extensions build in Swift 5 language mode
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: area:composer, effort:s
 created: 2026-10-24T22:32:50Z
-updated: 2026-10-24T23:51:38Z
+updated: 2026-10-25T00:09:20Z
+closed: 2026-10-25T00:09:20Z
 +++
 
 From a concurrency review. The SceneSprocketsComposer, SceneSprocketsQuickLook and SceneSprocketsThumbnail targets use SWIFT_VERSION = 5.0 (pbxproj and SceneSprocketsComposer-Shared.xcconfig), while the packages they use build in Swift 6 mode. Swift 6 data-race checking is off for the app entry point, PreviewViewController and ThumbnailProvider. Set SWIFT_VERSION = 6.0 for all three targets, fix any diagnostics, and keep SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor for the app.
