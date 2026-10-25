@@ -5302,7 +5302,7 @@ Fix direction: don't unwrap model-derived optionals with Binding($x). Give the s
 status: new
 priority: high
 kind: bug
-labels: area:renderer,area:composer,effort:m
+labels: area:renderer, area:composer, effort:m
 created: 2026-10-25T14:33:10Z
 +++
 
@@ -5318,5 +5318,7 @@ Hypotheses to check, none confirmed:
 2. A shared intermediate texture (SelectionOutline targets, post-pass or depth copies, PBR prepass) reused by the next frame while the previous frame's GPU work or composition still reads it, with more than one frame in flight.
 3. Memoryless or private depth: SceneView switches metalDepthStencilStorageMode and texture usage based on needsPostPasses or overlay. If a SwiftUI update flips those mid-flight (MTKView reallocates attachments), the next frame could see uninitialized memory. The inspector being visible means more SwiftUI updates; #235's equatable() may change how often SceneView re-runs.
 Next steps: capture a GPU trace (gpucapture) during an orbit with the inspector visible and find the frame; turn on Metal API validation and shader validation; try maximumDrawableCount and frames-in-flight changes; log when MTKView attachment settings change; check whether disabling the selection outline, bounding boxes and statistics overlay avoids it.
+
+- `2026-10-25T14:51:25Z`: More info (user): it is much better in a Release build than in Debug, but still happens, much less often. My reading (not verified): this points at timing, not logic. Slower CPU-side work in Debug (Swift unoptimized SwiftUI and inspector updates, the per-frame scene walk, encoding) widens the window for a race, which fits a synchronization or reuse bug (hypotheses 1 and 2) more than a deterministic wrong state. Useful next check: make Release slower on purpose (sleep a few ms in the frame closure, or in SwiftUI updates) and see whether the rate goes back up.
 
 ---
