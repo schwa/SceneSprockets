@@ -3986,9 +3986,9 @@ Split from #162. Saving a scene still warns for these two node features. Audio p
 status: open
 priority: low
 kind: feature
-labels: effort:m, area:composer, blocked
+labels: effort:m, area:composer
 created: 2026-10-24T11:44:53Z
-updated: 2026-10-24T15:08:18Z
+updated: 2026-10-25T01:35:01Z
 +++
 
 Imported glTFs are kept as mostly complete units (#157), not edited in detail. Add an Explode command that converts an imported glTF node tree into plain scene graph nodes (meshes, materials, transforms), so they can be edited and are then saved as generated content (#158).
