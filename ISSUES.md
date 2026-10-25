@@ -5075,3 +5075,102 @@ created: 2026-10-25T00:07:58Z
 Split out of #224. ScenePreviewView builds SceneView's decorations, overlay and onTapAt closures in its body, so SceneView never compares equal and its body re-runs on every model change. This is a library API design change. Options: (a) Equatable wrapper values keyed on what the closures capture (settings, selected ids, revisions); (b) decoration and overlay objects with identity held by the model, passed by reference. Measure with the SwiftUI instrument during a gizmo drag before choosing.
 
 ---
+
+## 236: Architecture: one edit/undo path for scene changes
+
++++
+status: new
+priority: medium
+kind: enhancement
+labels: area:composer, architecture, effort:l
+created: 2026-10-25T00:27:37Z
++++
+
+From an architecture review (deepening candidate 1).
+Cluster: EditorModel's ~15 setters (each registers its own undo and bumps revision counters), editSelection, gizmo drag begin/continue/end, AssistantTurnUndo (swaps the undo manager), SceneTools' string-based edits, InspectorProperties.
+Problem: every edit path must remember the same steps: register undo, group it, set an action name, bump the right revision, skip locked nodes. #215, #223 and the test-runner undo-grouping crashes came from this. The same operations exist three times (direct setters, inspector properties, assistant tools).
+Dependency category: in-process.
+Direction: one deep editing module (for example apply(edit, actionName:)) that owns undo, grouping, lock rules and change notification. Callers describe the change.
+Tests: replace the per-setter 'X undoes' tests with boundary tests: apply an edit, undo it, assert on the scene and the change notification.
+Next step: run the improve-codebase-architecture interface-design step, then write an RFC.
+
+---
+
+## 237: Architecture: scene change observation instead of manual revision counters
+
++++
+status: new
+priority: medium
+kind: enhancement
+labels: area:composer, area:scenegraph, architecture, effort:l
+created: 2026-10-25T00:27:38Z
++++
+
+From an architecture review (deepening candidate 2).
+Cluster: SceneGraph.Node (not observable, SceneSprockets #155), EditorModel.transformRevision and visibilityRevision, '_ = transformRevision' and '_ = localTRS(of:)' reads written only to make views update, editorState's graph walks, ComposerDocument.attach's withObservationTracking.
+Problem: nodes don't announce changes, so every reader must know which counter to read and every writer which counter to bump. A missing bump leaves a view stale; a too-broad read makes it lag (#215, #223, #232).
+Dependency category: in-process.
+Direction: a deep change-tracking module, either in the library (observable or revisioned nodes per aspect: transform, visibility, content) or in the editor as the single owner of mutations (pairs with the edit/undo issue).
+Tests: replace the counter-bump tests and parts of DragPerformanceTests with 'change X, readers of X see it, readers of Y don't re-run' tests.
+Related: #155.
+
+---
+
+## 238: Architecture: document save as a main-actor capture plus a thread-free writer
+
++++
+status: new
+priority: medium
+kind: enhancement
+labels: area:composer, area:document, architecture, effort:l
+created: 2026-10-25T00:27:38Z
++++
+
+From an architecture review (deepening candidate 3).
+Cluster: ComposerDocument (@unchecked Sendable, lock, savedEditorState), SceneArchive.write, EditorState (path encoding), DocumentPreview rendering, the off-main save on quit.
+Problem: snapshot needs the live graph (main actor), file I/O, a GPU render and the editor state, in one function that can run on any thread. #227 is punted on this; #204 and #232 also touched it.
+Dependency category: local-substitutable (temporary directory, system default Metal device).
+Direction: split into a cheap immutable capture made on the main actor and a writer that runs on any thread (files plus preview). See #227 option (c).
+Tests: replace the round-trip tests (documentRoundTrips, editorStateRoundTrips, preview tests) with capture-then-write tests, plus 'capture is unaffected by later edits'.
+Related: #227, #204, #232.
+
+---
+
+## 239: Architecture: one material editing module (PBR rebuild, kinds, presets, parameters)
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:composer, area:materials, architecture, effort:m
+created: 2026-10-25T00:27:38Z
++++
+
+From an architecture review (deepening candidate 4).
+Cluster: MaterialEditing.editedPBR (rebuilds PBRMaterial with the device, 5 callers), MaterialKind conversions, MaterialPreset, PBRParameters tables, MaterialSectionView, SceneTools' material update, setBaseColor.
+Problem: the PBR material is a class whose uniforms are mutated in place and shared with the renderer. Each caller re-implements 'copy, change, rebuild, set with undo'; the inspector, the assistant and multiple selection each have their own route.
+Dependency category: local-substitutable (system default Metal device).
+Direction: a material editing module that takes value-level edits (property, kind, preset, color) and returns or applies the rebuilt material through the edit/undo path.
+Tests: replace the separate material-type, preset, PBR-edit and glass tests with one 'edit material property, check the result and undo' suite.
+
+---
+
+## 240: Architecture: one picking and viewport module for clicks, menus, decorations and gizmo
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:composer,area:ui,architecture,effort:m
+created: 2026-10-25T00:27:38Z
++++
+
+From an architecture review (deepening candidate 5).
+Cluster: SceneView onTapAt hit test, DebugShapes.hitTest, EditorModel.node(at:viewSize:), SceneViewport built in 3 places, gizmo hit filters, decoration and overlay closures (#235).
+Problem: clicking, the context menu and decorations each rebuild the camera, projection and viewport and pick in their own order (light and camera shapes first, then meshes). The closures also stop SceneView comparing equal.
+Dependency category: in-process.
+Direction: one viewport and picking value (camera, projection, size, display scale) with pick(at:) that applies the shape-first rule; decorations and overlays take it instead of rebuilding it.
+Tests: replace the DebugShapes hit tests and the Composer pick tests with pick-at-point tests at one boundary.
+Related: #235, #220.
+
+---
