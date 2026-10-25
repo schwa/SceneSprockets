@@ -5295,3 +5295,28 @@ Fix direction: don't unwrap model-derived optionals with Binding($x). Give the s
 - `2026-10-25T04:00:21Z`: Fixed. The inspector no longer uses Binding($optional) on model-derived values. selectedLightForEditing and the materialKind, blinnPhong and pbrUniforms subscripts are non-optional: they read a default when the light or material is missing or of another kind, and writes then do nothing (MaterialEdit already skips edits that don't fit). The sections still decide whether to show from the optional values (selectedLight, model[material:]). New InspectorCrashTests host NodeInspectorView in an NSHostingView and change the light or material kind under it, then remove them. Before the fix the test process died with SIGTRAP (signal 5), the same trap as the report; after it, both pass. Not tried in the running app with the assistant.
 
 ---
+
+## 242: Composer: pink garbage frames in complex scenes while the inspector is visible and the camera moves
+
++++
+status: new
+priority: high
+kind: bug
+labels: area:renderer,area:composer,effort:m
+created: 2026-10-25T14:33:10Z
++++
+
+Video: '/Users/schwa/Shared/Desktop Stuff/Pink Bug.mov' (stays there until fixed). Scene: 114 meshes, 792,746 triangles, imported BMW glTF, PBR, no lights.
+Observations (user):
+- With the inspector hidden, complex scenes render fine while orbiting.
+- With the inspector shown (second half of the video), complex scenes get pink garbage.
+- When the camera stops (SwiftUI state stops updating), the pink stops.
+- SwiftUI and AppKit compositing may use Metal 3; the renderer uses Metal 4.
+What the video shows (frame scan at 30 fps from 6 s): only one corrupted frame, at about 7.17 s. The bottom ~2/3 of the viewport is tiled pink and black/white blocks with contour-like bands, while the top of the same frame (background, frame timing overlay) is correct. The tiling and the clean top band look like undefined texture memory being shown or sampled for part of the drawable, rather than a wrong shader color. That is a guess, not verified. FPS ~100 at the time (frame # ~36219).
+Hypotheses to check, none confirmed:
+1. Frame overlap or synchronization: when SwiftUI is busy (inspector re-rendering while the camera's @State changes), main-thread and Core Animation timing shift. A drawable, depth or intermediate texture could be presented or read before the Metal 4 queue finished writing it (missing waits or barriers between our passes and presentation). Related to #214's barrier work.
+2. A shared intermediate texture (SelectionOutline targets, post-pass or depth copies, PBR prepass) reused by the next frame while the previous frame's GPU work or composition still reads it, with more than one frame in flight.
+3. Memoryless or private depth: SceneView switches metalDepthStencilStorageMode and texture usage based on needsPostPasses or overlay. If a SwiftUI update flips those mid-flight (MTKView reallocates attachments), the next frame could see uninitialized memory. The inspector being visible means more SwiftUI updates; #235's equatable() may change how often SceneView re-runs.
+Next steps: capture a GPU trace (gpucapture) during an orbit with the inspector visible and find the frame; turn on Metal API validation and shader validation; try maximumDrawableCount and frames-in-flight changes; log when MTKView attachment settings change; check whether disabling the selection outline, bounding boxes and statistics overlay avoids it.
+
+---
