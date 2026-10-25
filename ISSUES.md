@@ -4911,8 +4911,8 @@ From a concurrency review. ComposerDocument is @unchecked Sendable, and snapshot
 Fix: capture an immutable snapshot on the main actor whenever an undoable edit lands, or right before saving (the encoded bundle data and textures plus the preview PNG), behind the existing lock pattern used for the editor state (updateEditorState). snapshot then only builds the FileWrapper from that capture and never touches the live graph. This needs SceneArchive to encode to data or a temporary directory on the main actor.
 Test: change the scene, call snapshot from a detached task while the main actor keeps mutating the graph; with Thread Sanitizer, no race is reported and the saved scene matches the captured state.
 
-- `2026-10-24T23:51:40Z`: Related: #232 (editor state copied on every body pass).
-- `2026-10-25T00:01:03Z`: Punted (auto-issue-fixer). Investigated: snapshot builds the whole bundle (SceneArchive.write to a temp dir, including copied model files and textures) and renders Preview.png on the GPU. A capture taken on the main actor therefore costs a full save plus a render. The quit-save path calls snapshot off-main with the main thread blocked (#204), so snapshot cannot hop to the main actor without deadlocking, and SwiftUI has no clean 'about to save' hook to capture just before. Options:
+\- `2026-10-24T23:51:40Z`: Related: #232 (editor state copied on every body pass).
+\- `2026-10-25T00:01:03Z`: Punted (auto-issue-fixer). Investigated: snapshot builds the whole bundle (SceneArchive.write to a temp dir, including copied model files and textures) and renders Preview.png on the GPU. A capture taken on the main actor therefore costs a full save plus a render. The quit-save path calls snapshot off-main with the main thread blocked (#204), so snapshot cannot hop to the main actor without deadlocking, and SwiftUI has no clean 'about to save' hook to capture just before. Options:
 (a) Capture the full bundle and preview on the main actor after each undo group closes, coalesced to once per runloop turn. Safe and simple, but every edit pays a save plus a render, which is slow for big glTF scenes.
 (b) Build live when snapshot runs on the main thread (normal Save and autosave). Use the last capture from (a) only off-main, so captures are needed only when an app quit might happen; still per-edit cost unless lazily dirtied.
 (c) Capture only the cheap parts (encoded scene JSON plus editor state) per edit, and copy model files and textures and render the preview in snapshot from immutable inputs. Needs SceneArchive split into encode on main and write files anywhere, plus a preview built from a copied graph.
@@ -4923,16 +4923,19 @@ Unblocker: which trade-off do you want? I suggest (c), it's the most work but ha
 ## 228: AnimatedMaterial is @unchecked Sendable mutable state without a lock
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:scenegraph, area:assets, effort:s
 created: 2026-10-24T22:32:50Z
-updated: 2026-10-24T23:51:38Z
+updated: 2026-10-25T00:03:41Z
+closed: 2026-10-25T00:03:41Z
 +++
 
 From a concurrency review. SceneSprocketsPBR/GLTFSceneGraph.swift:387: AnimatedMaterial has 'var state' and is mutated from AnimationClip.Property.set, which writes state and material.uniforms. Property is Sendable with @Sendable get and set closures, so clips can cross threads, and two players applying the same material at once race on state and uniforms.
 Options: (a) protect state with Mutex<PBRMaterial.AnimatedState> and write uniforms from the locked result; (b) if animation is only applied on one thread (main or render), drop Sendable and @Sendable from AnimationClip.Property. Its closures take a non-Sendable Node, so @Sendable adds no safety, and it is what forces @unchecked here. (b) is more honest; check every caller of Property.get and set and AnimationPlayer before choosing.
+
+- `2026-10-25T00:03:41Z`: Fixed with option (b). AnimationClip.Property and Path are no longer Sendable and their get/set closures are no longer @Sendable. AnimationClip itself was already non-Sendable and no caller relied on sending these. The built-in properties became static computed vars, because a static let of a non-Sendable type is not allowed. AnimatedMaterial dropped @unchecked Sendable. No unit test: the change is to type checking, and the compiler now rejects the race. Core, Composer and Demo build, and all tests pass.
 
 ---
 

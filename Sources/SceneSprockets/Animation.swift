@@ -5,7 +5,7 @@ extension SceneGraph {
     // Format-neutral keyframe animation. Channels target node translation, rotation, scale, morph weights, or any
     // other value through a Property.
     public struct AnimationClip {
-        public enum Path: Sendable, Hashable {
+        public enum Path: Hashable {
             case translation
             case rotation
             case scale
@@ -32,13 +32,14 @@ extension SceneGraph {
         }
 
         // A named animatable value. Equal when names are equal, so use one name per value.
-        public struct Property: Sendable, Hashable {
+        // Not Sendable: get and set mutate a non-Sendable Node and often captured state (#228).
+        public struct Property: Hashable {
             public var name: String
             // The node's current value, used as the rest value by AnimationMixer.
-            public var get: @Sendable (Node) -> [Float]
-            public var set: @Sendable (Node, [Float]) -> Void
+            public var get: (Node) -> [Float]
+            public var set: (Node, [Float]) -> Void
 
-            public init(name: String, get: @escaping @Sendable (Node) -> [Float], set: @escaping @Sendable (Node, [Float]) -> Void) {
+            public init(name: String, get: @escaping (Node) -> [Float], set: @escaping (Node, [Float]) -> Void) {
                 self.name = name
                 self.get = get
                 self.set = set
@@ -53,7 +54,7 @@ extension SceneGraph {
             }
 
             // The intensity of a light node.
-            public static let lightIntensity = Property(name: "light.intensity") { node in
+            public static var lightIntensity: Property { Property(name: "light.intensity") { node in
                 if case let .light(light) = node.content { [light.intensity] } else { [] }
             } set: { node, value in
                 if case var .light(light) = node.content, let intensity = value.first {
@@ -61,9 +62,10 @@ extension SceneGraph {
                     node.content = .light(light)
                 }
             }
+            }
 
             // The linear RGB color of a light node.
-            public static let lightColor = Property(name: "light.color") { node in
+            public static var lightColor: Property { Property(name: "light.color") { node in
                 if case let .light(light) = node.content { [light.color.x, light.color.y, light.color.z] } else { [] }
             } set: { node, value in
                 if case var .light(light) = node.content, value.count == 3 {
@@ -71,17 +73,19 @@ extension SceneGraph {
                     node.content = .light(light)
                 }
             }
+            }
 
             // isVisible as 0 or 1; values above 0.5 show the node.
-            public static let visibility = Property(name: "isVisible") { node in
+            public static var visibility: Property { Property(name: "isVisible") { node in
                 [node.isVisible ? 1 : 0]
             } set: { node, value in
                 if let visible = value.first {
                     node.isVisible = visible > 0.5
                 }
             }
+            }
 
-            static func light(_ name: String, _ keyPath: WritableKeyPath<Light, Float> & Sendable) -> Property {
+            static func light(_ name: String, _ keyPath: WritableKeyPath<Light, Float>) -> Property {
                 Property(name: "light.\(name)") { node in
                     if case let .light(light) = node.content { [light[keyPath: keyPath]] } else { [] }
                 } set: { node, value in
@@ -92,12 +96,12 @@ extension SceneGraph {
                 }
             }
 
-            public static let lightRange = light("range", \.range)
-            public static let lightInnerConeAngle = light("innerConeAngle", \.innerConeAngle)
-            public static let lightOuterConeAngle = light("outerConeAngle", \.outerConeAngle)
+            public static var lightRange: Property { light("range", \.range) }
+            public static var lightInnerConeAngle: Property { light("innerConeAngle", \.innerConeAngle) }
+            public static var lightOuterConeAngle: Property { light("outerConeAngle", \.outerConeAngle) }
 
             // A perspective camera's vertical field of view, in radians.
-            public static let cameraVerticalFieldOfView = Property(name: "camera.verticalFieldOfView") { node in
+            public static var cameraVerticalFieldOfView: Property { Property(name: "camera.verticalFieldOfView") { node in
                 if case let .camera(camera) = node.content, let projection = camera.projection as? PerspectiveProjection { [projection.verticalAngleOfView.radians] } else { [] }
             } set: { node, value in
                 if case var .camera(camera) = node.content, var projection = camera.projection as? PerspectiveProjection, let radians = value.first {
@@ -106,9 +110,10 @@ extension SceneGraph {
                     node.content = .camera(camera)
                 }
             }
+            }
 
             // An orthographic camera's half height.
-            public static let cameraHalfHeight = Property(name: "camera.halfHeight") { node in
+            public static var cameraHalfHeight: Property { Property(name: "camera.halfHeight") { node in
                 if case let .camera(camera) = node.content, let projection = camera.projection as? OrthographicProjection { [projection.halfHeight] } else { [] }
             } set: { node, value in
                 if case var .camera(camera) = node.content, var projection = camera.projection as? OrthographicProjection, let halfHeight = value.first {
@@ -117,10 +122,11 @@ extension SceneGraph {
                     node.content = .camera(camera)
                 }
             }
+            }
 
             // The near (isNear) or far clip plane of a perspective or orthographic camera with a clip range.
             static func cameraClip(isNear: Bool) -> Property {
-                @Sendable func clip(_ range: ClosedRange<Float>, _ value: Float) -> ClosedRange<Float> {
+                func clip(_ range: ClosedRange<Float>, _ value: Float) -> ClosedRange<Float> {
                     isNear ? min(value, range.upperBound)...range.upperBound : range.lowerBound...max(value, range.lowerBound)
                 }
                 return Property(name: isNear ? "camera.zNear" : "camera.zFar") { node in
@@ -165,8 +171,8 @@ extension SceneGraph {
                 }
             }
 
-            public static let cameraNear = cameraClip(isNear: true)
-            public static let cameraFar = cameraClip(isNear: false)
+            public static var cameraNear: Property { cameraClip(isNear: true) }
+            public static var cameraFar: Property { cameraClip(isNear: false) }
         }
 
         // Calls `handler` when playback passes `time` (clip seconds), like SCNAnimationEvent. `isPlayingBackward`

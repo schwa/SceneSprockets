@@ -384,7 +384,8 @@ private func floats<T>(_ attribute: MetalMesh.VertexAttributeData, as type: T.Ty
 }
 
 // A glTF material and its animated uniforms, shared by every channel that targets it.
-final class AnimatedMaterial: @unchecked Sendable {
+// Not Sendable: animation applies it from one thread at a time (#228).
+final class AnimatedMaterial {
     let material: PBRMaterial
     var state: PBRMaterial.AnimatedState
 
