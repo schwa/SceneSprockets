@@ -9,90 +9,32 @@ struct NodeInspectorView: View {
     var node: SceneGraph.Node
 
     var body: some View {
-        generalSection
-        transformSection
-        contentSection
+        GeneralSectionView(node: node)
+        TransformSectionView(transform: node.transform)
+        switch node.content {
+        case .empty:
+            EmptyView()
+        case .light(let light):
+            LightSectionView(light: light)
+        case .camera:
+            Section("Camera") {
+                LabeledContent("Projection", value: "Perspective")
+            }
+        case .mesh(_, let materials, let castsShadow, let receivesShadow):
+            MeshSectionView(materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
+        }
     }
+}
 
-    // MARK: - General
+private struct GeneralSectionView: View {
+    var node: SceneGraph.Node
 
-    @ViewBuilder
-    private var generalSection: some View {
+    var body: some View {
         Section("General") {
             LabeledContent("Label", value: node.label ?? "—")
             LabeledContent("Type", value: contentTypeName)
         }
     }
-
-    // MARK: - Transform
-
-    @ViewBuilder
-    private var transformSection: some View {
-        Section("Transform") {
-            let t = node.transform
-            VectorRow(label: "Position", value: t.columns.3.xyz)
-            VectorRow(label: "X Axis", value: SIMD3(t.columns.0.x, t.columns.0.y, t.columns.0.z))
-            VectorRow(label: "Y Axis", value: SIMD3(t.columns.1.x, t.columns.1.y, t.columns.1.z))
-            VectorRow(label: "Z Axis", value: SIMD3(t.columns.2.x, t.columns.2.y, t.columns.2.z))
-        }
-    }
-
-    // MARK: - Content
-
-    @ViewBuilder
-    private var contentSection: some View {
-        switch node.content {
-        case .empty:
-            EmptyView()
-        case .light(let light):
-            lightSection(light)
-        case .camera:
-            cameraSection
-        case .mesh(_, let materials, let castsShadow, let receivesShadow):
-            meshSection(materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
-        }
-    }
-
-    private func lightSection(_ light: Light) -> some View {
-        Section("Light") {
-            LabeledContent("Type", value: lightTypeName(light.type))
-            ColorRow(label: "Color", value: light.color)
-            LabeledContent("Intensity") { Text(light.intensity, format: .number.precision(.fractionLength(1))) }
-            LabeledContent("Range") { Text(light.range, format: .number.precision(.fractionLength(1))) }
-        }
-    }
-
-    @ViewBuilder
-    private var cameraSection: some View {
-        Section("Camera") {
-            LabeledContent("Projection", value: "Perspective")
-        }
-    }
-
-    private func meshSection(materials: [any SceneSprockets.Material], castsShadow: Bool, receivesShadow: Bool) -> some View {
-        Section("Mesh") {
-            LabeledContent("Casts Shadow", value: castsShadow ? "Yes" : "No")
-            LabeledContent("Receives Shadow", value: receivesShadow ? "Yes" : "No")
-            ForEach(materials.indices, id: \.self) { index in
-                if let blinnPhong = materials[index] as? BlinnPhongSceneMaterial {
-                    blinnPhongSection(blinnPhong)
-                }
-            }
-        }
-    }
-
-    private func blinnPhongSection(_ material: BlinnPhongSceneMaterial) -> some View {
-        Group {
-            Divider()
-            Text("Blinn-Phong Material").font(.subheadline).foregroundStyle(.secondary)
-            colorSourceRow(label: "Ambient", source: material.ambient)
-            colorSourceRow(label: "Diffuse", source: material.diffuse)
-            colorSourceRow(label: "Specular", source: material.specular)
-            LabeledContent("Shininess") { Text(material.shininess, format: .number.precision(.fractionLength(0))) }
-        }
-    }
-
-    // MARK: - Helpers
 
     private var contentTypeName: String {
         switch node.content {
@@ -102,13 +44,62 @@ struct NodeInspectorView: View {
         case .camera: "Camera"
         }
     }
+}
 
-    private func lightTypeName(_ type: Light.LightType) -> String {
-        switch type {
+private struct TransformSectionView: View {
+    var transform: simd_float4x4
+
+    var body: some View {
+        Section("Transform") {
+            VectorRow(label: "Position", value: transform.columns.3.xyz)
+            VectorRow(label: "X Axis", value: transform.columns.0.xyz)
+            VectorRow(label: "Y Axis", value: transform.columns.1.xyz)
+            VectorRow(label: "Z Axis", value: transform.columns.2.xyz)
+        }
+    }
+}
+
+private struct LightSectionView: View {
+    var light: Light
+
+    var body: some View {
+        Section("Light") {
+            LabeledContent("Type", value: typeName)
+            ColorRow(label: "Color", value: light.color)
+            LabeledContent("Intensity") { Text(light.intensity, format: .number.precision(.fractionLength(1))) }
+            LabeledContent("Range") { Text(light.range, format: .number.precision(.fractionLength(1))) }
+        }
+    }
+
+    private var typeName: String {
+        switch light.type {
         case .directional: "Directional"
         case .point: "Point"
         case .spot: "Spot"
         @unknown default: "Unknown"
+        }
+    }
+}
+
+private struct MeshSectionView: View {
+    var materials: [any SceneSprockets.Material]
+    var castsShadow: Bool
+    var receivesShadow: Bool
+
+    var body: some View {
+        Section("Mesh") {
+            LabeledContent("Casts Shadow", value: castsShadow ? "Yes" : "No")
+            LabeledContent("Receives Shadow", value: receivesShadow ? "Yes" : "No")
+            ForEach(materials.indices, id: \.self) { index in
+                if let material = materials[index] as? BlinnPhongSceneMaterial {
+                    Divider()
+                    Text("Blinn-Phong Material").font(.subheadline).foregroundStyle(.secondary)
+                    colorSourceRow(label: "Ambient", source: material.ambient)
+                    colorSourceRow(label: "Diffuse", source: material.diffuse)
+                    colorSourceRow(label: "Specular", source: material.specular)
+                    LabeledContent("Shininess") { Text(material.shininess, format: .number.precision(.fractionLength(0))) }
+                }
+            }
         }
     }
 

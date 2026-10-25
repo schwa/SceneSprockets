@@ -5,14 +5,14 @@ import UniformTypeIdentifiers
 
 // Scene-wide settings, shown when no node is selected.
 struct SceneInspectorView: View {
-    @Bindable var model: EditorModel
+    var model: EditorModel
     @State private var isImporting = false
     @State private var importError: String?
 
     var body: some View {
         Form {
-            backgroundSection
-            environmentSection
+            BackgroundSectionView(model: model)
+            EnvironmentSectionView(model: model, isImporting: $isImporting)
         }
         .formStyle(.grouped)
         .fileImporter(isPresented: $isImporting, allowedContentTypes: Self.imageTypes) { result in
@@ -31,7 +31,13 @@ struct SceneInspectorView: View {
         }
     }
 
-    private var backgroundSection: some View {
+    private static let imageTypes: [UTType] = [UTType(filenameExtension: "hdr"), UTType(filenameExtension: "exr"), .image].compactMap(\.self)
+}
+
+private struct BackgroundSectionView: View {
+    @Bindable var model: EditorModel
+
+    var body: some View {
         Section("Background") {
             Picker("Background", selection: $model[environment: "Background"].backgroundKind) {
                 ForEach(BackgroundKind.allCases) { kind in
@@ -52,8 +58,13 @@ struct SceneInspectorView: View {
             }
         }
     }
+}
 
-    private var environmentSection: some View {
+private struct EnvironmentSectionView: View {
+    @Bindable var model: EditorModel
+    @Binding var isImporting: Bool
+
+    var body: some View {
         Section("Environment") {
             LabeledContent("Image", value: mapName)
             HStack {
@@ -61,7 +72,7 @@ struct SceneInspectorView: View {
                     isImporting = true
                 }
                 Button("Use Studio") {
-                    update("Environment Image") { $0.map = PBREnvironment.studio }
+                    model[environment: "Environment Image"].map = PBREnvironment.studio
                 }
                 .disabled(model.environment.map === PBREnvironment.studio)
             }
@@ -74,8 +85,6 @@ struct SceneInspectorView: View {
         }
     }
 
-    private static let imageTypes: [UTType] = [UTType(filenameExtension: "hdr"), UTType(filenameExtension: "exr"), .image].compactMap(\.self)
-
     private var mapName: String {
         switch model.environment.map {
         case nil:
@@ -87,11 +96,5 @@ struct SceneInspectorView: View {
         default:
             "Custom Image"
         }
-    }
-
-    private func update(_ actionName: String, _ change: (inout SceneGraph.Environment) -> Void) {
-        var environment = model.environment
-        change(&environment)
-        model.setEnvironment(environment, actionName: actionName)
     }
 }

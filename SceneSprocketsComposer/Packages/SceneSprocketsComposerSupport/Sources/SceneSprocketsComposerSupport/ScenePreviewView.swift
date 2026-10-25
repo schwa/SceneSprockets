@@ -95,14 +95,27 @@ struct ScenePreviewView: View {
             pointer.viewSize = [Float(size.width), Float(size.height)]
         }
         .contextMenu {
-            contextMenuItems
+            ScenePreviewContextMenuView(model: model, pointer: pointer)
         }
     }
 
-    // Right-click menu (#220). Each action first selects what is under the pointer, then acts on the selection, so it
-    // works on the clicked object, or on the current selection when clicking empty space.
-    @ViewBuilder
-    private var contextMenuItems: some View {
+    // Read when the tap arrives; SceneView's tap callback has no modifier keys.
+    private static var isExtendingSelection: Bool {
+        #if os(macOS)
+        NSEvent.modifierFlags.contains(.shift)
+        #else
+        false
+        #endif
+    }
+}
+
+// Right-click menu (#220). Each action first selects what is under the pointer, then acts on the selection, so it
+// works on the clicked object, or on the current selection when clicking empty space.
+private struct ScenePreviewContextMenuView: View {
+    var model: EditorModel
+    var pointer: PointerTracker
+
+    var body: some View {
         Button("Select") {
             targetPointer()
         }
@@ -148,14 +161,5 @@ struct ScenePreviewView: View {
         if !model.selectedIDs.contains(node.id) {
             model.selection = node.id
         }
-    }
-
-    // Read when the tap arrives; SceneView's tap callback has no modifier keys.
-    private static var isExtendingSelection: Bool {
-        #if os(macOS)
-        NSEvent.modifierFlags.contains(.shift)
-        #else
-        false
-        #endif
     }
 }

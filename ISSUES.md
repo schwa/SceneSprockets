@@ -5016,12 +5016,13 @@ Fix: add an editorStateRevision to EditorModel, bumped by every setter that chan
 ## 233: SwiftUI structure: turn stateful private some View sections into View structs
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: area:composer, area:demo, effort:s
 created: 2026-10-24T23:49:33Z
-updated: 2026-10-24T23:51:39Z
+updated: 2026-10-25T00:10:48Z
+closed: 2026-10-25T00:10:48Z
 +++
 
 From a SwiftUI house-rules review ('private var foo: some View is generally an anti-pattern'). Extract into View structs, since these read several properties or have behavior:
