@@ -209,9 +209,11 @@ struct SceneEditBoundaryTests {
     model.camera.target = [4, 5, 6]
     model.renderSettings.showsGrid = false
     model.renderSettings.fieldOfView = 42
+    model.renderSettings.maximumFramesPerSecond = 30
     model.gizmoMode = .scale
     model.gizmoSpace = .local
     model.isInspectorPresented = false
+    #expect(model.previewFramesPerSecond == 30)
     // addShape selected B.
     let saved = model.editorState
     document.updateEditorState()
@@ -227,6 +229,10 @@ struct SceneEditBoundaryTests {
     #expect(reopened.camera.target == [4, 5, 6])
     #expect(reopened.gizmo.mode == .scale)
     #expect(reopened.renderSettings.fieldOfView == 42)
+    #expect(reopened.renderSettings.maximumFramesPerSecond == 30)
+    // No cap: the display's maximum.
+    reopened.renderSettings.maximumFramesPerSecond = nil
+    #expect(reopened.previewFramesPerSecond == reopened.display.maximumFramesPerSecond)
 
     // A broken file falls back to nil (defaults); a partial one keeps what it has.
     try Data("not json".utf8).write(to: url.appendingPathComponent("editor.json"))

@@ -90,6 +90,8 @@ struct ScenePreviewView: View {
         )
         // Compare with SceneView's ==, so an unchanged SceneView does not re-run its body.
         .equatable()
+        // Always set, so changing the cap or the display does not rebuild the Metal view.
+        .metalPreferredFramesPerSecond(model.previewFramesPerSecond)
         .focusable()
         .focusEffectDisabled()
         .focused($isFocused)

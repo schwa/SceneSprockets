@@ -42,6 +42,9 @@ struct RenderSettings: Hashable {
     var outlinesSelection = true
     // Off keeps the drawable readable, for example to inspect it in a GPU capture.
     var isFramebufferOnly = true
+    // A frame rate cap for the preview; nil draws as fast as the display allows, which changes with the display and
+    // Low Power Mode.
+    var maximumFramesPerSecond: Int?
     // Vertical, in degrees. The editor camera's; overrides any camera node.
     var fieldOfView: Float = 60
     var nearClip: Float = 0.01

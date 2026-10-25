@@ -188,6 +188,13 @@ public final class EditorModel {
     @ObservationIgnored let selectionOutline = SelectionOutline()
     // One instance, so it keeps its GPU state and SceneView sees the same shadows between updates (#235).
     @ObservationIgnored let shadows = SceneGraphShadows()
+    // Observable itself; for the frame rate cap.
+    @ObservationIgnored let display = DisplayFrameRate()
+
+    // The preview's frame rate: the cap in the render settings, or the display's maximum.
+    var previewFramesPerSecond: Int {
+        renderSettings.maximumFramesPerSecond ?? display.maximumFramesPerSecond
+    }
     @ObservationIgnored private var transformBeforeDrag: SceneGraph.LocalTransform?
     // The other selected nodes the gizmo carries along (#205), with their world and local transforms at drag start.
     @ObservationIgnored private var draggedCompanions: [(node: SceneGraph.Node, world: simd_float4x4, local: SceneGraph.LocalTransform)] = []

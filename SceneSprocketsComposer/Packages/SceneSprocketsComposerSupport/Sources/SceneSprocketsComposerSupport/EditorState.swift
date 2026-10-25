@@ -76,7 +76,7 @@ extension EditorState: Codable {
 
 extension RenderSettings: Codable {
     enum CodingKeys: String, CodingKey {
-        case showsGrid, showsAxes, showsXAxis, showsYAxis, showsZAxis, usesDefaultLighting, showsShadows, showsStatistics, showsFrameTiming, showsLightsAndCameras, boundingBoxes, outlinesSelection, isFramebufferOnly, fieldOfView, nearClip, farClip, debugMode, materialChannel
+        case showsGrid, showsAxes, showsXAxis, showsYAxis, showsZAxis, usesDefaultLighting, showsShadows, showsStatistics, showsFrameTiming, showsLightsAndCameras, boundingBoxes, outlinesSelection, isFramebufferOnly, fieldOfView, nearClip, farClip, debugMode, materialChannel, maximumFramesPerSecond
     }
 
     init(from decoder: Decoder) throws {
@@ -105,6 +105,7 @@ extension RenderSettings: Codable {
         try read(\.farClip, .farClip)
         debugMode = try container.decodeIfPresent(SceneGraphDebugMode.self, forKey: .debugMode)
         materialChannel = try container.decodeIfPresent(SceneGraphMaterialChannel.self, forKey: .materialChannel)
+        maximumFramesPerSecond = try container.decodeIfPresent(Int.self, forKey: .maximumFramesPerSecond)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -127,6 +128,7 @@ extension RenderSettings: Codable {
         try container.encode(farClip, forKey: .farClip)
         try container.encodeIfPresent(debugMode, forKey: .debugMode)
         try container.encodeIfPresent(materialChannel, forKey: .materialChannel)
+        try container.encodeIfPresent(maximumFramesPerSecond, forKey: .maximumFramesPerSecond)
     }
 }
 

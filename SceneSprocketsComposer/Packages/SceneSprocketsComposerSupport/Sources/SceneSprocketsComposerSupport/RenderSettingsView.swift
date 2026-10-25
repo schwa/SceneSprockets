@@ -37,6 +37,9 @@ struct RenderSettingsView: View {
             Section("Lighting") {
                 Toggle("Shadows", isOn: $model.renderSettings.showsShadows)
             }
+            Section("Performance") {
+                FrameRatePickerView(cap: $model.renderSettings.maximumFramesPerSecond, display: model.display)
+            }
             Section("Debug") {
                 Picker("View", selection: $model.renderSettings.debugMode) {
                     Text("Materials").tag(SceneGraphDebugMode?.none)
@@ -62,4 +65,37 @@ struct RenderSettingsView: View {
         .formStyle(.grouped)
     }
 
+}
+
+// Display Maximum follows the display (it changes with the monitor and Low Power Mode); the others are fixed caps.
+struct FrameRatePickerView: View {
+    @Binding var cap: Int?
+    var display: DisplayFrameRate
+
+    var body: some View {
+        Picker("Maximum Frame Rate", selection: $cap) {
+            Text("Display Maximum (\(display.maximumFramesPerSecond) fps)").tag(Int?.none)
+            Divider()
+            ForEach(display.choices.reversed(), id: \.self) { rate in
+                Text("\(rate) fps").tag(Int?.some(rate))
+            }
+            // A saved cap the current display cannot reach.
+            if let cap, !display.choices.contains(cap) {
+                Text("\(cap) fps (above this display)").tag(Int?.some(cap))
+            }
+        }
+        .help("The preview draws at most this often. The system can draw more slowly, for example in Low Power Mode.")
+        if display.isLowPowerModeEnabled {
+            Text("Low Power Mode is on, so the system may limit the frame rate.")
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+#Preview {
+    @Previewable @State var cap: Int?
+    Form {
+        FrameRatePickerView(cap: $cap, display: DisplayFrameRate())
+    }
+    .formStyle(.grouped)
 }
