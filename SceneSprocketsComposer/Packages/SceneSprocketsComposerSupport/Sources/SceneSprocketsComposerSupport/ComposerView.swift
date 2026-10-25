@@ -185,10 +185,6 @@ public struct ComposerView: View {
         } message: {
             Text(insertMessage ?? "")
         }
-        // Saving can run off the main actor, so the document keeps its own copy of the editor state (#204).
-        .onChange(of: model.editorState, initial: true) {
-            document.updateEditorState()
-        }
         .onChange(of: assistantStore?.isGenerating ?? false) { _, isGenerating in
             if assistantTurnUndo == nil {
                 assistantTurnUndo = AssistantTurnUndo(model: model)
@@ -200,8 +196,8 @@ public struct ComposerView: View {
             }
         }
         .onAppear {
-            document.editorModel = model
-            document.updateEditorState()
+            // Saving can run off the main actor, so the document keeps its own copy of the editor state (#204).
+            document.attach(model)
             if assistantStore == nil {
                 assistantStore = ComposerAssistant.makeStore(credentials: credentials, model: model)
             }

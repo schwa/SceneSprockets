@@ -45,6 +45,29 @@ public final class ComposerDocument: ReferenceFileDocument, @unchecked Sendable 
         savedEditorStateLock.withLock { $0 = state }
     }
 
+    // Copies the editor state now and again whenever its inputs change, instead of on every view update (#232).
+    @MainActor
+    func attach(_ model: EditorModel) {
+        editorModel = model
+        trackEditorState()
+    }
+
+    @MainActor
+    private func trackEditorState() {
+        guard let model = editorModel else {
+            return
+        }
+        let state = withObservationTracking {
+            model.editorState
+        } onChange: { [weak self] in
+            // Runs before the change lands, so copy on the next main-actor turn.
+            Task { @MainActor in
+                self?.trackEditorState()
+            }
+        }
+        savedEditorStateLock.withLock { $0 = state }
+    }
+
     public init(sceneGraph: SceneGraph) {
         self.sceneGraph = sceneGraph
         editorState = nil

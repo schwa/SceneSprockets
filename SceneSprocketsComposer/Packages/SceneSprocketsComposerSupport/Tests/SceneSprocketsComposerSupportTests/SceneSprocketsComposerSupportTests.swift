@@ -75,6 +75,22 @@ import UniformTypeIdentifiers
     #expect(Int(bytes[0]) + Int(bytes[1]) + Int(bytes[2]) > 30)
 }
 
+// #232: the document follows editor changes itself, without the view copying on every update.
+@MainActor
+@Test func attachedDocumentTracksEditorState() async {
+    let document = ComposerDocument()
+    let model = EditorModel(sceneGraph: document.sceneGraph)
+    document.attach(model)
+    #expect(document.savedEditorState?.gizmoMode == model.gizmoMode)
+    model.gizmoMode = .scale
+    model.renderSettings.fieldOfView = 42
+    for _ in 0 ..< 10 where document.savedEditorState?.renderSettings.fieldOfView != 42 {
+        await Task.yield()
+    }
+    #expect(document.savedEditorState?.gizmoMode == .scale)
+    #expect(document.savedEditorState?.renderSettings.fieldOfView == 42)
+}
+
 // #185
 @MainActor
 @Test func editorStateRoundTrips() throws {

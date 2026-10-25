@@ -4986,12 +4986,13 @@ Fix: keep one @State camera matrix as the source of truth in SceneView. Pass $ca
 ## 232: ComposerView recomputes editorState (a full graph walk) on every body pass
 
 +++
-status: open
+status: closed
 priority: high
 kind: bug
 labels: area:composer, area:ui, effort:s
 created: 2026-10-24T23:49:33Z
-updated: 2026-10-24T23:51:39Z
+updated: 2026-10-25T00:00:30Z
+closed: 2026-10-25T00:00:30Z
 +++
 
 From a SwiftUI house-rules review. ComposerView has .onChange(of: model.editorState, initial: true) { document.updateEditorState() }. editorState is computed: selectedNodes and lockedPaths each walk the whole graph. Measured at 1.36 ms per call with 500 nodes (DragPerformanceTests). It runs on every ComposerView body evaluation. Body must stay fast and side-effect free.
