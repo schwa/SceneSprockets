@@ -63,6 +63,29 @@ struct SceneArchiveTests {
         try String(contentsOf: url.appendingPathComponent("scene.json"), encoding: .utf8)
     }
 
+    // #238: a capture holds values. Edits after capturing do not reach it, and it writes textures without the graph.
+    @Test
+    func captureIsUnaffectedByLaterEdits() throws {
+        let sceneGraph = try makeScene()
+        let box = try #require(sceneGraph.root.children.first)
+        box.label = "Before"
+        let cache = SceneArchive.TextureCache()
+        let capture = try archive.capture(sceneGraph, textureCache: cache)
+        box.label = "After"
+        box.removeFromParent()
+        let url = temporaryURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        try capture.write(to: url)
+        let (loaded, _) = try archive.read(from: url, device: device)
+        let loadedBox = try #require(loaded.root.children.first)
+        #expect(loadedBox.label == "Before")
+        guard case .mesh(_, let materials, _, _) = loadedBox.content, let material = materials.first as? BlinnPhongSceneMaterial, case .texture(let texture, _, _) = material.diffuse else {
+            Issue.record("texture not saved")
+            return
+        }
+        #expect(texture.width == 2)
+    }
+
     // #196: an inactive subtree is hidden and stops simulating; the flag is saved.
     @Test
     func inactiveSubtreesStopAndAreSaved() throws {

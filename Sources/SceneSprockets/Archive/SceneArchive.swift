@@ -28,19 +28,77 @@ public struct SceneArchive {
     // Replaces anything at `url`. Returns warnings for what could not be saved.
     @discardableResult
     public func write(_ sceneGraph: SceneGraph, to url: URL) throws -> [String] {
-        let fileManager = FileManager.default
-        if fileManager.fileExists(atPath: url.path) {
-            try fileManager.removeItem(at: url)
-        }
-        try fileManager.createDirectory(at: url, withIntermediateDirectories: true)
-        let context = SceneArchiveContext(directory: url, device: nil, archive: self)
+        let capture = try capture(sceneGraph)
+        try capture.write(to: url)
+        return capture.warnings
+    }
+
+    // Everything the archive's files hold, as values. Read the graph on the thread that owns it; later edits do not
+    // change the capture, and it can be written on any thread (#238). `textureCache` keeps texture bytes between
+    // captures, so unchanged textures are read back from the GPU once.
+    public func capture(_ sceneGraph: SceneGraph, textureCache: TextureCache? = nil) throws -> Capture {
+        let context = SceneArchiveContext(directory: nil, device: nil, archive: self)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.nonConformingFloatEncodingStrategy = .convertToString(positiveInfinity: "inf", negativeInfinity: "-inf", nan: "nan")
         encoder.userInfo[.sceneArchive] = context
         let json = try String(decoding: encoder.encode(sceneGraph), as: UTF8.self)
-        try Data(ArchiveFormatting.compactNumberArrays(json).utf8).write(to: url.appendingPathComponent(Self.sceneFileName))
-        return context.warnings
+        let cache = textureCache ?? TextureCache()
+        var textures: [String: Data] = [:]
+        for pending in context.pendingTextures {
+            textures[pending.file] = try cache.data(for: pending.texture, isPNG: pending.file.hasSuffix(".png"))
+        }
+        cache.keepOnly(context.pendingTextures.map(\.texture))
+        return Capture(scene: Data(ArchiveFormatting.compactNumberArrays(json).utf8), textures: textures, warnings: context.warnings)
+    }
+
+    struct PendingTexture {
+        let texture: any MTLTexture
+        let file: String
+    }
+
+    // Texture file bytes by texture. Textures are not edited in place, so the bytes stay valid while the texture
+    // lives. Use from one thread.
+    public final class TextureCache {
+        private var entries: [ObjectIdentifier: (texture: any MTLTexture, isPNG: Bool, data: Data)] = [:]
+
+        public init() {}
+
+        func data(for texture: any MTLTexture, isPNG: Bool) throws -> Data {
+            if let entry = entries[ObjectIdentifier(texture)], entry.isPNG == isPNG {
+                return entry.data
+            }
+            let data = try SceneArchiveContext.fileData(texture, isPNG: isPNG)
+            entries[ObjectIdentifier(texture)] = (texture, isPNG, data)
+            return data
+        }
+
+        // Drops textures the scene no longer uses.
+        func keepOnly(_ textures: [any MTLTexture]) {
+            let used = Set(textures.map(ObjectIdentifier.init))
+            entries = entries.filter { used.contains($0.key) }
+        }
+    }
+
+    public struct Capture: Sendable {
+        let scene: Data
+        let textures: [String: Data]
+        public let warnings: [String]
+
+        // Replaces anything at `url`.
+        public func write(to url: URL) throws {
+            let fileManager = FileManager.default
+            if fileManager.fileExists(atPath: url.path) {
+                try fileManager.removeItem(at: url)
+            }
+            try fileManager.createDirectory(at: url, withIntermediateDirectories: true)
+            try scene.write(to: url.appendingPathComponent(SceneArchive.sceneFileName))
+            for (file, data) in textures {
+                let fileURL = url.appendingPathComponent(file)
+                try fileManager.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try data.write(to: fileURL)
+            }
+        }
     }
 
     public func read(from url: URL, device: MTLDevice) throws -> (sceneGraph: SceneGraph, warnings: [String]) {
@@ -126,11 +184,14 @@ private extension Optional {
 // warnings. Unchecked Sendable: coder userInfo values must be Sendable, but a context lives for one write or read on
 // one thread.
 public final class SceneArchiveContext: @unchecked Sendable {
-    let directory: URL
+    // Where to read from; nil while capturing, which only encodes.
+    let directory: URL?
     let archive: SceneArchive
     private let readDevice: MTLDevice?
     public private(set) var warnings: [String] = []
     private var writtenTextures: [ObjectIdentifier: TextureReference] = [:]
+    // Textures named while encoding, written after (#238).
+    var pendingTextures: [SceneArchive.PendingTexture] = []
     private var readTextures: [String: MTLTexture] = [:]
     // Constraints refer to nodes by path from this root.
     var encodingRoot: SceneGraph.Node?
@@ -138,7 +199,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
     var pendingConstraints: [(node: SceneGraph.Node, constraints: [ArchivedConstraint])] = []
     var pendingSkins: [(node: SceneGraph.Node, skin: ArchivedSkin)] = []
 
-    init(directory: URL, device: MTLDevice?, archive: SceneArchive) {
+    init(directory: URL?, device: MTLDevice?, archive: SceneArchive) {
         self.directory = directory
         self.readDevice = device
         self.archive = archive
@@ -147,6 +208,13 @@ public final class SceneArchiveContext: @unchecked Sendable {
     public var device: MTLDevice {
         get throws {
             try readDevice.orThrow(SceneArchiveError.missingDevice)
+        }
+    }
+
+    // Reading has both a directory and a device; capturing has neither.
+    private var readDirectory: URL {
+        get throws {
+            try directory.orThrow(SceneArchiveError.missingDevice)
         }
     }
 
@@ -265,6 +333,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
 
     // Reads `texture` back from the GPU and writes it once per archive. 2D 8-bit RGBA and BGRA textures are a PNG of
     // level 0 (mips are regenerated on load); everything else is raw bytes of every slice and mip level.
+    // Names the texture's file. The bytes are written now, or by SceneArchive.Capture.write when capturing (#238).
     public func encode(texture: MTLTexture) throws -> TextureReference {
         if let reference = writtenTextures[ObjectIdentifier(texture)] {
             return reference
@@ -272,54 +341,53 @@ public final class SceneArchiveContext: @unchecked Sendable {
         guard let typeName = Self.textureTypeNames.first(where: { $0.value == texture.textureType })?.key else {
             throw SceneArchiveError.unsupportedTexture("type \(texture.textureType.rawValue)")
         }
-        guard let layout = TextureLayout(texture.pixelFormat) else {
+        guard TextureLayout(texture.pixelFormat) != nil else {
             throw SceneArchiveError.unsupportedTexture("pixel format \(texture.pixelFormat.rawValue)")
         }
         let index = writtenTextures.count
         let isPNG = texture.textureType == .type2D && Self.pngFormats.contains(texture.pixelFormat)
-        guard isPNG else {
-            var bytes: [UInt8] = []
-            for slice in 0 ..< Self.sliceCount(texture.textureType, arrayLength: texture.arrayLength) {
-                for level in 0 ..< texture.mipmapLevelCount {
-                    bytes += try Self.readBack(texture, level: level, slice: slice, layout: layout)
-                }
-            }
-            let file = "\(SceneArchive.texturesDirectoryName)/\(index).bin"
-            let url = directory.appendingPathComponent(file)
-            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try Data(bytes).write(to: url)
-            let reference = TextureReference(
-                file: file, pixelFormat: texture.pixelFormat.rawValue, width: texture.width, height: texture.height, mipmapped: texture.mipmapLevelCount > 1,
+        let reference = if isPNG {
+            TextureReference(file: "\(SceneArchive.texturesDirectoryName)/\(index).png", pixelFormat: texture.pixelFormat.rawValue, width: texture.width, height: texture.height, mipmapped: texture.mipmapLevelCount > 1)
+        } else {
+            TextureReference(
+                file: "\(SceneArchive.texturesDirectoryName)/\(index).bin", pixelFormat: texture.pixelFormat.rawValue, width: texture.width, height: texture.height, mipmapped: texture.mipmapLevelCount > 1,
                 type: typeName == "2D" ? nil : typeName,
                 depth: texture.textureType == .type3D ? texture.depth : nil,
                 arrayLength: [.type2DArray, .typeCubeArray].contains(texture.textureType) ? texture.arrayLength : nil,
                 levels: texture.mipmapLevelCount
             )
-            writtenTextures[ObjectIdentifier(texture)] = reference
-            return reference
         }
-        var bytes = try Self.readBack(texture, level: 0, slice: 0, layout: layout)
-        let file = "\(SceneArchive.texturesDirectoryName)/\(index).\(isPNG ? "png" : "bin")"
-        let url = directory.appendingPathComponent(file)
-        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-        if isPNG {
-            if [.bgra8Unorm, .bgra8Unorm_srgb].contains(texture.pixelFormat) {
-                for pixel in stride(from: 0, to: bytes.count, by: 4) {
-                    bytes.swapAt(pixel, pixel + 2)
+        writtenTextures[ObjectIdentifier(texture)] = reference
+        pendingTextures.append(SceneArchive.PendingTexture(texture: texture, file: reference.file))
+        return reference
+    }
+
+    // The texture's file contents, read back from the GPU: PNG data, or raw texels of every slice and level.
+    static func fileData(_ texture: MTLTexture, isPNG: Bool) throws -> Data {
+        guard let layout = TextureLayout(texture.pixelFormat) else {
+            throw SceneArchiveError.unsupportedTexture("pixel format \(texture.pixelFormat.rawValue)")
+        }
+        guard isPNG else {
+            var bytes: [UInt8] = []
+            for slice in 0 ..< sliceCount(texture.textureType, arrayLength: texture.arrayLength) {
+                for level in 0 ..< texture.mipmapLevelCount {
+                    bytes += try readBack(texture, level: level, slice: slice, layout: layout)
                 }
             }
-            try Self.writePNG(bytes: bytes, width: texture.width, height: texture.height, to: url)
-        } else {
-            try Data(bytes).write(to: url)
+            return Data(bytes)
         }
-        let reference = TextureReference(file: file, pixelFormat: texture.pixelFormat.rawValue, width: texture.width, height: texture.height, mipmapped: texture.mipmapLevelCount > 1)
-        writtenTextures[ObjectIdentifier(texture)] = reference
-        return reference
+        var bytes = try readBack(texture, level: 0, slice: 0, layout: layout)
+        if [.bgra8Unorm, .bgra8Unorm_srgb].contains(texture.pixelFormat) {
+            for pixel in stride(from: 0, to: bytes.count, by: 4) {
+                bytes.swapAt(pixel, pixel + 2)
+            }
+        }
+        return try pngData(bytes: bytes, width: texture.width, height: texture.height)
     }
 
     // The stored file's bytes: PNG data, or raw rows of `pixelFormat` texels.
     public func data(for reference: TextureReference) throws -> Data {
-        try Data(contentsOf: directory.appendingPathComponent(reference.file))
+        try Data(contentsOf: readDirectory.appendingPathComponent(reference.file))
     }
 
     public func texture(for reference: TextureReference) throws -> MTLTexture {
@@ -327,7 +395,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
             return texture
         }
         let device = try device
-        let url = directory.appendingPathComponent(reference.file)
+        let url = try readDirectory.appendingPathComponent(reference.file)
         let pixelFormat = MTLPixelFormat(rawValue: reference.pixelFormat) ?? .rgba8Unorm
         guard let layout = TextureLayout(pixelFormat) else {
             throw SceneArchiveError.unsupportedTexture("pixel format \(reference.pixelFormat)")
@@ -517,16 +585,18 @@ public final class SceneArchiveContext: @unchecked Sendable {
     }
 
     // Straight (not premultiplied) RGBA, so alpha round-trips exactly.
-    private static func writePNG(bytes: [UInt8], width: Int, height: Int, to url: URL) throws {
+    private static func pngData(bytes: [UInt8], width: Int, height: Int) throws -> Data {
+        let data = NSMutableData()
         guard let provider = CGDataProvider(data: Data(bytes) as CFData),
               let image = CGImage(width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: width * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.last.rawValue), provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent),
-              let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil)
+              let destination = CGImageDestinationCreateWithData(data as CFMutableData, UTType.png.identifier as CFString, 1, nil)
         else {
             throw SceneArchiveError.unsupportedTexture("could not encode PNG")
         }
         CGImageDestinationAddImage(destination, image, nil)
         guard CGImageDestinationFinalize(destination) else {
-            throw SceneArchiveError.unsupportedTexture("could not write \(url.lastPathComponent)")
+            throw SceneArchiveError.unsupportedTexture("could not encode PNG")
         }
+        return data as Data
     }
 }

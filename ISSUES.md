@@ -4902,12 +4902,13 @@ Selecting a node shows no size information. Add a Bounds section (or rows under 
 ## 227: ComposerDocument.snapshot reads and renders the live scene graph off the main thread
 
 +++
-status: open
+status: closed
 priority: high
 kind: bug
 labels: area:composer, area:document, effort:m
 created: 2026-10-24T22:32:50Z
-updated: 2026-10-24T23:51:38Z
+updated: 2026-10-25T00:41:38Z
+closed: 2026-10-25T00:41:38Z
 +++
 
 From a concurrency review. ComposerDocument is @unchecked Sendable, and snapshot(contentType:) runs on a background queue when saving on quit (#204). There it encodes sceneGraph (an @Observable class the main actor mutates) with SceneArchive, and renders it with DocumentPreview. It is safe today only because AppKit blocks the main thread during that save; the types do not guarantee it, and other save paths (autosave, Save As while editing) are unverified.
@@ -5130,12 +5131,13 @@ Related: #155.
 ## 238: Architecture: document save as a main-actor capture plus a thread-free writer
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: area:composer, area:document, architecture, effort:l
 created: 2026-10-25T00:27:38Z
-updated: 2026-10-25T00:33:41Z
+updated: 2026-10-25T00:41:38Z
+closed: 2026-10-25T00:41:38Z
 +++
 
 From an architecture review (deepening candidate 3).
@@ -5146,7 +5148,13 @@ Direction: split into a cheap immutable capture made on the main actor and a wri
 Tests: replace the round-trip tests (documentRoundTrips, editorStateRoundTrips, preview tests) with capture-then-write tests, plus 'capture is unaffected by later edits'.
 Related: #227, #204, #232.
 
-- `2026-10-25T00:33:42Z`: Related: #227. User chose option (c); #227 will be fixed as part of this.
+\- `2026-10-25T00:33:42Z`: Related: #227. User chose option (c); #227 will be fixed as part of this.
+\- `2026-10-25T00:41:38Z`: Done together with #227, in one commit. They are one change.
+Design: SceneArchive.capture(_:textureCache:) encodes the graph on the owning thread into a Sendable Capture (scene.json data plus texture file data). Capture.write(to:) writes it on any thread, and SceneArchive.write is now capture plus write. MTLTexture is not Sendable, so the capture holds texture bytes, not textures. A TextureCache keyed by texture identity reads each texture back from the GPU once, so later captures only re-encode JSON.
+ComposerDocument.attach captures after every undo group close, undo or redo of the editor's undo manager, coalesced to once per main-actor turn.
+snapshot: on the main thread it captures fresh and renders the preview from the live graph. Off the main thread it writes the last capture and renders the preview from the bundle it just wrote, so it never touches the live graph.
+Limits: an edit with no undo step (mid-drag) is not in an off-main save until its undo step lands. The off-main preview misses anything the archive cannot save (#157/#158).
+Tests: offMainSnapshotSavesTheCapturedScene (failed before the fix: saved the live label), captureIsUnaffectedByLaterEdits (core), and snapshotWorksOffTheMainThread now uses attach.
 
 ---
 

@@ -22,7 +22,8 @@ extension SceneArchive {
 private let logger = Logger(subsystem: "io.schwa.SceneSprocketsComposer", category: "Document")
 
 // A .scenesprocketsd bundle, read and written by SceneArchive.
-// Unchecked Sendable: SwiftUI reads and snapshots the document on the main actor; writing uses only the snapshot.
+// Unchecked Sendable: the scene graph and editor are used only on the main actor. Off the main actor, snapshot reads
+// only the locked captures (#227).
 public final class ComposerDocument: ReferenceFileDocument, @unchecked Sendable {
     public static let readableContentTypes: [UTType] = [.sceneSprocketsDocument]
 
@@ -45,11 +46,56 @@ public final class ComposerDocument: ReferenceFileDocument, @unchecked Sendable 
         savedEditorStateLock.withLock { $0 = state }
     }
 
+    // The scene to save off the main actor, captured after each undoable change (#227, #238).
+    private let savedSceneLock = OSAllocatedUnfairLock<SceneArchive.Capture?>(initialState: nil)
+    @MainActor private let textureCache = SceneArchive.TextureCache()
+    @MainActor private var isSceneCapturePending = false
+    @MainActor private var undoObservers: [any NSObjectProtocol] = []
+
     // Copies the editor state now and again whenever its inputs change, instead of on every view update (#232).
+    // Captures the scene now and after every undoable change, for saving off the main actor (#227).
     @MainActor
     func attach(_ model: EditorModel) {
         editorModel = model
         trackEditorState()
+        captureScene()
+        undoObservers = [Notification.Name.NSUndoManagerDidCloseUndoGroup, .NSUndoManagerDidUndoChange, .NSUndoManagerDidRedoChange].map { name in
+            NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] notification in
+                let sender = (notification.object as? UndoManager).map(ObjectIdentifier.init)
+                MainActor.assumeIsolated {
+                    guard let self, let undoManager = self.editorModel?.undoManager, sender == ObjectIdentifier(undoManager) else {
+                        return
+                    }
+                    self.scheduleSceneCapture()
+                }
+            }
+        }
+    }
+
+    // Several notifications can arrive for one change; capture once, after they settle.
+    @MainActor
+    private func scheduleSceneCapture() {
+        guard !isSceneCapturePending else {
+            return
+        }
+        isSceneCapturePending = true
+        Task { @MainActor in
+            isSceneCapturePending = false
+            captureScene()
+        }
+    }
+
+    @MainActor
+    @discardableResult
+    private func captureScene() -> SceneArchive.Capture? {
+        do {
+            let capture = try SceneArchive.composer.capture(sceneGraph, textureCache: textureCache)
+            savedSceneLock.withLock { $0 = capture }
+            return capture
+        } catch {
+            logger.warning("Could not capture the scene: \(error, privacy: .public)")
+            return nil
+        }
     }
 
     @MainActor
@@ -98,24 +144,49 @@ public final class ComposerDocument: ReferenceFileDocument, @unchecked Sendable 
     }
 
     // The bundle is built here. SwiftUI usually calls this on the main actor, but AppKit calls it on a background
-    // queue when saving on quit, with the main thread blocked (#204). So it must not use the main actor: the editor
-    // state comes from `savedEditorState`.
+    // queue when saving on quit, with the main thread blocked (#204). On the main actor it captures the scene now;
+    // elsewhere it uses the last capture and never touches the live graph (#227).
     public func snapshot(contentType _: UTType) throws -> FileWrapper {
         let url = try Self.makeTemporaryURL()
         defer { try? FileManager.default.removeItem(at: url) }
-        Self.log(try SceneArchive.composer.write(sceneGraph, to: url))
-        // Saving still works without a preview or editor state.
+        if Thread.isMainThread {
+            try MainActor.assumeIsolated {
+                let capture = try SceneArchive.composer.capture(sceneGraph, textureCache: textureCache)
+                savedSceneLock.withLock { $0 = capture }
+                try write(capture, to: url)
+                // Saving still works without a preview.
+                do {
+                    try DocumentPreview.write(sceneGraph, into: url, device: systemDefaultDevice())
+                } catch {
+                    logger.warning("Could not write the preview: \(error, privacy: .public)")
+                }
+            }
+        } else {
+            guard let capture = savedSceneLock.withLock({ $0 }) else {
+                throw CocoaError(.fileWriteUnknown)
+            }
+            try write(capture, to: url)
+            // The preview comes from the bundle just written, a private copy of the captured scene.
+            do {
+                let saved = try SceneArchive.composer.read(from: url, device: systemDefaultDevice())
+                try DocumentPreview.write(saved.sceneGraph, into: url, device: systemDefaultDevice())
+            } catch {
+                logger.warning("Could not write the preview: \(error, privacy: .public)")
+            }
+        }
+        return try FileWrapper(url: url, options: .immediate)
+    }
+
+    // The scene files and editor state. Any thread.
+    private func write(_ capture: SceneArchive.Capture, to url: URL) throws {
+        Self.log(capture.warnings)
+        try capture.write(to: url)
+        // Saving still works without the editor state.
         do {
             try savedEditorState?.write(toBundleAt: url)
         } catch {
             logger.warning("Could not write the editor state: \(error, privacy: .public)")
         }
-        do {
-            try DocumentPreview.write(sceneGraph, into: url, device: systemDefaultDevice())
-        } catch {
-            logger.warning("Could not write the preview: \(error, privacy: .public)")
-        }
-        return try FileWrapper(url: url, options: .immediate)
     }
 
     public func fileWrapper(snapshot: FileWrapper, configuration _: WriteConfiguration) -> FileWrapper {

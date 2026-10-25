@@ -75,6 +75,34 @@ import UniformTypeIdentifiers
     #expect(Int(bytes[0]) + Int(bytes[1]) + Int(bytes[2]) > 30)
 }
 
+// #227: off the main thread, snapshot saves the scene as captured after the last undoable edit; it does not read
+// the live graph, which the main actor may be changing.
+@MainActor
+@Test func offMainSnapshotSavesTheCapturedScene() async throws {
+    let document = ComposerDocument()
+    let model = EditorModel(sceneGraph: document.sceneGraph)
+    let undoManager = UndoManager()
+    undoManager.groupsByEvent = false
+    model.undoManager = undoManager
+    document.attach(model)
+    undoManager.beginUndoGrouping()
+    model.addShape(.box(), label: "Captured")
+    undoManager.endUndoGrouping()
+    let node = try #require(model.sceneGraph.root.children.first)
+    for _ in 0 ..< 10 {
+        await Task.yield()
+    }
+    // A change with no undo step, as in the middle of a drag: not captured yet.
+    node.label = "Live"
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("scenesprocketsd")
+    defer { try? FileManager.default.removeItem(at: url) }
+    try await Task.detached {
+        try document.snapshot(contentType: .sceneSprocketsDocument).write(to: url, options: [], originalContentsURL: nil)
+    }.value
+    let loaded = try ComposerDocument(contentsOf: url)
+    #expect(loaded.sceneGraph.root.children.first?.label == "Captured")
+}
+
 // #232: the document follows editor changes itself, without the view copying on every update.
 @MainActor
 @Test func attachedDocumentTracksEditorState() async {
@@ -391,8 +419,7 @@ import UniformTypeIdentifiers
     let model = EditorModel(sceneGraph: document.sceneGraph)
     model.addShape(.box(), label: "Box")
     model.renderSettings.showsGrid = false
-    document.editorModel = model
-    document.updateEditorState()
+    document.attach(model)
     let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("scenesprocketsd")
     defer { try? FileManager.default.removeItem(at: url) }
     let wasOffMain = try await Task.detached {
@@ -403,6 +430,7 @@ import UniformTypeIdentifiers
     #expect(wasOffMain)
     let loaded = try ComposerDocument(contentsOf: url)
     #expect(loaded.editorState?.renderSettings.showsGrid == false)
+    #expect(loaded.sceneGraph.root.children.first?.label == "Box")
     #expect(DocumentPreview.image(inBundleAt: url) != nil)
 }
 
