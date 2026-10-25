@@ -5,17 +5,9 @@ import UniformTypeIdentifiers
 
 // Scene-wide settings, shown when no node is selected.
 struct SceneInspectorView: View {
-    var model: EditorModel
+    @Bindable var model: EditorModel
     @State private var isImporting = false
     @State private var importError: String?
-
-    private enum BackgroundKind: String, CaseIterable, Identifiable {
-        case clear = "None"
-        case color = "Color"
-        case environment = "Environment"
-
-        var id: Self { self }
-    }
 
     var body: some View {
         Form {
@@ -30,7 +22,7 @@ struct SceneInspectorView: View {
                 importError = error.localizedDescription
             }
         }
-        .alert("Could Not Load Image", isPresented: Binding(get: { importError != nil }, set: { if !$0 { importError = nil } })) {
+        .alert("Could Not Load Image", isPresented: $importError.isPresent) {
             Button("OK") {
                 importError = nil
             }
@@ -41,7 +33,7 @@ struct SceneInspectorView: View {
 
     private var backgroundSection: some View {
         Section("Background") {
-            Picker("Background", selection: backgroundKind) {
+            Picker("Background", selection: $model[environment: "Background"].backgroundKind) {
                 ForEach(BackgroundKind.allCases) { kind in
                     Text(kind.rawValue).tag(kind)
                 }
@@ -51,11 +43,11 @@ struct SceneInspectorView: View {
                 EmptyView()
 
             case .color:
-                ColorPicker("Color", selection: backgroundColor)
+                ColorPicker("Color", selection: $model[environment: "Background Color"].backgroundColor.linearColor)
 
             case .environment:
                 LabeledContent("Blur") {
-                    Slider(value: backgroundBlur, in: 0 ... 1)
+                    Slider(value: $model[environment: "Background Blur"].backgroundBlur, in: 0 ... 1)
                 }
             }
         }
@@ -74,10 +66,10 @@ struct SceneInspectorView: View {
                 .disabled(model.environment.map === PBREnvironment.studio)
             }
             LabeledContent("Intensity") {
-                Slider(value: binding(\.intensity, actionName: "Environment Intensity"), in: 0 ... 4)
+                Slider(value: $model[environment: "Environment Intensity"].intensity, in: 0 ... 4)
             }
             LabeledContent("Rotation") {
-                Slider(value: rotationDegrees, in: -180 ... 180)
+                Slider(value: $model[environment: "Environment Rotation"].rotationDegrees, in: -180 ... 180)
             }
         }
     }
@@ -101,56 +93,5 @@ struct SceneInspectorView: View {
         var environment = model.environment
         change(&environment)
         model.setEnvironment(environment, actionName: actionName)
-    }
-
-    private func binding<Value>(_ keyPath: WritableKeyPath<SceneGraph.Environment, Value>, actionName: String) -> Binding<Value> {
-        Binding(get: { model.environment[keyPath: keyPath] }, set: { value in update(actionName) { $0[keyPath: keyPath] = value } })
-    }
-
-    private var backgroundKind: Binding<BackgroundKind> {
-        Binding(get: {
-            switch model.environment.background {
-            case .none: .clear
-            case .color: .color
-            case .environment: .environment
-            }
-        }, set: { kind in
-            update("Background") { environment in
-                switch kind {
-                case .clear: environment.background = .none
-                case .color: environment.background = .color([0.2, 0.2, 0.22, 1])
-                case .environment: environment.background = .environment()
-                }
-            }
-        })
-    }
-
-    private var backgroundColor: Binding<Color> {
-        Binding(get: {
-            guard case let .color(color) = model.environment.background else {
-                return .black
-            }
-            return Color(.sRGBLinear, red: Double(color.x), green: Double(color.y), blue: Double(color.z), opacity: Double(color.w))
-        }, set: { color in
-            let resolved = color.resolve(in: EnvironmentValues())
-            update("Background Color") { $0.background = .color([resolved.linearRed, resolved.linearGreen, resolved.linearBlue, resolved.opacity]) }
-        })
-    }
-
-    private var backgroundBlur: Binding<Float> {
-        Binding(get: {
-            guard case let .environment(blur) = model.environment.background else {
-                return 0
-            }
-            return blur
-        }, set: { blur in
-            update("Background Blur") { $0.background = .environment(blur: blur) }
-        })
-    }
-
-    private var rotationDegrees: Binding<Float> {
-        Binding(get: { model.environment.rotation * 180 / .pi }, set: { degrees in
-            update("Environment Rotation") { $0.rotation = degrees * .pi / 180 }
-        })
     }
 }

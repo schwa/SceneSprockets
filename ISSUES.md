@@ -4845,12 +4845,13 @@ Measure before and after with the SwiftUI instrument (body update counts during 
 ## 224: Composer: remaining closure bindings: inspector leaf views and SceneView's decorations and overlay closures
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: area:composer, area:ui, effort:m
 created: 2026-10-24T22:11:12Z
-updated: 2026-10-24T23:51:37Z
+updated: 2026-10-25T00:08:04Z
+closed: 2026-10-25T00:08:04Z
 +++
 
 Follow-up to #223, which fixed the hot spots: the tree's List selection is now $model.treeSelection, SceneView's camera is $model.viewCameraMatrix, and tree rows read visibilityRevision instead of transformRevision.
@@ -4861,6 +4862,7 @@ Measure with the SwiftUI instrument during a drag.
 
 - `2026-10-24T23:49:33Z`: House-rules review adds to this issue: SceneInspectorView has 6 closure bindings (background, color, blur, rotation) and ComposerView has 2 alert isPresented bindings. Use .alert(_:isPresented:presenting:) or item-based alerts. Approach for the inspectors: writable computed properties on EditorModel (for example selectedLight, selectedMaterial(at:)), projected with Binding($model.optional) and key paths, instead of the binding(_:), trs, component and eulerDegrees helpers. Hiding a closure binding in a helper does not make it stable.
 - `2026-10-24T23:51:39Z`: Related: #231 (SceneView's camera binding; this issue covers its decorations and overlay closures) and #233 (struct extraction, which can carry the leaf-binding work).
+- `2026-10-25T00:08:04Z`: Fixed the inspector and alert bindings. All Binding(get:set:) uses in the Composer are gone. New InspectorProperties.swift adds writable properties and subscripts on EditorModel (selected node, light, multiple selection, materials, environment with an undo action name) and on value types (linearColor, [double:], rotationDegrees, Light cones, isPresent), projected with $model and key paths. The SceneView decorations, overlay and onTapAt closures are a library API design question, split out to #235. The 'measure with the SwiftUI instrument' step was not done. Tests: inspectorPropertiesEditTheSelection, lightConePropertiesKeepInnerInsideOuter.
 
 ---
 
@@ -5049,5 +5051,19 @@ From a SwiftUI house-rules review.
 - NodeInspectorView ForEach(0..<materialCount, id: \.self) over a range that changes size: iterate materials.indices or give slots stable ids.
 - Previews for leaf views: LightSection, MaterialSection, MultipleSelectionSection, DefaultCameraInspectorView, DefaultLightingInspectorView, Demo SceneNodeRow, VectorRow, ColorRow, CodePanel.
 The Task.yield hack is #230.
+
+---
+
+## 235: SceneView: decorations, overlay and onTapAt closures make SceneView never compare equal
+
++++
+status: new
+priority: medium
+kind: enhancement
+labels: area:ui, area:composer, effort:m
+created: 2026-10-25T00:07:58Z
++++
+
+Split out of #224. ScenePreviewView builds SceneView's decorations, overlay and onTapAt closures in its body, so SceneView never compares equal and its body re-runs on every model change. This is a library API design change. Options: (a) Equatable wrapper values keyed on what the closures capture (settings, selected ids, revisions); (b) decoration and overlay objects with identity held by the model, passed by reference. Measure with the SwiftUI instrument during a gizmo drag before choosing.
 
 ---

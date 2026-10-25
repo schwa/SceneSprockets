@@ -6,7 +6,7 @@ import SwiftFields
 import SwiftUI
 
 struct NodeInspectorView: View {
-    var model: EditorModel
+    @Bindable var model: EditorModel
 
     var body: some View {
         if let node = model.selectedNode {
@@ -16,15 +16,15 @@ struct NodeInspectorView: View {
                     MultipleSelectionSection(model: model)
                 }
                 Section("Node") {
-                    TextField("Name", text: Binding(get: { node.label ?? "" }, set: { model.setLabel($0.isEmpty ? nil : $0, of: node) }), prompt: Text("Untitled"))
+                    TextField("Name", text: $model.selectedLabel, prompt: Text("Untitled"))
                         .disabled(isLocked)
-                    Toggle("Visible", isOn: Binding(get: { model.isVisible(node) }, set: { model.setVisible($0, node) }))
+                    Toggle("Visible", isOn: $model.selectedIsVisible)
                         .help("Hidden nodes and their children are not drawn, do not light the scene and cannot be clicked")
                         .disabled(isLocked)
-                    Toggle("Active", isOn: Binding(get: { model.isActive(node) }, set: { model.setActive($0, node) }))
+                    Toggle("Active", isOn: $model.selectedIsActive)
                         .help("Inactive nodes and their children are hidden, and their actions, constraints, particles and physics stop")
                         .disabled(isLocked)
-                    Toggle("Locked", isOn: Binding(get: { model.lockedNodes.contains(node.id) }, set: { model.setLocked($0, node) }))
+                    Toggle("Locked", isOn: $model.selectedIsLocked)
                         .help("Locked nodes and their children cannot be picked in the viewport, moved or edited")
                     LabeledContent("Kind", value: node.kindName)
                 }
@@ -34,27 +34,27 @@ struct NodeInspectorView: View {
                             .foregroundStyle(.secondary)
                     }
                     LabeledContent("Translation") {
-                        vectorFields(trs(node, \.translation))
+                        vectorFields($model.selectedTRS.translation)
                     }
                     LabeledContent("Rotation") {
-                        let rotation = eulerDegrees(trs(node, \.rotation))
+                        let rotation = $model.selectedTRS.rotationDegrees
                         HStack {
-                            ScrubbableValueField("Pitch", value: component(rotation, 0), suffix: "\u{00B0}", range: -180 ... 180, sensitivity: 0.2)
-                            ScrubbableValueField("Yaw", value: component(rotation, 1), suffix: "\u{00B0}", range: -180 ... 180, sensitivity: 0.2)
-                            ScrubbableValueField("Roll", value: component(rotation, 2), suffix: "\u{00B0}", range: -180 ... 180, sensitivity: 0.2)
+                            ScrubbableValueField("Pitch", value: rotation[double: 0], suffix: "\u{00B0}", range: -180 ... 180, sensitivity: 0.2)
+                            ScrubbableValueField("Yaw", value: rotation[double: 1], suffix: "\u{00B0}", range: -180 ... 180, sensitivity: 0.2)
+                            ScrubbableValueField("Roll", value: rotation[double: 2], suffix: "\u{00B0}", range: -180 ... 180, sensitivity: 0.2)
                         }
                     }
                     LabeledContent("Scale") {
-                        vectorFields(trs(node, \.scale))
+                        vectorFields($model.selectedTRS.scale)
                     }
                 }
                 .disabled(isLocked)
                 let materialCount = model.materials(of: node).count
                 ForEach(0..<materialCount, id: \.self) { index in
-                    MaterialSection(model: model, node: node, index: index, count: materialCount, isLocked: isLocked)
+                    MaterialSection(model: model, index: index, count: materialCount, isLocked: isLocked)
                 }
-                if let light = light(node) {
-                    LightSection(model: model, node: node, light: light, isLocked: isLocked)
+                if let light = Binding($model.selectedLight) {
+                    LightSection(light: light, isLocked: isLocked)
                 }
             }
             .formStyle(.grouped)
@@ -70,39 +70,10 @@ struct NodeInspectorView: View {
 
     private func vectorFields(_ value: Binding<SIMD3<Float>>) -> some View {
         HStack {
-            ScrubbableValueField("X", value: component(value, 0), precision: 3)
-            ScrubbableValueField("Y", value: component(value, 1), precision: 3)
-            ScrubbableValueField("Z", value: component(value, 2), precision: 3)
+            ScrubbableValueField("X", value: value[double: 0], precision: 3)
+            ScrubbableValueField("Y", value: value[double: 1], precision: 3)
+            ScrubbableValueField("Z", value: value[double: 2], precision: 3)
         }
-    }
-
-    private func component(_ value: Binding<SIMD3<Float>>, _ index: Int) -> Binding<Double> {
-        Binding(get: { Double(value.wrappedValue[index]) }, set: { value.wrappedValue[index] = Float($0) })
-    }
-
-    // Pitch, yaw, roll in degrees, converted as CameraPose does.
-    private func eulerDegrees(_ rotation: Binding<simd_quatf>) -> Binding<SIMD3<Float>> {
-        Binding(get: { CameraPose(matrix: simd_float4x4(rotation.wrappedValue)).rotationDegrees }, set: { degrees in
-            rotation.wrappedValue = simd_quatf(CameraPose(position: .zero, rotationDegrees: degrees).matrix)
-        })
-    }
-
-    private func trs<Value>(_ node: SceneGraph.Node, _ keyPath: WritableKeyPath<Transform3D, Value>) -> Binding<Value> {
-        Binding(get: { model.localTRS(of: node)[keyPath: keyPath] }, set: { newValue in
-            let previous = node.localTransform
-            var trs = previous.trs
-            trs[keyPath: keyPath] = newValue
-            model.setTransform(.trs(trs), of: node, undoTo: previous)
-        })
-    }
-
-    // Reads the revision so the section refreshes after edits.
-    private func light(_ node: SceneGraph.Node) -> Light? {
-        _ = model.localTRS(of: node)
-        guard case .light(let light) = node.content else {
-            return nil
-        }
-        return light
     }
 }
 

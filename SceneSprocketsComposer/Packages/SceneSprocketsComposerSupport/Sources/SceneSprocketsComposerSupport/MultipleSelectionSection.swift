@@ -8,29 +8,16 @@ import SwiftUI
 // Shared fields for every selected node (#205), above the primary node's own sections. A toggle shows on when all
 // nodes have it on; setting it sets all of them, as one undo step. Locked nodes are left alone.
 struct MultipleSelectionSection: View {
-    var model: EditorModel
+    @Bindable var model: EditorModel
 
     var body: some View {
         let nodes = model.selectedNodes
         Section("\(nodes.count) Nodes Selected") {
-            Toggle("Visible", isOn: Binding(get: { nodes.allSatisfy { model.isVisible($0) } }, set: { value in
-                model.editSelection("Visibility") { model, node in model.setVisible(value, node) }
-            }))
-            Toggle("Active", isOn: Binding(get: { nodes.allSatisfy { model.isActive($0) } }, set: { value in
-                model.editSelection("Active") { model, node in model.setActive(value, node) }
-            }))
-            Toggle("Locked", isOn: Binding(get: { nodes.allSatisfy { model.lockedNodes.contains($0.id) } }, set: { value in
-                model.editSelection("Lock", includesLocked: true) { model, node in model.setLocked(value, node) }
-            }))
+            Toggle("Visible", isOn: $model.selectionIsVisible)
+            Toggle("Active", isOn: $model.selectionIsActive)
+            Toggle("Locked", isOn: $model.selectionIsLocked)
             if nodes.contains(where: { !model.materials(of: $0).isEmpty }) {
-                ColorPicker("Color", selection: Binding(get: {
-                    let color = nodes.lazy.compactMap { model.materials(of: $0).first }.first.map(EditorModel.baseColor(of:)) ?? .one
-                    return Color(.sRGBLinear, red: Double(color.x), green: Double(color.y), blue: Double(color.z))
-                }, set: { newColor in
-                    let resolved = newColor.resolve(in: EnvironmentValues())
-                    let color = SIMD3<Float>(resolved.linearRed, resolved.linearGreen, resolved.linearBlue)
-                    model.editSelection("Color") { model, node in model.setBaseColor(color, of: node) }
-                }), supportsOpacity: false)
+                ColorPicker("Color", selection: $model.selectionBaseColor.linearColor, supportsOpacity: false)
             }
         }
     }

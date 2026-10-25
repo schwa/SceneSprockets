@@ -1004,3 +1004,44 @@ import UniformTypeIdentifiers
     undoManager.undo()
     #expect(model.sceneGraph.root.children.isEmpty)
 }
+
+// #224: the inspectors' key-path properties write through the model's undoable setters.
+@MainActor
+@Test func inspectorPropertiesEditTheSelection() throws {
+    let model = EditorModel(sceneGraph: ComposerDocument().sceneGraph)
+    model.addShape(.box(), label: "Box")
+    let undoManager = UndoManager()
+    undoManager.groupsByEvent = false
+    model.undoManager = undoManager
+    let node = try #require(model.selectedNode)
+    undoManager.beginUndoGrouping()
+    model.selectedTRS.translation.x = 2
+    model.selectedTRS.rotationDegrees[double: 1] = 30
+    model.selectedLabel = ""
+    model.selectedIsVisible = false
+    model[environment: "Environment Rotation"].rotationDegrees = 90
+    undoManager.endUndoGrouping()
+    #expect(node.localTransform.trs.translation.x == 2)
+    #expect(abs(model.selectedTRS.rotationDegrees.y - 30) < 0.01)
+    #expect(node.label == nil)
+    #expect(!model.isVisible(node))
+    #expect(abs(model.environment.rotation - .pi / 2) < 0.0001)
+    undoManager.undo()
+    #expect(node.localTransform.trs.translation.x == 0)
+    #expect(node.label == "Box")
+    #expect(model.isVisible(node))
+    #expect(model.environment.rotation == 0)
+}
+
+@MainActor
+@Test func lightConePropertiesKeepInnerInsideOuter() {
+    var light = Light(type: .spot, color: [1, 1, 1], intensity: 1)
+    light.outerCone = .degrees(30)
+    light.innerCone = .degrees(40)
+    #expect(light.outerConeAngle == light.innerConeAngle)
+    light.isRangeLimited = false
+    #expect(light.range == .infinity)
+    var message: String? = "x"
+    message.isPresent = false
+    #expect(message == nil)
+}

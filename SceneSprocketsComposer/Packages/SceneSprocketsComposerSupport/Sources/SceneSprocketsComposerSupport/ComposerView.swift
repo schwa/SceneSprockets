@@ -167,7 +167,7 @@ public struct ComposerView: View {
                 .fileDialogDefaultDirectory(fileNeedingFolder?.deletingLastPathComponent())
                 .fileDialogConfirmationLabel("Allow Access")
         }
-        .alert(FolderAccessRequest.title, isPresented: Binding(get: { folderAccessRequest != nil }, set: { if !$0 { folderAccessRequest = nil } }), presenting: folderAccessRequest) { request in
+        .alert(FolderAccessRequest.title, isPresented: $folderAccessRequest.isPresent, presenting: folderAccessRequest) { request in
             Button("Choose Folder\u{2026}") {
                 fileNeedingFolder = request.file
                 isChoosingFolder = true
@@ -178,7 +178,7 @@ public struct ComposerView: View {
         } message: { request in
             Text(request.message)
         }
-        .alert("Insert Model File", isPresented: Binding(get: { insertMessage != nil }, set: { if !$0 { insertMessage = nil } })) {
+        .alert("Insert Model File", isPresented: $insertMessage.isPresent) {
             Button("OK") {
                 insertMessage = nil
             }
