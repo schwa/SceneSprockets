@@ -5078,8 +5078,8 @@ updated: 2026-10-25T00:33:41Z
 
 Split out of #224. ScenePreviewView builds SceneView's decorations, overlay and onTapAt closures in its body, so SceneView never compares equal and its body re-runs on every model change. This is a library API design change. Options: (a) Equatable wrapper values keyed on what the closures capture (settings, selected ids, revisions); (b) decoration and overlay objects with identity held by the model, passed by reference. Measure with the SwiftUI instrument during a gizmo drag before choosing.
 
-- `2026-10-25T00:33:41Z`: Related: #240 (picking and viewport module would replace these closures' viewport rebuilding).
-- `2026-10-25T00:42:28Z`: Punted (auto-issue-fixer) with a recommendation not to do this as written. What I checked: ScenePreviewView's body reads renderSettings, camera (for camera.target), sceneGraph, selectedIDs and selectedNodes. It does not read transformRevision.
+\- `2026-10-25T00:33:41Z`: Related: #240 (picking and viewport module would replace these closures' viewport rebuilding).
+\- `2026-10-25T00:42:28Z`: Punted (auto-issue-fixer) with a recommendation not to do this as written. What I checked: ScenePreviewView's body reads renderSettings, camera (for camera.target), sceneGraph, selectedIDs and selectedNodes. It does not read transformRevision.
 - Gizmo drag: only transformRevision changes, so ScenePreviewView and SceneView do not re-run, closures or not.
 - Camera orbit: model.camera changes every frame, so ScenePreviewView re-runs. But SceneView must re-run anyway, because its camera binding's value changed.
 - Settings or selection changes: the closures really do change (they capture settings and selected ids), so SceneView should re-run.
@@ -5092,12 +5092,13 @@ Unblocker: OK to close as won't-fix? A cheap related tweak: pass cameraTarget so
 ## 236: Architecture: one edit/undo path for scene changes
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: area:composer, architecture, effort:l
 created: 2026-10-25T00:27:37Z
-updated: 2026-10-25T00:33:41Z
+updated: 2026-10-25T00:47:21Z
+closed: 2026-10-25T00:47:21Z
 +++
 
 From an architecture review (deepening candidate 1).
@@ -5108,7 +5109,15 @@ Direction: one deep editing module (for example apply(edit, actionName:)) that o
 Tests: replace the per-setter 'X undoes' tests with boundary tests: apply an edit, undo it, assert on the scene and the change notification.
 Next step: run the improve-codebase-architecture interface-design step, then write an RFC.
 
-- `2026-10-25T00:33:42Z`: Related: #237 (design together: the edit path is the natural owner of change notification), #239.
+\- `2026-10-25T00:33:42Z`: Related: #237 (design together: the edit path is the natural owner of change notification), #239.
+\- `2026-10-25T00:47:21Z`: Design and implementation:
+- EditorModel.perform(actionName, affecting: SceneAspects, change, revert:) is the one way to change the scene undoably. It runs change, calls notify(aspects), and registers revert as the undo step; redo re-runs change. change and revert never register undo themselves.
+- EditorModel.transaction(actionName) { ... } groups several performs into one step. It replaces the hand-written begin/end grouping in the gizmo drag end, group, ungroup, move up/down, editSelection and drop to floor.
+- notify(_ aspects:) is now the only place that bumps transformRevision, visibilityRevision and environmentRevision. SceneAspects is transform, visibility, label, content, structure, environment; the aspect-to-revision map lives in one function, which sets up #237. bumpRevision() is removed.
+- Rewritten: setEnvironment, setTransform, setLocked, setVisible, setActive, delete, insert, reparent, setLabel, setLight, setMaterial. Every registerUndo call outside AssistantTurnUndo is gone.
+Behavior changes: rename and structural edits now also bump visibilityRevision, so tree rows refresh. Delete, insert and reparent now notify. Group places the new node before inserting it, so no stray transform undo.
+Tests: transformChangeUndoes is replaced by SceneEditBoundaryTests.editUndoesAndRedoes, a parameterized test over 13 kinds of edit. Each case checks that the saved scene.json changes, that undo restores it byte for byte, that redo re-applies it, that the undo name is right and that a revision moved. The case-specific tests (hidden subtree, locked nodes, assistant turn) stay, because they check more than undo.
+Not done: SceneTools and InspectorProperties already go through the setters, so they get this for free; no separate rewrite was needed.
 
 ---
 

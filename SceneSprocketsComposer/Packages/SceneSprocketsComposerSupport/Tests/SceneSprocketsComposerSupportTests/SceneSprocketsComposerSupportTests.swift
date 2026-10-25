@@ -24,23 +24,73 @@ import UniformTypeIdentifiers
     #expect(document.sceneGraph.root.children.isEmpty)
 }
 
+// #236: every edit goes through EditorModel.perform. At that boundary: the edit changes the saved scene, undo
+// restores it exactly, redo applies it again, and the undo step has the edit's name.
 @MainActor
-@Test func transformChangeUndoes() throws {
-    let model = EditorModel(sceneGraph: ComposerDocument().sceneGraph)
-    model.addShape(.box(), label: "Box")
-    let undoManager = UndoManager()
-    undoManager.groupsByEvent = false
-    model.undoManager = undoManager
-    let node = try #require(model.sceneGraph.root.children.first)
-    let before = node.localTransform.matrix
-    undoManager.beginUndoGrouping()
-    model.setTransform(.matrix(.init(diagonal: [2, 2, 2, 1])), of: node, undoTo: node.localTransform)
-    undoManager.endUndoGrouping()
-    #expect(node.localTransform.matrix != before)
-    undoManager.undo()
-    #expect(node.localTransform.matrix == before)
-    undoManager.redo()
-    #expect(node.localTransform.matrix != before)
+struct SceneEditBoundaryTests {
+    struct Edit: CustomTestStringConvertible, Sendable {
+        var actionName: String
+        var apply: @MainActor @Sendable (EditorModel, SceneGraph.Node) -> Void
+        var testDescription: String { actionName }
+    }
+
+    nonisolated static let edits: [Edit] = [
+        Edit(actionName: "Transform") { model, node in model.setTransform(.matrix(.init(diagonal: [2, 2, 2, 1])), of: node, undoTo: node.localTransform) },
+        Edit(actionName: "Hide") { model, node in model.setVisible(false, node) },
+        Edit(actionName: "Deactivate") { model, node in model.setActive(false, node) },
+        Edit(actionName: "Rename") { model, node in model.setLabel("Renamed", of: node) },
+        Edit(actionName: "Delete") { model, node in model.delete(node) },
+        Edit(actionName: "Add Sphere") { model, _ in model.addShape(.sphere(), label: "Sphere") },
+        Edit(actionName: "Move") { model, node in model.reparent(node, to: model.sceneGraph.root.children[1]) },
+        Edit(actionName: "Move Down") { model, _ in model.moveSelection(by: 1) },
+        Edit(actionName: "Group") { model, _ in model.groupSelection() },
+        Edit(actionName: "Light") { model, _ in
+            let light = model.sceneGraph.root.children[1]
+            guard case .light(var value) = light.content else {
+                return
+            }
+            value.intensity = 7
+            model.setLight(value, of: light)
+        },
+        Edit(actionName: "Color") { model, _ in model.editSelection("Color") { model, node in model.setBaseColor([1, 0, 0], of: node) } },
+        Edit(actionName: "Environment Rotation") { model, _ in model[environment: "Environment Rotation"].rotationDegrees = 45 },
+        Edit(actionName: "Drop to Floor") { model, _ in model.dropSelectionToFloor() },
+    ]
+
+    func sceneJSON(_ model: EditorModel) throws -> String {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("scenesprocketsd")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try SceneArchive.composer.write(model.sceneGraph, to: url)
+        return try String(contentsOf: url.appendingPathComponent("scene.json"), encoding: .utf8)
+    }
+
+    @Test(arguments: edits)
+    func editUndoesAndRedoes(_ edit: Edit) throws {
+        let model = EditorModel(sceneGraph: ComposerDocument().sceneGraph)
+        model.addShape(.box(), label: "Box")
+        model.addLight(.point)
+        let box = model.sceneGraph.root.children[0]
+        model.selection = box.id
+        let undoManager = UndoManager()
+        undoManager.groupsByEvent = false
+        model.undoManager = undoManager
+        let before = try sceneJSON(model)
+        let revisions = (model.transformRevision, model.visibilityRevision)
+        undoManager.beginUndoGrouping()
+        edit.apply(model, box)
+        undoManager.endUndoGrouping()
+        let after = try sceneJSON(model)
+        #expect(after != before)
+        #expect(undoManager.undoActionName == edit.actionName)
+        // Environment edits are read through model.environment, not the node revisions.
+        if edit.actionName != "Environment Rotation" {
+            #expect(revisions != (model.transformRevision, model.visibilityRevision))
+        }
+        undoManager.undo()
+        #expect(try sceneJSON(model) == before)
+        undoManager.redo()
+        #expect(try sceneJSON(model) == after)
+    }
 }
 
 @MainActor

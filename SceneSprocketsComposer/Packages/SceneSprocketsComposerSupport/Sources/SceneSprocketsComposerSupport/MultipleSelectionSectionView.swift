@@ -26,12 +26,11 @@ struct MultipleSelectionSectionView: View {
 extension EditorModel {
     // Runs `edit` for each selected node (unlocked ones unless `includesLocked`) as one undo step.
     func editSelection(_ actionName: String, includesLocked: Bool = false, _ edit: (EditorModel, SceneGraph.Node) -> Void) {
-        undoManager?.beginUndoGrouping()
-        for node in selectedNodes where includesLocked || !isLocked(node) {
-            edit(self, node)
+        transaction(actionName) {
+            for node in selectedNodes where includesLocked || !isLocked(node) {
+                edit(self, node)
+            }
         }
-        undoManager?.endUndoGrouping()
-        undoManager?.setActionName(actionName)
     }
 
     // The node under a point in the preview (view coordinates, origin top-left), as a click would pick it: light and
@@ -74,12 +73,11 @@ extension EditorModel {
     // it moves with that node.
     func dropSelectionToFloor() {
         let nodes = selectedNodes.filter { !isLocked($0) }
-        undoManager?.beginUndoGrouping()
-        for node in nodes where !nodes.contains(where: { $0 !== node && $0.isAncestor(of: node) }) {
-            dropToFloor(node)
+        transaction("Drop to Floor") {
+            for node in nodes where !nodes.contains(where: { $0 !== node && $0.isAncestor(of: node) }) {
+                dropToFloor(node)
+            }
         }
-        undoManager?.endUndoGrouping()
-        undoManager?.setActionName("Drop to Floor")
     }
 
     var canDropSelectionToFloor: Bool {

@@ -119,11 +119,46 @@ public final class EditorModel {
         didSet { gizmo.worldSize = baseGizmoWorldSize * gizmoSize.scale }
     }
     @ObservationIgnored private var baseGizmoWorldSize: Float = 1
-    // Bumped while the gizmo drags, so views that show transforms refresh. Nodes are not observable (SceneSprockets #155).
+    // Nodes are not observable (SceneSprockets #155), so views read these revisions. Only notify(_:) bumps them.
+    // Transforms, node content and structure; bumped while the gizmo drags.
     public private(set) var transformRevision = 0
-    // Bumped by visibility and active changes. Tree rows read this, not transformRevision, so dragging does not
-    // re-render every row (#223).
+    // What tree rows show: visibility, active, label and structure. Tree rows read this, not transformRevision, so
+    // dragging does not re-render every row (#223).
     public private(set) var visibilityRevision = 0
+    private var environmentRevision = 0
+
+    // Tells views that read `aspects` of the scene that they changed.
+    func notify(_ aspects: SceneAspects) {
+        if !aspects.isDisjoint(with: [.transform, .content, .structure]) {
+            transformRevision += 1
+        }
+        if !aspects.isDisjoint(with: [.visibility, .label, .structure]) {
+            visibilityRevision += 1
+        }
+        if aspects.contains(.environment) {
+            environmentRevision += 1
+        }
+    }
+
+    // The one way to change the scene undoably (#236). Runs `change`, notifies readers of `aspects`, and registers
+    // `revert` as the undo step named `actionName`; redo runs `change` again. Both get the model and must not
+    // register undo themselves.
+    func perform(_ actionName: String, affecting aspects: SceneAspects, _ change: @escaping (EditorModel) -> Void, revert: @escaping (EditorModel) -> Void) {
+        change(self)
+        notify(aspects)
+        undoManager?.registerUndo(withTarget: self) { model in
+            model.perform(actionName, affecting: aspects, revert, revert: change)
+        }
+        undoManager?.setActionName(actionName)
+    }
+
+    // Runs several changes as one undo step named `actionName`.
+    func transaction(_ actionName: String, _ body: () -> Void) {
+        undoManager?.beginUndoGrouping()
+        body()
+        undoManager?.endUndoGrouping()
+        undoManager?.setActionName(actionName)
+    }
     // Set by the view from the document's environment; registering undo marks the document edited.
     @ObservationIgnored public weak var undoManager: UndoManager?
     // PBRMaterialRenderer caches GPU state, so keep one instance per editor.
@@ -154,7 +189,8 @@ public final class EditorModel {
         for companion in draggedCompanions {
             companion.node.worldTransform = change * companion.world
         }
-        transformRevision += 1
+        // Live feedback; the undo step is registered when the drag ends.
+        notify(.transform)
     }
 
     // One undo step for the whole drag.
@@ -165,12 +201,12 @@ public final class EditorModel {
         transformBeforeDrag = nil
         let companions = draggedCompanions
         draggedCompanions = []
-        undoManager?.beginUndoGrouping()
-        setTransform(node.localTransform, of: node, undoTo: before)
-        for companion in companions {
-            setTransform(companion.node.localTransform, of: companion.node, undoTo: companion.local)
+        transaction("Transform") {
+            setTransform(node.localTransform, of: node, undoTo: before)
+            for companion in companions {
+                setTransform(companion.node.localTransform, of: companion.node, undoTo: companion.local)
+            }
         }
-        undoManager?.endUndoGrouping()
     }
 
     public init(sceneGraph: SceneGraph, device: (any MTLDevice)? = nil) {
@@ -210,17 +246,9 @@ public final class EditorModel {
         _ = environmentRevision
         return sceneGraph.environment
     }
-    private var environmentRevision = 0
-
-    // `actionName` groups undo: consecutive changes with the same name (a slider drag) still undo one by one.
     func setEnvironment(_ environment: SceneGraph.Environment, actionName: String) {
         let previous = sceneGraph.environment
-        sceneGraph.environment = environment
-        environmentRevision += 1
-        undoManager?.registerUndo(withTarget: self) { model in
-            model.setEnvironment(previous, actionName: actionName)
-        }
-        undoManager?.setActionName(actionName)
+        perform(actionName, affecting: .environment, { $0.sceneGraph.environment = environment }, revert: { $0.sceneGraph.environment = previous })
     }
 
     func importEnvironmentImage(from url: URL) throws {
@@ -245,12 +273,7 @@ public final class EditorModel {
     }
 
     func setTransform(_ transform: SceneGraph.LocalTransform, of node: SceneGraph.Node, undoTo previous: SceneGraph.LocalTransform) {
-        node.localTransform = transform
-        transformRevision += 1
-        undoManager?.registerUndo(withTarget: self) { model in
-            model.setTransform(previous, of: node, undoTo: transform)
-        }
-        undoManager?.setActionName("Transform")
+        perform("Transform", affecting: .transform, { _ in node.localTransform = transform }, revert: { _ in node.localTransform = previous })
     }
 
     // The root cannot be deleted.
@@ -274,15 +297,21 @@ public final class EditorModel {
         guard lockedNodes.contains(node.id) != isLocked else {
             return
         }
-        if isLocked {
-            lockedNodes.insert(node.id)
-        } else {
-            lockedNodes.remove(node.id)
-        }
-        undoManager?.registerUndo(withTarget: self) { model in
-            model.setLocked(!isLocked, node)
-        }
-        undoManager?.setActionName(isLocked ? "Lock" : "Unlock")
+        let id = node.id
+        // lockedNodes is observed directly.
+        perform(isLocked ? "Lock" : "Unlock", affecting: [], { model in
+            if isLocked {
+                model.lockedNodes.insert(id)
+            } else {
+                model.lockedNodes.remove(id)
+            }
+        }, revert: { model in
+            if isLocked {
+                model.lockedNodes.remove(id)
+            } else {
+                model.lockedNodes.insert(id)
+            }
+        })
     }
 
     // Scene data (Node.isVisible, saved in scene.json). A hidden node and its subtree are not drawn, lit by, hit or
@@ -291,12 +320,7 @@ public final class EditorModel {
         guard node.isVisible != isVisible else {
             return
         }
-        node.isVisible = isVisible
-        visibilityRevision += 1
-        undoManager?.registerUndo(withTarget: self) { model in
-            model.setVisible(!isVisible, node)
-        }
-        undoManager?.setActionName(isVisible ? "Show" : "Hide")
+        perform(isVisible ? "Show" : "Hide", affecting: .visibility, { _ in node.isVisible = isVisible }, revert: { _ in node.isVisible = !isVisible })
     }
 
     // The node's own flag; reads the revision so views refresh. Nodes are not observable (#155).
@@ -310,12 +334,7 @@ public final class EditorModel {
         guard node.isActive != isActive else {
             return
         }
-        node.isActive = isActive
-        visibilityRevision += 1
-        undoManager?.registerUndo(withTarget: self) { model in
-            model.setActive(!isActive, node)
-        }
-        undoManager?.setActionName(isActive ? "Activate" : "Deactivate")
+        perform(isActive ? "Activate" : "Deactivate", affecting: .visibility, { _ in node.isActive = isActive }, revert: { _ in node.isActive = !isActive })
     }
 
     func isActive(_ node: SceneGraph.Node) -> Bool {
@@ -370,23 +389,29 @@ public final class EditorModel {
         guard let parent = node.parent, let index = parent.children.firstIndex(where: { $0 === node }) else {
             return
         }
-        node.removeFromParent()
-        if selectedIDs.contains(node.id) {
-            select(selectedIDs.filter { $0 != node.id }.map(\.self), primary: selection == node.id ? nil : selection)
-        }
-        undoManager?.registerUndo(withTarget: self) { model in
-            model.insert(node, into: parent, at: index, actionName: "Delete")
-        }
-        undoManager?.setActionName("Delete")
+        perform("Delete", affecting: .structure, { model in
+            node.removeFromParent()
+            model.deselect(node)
+        }, revert: { model in
+            parent.insertChild(node, at: min(index, parent.children.count))
+            model.selection = node.id
+        })
     }
 
     private func insert(_ node: SceneGraph.Node, into parent: SceneGraph.Node, at index: Int, actionName: String) {
-        parent.insertChild(node, at: min(index, parent.children.count))
-        selection = node.id
-        undoManager?.registerUndo(withTarget: self) { model in
-            model.delete(node)
+        perform(actionName, affecting: .structure, { model in
+            parent.insertChild(node, at: min(index, parent.children.count))
+            model.selection = node.id
+        }, revert: { model in
+            node.removeFromParent()
+            model.deselect(node)
+        })
+    }
+
+    private func deselect(_ node: SceneGraph.Node) {
+        if selectedIDs.contains(node.id) {
+            select(selectedIDs.filter { $0 != node.id }.map(\.self), primary: selection == node.id ? nil : selection)
         }
-        undoManager?.setActionName(actionName)
     }
 
     // Moves `node` under `newParent` at `index` and keeps where it is in the world. Undoable (#221).
@@ -446,8 +471,9 @@ public final class EditorModel {
             return
         }
         // insertChild inserts before the node currently at an index, so moving down needs one past the target slot.
-        reparent(node, to: parent, at: destination > index ? destination + 1 : destination)
-        undoManager?.setActionName(offset < 0 ? "Move Up" : "Move Down")
+        transaction(offset < 0 ? "Move Up" : "Move Down") {
+            reparent(node, to: parent, at: destination > index ? destination + 1 : destination)
+        }
     }
 
     // The selected, unlocked nodes Group would take: not the root, and not under another of them.
@@ -474,19 +500,19 @@ public final class EditorModel {
             result.map { BoundingBox3D(min: simd_min($0.min, bounds.min), max: simd_max($0.max, bounds.max)) } ?? bounds
         }
         let group = SceneGraph.Node(label: "Group")
-        undoManager?.beginUndoGrouping()
-        insert(group, into: parent, at: index, actionName: "Group")
+        // Placed before it is inserted, so the change needs no undo of its own.
         if let bounds {
-            var world = group.worldTransform
-            world.columns.3 = SIMD4((bounds.min + bounds.max) / 2, 1)
-            group.worldTransform = world
+            var transform = matrix_identity_float4x4
+            transform.columns.3 = SIMD4((bounds.min + bounds.max) / 2, 1)
+            group.localTransform = .matrix(parent.worldTransform.inverse * transform)
         }
-        for node in nodes {
-            reparentKeepingWorldTransform(node, to: group)
+        transaction("Group") {
+            insert(group, into: parent, at: index, actionName: "Group")
+            for node in nodes {
+                reparentKeepingWorldTransform(node, to: group)
+            }
+            selection = group.id
         }
-        selection = group.id
-        undoManager?.endUndoGrouping()
-        undoManager?.setActionName("Group")
     }
 
     // A selected, unlocked empty node with children.
@@ -505,14 +531,13 @@ public final class EditorModel {
         }
         let index = parent.children.firstIndex { $0 === group } ?? parent.children.count
         let children = group.children
-        undoManager?.beginUndoGrouping()
-        for (offset, child) in children.enumerated() {
-            reparentKeepingWorldTransform(child, to: parent, at: index + offset)
+        transaction("Ungroup") {
+            for (offset, child) in children.enumerated() {
+                reparentKeepingWorldTransform(child, to: parent, at: index + offset)
+            }
+            delete(group)
+            select(children.map(\.id))
         }
-        delete(group)
-        select(children.map(\.id))
-        undoManager?.endUndoGrouping()
-        undoManager?.setActionName("Ungroup")
     }
 
     // Moves `node` under `newParent`, keeping its local transform. False when that would make a cycle or `node` is
@@ -522,16 +547,15 @@ public final class EditorModel {
         guard let oldParent = node.parent, let oldIndex = oldParent.children.firstIndex(where: { $0 === node }), newParent.canAddChild(node) else {
             return false
         }
-        newParent.insertChild(node, at: min(index ?? newParent.children.count, newParent.children.count))
-        transformRevision += 1
-        undoManager?.registerUndo(withTarget: self) { model in
+        perform("Move", affecting: [.transform, .structure], { _ in
+            newParent.insertChild(node, at: min(index ?? newParent.children.count, newParent.children.count))
+        }, revert: { _ in
             // insertChild inserts before the node at an index after taking this one out; to land back at oldIndex
             // when the node now sits earlier in the same parent, pass one more (#222).
             let current = oldParent.children.firstIndex { $0 === node }
             let index = current.map { $0 < oldIndex ? oldIndex + 1 : oldIndex } ?? oldIndex
-            model.reparent(node, to: oldParent, at: index)
-        }
-        undoManager?.setActionName("Move")
+            oldParent.insertChild(node, at: min(index, oldParent.children.count))
+        })
         return true
     }
 
@@ -565,11 +589,6 @@ public final class EditorModel {
         "\(type.rawValue.prefix(1).uppercased())\(type.rawValue.dropFirst()) Light"
     }
 
-    // For edits outside this file that views showing node data must see.
-    func bumpRevision() {
-        transformRevision += 1
-    }
-
     // Set by the Insert Model File… commands; ComposerView shows the file importer.
     var isImportingModel = false
 
@@ -597,23 +616,14 @@ public final class EditorModel {
         guard label != previous else {
             return
         }
-        node.label = label
-        undoManager?.registerUndo(withTarget: self) { model in
-            model.setLabel(previous, of: node)
-        }
-        undoManager?.setActionName("Rename")
+        perform("Rename", affecting: .label, { _ in node.label = label }, revert: { _ in node.label = previous })
     }
 
     func setLight(_ light: Light, of node: SceneGraph.Node) {
         guard case .light(let previous) = node.content else {
             return
         }
-        node.content = .light(light)
-        transformRevision += 1
-        undoManager?.registerUndo(withTarget: self) { model in
-            model.setLight(previous, of: node)
-        }
-        undoManager?.setActionName("Light")
+        perform("Light", affecting: .content, { _ in node.content = .light(light) }, revert: { _ in node.content = .light(previous) })
     }
 
     public var selectedNode: SceneGraph.Node? {

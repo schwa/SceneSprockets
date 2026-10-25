@@ -67,15 +67,11 @@ extension EditorModel {
         guard case let .mesh(mesh, materials, castsShadow, receivesShadow) = node.content, materials.indices.contains(index) else {
             return
         }
-        let previous = materials[index]
         var updated = materials
         updated[index] = material
-        node.content = .mesh(mesh, materials: updated, castsShadow: castsShadow, receivesShadow: receivesShadow)
-        bumpRevision()
-        undoManager?.registerUndo(withTarget: self) { model in
-            model.setMaterial(previous, at: index, of: node, actionName: actionName)
-        }
-        undoManager?.setActionName(actionName)
+        let previous = node.content
+        let content = SceneGraph.Node.Content.mesh(mesh, materials: updated, castsShadow: castsShadow, receivesShadow: receivesShadow)
+        perform(actionName, affecting: .content, { _ in node.content = content }, revert: { _ in node.content = previous })
     }
 
     // The material's main color, for conversions and presets.
