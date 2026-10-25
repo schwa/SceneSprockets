@@ -1045,3 +1045,23 @@ import UniformTypeIdentifiers
     message.isPresent = false
     #expect(message == nil)
 }
+
+// #226
+@MainActor
+@Test func selectionWorldBoundsCombinesSelectedNodes() throws {
+    let model = EditorModel(sceneGraph: ComposerDocument().sceneGraph)
+    model.addShape(.box(), label: "A")
+    model.addShape(.box(), label: "B")
+    let a = try #require(model.sceneGraph.root.children.first)
+    let b = try #require(model.sceneGraph.root.children.last)
+    model.selection = a.id
+    let single = try #require(model.selectionWorldBounds)
+    let width = single.max.x - single.min.x
+    #expect(width > 0)
+    b.localTransform = .trs(Transform3D(translation: [3, 0, 0]))
+    model.select([a.id, b.id], primary: a.id)
+    let combined = try #require(model.selectionWorldBounds)
+    #expect(abs((combined.max.x - combined.min.x) - (width + 3)) < 0.0001)
+    model.addLight(.point)
+    #expect(model.selectionWorldBounds == nil)
+}

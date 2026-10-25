@@ -49,6 +49,7 @@ struct NodeInspectorView: View {
                     }
                 }
                 .disabled(isLocked)
+                BoundsSectionView(model: model)
                 let materialCount = model.materials(of: node).count
                 ForEach(0..<materialCount, id: \.self) { index in
                     MaterialSection(model: model, index: index, count: materialCount, isLocked: isLocked)

@@ -4886,12 +4886,13 @@ Depends on MetalSprocketsAddOns 'AxisLinesRenderPipeline: choose which axes to d
 ## 226: Composer: show bounding box min, max and size in the inspector
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:composer, effort:xs
 created: 2026-10-24T22:22:44Z
-updated: 2026-10-24T23:51:38Z
+updated: 2026-10-25T00:12:42Z
+closed: 2026-10-25T00:12:42Z
 +++
 
 Selecting a node shows no size information. Add a Bounds section (or rows under Transform) with world-space min [x, y, z], max [x, y, z] and size (max - min), from SceneGraph.worldBounds(of:); also the center. Read-only, with 3 decimals. 'None' for nodes without bounds (empty, light, camera, hidden or inactive). With several nodes selected (#205), show the combined bounds. Must refresh while dragging, so it reads transformRevision; keep it in its own leaf view so it does not make the rest of the inspector depend on drags (#223, #224). Optionally also local-space bounds (Node.subtreeBounds).
