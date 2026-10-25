@@ -5079,6 +5079,13 @@ updated: 2026-10-25T00:33:41Z
 Split out of #224. ScenePreviewView builds SceneView's decorations, overlay and onTapAt closures in its body, so SceneView never compares equal and its body re-runs on every model change. This is a library API design change. Options: (a) Equatable wrapper values keyed on what the closures capture (settings, selected ids, revisions); (b) decoration and overlay objects with identity held by the model, passed by reference. Measure with the SwiftUI instrument during a gizmo drag before choosing.
 
 - `2026-10-25T00:33:41Z`: Related: #240 (picking and viewport module would replace these closures' viewport rebuilding).
+- `2026-10-25T00:42:28Z`: Punted (auto-issue-fixer) with a recommendation not to do this as written. What I checked: ScenePreviewView's body reads renderSettings, camera (for camera.target), sceneGraph, selectedIDs and selectedNodes. It does not read transformRevision.
+- Gizmo drag: only transformRevision changes, so ScenePreviewView and SceneView do not re-run, closures or not.
+- Camera orbit: model.camera changes every frame, so ScenePreviewView re-runs. But SceneView must re-run anyway, because its camera binding's value changed.
+- Settings or selection changes: the closures really do change (they capture settings and selected ids), so SceneView should re-run.
+Making the closures Equatable (keyed wrappers) or turning them into objects would be a public API change with no hot path to gain. It also wouldn't make SceneView equal, since renderers, manipulator, delegate and Camera are existentials.
+Not measured with Instruments; this is from reading what each body observes.
+Unblocker: OK to close as won't-fix? A cheap related tweak: pass cameraTarget so the preview doesn't observe all of model.camera, if orbit-time body cost ever shows up in a profile. #240 (picking and viewport) covers the closures' duplicated viewport maths.
 
 ---
 
