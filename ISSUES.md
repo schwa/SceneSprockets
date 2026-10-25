@@ -4613,12 +4613,13 @@ Also: if the folder importer is cancelled or the wrong folder is chosen, say so 
 ## 214: Gizmo and overlays flicker: probably a Metal 4 synchronization problem (barriers)
 
 +++
-status: open
+status: closed
 priority: high
 kind: bug
 labels: area:renderer, area:ui, effort:m
 created: 2026-10-24T18:30:46Z
-updated: 2026-10-24T18:32:38Z
+updated: 2026-10-25T01:00:44Z
+closed: 2026-10-25T01:00:44Z
 +++
 
 The transform gizmo started flickering in the Composer. Likely a Metal 4 hazard: Metal 4 does not track resource hazards or order passes, so every read-after-write between passes, and between frames, needs an explicit barrier. Not confirmed yet; needs a GPU capture of a bad frame. Ruled out so far: GraphicsContext3DRenderPipeline makes new buffers instead of rewriting them, and ParameterSet retains (makes resident) bound buffers per submission (ParameterSet.swift:244). Uniforms are bound by value.
@@ -4651,6 +4652,8 @@ Leaving open until you confirm the flicker is gone. If it is not, a capture of a
 Shadow Casters have no start barrier, but shadow maps are per submission (depthTexture(forSubmission:)), so frames cannot collide there.
 Replayed images: the Manipulator output is pixel-identical in all 5 frames and the gizmo draws correctly. Replay serializes the GPU work, so a timing hazard would not show in it anyway.
 No remaining missing barrier found. Open questions: does the flicker still happen with this build? If so, when (always, on hover highlight, while dragging, when toggling overlays)? Next suspects are CPU-side: frames where manipulatorOverlay returns nil (viewport nil, or overlay(viewport:) throws, which is swallowed by try?), or @MSState being matched to the wrong GraphicsContext3DRenderPipeline when the decorations (DebugShapes, BoundingBoxes) appear or disappear and shift element positions.
+
+- `2026-10-25T01:00:39Z`: User confirmed the flicker no longer reproduces. Likely fixed by the barriers added in a83c9a8c; root cause not separately confirmed.
 
 ---
 
