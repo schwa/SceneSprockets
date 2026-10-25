@@ -5262,3 +5262,22 @@ Not changed: the decorations closure still builds its viewport from the render c
 Tests: the core test above; the existing nodeUnderPointer and debugShapesDrawAndPickLightsAndCameras pass.
 
 ---
+
+## 241: Composer crashes in a SwiftUI force-unwrapped binding while the assistant builds a scene
+
++++
+status: new
+priority: critical
+kind: bug
+labels: area:composer,area:ui,effort:s
+created: 2026-10-25T03:57:17Z
++++
+
+Repro (user): ask the assistant to create a scene. The app stops with EXC_BREAKPOINT on the main thread in SwiftUICore BindingOperations.ForceUnwrapping.get(base:), under ProjectedLocation.update chains (5 levels deep) during DynamicBody.updateValue / GraphHost.flushTransactions. No app frames in the backtrace; console noise (DetachedSignatures, ViewBridge) looks unrelated.
+ForceUnwrapping is what Binding($optional) produces. When the optional becomes nil while a view still holds the unwrapped binding, reading it traps. Likely cause (not verified): the unwrapped bindings added in #224 (commit c7159c8f):
+- NodeInspectorView: if let light = Binding($model.selectedLight)
+- MaterialSectionView: Binding($model[materialKind: index]), Binding($model[blinnPhong: index, actionName:]), uniforms(_:) -> Binding($model[pbrUniforms: index, actionName:]); then projected further (dynamicMember, .linearColor, [double:]), which matches the nested ProjectedLocation frames.
+These read the *selected* node. The assistant changes the selection and the materials (kind conversions, deletes) between view updates, so an inspector built for the old selection can re-read its binding after the value turned nil, for example a material that is no longer Blinn-Phong or PBR, or a selection that is no longer a light.
+Fix direction: don't unwrap model-derived optionals with Binding($x). Give the subscripts non-optional values with a harmless default on get and a no-op set when missing (or key the sections by node id and material kind with .id(...) so they are rebuilt). Then reproduce with a test that changes the selection or material kind while a hosted inspector is alive, if one can be made to trap.
+
+---
