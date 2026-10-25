@@ -16,9 +16,9 @@ struct MaterialSectionView: View {
     var body: some View {
         if let material = model[material: index] {
             Section(count > 1 ? "Material \(index + 1)" : "Material") {
-                if let kind = Binding($model[materialKind: index]) {
+                if MaterialKind(material) != nil {
                     HStack {
-                        Picker("Type", selection: kind) {
+                        Picker("Type", selection: $model[materialKind: index]) {
                             ForEach(MaterialKind.allCases) { kind in
                                 Text(kind.rawValue).tag(kind)
                             }
@@ -57,10 +57,8 @@ struct MaterialSectionView: View {
         sourceRow("Diffuse", material.diffuse, \.diffuse)
         sourceRow("Ambient", material.ambient, \.ambient)
         sourceRow("Specular", material.specular, \.specular)
-        if let edited = Binding($model[blinnPhong: index, actionName: "Shininess"]) {
-            LabeledContent("Shininess") {
-                Slider(value: edited.shininess, in: 1 ... 256)
-            }
+        LabeledContent("Shininess") {
+            Slider(value: $model[blinnPhong: index, actionName: "Shininess"].shininess, in: 1 ... 256)
         }
         sourceRow("Emission", material.emission, \.emission)
     }
@@ -69,9 +67,7 @@ struct MaterialSectionView: View {
     private func sourceRow(_ title: String, _ source: BlinnPhongSceneMaterial.Source, _ keyPath: WritableKeyPath<BlinnPhongSceneMaterial, BlinnPhongSceneMaterial.Source>) -> some View {
         switch source {
         case .color:
-            if let edited = Binding($model[blinnPhong: index, actionName: title]) {
-                ColorPicker(title, selection: edited[dynamicMember: keyPath].color.linearColor, supportsOpacity: false)
-            }
+            ColorPicker(title, selection: $model[blinnPhong: index, actionName: title][dynamicMember: keyPath].color.linearColor, supportsOpacity: false)
 
         case .texture:
             LabeledContent(title, value: "Texture")
@@ -100,31 +96,25 @@ struct MaterialSectionView: View {
     }
 
     // `actionName` names the undo step.
-    private func uniforms(_ actionName: String) -> Binding<PBRMaterialUniforms>? {
-        Binding($model[pbrUniforms: index, actionName: actionName])
+    private func uniforms(_ actionName: String) -> Binding<PBRMaterialUniforms> {
+        $model[pbrUniforms: index, actionName: actionName]
     }
 
     @ViewBuilder
     private func pbrGroup(_ group: PBRParameters.Group, uniforms: PBRMaterialUniforms) -> some View {
         switch group {
         case .base:
-            if let edited = self.uniforms("Base Color") {
-                ColorPicker("Base Color", selection: edited.baseColorFactor.linearColor)
-            }
+            ColorPicker("Base Color", selection: self.uniforms("Base Color").baseColorFactor.linearColor)
         case .alpha:
-            if let edited = self.uniforms("Alpha Mode") {
-                Picker("Alpha Mode", selection: edited.alphaMode) {
-                    Text("Opaque").tag(PBRAlphaMode.opaque)
-                    Text("Mask").tag(PBRAlphaMode.mask)
-                    Text("Blend").tag(PBRAlphaMode.blend)
-                }
+            Picker("Alpha Mode", selection: self.uniforms("Alpha Mode").alphaMode) {
+                Text("Opaque").tag(PBRAlphaMode.opaque)
+                Text("Mask").tag(PBRAlphaMode.mask)
+                Text("Blend").tag(PBRAlphaMode.blend)
             }
             Toggle("Double Sided", isOn: $model[pbrDoubleSided: index])
         case .transmission:
-            if let edited = self.uniforms("Attenuation Distance") {
-                Toggle("Absorbs Light", isOn: edited.absorbsLight)
-                    .help("Off: the volume does not absorb (attenuation distance is infinite)")
-            }
+            Toggle("Absorbs Light", isOn: self.uniforms("Attenuation Distance").absorbsLight)
+                .help("Off: the volume does not absorb (attenuation distance is infinite)")
             if uniforms.attenuationDistance.isFinite {
                 scalarRow(PBRParameters.Scalar(name: "Attenuation Distance", keyPath: \.attenuationDistance, range: 0.01 ... 100, group: .transmission), uniforms: uniforms)
             }
@@ -135,28 +125,22 @@ struct MaterialSectionView: View {
             scalarRow(parameter, uniforms: uniforms)
         }
         ForEach(PBRParameters.colors.filter { $0.group == group }, id: \.name) { parameter in
-            if let edited = self.uniforms(parameter.name) {
-                ColorPicker(parameter.name, selection: edited[dynamicMember: parameter.keyPath].linearColor, supportsOpacity: false)
-            }
+            ColorPicker(parameter.name, selection: self.uniforms(parameter.name)[dynamicMember: parameter.keyPath].linearColor, supportsOpacity: false)
         }
         ForEach(PBRParameters.toggles.filter { $0.group == group }, id: \.name) { parameter in
-            if let edited = self.uniforms(parameter.name) {
-                Toggle(parameter.name, isOn: edited[dynamicMember: parameter.keyPath].isOn)
-            }
+            Toggle(parameter.name, isOn: self.uniforms(parameter.name)[dynamicMember: parameter.keyPath].isOn)
         }
     }
 
     @ViewBuilder
     private func scalarRow(_ parameter: PBRParameters.Scalar, uniforms: PBRMaterialUniforms) -> some View {
         let scale: Float = parameter.isAngle ? 180 / .pi : 1
-        if let edited = self.uniforms(parameter.name) {
-            LabeledContent(parameter.name) {
-                HStack {
-                    Slider(value: edited[dynamicMember: parameter.keyPath], in: parameter.range)
-                    Text((uniforms[keyPath: parameter.keyPath] * scale).formatted(.number.precision(.fractionLength(2))))
-                        .monospacedDigit()
-                        .frame(minWidth: 44, alignment: .trailing)
-                }
+        LabeledContent(parameter.name) {
+            HStack {
+                Slider(value: self.uniforms(parameter.name)[dynamicMember: parameter.keyPath], in: parameter.range)
+                Text((uniforms[keyPath: parameter.keyPath] * scale).formatted(.number.precision(.fractionLength(2))))
+                    .monospacedDigit()
+                    .frame(minWidth: 44, alignment: .trailing)
             }
         }
     }

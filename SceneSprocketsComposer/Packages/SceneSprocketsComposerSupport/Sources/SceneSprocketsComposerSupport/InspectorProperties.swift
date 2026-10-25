@@ -61,18 +61,23 @@ extension EditorModel {
     }
 
     var selectedLight: Light? {
-        get {
-            guard let node = selectedNode else {
-                return nil
-            }
-            observe(.content)
-            guard case .light(let light) = node.content else {
-                return nil
-            }
-            return light
+        guard let node = selectedNode else {
+            return nil
         }
+        observe(.content)
+        guard case .light(let light) = node.content else {
+            return nil
+        }
+        return light
+    }
+
+    // For the light inspector. Never optional: SwiftUI can still read a binding after the selection stopped being a
+    // light (the assistant changes things between view updates), and an unwrapped optional binding then traps
+    // (#241). Reads a default light and ignores writes when there is no selected light.
+    var selectedLightForEditing: Light {
+        get { selectedLight ?? Light(type: .point) }
         set {
-            if let node = selectedNode, let newValue {
+            if let node = selectedNode, selectedLight != nil {
                 setLight(newValue, of: node)
             }
         }
@@ -114,19 +119,21 @@ extension EditorModel {
         return materials.indices.contains(index) ? materials[index] : nil
     }
 
-    subscript(blinnPhong index: Int, actionName actionName: String) -> BlinnPhongSceneMaterial? {
-        get { self[material: index] as? BlinnPhongSceneMaterial }
+    // The material subscripts below are never optional, for the same reason as selectedLightForEditing (#241): a
+    // default when the material is missing or another kind, and writes that MaterialEdit skips in that case.
+    subscript(blinnPhong index: Int, actionName actionName: String) -> BlinnPhongSceneMaterial {
+        get { self[material: index] as? BlinnPhongSceneMaterial ?? BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0.8), specular: .color(0), shininess: 32) }
         set {
-            if let node = selectedNode, let newValue {
+            if let node = selectedNode {
                 try? editMaterials(of: node, at: index, actionName: actionName, [.blinnPhong { $0 = newValue }])
             }
         }
     }
 
-    subscript(pbrUniforms index: Int, actionName actionName: String) -> PBRMaterialUniforms? {
-        get { (self[material: index] as? PBRSceneMaterial)?.pbrMaterial.uniforms }
+    subscript(pbrUniforms index: Int, actionName actionName: String) -> PBRMaterialUniforms {
+        get { (self[material: index] as? PBRSceneMaterial)?.pbrMaterial.uniforms ?? .defaults(baseColor: [1, 1, 1, 1]) }
         set {
-            if let node = selectedNode, let newValue {
+            if let node = selectedNode {
                 try? editMaterials(of: node, at: index, actionName: actionName, [.uniforms { $0 = newValue }])
             }
         }
@@ -141,10 +148,10 @@ extension EditorModel {
         }
     }
 
-    subscript(materialKind index: Int) -> MaterialKind? {
-        get { self[material: index].flatMap(MaterialKind.init) }
+    subscript(materialKind index: Int) -> MaterialKind {
+        get { self[material: index].flatMap(MaterialKind.init) ?? .blinnPhong }
         set {
-            if let node = selectedNode, let newValue {
+            if let node = selectedNode {
                 try? editMaterials(of: node, at: index, actionName: "Material Type", [.kind(newValue)])
             }
         }

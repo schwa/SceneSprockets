@@ -5266,11 +5266,13 @@ Tests: the core test above; the existing nodeUnderPointer and debugShapesDrawAnd
 ## 241: Composer crashes in a SwiftUI force-unwrapped binding while the assistant builds a scene
 
 +++
-status: new
+status: closed
 priority: critical
 kind: bug
-labels: area:composer,area:ui,effort:s
+labels: area:composer, area:ui, effort:s
 created: 2026-10-25T03:57:17Z
+updated: 2026-10-25T04:00:21Z
+closed: 2026-10-25T04:00:21Z
 +++
 
 Repro (user): ask the assistant to create a scene. The app stops with EXC_BREAKPOINT on the main thread in SwiftUICore BindingOperations.ForceUnwrapping.get(base:), under ProjectedLocation.update chains (5 levels deep) during DynamicBody.updateValue / GraphHost.flushTransactions. No app frames in the backtrace; console noise (DetachedSignatures, ViewBridge) looks unrelated.
@@ -5279,5 +5281,7 @@ ForceUnwrapping is what Binding($optional) produces. When the optional becomes n
 - MaterialSectionView: Binding($model[materialKind: index]), Binding($model[blinnPhong: index, actionName:]), uniforms(_:) -> Binding($model[pbrUniforms: index, actionName:]); then projected further (dynamicMember, .linearColor, [double:]), which matches the nested ProjectedLocation frames.
 These read the *selected* node. The assistant changes the selection and the materials (kind conversions, deletes) between view updates, so an inspector built for the old selection can re-read its binding after the value turned nil, for example a material that is no longer Blinn-Phong or PBR, or a selection that is no longer a light.
 Fix direction: don't unwrap model-derived optionals with Binding($x). Give the subscripts non-optional values with a harmless default on get and a no-op set when missing (or key the sections by node id and material kind with .id(...) so they are rebuilt). Then reproduce with a test that changes the selection or material kind while a hosted inspector is alive, if one can be made to trap.
+
+- `2026-10-25T04:00:21Z`: Fixed. The inspector no longer uses Binding($optional) on model-derived values. selectedLightForEditing and the materialKind, blinnPhong and pbrUniforms subscripts are non-optional: they read a default when the light or material is missing or of another kind, and writes then do nothing (MaterialEdit already skips edits that don't fit). The sections still decide whether to show from the optional values (selectedLight, model[material:]). New InspectorCrashTests host NodeInspectorView in an NSHostingView and change the light or material kind under it, then remove them. Before the fix the test process died with SIGTRAP (signal 5), the same trap as the report; after it, both pass. Not tried in the running app with the assistant.
 
 ---

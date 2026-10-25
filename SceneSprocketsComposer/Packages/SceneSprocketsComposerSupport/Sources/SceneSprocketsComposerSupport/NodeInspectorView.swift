@@ -54,8 +54,8 @@ struct NodeInspectorView: View {
                 ForEach(materials.indices, id: \.self) { index in
                     MaterialSectionView(model: model, index: index, count: materials.count, isLocked: isLocked)
                 }
-                if let light = Binding($model.selectedLight) {
-                    LightSectionView(light: light, isLocked: isLocked)
+                if model.selectedLight != nil {
+                    LightSectionView(light: $model.selectedLightForEditing, isLocked: isLocked)
                 }
             }
             .formStyle(.grouped)
