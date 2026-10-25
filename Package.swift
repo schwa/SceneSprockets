@@ -20,10 +20,10 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/schwa/GeometryLite3D", branch: "main"),
-        .package(url: "https://github.com/schwa/MetalSprockets", branch: "main"),
+        .package(path: "../MetalSprockets"), // TEMP #242: local fix, do not commit
         .package(url: "https://github.com/schwa/SwiftMesh", branch: "main"),
         .package(url: "https://github.com/schwa/MetalSupport", branch: "main"),
-        .package(url: "https://github.com/schwa/MetalSprocketsPBR", branch: "main"),
+        .package(path: "../MetalSprocketsPBR"), // TEMP #242: local fix, do not commit
         .package(url: "https://github.com/schwa/MetalSprocketsGLTF", branch: "main"),
         .package(url: "https://github.com/schwa/SwiftGLTF", branch: "main"),
         .package(url: "https://github.com/schwa/Interaction3D", branch: "main"),

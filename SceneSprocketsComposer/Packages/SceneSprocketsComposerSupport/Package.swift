@@ -17,9 +17,9 @@ let package = Package(
         .package(path: "../../.."),
         .package(url: "https://github.com/schwa/GeometryLite3D", branch: "main"),
         .package(url: "https://github.com/schwa/Interaction3D", branch: "main"),
-        .package(url: "https://github.com/schwa/MetalSprockets", branch: "main"),
+        .package(path: "../../../../MetalSprockets"), // TEMP #242: local fix, do not commit
         .package(url: "https://github.com/schwa/MetalSprocketsAddOns", branch: "main"),
-        .package(url: "https://github.com/schwa/MetalSprocketsPBR", branch: "main"),
+        .package(path: "../../../../MetalSprocketsPBR"), // TEMP #242: local fix, do not commit
         .package(url: "https://github.com/schwa/MetalSupport", branch: "main"),
         .package(url: "https://github.com/schwa/SwiftMesh", branch: "main"),
         .package(url: "https://github.com/schwa/SwiftFields", branch: "main"),

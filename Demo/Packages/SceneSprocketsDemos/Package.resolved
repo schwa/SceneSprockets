@@ -1,5 +1,5 @@
 {
-  "originHash" : "6844a9814ef664e2a771170ae6816e27dfcd3105787131f9e16aa0fbba8cd965",
+  "originHash" : "e02bdc81dd8e0768527f332af5e82627280421f260b52ed701a7e7103b21b06f",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -65,15 +65,6 @@
       }
     },
     {
-      "identity" : "metalsprockets",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/schwa/MetalSprockets",
-      "state" : {
-        "branch" : "main",
-        "revision" : "7038521ecde3278818a9dc26cd25d371341b155b"
-      }
-    },
-    {
       "identity" : "metalsprocketsaddons",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsAddOns",
@@ -98,15 +89,6 @@
       "state" : {
         "revision" : "8b7dbb3c81e95b9f7fd458e7c51be46391832a99",
         "version" : "0.0.2"
-      }
-    },
-    {
-      "identity" : "metalsprocketspbr",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/schwa/MetalSprocketsPBR",
-      "state" : {
-        "branch" : "main",
-        "revision" : "385b1895ed7863f6de60618bbf1ad578ee233632"
       }
     },
     {
