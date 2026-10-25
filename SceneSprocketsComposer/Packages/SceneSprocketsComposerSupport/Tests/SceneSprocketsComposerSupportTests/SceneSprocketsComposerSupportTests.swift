@@ -469,6 +469,25 @@ struct SceneEditBoundaryTests {
     #expect(model.selectedNode?.parent === model.sceneGraph.root)
 }
 
+// #158: an inserted model's meshes are saved with the document.
+@MainActor
+@Test func insertedMeshesAreSavedWithTheDocument() throws {
+    let document = ComposerDocument()
+    let model = EditorModel(sceneGraph: document.sceneGraph)
+    let obj = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).obj")
+    defer { try? FileManager.default.removeItem(at: obj) }
+    try "v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n".write(to: obj, atomically: true, encoding: .utf8)
+    try model.insertModel(from: obj)
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("scenesprocketsd")
+    defer { try? FileManager.default.removeItem(at: url) }
+    try document.snapshot(contentType: .sceneSprocketsDocument).write(to: url, options: [], originalContentsURL: nil)
+    let loaded = try ComposerDocument(contentsOf: url)
+    let vertexCounts = loaded.sceneGraph.nodesWithWorldTransforms(includeHidden: true).compactMap { entry -> Int? in
+        if case let .mesh(mesh, _, _, _) = entry.node.content { mesh.vertexCount } else { nil }
+    }
+    #expect(vertexCounts == [3])
+}
+
 // #196
 @MainActor
 @Test func deactivatingIsUndoableAndDimsTheSubtree() throws {

@@ -4,6 +4,7 @@ import Metal
 import MetalSprockets
 import MetalSprocketsParticles
 import MetalSprocketsPBR
+import struct SwiftGLTF.Container
 import SwiftMesh
 import Testing
 import simd
@@ -182,6 +183,67 @@ struct SceneArchiveTests {
         var pixels = [UInt8](repeating: 0, count: 16)
         copy.getBytes(&pixels, bytesPerRow: 8, from: MTLRegionMake2D(0, 0, 2, 2), mipmapLevel: 0)
         #expect(pixels == [255, 0, 0, 255, 0, 255, 0, 128, 0, 0, 255, 255, 10, 20, 30, 40])
+    }
+
+    // #158: generated meshes are written as glTF and read back with the same vertex layout, data and submeshes.
+    @Test(arguments: [MetalMesh.BufferLayout.interleaved, .separateBuffers])
+    func generatedMeshesRoundTripAsGLTF(_ layout: MetalMesh.BufferLayout) throws {
+        let url = temporaryURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let positions: [SIMD3<Float>] = [[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0]]
+        let mesh = MetalMesh(
+            device: device,
+            attributes: [
+                .positions(positions),
+                .normals(Array(repeating: [0, 0, 1], count: 4)),
+                .textureCoordinates([[0, 0], [1, 0], [0, 1], [1, 1]]),
+                .tangents(Array(repeating: SIMD4<Float>(1, 0, 0, 1), count: 4)),
+                .colors([[1, 0, 0, 1], [0, 1, 0, 1], [0, 0, 1, 1], [1, 1, 1, 1]]),
+            ],
+            submeshes: [.init(indices: [0, 1, 2]), .init(indices: [2, 1, 3])],
+            label: "Quad",
+            bufferLayout: layout
+        )
+        let blinnPhong = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .texture(makeTexture()), specular: .color(0), shininess: 8)
+        let pbr = PBRSceneMaterial(try PBRMaterial(uniforms: .defaults(baseColor: [0, 1, 0, 1]), placeholder: PBRMaterial.placeholderBinding(device: device), device: device))
+        let root = SceneGraph.Node()
+        _ = SceneGraph.Node(parent: root, label: "Generated", content: .mesh(mesh, materials: [blinnPhong, pbr], castsShadow: false))
+        // Shares the mesh, so shares its file.
+        _ = SceneGraph.Node(parent: root, label: "Copy", content: .mesh(mesh, materials: [pbr]))
+        var archive = archive
+        archive.meshCodec = GLTFMeshCodec()
+        let warnings = try archive.write(SceneGraph(root: root), to: url)
+        #expect(warnings.isEmpty)
+
+        // Other tools can open the glTF.
+        let container = try SwiftGLTF.Container(url: url.appendingPathComponent("meshes/0.glb"))
+        #expect(try container.validate().isEmpty)
+        #expect(container.document.meshes.first?.primitives.count == 2)
+        #expect(container.document.materials.count == 2)
+        // Textures are shared with scene.json's, referenced from the package's textures folder.
+        #expect(container.document.images.map(\.uri?.string) == ["../textures/0.png"])
+        #expect(FileManager.default.fileExists(atPath: url.appendingPathComponent("textures/0.png").path))
+        #expect(try FileManager.default.contentsOfDirectory(atPath: url.appendingPathComponent("meshes").path) == ["0.glb"])
+
+        let (loaded, readWarnings) = try archive.read(from: url, device: device)
+        #expect(readWarnings.isEmpty)
+        guard case let .mesh(loadedMesh, materials, castsShadow, _) = try #require(loaded.root.children.first).content else {
+            Issue.record("mesh not read")
+            return
+        }
+        #expect(loadedMesh.vertexDescriptor == mesh.vertexDescriptor)
+        #expect(loadedMesh.vertexAttributeData().map(\.bytes) == mesh.vertexAttributeData().map(\.bytes))
+        #expect(loadedMesh.submeshes.map(\.indices) == [[0, 1, 2], [2, 1, 3]])
+        #expect(loadedMesh.label == "Quad")
+        #expect(materials.first is BlinnPhongSceneMaterial)
+        #expect(materials.last is PBRSceneMaterial)
+        #expect(!castsShadow)
+        guard case let .mesh(copyMesh, copyMaterials, _, _) = loaded.root.children[1].content else {
+            Issue.record("copy not read")
+            return
+        }
+        #expect(copyMesh.vertexBuffers[0] === loadedMesh.vertexBuffers[0])
+        #expect(copyMaterials.count == 1)
     }
 
     @Test

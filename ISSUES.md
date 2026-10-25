@@ -3443,20 +3443,29 @@ Part of #52. When a glTF is loaded into a scene, tag each imported node with its
 ## 158: Scene archive: write generated meshes as glTF
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: effort:m, area:document
 created: 2026-10-22T15:28:25Z
-updated: 2026-10-23T13:44:43Z
+updated: 2026-10-25T01:27:58Z
+closed: 2026-10-25T01:27:58Z
 +++
 
 Part of #52. Meshes built in code (MetalMesh from SwiftMesh: dice, gears, hand-built geometry) are written into the package as glTF, with their materials and textures (read back from the GPU), and scene.json refers to them. SwiftGLTF main can build documents from scratch (public initializers, settable Document, Container(document:binaryBuffer:url:), see its AuthoringTests). Done when a scene with generated dice round-trips.
 
-- `2026-10-23T13:44:43Z`: Punted by auto-issue-fixer. Looked at SceneGraph+Archive.swift (the mesh-not-a-shape branch) and target deps. Punting: needs two design decisions. (1) Where the glTF writer lives: the core SceneSprockets target has no SwiftGLTF dependency (only SceneSprocketsPBR does). Options: add SwiftGLTF to core, or add a mesh-codec hook to SceneArchive (like materialTypes) and implement it in SceneSprocketsPBR. (2) Materials: the issue says write materials and textures into the glTF, but scene.json already archives Blinn-Phong/PBR materials and textures. Should the glTF carry geometry only (materials stay in scene.json), or also materials? My suggestion: hook in SceneSprocketsPBR, geometry-only glTF (MetalMesh -> Mesh -> glTF primitives per submesh).
-- `2026-10-24T11:26:48Z`: Punted again by auto-issue-fixer: the two design questions in the previous comment are still open. Unblocker: confirm 'mesh-codec hook in SceneSprocketsPBR, geometry-only glTF' (or pick another option).
-- `2026-10-24T11:44:52Z`: Decided: SwiftGLTF supports writing; the glTF carries materials too (not geometry only). Still open: where the writer lives (core vs hook in SceneSprocketsPBR).
-- `2026-10-25T01:01:54Z`: Decision (user): the glTF writer lives in SceneSprocketsPBR, as GLTFSceneGraph+Export.swift next to the importer GLTFSceneGraph.swift. SwiftGLTF already does file-level writing (Codable Document, GLTFWriter.glbData, Container.write(to:embedResources:)), so the new code only maps a SceneGraph to a glTF Document: meshes to accessors and buffer views, PBR and Blinn-Phong materials, nodes, KHR lights and cameras. Keeping both directions in one target allows read-write-read round-trip tests. Both may later move together into a SceneSprocketsGLTF target if they grow.
+\- `2026-10-23T13:44:43Z`: Punted by auto-issue-fixer. Looked at SceneGraph+Archive.swift (the mesh-not-a-shape branch) and target deps. Punting: needs two design decisions. (1) Where the glTF writer lives: the core SceneSprockets target has no SwiftGLTF dependency (only SceneSprocketsPBR does). Options: add SwiftGLTF to core, or add a mesh-codec hook to SceneArchive (like materialTypes) and implement it in SceneSprocketsPBR. (2) Materials: the issue says write materials and textures into the glTF, but scene.json already archives Blinn-Phong/PBR materials and textures. Should the glTF carry geometry only (materials stay in scene.json), or also materials? My suggestion: hook in SceneSprocketsPBR, geometry-only glTF (MetalMesh -> Mesh -> glTF primitives per submesh).
+\- `2026-10-24T11:26:48Z`: Punted again by auto-issue-fixer: the two design questions in the previous comment are still open. Unblocker: confirm 'mesh-codec hook in SceneSprocketsPBR, geometry-only glTF' (or pick another option).
+\- `2026-10-24T11:44:52Z`: Decided: SwiftGLTF supports writing; the glTF carries materials too (not geometry only). Still open: where the writer lives (core vs hook in SceneSprocketsPBR).
+\- `2026-10-25T01:01:54Z`: Decision (user): the glTF writer lives in SceneSprocketsPBR, as GLTFSceneGraph+Export.swift next to the importer GLTFSceneGraph.swift. SwiftGLTF already does file-level writing (Codable Document, GLTFWriter.glbData, Container.write(to:embedResources:)), so the new code only maps a SceneGraph to a glTF Document: meshes to accessors and buffer views, PBR and Blinn-Phong materials, nodes, KHR lights and cameras. Keeping both directions in one target allows read-write-read round-trip tests. Both may later move together into a SceneSprocketsGLTF target if they grow.
+\- `2026-10-25T01:27:57Z`: Done.
+- Core: a new ArchivableMeshCodec protocol on SceneArchive (meshCodec). A mesh that is not a shape is written as mesh.file (a package path) next to its materials and shadow flags. Without a codec it is still skipped with a warning. Nodes sharing a mesh share one file, and share the decoded mesh on read. The archive capture (#238) now carries arbitrary files, not only textures.
+- SceneSprocketsPBR: GLTFMeshCodec in GLTFSceneGraph+Export.swift writes meshes/N.glb with every vertex attribute (glTF names, '_'-prefixed names for bitangents and 3-float tangents), one primitive per submesh, and glTF materials: PBR values, Blinn-Phong approximated (diffuse to base color, shininess to roughness), and core textures referenced as ../textures/N.png, shared with scene.json.
+- Mesh extras record the attribute order and buffer layout, so reading restores the exact vertex descriptor and data.
+- scene.json keeps the exact materials, so reading uses only the geometry from the glTF.
+- Not saved: morph targets and skins inside the MetalMesh (warned).
+- Enabled in the Composer (inserted models' meshes now survive saving; the 'not saved' insert alert is gone) and the Demo snapshot archive.
+Tests: core generatedMeshesRoundTripAsGLTF (both buffer layouts; glTF validates; textures referenced; shared file; exact attribute bytes, descriptor, indices; materials). Composer insertedMeshesAreSavedWithTheDocument. Demo generatedDiceRoundTrip (dice demo saves and reads back every mesh).
 
 ---
 

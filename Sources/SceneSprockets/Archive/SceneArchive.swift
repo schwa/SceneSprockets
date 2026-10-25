@@ -2,6 +2,7 @@ import CoreGraphics
 import Foundation
 import ImageIO
 import Metal
+import SwiftMesh
 import UniformTypeIdentifiers
 
 // Saves and loads a scene graph as a package directory (`.scenesprocketsd`): `scene.json` for the graph, and
@@ -15,14 +16,18 @@ public struct SceneArchive {
 
     public var materialTypes: [any ArchivableMaterial.Type]
     public var environmentMapTypes: [any ArchivableEnvironmentMap.Type]
+    // Saves meshes that are not shapes, such as generated geometry. Without one they are skipped with a warning
+    // (#158).
+    public var meshCodec: (any ArchivableMeshCodec)?
     // Metal libraries that saved shaders (ShaderMaterial) refer to by name. A compiled function does not say where
     // its library came from, so the app names the libraries it uses.
     public var shaderLibraries: [String: any MTLLibrary]
 
-    public init(materialTypes: [any ArchivableMaterial.Type] = [], environmentMapTypes: [any ArchivableEnvironmentMap.Type] = [], shaderLibraries: [String: any MTLLibrary] = [:]) {
+    public init(materialTypes: [any ArchivableMaterial.Type] = [], environmentMapTypes: [any ArchivableEnvironmentMap.Type] = [], shaderLibraries: [String: any MTLLibrary] = [:], meshCodec: (any ArchivableMeshCodec)? = nil) {
         self.materialTypes = materialTypes
         self.environmentMapTypes = environmentMapTypes
         self.shaderLibraries = shaderLibraries
+        self.meshCodec = meshCodec
     }
 
     // Replaces anything at `url`. Returns warnings for what could not be saved.
@@ -44,12 +49,12 @@ public struct SceneArchive {
         encoder.userInfo[.sceneArchive] = context
         let json = try String(decoding: encoder.encode(sceneGraph), as: UTF8.self)
         let cache = textureCache ?? TextureCache()
-        var textures: [String: Data] = [:]
+        var files = context.files
         for pending in context.pendingTextures {
-            textures[pending.file] = try cache.data(for: pending.texture, isPNG: pending.file.hasSuffix(".png"))
+            files[pending.file] = try cache.data(for: pending.texture, isPNG: pending.file.hasSuffix(".png"))
         }
         cache.keepOnly(context.pendingTextures.map(\.texture))
-        return Capture(scene: Data(ArchiveFormatting.compactNumberArrays(json).utf8), textures: textures, warnings: context.warnings)
+        return Capture(scene: Data(ArchiveFormatting.compactNumberArrays(json).utf8), files: files, warnings: context.warnings)
     }
 
     struct PendingTexture {
@@ -82,7 +87,8 @@ public struct SceneArchive {
 
     public struct Capture: Sendable {
         let scene: Data
-        let textures: [String: Data]
+        // Textures and mesh files by path in the package.
+        let files: [String: Data]
         public let warnings: [String]
 
         // Replaces anything at `url`.
@@ -93,7 +99,7 @@ public struct SceneArchive {
             }
             try fileManager.createDirectory(at: url, withIntermediateDirectories: true)
             try scene.write(to: url.appendingPathComponent(SceneArchive.sceneFileName))
-            for (file, data) in textures {
+            for (file, data) in files {
                 let fileURL = url.appendingPathComponent(file)
                 try fileManager.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
                 try data.write(to: fileURL)
@@ -109,6 +115,14 @@ public struct SceneArchive {
         let sceneGraph = try decoder.decode(SceneGraph.self, from: Data(contentsOf: url.appendingPathComponent(Self.sceneFileName)))
         return (sceneGraph, context.warnings)
     }
+}
+
+// Writes and reads meshes that are not shapes as files in the package (#158). Materials stay in scene.json; a codec
+// may also write them into its file for other tools.
+public protocol ArchivableMeshCodec {
+    // Adds the mesh's file to the package through `context` and returns its path.
+    func encode(_ mesh: MetalMesh, materials: [any Material], name: String?, context: SceneArchiveContext) throws -> String
+    func decode(path: String, context: SceneArchiveContext) throws -> MetalMesh
 }
 
 // A material that can be saved: it encodes itself, textures through `SceneArchiveContext`.
@@ -138,6 +152,7 @@ public enum SceneArchiveError: Error, CustomStringConvertible {
     case missingDevice
     case unsupportedTexture(String)
     case unreadableTexture(String)
+    case unsupportedMesh(String)
     case unsupportedFormatVersion(Int)
 
     public var description: String {
@@ -146,6 +161,7 @@ public enum SceneArchiveError: Error, CustomStringConvertible {
         case .missingDevice: "Reading a scene archive needs a device"
         case .unsupportedTexture(let reason): "Unsupported texture: \(reason)"
         case .unreadableTexture(let name): "Could not read texture \(name)"
+        case .unsupportedMesh(let reason): "Cannot save or read the mesh: \(reason)"
         case .unsupportedFormatVersion(let version): "Scene archive format \(version) is newer than this code (\(SceneArchive.formatVersion))"
         }
     }
@@ -192,6 +208,39 @@ public final class SceneArchiveContext: @unchecked Sendable {
     private var writtenTextures: [ObjectIdentifier: TextureReference] = [:]
     // Textures named while encoding, written after (#238).
     var pendingTextures: [SceneArchive.PendingTexture] = []
+    // Other files to write, such as meshes (#158), by path in the package.
+    private(set) var files: [String: Data] = [:]
+
+    // A new file path in the package: `directory`/N.`pathExtension`.
+    public func newFile(in directory: String, pathExtension: String) -> String {
+        "\(directory)/\(files.keys.count { $0.hasPrefix(directory + "/") }).\(pathExtension)"
+    }
+
+    // Adds a file to the package at `path`.
+    public func addFile(_ path: String, data: Data) {
+        files[path] = data
+    }
+
+    // A file read from the package.
+    public func data(atPath path: String) throws -> Data {
+        try Data(contentsOf: readDirectory.appendingPathComponent(path))
+    }
+
+    public func url(forPath path: String) throws -> URL {
+        try readDirectory.appendingPathComponent(path)
+    }
+
+    public var meshCodec: (any ArchivableMeshCodec)? {
+        archive.meshCodec
+    }
+
+    // Files already written for meshes, by the identity of their GPU buffers; and meshes already read, by file.
+    var meshFiles: [[ObjectIdentifier]: String] = [:]
+    var decodedMeshes: [String: MetalMesh] = [:]
+
+    func meshKey(_ mesh: MetalMesh) -> [ObjectIdentifier] {
+        mesh.vertexBuffers.sorted { $0.key < $1.key }.map { ObjectIdentifier($0.value) } + mesh.submeshes.map { ObjectIdentifier($0.indexBuffer) }
+    }
     private var readTextures: [String: MTLTexture] = [:]
     // Constraints refer to nodes by path from this root.
     var encodingRoot: SceneGraph.Node?

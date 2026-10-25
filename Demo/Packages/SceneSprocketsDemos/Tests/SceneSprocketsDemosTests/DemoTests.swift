@@ -30,6 +30,20 @@ func demoBuildsUpdatesAndRenders(demo: Demo) throws {
     #expect(litPixels > 40, "\(demo.title) rendered almost nothing")
 }
 
+// #158: the dice demo's generated dice and gears are saved as glTF and read back as meshes.
+@Test
+@MainActor
+func generatedDiceRoundTrip() throws {
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension(SceneArchive.pathExtension)
+    defer { try? FileManager.default.removeItem(at: url) }
+    let warnings = try DemoSnapshot.save(demoID: "dice", to: url, frames: 1)
+    #expect(!warnings.contains { $0.contains("not a shape") })
+    let saved = DemoCatalog.demos.first { $0.id == "dice" }!.make().sceneGraph.meshEntries().count
+    let (loaded, readWarnings) = try DemoSnapshot.archive.read(from: url, device: MTLCreateSystemDefaultDevice()!)
+    #expect(readWarnings.isEmpty, "\(readWarnings)")
+    #expect(loaded.meshEntries().count == saved)
+}
+
 // #69: the skinned tubes must sit on their skeletons, so bending curls them in place; with inverse bind matrices from
 // the joints' world transforms they were offset and swung around far-away pivots.
 @Test

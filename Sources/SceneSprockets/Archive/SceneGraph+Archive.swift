@@ -48,7 +48,8 @@ extension SceneGraph.Node: Codable {
     }
 
     enum MeshKeys: String, CodingKey {
-        case shape, materials, castsShadow, receivesShadow
+        // A mesh is a `shape`, or a `file` written by the archive's mesh codec (#158).
+        case shape, file, materials, castsShadow, receivesShadow
     }
 
     enum MaterialKeys: String, CodingKey {
@@ -94,10 +95,23 @@ extension SceneGraph.Node: Codable {
             try container.encode(light, forKey: .light)
         case let .camera(camera):
             try container.encode(camera, forKey: .camera)
-        case let .mesh(_, materials, castsShadow, receivesShadow):
-            if let shape {
+        case let .mesh(metalMesh, materials, castsShadow, receivesShadow):
+            if shape == nil, context.meshCodec == nil {
+                context.warn("\(nodeDescription): mesh is not a shape and the archive has no mesh codec; not saved (#158)")
+            } else {
                 var mesh = container.nestedContainer(keyedBy: MeshKeys.self, forKey: .mesh)
-                try mesh.encode(shape, forKey: .shape)
+                if let shape {
+                    try mesh.encode(shape, forKey: .shape)
+                } else if let codec = context.meshCodec {
+                    if metalMesh.morphTargets != nil || metalMesh.skin != nil {
+                        context.warn("\(nodeDescription): the mesh's morph targets and skin are not saved")
+                    }
+                    // Nodes that share a mesh share its file.
+                    let key = context.meshKey(metalMesh)
+                    let path = try context.meshFiles[key] ?? codec.encode(metalMesh, materials: materials, name: label, context: context)
+                    context.meshFiles[key] = path
+                    try mesh.encode(path, forKey: .file)
+                }
                 try mesh.encode(castsShadow, forKey: .castsShadow)
                 try mesh.encode(receivesShadow, forKey: .receivesShadow)
                 var list = mesh.nestedUnkeyedContainer(forKey: .materials)
@@ -114,9 +128,6 @@ extension SceneGraph.Node: Codable {
                     try item.encode(type(of: archivable).archiveTypeName, forKey: .type)
                     try archivable.encode(to: item.superEncoder(forKey: .value))
                 }
-            } else {
-                // glTF references (#157) and generated meshes (#158) come later.
-                context.warn("\(nodeDescription): mesh is not a shape; not saved yet (#157, #158)")
             }
         }
         warnAboutUnsavedFeatures(context)
@@ -149,7 +160,7 @@ extension SceneGraph.Node: Codable {
             content = .camera(camera)
         } else if container.contains(.mesh) {
             let mesh = try container.nestedContainer(keyedBy: MeshKeys.self, forKey: .mesh)
-            let shape = try mesh.decode(SceneGraph.Shape.self, forKey: .shape)
+            let shape = try mesh.decodeIfPresent(SceneGraph.Shape.self, forKey: .shape)
             var list = try mesh.nestedUnkeyedContainer(forKey: .materials)
             var materials: [any Material] = []
             while !list.isAtEnd {
@@ -165,8 +176,21 @@ extension SceneGraph.Node: Codable {
                 context.warn("\(label ?? "node"): no materials could be read; mesh dropped")
             } else {
                 let device = try context.device
-                content = .mesh(shape.metalMesh(device: device), materials: materials, castsShadow: try mesh.decode(Bool.self, forKey: .castsShadow), receivesShadow: try mesh.decode(Bool.self, forKey: .receivesShadow))
-                shapeStorage = (shape, device)
+                let castsShadow = try mesh.decode(Bool.self, forKey: .castsShadow)
+                let receivesShadow = try mesh.decode(Bool.self, forKey: .receivesShadow)
+                if let shape {
+                    content = .mesh(shape.metalMesh(device: device), materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
+                    shapeStorage = (shape, device)
+                } else if let path = try mesh.decodeIfPresent(String.self, forKey: .file) {
+                    if let codec = context.meshCodec {
+                        // Nodes that shared a mesh share it again.
+                        let decoded = try context.decodedMeshes[path] ?? codec.decode(path: path, context: context)
+                        context.decodedMeshes[path] = decoded
+                        content = .mesh(decoded, materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
+                    } else {
+                        context.warn("\(label ?? "node"): no mesh codec to read \(path); mesh dropped")
+                    }
+                }
             }
         }
         if let constraints = try container.decodeIfPresent([ArchivedConstraint].self, forKey: .constraints) {

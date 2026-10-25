@@ -51,12 +51,14 @@ public struct ComposerView: View {
     private func insertModel(_ url: URL, scopedURL: URL) {
         do {
             let warnings = try model.insertModel(from: url, scopedURL: scopedURL)
-            // Scene archives cannot store imported meshes yet; saving keeps the nodes but drops the geometry. Loader
-            // warnings are summarized; the full text goes to the log (#206).
+            // Saving writes the meshes into the document as glTF (#158). Loader warnings are summarized; the full
+            // text goes to the log (#206).
             for warning in warnings {
                 insertLogger.warning("Insert \(url.lastPathComponent, privacy: .public): \(warning, privacy: .public)")
             }
-            insertMessage = (["The model's meshes are not saved with the document yet (#157, #158)."] + InsertWarnings.summary(warnings)).joined(separator: "\n")
+            if !warnings.isEmpty {
+                insertMessage = InsertWarnings.summary(warnings).joined(separator: "\n")
+            }
         } catch {
             insertMessage = error.localizedDescription
         }

@@ -152,8 +152,12 @@ public enum DemoSnapshot {
             scene.sceneGraph.advanceActions(by: deltaTime)
             scene.sceneGraph.applyConstraints(pointOfView: scene.initialCameraMatrix, deltaTime: deltaTime)
         }
-        let archive = SceneArchive(materialTypes: [BlinnPhongSceneMaterial.self, PBRSceneMaterial.self, ShaderMaterial.self], environmentMapTypes: [PBREnvironment.self])
         return try archive.write(scene.sceneGraph, to: url)
+    }
+
+    // Generated meshes (dice, gears) are saved as glTF (#158).
+    static var archive: SceneArchive {
+        SceneArchive(materialTypes: [BlinnPhongSceneMaterial.self, PBRSceneMaterial.self, ShaderMaterial.self], environmentMapTypes: [PBREnvironment.self], meshCodec: GLTFMeshCodec())
     }
 
     public static func writePNG(_ image: CGImage, to url: URL) throws {
