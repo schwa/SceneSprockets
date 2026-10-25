@@ -5092,12 +5092,13 @@ The Task.yield hack is #230.
 ## 235: SceneView: decorations, overlay and onTapAt closures make SceneView never compare equal
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: area:ui, area:composer, effort:m
 created: 2026-10-25T00:07:58Z
-updated: 2026-10-25T00:33:41Z
+updated: 2026-10-25T14:08:02Z
+closed: 2026-10-25T14:08:02Z
 +++
 
 Split out of #224. ScenePreviewView builds SceneView's decorations, overlay and onTapAt closures in its body, so SceneView never compares equal and its body re-runs on every model change. This is a library API design change. Options: (a) Equatable wrapper values keyed on what the closures capture (settings, selected ids, revisions); (b) decoration and overlay objects with identity held by the model, passed by reference. Measure with the SwiftUI instrument during a gizmo drag before choosing.
@@ -5110,6 +5111,15 @@ Split out of #224. ScenePreviewView builds SceneView's decorations, overlay and 
 Making the closures Equatable (keyed wrappers) or turning them into objects would be a public API change with no hot path to gain. It also wouldn't make SceneView equal, since renderers, manipulator, delegate and Camera are existentials.
 Not measured with Instruments; this is from reading what each body observes.
 Unblocker: OK to close as won't-fix? A cheap related tweak: pass cameraTarget so the preview doesn't observe all of model.camera, if orbit-time body cost ever shows up in a profile. #240 (picking and viewport) covers the closures' duplicated viewport maths.
+
+\- `2026-10-25T14:08:02Z`: Done at the user's request (the earlier punt recommended won't-fix).
+- SceneView gains closuresID: AnyHashable? (last init parameter, source compatible) and an isolated '@MainActor Equatable' conformance. Equal only when closuresID is non-nil and equal, and every other input matches:
+  - objects by identity (scene graph, point of view, delegate, shadows, audio, manipulator);
+  - renderers through Equatable (BlinnPhong and ShaderMaterial renderers are now Equatable; PBRMaterialRenderer by identity; any other renderer counts as changed);
+  - cameras by mask, projection matrix and reverse Z; the camera binding by value; fog/post-processing presence captured at creation, because body reads it.
+- Composer: ScenePreviewView passes ScenePreviewClosuresID (render settings, selected ids, display scale, outline color, which is everything its closures capture by value) and applies .equatable(). RenderSettings is now Hashable.
+- Found along the way: RenderSettings.shadows created a new SceneGraphShadows on every read, so the preview got fresh shadow state on every update. EditorModel now keeps one instance.
+Tests: SceneViewEquatableTests (equal with the same inputs and id; unequal for nil or different ids, options, new shadows, camera value, renderer). Not measured with Instruments; body skips happen when ScenePreviewView re-runs with nothing SceneView uses changed.
 
 ---
 

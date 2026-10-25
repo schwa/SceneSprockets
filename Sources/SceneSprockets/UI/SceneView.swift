@@ -64,6 +64,10 @@ public struct SceneView: View {
     private let overlay: ((SceneViewport) throws -> AnyElement?)?
     private let debugMode: SceneGraphDebugMode?
     private let materialChannel: SceneGraphMaterialChannel?
+    private let closuresID: AnyHashable?
+    // Whether the scene had fog or post-processing when this view was made. The body reads them to configure the
+    // drawable, so == must notice when they change (#235).
+    private let hadScenePostPasses: Bool
 
     @Environment(\.displayScale) private var displayScale
     // Decided at the first change of each drag: whether it started on the manipulator.
@@ -121,8 +125,14 @@ public struct SceneView: View {
         decorations: ((SceneGraphRenderContext, SIMD2<Float>) throws -> AnyElement?)? = nil,
         // Passes after the scene and before the manipulator, such as selection outlines. They see the finished color
         // and can load the scene depth (reversed: nearer is greater). Start passes that read the drawable with a barrier.
-        overlay: ((SceneViewport) throws -> AnyElement?)? = nil
+        overlay: ((SceneViewport) throws -> AnyElement?)? = nil,
+        // Identifies what `onTap`, `onTapAt`, `decorations` and `overlay` capture. Closures cannot be compared, so
+        // with an id SceneView treats them as unchanged while the id is, and can skip updates when nothing else changed
+        // either (#235). Nil: the closures always count as changed.
+        closuresID: AnyHashable? = nil
     ) {
+        self.closuresID = closuresID
+        self.hadScenePostPasses = sceneGraph.fog != nil || sceneGraph.postProcessing != nil
         self.overlay = overlay
         self.debugMode = debugMode
         self.materialChannel = materialChannel
@@ -428,6 +438,58 @@ final class SceneClock {
         lastFrameTime = frameTime
         time += deltaTime
         return (time, deltaTime)
+    }
+}
+
+// Lets SwiftUI skip SceneView's body when its inputs have not changed (#235). Objects compare by identity; closures by
+// `closuresID`; renderers that are not Equatable, and closures without an id, always count as changed.
+extension SceneView: @MainActor Equatable {
+    public static func == (lhs: SceneView, rhs: SceneView) -> Bool {
+        // The camera binding compares by value: callers pass key-path bindings to the same model.
+        lhs.closuresID != nil && lhs.closuresID == rhs.closuresID
+                && lhs.sceneGraph === rhs.sceneGraph
+                && lhs.hadScenePostPasses == rhs.hadScenePostPasses
+                && lhs.pointOfView === rhs.pointOfView
+                && lhs.options == rhs.options
+                && lhs.renderers.count == rhs.renderers.count
+                && zip(lhs.renderers, rhs.renderers).allSatisfy(Self.isSameRenderer)
+                && lhs.delegate === rhs.delegate
+                && lhs.isPlaying == rhs.isPlaying
+                && lhs.shadows === rhs.shadows
+                && lhs.audio === rhs.audio
+                && (lhs.externalCameraMatrix == nil) == (rhs.externalCameraMatrix == nil)
+                && lhs.externalCameraMatrix?.wrappedValue == rhs.externalCameraMatrix?.wrappedValue
+                && lhs.hitTestCategoryBitMask == rhs.hitTestCategoryBitMask
+                && lhs.manipulator === rhs.manipulator
+                && Self.isSameCamera(lhs.defaultCamera, rhs.defaultCamera)
+                && Self.isSameCamera(lhs.cameraOverride, rhs.cameraOverride)
+                && lhs.cameraTarget == rhs.cameraTarget
+                && lhs.debugMode == rhs.debugMode
+                && lhs.materialChannel == rhs.materialChannel
+                && (lhs.onTap == nil) == (rhs.onTap == nil)
+                && (lhs.onTapAt == nil) == (rhs.onTapAt == nil)
+                && (lhs.decorations == nil) == (rhs.decorations == nil)
+                && (lhs.overlay == nil) == (rhs.overlay == nil)
+    }
+
+    private static func isSameRenderer(_ lhs: any SceneGraphMaterialRenderer, _ rhs: any SceneGraphMaterialRenderer) -> Bool {
+        func isEqual<T: Equatable>(_ lhs: T, _ rhs: Any) -> Bool {
+            (rhs as? T) == lhs
+        }
+        guard let lhs = lhs as? any Equatable else {
+            return false
+        }
+        return isEqual(lhs, rhs)
+    }
+
+    // Projections are not Equatable; their matrices and depth direction say what they do.
+    private static func isSameCamera(_ lhs: Camera?, _ rhs: Camera?) -> Bool {
+        guard let lhs, let rhs else {
+            return lhs == nil && rhs == nil
+        }
+        return lhs.categoryBitMask == rhs.categoryBitMask
+            && lhs.projection.isReverseZ == rhs.projection.isReverseZ
+            && lhs.projection.projectionMatrix(aspectRatio: 1) == rhs.projection.projectionMatrix(aspectRatio: 1)
     }
 }
 

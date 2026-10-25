@@ -186,6 +186,8 @@ public final class EditorModel {
     @ObservationIgnored public let gizmo = TransformGizmo()
     // Keeps its textures between frames.
     @ObservationIgnored let selectionOutline = SelectionOutline()
+    // One instance, so it keeps its GPU state and SceneView sees the same shadows between updates (#235).
+    @ObservationIgnored let shadows = SceneGraphShadows()
     @ObservationIgnored private var transformBeforeDrag: SceneGraph.LocalTransform?
     // The other selected nodes the gizmo carries along (#205), with their world and local transforms at drag start.
     @ObservationIgnored private var draggedCompanions: [(node: SceneGraph.Node, world: simd_float4x4, local: SceneGraph.LocalTransform)] = []

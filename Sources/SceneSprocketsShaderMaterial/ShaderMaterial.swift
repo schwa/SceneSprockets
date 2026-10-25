@@ -66,7 +66,7 @@ public struct ShaderMaterial: SceneSprockets.Material {
     }
 }
 
-public struct ShaderMaterialRenderer: SceneGraphMaterialRenderer {
+public struct ShaderMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
     public init() {
     }
 

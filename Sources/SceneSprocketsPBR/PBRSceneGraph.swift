@@ -144,7 +144,12 @@ public struct PBRSceneGraphModelBuilder {
     }
 }
 
-public final class PBRMaterialRenderer: SceneGraphMaterialRenderer {
+// Equal by identity: it holds GPU state, and SceneView only needs to know it is the same renderer (#235).
+public final class PBRMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
+    public static func == (lhs: PBRMaterialRenderer, rhs: PBRMaterialRenderer) -> Bool {
+        lhs === rhs
+    }
+
     public var device: MTLDevice
     public var environment: PBREnvironment
     public var environmentIntensity: Float

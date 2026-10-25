@@ -5,7 +5,7 @@ import SceneSprockets
 import simd
 
 // How the editor preview draws the scene. Editor state only; not saved in the document.
-struct RenderSettings: Equatable {
+struct RenderSettings: Hashable {
     var showsGrid = true
     var showsAxes = true
     // Which axis lines to draw when showsAxes is on (#225); the green Y line runs straight up through the scene.
@@ -68,10 +68,6 @@ struct RenderSettings: Equatable {
 
     var camera: Camera {
         Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(fieldOfView), depthMode: .standard(zClip: nearClip ... max(farClip, nearClip * 2))))
-    }
-
-    var shadows: SceneGraphShadows? {
-        showsShadows ? SceneGraphShadows() : nil
     }
 
     // Grid and axes, drawn in the scene pass. SceneSprockets uses reversed depth: test with `.greater` and do not

@@ -62,10 +62,15 @@ public struct BlinnPhongSceneMaterial: SceneSprockets.Material, SamplesShadowsIn
     }
 }
 
-public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer {
+// Equatable so SceneView can tell an unchanged renderer list (#235).
+public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
     public var ambientLightColor: SIMD3<Float>
     // Shared by copies of the renderer, so SwiftUI re-creating the struct keeps the cache.
     private let batchPlans = BatchPlanCache()
+
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.ambientLightColor == rhs.ambientLightColor && lhs.batchPlans === rhs.batchPlans
+    }
 
     public init(ambientLightColor: SIMD3<Float> = [0.15, 0.15, 0.2]) {
         self.ambientLightColor = ambientLightColor

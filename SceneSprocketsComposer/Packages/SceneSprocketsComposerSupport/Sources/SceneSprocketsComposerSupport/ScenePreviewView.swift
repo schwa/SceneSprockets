@@ -5,6 +5,14 @@ import SceneSprocketsGizmos
 import simd
 import SwiftUI
 
+// What ScenePreviewView's SceneView closures capture by value, so SceneView can tell when they changed (#235).
+struct ScenePreviewClosuresID: Hashable {
+    var settings: RenderSettings
+    var selectedIDs: Set<SceneGraph.Node.ID>
+    var displayScale: CGFloat
+    var outlineColor: SIMD4<Float>
+}
+
 final class PointerTracker {
     var location: SIMD2<Float> = .zero
     var viewSize: SIMD2<Float> = .zero
@@ -34,7 +42,7 @@ struct ScenePreviewView: View {
             sceneGraph: model.sceneGraph,
             options: settings.options.union(.allowsCameraControl),
             renderers: model.renderers,
-            shadows: settings.shadows,
+            shadows: settings.showsShadows ? model.shadows : nil,
             // A key-path binding, which SwiftUI can compare; a Binding(get:set:) is new on every pass (#223).
             cameraMatrix: $model.viewCameraMatrix,
             cameraTarget: model.camera.target,
@@ -76,8 +84,12 @@ struct ScenePreviewView: View {
                 outline.color = outlineColor
                 outline.width = 6
                 return try outline.element(nodes: selectedNodes, sceneGraph: sceneGraph, viewport: viewport)
-            }
+            },
+            // Every value the closures above capture; the rest (model, outline, pointer) are the same objects (#235).
+            closuresID: ScenePreviewClosuresID(settings: settings, selectedIDs: model.selectedIDs, displayScale: displayScale, outlineColor: outlineColor)
         )
+        // Compare with SceneView's ==, so an unchanged SceneView does not re-run its body.
+        .equatable()
         .focusable()
         .focusEffectDisabled()
         .focused($isFocused)
