@@ -3436,6 +3436,7 @@ Part of #52. When a glTF is loaded into a scene, tag each imported node with its
 
 - `2026-10-23T13:45:09Z`: Punted by auto-issue-fixer. Read GLTFSceneGraph.swift and the archive code. Punting: needs decisions. (1) Same as #158: the core archive has no glTF dependency, so this needs a content hook on SceneArchive implemented in SceneSprocketsPBR — best designed once for #157 and #158 together. (2) The issue leaves open what to do when an imported node's material or mesh is edited (override vs fall back to #158's generated-mesh path). (3) One glTF node can become several scene nodes (GLTFSceneGraphBuilder.node(_:) returns [Node], e.g. multi-material or instanced meshes), so the reference needs a sub-index or a rule. Unblocker: decide the hook design (see #158 comment) and pick the override rule; then this is implementable.
 - `2026-10-24T11:44:52Z`: Decided: the glTF stored in the package must be complete and match the current scene. Composer is not a detailed glTF editor: imported glTFs are treated as mostly complete units. Detailed edits go through a separate 'explode' feature that converts the glTF node tree into scene graph nodes (see new issue).
+- `2026-10-25T01:01:53Z`: Decision (user): the glTF writer lives in SceneSprocketsPBR, as GLTFSceneGraph+Export.swift next to the importer GLTFSceneGraph.swift. SwiftGLTF already does file-level writing (Codable Document, GLTFWriter.glbData, Container.write(to:embedResources:)), so the new code only maps a SceneGraph to a glTF Document: meshes to accessors and buffer views, PBR and Blinn-Phong materials, nodes, KHR lights and cameras. Keeping both directions in one target allows read-write-read round-trip tests. Both may later move together into a SceneSprocketsGLTF target if they grow.
 
 ---
 
@@ -3455,6 +3456,7 @@ Part of #52. Meshes built in code (MetalMesh from SwiftMesh: dice, gears, hand-b
 - `2026-10-23T13:44:43Z`: Punted by auto-issue-fixer. Looked at SceneGraph+Archive.swift (the mesh-not-a-shape branch) and target deps. Punting: needs two design decisions. (1) Where the glTF writer lives: the core SceneSprockets target has no SwiftGLTF dependency (only SceneSprocketsPBR does). Options: add SwiftGLTF to core, or add a mesh-codec hook to SceneArchive (like materialTypes) and implement it in SceneSprocketsPBR. (2) Materials: the issue says write materials and textures into the glTF, but scene.json already archives Blinn-Phong/PBR materials and textures. Should the glTF carry geometry only (materials stay in scene.json), or also materials? My suggestion: hook in SceneSprocketsPBR, geometry-only glTF (MetalMesh -> Mesh -> glTF primitives per submesh).
 - `2026-10-24T11:26:48Z`: Punted again by auto-issue-fixer: the two design questions in the previous comment are still open. Unblocker: confirm 'mesh-codec hook in SceneSprocketsPBR, geometry-only glTF' (or pick another option).
 - `2026-10-24T11:44:52Z`: Decided: SwiftGLTF supports writing; the glTF carries materials too (not geometry only). Still open: where the writer lives (core vs hook in SceneSprocketsPBR).
+- `2026-10-25T01:01:54Z`: Decision (user): the glTF writer lives in SceneSprocketsPBR, as GLTFSceneGraph+Export.swift next to the importer GLTFSceneGraph.swift. SwiftGLTF already does file-level writing (Codable Document, GLTFWriter.glbData, Container.write(to:embedResources:)), so the new code only maps a SceneGraph to a glTF Document: meshes to accessors and buffer views, PBR and Blinn-Phong materials, nodes, KHR lights and cameras. Keeping both directions in one target allows read-write-read round-trip tests. Both may later move together into a SceneSprocketsGLTF target if they grow.
 
 ---
 
@@ -3975,6 +3977,7 @@ updated: 2026-10-24T15:08:18Z
 Imported glTFs are kept as mostly complete units (#157), not edited in detail. Add an Explode command that converts an imported glTF node tree into plain scene graph nodes (meshes, materials, transforms), so they can be edited and are then saved as generated content (#158).
 
 - `2026-10-24T15:08:18Z`: Punting: nothing to explode yet. The Composer has no glTF import, and GLTFSceneGraph already turns a glTF into plain nodes. Explode only makes sense once #157 tags imported nodes as one glTF unit kept by reference, and #158 can save the exploded meshes as generated content. Unblocker: do #157 (and decide where the glTF writer lives for #158), plus a Composer 'Import glTF…' command. Explode then removes the tag from the imported subtree.
+- `2026-10-25T01:01:54Z`: Unblocked: #157/#158 now have a decided writer location (SceneSprocketsPBR).
 
 ---
 
