@@ -140,3 +140,23 @@ func hitsReportBarycentricsAndTextureCoordinates() throws {
     #expect(abs(uv.x - 0.75) < 1e-3)
     #expect(abs(uv.y - 0.25) < 1e-3 || abs(uv.y - 0.75) < 1e-3)
 }
+
+// #240: a viewport built from a camera casts the same rays as the projection itself, for every depth mode.
+@Test(arguments: [
+    PerspectiveProjection.DepthMode.standard(zClip: 0.1 ... 100),
+    .reversed(zClip: 0.1 ... 100),
+    .reversedInfinite(zNear: 0.1),
+])
+func viewportFromCameraCastsTheProjectionsRays(_ depthMode: PerspectiveProjection.DepthMode) {
+    let projection = PerspectiveProjection(verticalAngleOfView: .degrees(50), depthMode: depthMode)
+    let cameraMatrix = LookAt(position: [3, 2, 5], target: .zero, up: [0, 1, 0]).cameraMatrix
+    let viewSize: SIMD2<Float> = [640, 480]
+    let viewport = SceneViewport(cameraMatrix: cameraMatrix, camera: Camera(projection: projection), viewSize: viewSize, drawableSize: viewSize * 2)
+    let reference = ViewProjection(viewMatrix: cameraMatrix.inverse, projection: projection, viewSize: viewSize)
+    for point: SIMD2<Float> in [[0, 0], [320, 240], [600, 50]] {
+        let ray = viewport.ray(through: point)
+        let expected = reference.ray(through: point)
+        #expect(simd_distance(ray.origin, expected.origin) < 1e-3)
+        #expect(simd_distance(simd_normalize(ray.direction), simd_normalize(expected.direction)) < 1e-4)
+    }
+}

@@ -358,11 +358,9 @@ public struct SceneView: View {
         guard viewSize.width > 0, viewSize.height > 0 else {
             return nil
         }
-        let projection = activeCamera.projection
         let size = SIMD2<Float>(Float(viewSize.width), Float(viewSize.height))
-        let matrix = projection.projectionMatrix(aspectRatio: size.x / size.y)
         let drawable = drawableSize.map { SIMD2<Float>(Float($0.width), Float($0.height)) } ?? size * Float(displayScale)
-        return SceneViewport(cameraMatrix: currentCameraMatrix, projectionMatrix: projection.isReversedDepth ? .reversedDepth * matrix : matrix, viewSize: size, drawableSize: drawable)
+        return SceneViewport(cameraMatrix: currentCameraMatrix, camera: activeCamera, viewSize: size, drawableSize: drawable)
     }
 
     private var activeCameraNode: (node: SceneGraph.Node, camera: Camera, worldTransform: simd_float4x4)? {
@@ -410,15 +408,11 @@ public struct SceneView: View {
     }
 
     private func hit(at location: CGPoint) -> SceneGraph.Hit? {
-        guard viewSize.width > 0, viewSize.height > 0 else {
+        guard let viewport = viewport() else {
             return nil
         }
-        let camera = activeCamera
-        let matrix = currentCameraMatrix
-        let size = SIMD2<Float>(Float(viewSize.width), Float(viewSize.height))
-        let ray = ViewProjection(viewMatrix: matrix.inverse, projection: camera.projection, viewSize: size).ray(through: [Float(location.x), Float(location.y)])
         // Like SceneKit, taps only hit nodes the camera can see, further limited by hitTestCategoryBitMask.
-        return sceneGraph.hitTest(ray, categoryBitMask: camera.categoryBitMask & hitTestCategoryBitMask).first
+        return sceneGraph.hitTest(viewport.ray(through: [Float(location.x), Float(location.y)]), categoryBitMask: activeCamera.categoryBitMask & hitTestCategoryBitMask).first
     }
 }
 

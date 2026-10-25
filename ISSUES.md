@@ -5213,12 +5213,13 @@ Tests: materialEditsApplyAsValues replaces materialEditsReplaceAndUndo (kind, sk
 ## 240: Architecture: one picking and viewport module for clicks, menus, decorations and gizmo
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:composer, area:ui, architecture, effort:m
 created: 2026-10-25T00:27:38Z
-updated: 2026-10-25T00:33:41Z
+updated: 2026-10-25T00:57:38Z
+closed: 2026-10-25T00:57:38Z
 +++
 
 From an architecture review (deepening candidate 5).
@@ -5229,6 +5230,11 @@ Direction: one viewport and picking value (camera, projection, size, display sca
 Tests: replace the DebugShapes hit tests and the Composer pick tests with pick-at-point tests at one boundary.
 Related: #235, #220.
 
-- `2026-10-25T00:33:41Z`: Related: #235.
+\- `2026-10-25T00:33:41Z`: Related: #235.
+\- `2026-10-25T00:57:38Z`: Design and implementation: one viewport constructor, one editor picking function.
+- Core: SceneViewport.init(cameraMatrix:camera:viewSize:drawableSize:) builds the viewport the way SceneView draws it, converting reverse-Z projections to standard depth. SceneView.viewport() and SceneView's own tap hit test both use it now (the hit test used to build a separate ViewProjection). New test viewportFromCameraCastsTheProjectionsRays checks it gives the projection's own rays for standard, reversed and reversed-infinite depth.
+- Composer: EditorModel.viewport(viewSize:) and node(at:in:) hold the single pick rule (light and camera shapes first when shown, then the nearest mesh in the camera's category mask). Clicks (onTapAt) and the context menu (node(at:viewSize:)) both call it; ScenePreviewView no longer re-implements shape-first or uses SceneView's mesh hit. The context menu's viewport also now handles reverse-Z correctly (it used the raw projection matrix before; shape hits only used x and y, so no visible bug).
+Not changed: the decorations closure still builds its viewport from the render context's matrices. That is the per-frame render camera, not a pick, so it stays. #235 (closures) stays punted.
+Tests: the core test above; the existing nodeUnderPointer and debugShapesDrawAndPickLightsAndCameras pass.
 
 ---

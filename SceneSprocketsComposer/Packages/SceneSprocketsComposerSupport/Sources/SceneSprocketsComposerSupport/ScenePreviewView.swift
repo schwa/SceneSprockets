@@ -42,12 +42,10 @@ struct ScenePreviewView: View {
             manipulator: model.gizmo,
             debugMode: settings.debugMode,
             materialChannel: settings.materialChannel,
-            onTapAt: { point, viewport, hit in
+            onTapAt: { point, viewport, _ in
                 isFocused = true
-                // Light and camera shapes are drawn on top, so they win over meshes behind them.
-                let shapeHit = settings.showsLightsAndCameras ? DebugShapes.hitTest(point, sceneGraph: model.sceneGraph, viewport: viewport) : nil
                 // Shift-click adds to or removes from the selection (#201).
-                model.pick(shapeHit ?? hit?.node, extending: pointer.modifiers.contains(.shift))
+                model.pick(model.node(at: point, in: viewport), extending: pointer.modifiers.contains(.shift))
             },
             decorations: { [selectedIDs = model.selectedIDs, sceneGraph = model.sceneGraph, displayScale, accentColor = Color(.sRGB, red: Double(outlineColor.x), green: Double(outlineColor.y), blue: Double(outlineColor.z))] context, drawableSize in
                 let grid = try settings.decorations(context: context, drawableSize: drawableSize)

@@ -33,22 +33,26 @@ extension EditorModel {
         }
     }
 
-    // The node under a point in the preview (view coordinates, origin top-left), as a click would pick it: light and
-    // camera shapes first when shown, then the nearest mesh. Uses the editor camera, like SceneView's own hit test
-    // (#220).
-    func node(at point: SIMD2<Float>, viewSize: SIMD2<Float>) -> SceneGraph.Node? {
+    // The editor camera's viewport for a preview of `viewSize` points, as SceneView builds it (#240).
+    func viewport(viewSize: SIMD2<Float>) -> SceneViewport? {
         guard viewSize.x > 0, viewSize.y > 0 else {
             return nil
         }
-        let camera = renderSettings.camera
-        if renderSettings.showsLightsAndCameras {
-            let viewport = SceneViewport(cameraMatrix: self.camera.matrix, projectionMatrix: camera.projection.projectionMatrix(aspectRatio: viewSize.x / viewSize.y), viewSize: viewSize, drawableSize: viewSize)
-            if let shape = DebugShapes.hitTest(point, sceneGraph: sceneGraph, viewport: viewport) {
-                return shape
-            }
+        return SceneViewport(cameraMatrix: camera.matrix, camera: renderSettings.camera, viewSize: viewSize, drawableSize: viewSize)
+    }
+
+    // The node under a point (view coordinates, origin top-left), as a click picks it: light and camera shapes first
+    // when shown, because they are drawn on top, then the nearest mesh the camera can see. Clicks and the context
+    // menu both use this (#220, #240).
+    func node(at point: SIMD2<Float>, in viewport: SceneViewport) -> SceneGraph.Node? {
+        if renderSettings.showsLightsAndCameras, let shape = DebugShapes.hitTest(point, sceneGraph: sceneGraph, viewport: viewport) {
+            return shape
         }
-        let ray = ViewProjection(viewMatrix: self.camera.matrix.inverse, projection: camera.projection, viewSize: viewSize).ray(through: point)
-        return sceneGraph.hitTest(ray, categoryBitMask: camera.categoryBitMask).first?.node
+        return sceneGraph.hitTest(viewport.ray(through: point), categoryBitMask: renderSettings.camera.categoryBitMask).first?.node
+    }
+
+    func node(at point: SIMD2<Float>, viewSize: SIMD2<Float>) -> SceneGraph.Node? {
+        viewport(viewSize: viewSize).flatMap { node(at: point, in: $0) }
     }
 
     // Moves `node` up or down so the bottom of its world bounds is at y = 0, keeping x and z (#210). Works for nested

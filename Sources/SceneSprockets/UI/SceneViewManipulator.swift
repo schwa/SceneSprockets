@@ -18,6 +18,14 @@ public struct SceneViewport {
         self.drawableSize = drawableSize
     }
 
+    // The viewport `camera` sees from `cameraMatrix`, as SceneView draws and hit tests it (#240). Reversed-depth
+    // projections are converted to standard depth.
+    public init(cameraMatrix: simd_float4x4, camera: Camera, viewSize: SIMD2<Float>, drawableSize: SIMD2<Float>) {
+        let projection = camera.projection
+        let matrix = projection.projectionMatrix(aspectRatio: viewSize.x / viewSize.y)
+        self.init(cameraMatrix: cameraMatrix, projectionMatrix: projection.isReverseZ ? .reverseZ * matrix : matrix, viewSize: viewSize, drawableSize: drawableSize)
+    }
+
     public var viewMatrix: simd_float4x4 {
         cameraMatrix.inverse
     }
