@@ -4921,6 +4921,8 @@ Test: change the scene, call snapshot from a detached task while the main actor 
 (c) Capture only the cheap parts (encoded scene JSON plus editor state) per edit, and copy model files and textures and render the preview in snapshot from immutable inputs. Needs SceneArchive split into encode on main and write files anywhere, plus a preview built from a copied graph.
 Unblocker: which trade-off do you want? I suggest (c), it's the most work but has no per-edit GPU cost.
 
+- `2026-10-25T00:33:42Z`: User chose option (c): capture the cheap parts after each edit, then write files and the preview at save time. Done together with #238.
+
 ---
 
 ## 228: AnimatedMaterial is @unchecked Sendable mutable state without a lock
@@ -5065,25 +5067,29 @@ The Task.yield hack is #230.
 ## 235: SceneView: decorations, overlay and onTapAt closures make SceneView never compare equal
 
 +++
-status: new
+status: open
 priority: medium
 kind: enhancement
 labels: area:ui, area:composer, effort:m
 created: 2026-10-25T00:07:58Z
+updated: 2026-10-25T00:33:41Z
 +++
 
 Split out of #224. ScenePreviewView builds SceneView's decorations, overlay and onTapAt closures in its body, so SceneView never compares equal and its body re-runs on every model change. This is a library API design change. Options: (a) Equatable wrapper values keyed on what the closures capture (settings, selected ids, revisions); (b) decoration and overlay objects with identity held by the model, passed by reference. Measure with the SwiftUI instrument during a gizmo drag before choosing.
+
+- `2026-10-25T00:33:41Z`: Related: #240 (picking and viewport module would replace these closures' viewport rebuilding).
 
 ---
 
 ## 236: Architecture: one edit/undo path for scene changes
 
 +++
-status: new
+status: open
 priority: medium
 kind: enhancement
 labels: area:composer, architecture, effort:l
 created: 2026-10-25T00:27:37Z
+updated: 2026-10-25T00:33:41Z
 +++
 
 From an architecture review (deepening candidate 1).
@@ -5094,16 +5100,19 @@ Direction: one deep editing module (for example apply(edit, actionName:)) that o
 Tests: replace the per-setter 'X undoes' tests with boundary tests: apply an edit, undo it, assert on the scene and the change notification.
 Next step: run the improve-codebase-architecture interface-design step, then write an RFC.
 
+- `2026-10-25T00:33:42Z`: Related: #237 (design together: the edit path is the natural owner of change notification), #239.
+
 ---
 
 ## 237: Architecture: scene change observation instead of manual revision counters
 
 +++
-status: new
+status: open
 priority: medium
 kind: enhancement
 labels: area:composer, area:scenegraph, architecture, effort:l
 created: 2026-10-25T00:27:38Z
+updated: 2026-10-25T00:33:41Z
 +++
 
 From an architecture review (deepening candidate 2).
@@ -5114,16 +5123,19 @@ Direction: a deep change-tracking module, either in the library (observable or r
 Tests: replace the counter-bump tests and parts of DragPerformanceTests with 'change X, readers of X see it, readers of Y don't re-run' tests.
 Related: #155.
 
+- `2026-10-25T00:33:42Z`: Related: #236.
+
 ---
 
 ## 238: Architecture: document save as a main-actor capture plus a thread-free writer
 
 +++
-status: new
+status: open
 priority: medium
 kind: enhancement
 labels: area:composer, area:document, architecture, effort:l
 created: 2026-10-25T00:27:38Z
+updated: 2026-10-25T00:33:41Z
 +++
 
 From an architecture review (deepening candidate 3).
@@ -5134,16 +5146,19 @@ Direction: split into a cheap immutable capture made on the main actor and a wri
 Tests: replace the round-trip tests (documentRoundTrips, editorStateRoundTrips, preview tests) with capture-then-write tests, plus 'capture is unaffected by later edits'.
 Related: #227, #204, #232.
 
+- `2026-10-25T00:33:42Z`: Related: #227. User chose option (c); #227 will be fixed as part of this.
+
 ---
 
 ## 239: Architecture: one material editing module (PBR rebuild, kinds, presets, parameters)
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
 labels: area:composer, area:materials, architecture, effort:m
 created: 2026-10-25T00:27:38Z
+updated: 2026-10-25T00:33:41Z
 +++
 
 From an architecture review (deepening candidate 4).
@@ -5158,11 +5173,12 @@ Tests: replace the separate material-type, preset, PBR-edit and glass tests with
 ## 240: Architecture: one picking and viewport module for clicks, menus, decorations and gizmo
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
-labels: area:composer,area:ui,architecture,effort:m
+labels: area:composer, area:ui, architecture, effort:m
 created: 2026-10-25T00:27:38Z
+updated: 2026-10-25T00:33:41Z
 +++
 
 From an architecture review (deepening candidate 5).
@@ -5172,5 +5188,7 @@ Dependency category: in-process.
 Direction: one viewport and picking value (camera, projection, size, display scale) with pick(at:) that applies the shape-first rule; decorations and overlays take it instead of rebuilding it.
 Tests: replace the DebugShapes hit tests and the Composer pick tests with pick-at-point tests at one boundary.
 Related: #235, #220.
+
+- `2026-10-25T00:33:41Z`: Related: #235.
 
 ---
