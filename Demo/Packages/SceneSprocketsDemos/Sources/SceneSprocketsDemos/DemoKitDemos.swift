@@ -14,8 +14,10 @@ public enum SceneGraphDemos {
         ]
     }
 
+    // Catalog demos plus demos with their own SwiftUI layout, which DemoCatalog (single-scene, renderable from the CLI)
+    // cannot describe.
     public static var all: [any DemoView.Type] {
-        catalog.map { $0 }
+        catalog.map { $0 } + [TreeAppreciatorDemoView.self]
     }
 }
 
@@ -60,6 +62,14 @@ struct GearsDemoView: CatalogDemoView {
 
 struct DiceDemoView: CatalogDemoView {
     nonisolated static let demo = Demo(id: "dice", title: "Dice", systemImage: "dice", section: .basics, summary: "Generated D4 to D20 dice in a dozen PBR styles, thrown into a wooden tray with Jolt physics. Click or press Space to roll.") { DiceDemo() }
+}
+
+struct TreeAppreciatorDemoView: DemoView {
+    static let metadata = DemoMetadata(id: .init("tree-appreciator"), name: "Tree Appreciator", systemImage: "tree", description: "A spot-the-difference game: two procedurally grown trees side by side with a shared camera, seasonal palettes and particles.", group: DemoSection.basics.rawValue)
+
+    var body: some View {
+        TreeAppreciatorView()
+    }
 }
 
 struct ShadowsDemoView: CatalogDemoView {
