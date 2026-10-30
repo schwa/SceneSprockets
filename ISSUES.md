@@ -5319,8 +5319,8 @@ Hypotheses to check, none confirmed:
 3. Memoryless or private depth: SceneView switches metalDepthStencilStorageMode and texture usage based on needsPostPasses or overlay. If a SwiftUI update flips those mid-flight (MTKView reallocates attachments), the next frame could see uninitialized memory. The inspector being visible means more SwiftUI updates; #235's equatable() may change how often SceneView re-runs.
 Next steps: capture a GPU trace (gpucapture) during an orbit with the inspector visible and find the frame; turn on Metal API validation and shader validation; try maximumDrawableCount and frames-in-flight changes; log when MTKView attachment settings change; check whether disabling the selection outline, bounding boxes and statistics overlay avoids it.
 
-- `2026-10-25T14:51:25Z`: More info (user): it is much better in a Release build than in Debug, but still happens, much less often. My reading (not verified): this points at timing, not logic. Slower CPU-side work in Debug (Swift unoptimized SwiftUI and inspector updates, the per-frame scene walk, encoding) widens the window for a race, which fits a synchronization or reuse bug (hypotheses 1 and 2) more than a deterministic wrong state. Useful next check: make Release slower on purpose (sleep a few ms in the frame closure, or in SwiftUI updates) and see whether the rate goes back up.
-- `2026-10-25T15:45:31Z`: GPU capture analysis (/tmp/pinkcap/orbit.gputrace, Debug build, inspector visible, 120 frames):
+\- `2026-10-25T14:51:25Z`: More info (user): it is much better in a Release build than in Debug, but still happens, much less often. My reading (not verified): this points at timing, not logic. Slower CPU-side work in Debug (Swift unoptimized SwiftUI and inspector updates, the per-frame scene walk, encoding) widens the window for a race, which fits a synchronization or reuse bug (hypotheses 1 and 2) more than a deterministic wrong state. Useful next check: make Release slower on purpose (sleep a few ms in the frame closure, or in SwiftUI updates) and see whether the rate goes back up.
+\- `2026-10-25T15:45:31Z`: GPU capture analysis (/tmp/pinkcap/orbit.gputrace, Debug build, inspector visible, 120 frames):
 - Each frame is one MTL4CommandBuffer (3 allocators, so up to 3 frames in flight) with passes: PBR Transmission Scene, Transmission Backdrop, Back Faces, Mipmaps, the main scene pass (drawable + MTKView depth), Selection Mask, JumpFlood, Selection Outline.
 - PBR Transmission Scene (@tex10 RGBA16Float color, @tex11 depth), Selection Mask (@tex8) and MTKView depth (@tex7) are the same textures in every frame. Only the drawable alternates.
 - Every pass starts with a Metal 4 queue barrier EXCEPT 'PBR Transmission Scene', the first pass of the frame. It clears and re-renders @tex10/@tex11 with nothing ordering it after the previous frame's main pass, whose fragment shaders sample @tex10, or the previous frame's mipmap and backdrop blits. Metal 4 does not order submissions on a queue, so under CPU load (Debug, busy SwiftUI) frames bunch up and overlap: a likely cause of the garbage. Fits all observations: timing-dependent, only while the camera moves (identical frames hide stale reads), only in scenes with transmission.
@@ -5328,5 +5328,100 @@ Next steps: capture a GPU trace (gpucapture) during an orbit with the inspector 
 - The replayer failed to load the trace (XPC connection interrupted), so I could not fetch images of the bad frame from it.
 Fix: MetalSprocketsPBR #22, commit 168a00f6 (local, not pushed): QueueBarrier(after: [.fragment, .blit], before: .fragment) at the start of the PBR Transmission Scene pass.
 To finish: push MetalSprocketsPBR, update the MetalSprocketsPBR pin in the 4 Package.resolved files, re-test in Debug with the inspector visible, and re-capture to confirm the barrier is on the first pass.
+
+---
+
+## 243: README says Blinn-Phong supports only point lights, but it lights directional and spot lights
+
++++
+status: new
+priority: low
+kind: none
+created: 2026-10-30T14:40:28Z
++++
+
+README Limitations says: "The Blinn-Phong shader supports only point lights."
+
+The Blinn-Phong fragment shader handles BLINN_PHONG_LIGHT_DIRECTIONAL and BLINN_PHONG_LIGHT_SPOT, and ShadowsDemo uses directional and spot lights with BlinnPhongSceneMaterial. A directional sun light renders correctly in an external app (TreeAppreciator).
+
+Expected: the README matches the shader.
+
+---
+
+## 244: Package.swift uses local path dependencies, so external consumers resolve sibling checkouts
+
++++
+status: new
+priority: medium
+kind: none
+created: 2026-10-30T14:40:28Z
++++
+
+Package.swift on main depends on MetalSprockets and MetalSprocketsPBR with `.package(path: "../MetalSprockets")` and `.package(path: "../MetalSprocketsPBR")`, marked "TEMP #242: local fix, do not commit". Commit 3fdd7a98 ("Switch to local package dependencies…") is on main.
+
+A package outside the MetalSprockets folder can only use SceneSprockets through an absolute local path, and only on a machine with those sibling checkouts. TreeAppreciator (~/Projects/Scratch/TreeAppreciator) has to use `.package(path: "/Users/schwa/Projects/Current/MetalSprockets/SceneSprockets")`.
+
+---
+
+## 245: Deprecation warnings when building SceneSprockets
+
++++
+status: new
+priority: low
+kind: none
+created: 2026-10-30T14:40:28Z
++++
+
+Building a consumer app (Xcode 27.2) shows two warnings from SceneSprockets:
+
+```
+Sources/SceneSprockets/UI/SceneViewManipulator.swift:34: 'init(viewMatrix:projectionMatrix:isReversedDepth:viewSize:)' is deprecated: replaced by 'init(viewMatrix:projectionMatrix:isReverseZ:viewSize:)'
+Sources/SceneSprockets/Renderer/SceneGraphRenderer.swift:333: 'reversedDepth' is deprecated: renamed to 'reverseZ'
+```
+
+---
+
+## 246: Blinn-Phong ignores per-vertex colors
+
++++
+status: new
+priority: low
+kind: none
+created: 2026-10-30T14:40:29Z
++++
+
+The Blinn-Phong vertex input has only position, normal and textureCoordinate. A mesh with a `.color(0)` attribute renders with the material colour only.
+
+Procedural meshes with many colours (for example a low-poly tree with varied leaf shades) must be split into one submesh and one material per colour. TreeAppreciator uses about 15 submeshes per tree for this.
+
+---
+
+## 247: No gradient or procedural sky background without PBR
+
++++
+status: new
+priority: low
+kind: none
+created: 2026-10-30T14:40:29Z
++++
+
+With only BlinnPhongMaterialRenderer, `SceneGraph.Environment.Background` can be `.none` or a flat `.color`. `.environment` needs a PBR environment map and the PBR renderer.
+
+To get a sky gradient, TreeAppreciator draws an inside-out sphere mesh with an emission texture. That mesh is ordinary geometry, so it is fogged, counts in scene bounds and needs castsShadow false.
+
+---
+
+## 248: SceneView cannot show more than one scene graph or viewport in one view
+
++++
+status: new
+priority: low
+kind: none
+created: 2026-10-30T14:40:29Z
++++
+
+Comparing two scenes side by side (TreeAppreciator shows two trees with a shared camera) needs two SceneViews. Each one makes its own RenderView, drawable, shadow maps, particle runtimes and pipeline setup, so a new pair pays the setup cost twice.
+
+SceneView has no way to draw several scene graphs into split viewports of one RenderView. SceneGraphElement inside a custom RenderView is possible, but then SceneView features (camera control, onTapAt with SceneViewport, actions, constraints, particles advance) must be rebuilt by hand.
 
 ---
