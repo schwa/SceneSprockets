@@ -5351,10 +5351,13 @@ Expected: the README matches the shader.
 ## 244: Package.swift uses local path dependencies, so external consumers resolve sibling checkouts
 
 +++
-status: new
+status: closed
 priority: medium
 kind: none
+labels: release
 created: 2026-10-30T14:40:28Z
+updated: 2026-11-01T22:36:24Z
+closed: 2026-11-01T22:36:24Z
 +++
 
 Package.swift on main depends on MetalSprockets and MetalSprocketsPBR with `.package(path: "../MetalSprockets")` and `.package(path: "../MetalSprocketsPBR")`, marked "TEMP #242: local fix, do not commit". Commit 3fdd7a98 ("Switch to local package dependencies…") is on main.
@@ -5423,5 +5426,23 @@ created: 2026-10-30T14:40:29Z
 Comparing two scenes side by side (TreeAppreciator shows two trees with a shared camera) needs two SceneViews. Each one makes its own RenderView, drawable, shadow maps, particle runtimes and pipeline setup, so a new pair pays the setup cost twice.
 
 SceneView has no way to draw several scene graphs into split viewports of one RenderView. SceneGraphElement inside a custom RenderView is possible, but then SceneView features (camera control, onTapAt with SceneViewport, actions, constraints, particles advance) must be rebuilt by hand.
+
+---
+
+## 249: Bundled third-party glTF assets have no license or attribution
+
++++
+status: closed
+priority: medium
+kind: documentation
+labels: area:docs, release
+created: 2026-11-01T22:28:08Z
+updated: 2026-11-01T22:36:24Z
+closed: 2026-11-01T22:36:24Z
++++
+
+Demo/Packages/SceneSprocketsDemos/Sources/SceneSprocketsDemos/Resources/ contains Fox.glb and DiffuseTransmissionPlant.glb. They appear to come from the Khronos glTF sample models, which can carry attribution-required licenses (e.g. CC-BY).
+
+Nothing in the repo (README, LICENSE, or a NOTICE/credits file) states their source, authors, or licenses. This blocks a public open-source release.
 
 ---

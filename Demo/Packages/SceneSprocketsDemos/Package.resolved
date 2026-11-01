@@ -1,5 +1,5 @@
 {
-  "originHash" : "6844a9814ef664e2a771170ae6816e27dfcd3105787131f9e16aa0fbba8cd965",
+  "originHash" : "5bd2b02bac73f0c2e08dc493b6a77bcbdada083cbf9736aa386525b7be2e96c3",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/DemoKit",
       "state" : {
-        "branch" : "main",
-        "revision" : "2cbd09412c597cc12c4382b036d3c3ecd4a0129f"
+        "revision" : "2cbd09412c597cc12c4382b036d3c3ecd4a0129f",
+        "version" : "0.1.7"
       }
     },
     {
@@ -33,8 +33,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/GeometryLite3D",
       "state" : {
-        "branch" : "main",
-        "revision" : "4e91b6e3455e2b71d3495ffeb35f2aca30d39f33"
+        "revision" : "aabafead21eb8691c0162578452f93fef939665e",
+        "version" : "0.2.7"
       }
     },
     {
@@ -42,8 +42,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/GoldenImage",
       "state" : {
-        "revision" : "03b4d1557869ebb2161551edf97f7a27630dc7a7",
-        "version" : "0.1.6"
+        "revision" : "a1d17d68e763bf3ea02e5d634bb69460a1f7be9c",
+        "version" : "0.1.7"
       }
     },
     {
@@ -51,8 +51,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/Interaction3D",
       "state" : {
-        "branch" : "main",
-        "revision" : "3696a8f1e9f1e018fbdea5fd4c48030775dbd43e"
+        "revision" : "3696a8f1e9f1e018fbdea5fd4c48030775dbd43e",
+        "version" : "0.1.16"
       }
     },
     {
@@ -65,12 +65,21 @@
       }
     },
     {
+      "identity" : "metalsprockets",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/MetalSprockets",
+      "state" : {
+        "revision" : "4062c651c768055ebd2b914562bb5ad851f8a196",
+        "version" : "0.2.9"
+      }
+    },
+    {
       "identity" : "metalsprocketsaddons",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsAddOns",
       "state" : {
-        "branch" : "main",
-        "revision" : "02f667a46e96cbf148864d6de31b17b3c8f1a91d"
+        "revision" : "a475387dda0420e2c098a60303a8921f45d8df2f",
+        "version" : "0.2.5"
       }
     },
     {
@@ -78,8 +87,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsGLTF",
       "state" : {
-        "branch" : "main",
-        "revision" : "d1a4603a36de11b363341f436528914e5bdd7fc0"
+        "revision" : "5a3c9b62a0916a6f63dbde8c324351b476c2cbeb",
+        "version" : "0.0.3"
       }
     },
     {
@@ -92,12 +101,21 @@
       }
     },
     {
+      "identity" : "metalsprocketspbr",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/MetalSprocketsPBR",
+      "state" : {
+        "revision" : "693714e4108c58731949991241b4edf4f6567db1",
+        "version" : "0.0.3"
+      }
+    },
+    {
       "identity" : "metalsupport",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSupport",
       "state" : {
-        "branch" : "main",
-        "revision" : "667d86e694e2f9d599c757152bbdf0d46cab63fe"
+        "revision" : "667d86e694e2f9d599c757152bbdf0d46cab63fe",
+        "version" : "1.0.7"
       }
     },
     {
@@ -139,10 +157,10 @@
     {
       "identity" : "swift-collections",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-collections.git",
+      "location" : "https://github.com/apple/swift-collections",
       "state" : {
-        "revision" : "844289ac455816e193f1dbbe014f3c4dbe429410",
-        "version" : "1.7.4"
+        "revision" : "f96b909e1a9e469620bc5037c1e24e00153f376f",
+        "version" : "1.7.5"
       }
     },
     {
@@ -177,8 +195,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/SwiftGLTF",
       "state" : {
-        "branch" : "main",
-        "revision" : "108c177488f227bfdcfcb558535295bcb6dddfec"
+        "revision" : "978ddbbecd1d842c1b35233d8ea9db4176c18127",
+        "version" : "1.0.6"
       }
     },
     {
@@ -186,8 +204,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/SwiftJolt.git",
       "state" : {
-        "branch" : "main",
-        "revision" : "4cd5a89121e49f9803c926554e7751ac0e9fd0bf"
+        "revision" : "4cd5a89121e49f9803c926554e7751ac0e9fd0bf",
+        "version" : "0.0.1"
       }
     },
     {
@@ -195,8 +213,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/SwiftMesh",
       "state" : {
-        "branch" : "main",
-        "revision" : "cb80c0bc0ecc670c3b716fb2d53af792738c107b"
+        "revision" : "4270c075af06d438609f61548f7d6c632d15e4da",
+        "version" : "0.0.11"
       }
     },
     {

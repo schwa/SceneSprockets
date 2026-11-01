@@ -15,14 +15,14 @@ let package = Package(
     dependencies: [
         // Local checkout so editor and engine can change together. SwiftPM names it after its folder.
         .package(path: "../../.."),
-        .package(url: "https://github.com/schwa/GeometryLite3D", branch: "main"),
-        .package(url: "https://github.com/schwa/Interaction3D", branch: "main"),
-        .package(path: "../../../../MetalSprockets"), // TEMP #242: local fix, do not commit
-        .package(url: "https://github.com/schwa/MetalSprocketsAddOns", branch: "main"),
-        .package(path: "../../../../MetalSprocketsPBR"), // TEMP #242: local fix, do not commit
-        .package(url: "https://github.com/schwa/MetalSupport", branch: "main"),
-        .package(url: "https://github.com/schwa/SwiftMesh", branch: "main"),
-        .package(url: "https://github.com/schwa/SwiftFields", branch: "main"),
+        .package(url: "https://github.com/schwa/GeometryLite3D", .upToNextMinor(from: "0.2.7")),
+        .package(url: "https://github.com/schwa/Interaction3D", .upToNextMinor(from: "0.1.16")),
+        .package(url: "https://github.com/schwa/MetalSprockets", .upToNextMinor(from: "0.2.9")),
+        .package(url: "https://github.com/schwa/MetalSprocketsAddOns", .upToNextMinor(from: "0.2.5")),
+        .package(url: "https://github.com/schwa/MetalSprocketsPBR", .upToNextMinor(from: "0.0.3")),
+        .package(url: "https://github.com/schwa/MetalSupport", .upToNextMinor(from: "1.0.7")),
+        .package(url: "https://github.com/schwa/SwiftMesh", .upToNextMinor(from: "0.0.11")),
+        .package(url: "https://github.com/schwa/SwiftFields", .upToNextMinor(from: "0.1.5")),
         .package(url: "https://github.com/schwa/CollaborationKit", from: "0.2.5"),
     ],
     targets: [

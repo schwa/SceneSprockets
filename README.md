@@ -123,4 +123,5 @@ The demos live in a separate package, `Demo/Packages/SceneSprocketsDemos`, with 
 
 - **Xcode:** `Demo/SceneSprocketsDemo.xcodeproj` is a thin app around `SceneGraphDemosScene`.
 - **Command line:** from `Demo/Packages/SceneSprocketsDemos`, `xcb run scenesprockets-demos` opens the picker. `scenesprockets-demos --list` lists demo ids, and `scenesprockets-demos --render <id> [file.png] [--size 1280x800] [--frames 60]` renders a demo offscreen to a PNG without opening a window.
+- **Assets:** the demos bundle third-party models and textures under CC0 and CC BY 4.0. See [CREDITS.md](CREDITS.md).
 - **Golden images:** the demo package's tests render some demos offscreen and compare them with images in `Tests/SceneSprocketsDemosTests/Golden Images`. A missing golden fails the test and writes the render to `$TMPDIR/SceneSprocketsDemos-GoldenImages`; check it, then copy it in.
