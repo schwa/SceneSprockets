@@ -569,6 +569,27 @@ public final class EditorModel {
         }
     }
 
+    // The selection is part of an unlocked imported model.
+    var canExplodeSelection: Bool {
+        guard let node = selectedNode, let root = modelRoot(containing: node) else {
+            return false
+        }
+        return !isLocked(root)
+    }
+
+    // Turns the imported model holding the selection into plain nodes (#183): it then saves as scene nodes with
+    // generated meshes (#158) instead of its file, and its nodes can be edited and take children. Undoable.
+    func explodeSelection() {
+        guard canExplodeSelection, let node = selectedNode, let root = modelRoot(containing: node), let source = root.modelSource else {
+            return
+        }
+        perform("Explode", affecting: [.structure], { _ in
+            root.modelSource = nil
+        }, revert: { _ in
+            root.modelSource = source
+        })
+    }
+
     // A selected, unlocked empty node with children.
     var canUngroupSelection: Bool {
         guard let node = selectedNode, node.parent != nil, !isLocked(node), !node.children.isEmpty, case .empty = node.content else {

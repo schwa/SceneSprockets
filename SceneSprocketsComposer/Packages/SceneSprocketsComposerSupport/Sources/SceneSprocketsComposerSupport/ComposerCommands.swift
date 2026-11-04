@@ -72,6 +72,10 @@ public struct ComposerCommands: Commands {
                 }
                 .keyboardShortcut("g", modifiers: [.command, .shift])
                 .disabled(!model.canUngroupSelection)
+                Button("Explode Imported Model") {
+                    model.explodeSelection()
+                }
+                .disabled(!model.canExplodeSelection)
                 Button("Move Up") {
                     model.moveSelection(by: -1)
                 }

@@ -1019,6 +1019,38 @@ struct SceneEditBoundaryTests {
     #expect(model.node(at: [5, 5], viewSize: .zero) == nil)
 }
 
+// #183: Explode turns an imported model into plain nodes that can take children; undo restores the model.
+@MainActor
+@Test func explodeImportedModel() throws {
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    let modelRoot = SceneGraph.Node(label: "Imported")
+    let part = SceneGraph.Node(parent: modelRoot, label: "Part")
+    modelRoot.modelSource = SceneGraph.ModelSource(mainFile: "model.gltf", files: ["model.gltf": Data()])
+    model.sceneGraph.root.addChild(modelRoot)
+    let undoManager = UndoManager()
+    undoManager.groupsByEvent = false
+    model.undoManager = undoManager
+
+    model.selection = part.id
+    #expect(model.canExplodeSelection)
+    #expect(!model.canAddChildren(to: part))
+    undoManager.beginUndoGrouping()
+    model.explodeSelection()
+    undoManager.endUndoGrouping()
+    #expect(modelRoot.modelSource == nil)
+    #expect(model.canAddChildren(to: part))
+    #expect(!model.canExplodeSelection)
+
+    undoManager.undo()
+    #expect(modelRoot.modelSource?.mainFile == "model.gltf")
+    undoManager.redo()
+    #expect(modelRoot.modelSource == nil)
+
+    // Plain nodes have nothing to explode.
+    model.selection = model.sceneGraph.root.id
+    #expect(!model.canExplodeSelection)
+}
+
 // #221: group and ungroup keep world positions, undo as one step each, and skip nested picks.
 @MainActor
 @Test func groupAndUngroup() throws {
