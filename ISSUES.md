@@ -5299,11 +5299,12 @@ Fix direction: don't unwrap model-derived optionals with Binding($x). Give the s
 ## 242: Composer: pink garbage frames in complex scenes while the inspector is visible and the camera moves
 
 +++
-status: new
+status: open
 priority: high
 kind: bug
 labels: area:renderer, area:composer, effort:m
 created: 2026-10-25T14:33:10Z
+updated: 2026-11-04T20:44:59Z
 +++
 
 Video: '/Users/schwa/Shared/Desktop Stuff/Pink Bug.mov' (stays there until fixed). Scene: 114 meshes, 792,746 triangles, imported BMW glTF, PBR, no lights.
@@ -5329,15 +5330,19 @@ Next steps: capture a GPU trace (gpucapture) during an orbit with the inspector 
 Fix: MetalSprocketsPBR #22, commit 168a00f6 (local, not pushed): QueueBarrier(after: [.fragment, .blit], before: .fragment) at the start of the PBR Transmission Scene pass.
 To finish: push MetalSprocketsPBR, update the MetalSprocketsPBR pin in the 4 Package.resolved files, re-test in Debug with the inspector visible, and re-capture to confirm the barrier is on the first pass.
 
+- `2026-11-04T20:48:50Z`: Checked: the MetalSprocketsPBR fix (168a00f6, queue barrier before the PBR Transmission Scene pass) is pushed and included in MetalSprocketsPBR 0.0.3, which SceneSprockets already resolves (Package.resolved pins 693714e4, tag 0.0.3). No code change left here. Not closing: the bug is timing-dependent and needs a manual repro (Debug build, inspector visible, orbit the BMW scene). Unblocker: confirm the pink frames are gone, then close.
+
 ---
 
 ## 243: README says Blinn-Phong supports only point lights, but it lights directional and spot lights
 
 +++
-status: new
+status: open
 priority: low
-kind: none
+kind: documentation
+labels: effort:xs, area:docs
 created: 2026-10-30T14:40:28Z
+updated: 2026-11-04T20:44:59Z
 +++
 
 README Limitations says: "The Blinn-Phong shader supports only point lights."
@@ -5369,10 +5374,12 @@ A package outside the MetalSprockets folder can only use SceneSprockets through 
 ## 245: Deprecation warnings when building SceneSprockets
 
 +++
-status: new
+status: open
 priority: low
-kind: none
+kind: task
+labels: effort:xs, area:renderer, area:ui
 created: 2026-10-30T14:40:28Z
+updated: 2026-11-04T20:44:59Z
 +++
 
 Building a consumer app (Xcode 27.2) shows two warnings from SceneSprockets:
@@ -5387,10 +5394,12 @@ Sources/SceneSprockets/Renderer/SceneGraphRenderer.swift:333: 'reversedDepth' is
 ## 246: Blinn-Phong ignores per-vertex colors
 
 +++
-status: new
+status: open
 priority: low
-kind: none
+kind: enhancement
+labels: effort:s, area:renderer
 created: 2026-10-30T14:40:29Z
+updated: 2026-11-04T20:44:59Z
 +++
 
 The Blinn-Phong vertex input has only position, normal and textureCoordinate. A mesh with a `.color(0)` attribute renders with the material colour only.
@@ -5402,10 +5411,12 @@ Procedural meshes with many colours (for example a low-poly tree with varied lea
 ## 247: No gradient or procedural sky background without PBR
 
 +++
-status: new
+status: open
 priority: low
-kind: none
+kind: feature
+labels: effort:m, area:renderer
 created: 2026-10-30T14:40:29Z
+updated: 2026-11-04T20:45:00Z
 +++
 
 With only BlinnPhongMaterialRenderer, `SceneGraph.Environment.Background` can be `.none` or a flat `.color`. `.environment` needs a PBR environment map and the PBR renderer.
@@ -5417,10 +5428,12 @@ To get a sky gradient, TreeAppreciator draws an inside-out sphere mesh with an e
 ## 248: SceneView cannot show more than one scene graph or viewport in one view
 
 +++
-status: new
+status: open
 priority: low
-kind: none
+kind: feature
+labels: effort:l, area:ui
 created: 2026-10-30T14:40:29Z
+updated: 2026-11-04T20:45:00Z
 +++
 
 Comparing two scenes side by side (TreeAppreciator shows two trees with a shared camera) needs two SceneViews. Each one makes its own RenderView, drawable, shadow maps, particle runtimes and pipeline setup, so a new pair pays the setup cost twice.
@@ -5444,5 +5457,111 @@ closed: 2026-11-01T22:36:24Z
 Demo/Packages/SceneSprocketsDemos/Sources/SceneSprocketsDemos/Resources/ contains Fox.glb and DiffuseTransmissionPlant.glb. They appear to come from the Khronos glTF sample models, which can carry attribution-required licenses (e.g. CC-BY).
 
 Nothing in the repo (README, LICENSE, or a NOTICE/credits file) states their source, authors, or licenses. This blocks a public open-source release.
+
+---
+
+## 250: SceneGraph storage is not shared with ECS-based apps (SwiftECS backend umbrella)
+
++++
+status: open
+priority: low
+kind: feature
+labels: umbrella, area:scenegraph, effort:xl
+created: 2026-11-04T19:49:40Z
+updated: 2026-11-04T20:45:00Z
++++
+
+Umbrella issue: move SceneGraph storage onto SwiftECS, mostly hidden behind the current API.
+
+## Goals
+
+- Keep the public API (`SceneGraph`, `Node`, properties, traversal) working for most users without changes.
+- Give ECS-based apps direct access to the underlying `World`. They can attach their own components to scene entities and run systems over them.
+- Let the renderer and simulation use ECS queries instead of tree traversal where that helps.
+
+## Reasoning
+
+- `Node` already acts like an entity with optional parts: content, light, camera, physics body, skin, morph data, particles, audio, LOD, actions. These map naturally to components.
+- SwiftECS has a `ChildOf` relationship that can model the hierarchy.
+- Today, apps built around an ECS must mirror their state into the scene graph by hand. A shared storage removes that duplication.
+
+## Known problems to resolve
+
+- Toolchain: SwiftECS requires Swift 6.4. SceneSprockets is on tools 6.2.
+- Observation: `Node` is `@Observable`. Direct writes to the `World` do not notify SwiftUI.
+- Revisions and transactions are updated in `Node` `didSet`. Direct ECS writes skip them, so caches, revisions and undo can go stale.
+- Identity: `Node` is a reference type with a weak `parent` and `ObjectIdentifier` ids. The mapping between entities and nodes, and node lifetime after entity destruction, is undefined.
+- Child order: `children` is ordered. `ChildOf` may not be.
+- Per-access cost: property reads through the `World` may slow per-frame code that walks nodes.
+- Archive, clone and per-node caches (`boundsCache`, `deformationCache`, `runningActions`) depend on the current storage.
+
+## Planned sub-steps (to be filed separately)
+
+1. Spike: `Node` backed by an entity for transform, content and hierarchy only. Existing tests pass.
+2. Renderer flatten/culling uses ECS queries.
+3. Revisions and observation driven from component change events.
+4. Remaining node features, archive and clone.
+5. Public `world` escape hatch and documentation for ECS-based apps.
+
+\- `2026-11-04T19:50:06Z`: Additional goal: interop in both directions.
+
+- Embed a scene graph into an app's existing SwiftECS World: SceneGraph uses a World it does not own and does not create its own.
+- Or embed an app's ECS into a scene graph: the app attaches its own components and systems to the World that SceneGraph owns.
+
+Open questions:
+- Ownership and lifetime of the World when SceneGraph does not own it.
+- Several scene graphs in one World: which entities belong to which graph (a root entity, or a scene membership component).
+- Entities that the app creates with scene components but without a Node: does SceneGraph adopt them, ignore them, or create Nodes lazily.
+- Systems order: where SceneSprockets' own systems (actions, constraints, physics, particles) run in the app's pipeline.
+
+- `2026-11-04T20:45:00Z`: Related: #251 (large-world precision) and #252 (Float time) matter for the simulation-heavy apps this targets.
+
+---
+
+## 251: Shaders lose precision far from the world origin
+
++++
+status: open
+priority: medium
+kind: bug
+labels: effort:m, area:renderer
+created: 2026-11-04T20:38:00Z
+updated: 2026-11-04T20:45:00Z
++++
+
+ShaderMaterialTransforms passes modelMatrix, modelViewProjectionMatrix and cameraPosition as 32-bit floats in world space. In large scenes (SidraLine places units 50-100 km from the origin) a float only resolves about 4-8 mm there, so anything a shader derives from world positions close up is quantized.
+
+Seen in SidraLine (its issue #40): flat-face normals from dfdx/dfdy of the world position show per-pixel speckle on objects near the camera. A 14 mm per-pixel step comes out as 11.7 or 15.6 mm from pixel to pixel. The app works around it in its own shaders by building a camera-relative position from (modelMatrix[3] - cameraPosition) plus the local offset; every ShaderMaterial user far from the origin has to do the same.
+
+## Proposed fix (per schwa)
+
+Provide camera-relative transforms to materials: subtract the camera position from model translations on the CPU in double precision, and pass a camera-relative model matrix with a rotation-only view matrix, so shaders never see large world coordinates.
+
+\- `2026-11-04T20:43:11Z`: Target use cases: games like Harpoon or Kerbal Space Program.
+
+- Very large coordinate ranges: ocean theaters of hundreds to thousands of km, or whole solar systems. Float32 world positions cannot cover these even at coarse precision.
+- The camera moves across the full range and views objects close up anywhere in it, so precision is needed near the camera, wherever the camera is.
+- Several views of the same world at very different scales (tactical map vs close-up 3D).
+- Related: #252 (Float time) has the same kind of precision loss over long runs.
+
+---
+
+## 252: Time values use Float (precision loss, no units)
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:scenegraph, effort:l
+created: 2026-11-04T20:42:33Z
+updated: 2026-11-04T20:45:00Z
++++
+
+Times, durations and delta times are plain `Float` across the public API: `Action` durations, `advanceActions(by:)`, `applyConstraints(deltaTime:)`, `Transaction.animate(duration:)`, particle `time` and `advanceParticles(by:)`, animation clip time and blending, `SceneView`, and physics stepping (~70 sites in Action, Animation, AnimationBlending, Particles, Constraint, Transaction, SceneView, SceneGraphPhysicsWorld, ModelIOSceneGraph).
+
+Problems:
+- Float32 has about 7 significant digits. Accumulated or absolute times (long-running particle `time`, animation playhead, elapsed time) lose sub-millisecond precision after hours, causing jitter.
+- A bare number does not say its unit (seconds assumed) and does not separate durations from points in time.
+- Inconsistent with platform time types (`TimeInterval`/`Double`, `Duration`, `ContinuousClock.Instant`) that callers usually have.
 
 ---
