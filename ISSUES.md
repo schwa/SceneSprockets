@@ -5706,17 +5706,28 @@ Part of #255.
 ## 258: SwiftJolt double precision is unknown
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:physics, effort:s, subtask
 created: 2026-11-04T21:10:37Z
-updated: 2026-11-04T21:10:47Z
+updated: 2026-11-04T21:21:09Z
+closed: 2026-11-04T21:21:09Z
 +++
 
 Jolt supports a JPH_DOUBLE_PRECISION build (double positions, float elsewhere). It is not known whether SwiftJolt builds or exposes it, what its API looks like (RVec3), or what it costs. Needed to decide how physics works far from the origin.
 
 Part of #255.
+
+\- `2026-11-04T21:21:08Z`: Findings (SwiftJolt as resolved in SceneSprockets' .build/checkouts):
+- Not enabled. CJolt is a prebuilt binary xcframework; Scripts/build-xcframework.sh passes no -DDOUBLE_PRECISION=ON, so Jolt is built in single precision (pins: joltc e6409c5a, JoltPhysics 05fcfbf7).
+- The C header supports it: joltc.h has #if defined(JPH_DOUBLE_PRECISION) branches where JPH_RVec3 is three doubles and JPH_RMat4 has a double column3; otherwise JPH_RVec3 is a typedef of JPH_Vec3 (float). The module map does not define JPH_DOUBLE_PRECISION, so Swift sees the float layout.
+- The Swift API is float-only: PhysicsWorld.position(of:), setPosition(of:to:), addBody(position:), CompoundChild(position:) etc. take SIMD3<Float>; RVec3 is used in about 40 places (Constraints, BodyLocking, JoltPhysics, Character, VirtualCharacter, Vehicles, ContactListener) and bridged from SIMD3<Float>.
+- SceneSprocketsPhysics (SceneGraphPhysicsWorld) passes world-space SIMD3<Float> poses to these.
+
+What enabling it would take, in SwiftJolt: build a second (or replacement) xcframework with DOUBLE_PRECISION=ON; define JPH_DOUBLE_PRECISION for Swift (module map or a separate CJoltDouble module, since one module cannot expose both layouts); change the RVec3/RMat4 bridging to SIMD3<Double>/double matrices; change public position APIs to Double (or add Double overloads). Cost: not measured; Jolt documents double precision as somewhat slower and larger, with only positions in double.
+
+For #259 the alternative needs no SwiftJolt change: keep Jolt in float and simulate in a local frame around the active area (floating origin), shifting body positions when the origin moves.
 
 ---
 
