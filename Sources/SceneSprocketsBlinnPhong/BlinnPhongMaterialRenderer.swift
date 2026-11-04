@@ -9,7 +9,7 @@ import SwiftMesh
 import simd
 
 // A Blinn-Phong surface: ambient (lit by the renderer's ambient light), diffuse and specular, each a color or a
-// texture tinted by a color.
+// texture tinted by a color. A mesh's first vertex color set multiplies ambient, diffuse and opacity.
 public struct BlinnPhongSceneMaterial: SceneSprockets.Material, SamplesShadowsInShader {
     public enum Source {
         // Linear RGB.
@@ -288,27 +288,41 @@ private struct BlinnPhongBatchesElement: Element {
             }
 
             return ForEach(Array(groups.enumerated()), id: \.offset) { _, group in
+                let layout = blinnPhongVertexLayout(group.key.vertexDescriptor)
                 if !group.single.isEmpty {
-                    try RenderPipeline(label: "Blinn-Phong", vertexShader: shaders.vertex, fragmentShader: fragmentShader) {
+                    try RenderPipeline(label: "Blinn-Phong", vertexShader: layout.hasColors ? shaders.coloredVertex : shaders.vertex, fragmentShader: fragmentShader) {
                         ForEach(Array(passes(group.single).enumerated()), id: \.offset) { _, pass in
                             try draw(pass.batch, cullMode: pass.cullMode, instanced: false)
                         }
                     }
-                    .vertexDescriptor(group.key.vertexDescriptor.mtlVertexDescriptor)
+                    .vertexDescriptor(layout.descriptor)
                     .materialRenderState(group.key.renderState, isTransparent: isTransparent)
                 }
                 if !group.instanced.isEmpty {
-                    try RenderPipeline(label: "Blinn-Phong Instanced", vertexShader: shaders.instancedVertex, fragmentShader: fragmentShader) {
+                    try RenderPipeline(label: "Blinn-Phong Instanced", vertexShader: layout.hasColors ? shaders.coloredInstancedVertex : shaders.instancedVertex, fragmentShader: fragmentShader) {
                         ForEach(Array(passes(group.instanced).enumerated()), id: \.offset) { _, pass in
                             try draw(pass.batch, cullMode: pass.cullMode, instanced: true)
                         }
                     }
-                    .vertexDescriptor(group.key.vertexDescriptor.mtlVertexDescriptor)
+                    .vertexDescriptor(layout.descriptor)
                     .materialRenderState(group.key.renderState, isTransparent: isTransparent)
                 }
             }
         }
     }
+}
+
+// The mesh's own layout, plus its first color set at attribute 3 when it has one (#246). The shader reads position,
+// normal and texture coordinates at attributes 0, 1 and 2.
+func blinnPhongVertexLayout(_ vertexDescriptor: VertexDescriptor) -> (descriptor: MTLVertexDescriptor, hasColors: Bool) {
+    let descriptor = vertexDescriptor.mtlVertexDescriptor
+    guard let color = vertexDescriptor.attributes.first(where: { $0.semantic == .color(0) }) else {
+        return (descriptor, false)
+    }
+    descriptor.attributes[3].format = color.format
+    descriptor.attributes[3].offset = color.offset
+    descriptor.attributes[3].bufferIndex = color.bufferIndex
+    return (descriptor, true)
 }
 
 struct PipelineKey: Equatable {
@@ -559,6 +573,8 @@ func blinnPhongLights(_ lights: [(worldTransform: simd_float4x4, light: Light)],
 struct BlinnPhongShaders {
     var vertex: VertexShader
     var instancedVertex: VertexShader
+    var coloredVertex: VertexShader
+    var coloredInstancedVertex: VertexShader
     var fragment: FragmentShader
     var shadowedFragment: FragmentShader
 
@@ -581,7 +597,19 @@ struct BlinnPhongShaders {
             constants["HAS_SHADOWS"] = .bool(shadows)
             return try library.function(named: "fragment_main", type: FragmentShader.self, constants: constants)
         }
-        let shaders = BlinnPhongShaders(vertex: try library.vertex_main, instancedVertex: try library.vertex_instanced, fragment: try fragment(shadows: false), shadowedFragment: try fragment(shadows: true))
+        func vertex(_ name: String, colors: Bool) throws -> VertexShader {
+            var constants = FunctionConstants()
+            constants["HAS_VERTEX_COLORS"] = .bool(colors)
+            return try library.function(named: name, type: VertexShader.self, constants: constants)
+        }
+        let shaders = BlinnPhongShaders(
+            vertex: try vertex("vertex_main", colors: false),
+            instancedVertex: try vertex("vertex_instanced", colors: false),
+            coloredVertex: try vertex("vertex_main", colors: true),
+            coloredInstancedVertex: try vertex("vertex_instanced", colors: true),
+            fragment: try fragment(shadows: false),
+            shadowedFragment: try fragment(shadows: true)
+        )
         cached = shaders
         return shaders
     }

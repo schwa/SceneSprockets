@@ -5396,12 +5396,13 @@ Sources/SceneSprockets/Renderer/SceneGraphRenderer.swift:333: 'reversedDepth' is
 ## 246: Blinn-Phong ignores per-vertex colors
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: effort:s, area:renderer
 created: 2026-10-30T14:40:29Z
-updated: 2026-11-04T20:44:59Z
+updated: 2026-11-04T20:54:17Z
+closed: 2026-11-04T20:54:17Z
 +++
 
 The Blinn-Phong vertex input has only position, normal and textureCoordinate. A mesh with a `.color(0)` attribute renders with the material colour only.

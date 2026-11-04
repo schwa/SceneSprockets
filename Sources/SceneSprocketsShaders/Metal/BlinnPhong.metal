@@ -8,6 +8,8 @@ namespace BlinnPhong {
 
     // True when a shadow map is bound.
     constant bool HAS_SHADOWS [[function_constant(0)]];
+    // True when the mesh has per-vertex colors, bound at attribute 3 (#246).
+    constant bool HAS_VERTEX_COLORS [[function_constant(1)]];
 
     // PCF in one slice; 1 is lit. Positions outside the slice's view are lit.
     static float sliceShadow(float3 world, float4x4 viewProjection, float mapSize, int radius, depth2d_array<float, access::sample> shadowMap, sampler shadowSampler, uint slice) {
@@ -52,6 +54,7 @@ namespace BlinnPhong {
         float3 position [[attribute(0)]];
         float3 normal [[attribute(1)]];
         float2 textureCoordinate [[attribute(2)]];
+        float4 color [[attribute(3), function_constant(HAS_VERTEX_COLORS)]];
     };
 
     struct Fragment {
@@ -59,6 +62,8 @@ namespace BlinnPhong {
         float3 worldPosition;
         float3 normal;
         float2 textureCoordinate;
+        // Multiplies ambient, diffuse and alpha; white without vertex colors.
+        float4 color;
     };
 
     // One draw per mesh.
@@ -75,6 +80,7 @@ namespace BlinnPhong {
         // Not normalized here: a zero normal must stay zero (normalize would give NaN).
         out.normal = normalMatrix * in.normal;
         out.textureCoordinate = in.textureCoordinate;
+        out.color = HAS_VERTEX_COLORS ? in.color : float4(1);
         return out;
     }
 
@@ -92,6 +98,7 @@ namespace BlinnPhong {
         out.worldPosition = world.xyz / world.w;
         out.normal = normalMatrices[instanceID] * in.normal;
         out.textureCoordinate = in.textureCoordinate;
+        out.color = HAS_VERTEX_COLORS ? in.color : float4(1);
         return out;
     }
 
@@ -110,10 +117,10 @@ namespace BlinnPhong {
         sampler shadowSampler [[sampler(1), function_constant(HAS_SHADOWS)]],
         constant BlinnPhongShadowUniforms &shadow [[buffer(3), function_constant(HAS_SHADOWS)]]
     ) {
-        float3 ambientColor = material.ambient;
-        float3 diffuseColor = material.diffuse;
+        float3 ambientColor = material.ambient * in.color.rgb;
+        float3 diffuseColor = material.diffuse * in.color.rgb;
         float3 specularColor = material.specular;
-        float alpha = material.opacity;
+        float alpha = material.opacity * in.color.a;
         if (material.hasAmbientTexture) {
             ambientColor *= ambientTexture.sample(textureSampler, in.textureCoordinate).rgb;
         }

@@ -174,3 +174,22 @@ func cullModeHidesBackFaces() throws {
     material.cullMode = .front
     #expect(try litQuadPixel(material).x < 5)
 }
+
+// #246: per-vertex colors multiply the material's ambient and diffuse colors.
+@Test
+@MainActor
+func vertexColorsTintTheMaterial() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    var mesh = Mesh.quad(extents: [2, 2])
+    mesh.colors = Array(repeating: [1, 0, 0, 1], count: mesh.topology.halfEdges.count)
+    let quad = MetalMesh(mesh: mesh, device: device)
+    let value = try centerPixel(quad, BlinnPhongSceneMaterial(ambient: .color(1), diffuse: .color(0), specular: .color(0), shininess: 1))
+    // BGRA: red only.
+    #expect(value.z > 250)
+    #expect(value.x < 5 && value.y < 5)
+
+    // A mesh without colors keeps the material color.
+    let plain = MetalMesh(mesh: Mesh.quad(extents: [2, 2]), device: device)
+    let white = try centerPixel(plain, BlinnPhongSceneMaterial(ambient: .color(1), diffuse: .color(0), specular: .color(0), shininess: 1))
+    #expect(white.x > 250 && white.y > 250 && white.z > 250)
+}
