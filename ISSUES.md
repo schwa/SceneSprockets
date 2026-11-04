@@ -5568,4 +5568,6 @@ Problems:
 - A bare number does not say its unit (seconds assumed) and does not separate durations from points in time.
 - Inconsistent with platform time types (`TimeInterval`/`Double`, `Duration`, `ContinuousClock.Instant`) that callers usually have.
 
+- `2026-11-04T20:54:25Z`: Looked at the ~70 sites. Punting: this is a public API break across actions, animation, particles, constraints, transactions, SceneView and physics, and the target type is a design decision the code cannot answer. Options seen: (a) TimeInterval/Double everywhere (simple, matches CADisplayLink and AVFoundation); (b) Swift Duration for durations plus Double for accumulated time (typed, but awkward arithmetic and no Float conversion in shaders); (c) Double only for accumulated/absolute time (particle time, animation playhead), keep Float for small per-frame deltas and durations. Also: whether to keep Float overloads as deprecated shims. Unblocker: pick a/b/c and say whether to keep deprecated Float overloads.
+
 ---
