@@ -4023,6 +4023,8 @@ To investigate:
 - Does a distance fade on GridShader (MetalSprocketsAddOns) fix it? It may need adding there.
 - Does it still look wrong with an outdoor HDR?
 
+- `2026-11-04T21:00:28Z`: Checked: GridShader in MetalSprocketsAddOns 0.2.x has no distance-fade option, so the likely fix is a change in that package (new fade parameters, tag, bump here), not in SceneSprockets. Punting: the bug is perceptual and needs a visual judgement in the running Composer (Studio vs an outdoor HDR, with and without a fade), which I cannot make from tests. Unblocker: OK to add a distance fade to GridShader in MetalSprocketsAddOns and use it in the Composer grid? And, if possible, check once with an outdoor HDR whether it still looks wrong.
+
 ---
 
 ## 185: Composer: save editor state in the document bundle next to scene.json
