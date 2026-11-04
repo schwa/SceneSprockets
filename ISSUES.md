@@ -5445,6 +5445,8 @@ Comparing two scenes side by side (TreeAppreciator shows two trees with a shared
 
 SceneView has no way to draw several scene graphs into split viewports of one RenderView. SceneGraphElement inside a custom RenderView is possible, but then SceneView features (camera control, onTapAt with SceneViewport, actions, constraints, particles advance) must be rebuilt by hand.
 
+- `2026-11-04T20:59:53Z`: Looked at SceneView (one RenderView, one SceneGraphElement, one camera/manipulator, onTapAt with one SceneViewport). Punting: this needs API design decisions the code cannot answer. (1) Shape of the API: a SceneView taking [(sceneGraph, camera, rect)] viewports, a separate MultiSceneView, or making SceneGraphElement + a reusable 'scene runtime' (actions/constraints/particles advance, tap handling) public so apps compose their own RenderView. (2) Camera control: shared camera across viewports (TreeAppreciator's case) vs per-viewport manipulators, and which viewport gets gestures. (3) Shared resources: one shadow map per viewport or reused across them; particle runtimes per scene graph. (4) onTapAt must report which viewport was hit. Unblocker: pick (1) and (2); the TreeAppreciator side-by-side case with one shared camera is a good first target.
+
 ---
 
 ## 249: Bundled third-party glTF assets have no license or attribution
