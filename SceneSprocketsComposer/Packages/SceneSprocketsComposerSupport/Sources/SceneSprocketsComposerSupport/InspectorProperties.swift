@@ -255,6 +255,7 @@ enum BackgroundKind: String, CaseIterable, Identifiable {
     case clear = "None"
     case color = "Color"
     case environment = "Environment"
+    case gradient = "Gradient"
 
     var id: Self { self }
 }
@@ -266,6 +267,7 @@ extension SceneGraph.Environment {
             case .none: .clear
             case .color: .color
             case .environment: .environment
+            case .gradient: .gradient
             }
         }
         set {
@@ -273,6 +275,7 @@ extension SceneGraph.Environment {
             case .clear: background = .none
             case .color: background = .color([0.2, 0.2, 0.22, 1])
             case .environment: background = .environment()
+            case .gradient: background = .gradient(Self.defaultSkyGradient)
             }
         }
     }
@@ -285,6 +288,18 @@ extension SceneGraph.Environment {
             return [0, 0, 0, 1]
         }
         set { background = .color(newValue) }
+    }
+
+    static let defaultSkyGradient = SkyGradient(zenith: [0.15, 0.35, 0.8], horizon: [0.75, 0.85, 0.95], ground: [0.25, 0.22, 0.2])
+
+    var skyGradient: SkyGradient {
+        get {
+            if case let .gradient(gradient) = background {
+                return gradient
+            }
+            return Self.defaultSkyGradient
+        }
+        set { background = .gradient(newValue) }
     }
 
     var backgroundBlur: Float {

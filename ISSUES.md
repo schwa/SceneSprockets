@@ -5414,12 +5414,13 @@ Procedural meshes with many colours (for example a low-poly tree with varied lea
 ## 247: No gradient or procedural sky background without PBR
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: effort:m, area:renderer
 created: 2026-10-30T14:40:29Z
-updated: 2026-11-04T20:45:00Z
+updated: 2026-11-04T20:57:50Z
+closed: 2026-11-04T20:57:50Z
 +++
 
 With only BlinnPhongMaterialRenderer, `SceneGraph.Environment.Background` can be `.none` or a flat `.color`. `.environment` needs a PBR environment map and the PBR renderer.

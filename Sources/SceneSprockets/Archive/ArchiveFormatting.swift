@@ -64,7 +64,7 @@ extension MaterialRenderState.BlendMode {
 // `.none` is a string; cases with values keep the synthesized object form ({"color": {"_0": [...]}}).
 extension SceneGraph.Environment.Background: Codable {
     enum ArchiveKeys: String, CodingKey {
-        case none, color, environment
+        case none, color, environment, gradient
     }
 
     enum ValueKeys: String, CodingKey {
@@ -84,6 +84,9 @@ extension SceneGraph.Environment.Background: Codable {
             var container = encoder.container(keyedBy: ArchiveKeys.self)
             var values = container.nestedContainer(keyedBy: ValueKeys.self, forKey: .environment)
             try values.encode(blur, forKey: .blur)
+        case let .gradient(gradient):
+            var container = encoder.container(keyedBy: ArchiveKeys.self)
+            try container.encode(gradient, forKey: .gradient)
         }
     }
 
@@ -102,6 +105,8 @@ extension SceneGraph.Environment.Background: Codable {
             self = .color(try container.nestedContainer(keyedBy: ValueKeys.self, forKey: .color).decode(SIMD4<Float>.self, forKey: .value))
         } else if container.contains(.environment) {
             self = .environment(blur: try container.nestedContainer(keyedBy: ValueKeys.self, forKey: .environment).decodeIfPresent(Float.self, forKey: .blur) ?? 0)
+        } else if container.contains(.gradient) {
+            self = .gradient(try container.decode(SceneGraph.Environment.SkyGradient.self, forKey: .gradient))
         } else {
             throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Unknown background"))
         }

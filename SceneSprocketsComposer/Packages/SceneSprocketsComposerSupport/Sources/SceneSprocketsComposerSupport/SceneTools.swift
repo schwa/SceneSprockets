@@ -53,7 +53,7 @@ final class SceneTools {
     }
 
     struct EnvironmentInfo: Encodable {
-        // none, color or environment.
+        // none, color, environment or gradient (set in the inspector only).
         var background: String
         var backgroundColor: [Float]?
         var backgroundBlur: Float?
@@ -233,6 +233,8 @@ final class SceneTools {
         case let .environment(blur):
             info.background = "environment"
             info.backgroundBlur = blur
+        case .gradient:
+            info.background = "gradient"
         }
         if environment.map == nil {
             info.map = "default"

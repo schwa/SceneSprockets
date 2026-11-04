@@ -4,6 +4,7 @@
 #import "Fog.h"
 #import "ShaderMaterial.h"
 #import "ShadowMask.h"
+#import "SkyGradient.h"
 #import "PostProcessing.h"
 
 #ifdef __OBJC__

@@ -13,6 +13,24 @@ extension SceneGraph {
             case color(SIMD4<Float>)
             // Draw `map` behind the scene. Blur 0 is sharp, 1 is the most blurred.
             case environment(blur: Float = 0)
+            // A sky from three colors by view elevation; needs no environment map or PBR renderer.
+            case gradient(SkyGradient)
+        }
+
+        // Linear RGB. Straight up is `zenith`, level is `horizon`, straight down is `ground`. `exponent` bends the
+        // blend: above 1 keeps the horizon color over a wider band.
+        public struct SkyGradient: Equatable, Codable, Sendable {
+            public var zenith: SIMD3<Float>
+            public var horizon: SIMD3<Float>
+            public var ground: SIMD3<Float>
+            public var exponent: Float
+
+            public init(zenith: SIMD3<Float>, horizon: SIMD3<Float>, ground: SIMD3<Float>, exponent: Float = 1) {
+                self.zenith = zenith
+                self.horizon = horizon
+                self.ground = ground
+                self.exponent = exponent
+            }
         }
 
         public var background: Background

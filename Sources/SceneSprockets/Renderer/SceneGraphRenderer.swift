@@ -136,6 +136,9 @@ public struct SceneGraphElement: Element {
                 }
             }
             var elements: [AnyElement] = []
+            if case let .gradient(gradient) = context.environment.background {
+                elements.append(SkyGradientBackground(gradient: gradient, viewMatrix: context.viewMatrix, projectionMatrix: context.projectionMatrix).eraseToAnyElement())
+            }
             if case .environment = context.environment.background {
                 for case let renderer as any SceneGraphBackgroundRenderer in renderers {
                     if let background = try renderer.makeBackgroundElement(context: context) {

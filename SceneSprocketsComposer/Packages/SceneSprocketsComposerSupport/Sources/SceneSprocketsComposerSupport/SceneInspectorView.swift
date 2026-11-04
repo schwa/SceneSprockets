@@ -55,6 +55,14 @@ private struct BackgroundSectionView: View {
                 LabeledContent("Blur") {
                     Slider(value: $model[environment: "Background Blur"].backgroundBlur, in: 0 ... 1)
                 }
+
+            case .gradient:
+                ColorPicker("Zenith", selection: $model[environment: "Sky Zenith"].skyGradient.zenith.linearColor, supportsOpacity: false)
+                ColorPicker("Horizon", selection: $model[environment: "Sky Horizon"].skyGradient.horizon.linearColor, supportsOpacity: false)
+                ColorPicker("Ground", selection: $model[environment: "Sky Ground"].skyGradient.ground.linearColor, supportsOpacity: false)
+                LabeledContent("Exponent") {
+                    Slider(value: $model[environment: "Sky Exponent"].skyGradient.exponent, in: 0.1 ... 4)
+                }
             }
         }
     }
