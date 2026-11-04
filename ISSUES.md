@@ -5342,12 +5342,13 @@ To finish: push MetalSprocketsPBR, update the MetalSprocketsPBR pin in the 4 Pac
 ## 243: README says Blinn-Phong supports only point lights, but it lights directional and spot lights
 
 +++
-status: open
+status: closed
 priority: low
 kind: documentation
 labels: effort:xs, area:docs
 created: 2026-10-30T14:40:28Z
-updated: 2026-11-04T20:44:59Z
+updated: 2026-11-04T21:00:41Z
+closed: 2026-11-04T21:00:41Z
 +++
 
 README Limitations says: "The Blinn-Phong shader supports only point lights."

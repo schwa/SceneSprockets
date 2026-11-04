@@ -111,7 +111,6 @@ You do not change the scene graph core.
 ## Limitations
 
 - Only the PBR renderer draws morph targets and skins. Blinn-Phong draws the base mesh (#34).
-- The Blinn-Phong shader supports only point lights. It has no instancing and no transparency (#24, #32).
 - Shadows use 8 shadow map slices (a directional or spot light takes one, a point light six). A light that does not fit casts no shadow and is counted in `SceneGraphShadows.droppedLightCount`. Blinn-Phong samples each light's shadow while shading, so a light only darkens what it lights. PBR and `ShaderMaterial` meshes are darkened afterwards in screen space by all lights' shadows together (#102).
 - glTF loading skips non-node animation channels. USD is a long-term goal (#31).
 - Model I/O loading skips skins, blend shapes and orthographic cameras.
