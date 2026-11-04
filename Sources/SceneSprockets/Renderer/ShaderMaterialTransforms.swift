@@ -1,15 +1,34 @@
 import SceneSprocketsShaders
 import simd
 
+// Camera-relative rendering (#251, #253): shaders get positions with the camera at the origin, so values near the
+// camera stay small and precise even far from the world origin.
+public extension simd_float4x4 {
+    // This transform with `cameraPosition` subtracted from its translation, in Double.
+    func cameraRelative(to cameraPosition: SIMD3<Float>) -> simd_float4x4 {
+        var result = self
+        result.columns.3 = SIMD4(SIMD3<Float>(SIMD3<Double>(columns.3.xyz) - SIMD3<Double>(cameraPosition)), columns.3.w)
+        return result
+    }
+
+    // A view matrix without its translation, for use with cameraRelative(to:) model matrices.
+    var rotationOnlyView: simd_float4x4 {
+        var result = self
+        result.columns.3 = [0, 0, 0, 1]
+        return result
+    }
+}
+
+public func cameraRelative(_ position: SIMD3<Float>, to cameraPosition: SIMD3<Float>) -> SIMD3<Float> {
+    SIMD3<Float>(SIMD3<Double>(position) - SIMD3<Double>(cameraPosition))
+}
+
 public extension ShaderMaterialTransforms {
     // Far from the world origin, view * model cancels two large translations in Float and loses the small difference
     // (#251). Subtracting the camera position in Double first keeps modelViewProjectionMatrix precise.
     init(modelMatrix: simd_float4x4, viewMatrix: simd_float4x4, projectionMatrix: simd_float4x4, cameraPosition: SIMD3<Float>, opacity: Float) {
-        let relativeTranslation = SIMD3<Double>(modelMatrix.columns.3.xyz) - SIMD3<Double>(cameraPosition)
-        var cameraRelativeModelMatrix = modelMatrix
-        cameraRelativeModelMatrix.columns.3 = SIMD4(SIMD3<Float>(relativeTranslation), 1)
-        var cameraRelativeViewMatrix = viewMatrix
-        cameraRelativeViewMatrix.columns.3 = [0, 0, 0, 1]
+        let cameraRelativeModelMatrix = modelMatrix.cameraRelative(to: cameraPosition)
+        let cameraRelativeViewMatrix = viewMatrix.rotationOnlyView
         self.init(
             modelMatrix: modelMatrix,
             viewMatrix: viewMatrix,

@@ -5586,12 +5586,13 @@ Problems:
 ## 253: Blinn-Phong loses precision far from the world origin
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:renderer, effort:m
 created: 2026-11-04T21:06:11Z
-updated: 2026-11-04T21:06:14Z
+updated: 2026-11-04T21:15:18Z
+closed: 2026-11-04T21:15:18Z
 +++
 
 Follow-up to #251, which fixed ShaderMaterial and the debug view only.

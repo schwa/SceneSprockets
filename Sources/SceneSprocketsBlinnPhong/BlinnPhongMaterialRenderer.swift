@@ -83,8 +83,14 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer, Equatable 
     public func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement {
         let viewProjection = context.projectionMatrix * context.viewMatrix
         let cameraPosition = context.cameraMatrix.columns.3.xyz
-        let lights = blinnPhongLights(context.lights, shadowSlices: context.shadow == nil ? [] : context.lightShadowSlices)
-        let frame = BlinnPhongFrame(viewProjection: viewProjection, cameraPosition: cameraPosition, ambientLightColor: ambientLightColor, lightCount: Int32(lights.count), materialChannel: context.materialChannel?.rawValue ?? 0)
+        // The shader works in camera-relative space (#253): the camera is at the origin, and lights and model
+        // matrices are shifted by the camera position in Double.
+        let lights = blinnPhongLights(context.lights, shadowSlices: context.shadow == nil ? [] : context.lightShadowSlices).map { light in
+            var light = light
+            light.position = cameraRelative(light.position, to: cameraPosition)
+            return light
+        }
+        let frame = BlinnPhongFrame(viewProjection: context.projectionMatrix * context.viewMatrix.rotationOnlyView, cameraPosition: .zero, ambientLightColor: ambientLightColor, lightCount: Int32(lights.count), materialChannel: context.materialChannel?.rawValue ?? 0)
         // An empty array cannot be bound; the shader reads none of it when lightCount is 0.
         let lightValues = lights.isEmpty ? [BlinnPhongLight()] : lights
         // The shader has no morph or skin inputs, so those meshes are deformed on the CPU. They skip culling because
@@ -93,7 +99,7 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer, Equatable 
         let isTransparent = entries.first?.isTransparent ?? false
         let inFrustum = meshEntriesInFrustum(entries, viewProjection: viewProjection)
         if !isTransparent, let groups = cachedOpaqueGroups(entries: entries, inFrustum: inFrustum, context: context, cameraPosition: cameraPosition) {
-            return BlinnPhongBatchesElement(groups: groups, frame: frame, lights: lightValues, shadow: context.shadow, isTransparent: false).eraseToAnyElement()
+            return BlinnPhongBatchesElement(groups: groups, frame: frame, lights: lightValues, shadow: context.shadow, cameraPosition: cameraPosition, isTransparent: false).eraseToAnyElement()
         }
         // One pass, with capacity reserved: this runs every frame over every entry, so copies add up.
         var items: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, modelMatrix: simd_float4x4, material: BlinnPhongSceneMaterial)] = []
@@ -151,7 +157,7 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer, Equatable 
                 return (key: group.key, single: sortedSingle, instanced: batches.filter { $0.modelMatrices.count > 1 })
             }
         }
-        return BlinnPhongBatchesElement(groups: groups, frame: frame, lights: lightValues, shadow: context.shadow, isTransparent: isTransparent).eraseToAnyElement()
+        return BlinnPhongBatchesElement(groups: groups, frame: frame, lights: lightValues, shadow: context.shadow, cameraPosition: cameraPosition, isTransparent: isTransparent).eraseToAnyElement()
     }
 
     // Opaque batching depends on structure, opacity and mirroring, not on where things are, so it is cached and only
@@ -204,6 +210,8 @@ private struct BlinnPhongBatchesElement: Element {
     var frame: BlinnPhongFrame
     var lights: [BlinnPhongLight]
     var shadow: SceneGraphShadows.Sampling?
+    // World-space camera position; model matrices and shadow lookups are shifted by it.
+    var cameraPosition: SIMD3<Float>
     // Blends and does not write depth.
     var isTransparent: Bool
 
@@ -226,8 +234,10 @@ private struct BlinnPhongBatchesElement: Element {
                 uniforms.radius = Int32(max(shadow.softness, 0))
                 withUnsafeMutableBytes(of: &uniforms.sliceViewProjections) { buffer in
                     let slices = buffer.bindMemory(to: simd_float4x4.self)
+                    // Shading positions are camera-relative, so move them back to world space first.
+                    let toWorld = simd_float4x4(translation: cameraPosition)
                     for (index, matrix) in shadow.shadowMap.lightViewProjectionMatrices.prefix(slices.count).enumerated() {
-                        slices[index] = matrix
+                        slices[index] = matrix * toWorld
                     }
                 }
                 return (shadow.shadowMap.depthTexture(forSubmission: submissionIndex), shadow.shadowMap.sampler, uniforms)
@@ -248,18 +258,19 @@ private struct BlinnPhongBatchesElement: Element {
             func draw(_ batch: InstanceBatch, cullMode: MTLCullMode, instanced: Bool) throws -> AnyElement {
                 let submesh = batch.mesh.submeshes[batch.submeshIndex]
                 let normalMatrices = batch.modelMatrices.map(\.normalMatrix)
+                let modelMatrices = batch.modelMatrices.map { $0.cameraRelative(to: cameraPosition) }
                 var element = materialDraw(submesh, instanceCount: batch.modelMatrices.count, cullMode: cullMode, isMirrored: batch.isMirrored, fillMode: batch.material.renderState.fillMode)
                 .vertexBuffers(batch.mesh.vertexBuffers)
                 .parameter("frame", functionType: .vertex, value: frame)
                 .eraseToAnyElement()
                 if instanced {
                     element = element
-                        .parameter("modelMatrices", functionType: .vertex, values: batch.modelMatrices)
+                        .parameter("modelMatrices", functionType: .vertex, values: modelMatrices)
                         .parameter("normalMatrices", functionType: .vertex, values: normalMatrices)
                         .eraseToAnyElement()
                 } else {
                     element = element
-                        .parameter("modelMatrix", functionType: .vertex, value: batch.modelMatrices[0])
+                        .parameter("modelMatrix", functionType: .vertex, value: modelMatrices[0])
                         .parameter("normalMatrix", functionType: .vertex, value: normalMatrices[0])
                         .eraseToAnyElement()
                 }

@@ -6,7 +6,7 @@
 #define BLINN_PHONG_LIGHT_POINT 1
 #define BLINN_PHONG_LIGHT_SPOT 2
 
-// One light, in world space.
+// One light. Positions are camera-relative (world minus camera position), like everything the shader sees (#253).
 struct BlinnPhongLight {
     simd_float3 position;
     // The way the light points (travels). Used by directional and spot lights.
@@ -26,7 +26,7 @@ typedef struct BlinnPhongLight BlinnPhongLight;
 
 // The shadow map, for lights with shadow slices.
 struct BlinnPhongShadowUniforms {
-    // World to light clip space, one per slice.
+    // Camera-relative position to light clip space, one per slice.
     simd_float4x4 sliceViewProjections[8];
     float mapSize;
     // 0 leaves shadowed light unchanged, 1 scales it fully by `color`.
@@ -39,7 +39,9 @@ typedef struct BlinnPhongShadowUniforms BlinnPhongShadowUniforms;
 
 // Per-draw lighting state, shared by every mesh in a batch.
 struct BlinnPhongFrame {
+    // Projection times the view's rotation only; model matrices are camera-relative.
     simd_float4x4 viewProjection;
+    // Zero from the renderer (camera-relative space).
     simd_float3 cameraPosition;
     simd_float3 ambientLightColor;
     int lightCount;
