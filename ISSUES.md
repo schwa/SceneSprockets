@@ -1030,12 +1030,13 @@ Want: audio sources on nodes, positioned in 3D from the world transform, and a l
 ## 52: Save and load a scene graph
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: area:assets, effort:l
 created: 2026-10-13T20:20:23Z
-updated: 2026-10-22T15:20:58Z
+updated: 2026-11-04T20:52:33Z
+closed: 2026-11-04T20:52:33Z
 +++
 
 A scene graph can't be saved. SceneKit can archive `SCNScene` (`.scn`) and export it.
@@ -1047,6 +1048,7 @@ Want: a file format for the node tree, transforms, content, materials, animation
 - `2026-10-13T20:50:31Z`: Deferred: scene graphs are built by hand (or imported) for now.
 - `2026-10-22T15:28:24Z`: Design decided: a package directory (.scenesprocketsd) with scene.json for the graph; glTF content by reference (the original file copied into the package); generated meshes written as glTF too (needs SwiftGLTF builder APIs). Core first: node tree, transforms, flags, shapes, materials, lights, cameras, environment/fog/post. Animations, skins, morphs, constraints, physics, particles later. Split into the issues below.
 - `2026-10-25T01:34:52Z`: #157 (glTF kept by reference) and #158 (generated meshes as glTF) are done.
+- `2026-11-04T20:52:33Z`: All split-out subtasks are closed (#156-#165, #180): SceneArchive writes and reads .scenesprocketsd packages, and the Composer saves and opens them. Remaining gaps are tracked separately: #179 (animation clips, running actions) and #182 (audio players, LOD). Closing this umbrella.
 
 ---
 
