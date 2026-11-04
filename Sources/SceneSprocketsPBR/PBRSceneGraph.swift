@@ -79,9 +79,10 @@ public struct PBRNodeLayout {
         }
     }
 
-    public func pose() -> PBRPose {
+    // `cameraPosition` is subtracted from every matrix (in Double), for camera-relative rendering (#254).
+    public func pose(cameraPosition: SIMD3<Float> = .zero) -> PBRPose {
         PBRPose(
-            worldMatrices: entries.map(\.worldTransform) + jointNodes.map(\.worldTransform),
+            worldMatrices: (entries.map(\.worldTransform) + jointNodes.map(\.worldTransform)).map { $0.cameraRelative(to: cameraPosition) },
             morphWeights: entries.map(\.node.morphWeights) + jointNodes.map { _ in [] }
         )
     }
@@ -215,7 +216,7 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
 
     public func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement {
         let renderer = try makeRenderer(entries: entries, context: context, transmissionTarget: frameTransmissionTarget)
-        return PBRShadowedElement(shadow: context.shadow, cameraPosition: context.cameraMatrix.columns.3.xyz) { shadows in
+        return PBRShadowedElement(shadow: context.shadow) { shadows in
             var renderer = renderer
             renderer.lighting.shadows = shadows
             return renderer.eraseToAnyElement()
@@ -226,13 +227,16 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
     func makeRenderer(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, transmissionTarget: PBRTransmissionTarget?) throws -> PBRRenderer {
         let layout = PBRNodeLayout(entries: entries)
         let (model, keys) = try modelAndKeys(for: entries, layout: layout, structureRevision: context.revision.structure)
-        let lighting = lighting(context: context)
+        // Camera-relative (#254): poses and lights are shifted by the camera position and the view keeps only its
+        // rotation, so the PBR shaders work on small values far from the world origin.
+        let cameraPosition = context.cameraMatrix.columns.3.xyz
+        let lighting = lighting(context: context, cameraPosition: cameraPosition)
         var renderer = PBRRenderer(
             model: model,
-            viewMatrix: context.viewMatrix,
+            viewMatrix: context.viewMatrix.rotationOnlyView,
             projectionMatrix: context.projectionMatrix,
             lighting: lighting,
-            pose: layout.pose(),
+            pose: layout.pose(cameraPosition: cameraPosition),
             transmissionTarget: transmissionTarget
         )
         renderer.materialOverrides = try materialOverrides(for: entries, keys: keys)
@@ -276,7 +280,7 @@ extension PBRMaterialRenderer: SceneGraphPrePassRenderer {
         }
         let showsBackground = if case .environment = context.environment.background { true } else { false }
         let additionalContent = try otherOpaqueContent()
-        return PBRShadowedElement(shadow: context.shadow, cameraPosition: context.cameraMatrix.columns.3.xyz) { shadows in
+        return PBRShadowedElement(shadow: context.shadow) { shadows in
             let renderers = renderers.map { renderer in
                 var renderer = renderer
                 renderer.lighting.shadows = shadows
@@ -296,8 +300,6 @@ extension PBRMaterialRenderer: SceneGraphPrePassRenderer {
 // Binds this frame's shadow map, which is chosen by submission index, so only known while building the frame.
 private struct PBRShadowedElement: Element {
     var shadow: SceneGraphShadows.Sampling?
-    // Shadow slices take camera-relative positions; the PBR shaders use world positions until #254.
-    var cameraPosition: SIMD3<Float>
     var content: (PBRShadows?) throws -> AnyElement
 
     @MSEnvironment(\.submissionIndex)
@@ -308,7 +310,8 @@ private struct PBRShadowedElement: Element {
             let shadows = shadow.map { shadow in
                 PBRShadows(
                     map: shadow.shadowMap.depthTexture(forSubmission: submissionIndex),
-                    sliceViewProjections: shadow.shadowMap.lightViewProjectionMatrices.map { $0 * simd_float4x4(translation: -cameraPosition) },
+                    // Camera-relative, like the PBR positions.
+                    sliceViewProjections: shadow.shadowMap.lightViewProjectionMatrices,
                     filterRadius: max(shadow.softness, 0),
                     sampler: shadow.shadowMap.sampler,
                     intensity: shadow.intensity,
@@ -345,10 +348,11 @@ extension PBREnvironment: EnvironmentMap {}
 
 extension PBRMaterialRenderer: SceneGraphBackgroundRenderer {
     // The scene's environment map when it is a PBREnvironment, otherwise `environment`; intensities multiply.
-    func lighting(context: SceneGraphRenderContext) -> PBRLighting {
+    // Light positions are shifted by `cameraPosition` for camera-relative rendering.
+    func lighting(context: SceneGraphRenderContext, cameraPosition: SIMD3<Float> = .zero) -> PBRLighting {
         var lighting = PBRLighting(
             lights: context.lights.enumerated().map { index, light in
-                var result = pbrLight(worldTransform: light.worldTransform, light: light.light)
+                var result = pbrLight(worldTransform: light.worldTransform.cameraRelative(to: cameraPosition), light: light.light)
                 // Each light samples only its own shadow slices.
                 if context.shadow != nil, index < context.lightShadowSlices.count {
                     let slices = context.lightShadowSlices[index]
