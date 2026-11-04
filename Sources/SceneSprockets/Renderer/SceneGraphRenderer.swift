@@ -333,7 +333,7 @@ func makeRenderContext(sceneGraph: SceneGraph, camera: SceneGraph.Node?, cameraM
     }
     return SceneGraphRenderContext(
         viewMatrix: cameraMatrix.inverse,
-        projectionMatrix: .reversedDepth * resolved.camera.projection.projectionMatrix(aspectRatio: aspectRatio),
+        projectionMatrix: .reverseZ * resolved.camera.projection.projectionMatrix(aspectRatio: aspectRatio),
         cameraMatrix: cameraMatrix,
         lights: lights,
         revision: sceneGraph.revision,

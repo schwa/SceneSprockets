@@ -36,7 +36,7 @@ public final class SelectionOutline {
         return OutlinePasses(
             instances: instances,
             // The scene draws with reversed depth; the viewport's projection is standard.
-            viewProjection: .reversedDepth * viewport.projectionMatrix * viewport.viewMatrix,
+            viewProjection: .reverseZ * viewport.projectionMatrix * viewport.viewMatrix,
             mask: mask,
             seeds: seeds,
             color: color,

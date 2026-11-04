@@ -5377,12 +5377,13 @@ A package outside the MetalSprockets folder can only use SceneSprockets through 
 ## 245: Deprecation warnings when building SceneSprockets
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: effort:xs, area:renderer, area:ui
 created: 2026-10-30T14:40:28Z
-updated: 2026-11-04T20:44:59Z
+updated: 2026-11-04T21:00:18Z
+closed: 2026-11-04T21:00:18Z
 +++
 
 Building a consumer app (Xcode 27.2) shows two warnings from SceneSprockets:

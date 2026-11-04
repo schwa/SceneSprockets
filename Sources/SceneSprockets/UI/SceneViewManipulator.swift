@@ -31,7 +31,7 @@ public struct SceneViewport {
     }
 
     public var viewProjection: ViewProjection {
-        ViewProjection(viewMatrix: viewMatrix, projectionMatrix: projectionMatrix, isReversedDepth: false, viewSize: viewSize)
+        ViewProjection(viewMatrix: viewMatrix, projectionMatrix: projectionMatrix, isReverseZ: false, viewSize: viewSize)
     }
 
     public func ray(through point: SIMD2<Float>) -> Ray3D {
