@@ -15,14 +15,15 @@ namespace ShaderMaterialSamples {
     struct VertexOut {
         float4 position [[position]];
         float3 worldNormal;
-        float3 worldPosition;
+        // World position minus the camera position; precise far from the origin (#251).
+        float3 cameraRelativePosition;
     };
 
     [[vertex]] VertexOut vertex_main(VertexIn in [[stage_in]], constant ShaderMaterialTransforms &transforms [[buffer(10)]]) {
         VertexOut out;
         out.position = transforms.modelViewProjectionMatrix * float4(in.position, 1);
         out.worldNormal = (transforms.normalMatrix * float4(in.normal, 0)).xyz;
-        out.worldPosition = (transforms.modelMatrix * float4(in.position, 1)).xyz;
+        out.cameraRelativePosition = (transforms.cameraRelativeModelMatrix * float4(in.position, 1)).xyz;
         return out;
     }
 
@@ -33,7 +34,7 @@ namespace ShaderMaterialSamples {
 
     // `color`, darkened where the surface turns away from the camera; uses no lights.
     [[fragment]] float4 fragment_rim(VertexOut in [[stage_in]], constant float4 &color [[buffer(0)]], constant ShaderMaterialTransforms &transforms [[buffer(10)]]) {
-        float3 toCamera = normalize(transforms.cameraPosition - in.worldPosition);
+        float3 toCamera = normalize(-in.cameraRelativePosition);
         float facing = saturate(dot(normalize(in.worldNormal), toCamera));
         return float4(color.rgb * (0.25 + 0.75 * facing), color.a * transforms.opacity);
     }

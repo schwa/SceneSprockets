@@ -5521,12 +5521,13 @@ Open questions:
 ## 251: Shaders lose precision far from the world origin
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: effort:m, area:renderer
 created: 2026-11-04T20:38:00Z
-updated: 2026-11-04T20:45:00Z
+updated: 2026-11-04T20:52:18Z
+closed: 2026-11-04T20:52:18Z
 +++
 
 ShaderMaterialTransforms passes modelMatrix, modelViewProjectionMatrix and cameraPosition as 32-bit floats in world space. In large scenes (SidraLine places units 50-100 km from the origin) a float only resolves about 4-8 mm there, so anything a shader derives from world positions close up is quantized.

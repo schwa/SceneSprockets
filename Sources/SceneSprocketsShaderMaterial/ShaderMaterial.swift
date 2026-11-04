@@ -85,15 +85,7 @@ public struct ShaderMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
             return (deformed?.mesh ?? entry.mesh, entry.submeshIndex, deformed?.modelMatrix ?? entry.worldTransform, material, entry.opacity, entry.isTransparent)
         }
         return ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-            let transforms = ShaderMaterialTransforms(
-                modelMatrix: item.modelMatrix,
-                viewMatrix: context.viewMatrix,
-                projectionMatrix: context.projectionMatrix,
-                modelViewProjectionMatrix: context.projectionMatrix * context.viewMatrix * item.modelMatrix,
-                normalMatrix: item.modelMatrix.inverse.transpose,
-                cameraPosition: cameraPosition,
-                opacity: item.opacity
-            )
+            let transforms = ShaderMaterialTransforms(modelMatrix: item.modelMatrix, viewMatrix: context.viewMatrix, projectionMatrix: context.projectionMatrix, cameraPosition: cameraPosition, opacity: item.opacity)
             let submesh = item.mesh.submeshes[item.submeshIndex]
             try RenderPipeline(label: "ShaderMaterial", vertexShader: item.material.vertexShader, fragmentShader: item.material.fragmentShader) {
                 materialDraw(submesh, fillMode: item.material.renderState.fillMode)

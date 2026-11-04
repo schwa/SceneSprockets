@@ -80,15 +80,7 @@ struct SceneGraphDebugRenderer: SceneGraphMaterialRenderer {
             let deformed = entry.deformed(revision: context.revision)
             let mesh = deformed?.mesh ?? entry.mesh
             let modelMatrix = deformed?.modelMatrix ?? entry.worldTransform
-            let transforms = ShaderMaterialTransforms(
-                modelMatrix: modelMatrix,
-                viewMatrix: context.viewMatrix,
-                projectionMatrix: context.projectionMatrix,
-                modelViewProjectionMatrix: context.projectionMatrix * context.viewMatrix * modelMatrix,
-                normalMatrix: modelMatrix.inverse.transpose,
-                cameraPosition: cameraPosition,
-                opacity: 1
-            )
+            let transforms = ShaderMaterialTransforms(modelMatrix: modelMatrix, viewMatrix: context.viewMatrix, projectionMatrix: context.projectionMatrix, cameraPosition: cameraPosition, opacity: 1)
             let layout = Self.vertexLayout(mesh.vertexDescriptor)
             let debug = SIMD4<Int32>(mode.rawValue, layout.hasNormals ? 1 : 0, layout.hasTextureCoordinates ? 1 : 0, 0)
             let submesh = mesh.submeshes[entry.submeshIndex]

@@ -16,5 +16,11 @@ struct ShaderMaterialTransforms {
     // The node's inherited opacity. Multiply the output alpha by it to support fading; the renderer already blends
     // when it is below 1.
     float opacity;
+    // The model matrix with the camera at the origin: its translation is model minus camera position, subtracted in
+    // double precision. Far from the world origin, derive positions from this, not from modelMatrix (#251).
+    simd_float4x4 cameraRelativeModelMatrix;
+    // The view matrix without the camera's translation. projectionMatrix * cameraRelativeViewMatrix *
+    // cameraRelativeModelMatrix equals modelViewProjectionMatrix.
+    simd_float4x4 cameraRelativeViewMatrix;
 };
 typedef struct ShaderMaterialTransforms ShaderMaterialTransforms;

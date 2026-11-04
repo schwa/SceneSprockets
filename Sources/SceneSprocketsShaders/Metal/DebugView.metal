@@ -18,6 +18,8 @@ namespace DebugView {
         float4 position [[position]];
         float3 worldNormal;
         float3 worldPosition;
+        // World position minus the camera position; precise far from the origin (#251).
+        float3 cameraRelativePosition;
         float2 textureCoordinate;
     };
 
@@ -34,6 +36,7 @@ namespace DebugView {
         out.position = transforms.modelViewProjectionMatrix * float4(in.position, 1);
         out.worldNormal = (transforms.normalMatrix * float4(in.normal, 0)).xyz;
         out.worldPosition = (transforms.modelMatrix * float4(in.position, 1)).xyz;
+        out.cameraRelativePosition = (transforms.cameraRelativeModelMatrix * float4(in.position, 1)).xyz;
         out.textureCoordinate = in.textureCoordinate;
         return out;
     }
@@ -44,11 +47,11 @@ namespace DebugView {
         bool hasNormals = debug.y != 0;
         bool hasTextureCoordinates = debug.z != 0;
         // Flat normals from screen-space derivatives when the mesh has none.
-        float3 normal = hasNormals ? normalize(in.worldNormal) : normalize(cross(dfdx(in.worldPosition), dfdy(in.worldPosition)));
+        float3 normal = hasNormals ? normalize(in.worldNormal) : normalize(cross(dfdx(in.cameraRelativePosition), dfdy(in.cameraRelativePosition)));
         if (!isFrontFacing) {
             normal = -normal;
         }
-        float3 toCamera = normalize(transforms.cameraPosition - in.worldPosition);
+        float3 toCamera = normalize(-in.cameraRelativePosition);
         float facing = saturate(dot(normal, toCamera));
         float3 color;
         switch (mode) {
