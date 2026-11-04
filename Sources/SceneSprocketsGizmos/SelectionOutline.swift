@@ -28,7 +28,9 @@ public final class SelectionOutline {
         guard !nodes.isEmpty, width > 0 else {
             return nil
         }
-        let instances = Self.instances(of: nodes, in: sceneGraph)
+        // Camera-relative, like the scene, so the outline matches it far from the world origin (#257).
+        let cameraPosition = viewport.cameraMatrix.columns.3.xyz
+        let instances = Self.instances(of: nodes, in: sceneGraph, cameraPosition: cameraPosition)
         guard !instances.isEmpty else {
             return nil
         }
@@ -36,7 +38,7 @@ public final class SelectionOutline {
         return OutlinePasses(
             instances: instances,
             // The scene draws with reversed depth; the viewport's projection is standard.
-            viewProjection: .reverseZ * viewport.projectionMatrix * viewport.viewMatrix,
+            viewProjection: .reverseZ * viewport.projectionMatrix * viewport.viewMatrix.rotationOnlyView,
             mask: mask,
             seeds: seeds,
             color: color,
@@ -47,13 +49,13 @@ public final class SelectionOutline {
     }
 
     // One instance per mesh node in the nodes' subtrees; a node's submeshes share one mesh.
-    static func instances(of nodes: [SceneGraph.Node], in sceneGraph: SceneGraph) -> [SilhouetteMaskRenderPipeline.Instance] {
+    static func instances(of nodes: [SceneGraph.Node], in sceneGraph: SceneGraph, cameraPosition: SIMD3<Float>) -> [SilhouetteMaskRenderPipeline.Instance] {
         var seen = Set<ObjectIdentifier>()
         return sceneGraph.meshEntries().compactMap { entry in
             guard entry.node.isVisible, nodes.contains(where: { $0 === entry.node || $0.isAncestor(of: entry.node) }), seen.insert(entry.node.id).inserted else {
                 return nil
             }
-            return SilhouetteMaskRenderPipeline.Instance(mesh: entry.mesh, transform: entry.worldTransform)
+            return SilhouetteMaskRenderPipeline.Instance(mesh: entry.mesh, transform: entry.worldTransform.cameraRelative(to: cameraPosition))
         }
     }
 

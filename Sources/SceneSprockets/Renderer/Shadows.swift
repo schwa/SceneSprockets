@@ -99,7 +99,12 @@ public final class SceneGraphShadows {
         guard let bounds else {
             return nil
         }
-        let (views, dropped, slices) = shadowViewsAndDroppedLights(lights: context.lights, bounds: bounds)
+        // Everything here is camera-relative (#257): lights, bounds and casters are shifted by the camera position in
+        // Double, so the light views map camera-relative positions and stay precise far from the world origin.
+        let cameraPosition = context.cameraMatrix.columns.3.xyz
+        let relativeBounds = BoundingBox3D(min: cameraRelative(bounds.min, to: cameraPosition), max: cameraRelative(bounds.max, to: cameraPosition))
+        let relativeLights = context.lights.map { (worldTransform: $0.worldTransform.cameraRelative(to: cameraPosition), light: $0.light) }
+        let (views, dropped, slices) = shadowViewsAndDroppedLights(lights: relativeLights, bounds: relativeBounds)
         droppedLightCount = dropped
         guard !views.isEmpty else {
             return nil
@@ -124,14 +129,14 @@ public final class SceneGraphShadows {
                 return nil
             }
             guard let skin else {
-                return Caster(positions: positions, submesh: submesh, placement: .model(deformed?.modelMatrix ?? entry.worldTransform))
+                return Caster(positions: positions, submesh: submesh, placement: .model((deformed?.modelMatrix ?? entry.worldTransform).cameraRelative(to: cameraPosition)))
             }
             let influenceKey = InfluenceKey(node: ObjectIdentifier(entry.node), revision: entry.node.revision.structure)
             usedInfluences.insert(influenceKey)
             guard let influences = influenceBuffer(for: entry.node, key: influenceKey, device: mesh.vertexBuffer.device) else {
                 return nil
             }
-            return Caster(positions: positions, submesh: submesh, placement: .skinned(influences: influences, jointMatrices: skin.jointMatrices()))
+            return Caster(positions: positions, submesh: submesh, placement: .skinned(influences: influences, jointMatrices: skin.jointMatrices().map { $0.cameraRelative(to: cameraPosition) }))
         }
         // Materials that sample shadows themselves are kept out of the screen-space mask, like non-receivers.
         let skipsMask = { (entry: SceneGraph.MeshEntry) in !entry.receivesShadow || entry.material is any SamplesShadowsInShader }

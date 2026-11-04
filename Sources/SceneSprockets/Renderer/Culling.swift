@@ -17,6 +17,18 @@ public func meshEntriesInFrustum(_ entries: [SceneGraph.MeshEntry], viewProjecti
     }
 }
 
+// Camera-relative, so precise far from the world origin (#257). Prefer this to the viewProjection form.
+public func meshEntriesInFrustum(_ entries: [SceneGraph.MeshEntry], projectionMatrix: simd_float4x4, cameraMatrix: simd_float4x4) -> [Bool] {
+    let cameraPosition = cameraMatrix.columns.3.xyz
+    let frustum = Frustum(viewProjection: projectionMatrix * cameraMatrix.cameraRelative(to: cameraPosition).inverse)
+    return entries.map { entry in
+        guard let bounds = entry.node.meshBounds else {
+            return true
+        }
+        return frustum.intersects(bounds.transformed(by: entry.worldTransform.cameraRelative(to: cameraPosition)))
+    }
+}
+
 // Sorts by camera distance to each entry's world bounds center (its origin without bounds), farthest first, so
 // blended surfaces composite correctly.
 func sortedBackToFront(_ entries: [SceneGraph.MeshEntry], cameraPosition: SIMD3<Float>) -> [SceneGraph.MeshEntry] {

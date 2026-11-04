@@ -209,7 +209,9 @@ public struct SceneGraphElement: Element {
                 }
                 .eraseToAnyElement()
             }
-            let inverseViewProjection = (context.projectionMatrix * context.viewMatrix).inverse
+            // Post passes rebuild positions from depth in camera-relative space (camera at the origin), so they stay
+            // precise far from the world origin (#257). Shadow views are camera-relative too.
+            let relativeViewProjection = context.projectionMatrix * context.viewMatrix.rotationOnlyView
             // The shadow and post passes open their own encoders, so they are siblings of the scene pass.
             return try MetalSprockets.Group {
                 if let shadowFrame {
@@ -224,7 +226,7 @@ public struct SceneGraphElement: Element {
                         frame: shadowFrame,
                         sceneDepthTexture: postTargets.depth,
                         outputTexture: postTargets.color,
-                        viewProjection: context.projectionMatrix * context.viewMatrix,
+                        viewProjection: relativeViewProjection,
                         intensity: shadows.intensity,
                         color: shadows.color,
                         radius: shadows.softness
@@ -232,10 +234,10 @@ public struct SceneGraphElement: Element {
                 }
                 // Occlusion darkens geometry before fog covers it; color adjustment comes last.
                 if let ambientOcclusion {
-                    AmbientOcclusionPass(settings: ambientOcclusion, depthTexture: postTargets.depth, colorTexture: postTargets.color, viewProjection: context.projectionMatrix * context.viewMatrix, cameraPosition: cameraPosition)
+                    AmbientOcclusionPass(settings: ambientOcclusion, depthTexture: postTargets.depth, colorTexture: postTargets.color, viewProjection: relativeViewProjection, cameraPosition: .zero)
                 }
                 if let fog {
-                    FogPass(fog: fog, depthTexture: postTargets.depth, colorTexture: postTargets.color, inverseViewProjection: inverseViewProjection, cameraPosition: cameraPosition)
+                    FogPass(fog: fog, depthTexture: postTargets.depth, colorTexture: postTargets.color, inverseViewProjection: relativeViewProjection.inverse, cameraPosition: .zero)
                 }
                 if let postProcessing, adjustsColor {
                     ColorAdjustPass(settings: postProcessing, colorTexture: postTargets.color)

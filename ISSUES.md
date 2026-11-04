@@ -5637,9 +5637,9 @@ status: open
 priority: low
 kind: feature
 labels: area:scenegraph, effort:xl, umbrella
-depends: 256, 257, 258, 259, 260, 261, 253, 254, 252
+depends: 256, 257, 258, 259, 260, 261, 253, 254, 252, 262
 created: 2026-11-04T21:06:11Z
-updated: 2026-11-04T21:10:47Z
+updated: 2026-11-04T21:19:04Z
 +++
 
 Node transforms and accumulated world transforms are simd_float4x4. Float32 resolves about 4-8 mm at 100 km and about 1 km at 1e10 m, so worlds at solar-system scale (Kerbal Space Program style; see #251 comments) cannot be represented, even though the renderers can now draw camera-relative (#251).
@@ -5685,17 +5685,20 @@ Part of #255.
 ## 257: Shadows, fog, particles, gizmos and culling use world-space Float matrices
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:renderer, effort:m, subtask
 created: 2026-11-04T21:10:37Z
-updated: 2026-11-04T21:10:47Z
+updated: 2026-11-04T21:19:14Z
+closed: 2026-11-04T21:19:14Z
 +++
 
 #251 made ShaderMaterial and the debug view camera-relative. These paths still build world-space Float view-projection matrices and lose precision far from the origin: shadow-map light view-projections (Shadows.swift, ShadowMask), FogPass inverseViewProjection, particle simulate/render view matrices, gizmos and SelectionOutline, frustum culling (meshEntriesInFrustum).
 
 Part of #255.
+
+- `2026-11-04T21:19:14Z`: Fixed: shadows (light views, casters, skinned joints, screen-space mask, receiver mask), fog, ambient occlusion, culling and the selection outline are camera-relative. Not done: particles and the transform gizmo, moved to #262. Culling at 2^20 m showed no wrong results in the edge sweep test before the change (camera position exactly representable); the change still removes the large-value math.
 
 ---
 
@@ -5762,6 +5765,23 @@ updated: 2026-11-04T21:10:47Z
 +++
 
 Reverse-Z Float depth cannot resolve both nearby parts and very distant bodies in one pass. There is no scaled-space pass or multi-range (nested frusta) rendering. Related: #248 (several viewports/passes in one view).
+
+Part of #255.
+
+---
+
+## 262: Particles and the transform gizmo use world-space Float matrices
+
++++
+status: open
+priority: low
+kind: bug
+labels: area:renderer, effort:m, subtask
+created: 2026-11-04T21:19:04Z
+updated: 2026-11-04T21:19:14Z
++++
+
+Left over from #257. Particle simulation and drawing (SceneParticleSystem simulate(view:) and runtime render(projection:view:), MetalSprocketsParticles) and the transform gizmo (TransformGizmo, GraphicsContext3DRenderPipeline with projection * view) still work in world-space Float, so far from the origin they jitter or misplace like the other paths did before #251/#253/#257. Particle positions live in MetalSprocketsParticles buffers, so a fix spans that package.
 
 Part of #255.
 

@@ -215,7 +215,7 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
 
     public func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement {
         let renderer = try makeRenderer(entries: entries, context: context, transmissionTarget: frameTransmissionTarget)
-        return PBRShadowedElement(shadow: context.shadow) { shadows in
+        return PBRShadowedElement(shadow: context.shadow, cameraPosition: context.cameraMatrix.columns.3.xyz) { shadows in
             var renderer = renderer
             renderer.lighting.shadows = shadows
             return renderer.eraseToAnyElement()
@@ -276,7 +276,7 @@ extension PBRMaterialRenderer: SceneGraphPrePassRenderer {
         }
         let showsBackground = if case .environment = context.environment.background { true } else { false }
         let additionalContent = try otherOpaqueContent()
-        return PBRShadowedElement(shadow: context.shadow) { shadows in
+        return PBRShadowedElement(shadow: context.shadow, cameraPosition: context.cameraMatrix.columns.3.xyz) { shadows in
             let renderers = renderers.map { renderer in
                 var renderer = renderer
                 renderer.lighting.shadows = shadows
@@ -296,6 +296,8 @@ extension PBRMaterialRenderer: SceneGraphPrePassRenderer {
 // Binds this frame's shadow map, which is chosen by submission index, so only known while building the frame.
 private struct PBRShadowedElement: Element {
     var shadow: SceneGraphShadows.Sampling?
+    // Shadow slices take camera-relative positions; the PBR shaders use world positions until #254.
+    var cameraPosition: SIMD3<Float>
     var content: (PBRShadows?) throws -> AnyElement
 
     @MSEnvironment(\.submissionIndex)
@@ -306,7 +308,7 @@ private struct PBRShadowedElement: Element {
             let shadows = shadow.map { shadow in
                 PBRShadows(
                     map: shadow.shadowMap.depthTexture(forSubmission: submissionIndex),
-                    sliceViewProjections: shadow.shadowMap.lightViewProjectionMatrices,
+                    sliceViewProjections: shadow.shadowMap.lightViewProjectionMatrices.map { $0 * simd_float4x4(translation: -cameraPosition) },
                     filterRadius: max(shadow.softness, 0),
                     sampler: shadow.shadowMap.sampler,
                     intensity: shadow.intensity,

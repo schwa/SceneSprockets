@@ -9,6 +9,7 @@ public struct SceneGraphShadowMap {
     // One texture per in-flight submission, so a frame never clears a map an earlier frame still samples.
     let depthTextures: [MTLTexture]
     public let sampler: MTLSamplerState
+    // Camera-relative: they take world position minus the camera position (#257).
     public internal(set) var lightViewProjectionMatrices: [simd_float4x4]
     var depthBias: Float
     var slopeScale: Float

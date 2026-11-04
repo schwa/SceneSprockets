@@ -81,7 +81,6 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer, Equatable 
     }
 
     public func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement {
-        let viewProjection = context.projectionMatrix * context.viewMatrix
         let cameraPosition = context.cameraMatrix.columns.3.xyz
         // The shader works in camera-relative space (#253): the camera is at the origin, and lights and model
         // matrices are shifted by the camera position in Double.
@@ -97,7 +96,7 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer, Equatable 
         // their node bounds do not cover the deformation.
         // SceneGraphElement batches opaque and transparent entries apart, transparent ones sorted farthest first.
         let isTransparent = entries.first?.isTransparent ?? false
-        let inFrustum = meshEntriesInFrustum(entries, viewProjection: viewProjection)
+        let inFrustum = meshEntriesInFrustum(entries, projectionMatrix: context.projectionMatrix, cameraMatrix: context.cameraMatrix)
         if !isTransparent, let groups = cachedOpaqueGroups(entries: entries, inFrustum: inFrustum, context: context, cameraPosition: cameraPosition) {
             return BlinnPhongBatchesElement(groups: groups, frame: frame, lights: lightValues, shadow: context.shadow, cameraPosition: cameraPosition, isTransparent: false).eraseToAnyElement()
         }
@@ -234,10 +233,9 @@ private struct BlinnPhongBatchesElement: Element {
                 uniforms.radius = Int32(max(shadow.softness, 0))
                 withUnsafeMutableBytes(of: &uniforms.sliceViewProjections) { buffer in
                     let slices = buffer.bindMemory(to: simd_float4x4.self)
-                    // Shading positions are camera-relative, so move them back to world space first.
-                    let toWorld = simd_float4x4(translation: cameraPosition)
+                    // Both the slices and the shading positions are camera-relative.
                     for (index, matrix) in shadow.shadowMap.lightViewProjectionMatrices.prefix(slices.count).enumerated() {
-                        slices[index] = matrix * toWorld
+                        slices[index] = matrix
                     }
                 }
                 return (shadow.shadowMap.depthTexture(forSubmission: submissionIndex), shadow.shadowMap.sampler, uniforms)
