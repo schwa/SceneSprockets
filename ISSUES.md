@@ -5556,6 +5556,8 @@ Provide camera-relative transforms to materials: subtract the camera position fr
 - Several views of the same world at very different scales (tactical map vs close-up 3D).
 - Related: #252 (Float time) has the same kind of precision loss over long runs.
 
+- `2026-11-04T21:06:14Z`: Follow-ups: #253 (Blinn-Phong), #254 (PBR), #255 (Float scene graph positions for very large worlds).
+
 ---
 
 ## 252: Time values use Float (precision loss, no units)
@@ -5577,5 +5579,189 @@ Problems:
 - Inconsistent with platform time types (`TimeInterval`/`Double`, `Duration`, `ContinuousClock.Instant`) that callers usually have.
 
 - `2026-11-04T20:54:25Z`: Looked at the ~70 sites. Punting: this is a public API break across actions, animation, particles, constraints, transactions, SceneView and physics, and the target type is a design decision the code cannot answer. Options seen: (a) TimeInterval/Double everywhere (simple, matches CADisplayLink and AVFoundation); (b) Swift Duration for durations plus Double for accumulated time (typed, but awkward arithmetic and no Float conversion in shaders); (c) Double only for accumulated/absolute time (particle time, animation playhead), keep Float for small per-frame deltas and durations. Also: whether to keep Float overloads as deprecated shims. Unblocker: pick a/b/c and say whether to keep deprecated Float overloads.
+- `2026-11-04T21:10:48Z`: Part of #255 (very large worlds).
+
+---
+
+## 253: Blinn-Phong loses precision far from the world origin
+
++++
+status: open
+priority: medium
+kind: bug
+labels: area:renderer, effort:m
+created: 2026-11-04T21:06:11Z
+updated: 2026-11-04T21:06:14Z
++++
+
+Follow-up to #251, which fixed ShaderMaterial and the debug view only.
+
+BlinnPhong.metal computes worldPosition = modelMatrix * position and clip position = frame.viewProjection * world in 32-bit floats, in world space. Far from the origin (SidraLine: 50-100 km) a float resolves only about 4-8 mm, so anything derived from world positions near the camera is quantized:
+- flat normals from dfdx/dfdy(worldPosition) for meshes without normals
+- the normal-map tangent frame (perturbedNormal uses dfdx/dfdy of the position)
+- view direction (cameraPosition - worldPosition) for specular
+- point/spot light vectors and shadow-map lookups
+
+Expected: Blinn-Phong surfaces near a camera far from the origin shade like the same scene near the origin.
+
+- `2026-11-04T21:10:48Z`: Part of #255 (very large worlds).
+
+---
+
+## 254: PBR loses precision far from the world origin
+
++++
+status: open
+priority: medium
+kind: bug
+labels: area:renderer, effort:m
+created: 2026-11-04T21:06:11Z
+updated: 2026-11-04T21:06:14Z
++++
+
+Follow-up to #251, which fixed ShaderMaterial and the debug view only.
+
+The PBR path (MetalSprocketsPBR via PBRMaterialRenderer) passes world-space model matrices and camera position as 32-bit floats. Far from the origin (SidraLine: 50-100 km) world positions near the camera are quantized to about 4-8 mm, which affects screen-space derivatives, view vectors, lighting and transmission. The shaders live in MetalSprocketsPBR, so a fix likely spans both packages.
+
+Expected: PBR surfaces near a camera far from the origin render like the same scene near the origin.
+
+- `2026-11-04T21:10:48Z`: Part of #255 (very large worlds).
+
+---
+
+## 255: Umbrella: very large worlds (solar-system scale)
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:scenegraph, effort:xl, umbrella
+depends: 256, 257, 258, 259, 260, 261, 253, 254, 252
+created: 2026-11-04T21:06:11Z
+updated: 2026-11-04T21:10:47Z
++++
+
+Node transforms and accumulated world transforms are simd_float4x4. Float32 resolves about 4-8 mm at 100 km and about 1 km at 1e10 m, so worlds at solar-system scale (Kerbal Space Program style; see #251 comments) cannot be represented, even though the renderers can now draw camera-relative (#251).
+
+Affects: world transform accumulation, bounds, hit testing, culling, physics hand-off, archives.
+
+Related: #250 (ECS storage), #252 (Float time).
+
+\- `2026-11-04T21:10:48Z`: Now an umbrella. Sub-issues:
+- #256 Node and world transforms are Float (xl, the big refactor)
+- #253 Blinn-Phong precision far from origin (m)
+- #254 PBR precision far from origin (m, spans MetalSprocketsPBR)
+- #257 Shadows, fog, particles, gizmos, culling use world-space Float (m)
+- #258 SwiftJolt double precision unknown (s, investigation)
+- #259 Physics cannot run far from origin (l)
+- #260 Fast-moving active objects jitter (m)
+- #261 One depth range cannot hold parts and planets (l)
+- #252 Float time (needs an API decision)
+No orbit work planned.
+
+Doable now without a huge refactor: #253, #254, #257, #258. These work with today's Float world transforms (camera-relative rendering helps SidraLine-scale scenes immediately) and do not depend on #256.
+Blocked or big: #256 (core refactor); #259 and #260 build on #256 and #258; #261 is a renderer architecture change; #252 waits on a decision.
+
+---
+
+## 256: Node and world transforms are Float
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:scenegraph, effort:xl, subtask
+created: 2026-11-04T21:10:37Z
+updated: 2026-11-04T21:10:47Z
++++
+
+Node local transforms and accumulated world transforms (SceneGraph.visit/traverse, MeshEntry.worldTransform, bounds, hit testing) are simd_float4x4. Float32 resolves about 4-8 mm at 100 km and about 1 km at 1e10 m, so positions in very large worlds cannot be stored.
+
+Part of #255.
+
+---
+
+## 257: Shadows, fog, particles, gizmos and culling use world-space Float matrices
+
++++
+status: open
+priority: medium
+kind: bug
+labels: area:renderer, effort:m, subtask
+created: 2026-11-04T21:10:37Z
+updated: 2026-11-04T21:10:47Z
++++
+
+#251 made ShaderMaterial and the debug view camera-relative. These paths still build world-space Float view-projection matrices and lose precision far from the origin: shadow-map light view-projections (Shadows.swift, ShadowMask), FogPass inverseViewProjection, particle simulate/render view matrices, gizmos and SelectionOutline, frustum culling (meshEntriesInFrustum).
+
+Part of #255.
+
+---
+
+## 258: SwiftJolt double precision is unknown
+
++++
+status: open
+priority: low
+kind: task
+labels: area:physics, effort:s, subtask
+created: 2026-11-04T21:10:37Z
+updated: 2026-11-04T21:10:47Z
++++
+
+Jolt supports a JPH_DOUBLE_PRECISION build (double positions, float elsewhere). It is not known whether SwiftJolt builds or exposes it, what its API looks like (RVec3), or what it costs. Needed to decide how physics works far from the origin.
+
+Part of #255.
+
+---
+
+## 259: Physics cannot run far from the world origin
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:physics, effort:l, subtask
+created: 2026-11-04T21:10:37Z
+updated: 2026-11-04T21:10:47Z
++++
+
+SceneSprocketsPhysics hands world-space Float positions to Jolt. Far from the origin, simulation near the active area loses precision. There is no floating origin or local physics frame around the active area.
+
+Part of #255.
+
+---
+
+## 260: Fast-moving active objects jitter
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:physics, effort:m, subtask
+created: 2026-11-04T21:10:37Z
+updated: 2026-11-04T21:10:47Z
++++
+
+At orbital speeds (several km/s) the active object's coordinates change by kilometers per second, so precision near it degrades and rendering and physics jitter. There is no reference frame that keeps the active object near rest (KSP's Krakensbane).
+
+Part of #255.
+
+---
+
+## 261: One depth range cannot hold centimeter parts and planets millions of km away
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:renderer, effort:l, subtask
+created: 2026-11-04T21:10:38Z
+updated: 2026-11-04T21:10:47Z
++++
+
+Reverse-Z Float depth cannot resolve both nearby parts and very distant bodies in one pass. There is no scaled-space pass or multi-range (nested frusta) rendering. Related: #248 (several viewports/passes in one view).
+
+Part of #255.
 
 ---
