@@ -5474,13 +5474,14 @@ Nothing in the repo (README, LICENSE, or a NOTICE/credits file) states their sou
 ## 250: SceneGraph storage is not shared with ECS-based apps (SwiftECS backend umbrella)
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: umbrella, area:scenegraph, effort:xl, has-subtasks
 depends: 263, 264, 265, 266, 267, 268, 269
 created: 2026-11-04T19:49:40Z
-updated: 2026-11-05T17:25:05Z
+updated: 2026-11-05T23:02:28Z
+closed: 2026-11-05T23:02:28Z
 +++
 
 Umbrella issue: move SceneGraph storage onto SwiftECS, mostly hidden behind the current API.
@@ -5528,6 +5529,7 @@ Open questions:
 
 - `2026-11-04T20:45:00Z`: Related: #251 (large-world precision) and #252 (Float time) matter for the simulation-heavy apps this targets.
 - `2026-11-05T17:23:44Z`: Sub-issues (in dependency order): #263 toolchain → #264 per-access cost / change events → #265 spike → #266 revisions/observation → #267 renderer queries → #268 remaining features/archive/clone → #269 World-sharing API.
+- `2026-11-05T23:02:29Z`: Closed: all subtasks done (#263-#269, follow-ups #271-#281). Open follow-ups: #270 (steady-state node access cost, measure later) and #282 (SwiftECS is still a local path dependency).
 
 ---
 
@@ -6025,6 +6027,8 @@ Leaving open for the steady-state cost. Further gains likely need SwiftECS chang
 
 - `2026-11-05T22:17:11Z`: Question 1 (decision): Steady-state node access is still about 2-3x slower than before the ECS work. Keep this open until #267 (queries) or a lock-free SwiftECS read path lands, or accept the cost and close it? Suggested: keep open.
 - `2026-11-05T22:19:29Z`: Answer 1: keep open - but we'll measure cost later
+- `2026-11-06T00:25:58Z`: Autoresearch session (#283), commit 'Speed up node access and writes after the ECS port': traversal 276 -> ~153 ns/node, write 511 -> 260, flatten 296 -> ~155, read 107 -> ~45, create+attach 65,800 -> ~38,000. Pre-ECS reference: traversal ~100, read ~30, write ~180. Remaining traversal cost is mostly ComponentRef retain/release; further gains likely need a non-retaining SwiftECS read path.
+- `2026-11-06T01:29:09Z`: Second autoresearch session (#283), geomean of the 5 benchmark metrics 419 -> 284 (-32%). Mostly SwiftECS: entity location holds its archetype, lazy ComponentType names, typed entity creation, specialized swapRemove and change dispatch, reuse of the last creation archetype, skipping storage publish with no observers. SceneSprockets: typed node creation, static key paths for Observation, cheaper transaction check. Now (ns/node): traversal ~142, flatten ~137, read ~38, write ~192, create+attach ~13,000. Pre-ECS: traversal ~100, read ~30, write ~180.
 
 ---
 
@@ -6253,5 +6257,51 @@ closed: 2026-11-05T19:48:17Z
 +++
 
 Part of #250. constraints (and their accelerationStates) and subdivisionLevel/subdivisionBase live on Node. Not covered by #268's subtasks.
+
+---
+
+## 282: SwiftECS is a local path dependency, so SceneSprockets does not build elsewhere
+
++++
+status: open
+priority: medium
+kind: task
+labels: area:scenegraph, effort:s
+created: 2026-11-05T23:02:28Z
++++
+
+Package.swift depends on SwiftECS with .package(path: "../../Current/SwiftECS"). The SwiftECS changes SceneSprockets needs (#263-#281, SwiftECS #46-#49) are committed only locally; SwiftECS has no pushed release tag. Any other checkout, including CI, fails to resolve the package. Related: #250.
+
+---
+
+## 283: Node access performance has no reproducible benchmark
+
++++
+status: closed
+priority: low
+kind: task
+labels: area:scenegraph, effort:m
+created: 2026-11-05T23:08:55Z
+updated: 2026-11-06T00:25:58Z
+closed: 2026-11-06T00:25:58Z
++++
+
+Node and scene graph performance since the ECS port (#250, #270) was measured only with temporary test files, which were deleted. There is no permanent benchmark to compare changes against, or for an autoresearch loop to optimize.
+
+Metrics used so far (Release, 100k nodes, ns per node):
+
+| Metric | What it represents | Current | Before ECS |
+|---|---|---|---|
+| Flatten after one transform change | per-frame render prep while animating | ~280-300 | ~300 |
+| Traversal (graph.visit) | simulation passes (actions, constraints, particles) | ~280-300 | ~100 |
+| Attached transform read | per-property cost | ~100-140 | ~30 |
+| Attached transform write | animation and physics writes | ~500-700 | ~180 |
+| Create + attach | loading and adding nodes | ~9,700 | not measured |
+
+Noise: back-to-back runs of the same code on the development machine varied by 30-40%, larger than many of the differences being measured.
+
+Related: #270.
+
+- `2026-11-06T00:25:58Z`: Fixed by 'Add a node performance benchmark (#283)': NodePerformanceBenchmark.swift, SCENESPROCKETS_BENCHMARK=1, Release, run alone.
 
 ---
