@@ -5921,6 +5921,9 @@ Part of #250, sub-step 2. Flatten/culling traverse the tree. boundsCache and def
 
 - `2026-11-05T17:38:01Z`: Punting: blocked by #265 and #266. The renderer can't query the World for transforms, content, bounds or deformation until Node stores them there (#265), and query results can't be trusted until direct writes keep revisions and caches correct (#266). Relevant from #264: query iteration costs about the same as Node property access, so this step looks fast enough. Unblocker: the design decisions on #265.
 - `2026-11-05T18:30:02Z`: Checked what flatten and culling read per node: content and transform (in the World since #265), plus isShown (isVisible/isActive, inherited), inheritedOpacity, pivot, categoryBitMask, lightCategoryBitMask, renderingOrder, skin, skinVertices, morphTargets/morphWeights and mesh/subtree bounds, none of which are in the World. Punting: blocked by #268 (moves those fields), and it needs a design decision. World transform, visibility and opacity depend on ancestors, so a query can only replace the tree walk if something stores those per entity first. Traversal currently costs ~95 ns/node (#270), so speed alone may not justify it. Unblocker: decide whether SceneGraph should keep computed WorldTransform/visibility/opacity components (updated from revisions, and readable by ECS apps), or whether the renderer should keep walking the tree and #267 should close as not needed.
+- `2026-11-05T22:07:56Z`: Update: #268 is done, so every field flatten and culling read is now in the World. The design decision from the previous comment is still open: should SceneGraph keep computed WorldTransform/visibility/opacity components per entity, so the renderer can query them? New input from #270: per-node getters now cost ~280-300 ns per node in traversal (pre-ECS ~100). Reading columns through queries skips most of that, so this is now also the main path to recovering traversal speed. Punting until that decision is made.
+- `2026-11-05T22:17:09Z`: Question 1 (design): Should SceneGraph keep computed WorldTransform, visibility and opacity components per entity, so the renderer (and ECS apps) can query them instead of walking the tree? If not, keep the tree walk and close this. Suggested: yes; it is also the likeliest way to recover traversal speed (#270).
+- `2026-11-05T22:18:31Z`: Answer 1: yes
 
 ---
 
@@ -5958,7 +5961,26 @@ updated: 2026-11-05T17:25:05Z
 
 Part of #250, sub-step 5. Apps cannot pass their own World to SceneGraph or reach SceneGraph's World. Open: World ownership/lifetime when not owned; several graphs in one World; entities with scene components but no Node; ordering of SceneSprockets systems (actions, constraints, physics, particles) in the app's pipeline. Needs docs.
 
-- `2026-11-05T17:38:07Z`: Punting: blocked by #265-#268. SceneGraph has no World holding node data yet, so there is nothing to share or hand to an app. The open questions in this issue (World ownership, several graphs in one World, entities without a Node, system ordering) also depend on the identity and source-of-truth decisions on #265. Unblocker: the design decisions on #265.
+\- `2026-11-05T17:38:07Z`: Punting: blocked by #265-#268. SceneGraph has no World holding node data yet, so there is nothing to share or hand to an app. The open questions in this issue (World ownership, several graphs in one World, entities without a Node, system ordering) also depend on the identity and source-of-truth decisions on #265. Unblocker: the design decisions on #265.
+\- `2026-11-05T22:08:10Z`: Punting: the ownership/lifetime questions in this issue are still open, and they decide the API shape. Concrete questions:
+1. First step: expose SceneGraph.world (read/write) and make the Node*Component types public under their current names? Direct writes still have gaps: #271 destroy, #272 animation, #273 hierarchy.
+2. SceneGraph(world:) for an app-owned World: should SceneGraph hold it strongly (it lives as long as any graph using it) or weakly (app must keep it alive)?
+3. Several graphs in one World: tag entities with a scene-membership component holding the graph's root EntityID?
+4. Entities with Node components but no Node: ignore them (suggested), or create Nodes lazily?
+5. System ordering: leave actions/constraints/particles/physics as SceneGraph methods the app calls (today), or register them as SwiftECS systems in the World's pipeline?
+
+My suggestions: 1 yes, but only after #271/#273 are decided; 2 strong; 3 yes; 4 ignore; 5 keep methods for now.
+
+- `2026-11-05T22:17:09Z`: Question 1 (decision): Expose SceneGraph.world and make the Node*Component types public now, or wait until #271 and #273 are decided? Suggested: wait.
+- `2026-11-05T22:17:09Z`: Question 2 (decision): For SceneGraph(world:) with an app-owned World, should the graph hold the World strongly or weakly? Suggested: strongly.
+- `2026-11-05T22:17:10Z`: Question 3 (design): Several graphs in one World: tag each entity with a component holding its graph's root EntityID? Suggested: yes.
+- `2026-11-05T22:17:10Z`: Question 4 (decision): Entities that have Node components but no Node (created by the app): ignore them, or create Nodes for them lazily? Suggested: ignore.
+- `2026-11-05T22:17:11Z`: Question 5 (decision): Actions, constraints, particles and physics: keep them as SceneGraph methods the app calls, or register them as SwiftECS systems in the World's pipeline? Suggested: keep the methods for now.
+- `2026-11-05T22:18:39Z`: Answer 1: wait
+- `2026-11-05T22:18:53Z`: Answer 2: strongly
+- `2026-11-05T22:18:59Z`: Answer 3: sure
+- `2026-11-05T22:19:06Z`: Answer 4: ignore
+- `2026-11-05T22:19:13Z`: Answer 5: yes
 
 ---
 
@@ -5976,13 +5998,16 @@ updated: 2026-11-05T19:26:38Z
 
 Part of #250. After #265, nodes under a SceneGraph's root read transform and content through the World. Release build, 100k nodes, best of 5 (noisy machine): attached transform read ~64 ns vs ~34 ns before; attached write ~220 ns vs ~180 ns; detached read ~38 ns vs ~28 ns. Each attached read registers observation on both the Node and the World and takes a column lock. Traversal measured 75-153 ns per node vs ~102 ns before; the noise is too high to say more.
 
-- `2026-11-05T18:27:51Z`: After #266 (Release, 100k nodes, two runs): attached write ~360-390 ns (was ~220 after #265, ~180 before ECS). Node writes now go through SwiftECS's change observer, which SceneGraph uses to catch direct World writes. My guess is the cost is in the observer dispatch passing the component as 'any Component' (boxing a LocalTransform), not profiled. Attached read 70-98 ns; traversal ~95 ns/node (baseline ~102).
-- `2026-11-05T19:40:58Z`: After #279 (8 more fields in the World; traversal now reads isVisible, isActive, pivot and transform through the World): traversal 181-199 ns/node over 3 runs (was 81-167 before #279, ~102 before ECS). Attached transform read 93-100 ns. Each field read checks the binding's structuralRevision and the field's cached ref separately.
-- `2026-11-05T22:07:08Z`: Profiled the benchmark with Time Profiler. Two findings:
+\- `2026-11-05T18:27:51Z`: After #266 (Release, 100k nodes, two runs): attached write ~360-390 ns (was ~220 after #265, ~180 before ECS). Node writes now go through SwiftECS's change observer, which SceneGraph uses to catch direct World writes. My guess is the cost is in the observer dispatch passing the component as 'any Component' (boxing a LocalTransform), not profiled. Attached read 70-98 ns; traversal ~95 ns/node (baseline ~102).
+\- `2026-11-05T19:40:58Z`: After #279 (8 more fields in the World; traversal now reads isVisible, isActive, pivot and transform through the World): traversal 181-199 ns/node over 3 runs (was 81-167 before #279, ~102 before ECS). Attached transform read 93-100 ns. Each field read checks the binding's structuralRevision and the field's cached ref separately.
+\- `2026-11-05T22:07:08Z`: Profiled the benchmark with Time Profiler. Two findings:
 1. Main cause: every structural change anywhere in the World (add/remove of any node, app components) invalidated every node's cached field refs, so the next pass re-looked-up all of them (dictionary hashing, String(describing:) in ComponentType.init, conformance checks). Traversal right after one add+remove: 9,480 ns/node. Fixed by tracking the entity's own storage location (new World.storageLocation(of:) in SwiftECS, archetype serial + row) and re-making refs only when that moves: now ~300-340 ns/node.
 2. Steady state is still slower than before ECS: attached read ~100-110 ns (pre-ECS ~28), traversal ~280-300 ns/node (pre-ECS ~100), write ~490-540 ns. Profile shows this spread across retain/release, exclusivity checks, NodeFieldStorage copies and the column lock in ComponentRef. Tried making NodeFieldStorage a class: no measurable gain, reverted.
 
 Leaving open for the steady-state cost. Further gains likely need SwiftECS changes (lock-free serial reads in ComponentRef) or the renderer reading columns via queries (#267) instead of per-node getters.
+
+- `2026-11-05T22:17:11Z`: Question 1 (decision): Steady-state node access is still about 2-3x slower than before the ECS work. Keep this open until #267 (queries) or a lock-free SwiftECS read path lands, or accept the cost and close it? Suggested: keep open.
+- `2026-11-05T22:19:29Z`: Answer 1: keep open - but we'll measure cost later
 
 ---
 
@@ -6009,6 +6034,9 @@ Punting: SceneGraph has no cheap, eager way to learn that an entity was destroye
 
 Unblocker: OK to add an entity-level destroy observer to SwiftECS (e.g. World.observeDestroyed { entityID in ... }), separate from component events, so the existing design stays? Or accept lazy detection plus a pruning pass at a safe point (e.g. start of SceneGraph.advanceActions / each frame)?
 
+- `2026-11-05T22:17:07Z`: Question 1 (decision): Should SwiftECS get an entity-destroy event (separate from component events) so SceneGraph can remove a node from the tree when its entity is destroyed elsewhere? If not, SceneGraph would detect it lazily and prune at a safe point each frame. Suggested: add the event.
+- `2026-11-05T22:19:38Z`: Answer 1: yes
+
 ---
 
 ## 272: Direct World writes to node transforms are not animated by Transaction.animate
@@ -6025,6 +6053,10 @@ updated: 2026-11-05T19:26:38Z
 
 Part of #250. Inside SceneGraph.Transaction.animate, Node setters record the old transform so it can animate. Writing NodeTransformComponent directly to the graph's World inside the block changes the value at once with no animation. SwiftECS's change event only carries the new value.
 
+- `2026-11-05T22:07:27Z`: Looked at the event path. Punting: needs a design decision. Animating a direct World write needs the old value, and SwiftECS's ComponentEvent.changed carries only the new one. Options: (a) add the old value to SwiftECS change events (breaking public API, affects every observer); (b) keep a per-node copy of each field just for this, which brings back the duplicated storage #250 removes; (c) decide direct World writes are not implicitly animated (simulation code usually does not want it), document it on Transaction.animate and close this. My suggestion is (c). Which one?
+- `2026-11-05T22:17:08Z`: Question 1 (decision): Should direct World writes inside Transaction.animate be animated? That needs old values in SwiftECS change events (breaking) or a per-node copy of every field. Suggested: no; document it on Transaction.animate and close this.
+- `2026-11-05T22:19:47Z`: Answer 1: no
+
 ---
 
 ## 273: Direct ChildOf or sibling-index edits in the World do not change the node tree
@@ -6040,6 +6072,15 @@ updated: 2026-11-05T19:26:38Z
 +++
 
 Part of #250. The node tree owns the hierarchy and copies it into the World as ChildOf and SiblingIndexComponent. Changing either directly in the World leaves Node.parent and Node.children as they were, so rendering and traversal ignore the edit. SwiftECS has no events for relationship changes.
+
+\- `2026-11-05T22:07:42Z`: Checked SwiftECS: relationship edits (setParent, addRelationship, removeRelationship) emit no events, so SceneGraph cannot learn of a direct ChildOf change. SiblingIndexComponent edits do emit .changed, but applying them needs a rule for duplicate or out-of-range indices.
+
+Punting: needs design decisions, related to #271. Options: (a) add relationship-change and entity-destroy observers to SwiftECS (one decision for both #271 and #273), then sync the node tree from them, with the rule 'sort children by sibling index, ties keep their current order'; (b) declare the World's ChildOf and SiblingIndexComponent a read-only mirror of the node tree, document it for ECS apps (#269), and close this. Which one?
+
+- `2026-11-05T22:17:08Z`: Question 1 (decision): Should SwiftECS get relationship-change events so direct ChildOf edits update the node tree? If not, ChildOf and SiblingIndexComponent become a read-only copy of the node tree, documented for ECS apps. Suggested: add the events, together with #271's destroy event.
+- `2026-11-05T22:17:08Z`: Question 2 (design): If direct edits are synced: when sibling indices clash or are out of range, sort children by index with ties keeping their current order?
+- `2026-11-05T22:19:54Z`: Answer 1: yes
+- `2026-11-05T22:20:01Z`: Answer 2: unsure
 
 ---
 
