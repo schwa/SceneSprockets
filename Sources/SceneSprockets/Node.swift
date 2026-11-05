@@ -29,46 +29,26 @@ extension SceneGraph {
 
         @ObservationIgnored public private(set) weak var parent: Node?
         public private(set) var children: [Node] = []
-        public var label: String?
         // Set while the node is in a graph; see Node+Entity.swift.
         @ObservationIgnored var entityBinding: EntityBinding?
-        // Stored in the graph's World while the node is in a graph. Every one is listed in `worldFields`.
+        // Backing for the properties in Node+Fields.swift.
         @ObservationIgnored var localTransformStorage = NodeFieldStorage<NodeTransformComponent>()
-        public var localTransform: LocalTransform {
-            get { getField(\.localTransform, \.localTransformStorage) }
-            set { setField(\.localTransform, \.localTransformStorage, newValue) }
-        }
         @ObservationIgnored var contentStorage = NodeFieldStorage<NodeContentComponent>()
-        public var content: Content {
-            get { getField(\.content, \.contentStorage) }
-            set { setField(\.content, \.contentStorage, newValue) }
-        }
-        static let worldFields: [NodeFieldSlot] = [
-            NodeFieldSlot(\.localTransform, \.localTransformStorage),
-            NodeFieldSlot(\.content, \.contentStorage)
-        ]
+        @ObservationIgnored var labelStorage = NodeFieldStorage<NodeLabelComponent>()
+        @ObservationIgnored var isVisibleStorage = NodeFieldStorage<NodeIsVisibleComponent>()
+        @ObservationIgnored var isActiveStorage = NodeFieldStorage<NodeIsActiveComponent>()
+        @ObservationIgnored var opacityStorage = NodeFieldStorage<NodeOpacityComponent>()
+        @ObservationIgnored var pivotStorage = NodeFieldStorage<NodePivotComponent>()
+        @ObservationIgnored var categoryBitMaskStorage = NodeFieldStorage<NodeCategoryBitMaskComponent>()
+        @ObservationIgnored var lightCategoryBitMaskStorage = NodeFieldStorage<NodeLightCategoryBitMaskComponent>()
+        @ObservationIgnored var renderingOrderStorage = NodeFieldStorage<NodeRenderingOrderComponent>()
         // Blend shapes for this node's mesh (MetalMesh cannot carry them). Weighted by morphWeights.
         public var morphTargets: [MorphTarget] = [] {
-            didSet { bump(structure: true) }
-        }
-        // False hides this node and its subtree from traversal, rendering and bounds.
-        public var isVisible = true {
-            didSet { bump(structure: true) }
-        }
-        // False is hidden and also stops this subtree's actions, constraints, particles and physics, like Unity's
-        // GameObject.SetActive(false). Hidden-but-active nodes keep animating (#196).
-        public var isActive = true {
             didSet { bump(structure: true) }
         }
         // Drawn, hit and counted in bounds, if its ancestors are too: visible and active.
         public var isShown: Bool {
             isVisible && isActive
-        }
-        // 0 is invisible, 1 opaque; multiplies with the ancestors' opacity, like SCNNode.opacity. Applied by materials
-        // with appliesNodeOpacity (Blinn-Phong, ShaderMaterial, PBR). Bumps the transform revision, not the structure
-        // one, so fading does not rebuild renderer caches.
-        public var opacity: Float = 1 {
-            didSet { bump(structure: false) }
         }
 
         // Simulated by SceneSprocketsPhysics when set.
@@ -154,20 +134,6 @@ extension SceneGraph {
         }
         // Smoothed position and velocity of each acceleration constraint, by index in `constraints`.
         @ObservationIgnored var accelerationStates: [Int: AccelerationState] = [:]
-        // Matched against camera, light and hit-test masks, like SCNNode.categoryBitMask. Not inherited by children.
-        public var categoryBitMask: UInt = 1 {
-            didSet { bump(structure: true) }
-        }
-        // For light nodes: lights only meshes whose categoryBitMask shares a bit with this, like
-        // SCNLight.categoryBitMask.
-        public var lightCategoryBitMask: UInt = .max {
-            didSet { bump(structure: true) }
-        }
-        // Lower values draw first, like SCNNode.renderingOrder. Within one value, each renderer keeps its own order
-        // (for example PBR draws opaque before blended).
-        public var renderingOrder: Int = 0 {
-            didSet { bump(structure: true) }
-        }
 
         func bump(structure: Bool) {
             let value = Revision.next()
@@ -182,19 +148,21 @@ extension SceneGraph {
             }
         }
 
-        // The point position, rotation and scale apply around, like SCNNode.pivot: content and children are drawn
-        // at transform * pivot.inverse. Identity by default.
-        public var pivot: float4x4 = .identity {
-            didSet {
-                pivotInverse = pivot.inverse
-                bump(structure: false)
-            }
-        }
-        @ObservationIgnored private var pivotInverse: float4x4 = .identity
+        // Keyed by the pivot it inverts, so a pivot written directly to the World is not missed.
+        @ObservationIgnored private var pivotInverseCache: (pivot: float4x4, inverse: float4x4)?
 
         // The local transform with the pivot applied; what world transforms and bounds are built from.
         public var composedTransform: float4x4 {
-            pivot == .identity ? transform : transform * pivotInverse
+            let pivot = self.pivot
+            guard pivot != .identity else {
+                return transform
+            }
+            if let pivotInverseCache, pivotInverseCache.pivot == pivot {
+                return transform * pivotInverseCache.inverse
+            }
+            let inverse = pivot.inverse
+            pivotInverseCache = (pivot, inverse)
+            return transform * inverse
         }
 
         // Setting this stores a matrix. Does not include `pivot`.
@@ -216,7 +184,7 @@ extension SceneGraph {
             transform: float4x4 = .identity,
             content: Content = .empty
         ) {
-            self.label = label
+            self.labelStorage.local = label
             self.localTransformStorage.local = .matrix(transform)
             self.contentStorage.local = content
             for child in children {

@@ -9,33 +9,22 @@ protocol NodeField: Component, SendableMetatype {
     init(value: Value)
     // Used when the entity is destroyed outside the scene graph.
     static var defaultValue: Value { get }
-    // True bumps the structure revision when the value changes, false the transform revision.
-    static var changesStructure: Bool { get }
+    // The revision a change bumps, for Node setters and direct World writes alike.
+    static var revision: NodeFieldRevision { get }
     // Called after every change made through the Node API.
     static func didChange(_ node: SceneGraph.Node, from oldValue: Value)
 }
 
+enum NodeFieldRevision {
+    case none
+    case transform
+    case structure
+}
+
 extension NodeField {
     static func didChange(_ node: SceneGraph.Node, from oldValue: Value) {
-        node.bump(structure: changesStructure)
+        node.bump(revision)
     }
-}
-
-struct NodeTransformComponent: NodeField {
-    var value: SceneGraph.LocalTransform
-    static var defaultValue: SceneGraph.LocalTransform { .matrix(.identity) }
-    static var changesStructure: Bool { false }
-
-    static func didChange(_ node: SceneGraph.Node, from oldValue: SceneGraph.LocalTransform) {
-        SceneGraph.Transaction.current?.recordTransform(of: node, oldValue: oldValue)
-        node.bump(structure: false)
-    }
-}
-
-struct NodeContentComponent: NodeField {
-    var value: SceneGraph.Node.Content
-    static var defaultValue: SceneGraph.Node.Content { .empty }
-    static var changesStructure: Bool { true }
 }
 
 // ChildOf does not keep an order we can change, so each child stores its index among its siblings.
@@ -111,10 +100,10 @@ extension SceneGraph {
             case .added:
                 break
             case let .changed(entity, _):
-                entity[NodeReferenceComponent.self]?.node?.worldDidChange(keyPath, structure: Field.changesStructure)
+                entity[NodeReferenceComponent.self]?.node?.worldDidChange(keyPath, revision: Field.revision)
             case let .removed(entity, _):
                 // The node goes back to local storage with default values on its next read.
-                entity[NodeReferenceComponent.self]?.node?.worldDidChange(keyPath, structure: true)
+                entity[NodeReferenceComponent.self]?.node?.worldDidChange(keyPath, revision: .structure)
             }
         }
 
@@ -237,9 +226,20 @@ extension SceneGraph.Node {
         }
     }
 
-    func worldDidChange<Member>(_ keyPath: KeyPath<SceneGraph.Node, Member>, structure: Bool) {
+    func worldDidChange<Member>(_ keyPath: KeyPath<SceneGraph.Node, Member>, revision: NodeFieldRevision) {
         withMutation(keyPath: keyPath) {}
-        bump(structure: structure)
+        bump(revision)
+    }
+
+    func bump(_ revision: NodeFieldRevision) {
+        switch revision {
+        case .none:
+            break
+        case .transform:
+            bump(structure: false)
+        case .structure:
+            bump(structure: true)
+        }
     }
 
     // Gives this node and its subtree entities in `store`'s World. A subtree in another World leaves it first.

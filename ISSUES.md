@@ -5975,6 +5975,7 @@ updated: 2026-11-05T19:26:38Z
 Part of #250. After #265, nodes under a SceneGraph's root read transform and content through the World. Release build, 100k nodes, best of 5 (noisy machine): attached transform read ~64 ns vs ~34 ns before; attached write ~220 ns vs ~180 ns; detached read ~38 ns vs ~28 ns. Each attached read registers observation on both the Node and the World and takes a column lock. Traversal measured 75-153 ns per node vs ~102 ns before; the noise is too high to say more.
 
 - `2026-11-05T18:27:51Z`: After #266 (Release, 100k nodes, two runs): attached write ~360-390 ns (was ~220 after #265, ~180 before ECS). Node writes now go through SwiftECS's change observer, which SceneGraph uses to catch direct World writes. My guess is the cost is in the observer dispatch passing the component as 'any Component' (boxing a LocalTransform), not profiled. Attached read 70-98 ns; traversal ~95 ns/node (baseline ~102).
+- `2026-11-05T19:40:58Z`: After #279 (8 more fields in the World; traversal now reads isVisible, isActive, pivot and transform through the World): traversal 181-199 ns/node over 3 runs (was 81-167 before #279, ~102 before ECS). Attached transform read 93-100 ns. Each field read checks the binding's structuralRevision and the field's cached ref separately.
 
 ---
 
@@ -5994,8 +5995,8 @@ Part of #250. Decision on #265: a Node whose entity is destroyed from outside be
 
 Repro: make a graph with root and child; destroy the child's entity via graph.world; child.parent is still root and root.children still contains child.
 
-- `2026-11-05T18:27:51Z`: Also: destroying a node's entity emits no component .removed events, so the scene graph revision does not change either; renderer caches keep showing the node until something else bumps the revision.
-- `2026-11-05T19:36:37Z`: Tried: a test (destroy a middle child's entity via graph.world; expect child.parent == nil, root.children without it, a structure revision bump, and the grandchild's entity gone) fails all 6 checks. Then made SwiftECS's removeEntity emit .removed component events, so SceneGraph could react. Reverted: SwiftECS deliberately does not do that. 'entity lifecycle changes notify storage without synthesizing component events' (MutationBoundaryTests) and 2 other tests fail with it.
+\- `2026-11-05T18:27:51Z`: Also: destroying a node's entity emits no component .removed events, so the scene graph revision does not change either; renderer caches keep showing the node until something else bumps the revision.
+\- `2026-11-05T19:36:37Z`: Tried: a test (destroy a middle child's entity via graph.world; expect child.parent == nil, root.children without it, a structure revision bump, and the grandchild's entity gone) fails all 6 checks. Then made SwiftECS's removeEntity emit .removed component events, so SceneGraph could react. Reverted: SwiftECS deliberately does not do that. 'entity lifecycle changes notify storage without synthesizing component events' (MutationBoundaryTests) and 2 other tests fail with it.
 
 Punting: SceneGraph has no cheap, eager way to learn that an entity was destroyed. It only notices on the node's next read, and pruning the tree from inside a getter (often during traversal or a SwiftUI update, see #212) is unsafe. Scanning all nodes on every structuralRevision change costs O(n) per structural edit.
 
@@ -6129,13 +6130,14 @@ Acceptance: both are in the World for nodes in a graph; actions keep running whe
 ## 279: Visibility, opacity, masks, pivot, rendering order and label are not stored in the World
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:scenegraph, subtask, effort:m
 depends: 274
 created: 2026-11-05T19:12:43Z
-updated: 2026-11-05T19:12:51Z
+updated: 2026-11-05T19:40:58Z
+closed: 2026-11-05T19:40:58Z
 +++
 
 Part of #268 (added to its scope per schwa). isVisible, isActive, opacity, pivot, categoryBitMask, lightCategoryBitMask, renderingOrder and label live on Node. Flatten and culling (#267) need these.
