@@ -5908,22 +5908,38 @@ Part of #250, sub-step 3. Revisions, transactions/undo and @Observable notificat
 ## 267: Renderer flatten and culling walk the node tree instead of querying
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: subtask, effort:l, area:renderer
 depends: 266
 created: 2026-11-05T17:23:37Z
-updated: 2026-11-05T17:25:05Z
+updated: 2026-11-05T22:54:16Z
+closed: 2026-11-05T22:54:16Z
 +++
 
 Part of #250, sub-step 2. Flatten/culling traverse the tree. boundsCache and deformationCache live on Node and are not available to ECS queries.
 
-- `2026-11-05T17:38:01Z`: Punting: blocked by #265 and #266. The renderer can't query the World for transforms, content, bounds or deformation until Node stores them there (#265), and query results can't be trusted until direct writes keep revisions and caches correct (#266). Relevant from #264: query iteration costs about the same as Node property access, so this step looks fast enough. Unblocker: the design decisions on #265.
-- `2026-11-05T18:30:02Z`: Checked what flatten and culling read per node: content and transform (in the World since #265), plus isShown (isVisible/isActive, inherited), inheritedOpacity, pivot, categoryBitMask, lightCategoryBitMask, renderingOrder, skin, skinVertices, morphTargets/morphWeights and mesh/subtree bounds, none of which are in the World. Punting: blocked by #268 (moves those fields), and it needs a design decision. World transform, visibility and opacity depend on ancestors, so a query can only replace the tree walk if something stores those per entity first. Traversal currently costs ~95 ns/node (#270), so speed alone may not justify it. Unblocker: decide whether SceneGraph should keep computed WorldTransform/visibility/opacity components (updated from revisions, and readable by ECS apps), or whether the renderer should keep walking the tree and #267 should close as not needed.
-- `2026-11-05T22:07:56Z`: Update: #268 is done, so every field flatten and culling read is now in the World. The design decision from the previous comment is still open: should SceneGraph keep computed WorldTransform/visibility/opacity components per entity, so the renderer can query them? New input from #270: per-node getters now cost ~280-300 ns per node in traversal (pre-ECS ~100). Reading columns through queries skips most of that, so this is now also the main path to recovering traversal speed. Punting until that decision is made.
-- `2026-11-05T22:17:09Z`: Question 1 (design): Should SceneGraph keep computed WorldTransform, visibility and opacity components per entity, so the renderer (and ECS apps) can query them instead of walking the tree? If not, keep the tree walk and close this. Suggested: yes; it is also the likeliest way to recover traversal speed (#270).
-- `2026-11-05T22:18:31Z`: Answer 1: yes
+\- `2026-11-05T17:38:01Z`: Punting: blocked by #265 and #266. The renderer can't query the World for transforms, content, bounds or deformation until Node stores them there (#265), and query results can't be trusted until direct writes keep revisions and caches correct (#266). Relevant from #264: query iteration costs about the same as Node property access, so this step looks fast enough. Unblocker: the design decisions on #265.
+\- `2026-11-05T18:30:02Z`: Checked what flatten and culling read per node: content and transform (in the World since #265), plus isShown (isVisible/isActive, inherited), inheritedOpacity, pivot, categoryBitMask, lightCategoryBitMask, renderingOrder, skin, skinVertices, morphTargets/morphWeights and mesh/subtree bounds, none of which are in the World. Punting: blocked by #268 (moves those fields), and it needs a design decision. World transform, visibility and opacity depend on ancestors, so a query can only replace the tree walk if something stores those per entity first. Traversal currently costs ~95 ns/node (#270), so speed alone may not justify it. Unblocker: decide whether SceneGraph should keep computed WorldTransform/visibility/opacity components (updated from revisions, and readable by ECS apps), or whether the renderer should keep walking the tree and #267 should close as not needed.
+\- `2026-11-05T22:07:56Z`: Update: #268 is done, so every field flatten and culling read is now in the World. The design decision from the previous comment is still open: should SceneGraph keep computed WorldTransform/visibility/opacity components per entity, so the renderer can query them? New input from #270: per-node getters now cost ~280-300 ns per node in traversal (pre-ECS ~100). Reading columns through queries skips most of that, so this is now also the main path to recovering traversal speed. Punting until that decision is made.
+\- `2026-11-05T22:17:09Z`: Question 1 (design): Should SceneGraph keep computed WorldTransform, visibility and opacity components per entity, so the renderer (and ECS apps) can query them instead of walking the tree? If not, keep the tree walk and close this. Suggested: yes; it is also the likeliest way to recover traversal speed (#270).
+\- `2026-11-05T22:18:31Z`: Answer 1: yes
+\- `2026-11-05T22:49:44Z`: Implemented #267-Q1 (yes) in a working copy and measured it; not committed, reverted. Design tried: one NodeWorldStateComponent per entity (world transform, inherited isShown, inherited opacity, depth-first order), dirty-subtree updates from Node.bump, full pass on hierarchy change, flatten by World query sorted by order. All 320 tests passed.
+
+Release, 100k nodes (10k groups of 10), ns/node, back-to-back:
+| case | tree walk (current) | World state + query |
+| one transform changed | ~293 | ~275-295 |
+| root transform changed (all dirty) | ~295 | ~575-595 (1,400 before caching refs) |
+| hierarchy changed | ~375 | ~665-700 |
+
+Why: computing world state still needs a tree walk; on top of that each node is written to the World, and the query plus a sort over all entities costs about as much as the old walk. Per-node World reads dominate in both. So this does not speed up rendering, and my earlier suggestion that it would recover #270's cost was wrong.
+
+The other benefit, ECS apps querying world transforms, has no consumer until #269.
+
+- `2026-11-05T22:49:44Z`: Question 1 (decision): Querying world state for rendering measured slower than the tree walk (2x when the root or hierarchy changes, no gain otherwise; see comment). Keep the tree walk for rendering and close this, and add world-state components later with #269 only if ECS apps need them? Suggested: yes.
+- `2026-11-05T22:54:16Z`: Answer 1: Yes (per schwa: follow suggestion). Keep the tree walk for rendering; add world-state components with #269 only if ECS apps need them.
+- `2026-11-05T22:54:16Z`: Closed per #267-Q1: the renderer keeps the tree walk (World queries measured slower). World-state components may come later with #269 if ECS apps need them.
 
 ---
 
@@ -6084,6 +6100,7 @@ Punting: needs design decisions, related to #271. Options: (a) add relationship-
 - `2026-11-05T22:17:08Z`: Question 2 (design): If direct edits are synced: when sibling indices clash or are out of range, sort children by index with ties keeping their current order?
 - `2026-11-05T22:19:54Z`: Answer 1: yes
 - `2026-11-05T22:20:01Z`: Answer 2: unsure
+- `2026-11-05T22:54:16Z`: Q2 decided (per schwa: follow suggestion): sort children by sibling index, ties keep their current order; a direct ChildOf edit places the child last among its new siblings.
 
 ---
 
