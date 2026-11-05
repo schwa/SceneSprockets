@@ -88,7 +88,7 @@ struct NodeFieldSlot: Sendable {
     }
 }
 
-private struct WeakNode {
+struct WeakNode {
     weak var node: SceneGraph.Node?
 }
 
@@ -101,7 +101,7 @@ extension SceneGraph {
         var nodeWriteDepth = 0
 
         // Nodes by entity, so a destroyed entity (which has no components left to read) can find its node.
-        private var nodes: [EntityID: WeakNode] = [:]
+        var nodes: [EntityID: WeakNode] = [:]
 
         init() {
             for slot in Node.worldFields {
@@ -110,6 +110,12 @@ extension SceneGraph {
             world.observeDestroyed { [weak self] entityID in
                 // SceneGraph's own destroys unregister first, so only outside destroys reach the node (#271).
                 self?.nodes.removeValue(forKey: entityID)?.node?.entityWasDestroyed()
+            }
+            world.observeRelationship(ChildOf.self) { [weak self] event in
+                self?.handleChildOf(event)
+            }
+            world.observe(SiblingIndexComponent.self) { [weak self] event in
+                self?.handleSiblingIndex(event)
             }
         }
 
@@ -341,13 +347,16 @@ extension SceneGraph.Node {
         guard let binding = currentBinding(), let entity = binding.world[id] else {
             return
         }
-        if entity[SiblingIndexComponent.self]?.index != siblingIndex {
-            entity.set(SiblingIndexComponent(index: siblingIndex))
-        }
-        let parentEntity = parent.flatMap { binding.world[$0.id] }
-        if entity.parent?.id != parentEntity?.id {
-            // ChildOf is acyclic; the node tree already rejects cycles, so this does not throw.
-            try? entity.setParent(parentEntity)
+        // Inside writeFromNode, so NodeStore does not handle these as outside hierarchy edits (#273).
+        binding.store.writeFromNode {
+            if entity[SiblingIndexComponent.self]?.index != siblingIndex {
+                entity.set(SiblingIndexComponent(index: siblingIndex))
+            }
+            let parentEntity = parent.flatMap { binding.world[$0.id] }
+            if entity.parent?.id != parentEntity?.id {
+                // ChildOf is acyclic; the node tree already rejects cycles, so this does not throw.
+                try? entity.setParent(parentEntity)
+            }
         }
     }
 

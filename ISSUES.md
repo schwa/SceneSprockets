@@ -6081,13 +6081,14 @@ Part of #250. Inside SceneGraph.Transaction.animate, Node setters record the old
 ## 273: Direct ChildOf or sibling-index edits in the World do not change the node tree
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:scenegraph, effort:m, subtask
 depends: 266
 created: 2026-11-05T18:27:51Z
-updated: 2026-11-05T19:26:38Z
+updated: 2026-11-05T22:58:03Z
+closed: 2026-11-05T22:58:03Z
 +++
 
 Part of #250. The node tree owns the hierarchy and copies it into the World as ChildOf and SiblingIndexComponent. Changing either directly in the World leaves Node.parent and Node.children as they were, so rendering and traversal ignore the edit. SwiftECS has no events for relationship changes.

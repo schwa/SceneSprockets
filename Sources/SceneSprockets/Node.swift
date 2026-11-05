@@ -61,7 +61,6 @@ extension SceneGraph {
             isVisible && isActive
         }
 
-
         var inheritedOpacity: Float {
             var result = opacity
             var node = parent
@@ -220,6 +219,27 @@ extension SceneGraph {
             child.detach()
         }
 
+        // Orders children by their SiblingIndexComponent in the World, ties keeping their current order, then
+        // renumbers them 0, 1, 2... (#273).
+        func sortChildrenBySiblingIndex() {
+            guard let world else {
+                return
+            }
+            let sorted = children.enumerated()
+                .map { position, child in
+                    let index = world[child.id]?[SiblingIndexComponent.self]?.index ?? position
+                    return (index: index, position: position, child: child)
+                }
+                .sorted { ($0.index, $0.position) < ($1.index, $1.position) }
+                .map(\.child)
+            let changed = sorted.map(\.id) != children.map(\.id)
+            children = sorted
+            syncChildrenInWorld(from: 0)
+            if changed {
+                bump(structure: true)
+            }
+        }
+
         // Code outside the scene graph destroyed this node's entity (#271). The node leaves the tree like
         // removeFromParent(), with default values; its subtree comes along and leaves the World.
         func entityWasDestroyed() {
@@ -263,20 +283,6 @@ extension SceneGraph {
             insertChild(newChild, at: min(index, children.count))
         }
 
-        // The first node named `label` in depth-first order (this node excluded), like
-        // SCNNode.childNode(withName:recursively:).
-        public func childNode(withLabel label: String, recursively: Bool = true) -> Node? {
-            for child in children {
-                if child.label == label {
-                    return child
-                }
-                if recursively, let found = child.childNode(withLabel: label) {
-                    return found
-                }
-            }
-            return nil
-        }
-
         // A copy of this node and its subtree, like SCNNode.clone(). Meshes, materials, skins and constraints are
         // shared, not copied; running actions are not copied. The copy has no parent.
         public func clone() -> Node {
@@ -307,5 +313,21 @@ extension SceneGraph {
             }
             return copy
         }
+    }
+}
+
+extension SceneGraph.Node {
+    // The first node named `label` in depth-first order (this node excluded), like
+    // SCNNode.childNode(withName:recursively:).
+    public func childNode(withLabel label: String, recursively: Bool = true) -> SceneGraph.Node? {
+        for child in children {
+            if child.label == label {
+                return child
+            }
+            if recursively, let found = child.childNode(withLabel: label) {
+                return found
+            }
+        }
+        return nil
     }
 }

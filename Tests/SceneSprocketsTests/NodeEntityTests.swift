@@ -145,6 +145,53 @@ func replacingRootDetachesOldRoot() {
     #expect(translation(oldRoot) == [1, 0, 0])
 }
 
+// #273: direct hierarchy edits in the World update the node tree.
+@Test
+func directSetParentMovesNodeLast() throws {
+    let root = SceneGraph.Node()
+    let first = SceneGraph.Node(parent: root)
+    let second = SceneGraph.Node(parent: root)
+    let existing = SceneGraph.Node(parent: second)
+    let moving = SceneGraph.Node(parent: first)
+    let graph = SceneGraph(root: root)
+    let before = graph.revision
+    try #require(graph.world[moving.id]).setParent(try #require(graph.world[second.id]))
+    #expect(moving.parent === second)
+    #expect(second.children.map(\.id) == [existing.id, moving.id])
+    #expect(first.children.isEmpty)
+    #expect(siblingIndex(moving, in: graph.world) == 1)
+    #expect(moving.world === graph.world)
+    #expect(graph.revision.structure != before.structure)
+}
+
+@Test
+func directUnparentRemovesNodeFromTree() throws {
+    let root = SceneGraph.Node()
+    let child = SceneGraph.Node(parent: root, label: "child")
+    let graph = SceneGraph(root: root)
+    try #require(graph.world[child.id]).setParent(nil)
+    #expect(child.parent == nil)
+    #expect(root.children.isEmpty)
+    #expect(child.world == nil)
+    #expect(child.label == "child")
+}
+
+@Test
+func directSiblingIndexReordersChildren() throws {
+    let root = SceneGraph.Node()
+    let first = SceneGraph.Node(parent: root)
+    let second = SceneGraph.Node(parent: root)
+    let third = SceneGraph.Node(parent: root)
+    let graph = SceneGraph(root: root)
+    try #require(graph.world[third.id]).set(SiblingIndexComponent(index: -1))
+    #expect(root.children.map(\.id) == [third.id, first.id, second.id])
+    #expect([third, first, second].map { siblingIndex($0, in: graph.world) } == [0, 1, 2])
+    // A tie keeps the current order: `second` gets `first`'s index and stays after it.
+    try #require(graph.world[second.id]).set(SiblingIndexComponent(index: 1))
+    #expect(root.children.map(\.id) == [third.id, first.id, second.id])
+    #expect([third, first, second].map { siblingIndex($0, in: graph.world) } == [0, 1, 2])
+}
+
 // #271
 @Test
 func destroyedEntityRemovesNodeFromTree() throws {
