@@ -140,6 +140,27 @@ func skinAndMorphDataLiveInTheWorld() {
     #expect(node.skin == nil)
 }
 
+// #278
+@Test
+func actionStateLivesInTheWorldAndSurvivesMoves() {
+    let root = SceneGraph.Node()
+    let first = SceneGraph.Node(parent: root)
+    let second = SceneGraph.Node(parent: root)
+    let node = SceneGraph.Node(parent: first)
+    let graph = SceneGraph(root: root)
+    node.run(.move(by: [10, 0, 0], duration: 1), forKey: "move")
+    #expect(graph.world[node.id]?[NodeRunningActionsComponent.self]?.value.count == 1)
+    #expect(revisionChange(graph) { node.actionSpeed = 2 } == .none)
+    #expect(graph.world[node.id]?[NodeActionSpeedComponent.self]?.value == 2)
+
+    second.addChild(node)
+    #expect(node.hasAction(forKey: "move"))
+    graph.world[node.id]?.set(NodeActionSpeedComponent(value: 1))
+    #expect(node.actionSpeed == 1)
+    graph.advanceActions(by: 0.5)
+    #expect(abs(node.transform.columns.3.x - 5) < 1e-4)
+}
+
 // #277
 @Test
 func particleSystemsAndAudioPlayersLiveInTheWorld() throws {

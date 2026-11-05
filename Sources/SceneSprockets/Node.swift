@@ -50,6 +50,8 @@ extension SceneGraph {
         @ObservationIgnored var skinVerticesStorage = NodeFieldStorage<NodeSkinVerticesComponent>()
         @ObservationIgnored var morphTargetsStorage = NodeFieldStorage<NodeMorphTargetsComponent>()
         @ObservationIgnored var morphWeightsStorage = NodeFieldStorage<NodeMorphWeightsComponent>()
+        @ObservationIgnored var runningActionsStorage = NodeFieldStorage<NodeRunningActionsComponent>()
+        @ObservationIgnored var actionSpeedStorage = NodeFieldStorage<NodeActionSpeedComponent>()
         // Drawn, hit and counted in bounds, if its ancestors are too: visible and active.
         public var isShown: Bool {
             isVisible && isActive
@@ -77,9 +79,6 @@ extension SceneGraph {
         @ObservationIgnored var boundsCache = BoundsCache()
         @ObservationIgnored var deformationCache: (revision: Revision, mesh: MetalMesh)?
         @ObservationIgnored var shapeStorage: (shape: Shape, device: MTLDevice)?
-        @ObservationIgnored var runningActions: [RunningAction] = []
-        // Multiplies the time this node's actions advance by; 0 pauses them. Not inherited by children.
-        public var actionSpeed: Float = 1
         // Loop-subdivides this node's mesh, like SCNGeometry.subdivisionLevel; 0 restores the original. Triangle
         // meshes only. Setting `shape` rebuilds and subdivides again.
         public var subdivisionLevel = 0 {

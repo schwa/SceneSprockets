@@ -6115,13 +6115,14 @@ Acceptance: both are in the World for nodes in a graph; clone still shares parti
 ## 278: Action state is not stored in the World
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:scenegraph, subtask, effort:m
 depends: 274
 created: 2026-11-05T19:12:42Z
-updated: 2026-11-05T19:12:51Z
+updated: 2026-11-05T19:46:07Z
+closed: 2026-11-05T19:46:07Z
 +++
 
 Part of #268. runningActions and actionSpeed live on Node, so an ECS app cannot see or drive a node's actions.

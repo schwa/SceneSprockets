@@ -124,6 +124,19 @@ struct NodeMorphWeightsComponent: NodeField {
     }
 }
 
+// RunningAction is a class, so this array changes only when an action starts or ends, not every frame.
+struct NodeRunningActionsComponent: NodeField {
+    var value: [SceneGraph.Node.RunningAction]
+    static var defaultValue: [SceneGraph.Node.RunningAction] { [] }
+    static var revision: NodeFieldRevision { .none }
+}
+
+struct NodeActionSpeedComponent: NodeField {
+    var value: Float
+    static var defaultValue: Float { 1 }
+    static var revision: NodeFieldRevision { .none }
+}
+
 extension SceneGraph.Node {
     static let worldFields: [NodeFieldSlot] = [
         NodeFieldSlot(\.localTransform, \.localTransformStorage),
@@ -143,7 +156,9 @@ extension SceneGraph.Node {
         NodeFieldSlot(\.skin, \.skinStorage),
         NodeFieldSlot(\.skinVertices, \.skinVerticesStorage),
         NodeFieldSlot(\.morphTargets, \.morphTargetsStorage),
-        NodeFieldSlot(\.morphWeights, \.morphWeightsStorage)
+        NodeFieldSlot(\.morphWeights, \.morphWeightsStorage),
+        NodeFieldSlot(\.runningActions, \.runningActionsStorage),
+        NodeFieldSlot(\.actionSpeed, \.actionSpeedStorage)
     ]
 
     public var localTransform: SceneGraph.LocalTransform {
@@ -247,6 +262,17 @@ extension SceneGraph.Node {
     public var morphWeights: [Float] {
         get { getField(\.morphWeights, \.morphWeightsStorage) }
         set { setField(\.morphWeights, \.morphWeightsStorage, newValue) }
+    }
+
+    var runningActions: [RunningAction] {
+        get { getField(\.runningActions, \.runningActionsStorage) }
+        set { setField(\.runningActions, \.runningActionsStorage, newValue) }
+    }
+
+    // Multiplies the time this node's actions advance by; 0 pauses them. Not inherited by children.
+    public var actionSpeed: Float {
+        get { getField(\.actionSpeed, \.actionSpeedStorage) }
+        set { setField(\.actionSpeed, \.actionSpeedStorage, newValue) }
     }
 
     // Lower values draw first, like SCNNode.renderingOrder. Within one value, each renderer keeps its own order
