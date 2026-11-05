@@ -5822,16 +5822,39 @@ Part of #250. SwiftECS requires Swift tools 6.4; SceneSprockets declares 6.2, so
 ## 264: Unknown per-access cost of World-backed node properties
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:scenegraph, subtask, effort:m
 depends: 263
 created: 2026-11-05T17:23:35Z
-updated: 2026-11-05T17:25:05Z
+updated: 2026-11-05T17:37:32Z
+closed: 2026-11-05T17:37:32Z
 +++
 
 Part of #250. It is not known whether reading/writing node properties through a SwiftECS World is fast enough for per-frame code that walks nodes, nor whether SwiftECS reports component changes. Both determine whether the World can be the source of truth for node data. Needs measurement against current Node storage.
+
+\- `2026-11-05T17:37:32Z`: Findings (Release build, M-series Mac, 100k nodes/entities, best of 5, float4x4 component):
+
+| Access | ns/op |
+|---|---|
+| Node.transform read | 25.6 |
+| Node.transform write | 135.9 |
+| Entity[T] read (random access by handle) | 491.1 |
+| Entity.set write, no observer | 1267.8 |
+| Entity.set write, 1 observer | 1347.2 |
+| world.query read | 19.7 |
+| query ComponentRef write, no observer | 47.1 |
+| query ComponentRef write, 1 observer | 114.2 |
+
+- Per-entity access through Entity handles is ~19x slower for reads and ~9x slower for writes than Node properties. A Node that forwards each property to world lookups would make tree-walking code much slower.
+- Query iteration matches or beats Node property access (reads ~0.8x, writes ~0.35x).
+
+Change events:
+- SwiftECS has per-component-type observers: World.observe(T.self) delivers .added/.removed/.changed synchronously. Writes through Entity.set/subscript, ComponentRef.value and system field writes all emit .changed.
+- SwiftUI observation is coarse: World is @Observable with one storage revision (MutationCoordinator). Any mutation invalidates every view that read any component. Node today has per-property observation. World.batchingObservation coalesces invalidations.
+
+Benchmark was a temporary test, not committed.
 
 ---
 
@@ -5849,6 +5872,17 @@ updated: 2026-11-05T17:25:05Z
 
 Part of #250, sub-step 1. Node stores transform, content and hierarchy itself. Unresolved: entity<->Node mapping, Node lifetime after entity destruction, and ordered children vs ChildOf. Done when existing tests pass with these parts entity-backed.
 
+\- `2026-11-05T17:37:50Z`: Read SwiftECS's ChildOf/RelationshipStorage and counted Node property use in Sources (worldTransform 119, content 36, transform 23, parent 17, children 12). Punting: three design decisions are not settled, and #264's numbers make the first one costly to get wrong.
+
+1. Source of truth. Entity-handle access is ~19x slower to read and ~9x slower to write than Node properties (#264). Should Node (a) forward every property to the World, (b) keep a cached ComponentRef/column location so each access skips the lookup (this breaks when the entity's archetype changes), or (c) keep its own storage and mirror into the World?
+2. Identity and lifetime. Should Node.id become the EntityID? What should a Node do when its entity is destroyed from outside: trap, or report detached and return defaults?
+3. Child order. ChildOf keeps children in insertion order (OrderedSet) but has no insert-at or move. Use a sibling-index component, or add ordered insert to SwiftECS?
+
+Unblocker: choose for 1-3 (my suggestion: 1b, Node.id = EntityID with detached state, sibling-index component).
+
+- `2026-11-05T17:40:46Z`: Decisions (per schwa): 1b — Node caches its component storage location and refreshes it when the archetype changes. 2 — Node.id becomes EntityID; a Node whose entity is destroyed elsewhere becomes detached (no parent, default values, no trap). 3 — sibling-index component for child order.
+- `2026-11-05T18:07:48Z`: Decision update (per schwa): no private Worlds. A Node keeps local storage until it is attached under a SceneGraph's root. On attach it creates an entity in the graph's World with its own pre-assigned random EntityID and reads/writes through the World. On detach it copies values back to local storage. Needs SwiftECS: public createEntity(id:) and a public structural-change counter.
+
 ---
 
 ## 266: Direct World writes skip revisions, transactions and observation
@@ -5865,6 +5899,8 @@ updated: 2026-11-05T17:25:05Z
 
 Part of #250, sub-step 3. Revisions, transactions/undo and @Observable notifications are driven from Node didSet. Writes made directly to the World bypass them, leaving caches, undo and SwiftUI stale.
 
+- `2026-11-05T17:37:57Z`: Punting: blocked by #265. Node data is not stored in the World yet, so no direct World write can skip revisions or observation. Relevant from #264: SwiftECS emits synchronous per-type .changed events from every public write path, and World observation is one coarse revision. Unblocker: the design decisions on #265.
+
 ---
 
 ## 267: Renderer flatten and culling walk the node tree instead of querying
@@ -5880,6 +5916,8 @@ updated: 2026-11-05T17:25:05Z
 +++
 
 Part of #250, sub-step 2. Flatten/culling traverse the tree. boundsCache and deformationCache live on Node and are not available to ECS queries.
+
+- `2026-11-05T17:38:01Z`: Punting: blocked by #265 and #266. The renderer can't query the World for transforms, content, bounds or deformation until Node stores them there (#265), and query results can't be trusted until direct writes keep revisions and caches correct (#266). Relevant from #264: query iteration costs about the same as Node property access, so this step looks fast enough. Unblocker: the design decisions on #265.
 
 ---
 
@@ -5912,5 +5950,7 @@ updated: 2026-11-05T17:25:05Z
 +++
 
 Part of #250, sub-step 5. Apps cannot pass their own World to SceneGraph or reach SceneGraph's World. Open: World ownership/lifetime when not owned; several graphs in one World; entities with scene components but no Node; ordering of SceneSprockets systems (actions, constraints, physics, particles) in the app's pipeline. Needs docs.
+
+- `2026-11-05T17:38:07Z`: Punting: blocked by #265-#268. SceneGraph has no World holding node data yet, so there is nothing to share or hand to an app. The open questions in this issue (World ownership, several graphs in one World, entities without a Node, system ordering) also depend on the identity and source-of-truth decisions on #265. Unblocker: the design decisions on #265.
 
 ---
