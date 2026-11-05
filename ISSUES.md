@@ -5920,6 +5920,7 @@ updated: 2026-11-05T17:25:05Z
 Part of #250, sub-step 2. Flatten/culling traverse the tree. boundsCache and deformationCache live on Node and are not available to ECS queries.
 
 - `2026-11-05T17:38:01Z`: Punting: blocked by #265 and #266. The renderer can't query the World for transforms, content, bounds or deformation until Node stores them there (#265), and query results can't be trusted until direct writes keep revisions and caches correct (#266). Relevant from #264: query iteration costs about the same as Node property access, so this step looks fast enough. Unblocker: the design decisions on #265.
+- `2026-11-05T18:30:02Z`: Checked what flatten and culling read per node: content and transform (in the World since #265), plus isShown (isVisible/isActive, inherited), inheritedOpacity, pivot, categoryBitMask, lightCategoryBitMask, renderingOrder, skin, skinVertices, morphTargets/morphWeights and mesh/subtree bounds, none of which are in the World. Punting: blocked by #268 (moves those fields), and it needs a design decision. World transform, visibility and opacity depend on ancestors, so a query can only replace the tree walk if something stores those per entity first. Traversal currently costs ~95 ns/node (#270), so speed alone may not justify it. Unblocker: decide whether SceneGraph should keep computed WorldTransform/visibility/opacity components (updated from revisions, and readable by ECS apps), or whether the renderer should keep walking the tree and #267 should close as not needed.
 
 ---
 
@@ -5929,13 +5930,15 @@ Part of #250, sub-step 2. Flatten/culling traverse the tree. boundsCache and def
 status: open
 priority: low
 kind: feature
-labels: area:scenegraph, subtask, effort:xl
-depends: 267
+labels: area:scenegraph, subtask, effort:xl, has-subtasks
+depends: 267, 274, 275, 276, 277, 278, 279, 280
 created: 2026-11-05T17:23:37Z
-updated: 2026-11-05T17:25:05Z
+updated: 2026-11-05T19:12:50Z
 +++
 
 Part of #250, sub-step 4. Lights, cameras, physics bodies, skin, morph data, particles, audio, LOD, actions/runningActions, archive and clone still use Node storage.
+
+- `2026-11-05T19:12:50Z`: Split (per schwa): #274 shared storage mechanism → #275 skin/morph, #276 physics/LOD, #277 particles/audio, #278 action state, #279 visibility/opacity/masks/pivot/rendering order/label (added to scope) → #280 archive/clone tests. Lights and cameras are already in the World as content (#265). Constraints and subdivision filed separately as #281.
 
 ---
 
@@ -5960,12 +5963,13 @@ Part of #250, sub-step 5. Apps cannot pass their own World to SceneGraph or reac
 ## 270: Node property access is slower for nodes in a graph
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
-labels: area:scenegraph, effort:m
+labels: area:scenegraph, effort:m, subtask
 depends: 265
 created: 2026-11-05T18:22:50Z
+updated: 2026-11-05T19:26:38Z
 +++
 
 Part of #250. After #265, nodes under a SceneGraph's root read transform and content through the World. Release build, 100k nodes, best of 5 (noisy machine): attached transform read ~64 ns vs ~34 ns before; attached write ~220 ns vs ~180 ns; detached read ~38 ns vs ~28 ns. Each attached read registers observation on both the Node and the World and takes a column lock. Traversal measured 75-153 ns per node vs ~102 ns before; the noise is too high to say more.
@@ -5977,12 +5981,13 @@ Part of #250. After #265, nodes under a SceneGraph's root read transform and con
 ## 271: Node keeps its parent after its entity is destroyed outside the scene graph
 
 +++
-status: new
+status: open
 priority: low
 kind: bug
-labels: area:scenegraph, effort:s
+labels: area:scenegraph, effort:s, subtask
 depends: 265
 created: 2026-11-05T18:22:50Z
+updated: 2026-11-05T19:26:38Z
 +++
 
 Part of #250. Decision on #265: a Node whose entity is destroyed from outside becomes detached with no parent and default values. After #265 it gets default values and no entity, but it stays in its parent's children and keeps its parent, so traversal still visits it.
@@ -5996,12 +6001,13 @@ Repro: make a graph with root and child; destroy the child's entity via graph.wo
 ## 272: Direct World writes to node transforms are not animated by Transaction.animate
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
 labels: area:scenegraph, effort:m, subtask
 depends: 266
 created: 2026-11-05T18:27:51Z
+updated: 2026-11-05T19:26:38Z
 +++
 
 Part of #250. Inside SceneGraph.Transaction.animate, Node setters record the old transform so it can animate. Writing NodeTransformComponent directly to the graph's World inside the block changes the value at once with no animation. SwiftECS's change event only carries the new value.
@@ -6011,14 +6017,157 @@ Part of #250. Inside SceneGraph.Transaction.animate, Node setters record the old
 ## 273: Direct ChildOf or sibling-index edits in the World do not change the node tree
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
 labels: area:scenegraph, effort:m, subtask
 depends: 266
 created: 2026-11-05T18:27:51Z
+updated: 2026-11-05T19:26:38Z
 +++
 
 Part of #250. The node tree owns the hierarchy and copies it into the World as ChildOf and SiblingIndexComponent. Changing either directly in the World leaves Node.parent and Node.children as they were, so rendering and traversal ignore the edit. SwiftECS has no events for relationship changes.
+
+---
+
+## 274: Each World-backed node property repeats its own storage code
+
++++
+status: open
+priority: low
+kind: task
+labels: area:scenegraph, subtask, effort:m
+depends: 266
+created: 2026-11-05T19:12:42Z
+updated: 2026-11-05T19:12:50Z
++++
+
+Part of #268. localTransform and content each have their own component type, getter, setter (local storage vs ComponentRef, writeFromNode, Observation, revision bump) and change handling in NodeStore. Moving more fields to the World would copy that per field.
+
+Acceptance: transform and content use one shared mechanism; adding a field needs only its component and a short declaration; existing tests pass.
+
+---
+
+## 275: Skin and morph data are not stored in the World
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:scenegraph, subtask, effort:m
+depends: 274
+created: 2026-11-05T19:12:42Z
+updated: 2026-11-05T19:12:50Z
++++
+
+Part of #268. skin, skinVertices, morphTargets and morphWeights live on Node. ECS apps cannot read or change them through the graph's World.
+
+Acceptance: these fields are in the World for nodes in a graph; direct World writes bump the right revision; morphWeights implicit animation (Transaction) still works through the Node API; existing skin/morph tests pass.
+
+---
+
+## 276: Physics bodies and levels of detail are not stored in the World
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:scenegraph, subtask, effort:s
+depends: 274
+created: 2026-11-05T19:12:42Z
+updated: 2026-11-05T19:12:51Z
++++
+
+Part of #268. physicsBody and levelsOfDetail live on Node.
+
+Acceptance: both are in the World for nodes in a graph; direct World writes bump the structure revision; physics and LOD tests pass.
+
+---
+
+## 277: Particle systems and audio players are not stored in the World
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:scenegraph, subtask, effort:s
+depends: 274
+created: 2026-11-05T19:12:42Z
+updated: 2026-11-05T19:12:51Z
++++
+
+Part of #268. particleSystems and audioPlayers (arrays of shared objects) live on Node.
+
+Acceptance: both are in the World for nodes in a graph; clone still shares particle systems and does not copy audio players; particle and audio tests pass.
+
+---
+
+## 278: Action state is not stored in the World
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:scenegraph, subtask, effort:m
+depends: 274
+created: 2026-11-05T19:12:42Z
+updated: 2026-11-05T19:12:51Z
++++
+
+Part of #268. runningActions and actionSpeed live on Node, so an ECS app cannot see or drive a node's actions.
+
+Acceptance: both are in the World for nodes in a graph; actions keep running when a node moves inside a graph; action tests pass.
+
+---
+
+## 279: Visibility, opacity, masks, pivot, rendering order and label are not stored in the World
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:scenegraph, subtask, effort:m
+depends: 274
+created: 2026-11-05T19:12:43Z
+updated: 2026-11-05T19:12:51Z
++++
+
+Part of #268 (added to its scope per schwa). isVisible, isActive, opacity, pivot, categoryBitMask, lightCategoryBitMask, renderingOrder and label live on Node. Flatten and culling (#267) need these.
+
+Acceptance: these fields are in the World for nodes in a graph; direct World writes bump the same revision the Node setters do; existing tests pass.
+
+---
+
+## 280: Archive and clone are untested for nodes in a graph
+
++++
+status: open
+priority: low
+kind: task
+labels: area:scenegraph, subtask, effort:s
+depends: 275, 276, 277, 278, 279
+created: 2026-11-05T19:12:43Z
+updated: 2026-11-05T19:12:51Z
++++
+
+Part of #268. Archive and clone go through Node's public properties and are tested with nodes outside a graph. After the fields move to the World, nodes inside a graph are not covered.
+
+Acceptance: tests archive and clone subtrees that are in a graph, including one with app components on its entities; any bug found is fixed.
+
+---
+
+## 281: Constraints and subdivision are not stored in the World
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:scenegraph, effort:m
+depends: 274
+created: 2026-11-05T19:12:43Z
+updated: 2026-11-05T19:12:51Z
++++
+
+Part of #250. constraints (and their accelerationStates) and subdivisionLevel/subdivisionBase live on Node. Not covered by #268's subtasks.
 
 ---
