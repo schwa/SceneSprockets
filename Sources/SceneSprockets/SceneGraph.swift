@@ -9,14 +9,17 @@ public class SceneGraph {
     public var root: Node {
         didSet {
             if oldValue !== root {
-                oldValue.detach(from: world)
-                root.attach(to: world, parent: nil, siblingIndex: 0)
+                oldValue.detach(from: store)
+                root.attach(to: store, parent: nil, siblingIndex: 0)
             }
             rootRevision = Revision.next()
         }
     }
     // Holds the transform, content and hierarchy of every node under `root` (#250).
-    @ObservationIgnored let world = World()
+    @ObservationIgnored let store = NodeStore()
+    var world: World {
+        store.world
+    }
     @ObservationIgnored private var rootRevision = Revision.next()
     // Background and image-based lighting; read every frame, so changing it does not change `revision`.
     public var environment = Environment()
@@ -27,7 +30,7 @@ public class SceneGraph {
 
     public init(root: Node) {
         self.root = root
-        root.attach(to: world, parent: nil, siblingIndex: 0)
+        root.attach(to: store, parent: nil, siblingIndex: 0)
     }
 
     // For SceneArchive; see SceneGraph+Archive.swift.

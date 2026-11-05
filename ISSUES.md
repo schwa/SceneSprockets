@@ -5889,13 +5889,14 @@ Unblocker: choose for 1-3 (my suggestion: 1b, Node.id = EntityID with detached s
 ## 266: Direct World writes skip revisions, transactions and observation
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:scenegraph, subtask, effort:l
 depends: 265
 created: 2026-11-05T17:23:36Z
-updated: 2026-11-05T17:25:05Z
+updated: 2026-11-05T18:29:21Z
+closed: 2026-11-05T18:29:21Z
 +++
 
 Part of #250, sub-step 3. Revisions, transactions/undo and @Observable notifications are driven from Node didSet. Writes made directly to the World bypass them, leaving caches, undo and SwiftUI stale.
@@ -5969,6 +5970,8 @@ created: 2026-11-05T18:22:50Z
 
 Part of #250. After #265, nodes under a SceneGraph's root read transform and content through the World. Release build, 100k nodes, best of 5 (noisy machine): attached transform read ~64 ns vs ~34 ns before; attached write ~220 ns vs ~180 ns; detached read ~38 ns vs ~28 ns. Each attached read registers observation on both the Node and the World and takes a column lock. Traversal measured 75-153 ns per node vs ~102 ns before; the noise is too high to say more.
 
+- `2026-11-05T18:27:51Z`: After #266 (Release, 100k nodes, two runs): attached write ~360-390 ns (was ~220 after #265, ~180 before ECS). Node writes now go through SwiftECS's change observer, which SceneGraph uses to catch direct World writes. My guess is the cost is in the observer dispatch passing the component as 'any Component' (boxing a LocalTransform), not profiled. Attached read 70-98 ns; traversal ~95 ns/node (baseline ~102).
+
 ---
 
 ## 271: Node keeps its parent after its entity is destroyed outside the scene graph
@@ -5985,5 +5988,37 @@ created: 2026-11-05T18:22:50Z
 Part of #250. Decision on #265: a Node whose entity is destroyed from outside becomes detached with no parent and default values. After #265 it gets default values and no entity, but it stays in its parent's children and keeps its parent, so traversal still visits it.
 
 Repro: make a graph with root and child; destroy the child's entity via graph.world; child.parent is still root and root.children still contains child.
+
+- `2026-11-05T18:27:51Z`: Also: destroying a node's entity emits no component .removed events, so the scene graph revision does not change either; renderer caches keep showing the node until something else bumps the revision.
+
+---
+
+## 272: Direct World writes to node transforms are not animated by Transaction.animate
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:scenegraph, effort:m, subtask
+depends: 266
+created: 2026-11-05T18:27:51Z
++++
+
+Part of #250. Inside SceneGraph.Transaction.animate, Node setters record the old transform so it can animate. Writing NodeTransformComponent directly to the graph's World inside the block changes the value at once with no animation. SwiftECS's change event only carries the new value.
+
+---
+
+## 273: Direct ChildOf or sibling-index edits in the World do not change the node tree
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:scenegraph, effort:m, subtask
+depends: 266
+created: 2026-11-05T18:27:51Z
++++
+
+Part of #250. The node tree owns the hierarchy and copies it into the World as ChildOf and SiblingIndexComponent. Changing either directly in the World leaves Node.parent and Node.children as they were, so rendering and traversal ignore the edit. SwiftECS has no events for relationship changes.
 
 ---

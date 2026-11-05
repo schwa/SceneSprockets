@@ -38,16 +38,14 @@ extension SceneGraph {
         public var localTransform: LocalTransform {
             get {
                 access(keyPath: \.localTransform)
-                if entityBinding != nil, let binding = currentBinding() {
-                    return binding.transform.value.localTransform
-                }
-                return storedLocalTransform
+                return readLocalTransform()
             }
             set {
                 let oldValue = localTransform
                 withMutation(keyPath: \.localTransform) {
                     if let binding = currentBinding() {
-                        binding.transform.value = NodeTransformComponent(localTransform: newValue)
+                        let component = NodeTransformComponent(localTransform: newValue)
+                        binding.store.writeFromNode { binding.transform.value = component }
                     } else {
                         storedLocalTransform = newValue
                     }
@@ -59,15 +57,13 @@ extension SceneGraph {
         public var content: Content {
             get {
                 access(keyPath: \.content)
-                if entityBinding != nil, let binding = currentBinding() {
-                    return binding.content.value.content
-                }
-                return storedContent
+                return readContent()
             }
             set {
                 withMutation(keyPath: \.content) {
                     if let binding = currentBinding() {
-                        binding.content.value = NodeContentComponent(content: newValue)
+                        let component = NodeContentComponent(content: newValue)
+                        binding.store.writeFromNode { binding.content.value = component }
                     } else {
                         storedContent = newValue
                     }
@@ -197,7 +193,7 @@ extension SceneGraph {
             didSet { bump(structure: true) }
         }
 
-        private func bump(structure: Bool) {
+        func bump(structure: Bool) {
             let value = Revision.next()
             var node: Node? = self
             while let current = node {
