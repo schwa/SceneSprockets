@@ -1,13 +1,22 @@
 import GeometryLite3D
 import Observation
+import SwiftECS
 import SwiftMesh
 import simd
 
 @Observable
 public class SceneGraph {
     public var root: Node {
-        didSet { rootRevision = Revision.next() }
+        didSet {
+            if oldValue !== root {
+                oldValue.detach(from: world)
+                root.attach(to: world, parent: nil, siblingIndex: 0)
+            }
+            rootRevision = Revision.next()
+        }
     }
+    // Holds the transform, content and hierarchy of every node under `root` (#250).
+    @ObservationIgnored let world = World()
     @ObservationIgnored private var rootRevision = Revision.next()
     // Background and image-based lighting; read every frame, so changing it does not change `revision`.
     public var environment = Environment()
@@ -18,6 +27,7 @@ public class SceneGraph {
 
     public init(root: Node) {
         self.root = root
+        root.attach(to: world, parent: nil, siblingIndex: 0)
     }
 
     // For SceneArchive; see SceneGraph+Archive.swift.

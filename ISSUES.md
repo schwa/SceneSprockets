@@ -5861,13 +5861,14 @@ Benchmark was a temporary test, not committed.
 ## 265: Node cannot be backed by an ECS entity (transform, content, hierarchy)
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:scenegraph, subtask, effort:l
 depends: 264
 created: 2026-11-05T17:23:36Z
-updated: 2026-11-05T17:25:05Z
+updated: 2026-11-05T18:22:56Z
+closed: 2026-11-05T18:22:56Z
 +++
 
 Part of #250, sub-step 1. Node stores transform, content and hierarchy itself. Unresolved: entity<->Node mapping, Node lifetime after entity destruction, and ordered children vs ChildOf. Done when existing tests pass with these parts entity-backed.
@@ -5952,5 +5953,37 @@ updated: 2026-11-05T17:25:05Z
 Part of #250, sub-step 5. Apps cannot pass their own World to SceneGraph or reach SceneGraph's World. Open: World ownership/lifetime when not owned; several graphs in one World; entities with scene components but no Node; ordering of SceneSprockets systems (actions, constraints, physics, particles) in the app's pipeline. Needs docs.
 
 - `2026-11-05T17:38:07Z`: Punting: blocked by #265-#268. SceneGraph has no World holding node data yet, so there is nothing to share or hand to an app. The open questions in this issue (World ownership, several graphs in one World, entities without a Node, system ordering) also depend on the identity and source-of-truth decisions on #265. Unblocker: the design decisions on #265.
+
+---
+
+## 270: Node property access is slower for nodes in a graph
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:scenegraph, effort:m
+depends: 265
+created: 2026-11-05T18:22:50Z
++++
+
+Part of #250. After #265, nodes under a SceneGraph's root read transform and content through the World. Release build, 100k nodes, best of 5 (noisy machine): attached transform read ~64 ns vs ~34 ns before; attached write ~220 ns vs ~180 ns; detached read ~38 ns vs ~28 ns. Each attached read registers observation on both the Node and the World and takes a column lock. Traversal measured 75-153 ns per node vs ~102 ns before; the noise is too high to say more.
+
+---
+
+## 271: Node keeps its parent after its entity is destroyed outside the scene graph
+
++++
+status: new
+priority: low
+kind: bug
+labels: area:scenegraph, effort:s
+depends: 265
+created: 2026-11-05T18:22:50Z
++++
+
+Part of #250. Decision on #265: a Node whose entity is destroyed from outside becomes detached with no parent and default values. After #265 it gets default values and no entity, but it stays in its parent's children and keeps its parent, so traversal still visits it.
+
+Repro: make a graph with root and child; destroy the child's entity via graph.world; child.parent is still root and root.children still contains child.
 
 ---

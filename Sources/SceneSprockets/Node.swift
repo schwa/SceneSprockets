@@ -3,6 +3,7 @@ import Metal
 import SceneSprocketsAudio
 import MetalSprocketsParticles
 import Observation
+import SwiftECS
 import SwiftMesh
 import simd
 
@@ -23,21 +24,56 @@ extension SceneGraph {
             }
         }
 
-        public var id: ObjectIdentifier {
-            ObjectIdentifier(self)
-        }
+        // Also the id of this node's entity while it is in a graph.
+        public let id = EntityID()
 
         @ObservationIgnored public private(set) weak var parent: Node?
         public private(set) var children: [Node] = []
         public var label: String?
+        // Used while the node is not in a graph; see Node+Entity.swift.
+        @ObservationIgnored var entityBinding: EntityBinding?
+        @ObservationIgnored var storedLocalTransform: LocalTransform
+        @ObservationIgnored var storedContent: Content
+
         public var localTransform: LocalTransform {
-            didSet {
+            get {
+                access(keyPath: \.localTransform)
+                if entityBinding != nil, let binding = currentBinding() {
+                    return binding.transform.value.localTransform
+                }
+                return storedLocalTransform
+            }
+            set {
+                let oldValue = localTransform
+                withMutation(keyPath: \.localTransform) {
+                    if let binding = currentBinding() {
+                        binding.transform.value = NodeTransformComponent(localTransform: newValue)
+                    } else {
+                        storedLocalTransform = newValue
+                    }
+                }
                 SceneGraph.Transaction.current?.recordTransform(of: self, oldValue: oldValue)
                 bump(structure: false)
             }
         }
         public var content: Content {
-            didSet { bump(structure: true) }
+            get {
+                access(keyPath: \.content)
+                if entityBinding != nil, let binding = currentBinding() {
+                    return binding.content.value.content
+                }
+                return storedContent
+            }
+            set {
+                withMutation(keyPath: \.content) {
+                    if let binding = currentBinding() {
+                        binding.content.value = NodeContentComponent(content: newValue)
+                    } else {
+                        storedContent = newValue
+                    }
+                }
+                bump(structure: true)
+            }
         }
         // Blend shapes for this node's mesh (MetalMesh cannot carry them). Weighted by morphWeights.
         public var morphTargets: [MorphTarget] = [] {
@@ -209,8 +245,8 @@ extension SceneGraph {
             content: Content = .empty
         ) {
             self.label = label
-            self.localTransform = .matrix(transform)
-            self.content = content
+            self.storedLocalTransform = .matrix(transform)
+            self.storedContent = content
             for child in children {
                 addChild(child)
             }
@@ -263,9 +299,15 @@ extension SceneGraph {
             if child.parent === self, let current = children.firstIndex(where: { $0 === child }), current < index {
                 index -= 1
             }
-            child.removeFromParent()
+            // Unlink without detaching, so a move inside one graph keeps the child's entity.
+            child.parent?.unlinkChild(child)
             children.insert(child, at: index)
             child.parent = self
+            if currentBinding() != nil {
+                syncChildrenInWorld(from: index)
+            } else {
+                child.detach()
+            }
             bump(structure: true)
         }
 
@@ -273,8 +315,17 @@ extension SceneGraph {
             guard child.parent === self else {
                 return
             }
-            children.removeAll { $0 === child }
+            unlinkChild(child)
+            child.detach()
+        }
+
+        private func unlinkChild(_ child: Node) {
+            guard let index = children.firstIndex(where: { $0 === child }) else {
+                return
+            }
+            children.remove(at: index)
             child.parent = nil
+            syncChildrenInWorld(from: index)
             bump(structure: true)
         }
 
@@ -285,6 +336,7 @@ extension SceneGraph {
         public func removeAllChildren() {
             for child in children {
                 child.parent = nil
+                child.detach()
             }
             children.removeAll()
             bump(structure: true)
