@@ -220,6 +220,16 @@ extension SceneGraph {
             child.detach()
         }
 
+        // Code outside the scene graph destroyed this node's entity (#271). The node leaves the tree like
+        // removeFromParent(), with default values; its subtree comes along and leaves the World.
+        func entityWasDestroyed() {
+            lostEntity(notify: true)
+            for child in children {
+                child.detach()
+            }
+            parent?.unlinkChild(self)
+        }
+
         private func unlinkChild(_ child: Node) {
             guard let index = children.firstIndex(where: { $0 === child }) else {
                 return

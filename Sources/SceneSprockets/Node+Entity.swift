@@ -59,6 +59,7 @@ struct NodeFieldSlot: Sendable {
     let component: @Sendable (SceneGraph.Node) -> any Component
     let copyBack: @Sendable (SceneGraph.Node) -> Void
     let reset: @Sendable (SceneGraph.Node) -> Void
+    let notify: @Sendable (SceneGraph.Node) -> Void
     let observe: @Sendable (SceneGraph.NodeStore) -> Void
 
     init<Field: NodeField>(
@@ -76,12 +77,19 @@ struct NodeFieldSlot: Sendable {
             node[keyPath: storageKeyPath].local = Field.defaultValue
             node[keyPath: storageKeyPath].ref = nil
         }
+        notify = { node in
+            node.withMutation(keyPath: wrappedKeyPath) {}
+        }
         observe = { store in
             store.world.observe(Field.self) { [weak store] event in
                 store?.handle(event, keyPath: wrappedKeyPath)
             }
         }
     }
+}
+
+private struct WeakNode {
+    weak var node: SceneGraph.Node?
 }
 
 extension SceneGraph {
@@ -92,10 +100,25 @@ extension SceneGraph {
         // Above 0 while a Node setter writes, so its own change event is not handled twice.
         var nodeWriteDepth = 0
 
+        // Nodes by entity, so a destroyed entity (which has no components left to read) can find its node.
+        private var nodes: [EntityID: WeakNode] = [:]
+
         init() {
             for slot in Node.worldFields {
                 slot.observe(self)
             }
+            world.observeDestroyed { [weak self] entityID in
+                // SceneGraph's own destroys unregister first, so only outside destroys reach the node (#271).
+                self?.nodes.removeValue(forKey: entityID)?.node?.entityWasDestroyed()
+            }
+        }
+
+        func register(_ node: Node) {
+            nodes[node.id] = WeakNode(node: node)
+        }
+
+        func unregister(_ node: Node) {
+            nodes.removeValue(forKey: node.id)
         }
 
         func handle<Field: NodeField>(_ event: ComponentEvent<Field>, keyPath: KeyPath<Node, Field.Value>) {
@@ -177,10 +200,16 @@ extension SceneGraph.Node {
         return nil
     }
 
-    private func lostEntity() {
+    // Back to local storage with default values. `notify` tells observers; not done from getters, where writing
+    // Observation state can crash SwiftUI (#212).
+    func lostEntity(notify: Bool = false) {
+        entityBinding?.store.unregister(self)
         entityBinding = nil
         for slot in Self.worldFields {
             slot.reset(self)
+            if notify {
+                slot.notify(self)
+            }
         }
     }
 
@@ -274,6 +303,7 @@ extension SceneGraph.Node {
         ]
         components += Self.worldFields.map { $0.component(self) }
         store.world.createEntity(id: id, components: components)
+        store.register(self)
         entityBinding = EntityBinding(store: store, id: id)
         linkInWorld(parent: parent, siblingIndex: siblingIndex)
         for (index, child) in children.enumerated() {
@@ -293,6 +323,7 @@ extension SceneGraph.Node {
             slot.copyBack(self)
         }
         entityBinding = nil
+        binding.store.unregister(self)
         if let entity = binding.world[id] {
             _ = try? binding.world.destroy(entity)
         }

@@ -6014,13 +6014,14 @@ Leaving open for the steady-state cost. Further gains likely need SwiftECS chang
 ## 271: Node keeps its parent after its entity is destroyed outside the scene graph
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:scenegraph, effort:s, subtask
 depends: 265
 created: 2026-11-05T18:22:50Z
-updated: 2026-11-05T19:26:38Z
+updated: 2026-11-05T22:40:32Z
+closed: 2026-11-05T22:40:32Z
 +++
 
 Part of #250. Decision on #265: a Node whose entity is destroyed from outside becomes detached with no parent and default values. After #265 it gets default values and no entity, but it stays in its parent's children and keeps its parent, so traversal still visits it.

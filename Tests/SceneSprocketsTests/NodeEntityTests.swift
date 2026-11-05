@@ -145,6 +145,27 @@ func replacingRootDetachesOldRoot() {
     #expect(translation(oldRoot) == [1, 0, 0])
 }
 
+// #271
+@Test
+func destroyedEntityRemovesNodeFromTree() throws {
+    let root = SceneGraph.Node()
+    let first = SceneGraph.Node(parent: root)
+    let child = SceneGraph.Node(parent: root)
+    let grandchild = SceneGraph.Node(parent: child)
+    let last = SceneGraph.Node(parent: root)
+    let graph = SceneGraph(root: root)
+    let before = graph.revision
+    _ = try graph.world.destroy(try #require(graph.world[child.id]))
+    #expect(child.parent == nil)
+    #expect(root.children.map(\.id) == [first.id, last.id])
+    #expect(graph.revision.structure != before.structure)
+    // The subtree left the graph, so its entities leave the World; values survive.
+    #expect(grandchild.world == nil)
+    #expect(graph.world[grandchild.id] == nil)
+    #expect(grandchild.parent === child)
+    #expect(siblingIndex(last, in: graph.world) == 1)
+}
+
 @Test
 func destroyedEntityLeavesNodeDetachedWithDefaults() throws {
     let root = SceneGraph.Node()
