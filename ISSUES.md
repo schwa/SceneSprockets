@@ -5927,18 +5927,20 @@ Part of #250, sub-step 2. Flatten/culling traverse the tree. boundsCache and def
 ## 268: Remaining node features, archive and clone are not entity-backed
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:scenegraph, subtask, effort:xl, has-subtasks
 depends: 267, 274, 275, 276, 277, 278, 279, 280
 created: 2026-11-05T17:23:37Z
-updated: 2026-11-05T19:12:50Z
+updated: 2026-11-05T19:49:24Z
+closed: 2026-11-05T19:49:24Z
 +++
 
 Part of #250, sub-step 4. Lights, cameras, physics bodies, skin, morph data, particles, audio, LOD, actions/runningActions, archive and clone still use Node storage.
 
 - `2026-11-05T19:12:50Z`: Split (per schwa): #274 shared storage mechanism → #275 skin/morph, #276 physics/LOD, #277 particles/audio, #278 action state, #279 visibility/opacity/masks/pivot/rendering order/label (added to scope) → #280 archive/clone tests. Lights and cameras are already in the World as content (#265). Constraints and subdivision filed separately as #281.
+- `2026-11-05T19:49:24Z`: All subtasks closed (#274-#280). Constraints and subdivision were done separately in #281.
 
 ---
 
