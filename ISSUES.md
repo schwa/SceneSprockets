@@ -6042,13 +6042,14 @@ Unblocker: OK to add an entity-level destroy observer to SwiftECS (e.g. World.ob
 ## 272: Direct World writes to node transforms are not animated by Transaction.animate
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:scenegraph, effort:m, subtask
 depends: 266
 created: 2026-11-05T18:27:51Z
-updated: 2026-11-05T19:26:38Z
+updated: 2026-11-05T22:37:15Z
+closed: 2026-11-05T22:37:15Z
 +++
 
 Part of #250. Inside SceneGraph.Transaction.animate, Node setters record the old transform so it can animate. Writing NodeTransformComponent directly to the graph's World inside the block changes the value at once with no animation. SwiftECS's change event only carries the new value.
@@ -6056,6 +6057,7 @@ Part of #250. Inside SceneGraph.Transaction.animate, Node setters record the old
 - `2026-11-05T22:07:27Z`: Looked at the event path. Punting: needs a design decision. Animating a direct World write needs the old value, and SwiftECS's ComponentEvent.changed carries only the new one. Options: (a) add the old value to SwiftECS change events (breaking public API, affects every observer); (b) keep a per-node copy of each field just for this, which brings back the duplicated storage #250 removes; (c) decide direct World writes are not implicitly animated (simulation code usually does not want it), document it on Transaction.animate and close this. My suggestion is (c). Which one?
 - `2026-11-05T22:17:08Z`: Question 1 (decision): Should direct World writes inside Transaction.animate be animated? That needs old values in SwiftECS change events (breaking) or a per-node copy of every field. Suggested: no; document it on Transaction.animate and close this.
 - `2026-11-05T22:19:47Z`: Answer 1: no
+- `2026-11-05T22:37:15Z`: Closed per #272-Q1 (no): direct World writes are not animated; documented on Transaction.animate.
 
 ---
 
