@@ -5995,6 +5995,11 @@ Part of #250. Decision on #265: a Node whose entity is destroyed from outside be
 Repro: make a graph with root and child; destroy the child's entity via graph.world; child.parent is still root and root.children still contains child.
 
 - `2026-11-05T18:27:51Z`: Also: destroying a node's entity emits no component .removed events, so the scene graph revision does not change either; renderer caches keep showing the node until something else bumps the revision.
+- `2026-11-05T19:36:37Z`: Tried: a test (destroy a middle child's entity via graph.world; expect child.parent == nil, root.children without it, a structure revision bump, and the grandchild's entity gone) fails all 6 checks. Then made SwiftECS's removeEntity emit .removed component events, so SceneGraph could react. Reverted: SwiftECS deliberately does not do that. 'entity lifecycle changes notify storage without synthesizing component events' (MutationBoundaryTests) and 2 other tests fail with it.
+
+Punting: SceneGraph has no cheap, eager way to learn that an entity was destroyed. It only notices on the node's next read, and pruning the tree from inside a getter (often during traversal or a SwiftUI update, see #212) is unsafe. Scanning all nodes on every structuralRevision change costs O(n) per structural edit.
+
+Unblocker: OK to add an entity-level destroy observer to SwiftECS (e.g. World.observeDestroyed { entityID in ... }), separate from component events, so the existing design stays? Or accept lazy detection plus a pruning pass at a safe point (e.g. start of SceneGraph.advanceActions / each frame)?
 
 ---
 
