@@ -5978,6 +5978,11 @@ Part of #250. After #265, nodes under a SceneGraph's root read transform and con
 
 - `2026-11-05T18:27:51Z`: After #266 (Release, 100k nodes, two runs): attached write ~360-390 ns (was ~220 after #265, ~180 before ECS). Node writes now go through SwiftECS's change observer, which SceneGraph uses to catch direct World writes. My guess is the cost is in the observer dispatch passing the component as 'any Component' (boxing a LocalTransform), not profiled. Attached read 70-98 ns; traversal ~95 ns/node (baseline ~102).
 - `2026-11-05T19:40:58Z`: After #279 (8 more fields in the World; traversal now reads isVisible, isActive, pivot and transform through the World): traversal 181-199 ns/node over 3 runs (was 81-167 before #279, ~102 before ECS). Attached transform read 93-100 ns. Each field read checks the binding's structuralRevision and the field's cached ref separately.
+- `2026-11-05T22:07:08Z`: Profiled the benchmark with Time Profiler. Two findings:
+1. Main cause: every structural change anywhere in the World (add/remove of any node, app components) invalidated every node's cached field refs, so the next pass re-looked-up all of them (dictionary hashing, String(describing:) in ComponentType.init, conformance checks). Traversal right after one add+remove: 9,480 ns/node. Fixed by tracking the entity's own storage location (new World.storageLocation(of:) in SwiftECS, archetype serial + row) and re-making refs only when that moves: now ~300-340 ns/node.
+2. Steady state is still slower than before ECS: attached read ~100-110 ns (pre-ECS ~28), traversal ~280-300 ns/node (pre-ECS ~100), write ~490-540 ns. Profile shows this spread across retain/release, exclusivity checks, NodeFieldStorage copies and the column lock in ComponentRef. Tried making NodeFieldStorage a class: no measurable gain, reverted.
+
+Leaving open for the steady-state cost. Further gains likely need SwiftECS changes (lock-free serial reads in ComponentRef) or the renderer reading columns via queries (#267) instead of per-node getters.
 
 ---
 

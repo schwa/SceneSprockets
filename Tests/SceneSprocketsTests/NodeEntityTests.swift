@@ -59,6 +59,29 @@ func cachedStorageSurvivesOtherEntitiesMoving() {
     #expect(translation(third) == [30, 0, 0])
 }
 
+// #270: other entities changing the World must not invalidate a node's cached refs; its own move must.
+@Test
+func cachedRefsSurviveUnrelatedStructuralChanges() throws {
+    let root = SceneGraph.Node()
+    let node = SceneGraph.Node(parent: root, transform: simd_float4x4(translation: [1, 0, 0]))
+    let graph = SceneGraph(root: root)
+    _ = node.transform
+    let ref = try #require(node.localTransformStorage.ref)
+    let epoch = node.localTransformStorage.refEpoch
+    let other = SceneGraph.Node(parent: root)
+    other.removeFromParent()
+    _ = node.transform
+    #expect(node.localTransformStorage.refEpoch == epoch)
+    #expect(node.localTransformStorage.ref?.entityID == ref.entityID)
+
+    // Adding an app component moves the entity; the node must follow it.
+    struct Extra: Component {}
+    try #require(graph.world[node.id]).set(Extra())
+    node.transform = simd_float4x4(translation: [2, 0, 0])
+    #expect(node.localTransformStorage.refEpoch != epoch)
+    #expect(graph.world[node.id]?[NodeTransformComponent.self]?.value.matrix.columns.3.x == 2)
+}
+
 @Test
 func removedNodeKeepsValuesAndLosesEntity() {
     let root = SceneGraph.Node()

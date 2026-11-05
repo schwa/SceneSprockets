@@ -48,8 +48,8 @@ struct NodeReferenceComponent: Component {
 struct NodeFieldStorage<Field: NodeField> {
     var local = Field.defaultValue
     var ref: ComponentRef<Field>?
-    // The World's structuralRevision when `ref` was made.
-    var refRevision: UInt64 = 0
+    // The binding's locationEpoch when `ref` was made.
+    var refEpoch: UInt64 = 0
 }
 
 typealias NodeFieldStorageKeyPath<Field: NodeField> = ReferenceWritableKeyPath<SceneGraph.Node, NodeFieldStorage<Field>>
@@ -127,16 +127,20 @@ extension SceneGraph {
 extension SceneGraph.Node {
     final class EntityBinding {
         let store: SceneGraph.NodeStore
-        // The World's structuralRevision when the entity was last seen.
+        // store.world, kept here to save a hop on every field access.
+        let world: World
+        // The World's structuralRevision when the entity was last checked.
         var revision: UInt64
+        var location: World.StorageLocation?
+        // Goes up only when the entity's storage moves. Field refs made in an earlier epoch are stale; refs from this
+        // one stay valid however often other entities change the World (#270).
+        var locationEpoch: UInt64 = 1
 
-        var world: World {
-            store.world
-        }
-
-        init(store: SceneGraph.NodeStore) {
+        init(store: SceneGraph.NodeStore, id: EntityID) {
             self.store = store
-            revision = store.world.structuralRevision
+            world = store.world
+            revision = world.structuralRevision
+            location = world.storageLocation(of: id)
         }
 
         // False when the entity is gone.
@@ -144,11 +148,15 @@ extension SceneGraph.Node {
             if revision == world.structuralRevision {
                 return true
             }
-            guard world.componentRef(NodeReferenceComponent.self, for: id) != nil else {
-                return false
-            }
             revision = world.structuralRevision
-            return true
+            let current = world.storageLocation(of: id)
+            if current == location {
+                return current != nil
+            }
+            location = current
+            locationEpoch += 1
+            // A move can mean NodeReferenceComponent was removed; without it the node is not in the graph.
+            return current != nil && world.componentRef(NodeReferenceComponent.self, for: id) != nil
         }
     }
 
@@ -182,8 +190,8 @@ extension SceneGraph.Node {
         guard let binding = currentBinding() else {
             return nil
         }
-        let revision = binding.world.structuralRevision
-        if let ref = self[keyPath: storageKeyPath].ref, self[keyPath: storageKeyPath].refRevision == revision {
+        let storage = self[keyPath: storageKeyPath]
+        if storage.refEpoch == binding.locationEpoch, let ref = storage.ref {
             return ref
         }
         guard let ref = binding.world.componentRef(Field.self, for: id) else {
@@ -192,7 +200,7 @@ extension SceneGraph.Node {
             return nil
         }
         self[keyPath: storageKeyPath].ref = ref
-        self[keyPath: storageKeyPath].refRevision = revision
+        self[keyPath: storageKeyPath].refEpoch = binding.locationEpoch
         return ref
     }
 
@@ -266,7 +274,7 @@ extension SceneGraph.Node {
         ]
         components += Self.worldFields.map { $0.component(self) }
         store.world.createEntity(id: id, components: components)
-        entityBinding = EntityBinding(store: store)
+        entityBinding = EntityBinding(store: store, id: id)
         linkInWorld(parent: parent, siblingIndex: siblingIndex)
         for (index, child) in children.enumerated() {
             child.attach(to: store, parent: self, siblingIndex: index)
