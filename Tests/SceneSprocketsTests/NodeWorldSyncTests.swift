@@ -13,7 +13,7 @@ private final class ChangeCount: @unchecked Sendable {
 
 private func setTransformInWorld(_ node: SceneGraph.Node, in graph: SceneGraph, translation: SIMD3<Float>) throws {
     let entity = try #require(graph.world[node.id])
-    entity.set(NodeTransformComponent(localTransform: .matrix(simd_float4x4(translation: translation))))
+    entity.set(NodeTransformComponent(value: .matrix(simd_float4x4(translation: translation))))
 }
 
 @Test
@@ -32,7 +32,7 @@ func directContentWriteChangesStructureRevision() throws {
     let root = SceneGraph.Node()
     let graph = SceneGraph(root: root)
     let before = graph.revision
-    try #require(graph.world[root.id]).set(NodeContentComponent(content: .light(Light(type: .point))))
+    try #require(graph.world[root.id]).set(NodeContentComponent(value: .light(Light(type: .point))))
     #expect(graph.revision.structure != before.structure)
 }
 

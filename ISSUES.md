@@ -6033,13 +6033,14 @@ Part of #250. The node tree owns the hierarchy and copies it into the World as C
 ## 274: Each World-backed node property repeats its own storage code
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:scenegraph, subtask, effort:m
 depends: 266
 created: 2026-11-05T19:12:42Z
-updated: 2026-11-05T19:12:50Z
+updated: 2026-11-05T19:34:36Z
+closed: 2026-11-05T19:34:36Z
 +++
 
 Part of #268. localTransform and content each have their own component type, getter, setter (local storage vs ComponentRef, writeFromNode, Observation, revision bump) and change handling in NodeStore. Moving more fields to the World would copy that per field.

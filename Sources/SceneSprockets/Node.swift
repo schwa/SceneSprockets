@@ -30,47 +30,23 @@ extension SceneGraph {
         @ObservationIgnored public private(set) weak var parent: Node?
         public private(set) var children: [Node] = []
         public var label: String?
-        // Used while the node is not in a graph; see Node+Entity.swift.
+        // Set while the node is in a graph; see Node+Entity.swift.
         @ObservationIgnored var entityBinding: EntityBinding?
-        @ObservationIgnored var storedLocalTransform: LocalTransform
-        @ObservationIgnored var storedContent: Content
-
+        // Stored in the graph's World while the node is in a graph. Every one is listed in `worldFields`.
+        @ObservationIgnored var localTransformStorage = NodeFieldStorage<NodeTransformComponent>()
         public var localTransform: LocalTransform {
-            get {
-                access(keyPath: \.localTransform)
-                return readLocalTransform()
-            }
-            set {
-                let oldValue = localTransform
-                withMutation(keyPath: \.localTransform) {
-                    if let binding = currentBinding() {
-                        let component = NodeTransformComponent(localTransform: newValue)
-                        binding.store.writeFromNode { binding.transform.value = component }
-                    } else {
-                        storedLocalTransform = newValue
-                    }
-                }
-                SceneGraph.Transaction.current?.recordTransform(of: self, oldValue: oldValue)
-                bump(structure: false)
-            }
+            get { getField(\.localTransform, \.localTransformStorage) }
+            set { setField(\.localTransform, \.localTransformStorage, newValue) }
         }
+        @ObservationIgnored var contentStorage = NodeFieldStorage<NodeContentComponent>()
         public var content: Content {
-            get {
-                access(keyPath: \.content)
-                return readContent()
-            }
-            set {
-                withMutation(keyPath: \.content) {
-                    if let binding = currentBinding() {
-                        let component = NodeContentComponent(content: newValue)
-                        binding.store.writeFromNode { binding.content.value = component }
-                    } else {
-                        storedContent = newValue
-                    }
-                }
-                bump(structure: true)
-            }
+            get { getField(\.content, \.contentStorage) }
+            set { setField(\.content, \.contentStorage, newValue) }
         }
+        static let worldFields: [NodeFieldSlot] = [
+            NodeFieldSlot(\.localTransform, \.localTransformStorage),
+            NodeFieldSlot(\.content, \.contentStorage)
+        ]
         // Blend shapes for this node's mesh (MetalMesh cannot carry them). Weighted by morphWeights.
         public var morphTargets: [MorphTarget] = [] {
             didSet { bump(structure: true) }
@@ -241,8 +217,8 @@ extension SceneGraph {
             content: Content = .empty
         ) {
             self.label = label
-            self.storedLocalTransform = .matrix(transform)
-            self.storedContent = content
+            self.localTransformStorage.local = .matrix(transform)
+            self.contentStorage.local = content
             for child in children {
                 addChild(child)
             }

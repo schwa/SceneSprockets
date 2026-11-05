@@ -28,7 +28,7 @@ func graphGivesSubtreeEntitiesWithValues() throws {
     #expect(root.world === graph.world)
     #expect(child.world === graph.world)
     let entity = try #require(graph.world[child.id])
-    #expect(entity[NodeTransformComponent.self]?.localTransform.matrix.columns.3.xyz == [1, 0, 0])
+    #expect(entity[NodeTransformComponent.self]?.value.matrix.columns.3.xyz == [1, 0, 0])
     #expect(entity.parent?.id == root.id)
 }
 
@@ -38,8 +38,8 @@ func nodeWritesGoToWorldAndWorldWritesShowInNode() throws {
     let graph = SceneGraph(root: root)
     root.transform = simd_float4x4(translation: [4, 5, 6])
     let entity = try #require(graph.world[root.id])
-    #expect(entity[NodeTransformComponent.self]?.localTransform.matrix.columns.3.xyz == [4, 5, 6])
-    entity.set(NodeTransformComponent(localTransform: .matrix(simd_float4x4(translation: [7, 8, 9]))))
+    #expect(entity[NodeTransformComponent.self]?.value.matrix.columns.3.xyz == [4, 5, 6])
+    entity.set(NodeTransformComponent(value: .matrix(simd_float4x4(translation: [7, 8, 9]))))
     #expect(translation(root) == [7, 8, 9])
 }
 

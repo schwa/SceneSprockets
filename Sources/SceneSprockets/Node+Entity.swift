@@ -1,13 +1,41 @@
 import SwiftECS
 
-// A node under a SceneGraph's root stores these in the graph's World (#265). A node outside any graph keeps them
-// itself and has no entity.
-struct NodeTransformComponent: Component {
-    var localTransform: SceneGraph.LocalTransform
+// A Node property that lives in the graph's World while the node is under a SceneGraph's root, and on the node
+// otherwise (#265, #274). Declare it on Node with a NodeFieldStorage, a computed property that calls
+// getField/setField, and an entry in Node.worldFields.
+protocol NodeField: Component, SendableMetatype {
+    associatedtype Value
+    var value: Value { get }
+    init(value: Value)
+    // Used when the entity is destroyed outside the scene graph.
+    static var defaultValue: Value { get }
+    // True bumps the structure revision when the value changes, false the transform revision.
+    static var changesStructure: Bool { get }
+    // Called after every change made through the Node API.
+    static func didChange(_ node: SceneGraph.Node, from oldValue: Value)
 }
 
-struct NodeContentComponent: Component {
-    var content: SceneGraph.Node.Content
+extension NodeField {
+    static func didChange(_ node: SceneGraph.Node, from oldValue: Value) {
+        node.bump(structure: changesStructure)
+    }
+}
+
+struct NodeTransformComponent: NodeField {
+    var value: SceneGraph.LocalTransform
+    static var defaultValue: SceneGraph.LocalTransform { .matrix(.identity) }
+    static var changesStructure: Bool { false }
+
+    static func didChange(_ node: SceneGraph.Node, from oldValue: SceneGraph.LocalTransform) {
+        SceneGraph.Transaction.current?.recordTransform(of: node, oldValue: oldValue)
+        node.bump(structure: false)
+    }
+}
+
+struct NodeContentComponent: NodeField {
+    var value: SceneGraph.Node.Content
+    static var defaultValue: SceneGraph.Node.Content { .empty }
+    static var changesStructure: Bool { true }
 }
 
 // ChildOf does not keep an order we can change, so each child stores its index among its siblings.
@@ -15,9 +43,50 @@ struct SiblingIndexComponent: Component {
     var index: Int
 }
 
-// Finds the node for an entity, so writes made directly to the World can reach it.
+// Finds the node for an entity, so writes made directly to the World can reach it. Its presence also marks the
+// entity as a live scene graph node.
 struct NodeReferenceComponent: Component {
     weak var node: SceneGraph.Node?
+}
+
+// The local value of a node field, and a cached ref while the node is in a graph.
+struct NodeFieldStorage<Field: NodeField> {
+    var local = Field.defaultValue
+    var ref: ComponentRef<Field>?
+    // The World's structuralRevision when `ref` was made.
+    var refRevision: UInt64 = 0
+}
+
+typealias NodeFieldStorageKeyPath<Field: NodeField> = ReferenceWritableKeyPath<SceneGraph.Node, NodeFieldStorage<Field>>
+
+// Type-erased access to one node field, for code that handles every field.
+struct NodeFieldSlot: Sendable {
+    let component: @Sendable (SceneGraph.Node) -> any Component
+    let copyBack: @Sendable (SceneGraph.Node) -> Void
+    let reset: @Sendable (SceneGraph.Node) -> Void
+    let observe: @Sendable (SceneGraph.NodeStore) -> Void
+
+    init<Field: NodeField>(
+        _ wrappedKeyPath: ReferenceWritableKeyPath<SceneGraph.Node, Field.Value> & Sendable,
+        _ storageKeyPath: NodeFieldStorageKeyPath<Field> & Sendable
+    ) {
+        component = { node in
+            Field(value: node[keyPath: storageKeyPath].local)
+        }
+        copyBack = { node in
+            node[keyPath: storageKeyPath].local = node.readField(storageKeyPath)
+            node[keyPath: storageKeyPath].ref = nil
+        }
+        reset = { node in
+            node[keyPath: storageKeyPath].local = Field.defaultValue
+            node[keyPath: storageKeyPath].ref = nil
+        }
+        observe = { store in
+            store.world.observe(Field.self) { [weak store] event in
+                store?.handle(event, keyPath: wrappedKeyPath)
+            }
+        }
+    }
 }
 
 extension SceneGraph {
@@ -29,17 +98,12 @@ extension SceneGraph {
         var nodeWriteDepth = 0
 
         init() {
-            world.observe(NodeTransformComponent.self) { [weak self] event in
-                self?.handle(event, keyPath: \.localTransform, structure: false)
-            }
-            world.observe(NodeContentComponent.self) { [weak self] event in
-                self?.handle(event, keyPath: \.content, structure: true)
+            for slot in Node.worldFields {
+                slot.observe(self)
             }
         }
 
-        private func handle<T: Component, Member>(
-            _ event: ComponentEvent<T>, keyPath: KeyPath<Node, Member>, structure: Bool
-        ) {
+        func handle<Field: NodeField>(_ event: ComponentEvent<Field>, keyPath: KeyPath<Node, Field.Value>) {
             guard nodeWriteDepth == 0 else {
                 return
             }
@@ -47,7 +111,7 @@ extension SceneGraph {
             case .added:
                 break
             case let .changed(entity, _):
-                entity[NodeReferenceComponent.self]?.node?.worldDidChange(keyPath, structure: structure)
+                entity[NodeReferenceComponent.self]?.node?.worldDidChange(keyPath, structure: Field.changesStructure)
             case let .removed(entity, _):
                 // The node goes back to local storage with default values on its next read.
                 entity[NodeReferenceComponent.self]?.node?.worldDidChange(keyPath, structure: true)
@@ -65,38 +129,26 @@ extension SceneGraph {
 extension SceneGraph.Node {
     final class EntityBinding {
         let store: SceneGraph.NodeStore
-        // The World's structuralRevision when the refs were made. Any other value means the rows may have moved.
+        // The World's structuralRevision when the entity was last seen.
         var revision: UInt64
-        var transform: ComponentRef<NodeTransformComponent>
-        var content: ComponentRef<NodeContentComponent>
 
         var world: World {
             store.world
         }
 
-        init?(store: SceneGraph.NodeStore, id: EntityID) {
-            let world = store.world
-            guard let transform = world.componentRef(NodeTransformComponent.self, for: id),
-                  let content = world.componentRef(NodeContentComponent.self, for: id) else {
-                return nil
-            }
+        init(store: SceneGraph.NodeStore) {
             self.store = store
-            self.revision = world.structuralRevision
-            self.transform = transform
-            self.content = content
+            revision = store.world.structuralRevision
         }
 
-        // False when the entity or one of its components is gone.
+        // False when the entity is gone.
         func refresh(id: EntityID) -> Bool {
             if revision == world.structuralRevision {
                 return true
             }
-            guard let transform = world.componentRef(NodeTransformComponent.self, for: id),
-                  let content = world.componentRef(NodeContentComponent.self, for: id) else {
+            guard world.componentRef(NodeReferenceComponent.self, for: id) != nil else {
                 return false
             }
-            self.transform = transform
-            self.content = content
             revision = world.structuralRevision
             return true
         }
@@ -115,27 +167,74 @@ extension SceneGraph.Node {
         if entityBinding.refresh(id: id) {
             return entityBinding
         }
-        self.entityBinding = nil
-        storedLocalTransform = .matrix(.identity)
-        storedContent = .empty
+        lostEntity()
         return nil
     }
 
-    // Untracked reads: Node's own Observation covers these properties, so the World's is not needed.
-    @inline(__always)
-    func readLocalTransform() -> SceneGraph.LocalTransform {
-        if entityBinding != nil, let binding = currentBinding() {
-            return binding.transform.untrackedValue.localTransform
+    private func lostEntity() {
+        entityBinding = nil
+        for slot in Self.worldFields {
+            slot.reset(self)
         }
-        return storedLocalTransform
+    }
+
+    // Nil when the node is not in a graph. Refreshes the cached ref when the World's rows may have moved.
+    @inline(__always)
+    private func fieldRef<Field: NodeField>(_ storageKeyPath: NodeFieldStorageKeyPath<Field>) -> ComponentRef<Field>? {
+        guard let binding = currentBinding() else {
+            return nil
+        }
+        let revision = binding.world.structuralRevision
+        if let ref = self[keyPath: storageKeyPath].ref, self[keyPath: storageKeyPath].refRevision == revision {
+            return ref
+        }
+        guard let ref = binding.world.componentRef(Field.self, for: id) else {
+            // An app removed this component; treat it like a destroyed entity.
+            lostEntity()
+            return nil
+        }
+        self[keyPath: storageKeyPath].ref = ref
+        self[keyPath: storageKeyPath].refRevision = revision
+        return ref
     }
 
     @inline(__always)
-    func readContent() -> Content {
-        if entityBinding != nil, let binding = currentBinding() {
-            return binding.content.untrackedValue.content
+    func getField<Field: NodeField>(
+        _ wrappedKeyPath: KeyPath<SceneGraph.Node, Field.Value>, _ storageKeyPath: NodeFieldStorageKeyPath<Field>
+    ) -> Field.Value {
+        access(keyPath: wrappedKeyPath)
+        return readField(storageKeyPath)
+    }
+
+    @inline(__always)
+    func setField<Field: NodeField>(
+        _ wrappedKeyPath: KeyPath<SceneGraph.Node, Field.Value>, _ storageKeyPath: NodeFieldStorageKeyPath<Field>,
+        _ value: Field.Value
+    ) {
+        let oldValue = readField(storageKeyPath)
+        withMutation(keyPath: wrappedKeyPath) {
+            writeField(storageKeyPath, value)
         }
-        return storedContent
+        Field.didChange(self, from: oldValue)
+    }
+
+    // Untracked: Node's own Observation covers the property, so the World's is not needed.
+    @inline(__always)
+    func readField<Field: NodeField>(_ storageKeyPath: NodeFieldStorageKeyPath<Field>) -> Field.Value {
+        if entityBinding != nil, let ref = fieldRef(storageKeyPath) {
+            return ref.untrackedValue.value
+        }
+        return self[keyPath: storageKeyPath].local
+    }
+
+    @inline(__always)
+    func writeField<Field: NodeField>(_ storageKeyPath: NodeFieldStorageKeyPath<Field>, _ value: Field.Value) {
+        if entityBinding != nil, let ref = fieldRef(storageKeyPath), let binding = entityBinding {
+            let component = Field(value: value)
+            binding.store.writeFromNode { ref.value = component }
+        } else {
+            self[keyPath: storageKeyPath].local = value
+        }
     }
 
     func worldDidChange<Member>(_ keyPath: KeyPath<SceneGraph.Node, Member>, structure: Bool) {
@@ -152,14 +251,13 @@ extension SceneGraph.Node {
             }
             detach()
         }
-        store.world.createEntity(
-            id: id,
-            NodeTransformComponent(localTransform: storedLocalTransform),
-            NodeContentComponent(content: storedContent),
+        var components: [any Component] = [
             SiblingIndexComponent(index: siblingIndex),
             NodeReferenceComponent(node: self)
-        )
-        entityBinding = EntityBinding(store: store, id: id)
+        ]
+        components += Self.worldFields.map { $0.component(self) }
+        store.world.createEntity(id: id, components: components)
+        entityBinding = EntityBinding(store: store)
         linkInWorld(parent: parent, siblingIndex: siblingIndex)
         for (index, child) in children.enumerated() {
             child.attach(to: store, parent: self, siblingIndex: index)
@@ -174,8 +272,9 @@ extension SceneGraph.Node {
         guard let binding = currentBinding() else {
             return
         }
-        storedLocalTransform = binding.transform.untrackedValue.localTransform
-        storedContent = binding.content.untrackedValue.content
+        for slot in Self.worldFields {
+            slot.copyBack(self)
+        }
         entityBinding = nil
         if let entity = binding.world[id] {
             _ = try? binding.world.destroy(entity)
