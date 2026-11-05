@@ -33,17 +33,6 @@ extension NodeField {
     }
 }
 
-// ChildOf does not keep an order we can change, so each child stores its index among its siblings.
-struct SiblingIndexComponent: Component {
-    var index: Int
-}
-
-// Finds the node for an entity, so writes made directly to the World can reach it. Its presence also marks the
-// entity as a live scene graph node.
-struct NodeReferenceComponent: Component {
-    weak var node: SceneGraph.Node?
-}
-
 // The local value of a node field, and a cached ref while the node is in a graph.
 struct NodeFieldStorage<Field: NodeField> {
     var local = Field.defaultValue
@@ -60,7 +49,7 @@ struct NodeFieldSlot: Sendable {
     let copyBack: @Sendable (SceneGraph.Node) -> Void
     let reset: @Sendable (SceneGraph.Node) -> Void
     let notify: @Sendable (SceneGraph.Node) -> Void
-    let observe: @Sendable (SceneGraph.NodeStore) -> Void
+    let observe: @Sendable (SceneGraph.NodeStore) -> ObservationToken
 
     init<Field: NodeField>(
         _ wrappedKeyPath: ReferenceWritableKeyPath<SceneGraph.Node, Field.Value> & Sendable,
@@ -96,27 +85,42 @@ extension SceneGraph {
     // The World behind a scene graph. Turns component changes made directly in the World into the same revision
     // bumps and Observation notifications that Node's setters make (#266).
     final class NodeStore {
-        let world = World()
+        // Possibly shared with an ECS app and other graphs (#269); held strongly.
+        let world: World
+        // The graph's root entity; tagged on every entity of this graph (SceneGraphMembershipComponent).
+        var rootID: EntityID
         // Above 0 while a Node setter writes, so its own change event is not handled twice.
         var nodeWriteDepth = 0
 
         // Nodes by entity, so a destroyed entity (which has no components left to read) can find its node.
         var nodes: [EntityID: WeakNode] = [:]
+        private var observationTokens: [ObservationToken] = []
 
-        init() {
-            for slot in Node.worldFields {
-                slot.observe(self)
-            }
-            world.observeDestroyed { [weak self] entityID in
+        init(world: World, rootID: EntityID) {
+            self.world = world
+            self.rootID = rootID
+            observationTokens = Node.worldFields.map { $0.observe(self) }
+            observationTokens.append(world.observeDestroyed { [weak self] entityID in
                 // SceneGraph's own destroys unregister first, so only outside destroys reach the node (#271).
                 self?.nodes.removeValue(forKey: entityID)?.node?.entityWasDestroyed()
-            }
-            world.observeRelationship(ChildOf.self) { [weak self] event in
+            })
+            observationTokens.append(world.observeRelationship(ChildOf.self) { [weak self] event in
                 self?.handleChildOf(event)
-            }
-            world.observe(SiblingIndexComponent.self) { [weak self] event in
+            })
+            observationTokens.append(world.observe(SiblingIndexComponent.self) { [weak self] event in
                 self?.handleSiblingIndex(event)
+            })
+        }
+
+        deinit {
+            for token in observationTokens {
+                world.removeObserver(token)
             }
+        }
+
+        // Another graph sharing the World also sees events for this graph's entities (#269).
+        func owns(_ node: Node) -> Bool {
+            node.entityBinding?.store === self
         }
 
         func register(_ node: Node) {
@@ -135,13 +139,15 @@ extension SceneGraph {
             case .added:
                 break
             case let .changed(entity, _):
-                if let node = entity[NodeReferenceComponent.self]?.node {
+                if let node = entity[NodeReferenceComponent.self]?.node, owns(node) {
                     node.withMutation(keyPath: keyPath) {}
                     Field.didChangeInWorld(node)
                 }
             case let .removed(entity, _):
                 // The node goes back to local storage with default values on its next read.
-                entity[NodeReferenceComponent.self]?.node?.worldDidChange(keyPath, revision: .structure)
+                if let node = entity[NodeReferenceComponent.self]?.node, owns(node) {
+                    node.worldDidChange(keyPath, revision: .structure)
+                }
             }
         }
 
@@ -305,7 +311,8 @@ extension SceneGraph.Node {
         }
         var components: [any Component] = [
             SiblingIndexComponent(index: siblingIndex),
-            NodeReferenceComponent(node: self)
+            NodeReferenceComponent(node: self),
+            SceneGraphMembershipComponent(rootID: store.rootID)
         ]
         components += Self.worldFields.map { $0.component(self) }
         store.world.createEntity(id: id, components: components)

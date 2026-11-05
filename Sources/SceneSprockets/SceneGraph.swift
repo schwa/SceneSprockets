@@ -10,14 +10,23 @@ public class SceneGraph {
         didSet {
             if oldValue !== root {
                 oldValue.detach(from: store)
+                store.rootID = root.id
                 root.attach(to: store, parent: nil, siblingIndex: 0)
             }
             rootRevision = Revision.next()
         }
     }
-    // Holds the transform, content and hierarchy of every node under `root` (#250).
-    @ObservationIgnored let store = NodeStore()
-    var world: World {
+    @ObservationIgnored let store: NodeStore
+
+    // Holds every node under `root` as an entity with Node*Component values (#250, #269). An ECS app can add its own
+    // components to these entities and query or write the node components directly:
+    // - Writes update the nodes, their revisions and SwiftUI observation, like the Node API.
+    // - They are not animated by Transaction.animate (#272).
+    // - ChildOf and SiblingIndexComponent edits move nodes in the tree; setParent(nil) removes the node from the
+    //   graph, like removeFromParent(). Destroying an entity removes its node from the tree (#271, #273).
+    // - Entities without a Node, and ChildOf edges to them, are ignored.
+    // Several graphs can share one World; SceneGraphMembershipComponent tells their entities apart.
+    public var world: World {
         store.world
     }
     @ObservationIgnored private var rootRevision = Revision.next()
@@ -28,9 +37,20 @@ public class SceneGraph {
     // Nil: no post-processing. Read every frame, like `fog`.
     public var postProcessing: PostProcessing?
 
-    public init(root: Node) {
+    public convenience init(root: Node) {
+        self.init(root: root, world: World())
+    }
+
+    // Uses an app-owned World, held strongly, instead of creating one.
+    public init(root: Node, world: World) {
+        store = NodeStore(world: world, rootID: root.id)
         self.root = root
         root.attach(to: store, parent: nil, siblingIndex: 0)
+    }
+
+    // The World may outlive the graph, so the graph's entities leave it.
+    deinit {
+        root.detach(from: store)
     }
 
     // For SceneArchive; see SceneGraph+Archive.swift.

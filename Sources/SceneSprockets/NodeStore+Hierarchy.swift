@@ -27,7 +27,7 @@ extension SceneGraph.NodeStore {
     // A direct sibling-index write re-sorts the parent's children; ties keep their current order.
     func handleSiblingIndex(_ event: ComponentEvent<SiblingIndexComponent>) {
         guard nodeWriteDepth == 0, case let .changed(entity, _) = event,
-              let parent = entity[NodeReferenceComponent.self]?.node?.parent else {
+              let node = entity[NodeReferenceComponent.self]?.node, owns(node), let parent = node.parent else {
             return
         }
         writeFromNode { parent.sortChildrenBySiblingIndex() }

@@ -5966,13 +5966,14 @@ Part of #250, sub-step 4. Lights, cameras, physics bodies, skin, morph data, par
 ## 269: No API for sharing a World between SceneGraph and an ECS app
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:scenegraph, subtask, effort:l
 depends: 268
 created: 2026-11-05T17:23:38Z
-updated: 2026-11-05T17:25:05Z
+updated: 2026-11-05T23:01:40Z
+closed: 2026-11-05T23:01:40Z
 +++
 
 Part of #250, sub-step 5. Apps cannot pass their own World to SceneGraph or reach SceneGraph's World. Open: World ownership/lifetime when not owned; several graphs in one World; entities with scene components but no Node; ordering of SceneSprockets systems (actions, constraints, physics, particles) in the app's pipeline. Needs docs.
