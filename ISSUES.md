@@ -6153,13 +6153,14 @@ Acceptance: these fields are in the World for nodes in a graph; direct World wri
 ## 280: Archive and clone are untested for nodes in a graph
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:scenegraph, subtask, effort:s
 depends: 275, 276, 277, 278, 279
 created: 2026-11-05T19:12:43Z
-updated: 2026-11-05T19:12:51Z
+updated: 2026-11-05T19:49:16Z
+closed: 2026-11-05T19:49:16Z
 +++
 
 Part of #268. Archive and clone go through Node's public properties and are tested with nodes outside a graph. After the fields move to the World, nodes inside a graph are not covered.
