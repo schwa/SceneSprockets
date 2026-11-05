@@ -5477,9 +5477,10 @@ Nothing in the repo (README, LICENSE, or a NOTICE/credits file) states their sou
 status: open
 priority: low
 kind: feature
-labels: umbrella, area:scenegraph, effort:xl
+labels: umbrella, area:scenegraph, effort:xl, has-subtasks
+depends: 263, 264, 265, 266, 267, 268, 269
 created: 2026-11-04T19:49:40Z
-updated: 2026-11-04T20:45:00Z
+updated: 2026-11-05T17:25:05Z
 +++
 
 Umbrella issue: move SceneGraph storage onto SwiftECS, mostly hidden behind the current API.
@@ -5526,6 +5527,7 @@ Open questions:
 - Systems order: where SceneSprockets' own systems (actions, constraints, physics, particles) run in the app's pipeline.
 
 - `2026-11-04T20:45:00Z`: Related: #251 (large-world precision) and #252 (Float time) matter for the simulation-heavy apps this targets.
+- `2026-11-05T17:23:44Z`: Sub-issues (in dependency order): #263 toolchain → #264 per-access cost / change events → #265 spike → #266 revisions/observation → #267 renderer queries → #268 remaining features/archive/clone → #269 World-sharing API.
 
 ---
 
@@ -5796,5 +5798,116 @@ updated: 2026-11-04T21:19:14Z
 Left over from #257. Particle simulation and drawing (SceneParticleSystem simulate(view:) and runtime render(projection:view:), MetalSprocketsParticles) and the transform gizmo (TransformGizmo, GraphicsContext3DRenderPipeline with projection * view) still work in world-space Float, so far from the origin they jitter or misplace like the other paths did before #251/#253/#257. Particle positions live in MetalSprocketsParticles buffers, so a fix spans that package.
 
 Part of #255.
+
+---
+
+## 263: Package tools version 6.2 is below SwiftECS's required 6.4
+
++++
+status: open
+priority: low
+kind: task
+labels: area:scenegraph, effort:s, subtask
+created: 2026-11-05T17:23:12Z
+updated: 2026-11-05T17:25:05Z
++++
+
+Part of #250. SwiftECS requires Swift tools 6.4; SceneSprockets declares 6.2, so the package cannot depend on SwiftECS. Raising the version affects all downstream apps.
+
+---
+
+## 264: Unknown per-access cost of World-backed node properties
+
++++
+status: open
+priority: low
+kind: task
+labels: area:scenegraph, subtask, effort:m
+depends: 263
+created: 2026-11-05T17:23:35Z
+updated: 2026-11-05T17:25:05Z
++++
+
+Part of #250. It is not known whether reading/writing node properties through a SwiftECS World is fast enough for per-frame code that walks nodes, nor whether SwiftECS reports component changes. Both determine whether the World can be the source of truth for node data. Needs measurement against current Node storage.
+
+---
+
+## 265: Node cannot be backed by an ECS entity (transform, content, hierarchy)
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:scenegraph, subtask, effort:l
+depends: 264
+created: 2026-11-05T17:23:36Z
+updated: 2026-11-05T17:25:05Z
++++
+
+Part of #250, sub-step 1. Node stores transform, content and hierarchy itself. Unresolved: entity<->Node mapping, Node lifetime after entity destruction, and ordered children vs ChildOf. Done when existing tests pass with these parts entity-backed.
+
+---
+
+## 266: Direct World writes skip revisions, transactions and observation
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:scenegraph, subtask, effort:l
+depends: 265
+created: 2026-11-05T17:23:36Z
+updated: 2026-11-05T17:25:05Z
++++
+
+Part of #250, sub-step 3. Revisions, transactions/undo and @Observable notifications are driven from Node didSet. Writes made directly to the World bypass them, leaving caches, undo and SwiftUI stale.
+
+---
+
+## 267: Renderer flatten and culling walk the node tree instead of querying
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: subtask, effort:l, area:renderer
+depends: 266
+created: 2026-11-05T17:23:37Z
+updated: 2026-11-05T17:25:05Z
++++
+
+Part of #250, sub-step 2. Flatten/culling traverse the tree. boundsCache and deformationCache live on Node and are not available to ECS queries.
+
+---
+
+## 268: Remaining node features, archive and clone are not entity-backed
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:scenegraph, subtask, effort:xl
+depends: 267
+created: 2026-11-05T17:23:37Z
+updated: 2026-11-05T17:25:05Z
++++
+
+Part of #250, sub-step 4. Lights, cameras, physics bodies, skin, morph data, particles, audio, LOD, actions/runningActions, archive and clone still use Node storage.
+
+---
+
+## 269: No API for sharing a World between SceneGraph and an ECS app
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:scenegraph, subtask, effort:l
+depends: 268
+created: 2026-11-05T17:23:38Z
+updated: 2026-11-05T17:25:05Z
++++
+
+Part of #250, sub-step 5. Apps cannot pass their own World to SceneGraph or reach SceneGraph's World. Open: World ownership/lifetime when not owned; several graphs in one World; entities with scene components but no Node; ordering of SceneSprockets systems (actions, constraints, physics, particles) in the app's pipeline. Needs docs.
 
 ---
