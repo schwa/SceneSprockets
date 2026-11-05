@@ -6076,13 +6076,14 @@ Acceptance: these fields are in the World for nodes in a graph; direct World wri
 ## 276: Physics bodies and levels of detail are not stored in the World
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:scenegraph, subtask, effort:s
 depends: 274
 created: 2026-11-05T19:12:42Z
-updated: 2026-11-05T19:12:51Z
+updated: 2026-11-05T19:42:17Z
+closed: 2026-11-05T19:42:17Z
 +++
 
 Part of #268. physicsBody and levelsOfDetail live on Node.

@@ -70,6 +70,18 @@ struct NodeRenderingOrderComponent: NodeField {
     static var revision: NodeFieldRevision { .structure }
 }
 
+struct NodePhysicsBodyComponent: NodeField {
+    var value: SceneGraph.PhysicsBody?
+    static var defaultValue: SceneGraph.PhysicsBody? { nil }
+    static var revision: NodeFieldRevision { .structure }
+}
+
+struct NodeLevelsOfDetailComponent: NodeField {
+    var value: [SceneGraph.LevelOfDetail]
+    static var defaultValue: [SceneGraph.LevelOfDetail] { [] }
+    static var revision: NodeFieldRevision { .structure }
+}
+
 extension SceneGraph.Node {
     static let worldFields: [NodeFieldSlot] = [
         NodeFieldSlot(\.localTransform, \.localTransformStorage),
@@ -81,7 +93,9 @@ extension SceneGraph.Node {
         NodeFieldSlot(\.pivot, \.pivotStorage),
         NodeFieldSlot(\.categoryBitMask, \.categoryBitMaskStorage),
         NodeFieldSlot(\.lightCategoryBitMask, \.lightCategoryBitMaskStorage),
-        NodeFieldSlot(\.renderingOrder, \.renderingOrderStorage)
+        NodeFieldSlot(\.renderingOrder, \.renderingOrderStorage),
+        NodeFieldSlot(\.physicsBody, \.physicsBodyStorage),
+        NodeFieldSlot(\.levelsOfDetail, \.levelsOfDetailStorage)
     ]
 
     public var localTransform: SceneGraph.LocalTransform {
@@ -137,6 +151,18 @@ extension SceneGraph.Node {
     public var lightCategoryBitMask: UInt {
         get { getField(\.lightCategoryBitMask, \.lightCategoryBitMaskStorage) }
         set { setField(\.lightCategoryBitMask, \.lightCategoryBitMaskStorage, newValue) }
+    }
+
+    // Simulated by SceneSprocketsPhysics when set.
+    public var physicsBody: SceneGraph.PhysicsBody? {
+        get { getField(\.physicsBody, \.physicsBodyStorage) }
+        set { setField(\.physicsBody, \.physicsBodyStorage, newValue) }
+    }
+
+    // Simpler meshes for distant cameras; see LevelOfDetail. Order does not matter.
+    public var levelsOfDetail: [SceneGraph.LevelOfDetail] {
+        get { getField(\.levelsOfDetail, \.levelsOfDetailStorage) }
+        set { setField(\.levelsOfDetail, \.levelsOfDetailStorage, newValue) }
     }
 
     // Lower values draw first, like SCNNode.renderingOrder. Within one value, each renderer keeps its own order

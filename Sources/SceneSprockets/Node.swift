@@ -42,6 +42,8 @@ extension SceneGraph {
         @ObservationIgnored var categoryBitMaskStorage = NodeFieldStorage<NodeCategoryBitMaskComponent>()
         @ObservationIgnored var lightCategoryBitMaskStorage = NodeFieldStorage<NodeLightCategoryBitMaskComponent>()
         @ObservationIgnored var renderingOrderStorage = NodeFieldStorage<NodeRenderingOrderComponent>()
+        @ObservationIgnored var physicsBodyStorage = NodeFieldStorage<NodePhysicsBodyComponent>()
+        @ObservationIgnored var levelsOfDetailStorage = NodeFieldStorage<NodeLevelsOfDetailComponent>()
         // Blend shapes for this node's mesh (MetalMesh cannot carry them). Weighted by morphWeights.
         public var morphTargets: [MorphTarget] = [] {
             didSet { bump(structure: true) }
@@ -51,10 +53,6 @@ extension SceneGraph {
             isVisible && isActive
         }
 
-        // Simulated by SceneSprocketsPhysics when set.
-        public var physicsBody: PhysicsBody? {
-            didSet { bump(structure: true) }
-        }
 
         var inheritedOpacity: Float {
             var result = opacity
@@ -124,10 +122,6 @@ extension SceneGraph {
         public var particleSystems: [SceneParticleSystem] = []
         // Sounds that play from this node; see SceneAudio. Not copied by clone().
         public var audioPlayers: [AudioPlayer] = []
-        // Simpler meshes for distant cameras; see LevelOfDetail. Order does not matter.
-        public var levelsOfDetail: [LevelOfDetail] = [] {
-            didSet { bump(structure: true) }
-        }
         // Applied in order by SceneGraph.applyConstraints(pointOfView:deltaTime:).
         public var constraints: [Constraint] = [] {
             didSet { accelerationStates = [:] }

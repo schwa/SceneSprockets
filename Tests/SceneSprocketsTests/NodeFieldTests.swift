@@ -96,6 +96,23 @@ func directPivotWriteChangesComposedTransform() {
     #expect(node.composedTransform.columns.3.xyz == [4, 0, 0])
 }
 
+// #276
+@Test
+func physicsBodyAndLevelsOfDetailLiveInTheWorld() {
+    let attached = AttachedNode()
+    let (graph, node, entity) = (attached.graph, attached.node, attached.entity)
+    let body = SceneGraph.PhysicsBody(type: .dynamic, shape: .sphere(radius: 1))
+    #expect(revisionChange(graph) { node.physicsBody = body } == .structure)
+    #expect(entity[NodePhysicsBodyComponent.self]?.value == body)
+    #expect(revisionChange(graph) { node.levelsOfDetail = [.init(mesh: nil, distance: 10)] } == .structure)
+    #expect(entity[NodeLevelsOfDetailComponent.self]?.value.map(\.distance) == [10])
+
+    #expect(revisionChange(graph) { entity.set(NodePhysicsBodyComponent(value: nil)) } == .structure)
+    #expect(node.physicsBody == nil)
+    #expect(revisionChange(graph) { entity.set(NodeLevelsOfDetailComponent(value: [])) } == .structure)
+    #expect(node.levelsOfDetail.isEmpty)
+}
+
 @Test
 func displayFieldsSurviveDetach() {
     let attached = AttachedNode()
