@@ -52,6 +52,10 @@ extension SceneGraph {
         @ObservationIgnored var morphWeightsStorage = NodeFieldStorage<NodeMorphWeightsComponent>()
         @ObservationIgnored var runningActionsStorage = NodeFieldStorage<NodeRunningActionsComponent>()
         @ObservationIgnored var actionSpeedStorage = NodeFieldStorage<NodeActionSpeedComponent>()
+        @ObservationIgnored var constraintsStorage = NodeFieldStorage<NodeConstraintsComponent>()
+        @ObservationIgnored var accelerationStatesStorage = NodeFieldStorage<NodeAccelerationStatesComponent>()
+        @ObservationIgnored var subdivisionLevelStorage = NodeFieldStorage<NodeSubdivisionLevelComponent>()
+        @ObservationIgnored var subdivisionBaseStorage = NodeFieldStorage<NodeSubdivisionBaseComponent>()
         // Drawn, hit and counted in bounds, if its ancestors are too: visible and active.
         public var isShown: Bool {
             isVisible && isActive
@@ -79,18 +83,6 @@ extension SceneGraph {
         @ObservationIgnored var boundsCache = BoundsCache()
         @ObservationIgnored var deformationCache: (revision: Revision, mesh: MetalMesh)?
         @ObservationIgnored var shapeStorage: (shape: Shape, device: MTLDevice)?
-        // Loop-subdivides this node's mesh, like SCNGeometry.subdivisionLevel; 0 restores the original. Triangle
-        // meshes only. Setting `shape` rebuilds and subdivides again.
-        public var subdivisionLevel = 0 {
-            didSet {
-                guard subdivisionLevel != oldValue else {
-                    return
-                }
-                applySubdivision()
-            }
-        }
-        @ObservationIgnored var subdivisionBase: MetalMesh?
-
         func applySubdivision() {
             guard case let .mesh(mesh, materials, castsShadow, receivesShadow) = content else {
                 return
@@ -104,13 +96,6 @@ extension SceneGraph {
         // The model file this node's subtree was loaded from. A scene archive then stores the file instead of the
         // subtree, so the subtree should not be edited (#157).
         @ObservationIgnored public var modelSource: ModelSource?
-        // Applied in order by SceneGraph.applyConstraints(pointOfView:deltaTime:).
-        public var constraints: [Constraint] = [] {
-            didSet { accelerationStates = [:] }
-        }
-        // Smoothed position and velocity of each acceleration constraint, by index in `constraints`.
-        @ObservationIgnored var accelerationStates: [Int: AccelerationState] = [:]
-
         func bump(structure: Bool) {
             let value = Revision.next()
             var node: Node? = self

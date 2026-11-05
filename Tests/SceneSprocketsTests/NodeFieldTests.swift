@@ -1,10 +1,12 @@
 import AVFAudio
+import Metal
 import MetalSprocketsParticles
 import SceneSprocketsAudio
 import SwiftECS
 import Testing
 import simd
 @testable import SceneSprockets
+import SceneSprocketsShaderMaterial
 
 // #279: display fields are stored in the World for nodes in a graph.
 
@@ -159,6 +161,46 @@ func actionStateLivesInTheWorldAndSurvivesMoves() {
     #expect(node.actionSpeed == 1)
     graph.advanceActions(by: 0.5)
     #expect(abs(node.transform.columns.3.x - 5) < 1e-4)
+}
+
+// #281
+@Test
+func constraintsAndAccelerationStatesLiveInTheWorld() {
+    let attached = AttachedNode()
+    let (graph, node, entity) = (attached.graph, attached.node, attached.entity)
+    node.constraints = [.acceleration()]
+    #expect(entity[NodeConstraintsComponent.self]?.value.count == 1)
+    graph.applyConstraints(pointOfView: .identity, deltaTime: 1 / 60)
+    #expect(entity[NodeAccelerationStatesComponent.self]?.value.isEmpty == false)
+    // Replacing constraints directly in the World resets their smoothing state, as the setter does.
+    entity.set(NodeConstraintsComponent(value: [.billboard()]))
+    #expect(node.constraints.count == 1)
+    #expect(node.accelerationStates.isEmpty)
+}
+
+@Test
+func subdivisionLivesInTheWorld() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let triangles = SceneGraph.Shape.box().metalMesh(device: device).submeshes.reduce(0) { $0 + $1.indexCount / 3 }
+    let root = SceneGraph.Node()
+    let node = SceneGraph.Node(shape: .box(), material: try ShaderMaterial.normals(), device: device)
+    root.addChild(node)
+    let graph = SceneGraph(root: root)
+    let entity = try #require(graph.world[node.id])
+    func triangleCount() -> Int {
+        guard case let .mesh(mesh, _, _, _) = node.content else {
+            return 0
+        }
+        return mesh.submeshes.reduce(0) { $0 + $1.indexCount / 3 }
+    }
+
+    node.subdivisionLevel = 1
+    #expect(entity[NodeSubdivisionLevelComponent.self]?.value == 1)
+    #expect(entity[NodeSubdivisionBaseComponent.self]?.value != nil)
+    #expect(triangleCount() == triangles * 4)
+    // A direct World write subdivides too.
+    entity.set(NodeSubdivisionLevelComponent(value: 0))
+    #expect(triangleCount() == triangles)
 }
 
 // #277

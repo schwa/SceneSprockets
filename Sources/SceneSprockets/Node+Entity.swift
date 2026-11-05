@@ -13,6 +13,7 @@ protocol NodeField: Component, SendableMetatype {
     static var revision: NodeFieldRevision { get }
     // Called after every change made through the Node API.
     static func didChange(_ node: SceneGraph.Node, from oldValue: Value)
+    static func didChangeInWorld(_ node: SceneGraph.Node)
 }
 
 enum NodeFieldRevision {
@@ -23,6 +24,11 @@ enum NodeFieldRevision {
 
 extension NodeField {
     static func didChange(_ node: SceneGraph.Node, from oldValue: Value) {
+        node.bump(revision)
+    }
+
+    // Called after a direct World write. The old value is not known.
+    static func didChangeInWorld(_ node: SceneGraph.Node) {
         node.bump(revision)
     }
 }
@@ -100,7 +106,10 @@ extension SceneGraph {
             case .added:
                 break
             case let .changed(entity, _):
-                entity[NodeReferenceComponent.self]?.node?.worldDidChange(keyPath, revision: Field.revision)
+                if let node = entity[NodeReferenceComponent.self]?.node {
+                    node.withMutation(keyPath: keyPath) {}
+                    Field.didChangeInWorld(node)
+                }
             case let .removed(entity, _):
                 // The node goes back to local storage with default values on its next read.
                 entity[NodeReferenceComponent.self]?.node?.worldDidChange(keyPath, revision: .structure)

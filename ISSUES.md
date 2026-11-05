@@ -6171,13 +6171,14 @@ Acceptance: tests archive and clone subtrees that are in a graph, including one 
 ## 281: Constraints and subdivision are not stored in the World
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:scenegraph, effort:m
 depends: 274
 created: 2026-11-05T19:12:43Z
-updated: 2026-11-05T19:12:51Z
+updated: 2026-11-05T19:48:17Z
+closed: 2026-11-05T19:48:17Z
 +++
 
 Part of #250. constraints (and their accelerationStates) and subdivisionLevel/subdivisionBase live on Node. Not covered by #268's subtasks.

@@ -1,5 +1,6 @@
 import SceneSprocketsAudio
 import SwiftECS
+import SwiftMesh
 import simd
 
 // Node properties stored in the graph's World while the node is in a graph; see Node+Entity.swift. Each has a
@@ -137,6 +138,50 @@ struct NodeActionSpeedComponent: NodeField {
     static var revision: NodeFieldRevision { .none }
 }
 
+// Replacing constraints resets their acceleration smoothing, however the change is made.
+struct NodeConstraintsComponent: NodeField {
+    var value: [SceneGraph.Constraint]
+    static var defaultValue: [SceneGraph.Constraint] { [] }
+    static var revision: NodeFieldRevision { .none }
+
+    static func didChange(_ node: SceneGraph.Node, from oldValue: [SceneGraph.Constraint]) {
+        node.accelerationStates = [:]
+    }
+
+    static func didChangeInWorld(_ node: SceneGraph.Node) {
+        node.accelerationStates = [:]
+    }
+}
+
+struct NodeAccelerationStatesComponent: NodeField {
+    var value: [Int: AccelerationState]
+    static var defaultValue: [Int: AccelerationState] { [:] }
+    static var revision: NodeFieldRevision { .none }
+}
+
+// Changing the level rebuilds `content` from `subdivisionBase`, however the change is made.
+struct NodeSubdivisionLevelComponent: NodeField {
+    var value: Int
+    static var defaultValue: Int { 0 }
+    static var revision: NodeFieldRevision { .none }
+
+    static func didChange(_ node: SceneGraph.Node, from oldValue: Int) {
+        if node.subdivisionLevel != oldValue {
+            node.applySubdivision()
+        }
+    }
+
+    static func didChangeInWorld(_ node: SceneGraph.Node) {
+        node.applySubdivision()
+    }
+}
+
+struct NodeSubdivisionBaseComponent: NodeField {
+    var value: MetalMesh?
+    static var defaultValue: MetalMesh? { nil }
+    static var revision: NodeFieldRevision { .none }
+}
+
 extension SceneGraph.Node {
     static let worldFields: [NodeFieldSlot] = [
         NodeFieldSlot(\.localTransform, \.localTransformStorage),
@@ -158,7 +203,11 @@ extension SceneGraph.Node {
         NodeFieldSlot(\.morphTargets, \.morphTargetsStorage),
         NodeFieldSlot(\.morphWeights, \.morphWeightsStorage),
         NodeFieldSlot(\.runningActions, \.runningActionsStorage),
-        NodeFieldSlot(\.actionSpeed, \.actionSpeedStorage)
+        NodeFieldSlot(\.actionSpeed, \.actionSpeedStorage),
+        NodeFieldSlot(\.constraints, \.constraintsStorage),
+        NodeFieldSlot(\.accelerationStates, \.accelerationStatesStorage),
+        NodeFieldSlot(\.subdivisionLevel, \.subdivisionLevelStorage),
+        NodeFieldSlot(\.subdivisionBase, \.subdivisionBaseStorage)
     ]
 
     public var localTransform: SceneGraph.LocalTransform {
@@ -273,6 +322,30 @@ extension SceneGraph.Node {
     public var actionSpeed: Float {
         get { getField(\.actionSpeed, \.actionSpeedStorage) }
         set { setField(\.actionSpeed, \.actionSpeedStorage, newValue) }
+    }
+
+    // Applied in order by SceneGraph.applyConstraints(pointOfView:deltaTime:).
+    public var constraints: [SceneGraph.Constraint] {
+        get { getField(\.constraints, \.constraintsStorage) }
+        set { setField(\.constraints, \.constraintsStorage, newValue) }
+    }
+
+    // Smoothed position and velocity of each acceleration constraint, by index in `constraints`.
+    var accelerationStates: [Int: AccelerationState] {
+        get { getField(\.accelerationStates, \.accelerationStatesStorage) }
+        set { setField(\.accelerationStates, \.accelerationStatesStorage, newValue) }
+    }
+
+    // Loop-subdivides this node's mesh, like SCNGeometry.subdivisionLevel; 0 restores the original. Triangle
+    // meshes only. Setting `shape` rebuilds and subdivides again.
+    public var subdivisionLevel: Int {
+        get { getField(\.subdivisionLevel, \.subdivisionLevelStorage) }
+        set { setField(\.subdivisionLevel, \.subdivisionLevelStorage, newValue) }
+    }
+
+    var subdivisionBase: MetalMesh? {
+        get { getField(\.subdivisionBase, \.subdivisionBaseStorage) }
+        set { setField(\.subdivisionBase, \.subdivisionBaseStorage, newValue) }
     }
 
     // Lower values draw first, like SCNNode.renderingOrder. Within one value, each renderer keeps its own order
