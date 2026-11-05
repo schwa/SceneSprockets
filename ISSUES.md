@@ -5804,15 +5804,18 @@ Part of #255.
 ## 263: Package tools version 6.2 is below SwiftECS's required 6.4
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:scenegraph, effort:s, subtask
 created: 2026-11-05T17:23:12Z
-updated: 2026-11-05T17:25:05Z
+updated: 2026-11-05T17:34:51Z
+closed: 2026-11-05T17:34:51Z
 +++
 
 Part of #250. SwiftECS requires Swift tools 6.4; SceneSprockets declares 6.2, so the package cannot depend on SwiftECS. Raising the version affects all downstream apps.
+
+- `2026-11-05T17:34:51Z`: Tools version 6.4; SwiftECS added as local path dep of SceneSprockets. macOS build + 289 tests pass.
 
 ---
 

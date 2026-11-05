@@ -1,4 +1,4 @@
-// swift-tools-version: 6.2
+// swift-tools-version: 6.4
 
 import PackageDescription
 
@@ -31,6 +31,8 @@ let package = Package(
         .package(url: "https://github.com/schwa/SwiftJolt.git", .upToNextMinor(from: "0.0.1")),
         .package(url: "https://github.com/schwa/MetalSprocketsParticles", .upToNextMinor(from: "0.0.2")),
         .package(url: "https://github.com/schwa/MetalSprocketsAddOns", .upToNextMinor(from: "0.2.5")),
+        // Local until SwiftECS is published (#250).
+        .package(path: "../../Current/SwiftECS"),
     ],
     targets: [
         .target(
@@ -46,6 +48,7 @@ let package = Package(
                 .product(name: "MetalSprocketsUI", package: "MetalSprockets"),
                 .product(name: "MetalSupport", package: "MetalSupport"),
                 .product(name: "SwiftMesh", package: "SwiftMesh"),
+                .product(name: "SwiftECS", package: "SwiftECS"),
             ]
         ),
         // PBR materials and the loaders that make them (glTF, Model I/O). Model I/O can also make Blinn-Phong materials.
