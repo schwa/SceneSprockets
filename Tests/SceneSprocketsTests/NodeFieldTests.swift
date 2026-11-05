@@ -116,6 +116,30 @@ func physicsBodyAndLevelsOfDetailLiveInTheWorld() {
     #expect(node.levelsOfDetail.isEmpty)
 }
 
+// #275
+@Test
+func skinAndMorphDataLiveInTheWorld() {
+    let attached = AttachedNode()
+    let (graph, node, entity) = (attached.graph, attached.node, attached.entity)
+    let skin = SceneGraph.Skin(joints: [node], inverseBindMatrices: [.identity])
+    let vertex = SceneGraph.SkinVertex(joints: [0, 0, 0, 0], weights: [1, 0, 0, 0])
+    let target = SceneGraph.MorphTarget(name: "smile")
+
+    #expect(revisionChange(graph) { node.skin = skin } == .structure)
+    #expect(entity[NodeSkinComponent.self]?.value === skin)
+    #expect(revisionChange(graph) { node.skinVertices = [vertex] } == .structure)
+    #expect(entity[NodeSkinVerticesComponent.self]?.value == [vertex])
+    #expect(revisionChange(graph) { node.morphTargets = [target] } == .structure)
+    #expect(entity[NodeMorphTargetsComponent.self]?.value == [target])
+    #expect(revisionChange(graph) { node.morphWeights = [0.5] } == .transform)
+    #expect(entity[NodeMorphWeightsComponent.self]?.value == [0.5])
+
+    #expect(revisionChange(graph) { entity.set(NodeMorphWeightsComponent(value: [1])) } == .transform)
+    #expect(node.morphWeights == [1])
+    #expect(revisionChange(graph) { entity.set(NodeSkinComponent(value: nil)) } == .structure)
+    #expect(node.skin == nil)
+}
+
 // #277
 @Test
 func particleSystemsAndAudioPlayersLiveInTheWorld() throws {

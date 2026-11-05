@@ -95,6 +95,35 @@ struct NodeAudioPlayersComponent: NodeField {
     static var revision: NodeFieldRevision { .none }
 }
 
+struct NodeSkinComponent: NodeField {
+    var value: SceneGraph.Skin?
+    static var defaultValue: SceneGraph.Skin? { nil }
+    static var revision: NodeFieldRevision { .structure }
+}
+
+struct NodeSkinVerticesComponent: NodeField {
+    var value: [SceneGraph.SkinVertex]
+    static var defaultValue: [SceneGraph.SkinVertex] { [] }
+    static var revision: NodeFieldRevision { .structure }
+}
+
+struct NodeMorphTargetsComponent: NodeField {
+    var value: [SceneGraph.MorphTarget]
+    static var defaultValue: [SceneGraph.MorphTarget] { [] }
+    static var revision: NodeFieldRevision { .structure }
+}
+
+struct NodeMorphWeightsComponent: NodeField {
+    var value: [Float]
+    static var defaultValue: [Float] { [] }
+    static var revision: NodeFieldRevision { .transform }
+
+    static func didChange(_ node: SceneGraph.Node, from oldValue: [Float]) {
+        SceneGraph.Transaction.current?.recordMorphWeights(of: node, oldValue: oldValue)
+        node.bump(revision)
+    }
+}
+
 extension SceneGraph.Node {
     static let worldFields: [NodeFieldSlot] = [
         NodeFieldSlot(\.localTransform, \.localTransformStorage),
@@ -110,7 +139,11 @@ extension SceneGraph.Node {
         NodeFieldSlot(\.physicsBody, \.physicsBodyStorage),
         NodeFieldSlot(\.levelsOfDetail, \.levelsOfDetailStorage),
         NodeFieldSlot(\.particleSystems, \.particleSystemsStorage),
-        NodeFieldSlot(\.audioPlayers, \.audioPlayersStorage)
+        NodeFieldSlot(\.audioPlayers, \.audioPlayersStorage),
+        NodeFieldSlot(\.skin, \.skinStorage),
+        NodeFieldSlot(\.skinVertices, \.skinVerticesStorage),
+        NodeFieldSlot(\.morphTargets, \.morphTargetsStorage),
+        NodeFieldSlot(\.morphWeights, \.morphWeightsStorage)
     ]
 
     public var localTransform: SceneGraph.LocalTransform {
@@ -190,6 +223,30 @@ extension SceneGraph.Node {
     public var audioPlayers: [AudioPlayer] {
         get { getField(\.audioPlayers, \.audioPlayersStorage) }
         set { setField(\.audioPlayers, \.audioPlayersStorage, newValue) }
+    }
+
+    // Skinned meshes are placed by their joints, not by this node's transform.
+    public var skin: SceneGraph.Skin? {
+        get { getField(\.skin, \.skinStorage) }
+        set { setField(\.skin, \.skinStorage, newValue) }
+    }
+
+    // Per-vertex joint influences for this node's mesh; indexed like its vertices.
+    public var skinVertices: [SceneGraph.SkinVertex] {
+        get { getField(\.skinVertices, \.skinVerticesStorage) }
+        set { setField(\.skinVertices, \.skinVerticesStorage, newValue) }
+    }
+
+    // Blend shapes for this node's mesh (MetalMesh cannot carry them). Weighted by morphWeights.
+    public var morphTargets: [SceneGraph.MorphTarget] {
+        get { getField(\.morphTargets, \.morphTargetsStorage) }
+        set { setField(\.morphTargets, \.morphTargetsStorage, newValue) }
+    }
+
+    // Morph target weights for this node's mesh; animated like transforms.
+    public var morphWeights: [Float] {
+        get { getField(\.morphWeights, \.morphWeightsStorage) }
+        set { setField(\.morphWeights, \.morphWeightsStorage, newValue) }
     }
 
     // Lower values draw first, like SCNNode.renderingOrder. Within one value, each renderer keeps its own order

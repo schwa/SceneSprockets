@@ -46,10 +46,10 @@ extension SceneGraph {
         @ObservationIgnored var levelsOfDetailStorage = NodeFieldStorage<NodeLevelsOfDetailComponent>()
         @ObservationIgnored var particleSystemsStorage = NodeFieldStorage<NodeParticleSystemsComponent>()
         @ObservationIgnored var audioPlayersStorage = NodeFieldStorage<NodeAudioPlayersComponent>()
-        // Blend shapes for this node's mesh (MetalMesh cannot carry them). Weighted by morphWeights.
-        public var morphTargets: [MorphTarget] = [] {
-            didSet { bump(structure: true) }
-        }
+        @ObservationIgnored var skinStorage = NodeFieldStorage<NodeSkinComponent>()
+        @ObservationIgnored var skinVerticesStorage = NodeFieldStorage<NodeSkinVerticesComponent>()
+        @ObservationIgnored var morphTargetsStorage = NodeFieldStorage<NodeMorphTargetsComponent>()
+        @ObservationIgnored var morphWeightsStorage = NodeFieldStorage<NodeMorphWeightsComponent>()
         // Drawn, hit and counted in bounds, if its ancestors are too: visible and active.
         public var isShown: Bool {
             isVisible && isActive
@@ -64,21 +64,6 @@ extension SceneGraph {
                 node = current.parent
             }
             return result
-        }
-        // Skinned meshes are placed by their joints, not by this node's transform.
-        public var skin: Skin? {
-            didSet { bump(structure: true) }
-        }
-        // Per-vertex joint influences for this node's mesh; indexed like its vertices.
-        public var skinVertices: [SkinVertex] = [] {
-            didSet { bump(structure: true) }
-        }
-        // Morph target weights for this node's mesh; animated like transforms.
-        public var morphWeights: [Float] = [] {
-            didSet {
-                SceneGraph.Transaction.current?.recordMorphWeights(of: self, oldValue: oldValue)
-                bump(structure: false)
-            }
         }
 
         // Revision of this node's subtree; changes propagate to ancestors.

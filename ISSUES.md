@@ -6058,13 +6058,14 @@ Acceptance: transform and content use one shared mechanism; adding a field needs
 ## 275: Skin and morph data are not stored in the World
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:scenegraph, subtask, effort:m
 depends: 274
 created: 2026-11-05T19:12:42Z
-updated: 2026-11-05T19:12:50Z
+updated: 2026-11-05T19:44:54Z
+closed: 2026-11-05T19:44:54Z
 +++
 
 Part of #268. skin, skinVertices, morphTargets and morphWeights live on Node. ECS apps cannot read or change them through the graph's World.
