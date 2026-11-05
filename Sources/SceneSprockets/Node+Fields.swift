@@ -1,3 +1,4 @@
+import SceneSprocketsAudio
 import SwiftECS
 import simd
 
@@ -82,6 +83,18 @@ struct NodeLevelsOfDetailComponent: NodeField {
     static var revision: NodeFieldRevision { .structure }
 }
 
+struct NodeParticleSystemsComponent: NodeField {
+    var value: [SceneParticleSystem]
+    static var defaultValue: [SceneParticleSystem] { [] }
+    static var revision: NodeFieldRevision { .none }
+}
+
+struct NodeAudioPlayersComponent: NodeField {
+    var value: [AudioPlayer]
+    static var defaultValue: [AudioPlayer] { [] }
+    static var revision: NodeFieldRevision { .none }
+}
+
 extension SceneGraph.Node {
     static let worldFields: [NodeFieldSlot] = [
         NodeFieldSlot(\.localTransform, \.localTransformStorage),
@@ -95,7 +108,9 @@ extension SceneGraph.Node {
         NodeFieldSlot(\.lightCategoryBitMask, \.lightCategoryBitMaskStorage),
         NodeFieldSlot(\.renderingOrder, \.renderingOrderStorage),
         NodeFieldSlot(\.physicsBody, \.physicsBodyStorage),
-        NodeFieldSlot(\.levelsOfDetail, \.levelsOfDetailStorage)
+        NodeFieldSlot(\.levelsOfDetail, \.levelsOfDetailStorage),
+        NodeFieldSlot(\.particleSystems, \.particleSystemsStorage),
+        NodeFieldSlot(\.audioPlayers, \.audioPlayersStorage)
     ]
 
     public var localTransform: SceneGraph.LocalTransform {
@@ -163,6 +178,18 @@ extension SceneGraph.Node {
     public var levelsOfDetail: [SceneGraph.LevelOfDetail] {
         get { getField(\.levelsOfDetail, \.levelsOfDetailStorage) }
         set { setField(\.levelsOfDetail, \.levelsOfDetailStorage, newValue) }
+    }
+
+    // Particle effects at this node; see SceneParticleSystem. Shared, not copied, by clone().
+    public var particleSystems: [SceneParticleSystem] {
+        get { getField(\.particleSystems, \.particleSystemsStorage) }
+        set { setField(\.particleSystems, \.particleSystemsStorage, newValue) }
+    }
+
+    // Sounds that play from this node; see SceneAudio. Not copied by clone().
+    public var audioPlayers: [AudioPlayer] {
+        get { getField(\.audioPlayers, \.audioPlayersStorage) }
+        set { setField(\.audioPlayers, \.audioPlayersStorage, newValue) }
     }
 
     // Lower values draw first, like SCNNode.renderingOrder. Within one value, each renderer keeps its own order

@@ -6095,13 +6095,14 @@ Acceptance: both are in the World for nodes in a graph; direct World writes bump
 ## 277: Particle systems and audio players are not stored in the World
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:scenegraph, subtask, effort:s
 depends: 274
 created: 2026-11-05T19:12:42Z
-updated: 2026-11-05T19:12:51Z
+updated: 2026-11-05T19:43:41Z
+closed: 2026-11-05T19:43:41Z
 +++
 
 Part of #268. particleSystems and audioPlayers (arrays of shared objects) live on Node.

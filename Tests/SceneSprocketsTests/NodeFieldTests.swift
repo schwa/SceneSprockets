@@ -1,3 +1,6 @@
+import AVFAudio
+import MetalSprocketsParticles
+import SceneSprocketsAudio
 import SwiftECS
 import Testing
 import simd
@@ -111,6 +114,30 @@ func physicsBodyAndLevelsOfDetailLiveInTheWorld() {
     #expect(node.physicsBody == nil)
     #expect(revisionChange(graph) { entity.set(NodeLevelsOfDetailComponent(value: [])) } == .structure)
     #expect(node.levelsOfDetail.isEmpty)
+}
+
+// #277
+@Test
+func particleSystemsAndAudioPlayersLiveInTheWorld() throws {
+    let attached = AttachedNode()
+    let (graph, node, entity) = (attached.graph, attached.node, attached.entity)
+    let description = ParticleSystem("Glow") { EmitterDescription("Glow") { RateModule(birthRate: 10) } }
+    let system = SceneParticleSystem(description, seed: 1)
+    let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1))
+    let player = AudioPlayer(buffer: try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 16)))
+
+    #expect(revisionChange(graph) { node.particleSystems = [system] } == .none)
+    #expect(entity[NodeParticleSystemsComponent.self]?.value.first === system)
+    #expect(revisionChange(graph) { node.audioPlayers = [player] } == .none)
+    #expect(entity[NodeAudioPlayersComponent.self]?.value.first === player)
+    let copy = node.clone()
+    #expect(copy.particleSystems.first === system)
+    #expect(copy.audioPlayers.isEmpty)
+
+    entity.set(NodeParticleSystemsComponent(value: []))
+    #expect(node.particleSystems.isEmpty)
+    entity.set(NodeAudioPlayersComponent(value: []))
+    #expect(node.audioPlayers.isEmpty)
 }
 
 @Test

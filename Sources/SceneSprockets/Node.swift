@@ -44,6 +44,8 @@ extension SceneGraph {
         @ObservationIgnored var renderingOrderStorage = NodeFieldStorage<NodeRenderingOrderComponent>()
         @ObservationIgnored var physicsBodyStorage = NodeFieldStorage<NodePhysicsBodyComponent>()
         @ObservationIgnored var levelsOfDetailStorage = NodeFieldStorage<NodeLevelsOfDetailComponent>()
+        @ObservationIgnored var particleSystemsStorage = NodeFieldStorage<NodeParticleSystemsComponent>()
+        @ObservationIgnored var audioPlayersStorage = NodeFieldStorage<NodeAudioPlayersComponent>()
         // Blend shapes for this node's mesh (MetalMesh cannot carry them). Weighted by morphWeights.
         public var morphTargets: [MorphTarget] = [] {
             didSet { bump(structure: true) }
@@ -118,10 +120,6 @@ extension SceneGraph {
         // The model file this node's subtree was loaded from. A scene archive then stores the file instead of the
         // subtree, so the subtree should not be edited (#157).
         @ObservationIgnored public var modelSource: ModelSource?
-        // Particle effects at this node; see SceneParticleSystem. Shared, not copied, by clone().
-        public var particleSystems: [SceneParticleSystem] = []
-        // Sounds that play from this node; see SceneAudio. Not copied by clone().
-        public var audioPlayers: [AudioPlayer] = []
         // Applied in order by SceneGraph.applyConstraints(pointOfView:deltaTime:).
         public var constraints: [Constraint] = [] {
             didSet { accelerationStates = [:] }
