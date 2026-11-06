@@ -1,10 +1,10 @@
 import GeometryLite3D
 import Metal
-import SwiftMesh
-import Testing
-import simd
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
+import simd
+import SwiftMesh
+import Testing
 
 private extension simd_float4x4 {
     static func translation(_ x: Float, _ y: Float, _ z: Float) -> simd_float4x4 {

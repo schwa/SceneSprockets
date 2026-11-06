@@ -2,11 +2,11 @@ import CoreGraphics
 import GeometryLite3D
 import Metal
 import MetalSprockets
-import Testing
-import simd
 @testable import SceneSprockets
 import SceneSprocketsBlinnPhong
 @testable import SceneSprocketsGizmos
+import simd
+import Testing
 
 // #154
 @MainActor
@@ -157,7 +157,7 @@ struct TransformGizmoTests {
 
     // #178: pinch and twist on the gizmo scale and turn the target.
     @Test
-    func pinchAndTwistScaleAndTurnTheTarget() throws {
+    func pinchAndTwistScaleAndTurnTheTarget() {
         let (gizmo, node) = makeGizmo()
         #expect(gizmo.claimsTwoFingerGesture(at: screen(.zero) + [20, 20], viewport: viewport))
         #expect(!gizmo.claimsTwoFingerGesture(at: screen(.zero) + [gizmo.size + 10, 0], viewport: viewport))
@@ -189,7 +189,7 @@ struct TransformGizmoTests {
 
     // #168: dragging inside the rings turns the node freely.
     @Test
-    func trackballTurnsTheNearSideWithTheDrag() throws {
+    func trackballTurnsTheNearSideWithTheDrag() {
         let (gizmo, node) = makeGizmo(.rotate)
         let center = screen(.zero)
         #expect(gizmo.handle(at: center + [5, 5], viewport: viewport) == .center)
@@ -223,7 +223,7 @@ struct TransformGizmoTests {
         // The X ring (in the YZ plane) is seen edge-on: half in front of the center, half behind.
         let ring = try #require(gizmo.outlines(frame).first { $0.handle == .axis(.x) }).points
         let runs = TransformGizmo.ringRuns(ring, frame: frame)
-        #expect(runs.contains { $0.isFront } && runs.contains { !$0.isFront })
+        #expect(runs.contains(where: \.isFront) && runs.contains { !$0.isFront })
         for run in runs {
             for point in run.points.dropFirst().dropLast() {
                 #expect((simd_dot(point - frame.origin, frame.cameraForward) <= frame.length * 1e-4) == run.isFront)

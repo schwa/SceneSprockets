@@ -373,20 +373,22 @@ public func renderBatches(_ entries: [SceneGraph.MeshEntry], context: SceneGraph
         groups[key] = sortedBackToFront(groups[key] ?? [], cameraPosition: cameraPosition)
     }
     let allLights = Array(context.lights.indices)
-    return keys.enumerated().sorted {
-        ($0.element.order, $0.element.isTransparent ? 1 : 0, $0.offset) < ($1.element.order, $1.element.isTransparent ? 1 : 0, $1.offset)
-    }
-    .map { _, key in
-        var batchContext = context
-        if key.lights != allLights {
-            batchContext.lights = key.lights.map { context.lights[$0] }
-            batchContext.lightCategoryBitMasks = key.lights.map { $0 < context.lightCategoryBitMasks.count ? context.lightCategoryBitMasks[$0] : .max }
-            if !context.lightShadowSlices.isEmpty {
-                batchContext.lightShadowSlices = key.lights.map { $0 < context.lightShadowSlices.count ? context.lightShadowSlices[$0] : 0..<0 }
-            }
+    return keys
+        .enumerated()
+        .sorted {
+            ($0.element.order, $0.element.isTransparent ? 1 : 0, $0.offset) < ($1.element.order, $1.element.isTransparent ? 1 : 0, $1.offset)
         }
-        return (groups[key] ?? [], batchContext)
-    }
+        .map { _, key in
+            var batchContext = context
+            if key.lights != allLights {
+                batchContext.lights = key.lights.map { context.lights[$0] }
+                batchContext.lightCategoryBitMasks = key.lights.map { $0 < context.lightCategoryBitMasks.count ? context.lightCategoryBitMasks[$0] : .max }
+                if !context.lightShadowSlices.isEmpty {
+                    batchContext.lightShadowSlices = key.lights.map { $0 < context.lightShadowSlices.count ? context.lightShadowSlices[$0] : 0..<0 }
+                }
+            }
+            return (groups[key] ?? [], batchContext)
+        }
 }
 
 // Returns one array per renderer, in renderer order.

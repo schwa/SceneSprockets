@@ -2,11 +2,11 @@ import CoreGraphics
 import GeometryLite3D
 import Metal
 import MetalSprockets
-import SwiftMesh
-import Testing
-import simd
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
+import simd
+import SwiftMesh
+import Testing
 
 // #100: the in-repo Blinn-Phong renderer.
 @MainActor
@@ -99,11 +99,15 @@ func diffuseTextureAlphaIsOpacity() throws {
 func zeroNormalsFallBackToFaceNormals() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let positions: [SIMD3<Float>] = [[-1, -1, 0], [1, -1, 0], [-1, 1, 0], [1, 1, 0]]
-    let mesh = MetalMesh(device: device, attributes: [
-        .positions(positions),
-        .normals(Array(repeating: .zero, count: 4)),
-        .textureCoordinates(Array(repeating: .zero, count: 4)),
-    ], submeshes: [.init(indices: [0, 1, 2, 2, 1, 3])])
+    let mesh = MetalMesh(
+        device: device,
+        attributes: [
+            .positions(positions),
+            .normals(Array(repeating: .zero, count: 4)),
+            .textureCoordinates(Array(repeating: .zero, count: 4))
+        ],
+        submeshes: [.init(indices: [0, 1, 2, 2, 1, 3])]
+    )
     let root = SceneGraph.Node()
     _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40)))))
     // A light behind the camera, shining at the quad: lit only if the fallback normal faces the camera.

@@ -1,5 +1,5 @@
-import Testing
 @testable import SceneSprockets
+import Testing
 
 @Test
 func addChildKeepsParentAndChildrenInSync() {

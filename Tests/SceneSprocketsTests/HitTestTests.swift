@@ -1,10 +1,10 @@
 import GeometryLite3D
 import Metal
-import SwiftMesh
-import Testing
-import simd
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
+import simd
+import SwiftMesh
+import Testing
 
 private func material() -> BlinnPhongSceneMaterial {
     BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color([1, 1, 1]), specular: .color(0), shininess: 1)
@@ -145,7 +145,7 @@ func hitsReportBarycentricsAndTextureCoordinates() throws {
 @Test(arguments: [
     PerspectiveProjection.DepthMode.standard(zClip: 0.1 ... 100),
     .reversed(zClip: 0.1 ... 100),
-    .reversedInfinite(zNear: 0.1),
+    .reversedInfinite(zNear: 0.1)
 ])
 func viewportFromCameraCastsTheProjectionsRays(_ depthMode: PerspectiveProjection.DepthMode) {
     let projection = PerspectiveProjection(verticalAngleOfView: .degrees(50), depthMode: depthMode)

@@ -1,6 +1,9 @@
 import Foundation
 import simd
 
+// Node paths are nil when a node is absent or outside the root's subtree; an empty path is the root itself.
+// swiftlint:disable discouraged_optional_collection
+
 // Constraints in scene.json (#161). Nodes they refer to are stored as child-index paths from the root, and resolved
 // once the whole tree is read. Closure constraints (`.transform`) cannot be saved; they are skipped with a warning.
 struct ArchivedConstraint: Codable {
@@ -170,3 +173,5 @@ extension SceneGraph.Node {
         return node
     }
 }
+
+// swiftlint:enable discouraged_optional_collection

@@ -4,11 +4,11 @@ import GeometryLite3D
 import Metal
 import MetalSprockets
 import MetalSprocketsGLTF
-import Testing
-import simd
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
 @testable import SceneSprocketsPBR
+import simd
+import Testing
 
 // #87
 @Test

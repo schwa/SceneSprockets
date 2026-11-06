@@ -1,7 +1,7 @@
+@testable import SceneSprockets
+import simd
 import SwiftECS
 import Testing
-import simd
-@testable import SceneSprockets
 
 // #269: several graphs in one World, and graph lifetime.
 
@@ -29,7 +29,7 @@ func twoGraphsShareAWorldWithoutCrossTalk() throws {
 }
 
 @Test
-func freeingAGraphRemovesItsEntitiesFromAnAppWorld() throws {
+func freeingAGraphRemovesItsEntitiesFromAnAppWorld() {
     let world = World()
     let root = SceneGraph.Node()
     let child = SceneGraph.Node(parent: root)

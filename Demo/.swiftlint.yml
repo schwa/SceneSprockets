@@ -1,3 +1,18 @@
+excluded:
+  - "**/.build"
+  - "**/.swiftpm"
+  - "**/DerivedData"
+  - "**/Package.swift"
 disabled_rules:
   - explicit_top_level_acl
   - missing_docs
+  - identifier_name
+  - line_length
+  - file_length
+  - type_body_length
+  - function_body_length
+  - function_parameter_count
+  - cyclomatic_complexity
+  - large_tuple
+  # `_ = x` is not a statement in result builders.
+  - redundant_discardable_let

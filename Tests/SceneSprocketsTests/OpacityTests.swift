@@ -3,12 +3,12 @@ import GeometryLite3D
 import Metal
 import MetalSprockets
 import MetalSprocketsPBR
-import Testing
-import simd
 @testable import SceneSprockets
-@testable import SceneSprocketsShaderMaterial
 @testable import SceneSprocketsBlinnPhong
 @testable import SceneSprocketsPBR
+@testable import SceneSprocketsShaderMaterial
+import simd
+import Testing
 
 // #76
 

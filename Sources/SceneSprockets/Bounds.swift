@@ -1,8 +1,8 @@
 import GeometryLite3D
 import Metal
 import MetalSupport
-import SwiftMesh
 import simd
+import SwiftMesh
 
 extension MetalMesh {
     // Reads positions from the vertex buffers (shared storage). Nil if there is no float3 position attribute.

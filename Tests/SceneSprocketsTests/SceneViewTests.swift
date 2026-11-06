@@ -1,7 +1,7 @@
 import GeometryLite3D
-import Testing
-import simd
 @testable import SceneSprockets
+import simd
+import Testing
 
 @Test
 func defaultCameraIsUsedWithoutCameraNodes() throws {
@@ -26,4 +26,3 @@ func defaultLightIsAddedOnlyWithoutLights() throws {
     #expect(lit.lights.count == 1)
     #expect(lit.lights[0].light.type == .point)
 }
-

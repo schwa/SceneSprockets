@@ -1,8 +1,8 @@
 import GeometryLite3D
 import JoltPhysics
 import SceneSprockets
-import SwiftMesh
 import simd
+import SwiftMesh
 
 // Simulates the scene graph's nodes that have a physicsBody, with Jolt. Each step adds bodies for new nodes,
 // removes bodies for removed or hidden nodes, rebuilds bodies whose description changed, moves kinematic bodies to

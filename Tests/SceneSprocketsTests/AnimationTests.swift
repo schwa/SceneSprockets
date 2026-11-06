@@ -1,6 +1,6 @@
-import Testing
-import simd
 @testable import SceneSprockets
+import simd
+import Testing
 
 private typealias Clip = SceneGraph.AnimationClip
 
@@ -47,7 +47,7 @@ func cubicSplineMatchesHermite() {
     let node = SceneGraph.Node()
     let values: [Float] = [
         0, 0, 0, 0, 0, 0, 3, 0, 0,
-        3, 0, 0, 1, 0, 0, 0, 0, 0,
+        3, 0, 0, 1, 0, 0, 0, 0, 0
     ]
     let clip = Clip(name: "curve", channels: [.init(target: node, path: .translation, sampler: .init(times: [0, 1], values: values, interpolation: .cubicSpline))])
     clip.apply(at: 0.5)
@@ -139,7 +139,7 @@ func propertyPathsAnimateLights() {
     let node = SceneGraph.Node(content: .light(Light(type: .point, color: [1, 1, 1], intensity: 0)))
     let clip = Clip(name: "flicker", channels: [
         .init(target: node, path: .property(.lightIntensity), sampler: .init(times: [0, 1], values: [0, 4], interpolation: .linear)),
-        .init(target: node, path: .property(.lightColor), sampler: .init(times: [0, 1], values: [1, 0, 0, 0, 0, 1], interpolation: .linear)),
+        .init(target: node, path: .property(.lightColor), sampler: .init(times: [0, 1], values: [1, 0, 0, 0, 0, 1], interpolation: .linear))
     ])
     clip.apply(at: 0.5)
     guard case let .light(light) = node.content else {

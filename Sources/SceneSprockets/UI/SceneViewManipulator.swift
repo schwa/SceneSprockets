@@ -75,14 +75,14 @@ public protocol SceneViewManipulator: AnyObject {
 }
 
 public extension SceneViewManipulator {
-    func claimsTwoFingerGesture(at point: SIMD2<Float>, viewport: SceneViewport) -> Bool {
+    func claimsTwoFingerGesture(at _: SIMD2<Float>, viewport _: SceneViewport) -> Bool {
         false
     }
 
-    func beginTwoFingerGesture(viewport: SceneViewport) {
+    func beginTwoFingerGesture(viewport _: SceneViewport) {
     }
 
-    func twoFingerGesture(scale: Float, rotation: Float, viewport: SceneViewport) {
+    func twoFingerGesture(scale _: Float, rotation _: Float, viewport _: SceneViewport) {
     }
 
     func endTwoFingerGesture() {

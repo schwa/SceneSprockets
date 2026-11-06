@@ -54,7 +54,7 @@ extension SceneGraph {
             }
 
             // The intensity of a light node.
-            public static var lightIntensity: Property { Property(name: "light.intensity") { node in
+            public static var lightIntensity: Self { Self(name: "light.intensity") { node in
                 if case let .light(light) = node.content { [light.intensity] } else { [] }
             } set: { node, value in
                 if case var .light(light) = node.content, let intensity = value.first {
@@ -65,7 +65,7 @@ extension SceneGraph {
             }
 
             // The linear RGB color of a light node.
-            public static var lightColor: Property { Property(name: "light.color") { node in
+            public static var lightColor: Self { Self(name: "light.color") { node in
                 if case let .light(light) = node.content { [light.color.x, light.color.y, light.color.z] } else { [] }
             } set: { node, value in
                 if case var .light(light) = node.content, value.count == 3 {
@@ -76,7 +76,7 @@ extension SceneGraph {
             }
 
             // isVisible as 0 or 1; values above 0.5 show the node.
-            public static var visibility: Property { Property(name: "isVisible") { node in
+            public static var visibility: Self { Self(name: "isVisible") { node in
                 [node.isVisible ? 1 : 0]
             } set: { node, value in
                 if let visible = value.first {
@@ -85,8 +85,8 @@ extension SceneGraph {
             }
             }
 
-            static func light(_ name: String, _ keyPath: WritableKeyPath<Light, Float>) -> Property {
-                Property(name: "light.\(name)") { node in
+            static func light(_ name: String, _ keyPath: WritableKeyPath<Light, Float>) -> Self {
+                Self(name: "light.\(name)") { node in
                     if case let .light(light) = node.content { [light[keyPath: keyPath]] } else { [] }
                 } set: { node, value in
                     if case var .light(light) = node.content, let newValue = value.first {
@@ -96,12 +96,12 @@ extension SceneGraph {
                 }
             }
 
-            public static var lightRange: Property { light("range", \.range) }
-            public static var lightInnerConeAngle: Property { light("innerConeAngle", \.innerConeAngle) }
-            public static var lightOuterConeAngle: Property { light("outerConeAngle", \.outerConeAngle) }
+            public static var lightRange: Self { light("range", \.range) }
+            public static var lightInnerConeAngle: Self { light("innerConeAngle", \.innerConeAngle) }
+            public static var lightOuterConeAngle: Self { light("outerConeAngle", \.outerConeAngle) }
 
             // A perspective camera's vertical field of view, in radians.
-            public static var cameraVerticalFieldOfView: Property { Property(name: "camera.verticalFieldOfView") { node in
+            public static var cameraVerticalFieldOfView: Self { Self(name: "camera.verticalFieldOfView") { node in
                 if case let .camera(camera) = node.content, let projection = camera.projection as? PerspectiveProjection { [projection.verticalAngleOfView.radians] } else { [] }
             } set: { node, value in
                 if case var .camera(camera) = node.content, var projection = camera.projection as? PerspectiveProjection, let radians = value.first {
@@ -113,7 +113,7 @@ extension SceneGraph {
             }
 
             // An orthographic camera's half height.
-            public static var cameraHalfHeight: Property { Property(name: "camera.halfHeight") { node in
+            public static var cameraHalfHeight: Self { Self(name: "camera.halfHeight") { node in
                 if case let .camera(camera) = node.content, let projection = camera.projection as? OrthographicProjection { [projection.halfHeight] } else { [] }
             } set: { node, value in
                 if case var .camera(camera) = node.content, var projection = camera.projection as? OrthographicProjection, let halfHeight = value.first {
@@ -125,11 +125,11 @@ extension SceneGraph {
             }
 
             // The near (isNear) or far clip plane of a perspective or orthographic camera with a clip range.
-            static func cameraClip(isNear: Bool) -> Property {
+            static func cameraClip(isNear: Bool) -> Self {
                 func clip(_ range: ClosedRange<Float>, _ value: Float) -> ClosedRange<Float> {
                     isNear ? min(value, range.upperBound)...range.upperBound : range.lowerBound...max(value, range.lowerBound)
                 }
-                return Property(name: isNear ? "camera.zNear" : "camera.zFar") { node in
+                return Self(name: isNear ? "camera.zNear" : "camera.zFar") { node in
                     guard case let .camera(camera) = node.content else {
                         return []
                     }
@@ -171,8 +171,8 @@ extension SceneGraph {
                 }
             }
 
-            public static var cameraNear: Property { cameraClip(isNear: true) }
-            public static var cameraFar: Property { cameraClip(isNear: false) }
+            public static var cameraNear: Self { cameraClip(isNear: true) }
+            public static var cameraFar: Self { cameraClip(isNear: false) }
         }
 
         // Calls `handler` when playback passes `time` (clip seconds), like SCNAnimationEvent. `isPlayingBackward`

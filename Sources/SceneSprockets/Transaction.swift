@@ -1,6 +1,6 @@
 import GeometryLite3D
-import Synchronization
 import simd
+import Synchronization
 
 extension SceneGraph {
     // Implicit animation, like SCNTransaction: transform and morph weight changes made in `body` animate from their

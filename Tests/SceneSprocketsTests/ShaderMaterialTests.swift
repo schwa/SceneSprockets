@@ -2,11 +2,11 @@ import CoreGraphics
 import GeometryLite3D
 import Metal
 import MetalSprockets
-import SwiftMesh
-import Testing
-import simd
 @testable import SceneSprockets
 @testable import SceneSprocketsShaderMaterial
+import simd
+import SwiftMesh
+import Testing
 
 @MainActor
 private func render(_ material: ShaderMaterial) throws -> SIMD4<UInt8> {

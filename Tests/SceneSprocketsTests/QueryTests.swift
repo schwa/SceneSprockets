@@ -1,10 +1,10 @@
 import GeometryLite3D
 import Metal
-import SwiftMesh
-import Testing
-import simd
 @testable import SceneSprockets
 @testable import SceneSprocketsShaderMaterial
+import simd
+import SwiftMesh
+import Testing
 
 private let projection = PerspectiveProjection(verticalAngleOfView: .degrees(60)).projectionMatrix(aspectRatio: 1)
 private let camera = simd_float4x4(translation: [0, 0, 5])

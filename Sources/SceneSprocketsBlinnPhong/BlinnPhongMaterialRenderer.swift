@@ -1,12 +1,12 @@
-import GeometryLite3D
 import Foundation
+import GeometryLite3D
 import Metal
 import MetalSprockets
+import MetalSupport
 import SceneSprockets
 import SceneSprocketsShaders
-import MetalSupport
-import SwiftMesh
 import simd
+import SwiftMesh
 
 // A Blinn-Phong surface: ambient (lit by the renderer's ambient light), diffuse and specular, each a color or a
 // texture tinted by a color. A mesh's first vertex color set multiplies ambient, diffuse and opacity.
@@ -80,6 +80,7 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer, Equatable 
         BlinnPhongSceneMaterial.self
     }
 
+    // swiftlint:disable:next unneeded_throws_rethrows
     public func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement {
         let cameraPosition = context.cameraMatrix.columns.3.xyz
         // The shader works in camera-relative space (#253): the camera is at the origin, and lights and model
@@ -162,6 +163,7 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer, Equatable 
     // Opaque batching depends on structure, opacity and mirroring, not on where things are, so it is cached and only
     // the model matrices are gathered each frame (#134). Nil (use the full path) when an entry may deform or swap
     // its level of detail, since those change meshes without a structure change.
+    // swiftlint:disable:next discouraged_optional_collection - nil is a cache miss
     func cachedOpaqueGroups(entries: [SceneGraph.MeshEntry], inFrustum: [Bool], context: SceneGraphRenderContext, cameraPosition: SIMD3<Float>) -> [(key: PipelineKey, single: [InstanceBatch], instanced: [InstanceBatch])]? {
         var hasher = Hasher()
         hasher.combine(context.revision.structure)
@@ -253,7 +255,7 @@ private struct BlinnPhongBatchesElement: Element {
                 }
             }
 
-            func draw(_ batch: InstanceBatch, cullMode: MTLCullMode, instanced: Bool) throws -> AnyElement {
+            func draw(_ batch: InstanceBatch, cullMode: MTLCullMode, instanced: Bool) -> AnyElement {
                 let submesh = batch.mesh.submeshes[batch.submeshIndex]
                 let normalMatrices = batch.modelMatrices.map(\.normalMatrix)
                 let modelMatrices = batch.modelMatrices.map { $0.cameraRelative(to: cameraPosition) }
@@ -301,7 +303,7 @@ private struct BlinnPhongBatchesElement: Element {
                 if !group.single.isEmpty {
                     try RenderPipeline(label: "Blinn-Phong", vertexShader: layout.hasColors ? shaders.coloredVertex : shaders.vertex, fragmentShader: fragmentShader) {
                         ForEach(Array(passes(group.single).enumerated()), id: \.offset) { _, pass in
-                            try draw(pass.batch, cullMode: pass.cullMode, instanced: false)
+                            draw(pass.batch, cullMode: pass.cullMode, instanced: false)
                         }
                     }
                     .vertexDescriptor(layout.descriptor)
@@ -310,7 +312,7 @@ private struct BlinnPhongBatchesElement: Element {
                 if !group.instanced.isEmpty {
                     try RenderPipeline(label: "Blinn-Phong Instanced", vertexShader: layout.hasColors ? shaders.coloredInstancedVertex : shaders.instancedVertex, fragmentShader: fragmentShader) {
                         ForEach(Array(passes(group.instanced).enumerated()), id: \.offset) { _, pass in
-                            try draw(pass.batch, cullMode: pass.cullMode, instanced: true)
+                            draw(pass.batch, cullMode: pass.cullMode, instanced: true)
                         }
                     }
                     .vertexDescriptor(layout.descriptor)
@@ -587,14 +589,14 @@ struct BlinnPhongShaders {
     var fragment: FragmentShader
     var shadowedFragment: FragmentShader
 
-    nonisolated(unsafe) private static var cached: BlinnPhongShaders?
+    nonisolated(unsafe) private static var cached: Self?
     nonisolated(unsafe) private static var cachedPlaceholder: MTLTexture?
     nonisolated(unsafe) private static var cachedSampler: MTLSamplerState?
     // By descriptor identity, so a material's sampler state is made once.
     nonisolated(unsafe) private static var samplerStates: [ObjectIdentifier: (descriptor: MTLSamplerDescriptor, state: MTLSamplerState)] = [:]
     private static let lock = NSLock()
 
-    static func shared() throws -> BlinnPhongShaders {
+    static func shared() throws -> Self {
         lock.lock()
         defer { lock.unlock() }
         if let cached {
@@ -611,7 +613,7 @@ struct BlinnPhongShaders {
             constants["HAS_VERTEX_COLORS"] = .bool(colors)
             return try library.function(named: name, type: VertexShader.self, constants: constants)
         }
-        let shaders = BlinnPhongShaders(
+        let shaders = Self(
             vertex: try vertex("vertex_main", colors: false),
             instancedVertex: try vertex("vertex_instanced", colors: false),
             coloredVertex: try vertex("vertex_main", colors: true),

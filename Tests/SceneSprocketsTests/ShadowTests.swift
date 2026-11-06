@@ -2,13 +2,13 @@ import CoreGraphics
 import GeometryLite3D
 import Metal
 import MetalSprockets
-import SwiftMesh
-import Testing
-import simd
 @testable import SceneSprockets
-@testable import SceneSprocketsShaderMaterial
 @testable import SceneSprocketsBlinnPhong
 @testable import SceneSprocketsPBR
+@testable import SceneSprocketsShaderMaterial
+import simd
+import SwiftMesh
+import Testing
 
 private let size = CGSize(width: 128, height: 128)
 
@@ -105,7 +105,7 @@ func spotAndPointLightsCastShadows(light: Light.LightType) throws {
 }
 
 @Test
-func pointLightUsesSixViews() throws {
+func pointLightUsesSixViews() {
     let shadows = SceneGraphShadows()
     let bounds = BoundingBox3D(min: [-1, -1, -1], max: [1, 1, 1])
     #expect(shadows.shadowViews(lights: [(matrix_identity_float4x4, Light(type: .point))], bounds: bounds).count == 6)

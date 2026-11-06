@@ -1,9 +1,9 @@
 import Metal
 import MetalSprockets
-import SwiftMesh
-import Testing
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
+import SwiftMesh
+import Testing
 
 private struct UnlitMaterial: SceneSprockets.Material {
     var color: SIMD3<Float>
@@ -12,7 +12,7 @@ private struct UnlitMaterial: SceneSprockets.Material {
 private struct UnlitRenderer: SceneGraphMaterialRenderer {
     var materialType: any SceneSprockets.Material.Type { UnlitMaterial.self }
 
-    func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement {
+    func makeElement(entries _: [SceneGraph.MeshEntry], context _: SceneGraphRenderContext) -> AnyElement {
         EmptyElement().eraseToAnyElement()
     }
 }
@@ -26,7 +26,7 @@ func mixedMaterialsArePartitionedPerRenderer() throws {
     let root = SceneGraph.Node(children: [
         SceneGraph.Node(content: .mesh(box, material: blinnPhong)),
         SceneGraph.Node(content: .mesh(box, material: UnlitMaterial(color: [0, 1, 0]))),
-        SceneGraph.Node(content: .mesh(box, material: UnlitMaterial(color: [0, 0, 1]))),
+        SceneGraph.Node(content: .mesh(box, material: UnlitMaterial(color: [0, 0, 1])))
     ])
 
     let renderers: [any SceneGraphMaterialRenderer] = [BlinnPhongMaterialRenderer(), UnlitRenderer()]

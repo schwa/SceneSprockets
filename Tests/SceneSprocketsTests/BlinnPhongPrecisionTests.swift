@@ -2,10 +2,10 @@ import CoreGraphics
 import GeometryLite3D
 import Metal
 import MetalSprockets
-import Testing
-import simd
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
+import simd
+import Testing
 
 // #253: a quad lit by a point light, everything shifted by `offset`. Returns BGRA pixels.
 @MainActor

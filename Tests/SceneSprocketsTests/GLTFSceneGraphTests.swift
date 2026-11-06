@@ -5,11 +5,11 @@ import ImageIO
 import Metal
 import MetalSprocketsGLTF
 import MetalSprocketsPBR
+@testable import SceneSprockets
+@testable import SceneSprocketsPBR
 import simd
 import Testing
 import UniformTypeIdentifiers
-@testable import SceneSprockets
-@testable import SceneSprocketsPBR
 
 // Mesh node 0 (x = 10) has two triangle primitives with different materials, skinned to joint node 1 (x = 3), which
 // is animated from x = 3 to x = -3. Node 2 holds a camera and node 3 (a child of node 2) a point light.
@@ -162,7 +162,7 @@ func gltfInstancingAndVisibilityAreMapped() throws {
     let result = try GLTFAsset(url: url, device: device).makeSceneGraph(device: device)
     let copies = try #require(result.nodes[0])
     #expect(copies.children.count == 2)
-    #expect(copies.children.map { $0.transform.columns.3.x } == [5, -5])
+    #expect(copies.children.map(\.transform.columns.3.x) == [5, -5])
     let hidden = try #require(result.nodes[1])
     #expect(!hidden.isVisible)
     // Only the two copies are drawn.

@@ -1,8 +1,8 @@
 import GeometryLite3D
 import Metal
 import MetalSupport
-import SwiftMesh
 import simd
+import SwiftMesh
 
 extension SceneGraph.Node {
     // Like SCNNode.flattenedClone(): a node with this node's label and transform whose one mesh holds every visible

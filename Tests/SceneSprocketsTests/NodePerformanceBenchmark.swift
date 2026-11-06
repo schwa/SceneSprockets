@@ -1,7 +1,7 @@
 import Foundation
-import Testing
-import simd
 @testable import SceneSprockets
+import simd
+import Testing
 
 // #283: node and scene graph cost per node. Skipped unless SCENESPROCKETS_BENCHMARK=1, so normal test runs stay fast;
 // run it alone (other tests running in parallel skew the numbers). Prints `METRIC name=ns_per_node` lines.

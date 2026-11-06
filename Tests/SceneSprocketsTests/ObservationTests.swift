@@ -1,7 +1,7 @@
 import Observation
-import Testing
-import simd
 @testable import SceneSprockets
+import simd
+import Testing
 
 // #155
 private final class Flag: @unchecked Sendable {

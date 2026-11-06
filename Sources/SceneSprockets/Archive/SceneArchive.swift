@@ -51,6 +51,7 @@ public struct SceneArchive {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.nonConformingFloatEncodingStrategy = .convertToString(positiveInfinity: "inf", negativeInfinity: "-inf", nan: "nan")
         encoder.userInfo[.sceneArchive] = context
+        // swiftlint:disable:next optional_data_string_conversion - JSONEncoder output is valid UTF-8
         let json = try String(decoding: encoder.encode(sceneGraph), as: UTF8.self)
         let cache = textureCache ?? TextureCache()
         var files = context.files
@@ -145,7 +146,7 @@ public protocol ArchivableMaterial: Material, Codable {
 }
 
 public extension ArchivableMaterial {
-    func archiveProblem(context: SceneArchiveContext) -> String? {
+    func archiveProblem(context _: SceneArchiveContext) -> String? {
         nil
     }
 }
@@ -178,6 +179,7 @@ public enum SceneArchiveError: Error, CustomStringConvertible {
 }
 
 public extension CodingUserInfoKey {
+    // swiftlint:disable:next force_unwrapping - init(rawValue:) never fails
     static let sceneArchive = CodingUserInfoKey(rawValue: "io.schwa.SceneSprockets.sceneArchive")!
 }
 
@@ -414,7 +416,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
 
         private static let addressModes: [(String, MTLSamplerAddressMode)] = [
             ("clampToEdge", .clampToEdge), ("mirrorClampToEdge", .mirrorClampToEdge), ("repeat", .repeat),
-            ("mirrorRepeat", .mirrorRepeat), ("clampToZero", .clampToZero), ("clampToBorderColor", .clampToBorderColor),
+            ("mirrorRepeat", .mirrorRepeat), ("clampToZero", .clampToZero), ("clampToBorderColor", .clampToBorderColor)
         ]
 
         private static func name(_ mode: MTLSamplerAddressMode) -> String {
@@ -445,7 +447,11 @@ public final class SceneArchiveContext: @unchecked Sendable {
             TextureReference(file: "\(SceneArchive.texturesDirectoryName)/\(index).png", pixelFormat: texture.pixelFormat.rawValue, width: texture.width, height: texture.height, mipmapped: texture.mipmapLevelCount > 1)
         } else {
             TextureReference(
-                file: "\(SceneArchive.texturesDirectoryName)/\(index).bin", pixelFormat: texture.pixelFormat.rawValue, width: texture.width, height: texture.height, mipmapped: texture.mipmapLevelCount > 1,
+                file: "\(SceneArchive.texturesDirectoryName)/\(index).bin",
+                pixelFormat: texture.pixelFormat.rawValue,
+                width: texture.width,
+                height: texture.height,
+                mipmapped: texture.mipmapLevelCount > 1,
                 type: typeName == "2D" ? nil : typeName,
                 depth: texture.textureType == .type3D ? texture.depth : nil,
                 arrayLength: [.type2DArray, .typeCubeArray].contains(texture.textureType) ? texture.arrayLength : nil,
@@ -561,7 +567,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
             case .bc1_rgba, .bc1_rgba_srgb, .bc4_rUnorm, .bc4_rSnorm:
                 (blockWidth, blockHeight, bytesPerBlock) = (4, 4, 8)
             case .bc2_rgba, .bc2_rgba_srgb, .bc3_rgba, .bc3_rgba_srgb, .bc5_rgUnorm, .bc5_rgSnorm, .bc6H_rgbFloat, .bc6H_rgbuFloat, .bc7_rgbaUnorm, .bc7_rgbaUnorm_srgb,
-                 .astc_4x4_ldr, .astc_4x4_srgb, .astc_4x4_hdr:
+                 .astc_4x4_ldr, .astc_4x4_srgb, .astc_4x4_hdr: // swiftlint:disable:this indentation_width
                 (blockWidth, blockHeight, bytesPerBlock) = (4, 4, 16)
             case .astc_5x5_ldr, .astc_5x5_srgb, .astc_5x5_hdr:
                 (blockWidth, blockHeight, bytesPerBlock) = (5, 5, 16)
@@ -608,7 +614,10 @@ public final class SceneArchiveContext: @unchecked Sendable {
                     throw SceneArchiveError.unreadableTexture(reference.file)
                 }
                 bytes.withUnsafeBytes { buffer in
-                    texture.replace(region: size.region, mipmapLevel: level, slice: slice, withBytes: buffer.baseAddress! + offset, bytesPerRow: size.bytesPerRow, bytesPerImage: size.bytesPerImage)
+                    guard let baseAddress = buffer.baseAddress else {
+                        return
+                    }
+                    texture.replace(region: size.region, mipmapLevel: level, slice: slice, withBytes: baseAddress + offset, bytesPerRow: size.bytesPerRow, bytesPerImage: size.bytesPerImage)
                 }
                 offset += size.count
             }
@@ -663,7 +672,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil), let image = CGImageSourceCreateImageAtIndex(source, 0, nil), image.width == width, image.height == height else {
             throw SceneArchiveError.unreadableTexture(url.lastPathComponent)
         }
-        let isStraightRGBA = image.bitsPerComponent == 8 && image.bitsPerPixel == 32 && image.alphaInfo == .last && image.bitmapInfo.intersection(.byteOrderMask).isEmpty
+        let isStraightRGBA = image.bitsPerComponent == 8 && image.bitsPerPixel == 32 && image.alphaInfo == .last && image.bitmapInfo.isDisjoint(with: .byteOrderMask)
         if isStraightRGBA, let data = image.dataProvider?.data as Data? {
             var bytes = [UInt8](repeating: 0, count: width * height * 4)
             for row in 0 ..< height {
@@ -672,6 +681,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
             }
             return bytes
         }
+        // swiftlint:disable:next force_unwrapping - the sRGB color space always exists
         guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
             throw SceneArchiveError.unreadableTexture(url.lastPathComponent)
         }
@@ -683,6 +693,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
     private static func pngData(bytes: [UInt8], width: Int, height: Int) throws -> Data {
         let data = NSMutableData()
         guard let provider = CGDataProvider(data: Data(bytes) as CFData),
+              // swiftlint:disable:next force_unwrapping - the sRGB color space always exists
               let image = CGImage(width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: width * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.last.rawValue), provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent),
               let destination = CGImageDestinationCreateWithData(data as CFMutableData, UTType.png.identifier as CFString, 1, nil)
         else {

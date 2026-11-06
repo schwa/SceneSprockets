@@ -1,10 +1,10 @@
 import GeometryLite3D
 import Metal
-import SwiftMesh
-import Testing
-import simd
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
+import simd
+import SwiftMesh
+import Testing
 
 private func approximatelyEqual(_ lhs: BoundingBox3D?, _ rhs: BoundingBox3D) -> Bool {
     guard let lhs else {

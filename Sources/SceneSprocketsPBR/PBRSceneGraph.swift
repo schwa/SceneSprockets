@@ -2,10 +2,10 @@ import Metal
 import MetalSprockets
 import MetalSprocketsPBR
 import MetalSprocketsPBRShaders
-import SceneSprockets
 import MetalSupport
-import SwiftMesh
+import SceneSprockets
 import simd
+import SwiftMesh
 
 public struct PBRSceneMaterial: SceneSprockets.Material, SamplesShadowsInShader {
     public var pbrMaterial: PBRMaterial
@@ -75,7 +75,13 @@ public struct PBRNodeLayout {
 
     var pbrSkins: [PBRModel.Skin] {
         skins.map { skin in
-            PBRModel.Skin(joints: skin.joints.map { jointIndices[ObjectIdentifier($0)]! }, inverseBindMatrices: skin.inverseBindMatrices)
+            let joints = skin.joints.map { joint in
+                guard let index = jointIndices[ObjectIdentifier(joint)] else {
+                    fatalError("Skin joint '\(joint.label ?? "")' has no joint index")
+                }
+                return index
+            }
+            return PBRModel.Skin(joints: joints, inverseBindMatrices: skin.inverseBindMatrices)
         }
     }
 
@@ -369,6 +375,7 @@ extension PBRMaterialRenderer: SceneGraphBackgroundRenderer {
         return lighting
     }
 
+    // swiftlint:disable:next unneeded_throws_rethrows
     public func makeBackgroundElement(context: SceneGraphRenderContext) throws -> AnyElement? {
         guard case let .environment(blur) = context.environment.background else {
             return nil
@@ -435,4 +442,3 @@ func pbrLight(worldTransform: simd_float4x4, light: Light) -> PBRLight {
     }
     return result
 }
-

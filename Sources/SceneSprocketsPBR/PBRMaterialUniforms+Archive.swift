@@ -18,7 +18,7 @@ enum PBRUniformsArchive {
             self.stringValue = stringValue
         }
 
-        init?(intValue: Int) {
+        init?(intValue _: Int) {
             nil
         }
     }
@@ -52,7 +52,7 @@ enum PBRUniformsArchive {
         ("dispersion", \.dispersion),
         ("diffuseTransmissionFactor", \.diffuseTransmissionFactor),
         ("retroreflectionFactor", \.retroreflectionFactor),
-        ("glossinessFactor", \.glossinessFactor),
+        ("glossinessFactor", \.glossinessFactor)
         ]
     }
 
@@ -63,7 +63,7 @@ enum PBRUniformsArchive {
         ("specularColorFactor", \.specularColorFactor),
         ("sheenColorFactor", \.sheenColorFactor),
         ("diffuseTransmissionColorFactor", \.diffuseTransmissionColorFactor),
-        ("multiscatterColorFactor", \.multiscatterColorFactor),
+        ("multiscatterColorFactor", \.multiscatterColorFactor)
         ]
     }
 
@@ -71,7 +71,7 @@ enum PBRUniformsArchive {
         [
         ("unlit", \.unlit),
         ("volumeScatter", \.volumeScatter),
-        ("specularGlossiness", \.specularGlossiness),
+        ("specularGlossiness", \.specularGlossiness)
         ]
     }
 
@@ -96,7 +96,7 @@ enum PBRUniformsArchive {
         ("clearcoatNormal", \.clearcoatNormal),
         ("diffuseTransmission", \.diffuseTransmission),
         ("diffuseTransmissionColor", \.diffuseTransmissionColor),
-        ("retroreflection", \.retroreflection),
+        ("retroreflection", \.retroreflection)
         ]
     }
 

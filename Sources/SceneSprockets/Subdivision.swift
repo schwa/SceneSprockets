@@ -1,7 +1,7 @@
 import Metal
 import MetalSupport
-import SwiftMesh
 import simd
+import SwiftMesh
 
 extension MetalMesh {
     // Loop subdivision, like SCNGeometry.subdivisionLevel: each level splits every triangle in four. With `smooth`,
@@ -123,21 +123,27 @@ private struct SubdivisionMesh {
             boundaryNeighbors[Int(edge.low), default: []].append(Int(edge.high))
             boundaryNeighbors[Int(edge.high), default: []].append(Int(edge.low))
         }
+        func welded(_ id: Int) -> SIMD3<Float> {
+            guard let position = weldPosition[id] else {
+                fatalError("Subdivision: welded vertex \(id) has no position")
+            }
+            return position
+        }
         func oddPosition(_ edge: Edge) -> SIMD3<Float> {
-            let a = weldPosition[Int(edge.low)]!
-            let b = weldPosition[Int(edge.high)]!
+            let a = welded(Int(edge.low))
+            let b = welded(Int(edge.high))
             guard smooth, let faces = opposite[edge], faces.count == 2 else {
                 return (a + b) / 2
             }
-            return (a + b) * 3 / 8 + (weldPosition[Int(faces[0])]! + weldPosition[Int(faces[1])]!) / 8
+            return (a + b) * 3 / 8 + (welded(Int(faces[0])) + welded(Int(faces[1]))) / 8
         }
         func evenPosition(_ id: Int) -> SIMD3<Float> {
-            let position = weldPosition[id]!
+            let position = welded(id)
             if let boundary = boundaryNeighbors[id] {
                 guard boundary.count == 2 else {
                     return position
                 }
-                return position * 3 / 4 + (weldPosition[boundary[0]]! + weldPosition[boundary[1]]!) / 8
+                return position * 3 / 4 + (welded(boundary[0]) + welded(boundary[1])) / 8
             }
             let around = neighbors[id] ?? []
             let count = Float(around.count)
@@ -145,7 +151,7 @@ private struct SubdivisionMesh {
                 return position
             }
             let beta: Float = around.count == 3 ? 3 / 16 : 3 / (8 * count)
-            return position * (1 - count * beta) + around.reduce(.zero) { $0 + weldPosition[$1]! } * beta
+            return position * (1 - count * beta) + around.reduce(.zero) { $0 + welded($1) } * beta
         }
 
         // One new vertex per (unwelded) edge, so seams keep their own attributes.

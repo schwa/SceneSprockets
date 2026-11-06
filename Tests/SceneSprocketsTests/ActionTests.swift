@@ -1,6 +1,6 @@
-import Testing
-import simd
 @testable import SceneSprockets
+import simd
+import Testing
 
 private func near(_ a: SIMD3<Float>, _ b: SIMD3<Float>) -> Bool {
     simd_distance(a, b) < 1e-4
@@ -46,7 +46,7 @@ func groupRunsInParallelAndFinishesWithLongest() {
     let node = SceneGraph.Node()
     let graph = SceneGraph(root: node)
     var finished = false
-    node.run(.group([.move(by: [1, 0, 0], duration: 1), .scale(to: [3, 3, 3], duration: 2)]), completion: { finished = true })
+    node.run(.group([.move(by: [1, 0, 0], duration: 1), .scale(to: [3, 3, 3], duration: 2)])) { finished = true }
     graph.advanceActions(by: 1)
     #expect(near(node.trs.translation, [1, 0, 0]))
     #expect(near(node.trs.scale, [2, 2, 2]))
@@ -117,7 +117,7 @@ func reversedUndoesRelativeActions() {
     let action = SceneGraph.Action.sequence([
         .move(by: [1, 2, 0], duration: 1),
         .group([.rotate(by: 1, around: [0, 1, 0], duration: 0.5), .scale(by: 2, duration: 1)]),
-        .hide(),
+        .hide()
     ])
     run(.sequence([action, action.reversed()]), on: node, steps: [1, 1, 1, 1])
     #expect(near(node.trs.translation, .zero))

@@ -1,7 +1,7 @@
+@testable import SceneSprockets
+import simd
 import SwiftECS
 import Testing
-import simd
-@testable import SceneSprockets
 
 // #265: nodes under a SceneGraph's root store transform, content and hierarchy in the graph's World.
 

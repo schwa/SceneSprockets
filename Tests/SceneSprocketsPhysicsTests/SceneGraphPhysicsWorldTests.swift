@@ -2,9 +2,9 @@ import GeometryLite3D
 import Metal
 import SceneSprockets
 import SceneSprocketsPhysics
+import simd
 import SwiftMesh
 import Testing
-import simd
 
 // #38
 

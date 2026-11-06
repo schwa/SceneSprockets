@@ -50,9 +50,9 @@ extension SceneGraph {
         public var speed: Float = 1
         fileprivate let makeRunner: (TimingMode) -> any ActionRunner
         // Nil for actions that cannot be reversed (absolute ones such as move(to:)); reversed() returns them as is.
-        fileprivate var makeReversed: (() -> Action)?
+        fileprivate var makeReversed: (() -> Self)?
 
-        fileprivate init(duration: Float?, makeRunner: @escaping (TimingMode) -> any ActionRunner, reversed: (() -> Action)? = nil) {
+        fileprivate init(duration: Float?, makeRunner: @escaping (TimingMode) -> any ActionRunner, reversed: (() -> Self)? = nil) {
             self.duration = duration
             self.makeRunner = makeRunner
             self.makeReversed = reversed
@@ -85,10 +85,14 @@ extension SceneGraph {
         // MARK: Interval actions
 
         // `apply(node, from, to)` applies the progress between two eased fractions in 0...1.
-        fileprivate static func interval(_ duration: Float, start: @escaping (Node) -> Void = { _ in }, reversed: (() -> Action)? = nil, apply: @escaping (Node, Float, Float) -> Void) -> Self {
-            Self(duration: max(duration, 0), makeRunner: { timing in
-                IntervalRunner(duration: max(duration, 0), timing: timing, start: start, apply: apply)
-            }, reversed: reversed)
+        fileprivate static func interval(_ duration: Float, start: @escaping (Node) -> Void = { _ in }, reversed: (() -> Self)? = nil, apply: @escaping (Node, Float, Float) -> Void) -> Self {
+            Self(
+                duration: max(duration, 0),
+                makeRunner: { timing in
+                    IntervalRunner(duration: max(duration, 0), timing: timing, start: start, apply: apply)
+                },
+                reversed: reversed
+            )
         }
 
         public static func move(by delta: SIMD3<Float>, duration: Float) -> Self {
@@ -176,10 +180,14 @@ extension SceneGraph {
         // Waits a random time in duration ± range / 2 (never below 0), picked each time it starts. `duration` reports
         // the average.
         public static func wait(duration: Float, withRange range: Float) -> Self {
-            Self(duration: max(duration, 0), makeRunner: { timing in
-                let picked = max(duration + Float.random(in: -0.5...0.5) * range, 0)
-                return IntervalRunner(duration: picked, timing: timing, start: { _ in }, apply: { _, _, _ in })
-            }, reversed: { .wait(duration: duration, withRange: range) })
+            Self(
+                duration: max(duration, 0),
+                makeRunner: { timing in
+                    let picked = max(duration + Float.random(in: -0.5...0.5) * range, 0)
+                    return IntervalRunner(duration: picked, timing: timing, start: { _ in }, apply: { _, _, _ in })
+                },
+                reversed: { .wait(duration: duration, withRange: range) }
+            )
         }
 
         // `body` gets the node and the time since the action started, clamped to `duration`.
@@ -213,27 +221,31 @@ extension SceneGraph {
 
         // MARK: Composite actions
 
-        public static func sequence(_ actions: [Action]) -> Self {
+        public static func sequence(_ actions: [Self]) -> Self {
             let total = actions.reduce(Float?(0)) { sum, action in
-                guard let sum, let duration = action.duration else { return nil }
+                guard let sum, let duration = action.duration else {
+                    return nil
+                }
                 return sum + duration
             }
             return Self(duration: total, makeRunner: { _ in SequenceRunner(actions: actions) }, reversed: { .sequence(actions.reversed().map { $0.reversed() }) })
         }
 
-        public static func group(_ actions: [Action]) -> Self {
+        public static func group(_ actions: [Self]) -> Self {
             let total = actions.reduce(Float?(0)) { longest, action in
-                guard let longest, let duration = action.duration else { return nil }
+                guard let longest, let duration = action.duration else {
+                    return nil
+                }
                 return max(longest, duration)
             }
             return Self(duration: total, makeRunner: { _ in GroupRunner(actions: actions) }, reversed: { .group(actions.map { $0.reversed() }) })
         }
 
-        public static func `repeat`(_ action: Action, count: Int) -> Self {
+        public static func `repeat`(_ action: Self, count: Int) -> Self {
             Self(duration: action.duration.map { $0 * Float(max(count, 0)) }, makeRunner: { _ in RepeatRunner(action: action, count: max(count, 0)) }, reversed: { .repeat(action.reversed(), count: count) })
         }
 
-        public static func repeatForever(_ action: Action) -> Self {
+        public static func repeatForever(_ action: Self) -> Self {
             Self(duration: nil, makeRunner: { _ in RepeatRunner(action: action, count: nil) }, reversed: { .repeatForever(action.reversed()) })
         }
 
@@ -437,7 +449,7 @@ private final class RepeatRunner: ActionRunner {
     func step(_ node: SceneGraph.Node, _ deltaTime: Float) -> Float? {
         var remaining = deltaTime
         // Bounded, so a zero-length action repeated forever runs once per step instead of hanging.
-        for _ in 0..<1000 {
+        for _ in 0..<1_000 {
             if let count, completed >= count {
                 return remaining
             }

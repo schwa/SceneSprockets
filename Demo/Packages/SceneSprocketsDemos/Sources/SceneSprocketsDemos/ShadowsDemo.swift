@@ -21,7 +21,7 @@ final class ShadowsDemo: DemoScene {
             (.box(), [-2.5, 0.5, 0], [0.9, 0.35, 0.3]),
             (.sphere(radius: 0.6), [0, 0.6, -1], [0.3, 0.6, 0.9]),
             (.torus(ringRadius: 0.6, pipeRadius: 0.2), [2.5, 1.2, 0], [0.9, 0.8, 0.3]),
-            (.cylinder(radius: 0.3, height: 2.5), [0.5, 1.25, 1.5], [0.4, 0.8, 0.5]),
+            (.cylinder(radius: 0.3, height: 2.5), [0.5, 1.25, 1.5], [0.4, 0.8, 0.5])
         ]
         for (shape, position, color) in casters {
             let node = SceneGraph.Node(parent: root, shape: shape, material: BlinnPhongSceneMaterial.plastic(color), device: demoDevice, trs: .init(translation: position))
@@ -41,7 +41,7 @@ final class ShadowsDemo: DemoScene {
                 .toggle("Floor Receives Shadows", default: true),
                 .slider("Light Angle", 0...(2 * .pi), default: 0.6),
                 .toggle("Ambient Occlusion", default: false),
-                .slider("Vignette", 0...1, default: 0),
+                .slider("Vignette", 0...1, default: 0)
             ]
         )
     }

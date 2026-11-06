@@ -1,7 +1,7 @@
 import GeometryLite3D
-import Testing
-import simd
 @testable import SceneSprockets
+import simd
+import Testing
 
 private func translation(_ x: Float, _ y: Float, _ z: Float) -> simd_float4x4 {
     simd_float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [x, y, z, 1]))

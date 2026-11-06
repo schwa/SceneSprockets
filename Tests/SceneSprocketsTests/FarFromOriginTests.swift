@@ -2,13 +2,13 @@ import CoreGraphics
 import GeometryLite3D
 import Metal
 import MetalSprockets
-import SwiftMesh
-import Testing
-import simd
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
-@testable import SceneSprocketsShaderMaterial
 @testable import SceneSprocketsPBR
+@testable import SceneSprocketsShaderMaterial
+import simd
+import SwiftMesh
+import Testing
 
 // #257: shadows, the screen-space shadow mask, fog and culling far from the world origin.
 

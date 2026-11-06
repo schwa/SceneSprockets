@@ -71,7 +71,7 @@ private struct CodePanelView: View {
 // Just enough Swift highlighting for short slides: keywords, types, numbers, strings and comments.
 enum SwiftHighlighter {
     private static let keywords: Set<String> = [
-        "let", "var", "func", "for", "in", "return", "if", "else", "guard", "class", "struct", "enum", "true", "false", "nil", "self", "try", "await", "import",
+        "let", "var", "func", "for", "in", "return", "if", "else", "guard", "class", "struct", "enum", "true", "false", "nil", "self", "try", "await", "import"
     ]
     private static let plain = Color(white: 0.92)
     private static let keyword = Color(red: 0.99, green: 0.37, blue: 0.64)

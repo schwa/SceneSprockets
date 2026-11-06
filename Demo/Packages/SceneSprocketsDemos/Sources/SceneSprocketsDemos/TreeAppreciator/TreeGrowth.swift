@@ -33,25 +33,25 @@ struct Season: Sendable {
             Palette(name: "Cherry blossom", leaves: [0xF7B7CF, 0xF29BBB, 0xFFD6E4, 0xFBE9EF], tint: 0x7CC46A, tintWord: "green"),
             Palette(name: "Magnolia", leaves: [0xFFF4F7, 0xF3D3E2, 0xE8B4CC], tint: 0xB0417A, tintWord: "plum"),
             Palette(name: "New leaves", leaves: [0x86C96E, 0xA5D97F, 0x6BB85D, 0xB8E08A], tint: 0xFF8FBE, tintWord: "pink"),
-            Palette(name: "Crab apple", leaves: [0xE45C8A, 0xF07FA5, 0xD9467A, 0x8FC46A], tint: 0xFFFFFF, tintWord: "white"),
+            Palette(name: "Crab apple", leaves: [0xE45C8A, 0xF07FA5, 0xD9467A, 0x8FC46A], tint: 0xFFFFFF, tintWord: "white")
         ]),
         Season(name: "Summer", leaves: [0x3F8F3A, 0x4FA547, 0x2E7D32, 0x5CAE3C].map(linearColor), skyTop: linearColor(0x3D86D6), skyHorizon: linearColor(0xFFEAC0), ground: linearColor(0x6EA04A), density: 1, tint: linearColor(0xE0A52C), tintWord: "gold", sun: linearColor(0xFFF3D6), ambient: [0.4, 0.43, 0.48], hasFlowers: true, palettes: [
             Palette(name: "Oak", leaves: [0x3F8F3A, 0x4FA547, 0x2E7D32, 0x5CAE3C], tint: 0xE0A52C, tintWord: "gold"),
             Palette(name: "Copper beech", leaves: [0x6B2E3A, 0x80394A, 0x5A2430, 0x8C4A4F], tint: 0x6FB04F, tintWord: "green"),
             Palette(name: "Jacaranda", leaves: [0x8E7CE0, 0xA593EB, 0x7766CC, 0xB7A9F2], tint: 0xF2D14B, tintWord: "yellow"),
-            Palette(name: "Silver birch", leaves: [0x9CCB6A, 0xB6D98A, 0x84B85A], tint: 0xD9603B, tintWord: "rust"),
+            Palette(name: "Silver birch", leaves: [0x9CCB6A, 0xB6D98A, 0x84B85A], tint: 0xD9603B, tintWord: "rust")
         ]),
         Season(name: "Autumn", leaves: [0xD9822B, 0xC4452C, 0xE8B33A, 0xB8612A].map(linearColor), skyTop: linearColor(0x56679E), skyHorizon: linearColor(0xF8C58E), ground: linearColor(0x9A7B4F), density: 0.9, tint: linearColor(0x5F9E4F), tintWord: "green", sun: linearColor(0xFFD2A0), ambient: [0.45, 0.4, 0.38], hasFlowers: false, palettes: [
             Palette(name: "Maple", leaves: [0xC4302B, 0xD9452C, 0xE8642E, 0xA8241F], tint: 0xE8C23A, tintWord: "gold"),
             Palette(name: "Ginkgo", leaves: [0xF2C230, 0xE8B33A, 0xF7D85A, 0xD9A21F], tint: 0x5F9E4F, tintWord: "green"),
             Palette(name: "Mixed autumn", leaves: [0xD9822B, 0xC4452C, 0xE8B33A, 0xB8612A], tint: 0x8A3FA0, tintWord: "violet"),
-            Palette(name: "Smoke bush", leaves: [0xB0413E, 0x8E2F4A, 0xD86A3A, 0x6E2A3F], tint: 0xF2C230, tintWord: "yellow"),
+            Palette(name: "Smoke bush", leaves: [0xB0413E, 0x8E2F4A, 0xD86A3A, 0x6E2A3F], tint: 0xF2C230, tintWord: "yellow")
         ]),
         Season(name: "Winter", leaves: [0xEEF4F7, 0xDBE6EC, 0xF7FBFC].map(linearColor), skyTop: linearColor(0x8AA2BB), skyHorizon: linearColor(0xEEF1F4), ground: linearColor(0xEEF3F6), density: 0.45, tint: linearColor(0xC43B4A), tintWord: "red", sun: linearColor(0xFFF6EE), ambient: [0.5, 0.52, 0.56], hasFlowers: false, palettes: [
             Palette(name: "Snowy", leaves: [0xEEF4F7, 0xDBE6EC, 0xF7FBFC], tint: 0xC43B4A, tintWord: "red"),
             Palette(name: "Evergreen", leaves: [0x2F5D4A, 0x3B6E58, 0xE8F0F2], tint: 0xC43B4A, tintWord: "red"),
-            Palette(name: "Winter cherry", leaves: [0xF4C6D6, 0xEEF4F7, 0xE9AFC4], tint: 0x3B6E58, tintWord: "evergreen"),
-        ]),
+            Palette(name: "Winter cherry", leaves: [0xF4C6D6, 0xEEF4F7, 0xE9AFC4], tint: 0x3B6E58, tintWord: "evergreen")
+        ])
     ]
 }
 

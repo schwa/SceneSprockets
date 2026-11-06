@@ -1,10 +1,10 @@
 import Foundation
 import Metal
-import SwiftECS
-import Testing
-import simd
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
+import simd
+import SwiftECS
+import Testing
 
 // #280: archive and clone read node fields through the World when the node is in a graph.
 
@@ -13,7 +13,7 @@ private struct AppTag: Component {
 }
 
 // Values set after the graph exists, so they live only in the World.
-private func makeGraphEditedInPlace(device: MTLDevice) throws -> (SceneGraph, SceneGraph.Node) {
+private func makeGraphEditedInPlace(device: MTLDevice) -> (SceneGraph, SceneGraph.Node) {
     let root = SceneGraph.Node(label: "Root")
     let graph = SceneGraph(root: root)
     let material = BlinnPhongSceneMaterial(
@@ -56,7 +56,7 @@ private func expectEditedValues(_ box: SceneGraph.Node) {
 @Test
 func archiveRoundTripsValuesStoredInTheWorld() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
-    let (graph, _) = try makeGraphEditedInPlace(device: device)
+    let (graph, _) = makeGraphEditedInPlace(device: device)
     let archive = SceneArchive(materialTypes: [BlinnPhongSceneMaterial.self])
     let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         .appendingPathExtension(SceneArchive.pathExtension)
@@ -75,7 +75,7 @@ func archiveRoundTripsValuesStoredInTheWorld() throws {
 @Test
 func cloneCopiesValuesStoredInTheWorld() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
-    let (graph, box) = try makeGraphEditedInPlace(device: device)
+    let (graph, box) = makeGraphEditedInPlace(device: device)
     let copy = box.clone()
     #expect(copy.world == nil)
     #expect(copy.id != box.id)

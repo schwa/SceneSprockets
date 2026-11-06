@@ -17,9 +17,9 @@ public protocol SceneViewDelegate: AnyObject {
 }
 
 public extension SceneViewDelegate {
-    func sceneView(updateAtTime time: Float, deltaTime: Float) {}
-    func sceneView(didApplyActionsAtTime time: Float) {}
-    func sceneView(didApplyConstraintsAtTime time: Float) {}
+    func sceneView(updateAtTime _: Float, deltaTime _: Float) {}
+    func sceneView(didApplyActionsAtTime _: Float) {}
+    func sceneView(didApplyConstraintsAtTime _: Float) {}
 }
 
 // Shows a scene graph, like SceneKit's SwiftUI SceneView. Runs node actions every frame.
@@ -32,16 +32,16 @@ public struct SceneView: View {
         }
 
         // Orbit, pan and zoom with the mouse or trackpad. The point of view's node is not moved.
-        public static let allowsCameraControl = Options(rawValue: 1 << 0)
+        public static let allowsCameraControl = Self(rawValue: 1 << 0)
         // Adds a white directional light at the camera when the scene has no lights.
-        public static let autoenablesDefaultLighting = Options(rawValue: 1 << 1)
+        public static let autoenablesDefaultLighting = Self(rawValue: 1 << 1)
         // Overlays scene statistics (meshes, triangles, lights), like SCNView.showsStatistics.
-        public static let showsStatistics = Options(rawValue: 1 << 2)
+        public static let showsStatistics = Self(rawValue: 1 << 2)
         // Overlays MetalSprocketsUI's frame timing readout.
-        public static let showsFrameTiming = Options(rawValue: 1 << 4)
+        public static let showsFrameTiming = Self(rawValue: 1 << 4)
         // Keeps the drawable readable (framebufferOnly false) even without post passes, for example to inspect it in a
         // GPU capture. Costs some bandwidth.
-        public static let disablesFramebufferOnly = Options(rawValue: 1 << 3)
+        public static let disablesFramebufferOnly = Self(rawValue: 1 << 3)
     }
 
     private let sceneGraph: SceneGraph
@@ -108,7 +108,7 @@ public struct SceneView: View {
         cameraTarget: SIMD3<Float>? = nil,
         hitTestCategoryBitMask: UInt = .max,
         // Used when the scene has no camera node.
-        defaultCamera: Camera = SceneView.defaultCamera,
+        defaultCamera: Camera = Self.defaultCamera,
         // Replaces the camera node's camera (projection, masks), for editor cameras. The transform still comes from
         // `cameraMatrix` or the node.
         camera: Camera? = nil,
@@ -390,7 +390,7 @@ public struct SceneView: View {
         shadows != nil || sceneGraph.fog != nil || sceneGraph.postProcessing != nil
     }
 
-    public static let defaultCamera = Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(60), depthMode: .standard(zClip: 0.01 ... 1000)))
+    public static let defaultCamera = Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(60), depthMode: .standard(zClip: 0.01 ... 1_000)))
 
     // The starting camera transform, and the point camera control orbits around.
     private var viewpoint: (matrix: simd_float4x4, target: SIMD3<Float>) {
@@ -447,29 +447,29 @@ extension SceneView: @MainActor Equatable {
     public static func == (lhs: SceneView, rhs: SceneView) -> Bool {
         // The camera binding compares by value: callers pass key-path bindings to the same model.
         lhs.closuresID != nil && lhs.closuresID == rhs.closuresID
-                && lhs.sceneGraph === rhs.sceneGraph
-                && lhs.hadScenePostPasses == rhs.hadScenePostPasses
-                && lhs.pointOfView === rhs.pointOfView
-                && lhs.options == rhs.options
-                && lhs.renderers.count == rhs.renderers.count
-                && zip(lhs.renderers, rhs.renderers).allSatisfy(Self.isSameRenderer)
-                && lhs.delegate === rhs.delegate
-                && lhs.isPlaying == rhs.isPlaying
-                && lhs.shadows === rhs.shadows
-                && lhs.audio === rhs.audio
-                && (lhs.externalCameraMatrix == nil) == (rhs.externalCameraMatrix == nil)
-                && lhs.externalCameraMatrix?.wrappedValue == rhs.externalCameraMatrix?.wrappedValue
-                && lhs.hitTestCategoryBitMask == rhs.hitTestCategoryBitMask
-                && lhs.manipulator === rhs.manipulator
-                && Self.isSameCamera(lhs.defaultCamera, rhs.defaultCamera)
-                && Self.isSameCamera(lhs.cameraOverride, rhs.cameraOverride)
-                && lhs.cameraTarget == rhs.cameraTarget
-                && lhs.debugMode == rhs.debugMode
-                && lhs.materialChannel == rhs.materialChannel
-                && (lhs.onTap == nil) == (rhs.onTap == nil)
-                && (lhs.onTapAt == nil) == (rhs.onTapAt == nil)
-                && (lhs.decorations == nil) == (rhs.decorations == nil)
-                && (lhs.overlay == nil) == (rhs.overlay == nil)
+            && lhs.sceneGraph === rhs.sceneGraph
+            && lhs.hadScenePostPasses == rhs.hadScenePostPasses
+            && lhs.pointOfView === rhs.pointOfView
+            && lhs.options == rhs.options
+            && lhs.renderers.count == rhs.renderers.count
+            && zip(lhs.renderers, rhs.renderers).allSatisfy(Self.isSameRenderer)
+            && lhs.delegate === rhs.delegate
+            && lhs.isPlaying == rhs.isPlaying
+            && lhs.shadows === rhs.shadows
+            && lhs.audio === rhs.audio
+            && (lhs.externalCameraMatrix == nil) == (rhs.externalCameraMatrix == nil)
+            && lhs.externalCameraMatrix?.wrappedValue == rhs.externalCameraMatrix?.wrappedValue
+            && lhs.hitTestCategoryBitMask == rhs.hitTestCategoryBitMask
+            && lhs.manipulator === rhs.manipulator
+            && Self.isSameCamera(lhs.defaultCamera, rhs.defaultCamera)
+            && Self.isSameCamera(lhs.cameraOverride, rhs.cameraOverride)
+            && lhs.cameraTarget == rhs.cameraTarget
+            && lhs.debugMode == rhs.debugMode
+            && lhs.materialChannel == rhs.materialChannel
+            && (lhs.onTap == nil) == (rhs.onTap == nil)
+            && (lhs.onTapAt == nil) == (rhs.onTapAt == nil)
+            && (lhs.decorations == nil) == (rhs.decorations == nil)
+            && (lhs.overlay == nil) == (rhs.overlay == nil)
     }
 
     private static func isSameRenderer(_ lhs: any SceneGraphMaterialRenderer, _ rhs: any SceneGraphMaterialRenderer) -> Bool {
@@ -506,4 +506,3 @@ private struct CameraControl: ViewModifier {
         }
     }
 }
-

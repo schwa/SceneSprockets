@@ -2,11 +2,11 @@ import Foundation
 import GeometryLite3D
 import Metal
 import MetalSprockets
-import SceneSprocketsShaders
 import MetalSupport
 import ModelIO
-import SwiftMesh
+import SceneSprocketsShaders
 import simd
+import SwiftMesh
 
 // Materials whose renderer samples the shadow map per light while shading (Blinn-Phong). The screen-space mask skips
 // their pixels.
@@ -379,7 +379,7 @@ struct ShadowCasterDepthPass: Element {
 func casterPipeline(_ label: String, vertexShader: VertexShader, fragmentShader: FragmentShader, vertexDescriptor: MTLVertexDescriptor, casters: [SceneGraphShadows.Caster], viewProjection: simd_float4x4, colorPixelFormat: MTLPixelFormat) throws -> some Element {
     try RenderPipeline(label: label, vertexShader: vertexShader, fragmentShader: fragmentShader) {
         ForEach(Array(casters.enumerated()), id: \.offset) { _, caster in
-            try drawCaster(caster)
+            drawCaster(caster)
         }
         .parameter("lightViewProjection", functionType: .vertex, value: viewProjection)
     }
@@ -390,7 +390,7 @@ func casterPipeline(_ label: String, vertexShader: VertexShader, fragmentShader:
     }
 }
 
-private func drawCaster(_ caster: SceneGraphShadows.Caster) throws -> AnyElement {
+private func drawCaster(_ caster: SceneGraphShadows.Caster) -> AnyElement {
     let draw = Draw(
         primitiveType: caster.submesh.primitiveType,
         indexBuffer: caster.submesh.indexBuffer,
@@ -419,10 +419,10 @@ struct ShadowCasterShaders {
     var staticDescriptor: MTLVertexDescriptor
     var skinnedDescriptor: MTLVertexDescriptor
 
-    nonisolated(unsafe) private static var cached: ShadowCasterShaders?
+    nonisolated(unsafe) private static var cached: Self?
     private static let lock = NSLock()
 
-    static func shared() throws -> ShadowCasterShaders {
+    static func shared() throws -> Self {
         lock.lock()
         defer { lock.unlock() }
         if let cached {
@@ -441,7 +441,7 @@ struct ShadowCasterShaders {
         skinnedDescriptor.attributes[2].bufferIndex = 1
         skinnedDescriptor.attributes[2].offset = 16
         skinnedDescriptor.layouts[1].stride = 32
-        let shaders = ShadowCasterShaders(
+        let shaders = Self(
             staticVertex: try library.vertex_static,
             skinnedVertex: try library.vertex_skinned,
             fragment: try library.fragment_depth,

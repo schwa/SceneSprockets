@@ -1,7 +1,7 @@
 import SceneSprocketsAudio
+import simd
 import SwiftECS
 import SwiftMesh
-import simd
 
 // Components a node in a graph stores in the graph's World. Public so ECS apps can query and write them (#269);
 // see SceneGraph.world for what direct writes do.
@@ -280,7 +280,7 @@ public struct NodeConstraintsComponent: NodeField {
     static var defaultValue: [SceneGraph.Constraint] { [] }
     static var revision: NodeFieldRevision { .none }
 
-    static func didChange(_ node: SceneGraph.Node, from oldValue: [SceneGraph.Constraint]) {
+    static func didChange(_ node: SceneGraph.Node, from _: [SceneGraph.Constraint]) {
         node.accelerationStates = [:]
     }
 

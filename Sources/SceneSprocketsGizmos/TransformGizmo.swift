@@ -23,6 +23,19 @@ public final class TransformGizmo: SceneViewManipulator {
     public enum Axis: Int, CaseIterable, Sendable {
         case x, y, z
 
+        // The axes after this one, in x, y, z order, wrapping around.
+        var next: Self {
+            switch self {
+            case .x: .y
+            case .y: .z
+            case .z: .x
+            }
+        }
+
+        var afterNext: Self {
+            next.next
+        }
+
         var vector: SIMD3<Float> {
             switch self {
             case .x: [1, 0, 0]
@@ -122,8 +135,8 @@ public final class TransformGizmo: SceneViewManipulator {
             var result: [(Handle, [SIMD3<Float>])] = Axis.allCases.map { axis in (.axis(axis), [o, o + frame.axis(axis) * length]) }
             if mode == .translate {
                 for axis in Axis.allCases {
-                    let u = frame.axis(Axis(rawValue: (axis.rawValue + 1) % 3)!) * length * 0.25
-                    let v = frame.axis(Axis(rawValue: (axis.rawValue + 2) % 3)!) * length * 0.25
+                    let u = frame.axis(axis.next) * length * 0.25
+                    let v = frame.axis(axis.afterNext) * length * 0.25
                     let corner = o + (u + v) * 0.6
                     result.append((.plane(axis), [corner, corner + u * 0.8, corner + u * 0.8 + v * 0.8, corner + v * 0.8]))
                 }
@@ -131,8 +144,8 @@ public final class TransformGizmo: SceneViewManipulator {
             return result
         case .rotate:
             var result: [(Handle, [SIMD3<Float>])] = Axis.allCases.map { axis in
-                let u = frame.axis(Axis(rawValue: (axis.rawValue + 1) % 3)!)
-                let v = frame.axis(Axis(rawValue: (axis.rawValue + 2) % 3)!)
+                let u = frame.axis(axis.next)
+                let v = frame.axis(axis.afterNext)
                 return (.axis(axis), Self.circle(center: o, u: u, v: v, radius: length * 0.9))
             }
             result.append((.view, Self.circle(center: o, u: frame.cameraRight, v: frame.cameraUp, radius: length * 1.1)))
@@ -408,7 +421,7 @@ public final class TransformGizmo: SceneViewManipulator {
 
     // Scales uniformly by `scale` and turns about the view direction by `rotation` (clockwise on screen, as seen from
     // the camera), each snapped like the handles.
-    public func twoFingerGesture(scale: Float, rotation: Float, viewport: SceneViewport) {
+    public func twoFingerGesture(scale: Float, rotation: Float, viewport _: SceneViewport) {
         guard let target, let start = twoFingerStart else {
             return
         }
@@ -449,6 +462,7 @@ public final class TransformGizmo: SceneViewManipulator {
 
     static let axisColors: [Color] = [.red, .green, .blue]
 
+    // swiftlint:disable:next unneeded_throws_rethrows
     public func overlay(viewport: SceneViewport) throws -> AnyElement? {
         guard let frame = frame(viewport: viewport) else {
             return nil

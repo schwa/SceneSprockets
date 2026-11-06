@@ -2,12 +2,12 @@ import CoreGraphics
 import GeometryLite3D
 import Metal
 import MetalSprockets
-import SwiftMesh
-import Testing
-import simd
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
 @testable import SceneSprocketsPBR
+import simd
+import SwiftMesh
+import Testing
 
 // Renders small scenes offscreen and checks pixels, so both renderers are exercised end to end.
 

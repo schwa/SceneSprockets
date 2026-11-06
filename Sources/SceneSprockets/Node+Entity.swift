@@ -1,5 +1,5 @@
-import SwiftECS
 import simd
+import SwiftECS
 
 // A Node property that lives in the graph's World while the node is under a SceneGraph's root, and on the node
 // otherwise (#265, #274). Declare it on Node with a NodeFieldStorage, a computed property that calls
@@ -26,7 +26,7 @@ enum NodeFieldRevision {
 }
 
 extension NodeField {
-    static func didChange(_ node: SceneGraph.Node, from oldValue: Value) {
+    static func didChange(_ node: SceneGraph.Node, from _: Value) {
         node.bump(revision)
     }
 
@@ -270,7 +270,8 @@ extension SceneGraph.Node {
 
     @inline(__always)
     func setField<Field: NodeField>(
-        _ wrappedKeyPath: KeyPath<SceneGraph.Node, Field.Value>, _ storageKeyPath: NodeFieldStorageKeyPath<Field>,
+        _ wrappedKeyPath: KeyPath<SceneGraph.Node, Field.Value>,
+        _ storageKeyPath: NodeFieldStorageKeyPath<Field>,
         _ value: Field.Value
     ) {
         // Most fields never use the old value; reading it was a second full read per write (#283).

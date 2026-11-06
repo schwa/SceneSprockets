@@ -1,10 +1,10 @@
 import Foundation
 import Metal
-import SwiftMesh
-import Testing
-import simd
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
+import simd
+import SwiftMesh
+import Testing
 
 private var material: BlinnPhongSceneMaterial {
     BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color([1, 1, 1]), specular: .color(0), shininess: 1)
@@ -22,7 +22,7 @@ private var material: BlinnPhongSceneMaterial {
     (.tube(innerRadius: 0.5, outerRadius: 1, height: 2), SIMD3<Float>(2, 2, 2)),
     (.pyramid(width: 2, height: 3, length: 4), SIMD3<Float>(2, 3, 4)),
     (.floor(width: 10, length: 20), SIMD3<Float>(10, 0, 20)),
-    (.extrudedPath("0 0 m 2 0 l 2 1 l 0 1 l h", extrusionDepth: 0.5), SIMD3<Float>(2, 1, 0.5)),
+    (.extrudedPath("0 0 m 2 0 l 2 1 l 0 1 l h", extrusionDepth: 0.5), SIMD3<Float>(2, 1, 0.5))
 ])
 func shapeSizes(shape: SceneGraph.Shape, size: SIMD3<Float>) throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
@@ -35,7 +35,7 @@ func shapeSizes(shape: SceneGraph.Shape, size: SIMD3<Float>) throws {
 @Test(arguments: [
     (SceneGraph.Shape.tube(innerRadius: 0.5, outerRadius: 1, height: 2), Float.pi * (1 - 0.25) * 2),
     (.pyramid(width: 2, height: 3, length: 4), Float(2 * 3 * 4) / 3),
-    (.extrudedPath("0 0 m 2 0 l 2 1 l 0 1 l h", extrusionDepth: 0.5), 1),
+    (.extrudedPath("0 0 m 2 0 l 2 1 l 0 1 l h", extrusionDepth: 0.5), 1)
 ])
 func newShapesFaceOutward(shape: SceneGraph.Shape, volume: Float) {
     let mesh = shape.mesh().triangulated()
@@ -79,7 +79,7 @@ func textShapeHasUnitNormals() throws {
     let mesh = SceneGraph.Shape.text("SceneGraph", fontName: "Helvetica-Bold").metalMesh(device: device)
     let normals = try #require(mesh.float3Values(.normal))
     #expect(!normals.isEmpty)
-    #expect(normals.filter { abs(simd_length($0) - 1) > 1e-3 }.isEmpty)
+    #expect(!normals.contains { abs(simd_length($0) - 1) > 1e-3 })
 }
 
 @Test

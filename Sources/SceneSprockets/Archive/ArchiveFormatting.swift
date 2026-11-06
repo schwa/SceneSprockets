@@ -10,7 +10,7 @@ enum ArchiveStringEnum {
         try container.encode(value.rawValue)
     }
 
-    static func decode<Value: RawRepresentable<String>>(_ type: Value.Type, from decoder: Decoder) throws -> Value {
+    static func decode<Value: RawRepresentable<String>>(_: Value.Type, from decoder: Decoder) throws -> Value {
         let name: String
         if let string = try? decoder.singleValueContainer().decode(String.self) {
             name = string
@@ -36,7 +36,7 @@ struct ArchiveAnyKey: CodingKey {
         self.stringValue = stringValue
     }
 
-    init?(intValue: Int) {
+    init?(intValue _: Int) {
         nil
     }
 }
@@ -120,6 +120,7 @@ enum ArchiveFormatting {
         guard let expression = try? NSRegularExpression(pattern: #"\[\s*("# + number + #"(?:\s*,\s*"# + number + #")*)\s*\]"#) else {
             return json
         }
+        // swiftlint:disable:next legacy_objc_type - NSRegularExpression ranges are NSString ranges
         let source = json as NSString
         var result = ""
         var location = 0

@@ -1,12 +1,12 @@
 import GeometryLite3D
 import Metal
 import MetalSprockets
-import simd
-import SwiftMesh
-import Testing
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
 @testable import SceneSprocketsPBR
+import simd
+import SwiftMesh
+import Testing
 
 // #132: debug views replace every mesh's material.
 private func render(_ mode: SceneGraphDebugMode?, mesh: MetalMesh) throws -> SIMD4<UInt8> {

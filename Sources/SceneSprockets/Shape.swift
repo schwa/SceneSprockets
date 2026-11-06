@@ -1,9 +1,9 @@
 import CoreGraphics
 import GeometryLite3D
 import Metal
+import simd
 import SwiftMesh
 import SwiftUI
-import simd
 
 extension SceneGraph {
     // Parametric geometry, like SceneKit's SCNBox, SCNSphere, SCNText and so on. Sizes are full extents, centered on
@@ -42,6 +42,7 @@ extension SceneGraph {
             case let .cylinder(radius, height):
                 .cylinder(height: height, radius: radius, attributes: smooth)
             case let .cone(topRadius, bottomRadius, height):
+                // swiftlint:disable:next void_function_in_ternary - both branches return a mesh
                 topRadius == 0 ? .cone(height: height, radius: bottomRadius, attributes: smooth) : .conicalFrustum(height: height, topRadius: topRadius, bottomRadius: bottomRadius, attributes: smooth)
             case let .capsule(capRadius, height):
                 .capsule(segments: 64, height: height, radius: capRadius, latitudeSegments: 16, attributes: smooth)

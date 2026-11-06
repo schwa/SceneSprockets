@@ -2,11 +2,11 @@ import CoreGraphics
 import GeometryLite3D
 import Metal
 import MetalSprockets
-import Testing
-import simd
 @testable import SceneSprockets
 import SceneSprocketsBlinnPhong
 @testable import SceneSprocketsGizmos
+import simd
+import Testing
 
 // #172
 @MainActor

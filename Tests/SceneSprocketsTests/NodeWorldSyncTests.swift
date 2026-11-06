@@ -1,8 +1,8 @@
 import Observation
+@testable import SceneSprockets
+import simd
 import SwiftECS
 import Testing
-import simd
-@testable import SceneSprockets
 
 // #266: writes made directly to the World keep revisions and observation in step with the Node API.
 

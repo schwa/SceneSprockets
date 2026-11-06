@@ -10,7 +10,7 @@ public enum SceneGraphDemos {
             SceneKitFeaturesDemoView.self,
             ShadowsDemoView.self,
             DiceDemoView.self,
-            GearsDemoView.self,
+            GearsDemoView.self
         ]
     }
 

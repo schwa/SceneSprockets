@@ -1,9 +1,9 @@
 import Metal
-import SwiftUI
-import Testing
-import simd
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
+import simd
+import SwiftUI
+import Testing
 
 // #235: SceneView compares equal when its inputs are the same and its closures carry the same closuresID, so
 // SwiftUI can skip its body.

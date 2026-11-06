@@ -81,7 +81,6 @@ extension SceneGraph.Constraint {
 }
 
 extension SceneGraph {
-
     public struct BillboardAxes: OptionSet, Sendable {
         public let rawValue: Int
 
@@ -182,6 +181,7 @@ extension SceneGraph.Node {
                 return
             }
             let targetPosition = target.worldTransform.columns.3.xyz
+            // swiftlint:disable:next prefer_self_in_static_references - Self is not Node in this closure
             let ignored = { (node: SceneGraph.Node) in node === self || self.isAncestor(of: node) || node === target || target.isAncestor(of: node) }
             guard let hit = sceneGraph.hitTest(segmentFrom: targetPosition, to: world.translation, options: .init(categoryBitMask: categoryBitMask)).first(where: { !ignored($0.node) }) else {
                 return
@@ -283,4 +283,3 @@ extension SceneGraph.Node {
         return .lookRotation(from: position, to: target, up: worldUp, localFront: localFront)
     }
 }
-

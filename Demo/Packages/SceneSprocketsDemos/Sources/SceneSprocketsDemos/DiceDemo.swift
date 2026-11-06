@@ -64,7 +64,7 @@ final class DiceDemo: DemoScene {
         ("D&D Set", [.d4, .d6, .d8, .d10, .d12, .d20]),
         ("D20", [.d20]),
         // No dice: metal gears instead.
-        ("Gears", []),
+        ("Gears", [])
     ]
     private var generator = SystemRandomNumberGenerator()
 
@@ -91,7 +91,7 @@ final class DiceDemo: DemoScene {
                 .slider("Seconds per Roll", 2...10, default: 5),
                 .slider("Throw Strength", 0.5...2, default: 1),
                 // One large die per style, turning in place, to show the materials.
-                .toggle("Line Up", default: false),
+                .toggle("Line Up", default: false)
             ]
         )
         shadows = SceneGraphShadows(intensity: 0.65, softness: 2)
@@ -240,7 +240,7 @@ final class DiceDemo: DemoScene {
             ([outerWidth, wallHeight, wallThickness], [0, wallHeight / 2, -(trayDepth + wallThickness) / 2]),
             ([outerWidth, wallHeight, wallThickness], [0, wallHeight / 2, (trayDepth + wallThickness) / 2]),
             ([wallThickness, wallHeight, trayDepth], [-(trayWidth + wallThickness) / 2, wallHeight / 2, 0]),
-            ([wallThickness, wallHeight, trayDepth], [(trayWidth + wallThickness) / 2, wallHeight / 2, 0]),
+            ([wallThickness, wallHeight, trayDepth], [(trayWidth + wallThickness) / 2, wallHeight / 2, 0])
         ]
         for wall in walls {
             let node = SceneGraph.Node(parent: tray, label: "Wall", shape: .box(width: wall.size.x, height: wall.size.y, length: wall.size.z), material: wood, device: demoDevice, trs: .init(translation: wall.position))

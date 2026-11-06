@@ -2,9 +2,9 @@ import GeometryLite3D
 import Metal
 import MetalKit
 import MetalSprocketsPBR
+import ModelIO
 import SceneSprockets
 import SceneSprocketsBlinnPhong
-import ModelIO
 import simd
 import SwiftMesh
 
@@ -24,6 +24,7 @@ public struct ModelIOSceneGraph {
     public init(url: URL, device: MTLDevice, materials: MaterialKind = .pbr) throws {
         let allocator = MTKMeshBufferAllocator(device: device)
         let asset = MDLAsset(url: url, vertexDescriptor: nil, bufferAllocator: allocator)
+        // swiftlint:disable:next empty_count - MDLAsset has no isEmpty
         guard asset.count > 0 else {
             throw ModelIOSceneGraphError.emptyAsset(url)
         }
@@ -120,7 +121,7 @@ private struct ModelIOConverter {
         channels += [
             .init(target: node, path: .translation, sampler: .init(times: times, values: translations, interpolation: .linear)),
             .init(target: node, path: .rotation, sampler: .init(times: times, values: rotations, interpolation: .linear)),
-            .init(target: node, path: .scale, sampler: .init(times: times, values: scales, interpolation: .linear)),
+            .init(target: node, path: .scale, sampler: .init(times: times, values: scales, interpolation: .linear))
         ]
     }
 
@@ -154,8 +155,8 @@ private struct ModelIOConverter {
         let metallic = scalar(source?.property(with: .metallic)) ?? 0
         let roughness = scalar(source?.property(with: .roughness)) ?? 0.5
         let emission = color(source?.property(with: .emission)).map { SIMD3($0.x, $0.y, $0.z) } ?? .zero
-        let baseColorTexture = try texture(source?.property(with: .baseColor), sRGB: true)
-        let emissionTexture = try texture(source?.property(with: .emission), sRGB: true)
+        let baseColorTexture = texture(source?.property(with: .baseColor), sRGB: true)
+        let emissionTexture = texture(source?.property(with: .emission), sRGB: true)
 
         let result: any SceneSprockets.Material
         switch materialKind {
@@ -174,11 +175,11 @@ private struct ModelIOConverter {
                     uniforms.emissiveFactor = [1, 1, 1]
                 }
             }
-            if let normalTexture = try texture(source?.property(with: .tangentSpaceNormal), sRGB: false) {
+            if let normalTexture = texture(source?.property(with: .tangentSpaceNormal), sRGB: false) {
                 bindings[Int(kPBRTextureNormal.rawValue)] = try binding(normalTexture)
                 uniforms.normal.enabled = 1
             }
-            if let occlusionTexture = try texture(source?.property(with: .ambientOcclusion), sRGB: false) {
+            if let occlusionTexture = texture(source?.property(with: .ambientOcclusion), sRGB: false) {
                 bindings[Int(kPBRTextureOcclusion.rawValue)] = try binding(occlusionTexture)
                 uniforms.occlusion.enabled = 1
             }
@@ -221,6 +222,7 @@ private struct ModelIOConverter {
             let value = property.floatValue
             return SIMD4(value, value, value, 1)
         case .color:
+            // swiftlint:disable:next force_unwrapping - the linear sRGB color space always exists
             guard let color = property.color, let components = color.converted(to: CGColorSpace(name: CGColorSpace.linearSRGB)!, intent: .defaultIntent, options: nil)?.components, components.count >= 3 else {
                 return nil
             }
@@ -253,6 +255,7 @@ private struct ModelIOConverter {
         guard width > 0, height > 0 else {
             return nil
         }
+        // swiftlint:disable:next discouraged_optional_collection - nil means no usable map
         func channel(_ map: MDLTexture?) -> [UInt8]? {
             guard let map else {
                 return Array(repeating: 255, count: width * height)
@@ -285,23 +288,31 @@ private struct ModelIOConverter {
     }
 
     // First channel of each texel, as 0...255, rows top first. Nil for formats other than 8-bit, 16-bit or float.
+    // swiftlint:disable:next discouraged_optional_collection - nil means an unsupported format
     func firstChannel(of map: MDLTexture) -> [UInt8]? {
         guard let data = map.texelDataWithTopLeftOrigin() else {
             return nil
         }
         let count = Int(map.dimensions.x) * Int(map.dimensions.y)
         let channels = Int(map.channelCount)
+        // swiftlint:disable:next discouraged_optional_collection - nil means an unsupported format
         return data.withUnsafeBytes { bytes -> [UInt8]? in
             switch map.channelEncoding {
             case .uInt8:
-                guard bytes.count >= count * channels else { return nil }
+                guard bytes.count >= count * channels else {
+                    return nil
+                }
                 return (0..<count).map { bytes[$0 * channels] }
             case .uInt16:
-                guard bytes.count >= count * channels * 2 else { return nil }
+                guard bytes.count >= count * channels * 2 else {
+                    return nil
+                }
                 let values = bytes.bindMemory(to: UInt16.self)
                 return (0..<count).map { UInt8(values[$0 * channels] >> 8) }
             case .float32:
-                guard bytes.count >= count * channels * 4 else { return nil }
+                guard bytes.count >= count * channels * 4 else {
+                    return nil
+                }
                 let values = bytes.bindMemory(to: Float.self)
                 return (0..<count).map { UInt8(min(max(values[$0 * channels], 0), 1) * 255) }
             default:
@@ -310,7 +321,7 @@ private struct ModelIOConverter {
         }
     }
 
-    mutating func texture(_ property: MDLMaterialProperty?, sRGB: Bool) throws -> MTLTexture? {
+    mutating func texture(_ property: MDLMaterialProperty?, sRGB: Bool) -> MTLTexture? {
         guard let property, property.type == .texture, let source = property.textureSamplerValue?.texture else {
             return nil
         }
@@ -323,7 +334,7 @@ private struct ModelIOConverter {
                 .SRGB: sRGB,
                 .generateMipmaps: true,
                 .textureUsage: MTLTextureUsage.shaderRead.rawValue,
-                .textureStorageMode: MTLStorageMode.private.rawValue,
+                .textureStorageMode: MTLStorageMode.private.rawValue
             ])
             textureCache[key] = texture
             return texture
@@ -336,6 +347,7 @@ private struct ModelIOConverter {
     func convert(_ light: MDLLight) -> Light? {
         let physical = light as? MDLPhysicallyPlausibleLight
         let color: SIMD3<Float> = physical?.color.flatMap { color in
+            // swiftlint:disable:next force_unwrapping - the linear sRGB color space always exists
             guard let linear = color.converted(to: CGColorSpace(name: CGColorSpace.linearSRGB)!, intent: .defaultIntent, options: nil), let components = linear.components, components.count >= 3 else {
                 return nil
             }

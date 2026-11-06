@@ -1,7 +1,7 @@
 import Metal
 import MetalSupport
-import SwiftMesh
 import simd
+import SwiftMesh
 
 // CPU morphing and skinning, for renderers without GPU support for them.
 
@@ -49,6 +49,7 @@ extension MetalMesh {
     }
 
     // Copies the vertex buffers and rewrites float3 positions and normals. Submeshes keep their index buffers.
+    // swiftlint:disable:next discouraged_optional_collection - nil means the mesh is not skinned
     func deformed(morphTargets: [SceneGraph.MorphTarget], weights: [Float], jointMatrices: [simd_float4x4]?, skinVertices: [SceneGraph.SkinVertex]) -> MetalMesh? {
         var copies: [Int: MTLBuffer] = [:]
         for (index, buffer) in vertexBuffers {

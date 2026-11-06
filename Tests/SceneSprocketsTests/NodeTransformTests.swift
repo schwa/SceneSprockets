@@ -1,7 +1,7 @@
 import GeometryLite3D
-import Testing
-import simd
 @testable import SceneSprockets
+import simd
+import Testing
 
 private func isClose(_ lhs: simd_float4x4, _ rhs: simd_float4x4) -> Bool {
     (0..<4).allSatisfy { simd_distance(lhs[$0], rhs[$0]) < 0.0001 }

@@ -3,11 +3,11 @@ import GeometryLite3D
 import Metal
 import MetalSprockets
 import MetalSprocketsPBR
-import SwiftMesh
-import Testing
-import simd
 @testable import SceneSprockets
 @testable import SceneSprocketsPBR
+import simd
+import SwiftMesh
+import Testing
 
 @Test
 func pbrModelIsBuiltFromSceneGraph() throws {

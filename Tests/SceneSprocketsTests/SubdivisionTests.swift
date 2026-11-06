@@ -1,9 +1,9 @@
 import Metal
-import SwiftMesh
-import Testing
-import simd
 @testable import SceneSprockets
 @testable import SceneSprocketsShaderMaterial
+import simd
+import SwiftMesh
+import Testing
 
 // #82
 @Test

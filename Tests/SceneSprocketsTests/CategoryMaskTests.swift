@@ -2,11 +2,11 @@ import CoreGraphics
 import GeometryLite3D
 import Metal
 import MetalSprockets
-import SwiftMesh
-import Testing
-import simd
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
+import simd
+import SwiftMesh
+import Testing
 
 private var material: BlinnPhongSceneMaterial {
     BlinnPhongSceneMaterial(ambient: .color([0.5, 0.5, 0.5]), diffuse: .color([0.5, 0.5, 0.5]), specular: .color(0), shininess: 1)
@@ -53,9 +53,9 @@ func hitTestRespectsMask() throws {
     let (sceneGraph, box) = try scene()
     box.categoryBitMask = 0b10
     let ray = Ray3D(origin: [0, 0, 4], direction: [0, 0, -1])
-    #expect(sceneGraph.hitTest(ray).count > 0)
+    #expect(!sceneGraph.hitTest(ray).isEmpty)
     #expect(sceneGraph.hitTest(ray, categoryBitMask: 0b01).isEmpty)
-    #expect(sceneGraph.hitTest(ray, categoryBitMask: 0b10).count > 0)
+    #expect(!sceneGraph.hitTest(ray, categoryBitMask: 0b10).isEmpty)
 }
 
 @Test

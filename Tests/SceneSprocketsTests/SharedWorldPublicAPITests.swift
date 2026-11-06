@@ -1,7 +1,7 @@
 import SceneSprockets
+import simd
 import SwiftECS
 import Testing
-import simd
 
 // #269: only the public API, so this file fails to compile if any of it is missing.
 

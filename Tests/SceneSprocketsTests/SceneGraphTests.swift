@@ -1,6 +1,6 @@
-import Testing
-import simd
 @testable import SceneSprockets
+import simd
+import Testing
 
 @Test
 func testEmptySceneGraph() {

@@ -2,9 +2,9 @@ import GeometryLite3D
 import Metal
 import MetalSprocketsParticles
 import Observation
+import simd
 import SwiftECS
 import SwiftMesh
-import simd
 
 extension SceneGraph {
     // Observable, so SwiftUI views that read a node update when it changes. Caches and revisions are ignored: the

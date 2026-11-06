@@ -22,7 +22,7 @@ public final class KeynoteDemo: DemoScene {
     public static let titles = [
         "SceneSprockets", "Scene Graph", "Shapes", "Materials", "Lights", "Actions", "Constraints", "Opacity & Fades", "Blend Modes",
         "Custom Shaders", "Glass", "PBR Extensions", "Shadows", "Fog", "Particles", "Mesh Emitters", "Implicit Animation", "Animation Blending", "Deformation",
-        "glTF & Model I/O", "Hit Testing", "Physics", "Performance", "Post-Processing", "SceneView", "Thank You",
+        "glTF & Model I/O", "Hit Testing", "Physics", "Performance", "Post-Processing", "SceneView", "Thank You"
     ]
 
     private let cameraNode: SceneGraph.Node
@@ -77,7 +77,7 @@ public final class KeynoteDemo: DemoScene {
         physics = try? SceneGraphPhysicsWorld(sceneGraph: sceneGraph, gravity: Self.trayTilt.act([0, -9.81, 0]))
         actions = [
             DemoAction("Previous", systemImage: "chevron.left", shortcut: .leftArrow) { [weak self] in self?.go(by: -1) },
-            DemoAction("Next", systemImage: "chevron.right", shortcut: .rightArrow) { [weak self] in self?.go(by: 1) },
+            DemoAction("Next", systemImage: "chevron.right", shortcut: .rightArrow) { [weak self] in self?.go(by: 1) }
         ]
     }
 
@@ -113,7 +113,7 @@ public final class KeynoteDemo: DemoScene {
         if let hit, let target = hitTarget(containing: hit.node) {
             target.run(.group([
                 .sequence([.move(by: [0, 1, 0], duration: 0.25), .move(by: [0, -1, 0], duration: 0.25)]),
-                .rotate(by: .pi * 2, around: [0, 1, 0], duration: 0.5),
+                .rotate(by: .pi * 2, around: [0, 1, 0], duration: 0.5)
             ]), forKey: "hop")
             return
         }
@@ -509,7 +509,7 @@ public final class KeynoteDemo: DemoScene {
             (.cylinder(radius: 0.5, height: 1.2), [0.4, 0.9, 0.4]),
             (.cone(bottomRadius: 0.6, height: 1.2), [0.3, 0.8, 1]),
             (.capsule(capRadius: 0.4, height: 1.4), [0.6, 0.5, 1]),
-            (.torus(ringRadius: 0.5, pipeRadius: 0.18), [1, 0.5, 0.8]),
+            (.torus(ringRadius: 0.5, pipeRadius: 0.18), [1, 0.5, 0.8])
         ]
         for (index, (shape, color)) in shapes.enumerated() {
             let node = SceneGraph.Node(parent: slide, shape: shape, material: BlinnPhongSceneMaterial.plastic(color, shininess: 48), device: demoDevice, trs: .init(translation: [Float(index) * 1.8 - 4.5, 1.2, 0]))
@@ -620,7 +620,7 @@ public final class KeynoteDemo: DemoScene {
         let shapes: [(SceneGraph.Shape, Float, Float)] = [
             (.sphere(radius: 0.9), -2.6, 0),
             (.box(width: 1.6, height: 1.6, length: 0.4), 0, 0.15),
-            (.torus(ringRadius: 0.75, pipeRadius: 0.3), 2.6, 0.05),
+            (.torus(ringRadius: 0.75, pipeRadius: 0.3), 2.6, 0.05)
         ]
         for (shape, x, roughness) in shapes {
             guard let glass = try? PBRSceneMaterial(device: demoDevice, baseColor: [1, 1, 1, 1], metallic: 0, roughness: roughness) else {
@@ -685,11 +685,11 @@ public final class KeynoteDemo: DemoScene {
             }
         }
         let bounce = SceneGraph.AnimationClip(name: "Bounce", channels: [
-            .init(target: body, path: .translation, sampler: .init(times: [0, 0.5, 1], values: vector([[0, 0.5, 0], [0, 2, 0], [0, 0.5, 0]]), interpolation: .linear)),
+            .init(target: body, path: .translation, sampler: .init(times: [0, 0.5, 1], values: vector([[0, 0.5, 0], [0, 2, 0], [0, 0.5, 0]]), interpolation: .linear))
         ])
         let sway = SceneGraph.AnimationClip(name: "Sway", channels: [
             .init(target: body, path: .rotation, sampler: .init(times: [0, 1, 2], values: quaternions([-0.4, 0.4, -0.4], axis: [0, 0, 1]), interpolation: .linear)),
-            .init(target: head, path: .rotation, sampler: .init(times: [0, 1, 2], values: quaternions([0.6, -0.6, 0.6], axis: [0, 1, 0]), interpolation: .linear)),
+            .init(target: head, path: .rotation, sampler: .init(times: [0, 1, 2], values: quaternions([0.6, -0.6, 0.6], axis: [0, 1, 0]), interpolation: .linear))
         ])
         blendMixer = SceneGraph.AnimationMixer(clips: [bounce, sway])
         blendController = SceneGraph.AnimationController(clips: [bounce, sway])
@@ -763,7 +763,7 @@ public final class KeynoteDemo: DemoScene {
             (.box(width: 1, height: 1, length: 1), [1, 0.4, 0.3]),
             (.sphere(radius: 0.6), [1, 0.8, 0.3]),
             (.cone(bottomRadius: 0.6, height: 1.2), [0.3, 0.8, 1]),
-            (.torus(ringRadius: 0.5, pipeRadius: 0.18), [1, 0.5, 0.8]),
+            (.torus(ringRadius: 0.5, pipeRadius: 0.18), [1, 0.5, 0.8])
         ]
         for (index, (shape, color)) in shapes.enumerated() {
             let node = SceneGraph.Node(parent: slide, shape: shape, material: BlinnPhongSceneMaterial.plastic(color, shininess: 48), device: demoDevice, trs: .init(translation: [Float(index) * 2.2 - 3.3, 1.2, 0]))
@@ -829,7 +829,7 @@ public final class KeynoteDemo: DemoScene {
         let materials: [any SceneSprockets.Material] = [
             try? ShaderMaterial.normals(),
             try? ShaderMaterial.rim(color: [0.3, 0.8, 1, 1]),
-            try? ShaderMaterial.rim(color: [1, 0.4, 0.7, 1]),
+            try? ShaderMaterial.rim(color: [1, 0.4, 0.7, 1])
         ].compactMap { $0 }
         let shapes: [SceneGraph.Shape] = [.torus(ringRadius: 0.7, pipeRadius: 0.28), .sphere(radius: 0.9), .capsule(capRadius: 0.5, height: 1.8)]
         for (index, (shape, material)) in zip(shapes, materials).enumerated() {
@@ -854,7 +854,7 @@ public final class KeynoteDemo: DemoScene {
             (roundedBox, PBRExtensionMaterials.gummy(color: [1, 0.3, 0.1], speckles: speckles), [-3.6, 1.4, 0]),
             (cube, pearl, [-1.2, 1.6, 0]),
             (egg, PBRExtensionMaterials.gummy(color: [0.5, 0.75, 0.15], speckles: speckles), [1.2, 1.4, 0]),
-            (bean, pearl, [3.6, 1.4, 0]),
+            (bean, pearl, [3.6, 1.4, 0])
         ]
         var generator = SystemRandomNumberGenerator()
         for (mesh, material, position) in pieces {
@@ -1006,7 +1006,7 @@ public final class KeynoteDemo: DemoScene {
         ("Noir", .init(exposure: -0.1, contrast: 1.8, saturation: 0, vignetteIntensity: 0.9, vignetteRadius: 0.35)),
         ("Vivid", .init(exposure: 0.15, contrast: 1.35, saturation: 2.2, vignetteIntensity: 0.3)),
         ("Overexposed", .init(exposure: 1.2, contrast: 0.8, saturation: 0.6)),
-        ("Moody", .init(exposure: -0.8, contrast: 1.5, saturation: 0.5, vignetteIntensity: 1, vignetteRadius: 0.25)),
+        ("Moody", .init(exposure: -0.8, contrast: 1.5, saturation: 0.5, vignetteIntensity: 1, vignetteRadius: 0.25))
     ]
 
     // Holds each grade, then eases into the next over `blendTime`.

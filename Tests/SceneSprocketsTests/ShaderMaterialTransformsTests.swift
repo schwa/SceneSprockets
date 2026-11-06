@@ -1,8 +1,8 @@
 import GeometryLite3D
-import SceneSprocketsShaders
-import Testing
-import simd
 @testable import SceneSprockets
+import SceneSprocketsShaders
+import simd
+import Testing
 
 private func doubleMatrix(_ matrix: simd_float4x4) -> simd_double4x4 {
     simd_double4x4(columns: (SIMD4<Double>(matrix.columns.0), SIMD4<Double>(matrix.columns.1), SIMD4<Double>(matrix.columns.2), SIMD4<Double>(matrix.columns.3)))

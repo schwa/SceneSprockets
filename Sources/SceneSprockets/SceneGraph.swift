@@ -1,8 +1,8 @@
 import GeometryLite3D
 import Observation
+import simd
 import SwiftECS
 import SwiftMesh
-import simd
 
 @Observable
 public class SceneGraph {
@@ -276,7 +276,7 @@ public class SceneGraph {
     }
 
     /// Returns one entry per submesh whose material matches the given type, with world transforms.
-    public func meshNodes<M: Material>(withMaterial materialType: M.Type, worldTransform initialTransform: float4x4 = .identity) -> [(node: Node, worldTransform: float4x4, mesh: MetalMesh, submeshIndex: Int, material: M, castsShadow: Bool, receivesShadow: Bool)] {
+    public func meshNodes<M: Material>(withMaterial _: M.Type, worldTransform initialTransform: float4x4 = .identity) -> [(node: Node, worldTransform: float4x4, mesh: MetalMesh, submeshIndex: Int, material: M, castsShadow: Bool, receivesShadow: Bool)] {
         meshEntries(worldTransform: initialTransform).compactMap { entry in
             guard let material = entry.material as? M else {
                 return nil

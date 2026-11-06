@@ -1,16 +1,16 @@
+import GeometryLite3D
 import Metal
 import Observation
-import GeometryLite3D
-import SwiftMesh
-import Testing
-import simd
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
+import simd
+import SwiftMesh
+import Testing
 
 // #212: SwiftUI reads statistics during a view update; a query that writes an observed property crashes it
 // ('setting value during update').
 @Test
-func queriesDoNotChangeObservedState() throws {
+func queriesDoNotChangeObservedState() {
     let sceneGraph = SceneGraph(root: SceneGraph.Node())
     _ = SceneGraph.Node(parent: sceneGraph.root, content: .light(Light(type: .point)))
     nonisolated(unsafe) var changed = false

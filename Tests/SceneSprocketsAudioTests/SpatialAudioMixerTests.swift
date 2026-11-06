@@ -1,7 +1,7 @@
 import AVFAudio
 import SceneSprocketsAudio
-import Testing
 import simd
+import Testing
 
 // #104: the audio engine works on its own, without a scene graph.
 @Test

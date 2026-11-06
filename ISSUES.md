@@ -6379,15 +6379,18 @@ The SceneSprocketsDemos test catalogMatchesAppAndIDsAreUnique fails on main. CI 
 ## 288: No root SwiftLint config and existing lint violations
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: release, area:ci, effort:m
 created: 2026-11-06T18:01:40Z
-updated: 2026-11-06T18:03:13Z
+updated: 2026-11-06T23:23:01Z
+closed: 2026-11-06T23:23:01Z
 +++
 
 Only Demo/ and SceneSprocketsComposer/ have .swiftlint.yml; the library sources and tests have no config. The demos report about 163 violations. 'swiftlint --strict' as run in SwiftECS's CI would fail.
+
+- `2026-11-06T23:23:02Z`: Fixed for the root package and the demos: root .swiftlint.yml (strict only_rules for Sources/ and Tests/, excludes Demo/ and SceneSprocketsComposer/, which keep their own configs), Tests/.swiftlint.yml relaxing force unwrap/cast, optional collections, identical operands, indentation (inline JSON) and prefer_key_path (#expect cannot expand key paths to rethrowing functions). Demo/.swiftlint.yml now excludes build output and turns off size and naming rules. swiftlint --strict is clean in both. Composer's 255 violations are split out as #296.
 
 ---
 
@@ -6508,5 +6511,20 @@ updated: 2026-11-06T18:03:14Z
 SceneSprockets has no version tag and no release notes, so SwiftPM users cannot depend on a version, and there is no summary of what the first release contains.
 
 - `2026-11-06T18:12:40Z`: Release notes added in CHANGELOG.md under 'Unreleased' (products, features, link to README limitations). Left open: the version number and the git tag are for the user to choose and create; when tagging, rename 'Unreleased' to the version. Also noticed Documentation/Features.md is stale: save/load (SceneArchive), debug views and gizmos (SceneSprocketsGizmos) are marked not done, and the entity-component system is struck through although nodes now live in a SwiftECS World. The notes follow the code, not that table.
+
+---
+
+## 296: SceneSprocketsComposer has 255 SwiftLint violations
+
++++
+status: open
+priority: medium
+kind: task
+labels: release, area:composer, area:ci, effort:m
+created: 2026-11-06T23:22:52Z
+updated: 2026-11-06T23:23:01Z
++++
+
+Linting SceneSprocketsComposer/ with its own .swiftlint.yml reports 255 violations, so 'swiftlint --strict' fails there. Largest groups: sorted_enum_cases 40, vertical_whitespace_between_cases 34, discouraged_optional_collection 34, explicit_enum_raw_value 30, variable_shadowing 20, discouraged_default_parameter 18, multiline_arguments 10, and size rules (function_parameter_count, closure_body_length, file_length, cyclomatic_complexity, type_body_length). The root package and the demos lint clean (#288).
 
 ---

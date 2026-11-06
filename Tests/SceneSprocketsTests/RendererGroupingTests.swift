@@ -1,8 +1,8 @@
 import Metal
 import MetalSupport
+@testable import SceneSprockets
 import SwiftMesh
 import Testing
-@testable import SceneSprockets
 
 @Test
 func meshesWithDifferentVertexDescriptorsGetSeparateGroups() throws {

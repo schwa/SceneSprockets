@@ -1,14 +1,14 @@
 import Foundation
 import Metal
+import MetalKit
 import MetalSprocketsPBR
 import MetalSprocketsPBRShaders
-import MetalKit
 import ModelIO
-import simd
-import Testing
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
 @testable import SceneSprocketsPBR
+import simd
+import Testing
 
 private func temporaryDirectory() throws -> URL {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -119,7 +119,7 @@ func pbrMaterialMapsAreImported() throws {
     for (semantic, property) in [
         (MDLMaterialSemantic.tangentSpaceNormal, map("normal", [128, 128, 255, 255, 128, 128, 255, 255], channels: 4)),
         (.ambientOcclusion, map("occlusion", [255, 255, 255, 255, 64, 64, 64, 255], channels: 4)),
-        (.metallic, map("metallic", [0, 200], channels: 1)),
+        (.metallic, map("metallic", [0, 200], channels: 1))
     ] {
         property.semantic = semantic
         material.remove(material.property(with: semantic) ?? property)

@@ -1,5 +1,5 @@
-import GeometryLite3D
 import Foundation
+import GeometryLite3D
 import Metal
 import MetalSprockets
 import SceneSprockets
@@ -74,6 +74,7 @@ public struct ShaderMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
         ShaderMaterial.self
     }
 
+    // swiftlint:disable:next unneeded_throws_rethrows
     public func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement {
         let cameraPosition = context.cameraMatrix.columns.3.xyz
         // Skinned and morphed meshes are deformed on the CPU, as for Blinn-Phong.

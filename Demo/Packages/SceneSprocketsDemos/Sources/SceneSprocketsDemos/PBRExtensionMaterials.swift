@@ -10,6 +10,18 @@ import simd
 // clearcoat) and pearls (thin-film iridescence).
 @MainActor
 enum PBRExtensionMaterials {
+    // These only fail if Metal cannot allocate a tiny buffer.
+    private static func make<T>(_ what: String, _ body: () throws -> T) -> T {
+        do {
+            return try body()
+        } catch {
+            fatalError("Cannot make the \(what): \(error)")
+        }
+    }
+
+    private static func placeholder() -> PBRMaterial.Binding {
+        make("placeholder texture binding") { try PBRMaterial.placeholderBinding(device: demoDevice) }
+    }
 
     static func gummy(color: SIMD3<Float>, speckles: PBRMaterial.Binding) -> PBRSceneMaterial {
         var uniforms = PBRMaterialUniforms.defaults(baseColor: SIMD4(color, 1), metallic: 0, roughness: 0.4)
@@ -30,10 +42,9 @@ enum PBRExtensionMaterials {
         uniforms.multiscatterColorFactor = simd_mix(color, [1, 1, 1], [0.4, 0.4, 0.4])
         uniforms.clearcoatFactor = 0.25
         uniforms.clearcoatRoughnessFactor = 0.35
-        var bindings = Array(repeating: try! PBRMaterial.placeholderBinding(device: demoDevice), count: Int(kPBRMaterialTextureCount.rawValue))
+        var bindings = Array(repeating: placeholder(), count: Int(kPBRMaterialTextureCount.rawValue))
         bindings[Int(kPBRTextureBaseColor.rawValue)] = speckles
-        // try! is fine in a demo: this only fails if Metal cannot allocate a tiny buffer.
-        return PBRSceneMaterial(try! PBRMaterial(name: "Gummy", uniforms: uniforms, textureBindings: bindings, device: demoDevice))
+        return PBRSceneMaterial(make("gummy material") { try PBRMaterial(name: "Gummy", uniforms: uniforms, textureBindings: bindings, device: demoDevice) })
     }
 
     static func pearl() -> PBRSceneMaterial {
@@ -44,7 +55,8 @@ enum PBRExtensionMaterials {
         uniforms.iridescenceThicknessMaximum = 400
         uniforms.clearcoatFactor = 1
         uniforms.clearcoatRoughnessFactor = 0.1
-        return PBRSceneMaterial(try! PBRMaterial(name: "Pearl", uniforms: uniforms, placeholder: try! PBRMaterial.placeholderBinding(device: demoDevice), device: demoDevice))
+        let placeholderBinding = placeholder()
+        return PBRSceneMaterial(make("pearl material") { try PBRMaterial(name: "Pearl", uniforms: uniforms, placeholder: placeholderBinding, device: demoDevice) })
     }
 
     // MARK: Noise texture
@@ -101,8 +113,8 @@ enum PBRExtensionMaterials {
         blit.endEncoding()
         commandBuffer.commit()
         commandBuffer.waitUntilCompleted()
-        let placeholder = try! PBRMaterial.placeholderBinding(device: demoDevice)
-        return try! PBRMaterial.Binding(texture: texture, samplerDescriptor: placeholder.samplerDescriptor, device: demoDevice)
+        let samplerDescriptor = placeholder().samplerDescriptor
+        return make("noise texture binding") { try PBRMaterial.Binding(texture: texture, samplerDescriptor: samplerDescriptor, device: demoDevice) }
     }
 
     // Tileable smooth value noise on a 64x64 lattice.
@@ -144,7 +156,7 @@ extension Mesh {
         let axes: [(SIMD3<Float>, SIMD3<Float>, SIMD3<Float>)] = [
             ([0, 0, 1], [1, 0, 0], [0, 1, 0]), ([0, 0, -1], [-1, 0, 0], [0, 1, 0]),
             ([1, 0, 0], [0, 0, -1], [0, 1, 0]), ([-1, 0, 0], [0, 0, 1], [0, 1, 0]),
-            ([0, 1, 0], [1, 0, 0], [0, 0, -1]), ([0, -1, 0], [1, 0, 0], [0, 0, 1]),
+            ([0, 1, 0], [1, 0, 0], [0, 0, -1]), ([0, -1, 0], [1, 0, 0], [0, 0, 1])
         ]
         let outer = extents / 2
         for (faceIndex, (normal, uAxis, vAxis)) in axes.enumerated() {

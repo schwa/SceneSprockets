@@ -167,7 +167,7 @@ extension PBREnvironment: ArchivableEnvironmentMap {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: ArchiveKeys.self)
-        if self === PBREnvironment.studio {
+        if self === Self.studio {
             try container.encode(true, forKey: .studio)
         } else {
             try container.encode(try encoder.sceneArchive.encode(texture: source), forKey: .source)
@@ -177,7 +177,7 @@ extension PBREnvironment: ArchivableEnvironmentMap {
     public static func decodeEnvironmentMap(from decoder: Decoder) throws -> any EnvironmentMap {
         let container = try decoder.container(keyedBy: ArchiveKeys.self)
         if try container.decodeIfPresent(Bool.self, forKey: .studio) == true {
-            return PBREnvironment.studio
+            return Self.studio
         }
         let context = try decoder.sceneArchive
         let reference = try container.decode(SceneArchiveContext.TextureReference.self, forKey: .source)

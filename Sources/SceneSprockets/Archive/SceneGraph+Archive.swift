@@ -297,7 +297,7 @@ extension SceneGraph.Node: Codable {
         let unsaved: [(String, Bool)] = [
             ("audio players", !audioPlayers.isEmpty),
             ("levels of detail", !levelsOfDetail.isEmpty),
-            ("running actions", !runningActions.isEmpty),
+            ("running actions", !runningActions.isEmpty)
         ]
         for (feature, isPresent) in unsaved where isPresent {
             context.warn("\(nodeDescription): \(feature) not saved yet")

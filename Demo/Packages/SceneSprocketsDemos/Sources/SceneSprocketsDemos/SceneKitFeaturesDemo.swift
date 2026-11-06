@@ -25,7 +25,7 @@ import simd
 //   the ball, using convertPosition and convertVector.
 final class SceneKitFeaturesDemo: DemoScene {
     private static let easings: [(String, SceneGraph.Action.TimingMode)] = [
-        ("Ease In Out", .easeInEaseOut), ("Ease In", .easeIn), ("Ease Out", .easeOut), ("Linear", .linear),
+        ("Ease In Out", .easeInEaseOut), ("Ease In", .easeIn), ("Ease Out", .easeOut), ("Linear", .linear)
     ]
     private static let categoryTwo: UInt = 0b10
     private static let perspective = PerspectiveProjection(verticalAngleOfView: .degrees(45))
@@ -66,7 +66,7 @@ final class SceneKitFeaturesDemo: DemoScene {
             (.cylinder(radius: 0.45, height: 1.1), [0.95, 0.75, 0.2]),
             (.cone(bottomRadius: 0.55, height: 1.2), [0.4, 0.8, 0.4]),
             (.capsule(capRadius: 0.35, height: 1.3), [0.75, 0.45, 0.9]),
-            (.torus(ringRadius: 0.5, pipeRadius: 0.18), [0.95, 0.5, 0.65]),
+            (.torus(ringRadius: 0.5, pipeRadius: 0.18), [0.95, 0.5, 0.65])
         ]
         var homePositions: [SIMD3<Float>] = []
         var torus: SceneGraph.Node?
@@ -106,7 +106,7 @@ final class SceneKitFeaturesDemo: DemoScene {
         ball = SceneGraph.Node(parent: pivot, label: "Ball", shape: .sphere(radius: 0.3), material: BlinnPhongSceneMaterial.plastic([1, 0.85, 0.2], shininess: 64), device: demoDevice, trs: .init(translation: [3, 0, 0]))
         ball.run(.repeatForever(.sequence([
             .move(by: [0, 1, 0], duration: 1).timingMode(.easeInEaseOut),
-            .move(by: [0, -1, 0], duration: 1).timingMode(.easeInEaseOut),
+            .move(by: [0, -1, 0], duration: 1).timingMode(.easeInEaseOut)
         ])), forKey: "bob")
         let spot = SceneGraph.Node(parent: root, label: "Spotlight (looks at ball)", trs: .init(translation: [-5, 5, 4]), content: .light(.spot(color: [0.6, 0.8, 1], intensity: 40, innerConeAngle: .pi / 16, outerConeAngle: .pi / 10)))
         spot.constraints = [.lookAt(target: ball)]
@@ -158,7 +158,7 @@ final class SceneKitFeaturesDemo: DemoScene {
                 .choice("Cull Mode", Self.cullModes.map(\.0)),
                 .slider("Box Yaw", -Float.pi...Float.pi, default: 0),
                 .slider("Box Pitch", -Float.pi...Float.pi, default: 0),
-                .slider("Box Roll", -Float.pi...Float.pi, default: 0),
+                .slider("Box Roll", -Float.pi...Float.pi, default: 0)
             ]
         )
         actions = [
@@ -167,7 +167,7 @@ final class SceneKitFeaturesDemo: DemoScene {
             DemoAction("Hop", systemImage: "arrow.up.circle") { [weak self] in self?.hop() },
             DemoAction("Fade", systemImage: "circle.lefthalf.filled") { [weak self] in self?.fade() },
             DemoAction("Look at Ball", systemImage: "eye") { [weak self] in self?.lookAtBall() },
-            DemoAction("Snap to Ball", systemImage: "arrow.down.to.line") { [weak self] in self?.snapToBall() },
+            DemoAction("Snap to Ball", systemImage: "arrow.down.to.line") { [weak self] in self?.snapToBall() }
         ]
     }
 
@@ -277,7 +277,7 @@ final class SceneKitFeaturesDemo: DemoScene {
             .move(by: [0, 1, 0], duration: 0.3).timingMode(.easeOut),
             .move(by: [0, -1, 0], duration: 0.3).timingMode(.easeIn),
             .scale(to: [1.2, 0.8, 1.2], duration: 0.08),
-            .scale(to: [1, 1, 1], duration: 0.12),
+            .scale(to: [1, 1, 1], duration: 0.12)
         ]), forKey: "hop")
     }
 }

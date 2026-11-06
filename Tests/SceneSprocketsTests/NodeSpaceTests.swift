@@ -1,7 +1,7 @@
 import GeometryLite3D
-import Testing
-import simd
 @testable import SceneSprockets
+import simd
+import Testing
 
 private func isClose(_ a: SIMD3<Float>, _ b: SIMD3<Float>) -> Bool {
     simd_distance(a, b) < 1e-4

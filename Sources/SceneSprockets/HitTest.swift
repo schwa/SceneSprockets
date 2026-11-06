@@ -1,8 +1,8 @@
 import GeometryLite3D
 import Metal
 import MetalSupport
-import SwiftMesh
 import simd
+import SwiftMesh
 
 extension SceneGraph {
     public struct Hit {
@@ -169,6 +169,7 @@ private struct PositionsKey: Hashable {
 
 extension MetalMesh {
     // float2 values of `semantic` read from the vertex buffers; nil if there is no such float2 attribute.
+    // swiftlint:disable:next discouraged_optional_collection - nil means the attribute is absent
     func float2Values(_ semantic: VertexDescriptor.Attribute.Semantic) -> [SIMD2<Float>]? {
         guard let attribute = vertexDescriptor.attributes.first(where: { $0.semantic == semantic }),
               attribute.format == .float2,
@@ -190,6 +191,7 @@ extension MetalMesh {
     }
 
     // float3 values of `semantic` read from the vertex buffers; nil if there is no such float3 attribute.
+    // swiftlint:disable:next discouraged_optional_collection - nil means the attribute is absent
     func float3Values(_ semantic: VertexDescriptor.Attribute.Semantic) -> [SIMD3<Float>]? {
         guard let attribute = vertexDescriptor.attributes.first(where: { $0.semantic == semantic }),
               attribute.format == .float3,
@@ -205,4 +207,3 @@ extension MetalMesh {
         }
     }
 }
-

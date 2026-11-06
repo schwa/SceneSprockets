@@ -3,11 +3,11 @@ import GeometryLite3D
 import Metal
 import MetalSprockets
 import MetalSprocketsPBR
-import Testing
-import simd
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
 @testable import SceneSprocketsPBR
+import simd
+import Testing
 
 // #123: a smooth glass quad in front of an emissive green quad, or nothing. Returns the center pixel (BGRA).
 // `blinnPhong` (#129) makes the green quad Blinn-Phong instead of PBR.
@@ -20,7 +20,7 @@ private func glass(behind: Bool, blinnPhong: Bool = false) throws -> SIMD4<UInt8
     let glass = try PBRSceneMaterial(device: device, baseColor: [1, 1, 1, 1], roughness: 0)
     glass.pbrMaterial.uniforms.transmissionFactor = 1
     _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: glass))
-    if behind && blinnPhong {
+    if behind, blinnPhong {
         let green = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0, 1, 0]))
         _ = SceneGraph.Node(parent: root, content: .mesh(quad, material: green))
     } else if behind {

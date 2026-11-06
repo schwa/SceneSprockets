@@ -326,10 +326,12 @@ private struct GLTFSceneGraphBuilder {
     }
 
     // EXT_mesh_gpu_instancing copies, relative to the node; nil when the node does not use it.
+    // swiftlint:disable:next discouraged_optional_collection - nil means the node does not use instancing
     func instanceTransforms(of node: SwiftGLTF.Node) throws -> [simd_float4x4]? {
         guard let instancing = try? node.extensionValue(EXTMeshGPUInstancing.self) else {
             return nil
         }
+        // swiftlint:disable:next discouraged_optional_collection - nil means the attribute is absent
         func values(_ name: String, components: Int) throws -> [Float]? {
             guard let index = instancing.attributes[name] else {
                 return nil
@@ -366,7 +368,7 @@ private struct GLTFSceneGraphBuilder {
         }
         let source = document.cameras[index]
         if let perspective = source.perspective {
-            let far = perspective.zfar ?? 1000
+            let far = perspective.zfar ?? 1_000
             return SceneSprockets.Camera(projection: PerspectiveProjection(verticalAngleOfView: .radians(perspective.yfov), depthMode: .standard(zClip: perspective.znear ... max(far, perspective.znear))))
         }
         if let orthographic = source.orthographic {
@@ -376,7 +378,7 @@ private struct GLTFSceneGraphBuilder {
     }
 }
 
-private func floats<T>(_ attribute: MetalMesh.VertexAttributeData, as type: T.Type) -> [T] {
+private func floats<T>(_ attribute: MetalMesh.VertexAttributeData, as _: T.Type) -> [T] {
     let size = attribute.format.size
     return attribute.bytes.withUnsafeBytes { bytes in
         (0..<attribute.count).map { bytes.loadUnaligned(fromByteOffset: $0 * size, as: T.self) }

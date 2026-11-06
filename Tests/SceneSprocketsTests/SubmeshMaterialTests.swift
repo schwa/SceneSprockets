@@ -1,8 +1,8 @@
 import Metal
-import SwiftMesh
-import Testing
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
+import SwiftMesh
+import Testing
 
 @Test
 func eachSubmeshGetsItsOwnMaterial() throws {

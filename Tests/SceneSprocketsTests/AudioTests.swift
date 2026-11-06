@@ -1,8 +1,8 @@
 import AVFAudio
-import SceneSprocketsAudio
-import Testing
-import simd
 @testable import SceneSprockets
+import SceneSprocketsAudio
+import simd
+import Testing
 
 // #51
 @Test

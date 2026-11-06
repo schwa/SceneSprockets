@@ -4,14 +4,14 @@ import Metal
 import MetalSprockets
 import MetalSprocketsParticles
 import MetalSprocketsPBR
-import struct SwiftGLTF.Container
-import SwiftMesh
-import Testing
-import simd
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
 @testable import SceneSprocketsPBR
 import SceneSprocketsShaderMaterial
+import simd
+import struct SwiftGLTF.Container
+import SwiftMesh
+import Testing
 
 // #156
 @MainActor
@@ -198,7 +198,7 @@ struct SceneArchiveTests {
                 .normals(Array(repeating: [0, 0, 1], count: 4)),
                 .textureCoordinates([[0, 0], [1, 0], [0, 1], [1, 1]]),
                 .tangents(Array(repeating: SIMD4<Float>(1, 0, 0, 1), count: 4)),
-                .colors([[1, 0, 0, 1], [0, 1, 0, 1], [0, 0, 1, 1], [1, 1, 1, 1]]),
+                .colors([[1, 0, 0, 1], [0, 1, 0, 1], [0, 0, 1, 1], [1, 1, 1, 1]])
             ],
             submeshes: [.init(indices: [0, 1, 2]), .init(indices: [2, 1, 3])],
             label: "Quad",
@@ -666,7 +666,7 @@ struct SceneArchiveTests {
             .billboard(freeAxes: .y),
             .inverseKinematics(chainRoot: root, target: target, iterations: 4),
             .acceleration(damping: 0.25),
-            .transform { _, trs in trs },
+            .transform { _, trs in trs }
         ]
         let warnings = try archive.write(SceneGraph(root: root), to: url)
         #expect(warnings.contains { $0.contains("Follower") && $0.contains("transform constraints") })

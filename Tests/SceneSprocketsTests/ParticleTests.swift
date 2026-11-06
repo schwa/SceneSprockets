@@ -3,11 +3,11 @@ import GeometryLite3D
 import Metal
 import MetalSprockets
 import MetalSprocketsParticles
-import SwiftMesh
-import Testing
-import simd
 @testable import SceneSprockets
 @testable import SceneSprocketsShaderMaterial
+import simd
+import SwiftMesh
+import Testing
 
 // A bright cloud of still, long-lived additive particles at the emitter.
 private func glowSystem() -> ParticleSystem {
@@ -99,7 +99,7 @@ func softParticlesFadeIntoGeometry() throws {
 
 // #144
 @Test
-func collidersFollowTheNodeTransform() throws {
+func collidersFollowTheNodeTransform() {
     var transform = simd_float4x4(simd_quatf(angle: .pi / 2, axis: [0, 0, 1]))
     transform.columns = (transform.columns.0 * 2, transform.columns.1 * 2, transform.columns.2 * 2, [1, 2, 3, 1])
     let sphere = Collider.sphere(center: [1, 0, 0], radius: 0.5).transformed(by: transform)

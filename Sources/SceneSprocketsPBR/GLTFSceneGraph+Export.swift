@@ -205,7 +205,7 @@ struct GLTFVertexFormat: Hashable {
     var type: Accessor.AttributeType
     var normalized = false
 
-    static let table: [(MTLVertexFormat, GLTFVertexFormat)] = [
+    static let table: [(MTLVertexFormat, Self)] = [
         (.float, .init(componentType: .FLOAT, type: .SCALAR)),
         (.float2, .init(componentType: .FLOAT, type: .VEC2)),
         (.float3, .init(componentType: .FLOAT, type: .VEC3)),
@@ -219,7 +219,7 @@ struct GLTFVertexFormat: Hashable {
         (.short2, .init(componentType: .SHORT, type: .VEC2)),
         (.short4, .init(componentType: .SHORT, type: .VEC4)),
         (.char4, .init(componentType: .BYTE, type: .VEC4)),
-        (.uint, .init(componentType: .UNSIGNED_INT, type: .SCALAR)),
+        (.uint, .init(componentType: .UNSIGNED_INT, type: .SCALAR))
     ]
 
     init(componentType: Accessor.ComponentType, type: Accessor.AttributeType, normalized: Bool = false) {
@@ -250,6 +250,7 @@ struct GLTFDocumentBuilder {
     var samplers: [Sampler] = []
     private var imageIndices: [String: Int] = [:]
 
+    // swiftlint:disable:next discouraged_optional_collection - nil omits min and max from the accessor
     mutating func addAccessor(bytes: [UInt8], count: Int, format: GLTFVertexFormat, target: BufferView.Target, min: [Double]? = nil, max: [Double]? = nil) -> Index<Accessor> {
         while !binary.count.isMultiple(of: 4) {
             binary.append(0)

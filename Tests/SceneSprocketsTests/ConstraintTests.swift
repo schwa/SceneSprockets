@@ -1,10 +1,10 @@
 import GeometryLite3D
 import Metal
-import SwiftMesh
-import Testing
-import simd
 @testable import SceneSprockets
 @testable import SceneSprocketsShaderMaterial
+import simd
+import SwiftMesh
+import Testing
 
 private func front(of node: SceneGraph.Node) -> SIMD3<Float> {
     let matrix = node.worldTransform
@@ -108,11 +108,13 @@ func avoidOccluderMovesInFrontOfBlocker() throws {
 func transformConstraintAndBillboardAxes() {
     let root = SceneGraph.Node()
     let node = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 0]))
-    node.constraints = [.transform { _, world in
-        var result = world
-        result.translation.y = 7
-        return result
-    }]
+    node.constraints = [
+        .transform { _, world in
+            var result = world
+            result.translation.y = 7
+            return result
+        }
+    ]
     let graph = SceneGraph(root: root)
     graph.applyConstraints(pointOfView: matrix_identity_float4x4)
     #expect(node.trs.translation.y == 7)

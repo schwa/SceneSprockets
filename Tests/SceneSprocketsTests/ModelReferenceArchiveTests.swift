@@ -1,10 +1,10 @@
 import Foundation
 import Metal
-import SwiftGLTF
-import Testing
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
 @testable import SceneSprocketsPBR
+import SwiftGLTF
+import Testing
 
 // #157: a loaded glTF is saved as the file itself (with its buffers), and read back by loading it again. The model
 // root's own changes, such as a move, are kept.
@@ -30,11 +30,11 @@ struct ModelReferenceArchiveTests {
             meshes: [Mesh(primitives: [.init(attributes: [.POSITION: Index(0)], indices: Index(1), material: Index(0))])],
             accessors: [
                 Accessor(bufferView: Index(0), componentType: .FLOAT, count: 3, type: .VEC3, max: [1, 1, 0], min: [0, 0, 0]),
-                Accessor(bufferView: Index(1), componentType: .UNSIGNED_SHORT, count: 3, type: .SCALAR),
+                Accessor(bufferView: Index(1), componentType: .UNSIGNED_SHORT, count: 3, type: .SCALAR)
             ],
             bufferViews: [
                 BufferView(buffer: Index(0), byteLength: 36, target: .ARRAY_BUFFER),
-                BufferView(buffer: Index(0), byteOffset: 36, byteLength: 6, target: .ELEMENT_ARRAY_BUFFER),
+                BufferView(buffer: Index(0), byteOffset: 36, byteLength: 6, target: .ELEMENT_ARRAY_BUFFER)
             ],
             buffers: [Buffer(byteLength: binary.count, uri: URI("Triangle.bin"))],
             materials: [Material(pbrMetallicRoughness: .init(baseColorFactor: [1, 0, 0, 1]))]

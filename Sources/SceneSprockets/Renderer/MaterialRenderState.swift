@@ -65,7 +65,7 @@ extension Element {
     public func materialRenderState(_ state: MaterialRenderState, isTransparent: Bool) -> some Element {
         depthCompare(function: state.readsFromDepthBuffer ? .greater : .always, writes: state.writesToDepthBuffer && !isTransparent)
             .renderPipelineDescriptorTransformer { descriptor in
-                let attachment = descriptor.colorAttachments[0]!
+                let attachment: MTL4RenderPipelineColorAttachmentDescriptor = descriptor.colorAttachments[0]
                 attachment.writeMask = state.colorWriteMask
                 let blendMode: MaterialRenderState.BlendMode = state.blendMode == .alpha && !isTransparent ? .replace : state.blendMode
                 guard blendMode != .replace else {

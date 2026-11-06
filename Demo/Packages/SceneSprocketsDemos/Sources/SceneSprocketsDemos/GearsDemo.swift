@@ -41,7 +41,7 @@ final class GearsDemo: DemoScene {
                 .slider("Second Teeth", 8...48, default: 12),
                 .slider("Third Teeth", 8...48, default: 36),
                 .slider("Fourth Teeth", 8...48, default: 16),
-                .slider("Speed", 0...2, default: 0.5),
+                .slider("Speed", 0...2, default: 0.5)
             ]
         )
         shadows = SceneGraphShadows(intensity: 0.6, softness: 2)
@@ -76,7 +76,7 @@ final class GearsDemo: DemoScene {
         let materials = [
             (try? PBRSceneMaterial(device: demoDevice, baseColor: [0.85, 0.65, 0.3, 1], metallic: 1, roughness: 0.3)),
             (try? PBRSceneMaterial(device: demoDevice, baseColor: [0.75, 0.76, 0.78, 1], metallic: 1, roughness: 0.25)),
-            (try? PBRSceneMaterial(device: demoDevice, baseColor: [0.9, 0.5, 0.35, 1], metallic: 1, roughness: 0.35)),
+            (try? PBRSceneMaterial(device: demoDevice, baseColor: [0.9, 0.5, 0.35, 1], metallic: 1, roughness: 0.35))
         ]
         let directions: [Float] = [0, -0.5, 0.45, -0.3]
         var center = SIMD2<Float>(-2.2, 0.4)

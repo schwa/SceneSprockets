@@ -1,12 +1,12 @@
 import AVFAudio
 import Metal
 import MetalSprocketsParticles
+@testable import SceneSprockets
 import SceneSprocketsAudio
+import SceneSprocketsShaderMaterial
+import simd
 import SwiftECS
 import Testing
-import simd
-@testable import SceneSprockets
-import SceneSprocketsShaderMaterial
 
 // #279: display fields are stored in the World for nodes in a graph.
 

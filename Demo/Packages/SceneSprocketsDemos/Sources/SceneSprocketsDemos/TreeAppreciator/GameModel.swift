@@ -208,7 +208,7 @@ final class GameModel {
                         let t = elapsed / 3.5
                         node.trs.scale = SIMD3(repeating: sin(t * .pi) * (1 + 0.08 * sin(elapsed * 6)))
                     },
-                    .removeFromParent(),
+                    .removeFromParent()
                 ]))
             } else {
                 holder.run(.custom(duration: 0.6) { node, elapsed in

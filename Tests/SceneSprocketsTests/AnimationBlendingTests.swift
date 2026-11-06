@@ -1,6 +1,6 @@
-import Testing
-import simd
 @testable import SceneSprockets
+import simd
+import Testing
 
 private typealias Clip = SceneGraph.AnimationClip
 
@@ -109,7 +109,7 @@ func stateMachineTransitionsOnParameter() {
         states: [.init("idle", clip: 0), .init("walk", clip: 1)],
         transitions: [
             .init(from: "idle", to: "walk", fadeDuration: 0) { $0.parameters["speed", default: 0] > 0.5 },
-            .init(from: "walk", to: "idle", fadeDuration: 0) { $0.parameters["speed", default: 0] <= 0.5 },
+            .init(from: "walk", to: "idle", fadeDuration: 0) { $0.parameters["speed", default: 0] <= 0.5 }
         ],
         initial: "idle"
     )

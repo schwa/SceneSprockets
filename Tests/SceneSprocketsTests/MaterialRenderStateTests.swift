@@ -2,12 +2,12 @@ import CoreGraphics
 import GeometryLite3D
 import Metal
 import MetalSprockets
+@testable import SceneSprockets
+@testable import SceneSprocketsBlinnPhong
+@testable import SceneSprocketsShaderMaterial
+import simd
 import SwiftMesh
 import Testing
-import simd
-@testable import SceneSprockets
-@testable import SceneSprocketsShaderMaterial
-@testable import SceneSprocketsBlinnPhong
 
 // #84: a quad at z = 0.5 (`near`) in front of one at z = 0 (`far`), seen from z = 3. Returns BGRA at `pixel`.
 @MainActor

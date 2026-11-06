@@ -1,0 +1,10 @@
+disabled_rules:
+  - force_unwrapping
+  - force_cast
+  - discouraged_optional_collection
+  # Equatable tests compare a value with itself.
+  - identical_operands
+  # Inline glTF JSON uses two-space indentation.
+  - indentation_width
+  # #expect cannot expand key paths passed to rethrowing functions such as allSatisfy.
+  - prefer_key_path

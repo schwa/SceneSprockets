@@ -1,7 +1,7 @@
 import SceneSprocketsAudio
+import simd
 import SwiftECS
 import SwiftMesh
-import simd
 
 // Node properties stored in the graph's World while the node is in a graph; see Node+Entity.swift. Each has a
 // component, a NodeFieldStorage var on Node, a property below and an entry in `worldFields`.

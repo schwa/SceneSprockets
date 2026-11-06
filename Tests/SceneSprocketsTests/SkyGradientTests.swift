@@ -3,10 +3,10 @@ import Foundation
 import GeometryLite3D
 import Metal
 import MetalSprockets
-import Testing
-import simd
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
+import simd
+import Testing
 
 private let gradient = SceneGraph.Environment.SkyGradient(zenith: [0, 0, 1], horizon: [0, 1, 0], ground: [1, 0, 0])
 
