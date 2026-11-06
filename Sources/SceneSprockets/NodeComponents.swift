@@ -18,8 +18,10 @@ public struct SiblingIndexComponent: Component {
 
 // Finds the node for an entity, so writes made directly to the World can reach it. Its presence also marks the
 // entity as a live scene graph node.
+// Unowned, not weak: a weak reference moves the node's reference count to a side table, which slows every retain of
+// every node (#283). The entity never outlives its node: it is destroyed when the node leaves the graph.
 public struct NodeReferenceComponent: Component {
-    public internal(set) weak var node: SceneGraph.Node?
+    public internal(set) unowned var node: SceneGraph.Node?
 
     init(node: SceneGraph.Node) {
         self.node = node
@@ -40,6 +42,11 @@ public struct NodeTransformComponent: NodeField {
 
     static var defaultValue: SceneGraph.LocalTransform { .matrix(.identity) }
     static var revision: NodeFieldRevision { .transform }
+
+    // Only Transaction.animate uses the old value.
+    static var needsOldValue: Bool {
+        SceneGraph.Transaction.current != nil
+    }
 
     static func didChange(_ node: SceneGraph.Node, from oldValue: SceneGraph.LocalTransform) {
         SceneGraph.Transaction.current?.recordTransform(of: node, oldValue: oldValue)
@@ -234,6 +241,10 @@ public struct NodeMorphWeightsComponent: NodeField {
     static var defaultValue: [Float] { [] }
     static var revision: NodeFieldRevision { .transform }
 
+    static var needsOldValue: Bool {
+        SceneGraph.Transaction.current != nil
+    }
+
     static func didChange(_ node: SceneGraph.Node, from oldValue: [Float]) {
         SceneGraph.Transaction.current?.recordMorphWeights(of: node, oldValue: oldValue)
         node.bump(revision)
@@ -294,6 +305,10 @@ public struct NodeSubdivisionLevelComponent: NodeField {
 
     static var defaultValue: Int { 0 }
     static var revision: NodeFieldRevision { .none }
+
+    static var needsOldValue: Bool {
+        true
+    }
 
     static func didChange(_ node: SceneGraph.Node, from oldValue: Int) {
         if node.subdivisionLevel != oldValue {

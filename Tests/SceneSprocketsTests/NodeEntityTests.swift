@@ -192,6 +192,16 @@ func directSiblingIndexReordersChildren() throws {
     #expect([third, first, second].map { siblingIndex($0, in: graph.world) } == [0, 1, 2])
 }
 
+// #283: parent is unowned and cleared by the parent's deinit, so it still reads nil like a weak reference.
+@Test
+func childParentIsNilAfterParentIsFreed() {
+    let child = SceneGraph.Node()
+    var parent: SceneGraph.Node? = SceneGraph.Node(children: [child])
+    #expect(child.parent === parent)
+    parent = nil
+    #expect(child.parent == nil)
+}
+
 // #271
 @Test
 func destroyedEntityRemovesNodeFromTree() throws {

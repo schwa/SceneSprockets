@@ -107,10 +107,10 @@ public class SceneGraph {
 
     // Returns false when the traversal stopped.
     private static func traverse(node: Node, parentTransform: float4x4, includeHidden: Bool, _ visitor: (Node, float4x4) throws -> VisitResult) rethrows -> Bool {
-        guard includeHidden || node.isShown else {
+        guard let composedTransform = node.traversalTransform(includeHidden: includeHidden) else {
             return true
         }
-        let worldTransform = parentTransform * node.composedTransform
+        let worldTransform = parentTransform * composedTransform
         switch try visitor(node, worldTransform) {
         case .stop:
             return false
@@ -125,10 +125,10 @@ public class SceneGraph {
     }
 
     private static func visit(node: Node, parentTransform: float4x4, includeHidden: Bool, _ visitor: (Node, float4x4) throws -> Void) rethrows {
-        guard includeHidden || node.isShown else {
+        guard let composedTransform = node.traversalTransform(includeHidden: includeHidden) else {
             return
         }
-        let worldTransform = parentTransform * node.composedTransform
+        let worldTransform = parentTransform * composedTransform
         try visitor(node, worldTransform)
         for child in node.children {
             try visit(node: child, parentTransform: worldTransform, includeHidden: includeHidden, visitor)

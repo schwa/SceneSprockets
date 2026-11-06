@@ -1,4 +1,5 @@
 import SwiftECS
+import simd
 
 // A Node property that lives in the graph's World while the node is under a SceneGraph's root, and on the node
 // otherwise (#265, #274). Declare it on Node with a NodeFieldStorage, a computed property that calls
@@ -14,6 +15,8 @@ protocol NodeField: Component, SendableMetatype {
     // Called after every change made through the Node API.
     static func didChange(_ node: SceneGraph.Node, from oldValue: Value)
     static func didChangeInWorld(_ node: SceneGraph.Node)
+    // False: setters skip reading the old value and call didChangeInWorld, which must then do what didChange does.
+    static var needsOldValue: Bool { get }
 }
 
 enum NodeFieldRevision {
@@ -28,6 +31,10 @@ extension NodeField {
     }
 
     // Called after a direct World write. The old value is not known.
+    static var needsOldValue: Bool {
+        false
+    }
+
     static func didChangeInWorld(_ node: SceneGraph.Node) {
         node.bump(revision)
     }
@@ -70,15 +77,18 @@ struct NodeFieldSlot: Sendable {
             node.withMutation(keyPath: wrappedKeyPath) {}
         }
         observe = { store in
-            store.world.observe(Field.self) { [weak store] event in
-                store?.handle(event, keyPath: wrappedKeyPath)
+            // Unowned: NodeStore removes its observers in deinit. A weak capture gives the store a side-table
+            // reference count, which slows every Node write (#283).
+            store.world.observe(Field.self) { [unowned store] event in
+                store.handle(event, keyPath: wrappedKeyPath)
             }
         }
     }
 }
 
+// Unowned for the same reason as NodeReferenceComponent; entries are removed when the node leaves the graph.
 struct WeakNode {
-    weak var node: SceneGraph.Node?
+    unowned var node: SceneGraph.Node?
 }
 
 extension SceneGraph {
@@ -100,15 +110,16 @@ extension SceneGraph {
             self.world = world
             self.rootID = rootID
             observationTokens = Node.worldFields.map { $0.observe(self) }
-            observationTokens.append(world.observeDestroyed { [weak self] entityID in
+            // Unowned for the same reason as the field observers.
+            observationTokens.append(world.observeDestroyed { [unowned self] entityID in
                 // SceneGraph's own destroys unregister first, so only outside destroys reach the node (#271).
-                self?.nodes.removeValue(forKey: entityID)?.node?.entityWasDestroyed()
+                nodes.removeValue(forKey: entityID)?.node?.entityWasDestroyed()
             })
-            observationTokens.append(world.observeRelationship(ChildOf.self) { [weak self] event in
-                self?.handleChildOf(event)
+            observationTokens.append(world.observeRelationship(ChildOf.self) { [unowned self] event in
+                handleChildOf(event)
             })
-            observationTokens.append(world.observe(SiblingIndexComponent.self) { [weak self] event in
-                self?.handleSiblingIndex(event)
+            observationTokens.append(world.observe(SiblingIndexComponent.self) { [unowned self] event in
+                handleSiblingIndex(event)
             })
         }
 
@@ -165,11 +176,12 @@ extension SceneGraph.Node {
         // store.world, kept here to save a hop on every field access.
         let world: World
         // The World's structuralRevision when the entity was last checked.
-        var revision: UInt64
-        var location: World.StorageLocation?
+        // Unchecked exclusivity: read on every field access, only from the World's thread (#283).
+        @exclusivity(unchecked) var revision: UInt64
+        @exclusivity(unchecked) var location: World.StorageLocation?
         // Goes up only when the entity's storage moves. Field refs made in an earlier epoch are stale; refs from this
         // one stay valid however often other entities change the World (#270).
-        var locationEpoch: UInt64 = 1
+        @exclusivity(unchecked) var locationEpoch: UInt64 = 1
 
         init(store: SceneGraph.NodeStore, id: EntityID) {
             self.store = store
@@ -258,6 +270,14 @@ extension SceneGraph.Node {
         _ wrappedKeyPath: KeyPath<SceneGraph.Node, Field.Value>, _ storageKeyPath: NodeFieldStorageKeyPath<Field>,
         _ value: Field.Value
     ) {
+        // Most fields never use the old value; reading it was a second full read per write (#283).
+        guard Field.needsOldValue else {
+            withMutation(keyPath: wrappedKeyPath) {
+                writeField(storageKeyPath, value)
+            }
+            Field.didChangeInWorld(self)
+            return
+        }
         let oldValue = readField(storageKeyPath)
         withMutation(keyPath: wrappedKeyPath) {
             writeField(storageKeyPath, value)
@@ -268,7 +288,17 @@ extension SceneGraph.Node {
     // Untracked: Node's own Observation covers the property, so the World's is not needed.
     @inline(__always)
     func readField<Field: NodeField>(_ storageKeyPath: NodeFieldStorageKeyPath<Field>) -> Field.Value {
-        if entityBinding != nil, let ref = fieldRef(storageKeyPath) {
+        guard let binding = entityBinding else {
+            return self[keyPath: storageKeyPath].local
+        }
+        // Fast path: nothing structural changed since the binding last checked, and this field's ref is current.
+        // Reads the cached ref in place instead of copying the storage.
+        if binding.revision == binding.world.structuralRevision,
+           self[keyPath: storageKeyPath].refEpoch == binding.locationEpoch,
+           let value = self[keyPath: storageKeyPath].ref?.untrackedValue.value {
+            return value
+        }
+        if let ref = fieldRef(storageKeyPath) {
             return ref.untrackedValue.value
         }
         return self[keyPath: storageKeyPath].local
@@ -376,5 +406,44 @@ extension SceneGraph.Node {
         for childIndex in children.indices where childIndex >= index {
             children[childIndex].attach(to: binding.store, parent: self, siblingIndex: childIndex)
         }
+    }
+}
+
+extension SceneGraph.Node {
+    // What SceneGraph.visit and traverse read per node, with one binding check instead of one per field (#283).
+    // Nil when the node is skipped. Observes the same properties, in the same order, as
+    // `includeHidden || isShown` followed by `composedTransform`.
+    @inline(__always)
+    func traversalTransform(includeHidden: Bool) -> simd_float4x4? {
+        guard let binding = entityBinding, binding.revision == binding.world.structuralRevision else {
+            guard includeHidden || isShown else {
+                return nil
+            }
+            return composedTransform
+        }
+        let epoch = binding.locationEpoch
+        if !includeHidden {
+            access(keyPath: \.isVisible)
+            guard cachedValue(\.isVisibleStorage, epoch: epoch) ?? readField(\.isVisibleStorage) else {
+                return nil
+            }
+            access(keyPath: \.isActive)
+            guard cachedValue(\.isActiveStorage, epoch: epoch) ?? readField(\.isActiveStorage) else {
+                return nil
+            }
+        }
+        access(keyPath: \.localTransform)
+        let local = cachedValue(\.localTransformStorage, epoch: epoch) ?? readField(\.localTransformStorage)
+        access(keyPath: \.pivot)
+        let pivot = cachedValue(\.pivotStorage, epoch: epoch) ?? readField(\.pivotStorage)
+        return composedTransform(transform: local.matrix, pivot: pivot)
+    }
+
+    @inline(__always)
+    private func cachedValue<Field: NodeField>(_ storageKeyPath: NodeFieldStorageKeyPath<Field>, epoch: UInt64) -> Field.Value? {
+        guard self[keyPath: storageKeyPath].refEpoch == epoch else {
+            return nil
+        }
+        return self[keyPath: storageKeyPath].ref?.untrackedValue.value
     }
 }

@@ -11,7 +11,7 @@ extension SceneGraph {
     // Observable, so SwiftUI views that read a node update when it changes. Caches and revisions are ignored: the
     // renderer writes them every frame.
     @Observable
-    public class Node: Identifiable {
+    public final class Node: Identifiable {
         public enum Content {
             case empty
             // materials[i] applies to submesh i; the last material covers any extra submeshes.
@@ -27,35 +27,46 @@ extension SceneGraph {
         // Also the id of this node's entity while it is in a graph.
         public let id = EntityID()
 
-        @ObservationIgnored public private(set) weak var parent: Node?
+        // Unowned, not weak: a weak reference gives the parent a side-table reference count, which slows every retain,
+        // including the ancestor walk in bump() on each write (#283). deinit clears it in the children instead, so it
+        // still reads nil after the parent is freed.
+        @ObservationIgnored public private(set) unowned var parent: Node?
+
+        // A child's parent is always the node whose `children` holds it. Reading `parent` here would trap: it points at
+        // the node being freed.
+        deinit {
+            for child in children {
+                child.parent = nil
+            }
+        }
         public private(set) var children: [Node] = []
         // Set while the node is in a graph; see Node+Entity.swift.
-        @ObservationIgnored var entityBinding: EntityBinding?
+        @ObservationIgnored @exclusivity(unchecked) var entityBinding: EntityBinding?
         // Backing for the properties in Node+Fields.swift.
-        @ObservationIgnored var localTransformStorage = NodeFieldStorage<NodeTransformComponent>()
-        @ObservationIgnored var contentStorage = NodeFieldStorage<NodeContentComponent>()
-        @ObservationIgnored var labelStorage = NodeFieldStorage<NodeLabelComponent>()
-        @ObservationIgnored var isVisibleStorage = NodeFieldStorage<NodeIsVisibleComponent>()
-        @ObservationIgnored var isActiveStorage = NodeFieldStorage<NodeIsActiveComponent>()
-        @ObservationIgnored var opacityStorage = NodeFieldStorage<NodeOpacityComponent>()
-        @ObservationIgnored var pivotStorage = NodeFieldStorage<NodePivotComponent>()
-        @ObservationIgnored var categoryBitMaskStorage = NodeFieldStorage<NodeCategoryBitMaskComponent>()
-        @ObservationIgnored var lightCategoryBitMaskStorage = NodeFieldStorage<NodeLightCategoryBitMaskComponent>()
-        @ObservationIgnored var renderingOrderStorage = NodeFieldStorage<NodeRenderingOrderComponent>()
-        @ObservationIgnored var physicsBodyStorage = NodeFieldStorage<NodePhysicsBodyComponent>()
-        @ObservationIgnored var levelsOfDetailStorage = NodeFieldStorage<NodeLevelsOfDetailComponent>()
-        @ObservationIgnored var particleSystemsStorage = NodeFieldStorage<NodeParticleSystemsComponent>()
-        @ObservationIgnored var audioPlayersStorage = NodeFieldStorage<NodeAudioPlayersComponent>()
-        @ObservationIgnored var skinStorage = NodeFieldStorage<NodeSkinComponent>()
-        @ObservationIgnored var skinVerticesStorage = NodeFieldStorage<NodeSkinVerticesComponent>()
-        @ObservationIgnored var morphTargetsStorage = NodeFieldStorage<NodeMorphTargetsComponent>()
-        @ObservationIgnored var morphWeightsStorage = NodeFieldStorage<NodeMorphWeightsComponent>()
-        @ObservationIgnored var runningActionsStorage = NodeFieldStorage<NodeRunningActionsComponent>()
-        @ObservationIgnored var actionSpeedStorage = NodeFieldStorage<NodeActionSpeedComponent>()
-        @ObservationIgnored var constraintsStorage = NodeFieldStorage<NodeConstraintsComponent>()
-        @ObservationIgnored var accelerationStatesStorage = NodeFieldStorage<NodeAccelerationStatesComponent>()
-        @ObservationIgnored var subdivisionLevelStorage = NodeFieldStorage<NodeSubdivisionLevelComponent>()
-        @ObservationIgnored var subdivisionBaseStorage = NodeFieldStorage<NodeSubdivisionBaseComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var localTransformStorage = NodeFieldStorage<NodeTransformComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var contentStorage = NodeFieldStorage<NodeContentComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var labelStorage = NodeFieldStorage<NodeLabelComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var isVisibleStorage = NodeFieldStorage<NodeIsVisibleComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var isActiveStorage = NodeFieldStorage<NodeIsActiveComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var opacityStorage = NodeFieldStorage<NodeOpacityComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var pivotStorage = NodeFieldStorage<NodePivotComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var categoryBitMaskStorage = NodeFieldStorage<NodeCategoryBitMaskComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var lightCategoryBitMaskStorage = NodeFieldStorage<NodeLightCategoryBitMaskComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var renderingOrderStorage = NodeFieldStorage<NodeRenderingOrderComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var physicsBodyStorage = NodeFieldStorage<NodePhysicsBodyComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var levelsOfDetailStorage = NodeFieldStorage<NodeLevelsOfDetailComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var particleSystemsStorage = NodeFieldStorage<NodeParticleSystemsComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var audioPlayersStorage = NodeFieldStorage<NodeAudioPlayersComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var skinStorage = NodeFieldStorage<NodeSkinComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var skinVerticesStorage = NodeFieldStorage<NodeSkinVerticesComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var morphTargetsStorage = NodeFieldStorage<NodeMorphTargetsComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var morphWeightsStorage = NodeFieldStorage<NodeMorphWeightsComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var runningActionsStorage = NodeFieldStorage<NodeRunningActionsComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var actionSpeedStorage = NodeFieldStorage<NodeActionSpeedComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var constraintsStorage = NodeFieldStorage<NodeConstraintsComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var accelerationStatesStorage = NodeFieldStorage<NodeAccelerationStatesComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var subdivisionLevelStorage = NodeFieldStorage<NodeSubdivisionLevelComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var subdivisionBaseStorage = NodeFieldStorage<NodeSubdivisionBaseComponent>()
         // Drawn, hit and counted in bounds, if its ancestors are too: visible and active.
         public var isShown: Bool {
             isVisible && isActive
@@ -113,8 +124,13 @@ extension SceneGraph {
 
         // The local transform with the pivot applied; what world transforms and bounds are built from.
         public var composedTransform: float4x4 {
-            let pivot = self.pivot
-            guard pivot != .identity else {
+            composedTransform(transform: transform, pivot: pivot)
+        }
+
+        @inline(__always)
+        func composedTransform(transform: float4x4, pivot: float4x4) -> float4x4 {
+            // simd's constant, not GeometryLite3D's `.identity`, which is not inlinable (#283).
+            guard pivot != matrix_identity_float4x4 else {
                 return transform
             }
             if let pivotInverseCache, pivotInverseCache.pivot == pivot {
