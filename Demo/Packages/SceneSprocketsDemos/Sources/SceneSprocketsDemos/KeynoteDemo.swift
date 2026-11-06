@@ -13,7 +13,7 @@ import SwiftMesh
 import SwiftUI
 import simd
 
-// "Introduction to SceneGraph", presented like a keynote and built only from scene graph features (#98). Slides sit
+// "Introduction to SceneSprockets", presented like a keynote and built only from scene graph features (#98). Slides sit
 // side by side along +X; the camera flies between them with Transaction.animate, and slides fade in and out with node
 // opacity (hidden once faded so they cost nothing). Next/Previous are toolbar actions with the arrow keys; a click
 // also advances, and Auto-advance moves on every few seconds.
@@ -251,7 +251,7 @@ public final class KeynoteDemo: DemoScene {
         case 0:
             addTitle("SceneSprockets", size: 1.6, y: 2.2, to: slide)
             addTitle("for MetalSprockets", size: 0.6, y: 0.9, color: [0.6, 0.65, 0.75], to: slide)
-            let torus = SceneGraph.Node(parent: slide, shape: .torus(ringRadius: 1.2, pipeRadius: 0.25), material: BlinnPhongSceneMaterial.plastic([0.3, 0.5, 1], shininess: 64), device: demoDevice, trs: .init(translation: [0, 1.5, -4]))
+            let torus = SceneGraph.Node(parent: slide, shape: .torus(ringRadius: 1.2, pipeRadius: 0.25), material: BlinnPhongSceneMaterial.plastic([0.3, 0.5, 1], shininess: 64), device: demoDevice, trs: .init(translation: [0, -1.2, -4]))
             torus.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([1, 1, 0]), duration: 10)))
             addLight(to: slide, at: [3, 5, 5], color: [1, 0.95, 0.9], intensity: 60)
         case 1:

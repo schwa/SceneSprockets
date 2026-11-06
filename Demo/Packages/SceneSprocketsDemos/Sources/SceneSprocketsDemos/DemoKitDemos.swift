@@ -49,7 +49,7 @@ extension CatalogDemoView {
 }
 
 struct KeynoteDemoView: CatalogDemoView {
-    nonisolated static let demo = Demo(id: "keynote", title: "Introduction to SceneGraph", systemImage: "play.rectangle", section: .basics, summary: "A keynote-style tour built from scene graph features. Arrow keys or click to move between slides; turn on Auto-advance in the inspector.") { KeynoteDemo() }
+    nonisolated static let demo = Demo(id: "keynote", title: "Introduction to SceneSprockets", systemImage: "play.rectangle", section: .basics, summary: "A keynote-style tour built from scene graph features. Arrow keys or click to move between slides; turn on Auto-advance in the inspector.") { KeynoteDemo() }
 }
 
 struct SceneKitFeaturesDemoView: CatalogDemoView {
