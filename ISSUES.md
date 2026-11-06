@@ -6412,15 +6412,18 @@ There is no .spi.yml, so Swift Package Index would not link to the hosted docs o
 ## 290: No Justfile for docs preview and check
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: release, area:docs, effort:xs
 created: 2026-11-06T18:01:41Z
-updated: 2026-11-06T18:03:13Z
+updated: 2026-11-06T18:33:27Z
+closed: 2026-11-06T18:33:27Z
 +++
 
 There is no Justfile with recipes to preview the docs and build them with warnings as errors, as SwiftECS has (preview-docs, check-docs).
+
+- `2026-11-06T18:33:27Z`: Fixed: Justfile with preview-docs (target parameter, default SceneSprockets) and check-docs (combined archive for all seven library targets, warnings as errors; same command as the DocC Check workflow). Verified: check-docs exits 0; preview-docs serves documentation/scenesprockets (HTTP 200 on localhost:8080).
 
 ---
 
