@@ -52,7 +52,9 @@ typealias NodeFieldStorageKeyPath<Field: NodeField> = ReferenceWritableKeyPath<S
 
 // Type-erased access to one node field, for code that handles every field.
 struct NodeFieldSlot: Sendable {
-    let component: @Sendable (SceneGraph.Node) -> any Component
+    let componentType: ComponentType
+    // Typed, so attaching does not pass each field through `any Component` (#283).
+    let insert: @Sendable (SceneGraph.Node, World.EntityInitializer) -> Void
     let copyBack: @Sendable (SceneGraph.Node) -> Void
     let reset: @Sendable (SceneGraph.Node) -> Void
     let notify: @Sendable (SceneGraph.Node) -> Void
@@ -62,8 +64,9 @@ struct NodeFieldSlot: Sendable {
         _ wrappedKeyPath: ReferenceWritableKeyPath<SceneGraph.Node, Field.Value> & Sendable,
         _ storageKeyPath: NodeFieldStorageKeyPath<Field> & Sendable
     ) {
-        component = { node in
-            Field(value: node[keyPath: storageKeyPath].local)
+        componentType = ComponentType(Field.self)
+        insert = { node, initializer in
+            initializer.set(Field(value: node[keyPath: storageKeyPath].local))
         }
         copyBack = { node in
             node[keyPath: storageKeyPath].local = node.readField(storageKeyPath)
@@ -339,13 +342,14 @@ extension SceneGraph.Node {
             }
             detach()
         }
-        var components: [any Component] = [
-            SiblingIndexComponent(index: siblingIndex),
-            NodeReferenceComponent(node: self),
-            SceneGraphMembershipComponent(rootID: store.rootID)
-        ]
-        components += Self.worldFields.map { $0.component(self) }
-        store.world.createEntity(id: id, components: components)
+        store.world.createEntity(id: id, types: Self.entityComponentTypes) { initializer in
+            initializer.set(SiblingIndexComponent(index: siblingIndex))
+            initializer.set(NodeReferenceComponent(node: self))
+            initializer.set(SceneGraphMembershipComponent(rootID: store.rootID))
+            for slot in Self.worldFields {
+                slot.insert(self, initializer)
+            }
+        }
         store.register(self)
         entityBinding = EntityBinding(store: store, id: id)
         linkInWorld(parent: parent, siblingIndex: siblingIndex)
@@ -423,20 +427,28 @@ extension SceneGraph.Node {
         }
         let epoch = binding.locationEpoch
         if !includeHidden {
-            access(keyPath: \.isVisible)
+            access(keyPath: TraversalKeyPaths.isVisible)
             guard cachedValue(\.isVisibleStorage, epoch: epoch) ?? readField(\.isVisibleStorage) else {
                 return nil
             }
-            access(keyPath: \.isActive)
+            access(keyPath: TraversalKeyPaths.isActive)
             guard cachedValue(\.isActiveStorage, epoch: epoch) ?? readField(\.isActiveStorage) else {
                 return nil
             }
         }
-        access(keyPath: \.localTransform)
+        access(keyPath: TraversalKeyPaths.localTransform)
         let local = cachedValue(\.localTransformStorage, epoch: epoch) ?? readField(\.localTransformStorage)
-        access(keyPath: \.pivot)
+        access(keyPath: TraversalKeyPaths.pivot)
         let pivot = cachedValue(\.pivotStorage, epoch: epoch) ?? readField(\.pivotStorage)
         return composedTransform(transform: local.matrix, pivot: pivot)
+    }
+
+    // Made once: a key path literal passed to access(keyPath:) is instantiated through the runtime on every call (#283).
+    private enum TraversalKeyPaths {
+        static let isVisible = \SceneGraph.Node.isVisible
+        static let isActive = \SceneGraph.Node.isActive
+        static let localTransform = \SceneGraph.Node.localTransform
+        static let pivot = \SceneGraph.Node.pivot
     }
 
     @inline(__always)
