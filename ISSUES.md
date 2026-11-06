@@ -6430,17 +6430,19 @@ There is no Justfile with recipes to preview the docs and build them with warnin
 ## 291: Swift tools version does not match the documented requirement
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: release, area:scenegraph, effort:s
 created: 2026-11-06T18:01:41Z
-updated: 2026-11-06T18:03:13Z
+updated: 2026-11-06T22:15:37Z
+closed: 2026-11-06T22:15:37Z
 +++
 
 Package.swift declares swift-tools-version 6.4, but README.md says Swift 6.2. Either the README is wrong or users on Swift 6.2 cannot resolve the package. SwiftECS lowered its tools version to 6.2 for release.
 
 - `2026-11-06T18:08:36Z`: Tried to resolve. Findings: the manifest uses no 6.4-only features; all direct dependencies declare tools 6.2 or lower (transitive swift-collections resolves a 6.4 release, but older releases support 6.2); no code gates on compiler 6.3/6.4 or OS 27. Punting: this machine has only Swift 6.4.x toolchains (Xcode 27.2, 27.3 beta, swift-6.4.1), so I cannot check that the sources compile with Swift 6.2, and which version to support is a product decision. Unblocker: decide whether the release supports Swift 6.2 (lower tools to 6.2 and verify on Xcode 26.x, e.g. via CI from #286) or requires 6.4 (change the README).
+- `2026-11-06T22:15:38Z`: Fixed per user: swift-tools-version lowered to 6.2 to match the README; the package is still built with the Swift 6.4 compiler. Root package builds with 0 warnings, 327 tests pass, demos build, check-docs passes. DocC workflow comments updated (they still pin Xcode 27.2).
 
 ---
 
