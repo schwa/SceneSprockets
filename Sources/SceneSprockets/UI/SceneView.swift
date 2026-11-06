@@ -73,7 +73,7 @@ public struct SceneView: View {
     // Decided at the first change of each drag: whether it started on the manipulator.
     @State private var manipulatorDragClaim: Bool?
     // The same for two-finger pinch and twist (iOS, visionOS).
-    @State private var twoFingerClaim: Bool?
+    @State private var twoFingerClaim: Bool? // periphery:ignore - read in the gesture handlers
 
     @State private var internalCameraMatrix: simd_float4x4?
     @State private var controlledCameraMatrix: simd_float4x4 = matrix_identity_float4x4

@@ -6477,15 +6477,18 @@ The README, Documentation/Features.md and any new DocC articles have not been re
 ## 294: Unused code has not been checked before release
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: release, area:scenegraph, effort:s
 created: 2026-11-06T18:01:42Z
-updated: 2026-11-06T18:03:14Z
+updated: 2026-11-06T18:36:42Z
+closed: 2026-11-06T18:36:42Z
 +++
 
 There is no Periphery config, and the public API has not been checked for unused or leftover declarations. SwiftECS has a .periphery.yml.
+
+- `2026-11-06T18:36:42Z`: Fixed: .periphery.yml (retain public, assign-only properties and protocol func params; report only Sources/ and Tests/), with the two-step scan command for Swift Build in a comment. Removed two unused imports (SceneSprocketsAudio in Node.swift, SceneSprocketsBlinnPhong in FlattenTests.swift). Other findings were false positives: Hashable cache-key and GPU-layout properties, public protocol parameters, and SwiftUI @State twoFingerClaim (periphery:ignore). The scan now reports no unused code. Dependency checkouts also have findings; not ours, not changed.
 
 ---
 

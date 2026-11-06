@@ -4,7 +4,6 @@ import SwiftMesh
 import Testing
 import simd
 @testable import SceneSprockets
-@testable import SceneSprocketsBlinnPhong
 
 private struct Tag: SceneSprockets.Material {
     var name: String

@@ -1,6 +1,5 @@
 import GeometryLite3D
 import Metal
-import SceneSprocketsAudio
 import MetalSprocketsParticles
 import Observation
 import SwiftECS
