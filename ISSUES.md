@@ -6394,15 +6394,18 @@ Only Demo/ and SceneSprocketsComposer/ have .swiftlint.yml; the library sources 
 ## 289: No Swift Package Index config
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: release, area:docs, effort:xs
 created: 2026-11-06T18:01:41Z
-updated: 2026-11-06T18:03:13Z
+updated: 2026-11-06T18:12:50Z
+closed: 2026-11-06T18:12:50Z
 +++
 
 There is no .spi.yml, so Swift Package Index would not link to the hosted docs or know which targets to document.
+
+- `2026-11-06T18:12:50Z`: Fixed: .spi.yml links Swift Package Index to the GitHub Pages docs (https://schwa.github.io/SceneSprockets/documentation/, the combined archive from #285), like SwiftECS.
 
 ---
 
