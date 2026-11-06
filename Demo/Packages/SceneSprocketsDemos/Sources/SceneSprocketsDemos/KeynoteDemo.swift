@@ -20,9 +20,9 @@ import simd
 public final class KeynoteDemo: DemoScene {
     private static let spacing: Float = 24
     public static let titles = [
-        "SceneGraph", "Scene Graph", "Shapes", "Materials", "Lights", "Actions", "Constraints", "Opacity & Fades", "Blend Modes",
+        "SceneSprockets", "Scene Graph", "Shapes", "Materials", "Lights", "Actions", "Constraints", "Opacity & Fades", "Blend Modes",
         "Custom Shaders", "Glass", "PBR Extensions", "Shadows", "Fog", "Particles", "Mesh Emitters", "Implicit Animation", "Animation Blending", "Deformation",
-        "glTF & Model I/O", "Hit Testing", "Physics", "Performance", "Post-processing", "SceneView", "Thank You",
+        "glTF & Model I/O", "Hit Testing", "Physics", "Performance", "Post-Processing", "SceneView", "Thank You",
     ]
 
     private let cameraNode: SceneGraph.Node
@@ -168,7 +168,7 @@ public final class KeynoteDemo: DemoScene {
             }
         case "Performance":
             waveCrates(time: time)
-        case "Post-processing":
+        case "Post-Processing":
             updateGrade(deltaTime: deltaTime)
         case "glTF & Model I/O":
             importedPlayer?.advance(by: deltaTime)
@@ -192,7 +192,7 @@ public final class KeynoteDemo: DemoScene {
     private func applySceneSettings() {
         shadows = currentTitle == "Shadows" ? shadowRenderer : nil
         sceneGraph.fog = currentTitle == "Fog" ? SceneGraph.Fog(color: [0.05, 0.06, 0.1, 1], startDistance: 12, endDistance: 34) : nil
-        if currentTitle == "Post-processing" {
+        if currentTitle == "Post-Processing" {
             gradeIndex = 0
             sinceGrade = 0
         } else {
@@ -249,7 +249,7 @@ public final class KeynoteDemo: DemoScene {
     private func build(slide: SceneGraph.Node, index: Int, title: String) {
         switch index {
         case 0:
-            addTitle("SceneGraph", size: 1.6, y: 2.2, to: slide)
+            addTitle("SceneSprockets", size: 1.6, y: 2.2, to: slide)
             addTitle("for MetalSprockets", size: 0.6, y: 0.9, color: [0.6, 0.65, 0.75], to: slide)
             let torus = SceneGraph.Node(parent: slide, shape: .torus(ringRadius: 1.2, pipeRadius: 0.25), material: BlinnPhongSceneMaterial.plastic([0.3, 0.5, 1], shininess: 64), device: demoDevice, trs: .init(translation: [0, 1.5, -4]))
             torus.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([1, 1, 0]), duration: 10)))
@@ -391,7 +391,7 @@ public final class KeynoteDemo: DemoScene {
             // Nodes outside the view are culled.
             Node(parent: grid, content: .mesh(box, material: crate))
             """, to: slide)
-        case "Post-processing":
+        case "Post-Processing":
             postProcessingSlide(slide)
             addCode("""
             // Noir
