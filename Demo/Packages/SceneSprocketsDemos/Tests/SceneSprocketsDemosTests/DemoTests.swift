@@ -177,8 +177,10 @@ func bumpNormalMapPointsUpOnTop() throws {
 @Test
 @MainActor
 func catalogMatchesAppAndIDsAreUnique() {
-    #expect(SceneGraphDemos.all.map { $0.metadata.id.rawValue } == DemoCatalog.demos.map(\.id))
-    #expect(Set(DemoCatalog.demos.map(\.id)).count == DemoCatalog.demos.count)
+    // The app adds custom DemoViews (Tree Appreciator) after the catalog's scene demos.
+    let appIDs = SceneGraphDemos.all.map { $0.metadata.id.rawValue }
+    #expect(Array(appIDs.prefix(DemoCatalog.demos.count)) == DemoCatalog.demos.map(\.id))
+    #expect(Set(appIDs).count == appIDs.count)
 }
 
 @Test

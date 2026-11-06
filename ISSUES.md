@@ -6358,15 +6358,18 @@ No GitHub Actions workflow builds or tests the package, the demos or Composer, o
 ## 287: Demos test catalogMatchesAppAndIDsAreUnique fails
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: release, area:demo, area:ci, effort:s
 created: 2026-11-06T18:01:40Z
-updated: 2026-11-06T18:03:13Z
+updated: 2026-11-06T18:08:07Z
+closed: 2026-11-06T18:08:07Z
 +++
 
 The SceneSprocketsDemos test catalogMatchesAppAndIDsAreUnique fails on main. CI that runs the demo tests will be red.
+
+- `2026-11-06T18:08:07Z`: Fixed: the test was stale. SceneGraphDemos.all appends TreeAppreciatorDemoView (a custom DemoView, not a catalog Demo) after the catalog. The test now checks that the app lists the catalog demos first, in order, and that all app IDs are unique.
 
 ---
 
