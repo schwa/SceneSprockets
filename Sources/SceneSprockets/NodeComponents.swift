@@ -45,11 +45,11 @@ public struct NodeTransformComponent: NodeField {
 
     // Only Transaction.animate uses the old value.
     static var needsOldValue: Bool {
-        SceneGraph.Transaction.current != nil
+        SceneGraph.Transaction.currentIfAny != nil
     }
 
     static func didChange(_ node: SceneGraph.Node, from oldValue: SceneGraph.LocalTransform) {
-        SceneGraph.Transaction.current?.recordTransform(of: node, oldValue: oldValue)
+        SceneGraph.Transaction.currentIfAny?.recordTransform(of: node, oldValue: oldValue)
         node.bump(revision)
     }
 }
@@ -242,11 +242,11 @@ public struct NodeMorphWeightsComponent: NodeField {
     static var revision: NodeFieldRevision { .transform }
 
     static var needsOldValue: Bool {
-        SceneGraph.Transaction.current != nil
+        SceneGraph.Transaction.currentIfAny != nil
     }
 
     static func didChange(_ node: SceneGraph.Node, from oldValue: [Float]) {
-        SceneGraph.Transaction.current?.recordMorphWeights(of: node, oldValue: oldValue)
+        SceneGraph.Transaction.currentIfAny?.recordMorphWeights(of: node, oldValue: oldValue)
         node.bump(revision)
     }
 }

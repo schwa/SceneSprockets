@@ -1,4 +1,5 @@
 import GeometryLite3D
+import Synchronization
 import simd
 
 extension SceneGraph {
@@ -11,6 +12,15 @@ extension SceneGraph {
     public enum Transaction {
         @TaskLocal static var current: Recorder?
 
+        // Animating transactions running on any thread. Reading a TaskLocal costs more than a node write's other
+        // work, and it is only set while this is above zero, so writes check this first (#283).
+        private static let activeCount = Atomic<Int>(0)
+
+        // The recorder for this task, or nil. Same result as `current`, cheaper when no transaction is running.
+        static var currentIfAny: Recorder? {
+            activeCount.load(ordering: .relaxed) > 0 ? current : nil
+        }
+
         public static func animate(duration: Float, timingMode: Action.TimingMode = .easeInEaseOut, _ body: () throws -> Void, completion: (() -> Void)? = nil) rethrows {
             guard duration > 0 else {
                 try body()
@@ -18,6 +28,8 @@ extension SceneGraph {
                 return
             }
             let recorder = Recorder()
+            activeCount.add(1, ordering: .relaxed)
+            defer { activeCount.subtract(1, ordering: .relaxed) }
             try $current.withValue(recorder) {
                 try body()
             }
