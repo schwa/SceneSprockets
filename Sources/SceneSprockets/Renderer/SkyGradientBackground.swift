@@ -27,7 +27,7 @@ struct SkyGradientBackground: Element {
                 }
                 .parameter("uniforms", value: uniforms)
             }
-            .depthCompare(function: .always, enabled: false)
+            .depthCompare(function: .always, writes: false)
         }
     }
 }
