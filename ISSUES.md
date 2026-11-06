@@ -6496,4 +6496,6 @@ updated: 2026-11-06T18:03:14Z
 
 SceneSprockets has no version tag and no release notes, so SwiftPM users cannot depend on a version, and there is no summary of what the first release contains.
 
+- `2026-11-06T18:12:40Z`: Release notes added in CHANGELOG.md under 'Unreleased' (products, features, link to README limitations). Left open: the version number and the git tag are for the user to choose and create; when tagging, rename 'Unreleased' to the version. Also noticed Documentation/Features.md is stale: save/load (SceneArchive), debug views and gizmos (SceneSprocketsGizmos) are marked not done, and the entity-component system is struck through although nodes now live in a SwiftECS World. The notes follow the code, not that table.
+
 ---
