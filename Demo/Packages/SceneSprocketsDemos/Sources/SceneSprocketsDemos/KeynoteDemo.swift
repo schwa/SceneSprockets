@@ -39,11 +39,9 @@ public final class KeynoteDemo: DemoScene {
     private var importedPlayer: SceneGraph.AnimationPlayer?
     private var hitTargets: Set<ObjectIdentifier> = []
     private var physics: SceneGraphPhysicsWorld?
-    private var physicsStack: SceneGraph.Node?
+    private var physicsDice: SceneGraph.Node?
     private var sincePhysicsReset: Float = 0
-    // Waits on the ground until launched, a moment after the slide comes up.
-    private var physicsBall: SceneGraph.Node?
-    private static let ballLaunchDelay: Float = 0.5
+    private var diceGenerator = SystemRandomNumberGenerator()
     private static let tubeJointCount = 7
     private var pbrExtensionPieces: [(node: SceneGraph.Node, axis: SIMD3<Float>, speed: Float)] = []
     private var burningFox: BurningFox?
@@ -74,7 +72,9 @@ public final class KeynoteDemo: DemoScene {
             slide.isVisible = index == 0
             slides.append(slide)
         }
-        physics = try? SceneGraphPhysicsWorld(sceneGraph: sceneGraph)
+        // Only the physics slide steps it. Gravity points down the tilted tray, so the dice fall as in a flat tray seen
+        // at an angle.
+        physics = try? SceneGraphPhysicsWorld(sceneGraph: sceneGraph, gravity: Self.trayTilt.act([0, -9.81, 0]))
         actions = [
             DemoAction("Previous", systemImage: "chevron.left", shortcut: .leftArrow) { [weak self] in self?.go(by: -1) },
             DemoAction("Next", systemImage: "chevron.right", shortcut: .rightArrow) { [weak self] in self?.go(by: 1) },
@@ -177,15 +177,12 @@ public final class KeynoteDemo: DemoScene {
         case "Mesh Emitters":
             burningFox?.update(sceneGraph: sceneGraph, deltaTime: deltaTime)
         case "Physics":
-            let wasWaiting = sincePhysicsReset < Self.ballLaunchDelay
             sincePhysicsReset += deltaTime
-            if wasWaiting, sincePhysicsReset >= Self.ballLaunchDelay, let physicsBall {
-                physics?.setVelocity([14, 3, 0], of: physicsBall)
-            }
-            if sincePhysicsReset > 7 {
+            if sincePhysicsReset > 5 {
                 resetPhysics()
             }
-            physics?.step(deltaTime: min(deltaTime, 1.0 / 30.0))
+            // As in DiceDemo: small fixed steps keep fast, small dice from passing through the walls.
+            physics?.step(deltaTime: min(deltaTime, 1.0 / 30.0), collisionSteps: 2)
         default:
             break
         }
@@ -443,8 +440,9 @@ public final class KeynoteDemo: DemoScene {
         case "Physics":
             physicsSlide(slide)
             addCode("""
-            box.physicsBody = .init(type: .dynamic, shape: .boundingBox)
+            die.physicsBody = .init(type: .dynamic, shape: .convexHull)
             let physics = try SceneGraphPhysicsWorld(sceneGraph: sceneGraph)
+            physics.setAngularVelocity(spin, of: die)
             physics.step(deltaTime: deltaTime)
             """, to: slide)
         case "SceneView":
@@ -774,34 +772,56 @@ public final class KeynoteDemo: DemoScene {
         addTitle("Click a shape", size: 0.35, y: 2.8, color: [0.6, 0.65, 0.75], to: slide)
     }
 
+    // DiceDemo's wooden tray and dice, tilted toward the camera so the dice show from the slides' usual eye height.
+    private static let trayTilt = simd_quatf(angle: 0.5, axis: [1, 0, 0])
+
     private func physicsSlide(_ slide: SceneGraph.Node) {
         addLight(to: slide, at: [3, 6, 6], intensity: 80)
-        let ground = SceneGraph.Node(parent: slide, label: "Ground", shape: .box(width: 12, height: 0.2, length: 4), material: BlinnPhongSceneMaterial.plastic([0.5, 0.5, 0.55], shininess: 8), device: demoDevice, trs: .init(translation: [0, -0.1, 0]))
-        ground.physicsBody = .init(type: .static, shape: .boundingBox, friction: 0.6, restitution: 0.3)
-        physicsStack = SceneGraph.Node(parent: slide, label: "Bodies")
+        let tray = SceneGraph.Node(
+            parent: slide, label: "Dice Tray", trs: .init(translation: [0, 0.8, 0], rotation: Self.trayTilt)
+        )
+        DiceDemo.buildTray(in: tray)
+        physicsDice = SceneGraph.Node(parent: tray, label: "Dice")
     }
 
-    // Restacks the boxes and puts a new ball on the ground; update throws it after ballLaunchDelay. Hidden slides drop
-    // out of the physics world, so this runs on arrival.
+    // Throws six new dice, one of each D&D kind in mixed styles, from the tray's front-left corner, as DiceDemo.roll
+    // does. Hidden slides drop out of the physics world, so this runs on arrival.
     private func resetPhysics() {
-        guard let physicsStack else {
+        guard let physicsDice else {
             return
         }
         sincePhysicsReset = 0
-        physicsStack.removeAllChildren()
-        let colors: [SIMD3<Float>] = [[0.8, 0.5, 0.2], [0.6, 0.3, 0.15], [0.7, 0.6, 0.3], [0.5, 0.4, 0.2]]
-        for row in 0..<4 {
-            let count = 4 - row
-            for column in 0..<count {
-                let x = 1.5 + Float(column) * 0.62 - Float(count - 1) * 0.31
-                let box = SceneGraph.Node(parent: physicsStack, shape: .box(width: 0.6, height: 0.6, length: 0.6), material: BlinnPhongSceneMaterial.plastic(colors[(row + column) % colors.count], shininess: 16), device: demoDevice, trs: .init(translation: [x, 0.3 + Float(row) * 0.61, 0]))
-                box.physicsBody = .init(type: .dynamic, shape: .boundingBox, friction: 0.4, restitution: 0.2)
+        physicsDice.removeAllChildren()
+        let styles = DiceStyle.allCases.shuffled(using: &diceGenerator)
+        let dice = DiceDemo.Kind.allCases.enumerated().compactMap { index, kind -> SceneGraph.Node? in
+            guard let die = DiceDemo.makeDie(kind, style: styles[index % styles.count]) else {
+                return nil
             }
+            let position = SIMD3<Float>(
+                -DiceDemo.trayWidth / 2 + 0.6 + Float(index % 4) * 0.6,
+                1.4 + Float(index / 4) * 0.6,
+                DiceDemo.trayDepth / 2 - 0.6 - Float.random(in: 0...0.3, using: &diceGenerator)
+            )
+            let axis = simd_normalize(SIMD3<Float>.random(in: -1...1, using: &diceGenerator) + [0, 0.01, 0])
+            let rotation = simd_quatf(angle: .random(in: 0...(2 * .pi), using: &diceGenerator), axis: axis)
+            die.trs = .init(translation: position, rotation: rotation, scale: SIMD3(repeating: DiceDemo.dieScale))
+            physicsDice.addChild(die)
+            return die
         }
-        let ball = SceneGraph.Node(parent: physicsStack, label: "Ball", shape: .sphere(radius: 0.35), material: BlinnPhongSceneMaterial.plastic([0.9, 0.15, 0.15], shininess: 64), device: demoDevice, trs: .init(translation: [-4.5, 0.35, 0]))
-        ball.physicsBody = .init(type: .dynamic, shape: .sphere(radius: 0.35), friction: 0.3, restitution: 0.4)
-        physicsBall = ball
-        physics?.sync()
+        guard let physics else {
+            return
+        }
+        physics.sync()
+        for die in dice {
+            let velocity = SIMD3<Float>(
+                .random(in: 4...7, using: &diceGenerator),
+                .random(in: 0...1.5, using: &diceGenerator),
+                .random(in: -4 ... -2, using: &diceGenerator)
+            )
+            // Velocities are in world space; the throw is in the tilted tray's.
+            physics.setVelocity(Self.trayTilt.act(velocity), of: die)
+            physics.setAngularVelocity(SIMD3<Float>.random(in: -15...15, using: &diceGenerator), of: die)
+        }
     }
 
     private func customShadersSlide(_ slide: SceneGraph.Node) {

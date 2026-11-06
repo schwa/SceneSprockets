@@ -15,14 +15,14 @@ import SwiftUI
 // Dice thrown into a wooden tray, with Jolt physics. Click, press Space, or wait to roll again. The dice are generated
 // (DiceGeometry) and styled with PBR (DiceStyle); the tray texture is in Resources/Dice/README.md.
 final class DiceDemo: DemoScene {
-    // The tray's inside, in world units.
-    private static let trayWidth: Float = 6
-    private static let trayDepth: Float = 4
+    // The tray's inside, in world units. The tray and dice are also used by the keynote's physics slide.
+    static let trayWidth: Float = 6
+    static let trayDepth: Float = 4
     private static let wallHeight: Float = 0.6
     private static let wallThickness: Float = 0.2
     private static let dieSize: Float = 0.5
     // The OBJ is 8 units across.
-    private static let dieScale = dieSize / 8
+    static let dieScale = dieSize / 8
 
     private var physics: SceneGraphPhysicsWorld?
     private var dice: [SceneGraph.Node] = []
@@ -195,7 +195,7 @@ final class DiceDemo: DemoScene {
     }
 
     // A wooden floor and four walls, all static.
-    private static func buildTray(in root: SceneGraph.Node) {
+    static func buildTray(in root: SceneGraph.Node) {
         // Poly Haven's Dark Wood (CC0): color, normal, and roughness packed in green.
         let wood: any SceneSprockets.Material = {
             let loader = MTKTextureLoader(device: demoDevice)
@@ -281,7 +281,7 @@ final class DiceDemo: DemoScene {
     private static var gearMeshes: [GearSpec: MetalMesh] = [:]
 
     // One die of `kind` in `style`, colliding as the convex hull of its mesh. Nil when the assets do not load.
-    private static func makeDie(_ kind: Kind, style: DiceStyle) -> SceneGraph.Node? {
+    static func makeDie(_ kind: Kind, style: DiceStyle) -> SceneGraph.Node? {
         guard let parts = parts(for: kind) else {
             return nil
         }
