@@ -31,8 +31,7 @@ let package = Package(
         .package(url: "https://github.com/schwa/SwiftJolt.git", .upToNextMinor(from: "0.0.1")),
         .package(url: "https://github.com/schwa/MetalSprocketsParticles", .upToNextMinor(from: "0.0.2")),
         .package(url: "https://github.com/schwa/MetalSprocketsAddOns", .upToNextMinor(from: "0.2.5")),
-        // Local until SwiftECS is published (#250).
-        .package(path: "../../Current/SwiftECS"),
+        .package(url: "https://github.com/schwa/SwiftECS", .upToNextMinor(from: "0.1.0")),
     ],
     targets: [
         .target(

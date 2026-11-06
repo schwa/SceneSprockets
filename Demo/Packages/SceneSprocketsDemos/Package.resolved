@@ -1,5 +1,5 @@
 {
-  "originHash" : "5bd2b02bac73f0c2e08dc493b6a77bcbdada083cbf9736aa386525b7be2e96c3",
+  "originHash" : "426c1f3de791b732572abe3517141867837d2d76eaf479f0daa26b179a6e7d6b",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -179,6 +179,15 @@
       "state" : {
         "revision" : "050f1a346fbbac0ca2cfb15a95274f7bd1cf0ccf",
         "version" : "604.0.0"
+      }
+    },
+    {
+      "identity" : "swiftecs",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/SwiftECS",
+      "state" : {
+        "revision" : "9fee9e48ba84944ab4e42368ce7270ef0c37f367",
+        "version" : "0.1.1"
       }
     },
     {

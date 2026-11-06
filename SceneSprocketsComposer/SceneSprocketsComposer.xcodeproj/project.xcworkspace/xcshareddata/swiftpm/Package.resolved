@@ -173,6 +173,15 @@
       }
     },
     {
+      "identity" : "swiftecs",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/SwiftECS",
+      "state" : {
+        "revision" : "9fee9e48ba84944ab4e42368ce7270ef0c37f367",
+        "version" : "0.1.1"
+      }
+    },
+    {
       "identity" : "swiftfields",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/SwiftFields",

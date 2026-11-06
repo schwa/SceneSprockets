@@ -6263,14 +6263,18 @@ Part of #250. constraints (and their accelerationStates) and subdivisionLevel/su
 ## 282: SwiftECS is a local path dependency, so SceneSprockets does not build elsewhere
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: area:scenegraph, effort:s
 created: 2026-11-05T23:02:28Z
+updated: 2026-11-06T04:47:21Z
+closed: 2026-11-06T04:47:21Z
 +++
 
 Package.swift depends on SwiftECS with .package(path: "../../Current/SwiftECS"). The SwiftECS changes SceneSprockets needs (#263-#281, SwiftECS #46-#49) are committed only locally; SwiftECS has no pushed release tag. Any other checkout, including CI, fails to resolve the package. Related: #250.
+
+- `2026-11-06T04:47:21Z`: Fixed: Package.swift depends on https://github.com/schwa/SwiftECS, upToNextMinor from 0.1.0 (resolves 0.1.1).
 
 ---
 
