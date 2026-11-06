@@ -1,0 +1,37 @@
+# Fail on any DocC warning (broken links, missing parameter docs, missing resources).
+name: DocC Check
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  docc:
+    runs-on: macos-26
+    steps:
+      # Swift tools 6.4 needs Xcode 27 (see #291).
+      - uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
+        with:
+          xcode-version: "27.2"
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Trust plugins
+        run: defaults write com.apple.dt.Xcode IDESkipPackagePluginFingerprintValidation -bool YES
+      - name: Build documentation with warnings as errors
+        run: |
+          swift package \
+            --disable-sandbox \
+            --allow-writing-to-directory ./docs \
+            generate-documentation \
+            --target SceneSprockets \
+            --target SceneSprocketsPhysics \
+            --target SceneSprocketsPBR \
+            --target SceneSprocketsBlinnPhong \
+            --target SceneSprocketsShaderMaterial \
+            --target SceneSprocketsAudio \
+            --target SceneSprocketsGizmos \
+            --enable-experimental-combined-documentation \
+            --warnings-as-errors \
+            --output-path ./docs

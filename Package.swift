@@ -32,6 +32,7 @@ let package = Package(
         .package(url: "https://github.com/schwa/MetalSprocketsParticles", .upToNextMinor(from: "0.0.2")),
         .package(url: "https://github.com/schwa/MetalSprocketsAddOns", .upToNextMinor(from: "0.2.5")),
         .package(url: "https://github.com/schwa/SwiftECS", .upToNextMinor(from: "0.1.0")),
+        .package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.0.0"),
     ],
     targets: [
         .target(

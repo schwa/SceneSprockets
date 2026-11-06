@@ -1,0 +1,76 @@
+# Publish DocC documentation to GitHub Pages
+name: Documentation
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      # Swift tools 6.4 needs Xcode 27 (see #291).
+      - uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
+        with:
+          xcode-version: "27.2"
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Trust plugins
+        run: defaults write com.apple.dt.Xcode IDESkipPackagePluginFingerprintValidation -bool YES
+      - name: Build Documentation
+        run: |
+          swift package \
+            --disable-sandbox \
+            --allow-writing-to-directory ./docs \
+            generate-documentation \
+            --target SceneSprockets \
+            --target SceneSprocketsPhysics \
+            --target SceneSprocketsPBR \
+            --target SceneSprocketsBlinnPhong \
+            --target SceneSprocketsShaderMaterial \
+            --target SceneSprocketsAudio \
+            --target SceneSprocketsGizmos \
+            --enable-experimental-combined-documentation \
+            --source-service github \
+            --source-service-base-url https://github.com/schwa/SceneSprockets/blob/main \
+            --checkout-path . \
+            --transform-for-static-hosting \
+            --hosting-base-path SceneSprockets \
+            --output-path ./docs
+          cat > ./docs/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta http-equiv="refresh" content="0; url=documentation/">
+            <title>SceneSprockets Documentation</title>
+          </head>
+          <body>
+            <p>Redirecting to <a href="documentation/">SceneSprockets Documentation</a>...</p>
+          </body>
+          </html>
+          EOF
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
+        with:
+          path: ./docs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0

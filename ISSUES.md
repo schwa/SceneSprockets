@@ -6328,15 +6328,18 @@ The package has no Documentation.docc catalog: no landing page, no articles, no 
 ## 285: Documentation is not published and DocC warnings are not checked
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: release, area:docs, area:ci, effort:s
 created: 2026-11-06T18:01:40Z
-updated: 2026-11-06T18:03:12Z
+updated: 2026-11-06T18:12:05Z
+closed: 2026-11-06T18:12:05Z
 +++
 
 No workflow builds the DocC documentation or publishes it to GitHub Pages, and nothing fails on DocC warnings (broken symbol links, missing parameter docs). SwiftECS has docc.yml (Pages) and docc-check.yml (warnings as errors).
+
+- `2026-11-06T18:12:05Z`: Fixed: added swift-docc-plugin, .github/workflows/docc-check.yml (DocC with warnings as errors on push/PR) and .github/workflows/docc.yml (publish to GitHub Pages on main). Both build one combined archive for all seven library targets; documentation/ lists the modules and the Pages root redirects there. Verified locally: both command lines exit 0 with zero DocC warnings. Not verified on GitHub: the workflows pin Xcode 27.2 because Package.swift needs tools 6.4 (#291); whether macos-26 runners have it is unchecked. Pages must be enabled in the repo settings (source: GitHub Actions).
 
 ---
 
