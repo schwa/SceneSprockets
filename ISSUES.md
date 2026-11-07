@@ -6054,6 +6054,7 @@ Leaving open for the steady-state cost. Further gains likely need SwiftECS chang
 - `2026-11-05T22:19:29Z`: Answer 1: keep open - but we'll measure cost later
 - `2026-11-06T00:25:58Z`: Autoresearch session (#283), commit 'Speed up node access and writes after the ECS port': traversal 276 -> ~153 ns/node, write 511 -> 260, flatten 296 -> ~155, read 107 -> ~45, create+attach 65,800 -> ~38,000. Pre-ECS reference: traversal ~100, read ~30, write ~180. Remaining traversal cost is mostly ComponentRef retain/release; further gains likely need a non-retaining SwiftECS read path.
 - `2026-11-06T01:29:09Z`: Second autoresearch session (#283), geomean of the 5 benchmark metrics 419 -> 284 (-32%). Mostly SwiftECS: entity location holds its archetype, lazy ComponentType names, typed entity creation, specialized swapRemove and change dispatch, reuse of the last creation archetype, skipping storage publish with no observers. SceneSprockets: typed node creation, static key paths for Observation, cheaper transaction check. Now (ns/node): traversal ~142, flatten ~137, read ~38, write ~192, create+attach ~13,000. Pre-ECS: traversal ~100, read ~30, write ~180.
+- `2026-11-07T16:17:46Z`: Autonomous run: not changed. Per the 2026-11-05 answer ('keep open, measure later') and two autoresearch sessions since: traversal ~142 ns/node (pre-ECS ~100), read ~38 (~30), write ~192 (~180). The remaining cost is mostly ComponentRef retain/release; the next real gain needs a non-retaining read path in SwiftECS, which is outside this repo. Tuning SceneSprockets further against the benchmark would be overfitting. Unblocker: decide whether to add that SwiftECS read path, or accept the current cost and close.
 
 ---
 
@@ -6616,6 +6617,8 @@ created: 2026-11-07T15:41:12Z
 +++
 
 SceneGraphShadows has 8 shadow map slices: a directional or spot light takes one, a point light six. Lights that do not fit cast no shadow; SceneGraphShadows.droppedLightCount counts them (#68). A scene with two point lights already loses one light's shadows. Listed under Limitations in the README.
+
+- `2026-11-07T16:18:08Z`: Autonomous run: scoped, not changed. The 8 is a fixed array size in shader uniforms in three places: BlinnPhong.h (sliceViewProjections[8]), ShadowMask.h (SCENE_SHADOW_MAX_SLICES 8), and MetalSprocketsPBR's PBRShaderTypes.h (kPBRMaxShadowSliceCount 8). Raising it here alone would leave PBR at 8, so a fix needs a MetalSprocketsPBR change and release too (the depth array texture also grows with it: 2048x2048 depth32 is 16 MB per slice per frame in flight). Punting: cross-package, and two decisions are yours: (1) the new limit (16? configurable on SceneGraphShadows?), and (2) which lights get shadows when they still do not fit (today: first come, first served; alternatives: brightest, or nearest to the camera).
 
 ---
 
