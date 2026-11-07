@@ -28,11 +28,13 @@ private func render(_ postProcessing: SceneGraph.PostProcessing?, color: SIMD3<F
 }
 
 @MainActor
-private func pixel(_ texture: MTLTexture, _ sceneGraph: SceneGraph, at point: SIMD3<Float>) -> SIMD4<UInt8> {
-    let context = makeRenderContext(sceneGraph: sceneGraph, camera: nil, cameraMatrix: nil, aspectRatio: 1)!
+private func pixel(_ texture: MTLTexture, _ sceneGraph: SceneGraph, at point: SIMD3<Float>) throws -> SIMD4<UInt8> {
+    let context = try #require(makeRenderContext(sceneGraph: sceneGraph, camera: nil, cameraMatrix: nil, aspectRatio: 1))
     let clip = context.projectionMatrix * context.viewMatrix * SIMD4(point, 1)
     let x = Int((clip.x / clip.w + 1) / 2 * 64)
     let y = Int((1 - clip.y / clip.w) / 2 * 64)
+    // Off-screen points would read outside the texture (#297).
+    try #require((0..<texture.width).contains(x) && (0..<texture.height).contains(y), "\(point) projects to (\(x), \(y)), outside the texture")
     var value = SIMD4<UInt8>.zero
     texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(x, y, 1, 1), mipmapLevel: 0)
     return value
@@ -43,13 +45,13 @@ private func pixel(_ texture: MTLTexture, _ sceneGraph: SceneGraph, at point: SI
 func colorAdjustmentChangesSaturationExposureAndCorners() throws {
     let floorPoint: SIMD3<Float> = [1.5, 0, 1.5]
     let (sceneGraph, plain) = try render(nil, color: [0.5, 0.2, 0.1])
-    let base = pixel(plain, sceneGraph, at: floorPoint)
+    let base = try pixel(plain, sceneGraph, at: floorPoint)
     let (_, grey) = try render(.init(saturation: 0), color: [0.5, 0.2, 0.1])
-    let greyPixel = pixel(grey, sceneGraph, at: floorPoint)
+    let greyPixel = try pixel(grey, sceneGraph, at: floorPoint)
     #expect(abs(Int(greyPixel.x) - Int(greyPixel.z)) <= 2)
     #expect(Int(base.z) - Int(base.x) > 30)
     let (_, brighter) = try render(.init(exposure: 1), color: [0.5, 0.2, 0.1])
-    #expect(pixel(brighter, sceneGraph, at: floorPoint).z > base.z)
+    #expect(try pixel(brighter, sceneGraph, at: floorPoint).z > base.z)
     let (_, vignette) = try render(.init(vignetteIntensity: 1, vignetteRadius: 0), color: [0.5, 0.2, 0.1])
     var corner = SIMD4<UInt8>.zero
     var plainCorner = SIMD4<UInt8>.zero
@@ -65,7 +67,11 @@ func ambientOcclusionDarkensContactsOnly() throws {
     let (_, occluded) = try render(.init(ambientOcclusion: .init(radius: 0.5, intensity: 1, sampleCount: 32)))
     // Floor right at the box's front base, and floor far from it.
     let contact: SIMD3<Float> = [0, 0, 0.55]
-    let open: SIMD3<Float> = [2, 0, 2]
-    #expect(Int(pixel(occluded, sceneGraph, at: contact).x) < Int(pixel(plain, sceneGraph, at: contact).x) - 15)
-    #expect(abs(Int(pixel(occluded, sceneGraph, at: open).x) - Int(pixel(plain, sceneGraph, at: open).x)) <= 8)
+    let open: SIMD3<Float> = [1.5, 0, 1.5]
+    let occludedContact = try pixel(occluded, sceneGraph, at: contact)
+    let plainContact = try pixel(plain, sceneGraph, at: contact)
+    #expect(Int(occludedContact.x) < Int(plainContact.x) - 15)
+    let occludedOpen = try pixel(occluded, sceneGraph, at: open)
+    let plainOpen = try pixel(plain, sceneGraph, at: open)
+    #expect(abs(Int(occludedOpen.x) - Int(plainOpen.x)) <= 8)
 }

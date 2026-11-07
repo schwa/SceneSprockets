@@ -6544,11 +6544,13 @@ Linting SceneSprocketsComposer/ with its own .swiftlint.yml reports 255 violatio
 ## 297: A test writes past a texture's width (AGX 'Region width OOB' assertion)
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:renderer, effort:s
 created: 2026-11-07T00:55:29Z
+updated: 2026-11-07T15:07:41Z
+closed: 2026-11-07T15:07:41Z
 +++
 
 Running the SceneSprockets test suite prints, twice:
@@ -6556,5 +6558,7 @@ Running the SceneSprockets test suite prints, twice:
 AGX: Texture read/write assertion failed: (xoffset + width) <= ALIGNGRAN_NPOT(getViewLevelWidth(mipmapLevel), block_width) && "Region width OOB"
 
 All tests pass. Tests run in parallel, so the log does not show which test triggers it; it appears near nonReceiversAreNotDarkened, blinnPhongSkinnedBoxFollowsJoint, textShapeHasUnitNormals and ambientOcclusionDarkensContactsOnly. Seen with Xcode 27.2 on Apple silicon.
+
+- `2026-11-07T15:07:41Z`: Fixed: a test bug, not a renderer bug. ambientOcclusionDarkensContactsOnly read its 'open floor' point [2, 0, 2], which projects to pixel (72, 56), outside the 64x64 texture; getBytes then read out of bounds (the AGX assertion), and the test's second expectation compared garbage. pixel() now requires the pixel to be inside the texture, and the open point is [1.5, 0, 1.5]. The full suite runs with no AGX assertion.
 
 ---
