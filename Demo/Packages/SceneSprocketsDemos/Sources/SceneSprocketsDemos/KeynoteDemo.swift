@@ -594,9 +594,9 @@ public final class KeynoteDemo: DemoScene {
             addTitle(title, y: 4, to: slide)
             blendModesSlide(slide)
             addCode("""
-            BlinnPhongSceneMaterial(..., emission: .color(red),
-                renderState: MaterialRenderState(blendMode: .add))
-            MaterialRenderState(fillMode: .lines)
+            BlinnPhongSceneMaterial(..., emission: .color(orange),
+                renderState: MaterialRenderState(blendMode: .multiply))
+            // .alpha, .add, .subtract, .multiply, .screen, .replace
             """, to: slide)
         default:
             buildLaterSlide(slide, title: title)
@@ -934,16 +934,29 @@ public final class KeynoteDemo: DemoScene {
     }
 
     private func blendModesSlide(_ slide: SceneGraph.Node) {
-        // Three glowing discs in add mode overlap like stage lights; a wireframe sphere turns behind them.
-        let colors: [SIMD3<Float>] = [[1, 0.1, 0.1], [0.1, 1, 0.1], [0.1, 0.2, 1]]
-        for (index, color) in colors.enumerated() {
-            let angle = Float(index) * 2 * .pi / 3 + .pi / 2
-            let material = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color(color), renderState: MaterialRenderState(blendMode: .add))
-            _ = SceneGraph.Node(parent: slide, shape: .cylinder(radius: 1.3, height: 0.02), material: material, device: demoDevice, trs: .init(translation: [cos(angle) * 0.9, 1.6 + sin(angle) * 0.9, 1], rotation: simd_quatf(angle: .pi / 2, axis: [1, 0, 0])))
+        // One orange disc per blend mode over the same striped wall, so each mode's mix shows side by side (#339).
+        func glow(_ color: SIMD3<Float>, opacity: Float = 1, blendMode: MaterialRenderState.BlendMode = .alpha) -> BlinnPhongSceneMaterial {
+            BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, opacity: opacity, emission: .color(color), renderState: MaterialRenderState(blendMode: blendMode))
         }
-        let wire = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0.5, 0.55, 0.65]), renderState: MaterialRenderState(fillMode: .lines))
-        let sphere = SceneGraph.Node(parent: slide, shape: .sphere(radius: 1.5), material: wire, device: demoDevice, trs: .init(translation: [0, 1.5, -3]))
-        sphere.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 12)))
+        let stripes: [SIMD3<Float>] = [[0.9, 0.15, 0.15], [0.95, 0.85, 0.2], [0.2, 0.8, 0.3], [0.2, 0.75, 0.95], [0.3, 0.3, 0.95], [0.85, 0.3, 0.85], [0.95, 0.95, 0.95], [0.25, 0.25, 0.28]]
+        let wall = SceneGraph.Node(parent: slide, label: "Stripes", trs: .init(translation: [0, 1.6, -0.6]))
+        for (index, color) in stripes.enumerated() {
+            _ = SceneGraph.Node(parent: wall, shape: .plane(width: 1.35, height: 2.8), material: glow(color), device: demoDevice, trs: .init(translation: [Float(index) * 1.35 - 4.725, 0, 0]))
+        }
+        // Slowly sliding back and forth, so each disc crosses several stripes.
+        wall.run(.repeatForever(.sequence([
+            .move(by: [1.35, 0, 0], duration: 3).timingMode(.easeInEaseOut),
+            .move(by: [-1.35, 0, 0], duration: 3).timingMode(.easeInEaseOut)
+        ])))
+        let modes: [(String, MaterialRenderState.BlendMode)] = [("alpha", .alpha), ("add", .add), ("subtract", .subtract), ("multiply", .multiply), ("screen", .screen), ("replace", .replace)]
+        for (index, (name, mode)) in modes.enumerated() {
+            let x = Float(index) * 1.6 - 4
+            // Alpha blends only when the material is see-through.
+            let material = glow([1, 0.55, 0.15], opacity: mode == .alpha ? 0.5 : 1, blendMode: mode)
+            _ = SceneGraph.Node(parent: slide, label: "Blend \(name)", shape: .cylinder(radius: 0.6, height: 0.02), material: material, device: demoDevice, trs: .init(translation: [x, 1.6, 0], rotation: simd_quatf(angle: .pi / 2, axis: [1, 0, 0])))
+            let label = addTitle(".\(name)", size: 0.3, y: 0, color: [0.85, 0.85, 0.9], to: slide)
+            label.trs.translation.x = x
+        }
     }
 
     // PBR glass in front of turning Blinn-Phong and PBR shapes, which show through it refracted (#123, #129).

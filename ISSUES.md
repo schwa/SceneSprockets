@@ -7443,11 +7443,13 @@ Related: SceneKit's SCNLevelOfDetail also switches abruptly; engines often cross
 ## 339: Keynote Blend Modes slide shows only one blend mode
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:demo, effort:s
 created: 2026-11-07T18:53:03Z
+updated: 2026-11-07T19:19:39Z
+closed: 2026-11-07T19:19:39Z
 +++
 
 The keynote's Blend Modes slide shows only additive blending (three overlapping colored discs). The library has six blend modes (alpha, add, subtract, multiply, screen, replace), so most are not shown.
