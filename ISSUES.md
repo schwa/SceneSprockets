@@ -7438,6 +7438,9 @@ The pop is partly intentional on the slide, because the slide demonstrates the s
 
 Related: SceneKit's SCNLevelOfDetail also switches abruptly; engines often cross-fade or dither between levels.
 
+- `2026-11-07T19:24:49Z`: Looked at it: levels are picked fresh each frame from distance alone (applyLevelsOfDetail), with no state and no transition. Options, which differ a lot in cost: (1) cross-fade by drawing both levels partly transparent across a distance band: cheap, but both meshes are see-through during the fade; (2) dithered (screen-door) fade, the usual engine approach: needs a dither term in the Blinn-Phong, PBR and ShaderMaterial fragment shaders; (3) hysteresis: needs per-node level state; stops flicker near a switch distance but does not hide the pop itself. Punting: this is a design choice.
+- `2026-11-07T19:24:49Z`: Question 1 (decision): Which LOD transition should we use: dithered fade in the shaders (best look, touches every material renderer), alpha cross-fade (cheap, see-through during the fade), hysteresis only, or leave abrupt switching as-is (like SceneKit)?
+
 ---
 
 ## 339: Keynote Blend Modes slide shows only one blend mode
