@@ -7574,12 +7574,13 @@ Actual: the title is too big.
 ## 345: Unclear which parts of the keynote demo need code and which could be stored as scene data
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:demo, effort:m
 created: 2026-11-07T18:54:14Z
-updated: 2026-11-07T18:54:15Z
+updated: 2026-11-07T19:25:41Z
+closed: 2026-11-07T19:25:41Z
 +++
 
 The keynote demo builds every slide in Swift (KeynoteDemo.swift is over 1,500 lines). Much of it is static content (shapes, materials, lights, positions, titles, code panels) that SceneArchive could already store, but some needs code (slide transitions, per-frame updates such as boids, physics and fog easing, hit-test reactions, the finale's timing).
@@ -7587,6 +7588,8 @@ The keynote demo builds every slide in Swift (KeynoteDemo.swift is over 1,500 li
 There is no inventory of which parts could move into a stored scene definition and which must stay in code, or of what SceneArchive is missing (for example running actions, see #179) to store more of it.
 
 Expected: a list, per slide, of what is data and what needs code, and the archive gaps that block moving data out.
+
+- `2026-11-07T19:25:41Z`: Inventory written: Demo/Packages/SceneSprocketsDemos/KeynoteDataAndCode.md. Main finding: most slides are data plus repeating actions, so saving running actions (#179) would move most of the keynote into stored scenes; per-frame logic, cross-slide timing and SceneView settings remain code.
 
 ---
 
