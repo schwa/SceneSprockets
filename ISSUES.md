@@ -7531,11 +7531,13 @@ Related: #341 (texture convenience).
 ## 343: Keynote Scene Graph slide has flat lighting and plain spheres
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:demo, effort:s
 created: 2026-11-07T18:53:49Z
+updated: 2026-11-07T19:24:33Z
+closed: 2026-11-07T19:24:33Z
 +++
 
 The keynote's Scene Graph slide (a sun with an orbiting planet and moon, showing parent-child transforms) looks dull: the lighting is flat and the sun, planet and moon are plain colored spheres.

@@ -815,16 +815,41 @@ public final class KeynoteDemo: DemoScene {
     }
 
     private func sceneGraphSlide(_ slide: SceneGraph.Node) {
-        // A sun, a planet orbiting it and a moon orbiting the planet: each orbit is a parent node that turns.
-        addLight(to: slide, at: [0, 1.5, 0], color: [1, 0.85, 0.6], intensity: 40)
-        let sun = SceneGraph.Node(parent: slide, shape: .sphere(radius: 0.8), material: BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([1, 0.75, 0.3])), device: demoDevice, trs: .init(translation: [0, 1.5, 0]))
-        // Parented to the sun, as the code panel shows; the sun does not turn, so only the orbit spins the planet.
-        let orbit = SceneGraph.Node(parent: sun, label: "Planet Orbit")
-        orbit.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 8)))
-        let planet = SceneGraph.Node(parent: orbit, shape: .sphere(radius: 0.4), material: BlinnPhongSceneMaterial.plastic([0.3, 0.55, 1]), device: demoDevice, trs: .init(translation: [3.2, 0, 0]))
-        let moonOrbit = SceneGraph.Node(parent: planet, label: "Moon Orbit")
-        moonOrbit.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 2)))
-        _ = SceneGraph.Node(parent: moonOrbit, shape: .sphere(radius: 0.15), material: BlinnPhongSceneMaterial.plastic([0.8, 0.8, 0.8]), device: demoDevice, trs: .init(translation: [0.8, 0, 0]))
+        // A sun with planets, a moon and a ring: each orbit is a parent node that turns, and children ride along. The
+        // system is tilted toward the camera so the orbits read as ellipses (#343).
+        let system = SceneGraph.Node(parent: slide, label: "Solar System", trs: .init(translation: [0, 1.9, 0], rotation: simd_quatf(angle: 0.35, axis: [1, 0, 0])))
+        var sunlight = Light(type: .point, color: [1, 0.9, 0.75], intensity: 45)
+        sunlight.range = 30
+        _ = SceneGraph.Node(parent: system, label: "Sunlight", content: .light(sunlight))
+        // A dim fill from the camera side, so the planets' night sides are not pure black.
+        addLight(to: slide, at: [0, 4, 10], color: [0.4, 0.5, 0.8], intensity: 6)
+        let sun = SceneGraph.Node(parent: system, label: "Sun", shape: .sphere(radius: 0.75), material: BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([1, 0.7, 0.25])), device: demoDevice)
+        func pbr(_ color: SIMD3<Float>, metallic: Float = 0, roughness: Float) -> any SceneSprockets.Material {
+            (try? PBRSceneMaterial(device: demoDevice, baseColor: SIMD4(color, 1), metallic: metallic, roughness: roughness)) ?? BlinnPhongSceneMaterial.plastic(color)
+        }
+        let pathMaterial = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0.25, 0.27, 0.35]), renderState: MaterialRenderState(fillMode: .lines))
+        // (radius, size, period, color, roughness)
+        let planets: [(Float, Float, Float, SIMD3<Float>, Float)] = [(1.6, 0.18, 5, [0.75, 0.45, 0.3], 0.9), (3.2, 0.4, 8, [0.3, 0.55, 1], 0.35), (4.3, 0.3, 13, [0.9, 0.78, 0.55], 0.6)]
+        for (index, (radius, size, period, color, roughness)) in planets.enumerated() {
+            _ = SceneGraph.Node(parent: sun, label: "Orbit Path", shape: .torus(ringRadius: radius, pipeRadius: 0.004), material: pathMaterial, device: demoDevice)
+            // Parented to the sun, as the code panel shows; the sun does not turn, so only the orbit spins the planet.
+            let orbit = SceneGraph.Node(parent: sun, label: "Planet Orbit", trs: .init(rotation: simd_quatf(angle: Float(index) * 2.1, axis: [0, 1, 0])))
+            orbit.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: period)))
+            let planet = SceneGraph.Node(parent: orbit, label: "Planet", shape: .sphere(radius: size), material: pbr(color, roughness: roughness), device: demoDevice, trs: .init(translation: [radius, 0, 0]))
+            planet.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 3)))
+            switch index {
+            case 1:
+                let moonOrbit = SceneGraph.Node(parent: planet, label: "Moon Orbit")
+                moonOrbit.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 2)))
+                _ = SceneGraph.Node(parent: moonOrbit, label: "Moon", shape: .sphere(radius: 0.1), material: pbr([0.8, 0.8, 0.82], roughness: 0.8), device: demoDevice, trs: .init(translation: [0.7, 0, 0]))
+            case 2:
+                // The ring is a child of the planet: it tilts and spins with it.
+                let ring = SceneGraph.Node(parent: planet, label: "Ring", shape: .torus(ringRadius: 0.58, pipeRadius: 0.06), material: pbr([0.85, 0.75, 0.6], metallic: 0.3, roughness: 0.4), device: demoDevice, trs: .init(rotation: simd_quatf(angle: 0.35, axis: [0, 0, 1])))
+                ring.trs.scale = [1, 0.15, 1]
+            default:
+                break
+            }
+        }
     }
 
     private func shapesSlide(_ slide: SceneGraph.Node) {
