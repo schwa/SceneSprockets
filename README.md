@@ -16,7 +16,7 @@ A 3D scene graph for [MetalSprockets](https://github.com/schwa/MetalSprockets), 
 - Rigid-body [physics](https://schwa.github.io/SceneSprockets/documentation/scenesprocketsphysics/) on Jolt, [GPU particles](https://schwa.github.io/SceneSprockets/documentation/scenesprockets/sceneparticlesystem/) and positional [audio](https://schwa.github.io/SceneSprockets/documentation/scenesprocketsaudio/)
 - Loading from [glTF](https://schwa.github.io/SceneSprockets/documentation/scenesprocketspbr/gltfscenegraph/) and [Model I/O](https://schwa.github.io/SceneSprockets/documentation/scenesprocketspbr/modelioscenegraph/) (OBJ, PLY, STL, ABC, USD), and saving with [`SceneArchive`](https://schwa.github.io/SceneSprockets/documentation/scenesprockets/scenearchive/)
 - [`SceneView`](https://schwa.github.io/SceneSprockets/documentation/scenesprockets/sceneview/) for SwiftUI, with camera control, hit testing and [transform gizmos](https://schwa.github.io/SceneSprockets/documentation/scenesprocketsgizmos/)
-- Node data stored in a [SwiftECS](https://github.com/schwa/SwiftECS) world that you can query with your own systems
+- Node data stored in a [SwiftECS](https://github.com/schwa/SwiftECS) world that you can [query with your own systems](https://schwa.github.io/SceneSprockets/documentation/scenesprockets/workingwiththeworld/)
 
 See [CHANGELOG.md](CHANGELOG.md) for the full list.
 
@@ -69,7 +69,7 @@ struct ContentView: View {
 }
 ```
 
-[Documentation/Usage.md](Documentation/Usage.md) covers rendering with `SceneGraphElement`, environments, fog, shadows, custom materials, change tracking and animation in more detail.
+The documentation has articles on [getting started](https://schwa.github.io/SceneSprockets/documentation/scenesprockets/gettingstarted/), [rendering](https://schwa.github.io/SceneSprockets/documentation/scenesprockets/rendering/), [animation](https://schwa.github.io/SceneSprockets/documentation/scenesprockets/animation/), [change tracking and queries](https://schwa.github.io/SceneSprockets/documentation/scenesprockets/changetracking/), and [working with the SwiftECS world](https://schwa.github.io/SceneSprockets/documentation/scenesprockets/workingwiththeworld/).
 
 ## Demos
 

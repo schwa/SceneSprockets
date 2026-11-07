@@ -6313,15 +6313,18 @@ Related: #270.
 ## 284: No DocC catalog for SceneSprockets
 
 +++
-status: open
+status: closed
 priority: medium
 kind: documentation
 labels: release, area:docs, effort:l
 created: 2026-11-06T18:01:40Z
-updated: 2026-11-06T18:03:12Z
+updated: 2026-11-07T00:29:14Z
+closed: 2026-11-07T00:29:14Z
 +++
 
 The package has no Documentation.docc catalog: no landing page, no articles, no topic groups. Usage docs live in README.md and Documentation/Features.md, which DocC does not build. The other products (SceneSprocketsBlinnPhong, SceneSprocketsPBR, SceneSprocketsPhysics, SceneSprocketsAudio, SceneSprocketsGizmos, SceneSprocketsShaderMaterial) have no documentation landing pages either. SwiftECS has a catalog with a landing page and GettingStarted, Systems, Relationships, Observation, ParallelSystems and Performance articles.
+
+- `2026-11-07T00:29:14Z`: Fixed: Documentation.docc catalogs for all seven targets. SceneSprockets has a landing page with curated topic groups and five articles (Getting Started, Rendering, Animation, Change Tracking and Queries, Working with the World), taken from the old Documentation/Usage.md, which is removed. The other six products have landing pages with an overview and topics. just check-docs (warnings as errors) passes; article code samples compiled in a temporary test file. README links point at the articles (all paths checked); the demo-test notes moved to Demo/Packages/SceneSprocketsDemos/README.md.
 
 ---
 
