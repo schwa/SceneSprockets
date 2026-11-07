@@ -7484,11 +7484,13 @@ Cause not investigated. Unverified possibilities: linear timing (no easing) make
 ## 341: Adding a texture to a material takes too much code
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: area:renderer, effort:s
 created: 2026-11-07T18:53:39Z
+updated: 2026-11-07T18:57:50Z
+closed: 2026-11-07T18:57:50Z
 +++
 
 Materials support textures, but setting one up is hard:
@@ -7601,7 +7603,6 @@ priority: low
 kind: feature
 labels: area:renderer, effort:xl
 created: 2026-11-07T18:54:26Z
-updated: 2026-11-07T18:54:26Z
 +++
 
 The renderer is raster-only. It does not use Metal ray tracing (acceleration structures, intersection functions), so effects that ray tracing does well are missing or approximated: ray-traced shadows (sharp contact and soft area-light shadows without shadow maps), reflections, ambient occlusion, global illumination, and offline path tracing of a scene for reference images.

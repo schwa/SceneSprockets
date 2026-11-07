@@ -27,6 +27,18 @@ public struct BlinnPhongSceneMaterial: SceneSprockets.Material, SamplesShadowsIn
         public static func color(_ grey: Float) -> Self {
             .color(SIMD3(repeating: grey))
         }
+
+        /// A color texture loaded from an image file with ``MaterialTexture``.
+        ///
+        /// - Parameters:
+        ///   - url: The image file.
+        ///   - device: The device for the texture.
+        ///   - tint: A color that multiplies the texture.
+        /// - Returns: The texture source.
+        /// - Throws: An error if the image cannot be loaded.
+        public static func texture(contentsOf url: URL, device: MTLDevice, tint: SIMD3<Float> = .one) throws -> Self {
+            .texture(try MaterialTexture.load(contentsOf: url, device: device), tint: tint)
+        }
     }
 
     /// The color that the ambient light lights.

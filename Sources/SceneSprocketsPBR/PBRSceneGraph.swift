@@ -59,6 +59,63 @@ public struct PBRSceneMaterial: SceneSprockets.Material, SamplesShadowsInShader 
         let uniforms = PBRMaterialUniforms.defaults(baseColor: baseColor, metallic: metallic, roughness: roughness)
         pbrMaterial = try PBRMaterial(uniforms: uniforms, placeholder: PBRMaterial.placeholderBinding(device: device), device: device)
     }
+
+    /// The common glTF texture slots. ``MaterialTexture`` loads textures from images.
+    public struct Textures {
+        /// Base color in sRGB, multiplied by the base color factor. Alpha is opacity.
+        public var baseColor: MTLTexture?
+        /// Roughness in green and metalness in blue, multiplied by the roughness and metallic factors.
+        public var metallicRoughness: MTLTexture?
+        /// A tangent-space normal map.
+        public var normal: MTLTexture?
+        /// Ambient occlusion in red.
+        public var occlusion: MTLTexture?
+        /// Emitted light in sRGB.
+        public var emissive: MTLTexture?
+
+        /// Creates a set of textures. Slots left `nil` use the material's factors only.
+        public init(baseColor: MTLTexture? = nil, metallicRoughness: MTLTexture? = nil, normal: MTLTexture? = nil, occlusion: MTLTexture? = nil, emissive: MTLTexture? = nil) {
+            self.baseColor = baseColor
+            self.metallicRoughness = metallicRoughness
+            self.normal = normal
+            self.occlusion = occlusion
+            self.emissive = emissive
+        }
+    }
+
+    /// Creates a material with textures.
+    ///
+    /// - Parameters:
+    ///   - device: The device for the material's buffers.
+    ///   - baseColor: The base color factor in linear RGB, with alpha in `w`. It multiplies the base color texture.
+    ///   - metallic: The metalness factor.
+    ///   - roughness: The roughness factor.
+    ///   - textures: The textures. An emissive texture sets the emissive factor to 1.
+    ///   - sampler: The sampler for every texture, or `nil` for linear filtering with repeat.
+    /// - Throws: An error if the material's buffers cannot be created.
+    public init(device: MTLDevice, baseColor: SIMD4<Float> = [1, 1, 1, 1], metallic: Float = 0, roughness: Float = 0.5, textures: Textures, sampler: MTLSamplerDescriptor? = nil) throws {
+        var uniforms = PBRMaterialUniforms.defaults(baseColor: baseColor, metallic: metallic, roughness: roughness)
+        let placeholder = try PBRMaterial.placeholderBinding(device: device)
+        var bindings = Array(repeating: placeholder, count: Int(kPBRMaterialTextureCount.rawValue))
+        let slots: [(MTLTexture?, PBRMaterialTextureIndex, WritableKeyPath<PBRMaterialUniforms, PBRTextureSlot>)] = [
+            (textures.baseColor, kPBRTextureBaseColor, \.baseColor),
+            (textures.metallicRoughness, kPBRTextureMetallicRoughness, \.metallicRoughness),
+            (textures.normal, kPBRTextureNormal, \.normal),
+            (textures.occlusion, kPBRTextureOcclusion, \.occlusion),
+            (textures.emissive, kPBRTextureEmissive, \.emissive)
+        ]
+        for (texture, index, slot) in slots {
+            guard let texture else {
+                continue
+            }
+            bindings[Int(index.rawValue)] = try .init(texture: texture, samplerDescriptor: sampler ?? placeholder.samplerDescriptor, device: device)
+            uniforms[keyPath: slot].enabled = 1
+        }
+        if textures.emissive != nil {
+            uniforms.emissiveFactor = [1, 1, 1]
+        }
+        pbrMaterial = try PBRMaterial(uniforms: uniforms, textureBindings: bindings, device: device)
+    }
 }
 
 /// The map from scene graph nodes to node indices in a `PBRModel`.

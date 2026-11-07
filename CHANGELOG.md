@@ -26,7 +26,7 @@ SceneSprockets needs Swift 6.2 or later, and iOS, macOS or visionOS 26 or later.
 
 ### Geometry
 
-- Box, sphere, plane, cylinder, cone, capsule, torus, and extruded text shapes.
+- Box, sphere, plane, cylinder, cone, capsule, torus, tube, pyramid, floor, Utah teapot, extruded text, and extruded path shapes.
 - Any SwiftMesh mesh, with one material per submesh.
 - Subdivision, levels of detail, automatic instancing, and frustum culling.
 
@@ -42,6 +42,7 @@ SceneSprockets needs Swift 6.2 or later, and iOS, macOS or visionOS 26 or later.
 - Blinn-Phong: colors, textures, emission, normal maps, opacity.
 - PBR metallic-roughness, with most glTF material extensions (transmission, volume, IOR, dispersion, specular, iridescence, anisotropy, sheen, clearcoat, and more), image-based lighting, and shadows.
 - Custom shaders through `ShaderMaterial`.
+- `MaterialTexture` loads textures from image files, `CGImage`s and asset catalogs. Blinn-Phong takes them with `.texture(contentsOf:device:)`, and `PBRSceneMaterial(device:textures:)` takes base color, metallic-roughness, normal, occlusion and emissive textures.
 
 ### Animation and constraints
 
