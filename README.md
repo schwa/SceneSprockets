@@ -85,14 +85,6 @@ scenesprockets-demos --render gears gears.png --size 1280x800  # renders a demo 
 
 The demos use third-party models and textures under CC0 and CC BY 4.0. See [CREDITS.md](CREDITS.md).
 
-## Limitations
-
-- PBR deforms morph targets and skins on the GPU. Blinn-Phong and `ShaderMaterial` deform them on the CPU every frame, which is slower for large meshes.
-- Shadows use 8 shadow map slices (a directional or spot light takes one, a point light six). A light that does not fit casts no shadow, and `SceneGraphShadows.droppedLightCount` counts it. Blinn-Phong and PBR sample the shadow of each light when they shade a pixel, so a light darkens only what it lights. For `ShaderMaterial` meshes, a screen-space pass applies the shadows of all lights together, after the renderers draw the meshes.
-- glTF loading skips animation channels with unsupported pointers, such as camera `xmag` and `aspectRatio`. USD loading into a scene graph is a long-term goal.
-- Model I/O loading skips skins, blend shapes and orthographic cameras.
-- Position, bounds and PBR conversion read mesh vertex buffers on the CPU. The buffers must use shared storage.
-
 ## Documentation
 
 [SceneSprockets documentation](https://schwa.github.io/SceneSprockets/documentation/)
