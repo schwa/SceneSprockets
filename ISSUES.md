@@ -2172,6 +2172,7 @@ updated: 2026-10-15T21:19:41Z
 Move the public API closer to SceneKit's model so it is simple and easy to use. Goal: a newcomer who knows SceneKit can build and render a scene with little boilerplate. This is an ongoing direction, not a single change.
 
 - `2026-10-15T19:23:06Z`: Ongoing direction; split concrete changes into their own issues.
+- `2026-11-07T17:56:37Z`: Related: #312 (SceneKit-style configurable camera control).
 
 ---
 
@@ -6900,6 +6901,8 @@ SceneView has one built-in camera control (options: .allowsCameraControl) with n
 
 There is no equivalent here: an app cannot pick a mode, turn inertia on or off, set orbit limits, or read and drive the controller from code without building its own camera control (Interaction3D) around SceneView's cameraMatrix binding.
 
+- `2026-11-07T17:56:37Z`: Related: #106 (make the API more SceneKit-like) and #313 (keyboard/game controller navigation).
+
 ---
 
 ## 313: No keyboard (WASD) or game controller camera navigation
@@ -6915,6 +6918,8 @@ created: 2026-11-07T17:16:02Z
 SceneView offers no keyboard or game controller navigation. There is no built-in way to fly or walk the camera with WASD (and arrow keys or mouse look), or with a game controller's sticks and triggers (GameController framework). Apps and demos that want first-person or fly-through navigation must handle key events and GCController input themselves and drive the cameraMatrix binding.
 
 Related: Documentation/Features.md lists 'Camera controllers: first person, fly, follow' and 'Game controller and keyboard input mapping' as not done.
+
+- `2026-11-07T17:56:37Z`: Related: #312 (configurable camera control; WASD/controller could be one of its modes).
 
 ---
 
@@ -7125,5 +7130,153 @@ The renderer always uses reverse-Z (projection multiplied by .reverseZ, with a m
 
 ## Proposed behavior (per schwa)
 Switch between normal Z and reverse-Z automatically, with no side effects: everything that uses depth keeps working in both modes.
+
+---
+
+## 326: Keynote transition between Lights and Shadows slides still looks wrong
+
++++
+status: open
+priority: medium
+kind: bug
+labels: area:demo, effort:s
+created: 2026-11-07T17:55:56Z
+updated: 2026-11-07T17:55:57Z
++++
+
+Moving between the Lights and Shadows slides in the keynote demo still shows a visible jump, even after the per-slide light fix (#308).
+
+Steps to reproduce:
+1. Open the Introduction to SceneSprockets demo (keynote).
+2. Go to the Lights slide.
+3. Advance to Shadows, and back.
+
+Expected: a smooth crossfade and camera fly, like other transitions.
+Actual: the look changes abruptly partway through. Unverified guesses: shadows switch on about 0.8 s in while Shadows is already half faded in; the slides' lighting differs a lot (dim colored point lights against a bright sun); the camera angle for Shadows differs from every other slide.
+
+---
+
+## 327: Keynote Glass slide looks wrong while transitioning in and out
+
++++
+status: open
+priority: medium
+kind: bug
+labels: area:demo, effort:s
+created: 2026-11-07T17:55:57Z
++++
+
+The Glass slide in the keynote demo does odd things while it fades in and while it fades out. Cause not investigated.
+
+Steps to reproduce:
+1. Open the Introduction to SceneSprockets demo (keynote).
+2. Go to the slide before Glass (Blend Modes) and advance to Glass, then advance to PBR Extensions.
+
+Expected: the glass objects fade in and out smoothly with the rest of the slide.
+Actual: the glass objects look wrong during both transitions.
+
+---
+
+## 328: Keynote slides show transform gizmos when objects are tapped
+
++++
+status: open
+priority: medium
+kind: bug
+labels: area:demo, effort:s
+created: 2026-11-07T17:56:13Z
++++
+
+In the keynote demo, tapping an object on some slides (possibly all) selects it and shows a transform gizmo (widget). Only the Gizmos slide is meant to show selection and gizmos; on other slides tapping objects should not bring up editing widgets.
+
+Steps to reproduce:
+1. Open the Introduction to SceneSprockets demo (keynote).
+2. Go to any slide other than Gizmos (for example Materials).
+3. Click or tap an object.
+
+Expected: no selection outline or gizmo appears (except on the Gizmos slide).
+Actual: the object gets a gizmo.
+
+---
+
+## 329: Keynote Slide picker jumps animate across the deck and show nothing
+
++++
+status: open
+priority: medium
+kind: bug
+labels: area:demo, effort:xs
+created: 2026-11-07T17:57:16Z
++++
+
+Choosing a slide from the keynote's Slide picker (#309) runs the normal transition from the current slide. For a far-away slide, the camera flies across the deck while every slide between them is hidden, so nothing shows until the new slide fades in.
+
+Steps to reproduce:
+1. Open the Introduction to SceneSprockets demo (keynote).
+2. On slide 1, pick a far slide (for example Physics) from the Slide picker.
+
+Expected: the picked slide appears.
+Actual: an animated camera fly over an empty scene, then the slide fades in.
+
+## Proposed behavior (per schwa)
+Picker jumps switch instantly (a pop) to the new slide. Arrow keys, clicks and auto-advance keep the animated transition.
+
+---
+
+## 330: Twenty-sided die is missing many numerals in the debug view
+
++++
+status: open
+priority: medium
+kind: bug
+labels: area:demo, effort:s
+created: 2026-11-07T17:59:02Z
++++
+
+In the keynote's debug view, the twenty-sided die (d20) shows numerals on only some of its faces; many faces have no numeral.
+
+Steps to reproduce:
+1. Open the Introduction to SceneSprockets demo (keynote).
+2. Go to the Debug Views slide and watch the d20 as the debug modes change.
+
+Expected: every face of the d20 shows its numeral.
+Actual: many faces show no numeral.
+
+Cause not investigated (for example whether the numerals are missing from the geometry or are hidden only by the debug view).
+
+---
+
+## 331: Keynote has no presenter notes window
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:demo, effort:m
+created: 2026-11-07T18:00:59Z
+updated: 2026-11-07T18:01:00Z
++++
+
+The keynote demo has no way to show presenter notes. When presenting, there is no separate window (for example on a second display) that shows notes for the current slide and follows the slide as it changes.
+
+Expected: a presenter notes window that shows the current slide's notes and stays in step with the deck (arrow keys, clicks, auto-advance, Slide picker).
+
+---
+
+## 332: Keynote slides have no presenter notes content
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:demo, effort:m
+depends: 331
+created: 2026-11-07T18:01:00Z
+updated: 2026-11-07T18:01:00Z
++++
+
+None of the keynote's slides have presenter notes: there is no text describing what to say for each slide.
+
+Expected: every slide has notes, shown in the presenter notes window (#331).
 
 ---
