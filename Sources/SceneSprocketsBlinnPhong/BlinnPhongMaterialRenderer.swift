@@ -28,7 +28,7 @@ public struct BlinnPhongSceneMaterial: SceneSprockets.Material, SamplesShadowsIn
             .color(SIMD3(repeating: grey))
         }
 
-        /// A color texture loaded from an image file with ``MaterialTexture``.
+        /// A color texture loaded from an image file with `MaterialTexture`.
         ///
         /// - Parameters:
         ///   - url: The image file.

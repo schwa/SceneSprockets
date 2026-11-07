@@ -6891,11 +6891,13 @@ Related: the current extrude-and-turn transition from the title slide (uncommitt
 ## 312: SceneView camera control is not configurable like SceneKit's
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: area:ui, effort:m
 created: 2026-11-07T17:16:02Z
+updated: 2026-11-07T19:00:23Z
+closed: 2026-11-07T19:00:23Z
 +++
 
 SceneView has one built-in camera control (options: .allowsCameraControl) with no way to configure it. SceneKit's SCNView exposes defaultCameraController (SCNCameraController) with interaction modes (orbitTurntable, orbitArcball, fly, pan, truck), inertia, a target point, and limits such as maximum and minimum vertical angle, which apps tune with a few properties.
@@ -6903,6 +6905,7 @@ SceneView has one built-in camera control (options: .allowsCameraControl) with n
 There is no equivalent here: an app cannot pick a mode, turn inertia on or off, set orbit limits, or read and drive the controller from code without building its own camera control (Interaction3D) around SceneView's cameraMatrix binding.
 
 - `2026-11-07T17:56:37Z`: Related: #106 (make the API more SceneKit-like) and #313 (keyboard/game controller navigation).
+- `2026-11-07T19:00:23Z`: Done: SceneCameraControl (via .sceneCameraControl(_:)) sets turntable or arcball mode, rotate/zoom/pan speeds, and distance and pitch limits; the orbit target was already SceneView's cameraTarget. Not done: inertia, and fly/pan-only modes. Interaction3D has no inertia or fly mode, and adding them belongs in that package. Limits are applied by clamping the camera after each change, so they hold for both modes. Unit-tested; not tried by hand in an app.
 
 ---
 

@@ -32,6 +32,7 @@ SceneSprockets needs Swift 6.2 or later, and iOS, macOS or visionOS 26 or later.
 
 ### Cameras, lights and rendering
 
+- Built-in camera control in `SceneView`, configured with `sceneCameraControl(_:)`: turntable or arcball, rotate, zoom and pan speeds, and distance and pitch limits.
 - Perspective and orthographic cameras. Directional, point and spot lights, with per-node light masks and default lighting.
 - Shadow maps for all light types, with intensity, color, softness, bias, and per-mesh cast and receive settings.
 - Color or environment backgrounds, fog, screen-space ambient occlusion, and post-processing (exposure, contrast, saturation, vignette).

@@ -73,6 +73,7 @@ public struct SceneView: View {
     private let hadScenePostPasses: Bool
 
     @Environment(\.displayScale) private var displayScale
+    @Environment(\.sceneCameraControl) private var cameraControl
     // Decided at the first change of each drag: whether it started on the manipulator.
     @State private var manipulatorDragClaim: Bool?
     // The same for two-finger pinch and twist (iOS, visionOS).
@@ -202,7 +203,7 @@ public struct SceneView: View {
         .metalFramebufferOnly(!needsPostPasses && !options.contains(.disablesFramebufferOnly))
         .metalDepthStencilAttachmentTextureUsage(needsPostPasses ? [.renderTarget, .shaderRead] : [.renderTarget])
         .metalDepthStencilStorageMode(needsPostPasses || overlay != nil ? .private : .memoryless)
-        .modifier(CameraControl(isEnabled: options.contains(.allowsCameraControl), cameraMatrix: $controlledCameraMatrix, target: cameraTarget ?? orbitTarget ?? viewpoint.target))
+        .modifier(CameraControl(isEnabled: options.contains(.allowsCameraControl), cameraMatrix: $controlledCameraMatrix, target: cameraTarget ?? orbitTarget ?? viewpoint.target, configuration: cameraControl))
         // Camera control edits a stable @State; these keep it and the source in step (#231).
         .onChange(of: cameraMatrix ?? viewpoint.matrix, initial: true) { _, newValue in
             if controlledCameraMatrix != newValue {
@@ -501,10 +502,16 @@ private struct CameraControl: ViewModifier {
     var isEnabled: Bool
     @Binding var cameraMatrix: simd_float4x4
     var target: SIMD3<Float>
+    var configuration: SceneCameraControl
 
     func body(content: Content) -> some View {
         if isEnabled {
-            content.interactiveCamera(cameraMatrix: $cameraMatrix, target: target)
+            // Changes from the interaction are kept inside the configuration's limits (#312).
+            let clamped = Binding(
+                get: { cameraMatrix },
+                set: { [configuration, target] newValue in cameraMatrix = configuration.clamped(newValue, target: target) }
+            )
+            content.interactiveCamera(cameraMatrix: clamped, mode: configuration.interactionMode, transforms: configuration.transforms, target: target)
         } else {
             content
         }

@@ -60,7 +60,7 @@ public struct PBRSceneMaterial: SceneSprockets.Material, SamplesShadowsInShader 
         pbrMaterial = try PBRMaterial(uniforms: uniforms, placeholder: PBRMaterial.placeholderBinding(device: device), device: device)
     }
 
-    /// The common glTF texture slots. ``MaterialTexture`` loads textures from images.
+    /// The common glTF texture slots. `MaterialTexture` loads textures from images.
     public struct Textures {
         /// Base color in sRGB, multiplied by the base color factor. Alpha is opacity.
         public var baseColor: MTLTexture?

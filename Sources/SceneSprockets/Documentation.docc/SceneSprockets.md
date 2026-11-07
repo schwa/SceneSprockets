@@ -21,6 +21,7 @@ SceneSprockets stores node data in a SwiftECS `World`. Your app can query this w
 - ``Camera``
 - ``Light``
 - ``Material``
+- ``MaterialTexture``
 
 ### Rendering
 
@@ -59,6 +60,7 @@ SceneSprockets stores node data in a SwiftECS `World`. Your app can query this w
 
 ### Interaction
 
+- ``SceneCameraControl``
 - ``SceneViewManipulator``
 - ``SceneViewport``
 
