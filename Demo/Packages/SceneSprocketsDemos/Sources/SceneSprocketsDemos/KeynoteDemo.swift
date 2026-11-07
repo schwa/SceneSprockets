@@ -23,7 +23,7 @@ public final class KeynoteDemo: DemoScene {
     public static let titles = [
         "SceneSprockets", "Scene Graph", "Shapes", "Materials", "Lights", "Actions", "Constraints", "Opacity & Fades", "Blend Modes",
         "Custom Shaders", "Glass", "PBR Extensions", "Shadows", "Fog", "Particles", "Mesh Emitters", "Implicit Animation", "Animation Blending", "Deformation",
-        "Level of Detail", "glTF & Model I/O", "Hit Testing", "Gizmos", "Physics", "Performance", "Post-Processing", "Debug Views", "SceneView", "Thank You"
+        "Level of Detail", "glTF & Model I/O", "Hit Testing", "Gizmos", "Physics", "Performance", "Post-Processing", "Debug Views", "SwiftECS World", "SceneView", "Thank You"
     ]
 
     private let cameraNode: SceneGraph.Node
@@ -48,6 +48,8 @@ public final class KeynoteDemo: DemoScene {
     private var burningFox: BurningFox?
     private var campfireLight: SceneGraph.Node?
     private var gradeLabels: [SceneGraph.Node] = []
+    // SwiftECS World slide.
+    private var boids: KeynoteBoids?
     // Gizmos slide: the node it selects.
     private var gizmoTarget: SceneGraph.Node?
     // Debug Views slide: one label per mode, and the time on the current one.
@@ -186,6 +188,8 @@ public final class KeynoteDemo: DemoScene {
             updateGrade(deltaTime: deltaTime)
         case "Debug Views":
             updateDebugView(deltaTime: deltaTime)
+        case "SwiftECS World":
+            boids?.step(deltaTime: deltaTime)
         case "Gizmos":
             let modes: [TransformGizmo.Mode] = [.translate, .rotate, .scale]
             gizmoMode = modes[Int(time / 2.5) % modes.count]
@@ -431,6 +435,17 @@ public final class KeynoteDemo: DemoScene {
             // Same mesh + material: one instanced draw per color.
             // Nodes outside the view are culled.
             Node(parent: grid, content: .mesh(box, material: crate))
+            """, to: slide)
+        case "SwiftECS World":
+            addLight(to: slide, at: [2, 6, 5], intensity: 70)
+            addLight(to: slide, at: [-4, 3, -2], color: [0.6, 0.7, 1], intensity: 30)
+            boids = KeynoteBoids(sceneGraph: sceneGraph, parent: slide)
+            addCode("""
+            sceneGraph.world[boid.id]?.set(Velocity(value: v))
+            let flock = System("flock")
+                .query(Write<NodeTransformComponent>(), Write<Velocity>())
+                .each { context, transform, velocity in /* steer, move */ }
+            try sceneGraph.world.run(flock, deltaTime: deltaTime)
             """, to: slide)
         case "Gizmos":
             gizmosSlide(slide)

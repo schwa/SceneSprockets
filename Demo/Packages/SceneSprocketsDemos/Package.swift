@@ -26,6 +26,7 @@ let package = Package(
         .package(url: "https://github.com/schwa/DemoKit", .upToNextMinor(from: "0.1.7")),
         .package(url: "https://github.com/schwa/GoldenImage", .upToNextMinor(from: "0.1.6")),
         .package(url: "https://github.com/schwa/MetalSprocketsParticles", .upToNextMinor(from: "0.0.2")),
+        .package(url: "https://github.com/schwa/SwiftECS", .upToNextMinor(from: "0.1.0")),
     ],
     targets: [
         .target(
@@ -49,6 +50,7 @@ let package = Package(
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
                 .product(name: "MetalSprocketsSupport", package: "MetalSprockets"),
                 .product(name: "SwiftMesh", package: "SwiftMesh"),
+                .product(name: "SwiftECS", package: "SwiftECS"),
             ],
             resources: [.copy("Resources")]
         ),

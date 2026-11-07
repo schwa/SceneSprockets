@@ -6754,17 +6754,20 @@ SceneSprocketsGizmos (TransformGizmo, SelectionOutline) is not shown in the Keyn
 ## 307: Keynote has no slide for the SwiftECS world
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:demo, effort:m
 created: 2026-11-07T15:45:06Z
-updated: 2026-11-07T15:45:07Z
+updated: 2026-11-07T16:53:11Z
+closed: 2026-11-07T16:53:11Z
 +++
 
 The Keynote demo does not show that node data lives in a SwiftECS World (SceneGraph.world, #250), or that an ECS app can query and write node components directly.
 
 ## Proposed slide (per schwa)
 3D boids: a flock of nodes moved by a SwiftECS system that reads and writes NodeTransformComponent through sceneGraph.world. SwiftECS has a 2D Boids demo with a parallel flocking system to draw from.
+
+- `2026-11-07T16:53:11Z`: Fixed: new 'SwiftECS World' slide before SceneView. 120 cone boids are scene graph nodes; the demo adds a BoidVelocity component to their entities through sceneGraph.world, and each frame a SwiftECS System (query Write<NodeTransformComponent>, Write<BoidVelocity>) applies cohesion, alignment, separation and a bounding box, and writes the node transforms directly in the World, which moves the nodes. Neighbors come from a world.query snapshot taken before the system runs (callbacks cannot read the World). The demo package now depends on SwiftECS directly. Verified with renders at frames 30, 240 and 480 (the flock forms and stays below the title); 15 demo tests pass.
 
 ---
