@@ -80,6 +80,19 @@ func keynoteSlidePickerSwitchesInstantly() throws {
     #expect(keynote[value: "Slide"] == Float(index))
 }
 
+// #317: the Thank You slide shows the title alone for half a second, then the finale.
+@Test
+@MainActor
+func keynoteThankYouFinaleStartsAfterTheTitle() throws {
+    let keynote = try keynoteShowing("Thank You")
+    let finale = try #require(keynote.sceneGraph.nodesWithWorldTransforms(includeHidden: true).first { $0.node.label == "Finale" }?.node)
+    #expect(!finale.isVisible)
+    keynote.sceneGraph.advanceActions(by: 0.3)
+    #expect(!finale.isVisible)
+    keynote.sceneGraph.advanceActions(by: 0.3)
+    #expect(finale.isVisible)
+}
+
 // #326: shadows are on from the start of a transition into the Shadows slide, and stay on until it has faded out.
 @Test
 @MainActor

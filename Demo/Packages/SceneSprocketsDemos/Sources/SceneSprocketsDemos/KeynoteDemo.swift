@@ -54,6 +54,10 @@ public final class KeynoteDemo: DemoScene {
     private static let tubeJointCount = 7
     private var pbrExtensionPieces: [(node: SceneGraph.Node, axis: SIMD3<Float>, speed: Float)] = []
     private var burningFox: BurningFox?
+    // The Thank You slide's fireworks, glass and lights, hidden until the title has been read (#317).
+    private var finale: SceneGraph.Node?
+    private var finaleTitle: SceneGraph.Node?
+    private var finaleEmitters: [(node: SceneGraph.Node, system: ParticleSystem)] = []
     private var campfireLight: SceneGraph.Node?
     private var gradeLabels: [SceneGraph.Node] = []
     // The title slide's text: flat on that slide, extruded once the keynote moves on.
@@ -259,7 +263,11 @@ public final class KeynoteDemo: DemoScene {
         }
     }
 
-    private func resetCurrentSlide() {
+    // `visibleAfter` is how long until the slide has faded in.
+    private func resetCurrentSlide(visibleAfter: Float) {
+        if currentTitle == "Thank You" {
+            startFinale(after: visibleAfter + 0.5)
+        }
         if currentTitle == "Physics" {
             resetPhysics()
         }
@@ -323,7 +331,8 @@ public final class KeynoteDemo: DemoScene {
         current = next
         // Keeps the Slide picker in step with arrow keys, clicks and auto-advance.
         values["Slide"] = Float(current)
-        resetCurrentSlide()
+        // The incoming slide finishes fading in 1.2 s after the delay.
+        resetCurrentSlide(visibleAfter: delay + 1.2)
         // Scene-wide settings (shadows, fog, post-processing) change once the old slide has faded out (#308).
         let settings = SceneGraph.Action.run { [weak self] _ in self?.applySceneSettings() }
         sceneGraph.root.run(.sequence([.wait(duration: delay + 0.8), settings]), forKey: "settings")
@@ -350,7 +359,7 @@ public final class KeynoteDemo: DemoScene {
         sceneGraph.root.removeAction(forKey: "settings")
         fogAmount = currentTitle == "Fog" ? 1 : 0
         updateFog(deltaTime: 0)
-        resetCurrentSlide()
+        resetCurrentSlide(visibleAfter: 0)
         applySceneSettings()
     }
 
@@ -447,8 +456,9 @@ public final class KeynoteDemo: DemoScene {
 
     private func buildLaterSlide(_ slide: SceneGraph.Node, title: String) {
         if title == "Thank You" {
-            addTitle(title, size: 1.6, y: 1.5, to: slide)
+            finaleTitle = addTitle(title, size: 1.6, y: 1.5, to: slide)
             addLight(to: slide, at: [0, 4, 6], intensity: 60)
+            finaleSlide(slide)
             return
         }
         addTitle(title, y: 4, to: slide)
@@ -833,6 +843,81 @@ public final class KeynoteDemo: DemoScene {
         torus.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([1, 0.5, 0]), duration: 6)))
         _ = SceneGraph.Node(parent: slide, shape: .box(width: 1, height: 1, length: 1), material: BlinnPhongSceneMaterial.plastic([0.9, 0.35, 0.3]), device: demoDevice, trs: .init(translation: [-3, 0.5, 0]))
         _ = SceneGraph.Node(parent: slide, shape: .cylinder(radius: 0.35, height: 2), material: BlinnPhongSceneMaterial.plastic([0.4, 0.8, 0.5]), device: demoDevice, trs: .init(translation: [3, 1, 0]))
+    }
+
+    // Glass orbiting the title, colored lights, fireworks and confetti. Hidden until `startFinale`.
+    private func finaleSlide(_ slide: SceneGraph.Node) {
+        let finale = SceneGraph.Node(parent: slide, label: "Finale")
+        finale.isVisible = false
+        self.finale = finale
+        let colors: [SIMD3<Float>] = [[1, 0.3, 0.4], [0.3, 1, 0.5], [0.4, 0.5, 1]]
+        for (index, color) in colors.enumerated() {
+            let pivot = SceneGraph.Node(parent: finale, label: "Light Orbit", trs: .init(translation: [0, 1.5, 0], rotation: simd_quatf(angle: Float(index) * 2 * .pi / 3, axis: [0, 1, 0])))
+            pivot.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 3 + Float(index))))
+            addLight(to: pivot, at: [4, 1, 2], color: color, intensity: 60)
+        }
+        // A tilted ring of candy-colored spheres around the title. Glass over a black background reads as black.
+        let ring = SceneGraph.Node(parent: finale, label: "Candy Ring", trs: .init(translation: [0, 1.5, 0], rotation: simd_quatf(angle: 0.35, axis: [1, 0, 0])))
+        ring.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 8)))
+        for index in 0..<6 {
+            guard let candy = try? PBRSceneMaterial(device: demoDevice, baseColor: SIMD4(colors[index % 3], 1), metallic: 0.8, roughness: 0.2) else {
+                continue
+            }
+            candy.pbrMaterial.uniforms.clearcoatFactor = 1
+            candy.pbrMaterial.uniforms.clearcoatRoughnessFactor = 0.03
+            let angle = Float(index) * 2 * .pi / 6
+            _ = SceneGraph.Node(parent: ring, shape: .sphere(radius: 0.45), material: candy, device: demoDevice, trs: .init(translation: [cos(angle) * 4.6, 0, sin(angle) * 2]))
+        }
+        // Big glass shapes and polished metal spinning on either side.
+        let props: [(SceneGraph.Shape, SIMD3<Float>, Bool)] = [
+            (.torus(ringRadius: 0.7, pipeRadius: 0.28), [-5.2, 3.2, -1.5], true),
+            (.teapot(diameter: 1.8), [5.2, 3.2, -1.5], true),
+            (.box(width: 0.9, height: 0.9, length: 0.9), [-5.4, -0.4, -1], false),
+            (.capsule(capRadius: 0.35, height: 1.2), [5.4, -0.4, -1], false)
+        ]
+        for (index, (shape, position, isGlass)) in props.enumerated() {
+            guard let material = try? PBRSceneMaterial(device: demoDevice, baseColor: isGlass ? [1, 1, 1, 1] : [1, 0.8, 0.4, 1], metallic: isGlass ? 0 : 1, roughness: isGlass ? 0 : 0.15) else {
+                continue
+            }
+            if isGlass {
+                material.pbrMaterial.uniforms.transmissionFactor = 1
+                material.pbrMaterial.uniforms.thicknessFactor = 0.6
+            }
+            let node = SceneGraph.Node(parent: finale, shape: shape, material: material, device: demoDevice, trs: .init(translation: position))
+            node.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([0.4, 1, 0.3]), duration: 3 + Float(index))))
+        }
+        let emitters: [(SIMD3<Float>, ParticleSystem)] = [
+            ([-3.5, 0, -4], .fireworks), ([3.5, 0, -4], .fireworks), ([0, 5, 0], .confetti),
+            ([0, -0.4, -1.5], .ringOfFire), ([0, 1.5, -8], .galaxy)
+        ]
+        finaleEmitters = emitters.map { position, system in
+            (SceneGraph.Node(parent: finale, label: "Finale Emitter", trs: .init(translation: position)), system)
+        }
+    }
+
+    // Shows the title alone for a moment, then everything at once. Particles start fresh each time.
+    private func startFinale(after delay: Float) {
+        guard let finale else {
+            return
+        }
+        finale.removeAction(forKey: "finale")
+        finale.isVisible = false
+        finaleTitle?.removeAction(forKey: "pulse")
+        finaleTitle?.trs.scale = [1, 1, 1]
+        for emitter in finaleEmitters {
+            emitter.node.particleSystems = []
+        }
+        let emitters = finaleEmitters
+        let title = finaleTitle
+        let reveal = SceneGraph.Action.run { node in
+            node.isVisible = true
+            for (seed, emitter) in emitters.enumerated() {
+                emitter.node.particleSystems = [SceneParticleSystem(emitter.system, seed: UInt32(seed + 1))]
+            }
+            let pulse = SceneGraph.Action.sequence([.scale(to: [1.08, 1.08, 1.08], duration: 0.35), .scale(to: [1, 1, 1], duration: 0.35)])
+            title?.run(.repeatForever(pulse.timingMode(.easeInEaseOut)), forKey: "pulse")
+        }
+        finale.run(.sequence([.wait(duration: delay), reveal]), forKey: "finale")
     }
 
     private func fogSlide(_ slide: SceneGraph.Node) {

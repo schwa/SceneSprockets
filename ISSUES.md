@@ -6982,11 +6982,13 @@ Related: SceneSprocketsAddOns target (#314).
 ## 317: Keynote Thank You slide is a plain title
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:demo, effort:m
 created: 2026-11-07T17:18:35Z
+updated: 2026-11-07T18:39:22Z
+closed: 2026-11-07T18:39:22Z
 +++
 
 The keynote's last slide only shows "Thank You" with one light. It ends the deck quietly instead of showing off what the library can do.
