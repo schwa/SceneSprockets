@@ -105,18 +105,13 @@ public final class KeynoteDemo: DemoScene {
     }
 
     private static func eye(for index: Int) -> SIMD3<Float> {
-        switch titles[index] {
-        // From above, so the shadows on the floor show.
-        case "Shadows": [Float(index) * spacing, 4.5, 12.5]
-        default: [Float(index) * spacing, 1.6, 13]
-        }
+        // Every slide uses the same camera height and angle, so transitions only fly sideways (#334). Slides that need
+        // another view (Shadows, Physics) tilt their models instead.
+        [Float(index) * spacing, 1.6, 13]
     }
 
     private static func target(for index: Int) -> SIMD3<Float> {
-        switch titles[index] {
-        case "Shadows": [Float(index) * spacing, 0.8, 0]
-        default: [Float(index) * spacing, 1.1, 0]
-        }
+        [Float(index) * spacing, 1.1, 0]
     }
 
     override public func update(time: Float, deltaTime: Float) {
@@ -630,6 +625,10 @@ public final class KeynoteDemo: DemoScene {
         if let bounds = label.meshBounds {
             label.trs.translation.x = -(bounds.min.x + bounds.max.x) / 2
         }
+        // Titles are not part of the scene: no shadows on the Shadows slide's floor.
+        if case let .mesh(mesh, materials, _, receivesShadow) = label.content {
+            label.content = .mesh(mesh, materials: materials, castsShadow: false, receivesShadow: receivesShadow)
+        }
         return holder
     }
 
@@ -796,6 +795,9 @@ public final class KeynoteDemo: DemoScene {
     }
 
     private func shadowsSlide(_ slide: SceneGraph.Node) {
+        // Tilted toward the camera so the shadows on the floor show.
+        let stage = SceneGraph.Node(parent: slide, label: "Stage", trs: .init(translation: [0, 0.8, -2.5], rotation: simd_quatf(angle: 0.35, axis: [1, 0, 0])))
+        let slide = stage
         _ = SceneGraph.Node(parent: slide, label: "Sun", transform: .camera(eye: [3, 6, 4], target: .zero), content: .light(Light(type: .directional, color: [1, 0.95, 0.9], intensity: 1.5)))
         _ = SceneGraph.Node(parent: slide, label: "Floor", shape: .box(width: 12, height: 0.1, length: 6), material: BlinnPhongSceneMaterial.plastic([0.7, 0.7, 0.75], shininess: 8), device: demoDevice, trs: .init(translation: [0, -0.05, 0]))
         let torus = SceneGraph.Node(parent: slide, shape: .torus(ringRadius: 0.8, pipeRadius: 0.25), material: BlinnPhongSceneMaterial.plastic([0.95, 0.75, 0.3], shininess: 48), device: demoDevice, trs: .init(translation: [0, 1.8, 0]))

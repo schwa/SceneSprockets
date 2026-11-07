@@ -7154,6 +7154,8 @@ Steps to reproduce:
 Expected: a smooth crossfade and camera fly, like other transitions.
 Actual: the look changes abruptly partway through. Unverified guesses: shadows switch on about 0.8 s in while Shadows is already half faded in; the slides' lighting differs a lot (dim colored point lights against a bright sun); the camera angle for Shadows differs from every other slide.
 
+- `2026-11-07T18:11:17Z`: #334 (fixed camera height on every slide; the Shadows slide now tilts its models) and #333 (fog eases in) remove two of the suspected causes. Shadows still switch on about 0.8 s into the transition.
+
 ---
 
 ## 327: Keynote Glass slide looks wrong while transitioning in and out
@@ -7312,12 +7314,13 @@ Related: #308. Scene-wide settings (fog, shadows, post-processing) now change on
 ## 334: Keynote camera angle changes between slides instead of staying fixed
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:demo, effort:s
 created: 2026-11-07T18:04:45Z
-updated: 2026-11-07T18:04:49Z
+updated: 2026-11-07T18:11:17Z
+closed: 2026-11-07T18:11:17Z
 +++
 
 The Shadows slide uses its own camera position (higher, looking down), unlike every other slide. Moving between Shadows and its neighbors (Lights before it, Fog after it) makes the camera swing up or down a lot during the transition.

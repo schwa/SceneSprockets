@@ -80,6 +80,19 @@ func keynoteSlidePickerSwitchesInstantly() throws {
     #expect(keynote[value: "Slide"] == Float(index))
 }
 
+// #334: every slide uses the same camera height, so transitions only fly sideways.
+@Test
+@MainActor
+func keynoteCameraHeightIsTheSameOnEverySlide() throws {
+    let keynote = KeynoteDemo()
+    var heights: Set<Float> = []
+    for index in KeynoteDemo.titles.indices {
+        keynote.show(slide: index)
+        heights.insert(try #require(keynote.sceneGraph.cameraNodes().first).worldTransform.columns.3.y)
+    }
+    #expect(heights.count == 1)
+}
+
 // #333: the fog fades in with the transition to the Fog slide instead of switching on at the end.
 @Test
 @MainActor
