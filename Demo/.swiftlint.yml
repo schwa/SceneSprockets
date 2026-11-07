@@ -16,3 +16,9 @@ disabled_rules:
   - large_tuple
   # `_ = x` is not a statement in result builders.
   - redundant_discardable_let
+  - force_unwrapping
+  - multiline_call_arguments
+  # Keynote code panels are string literals.
+  - indentation_width
+  # #expect cannot expand key paths passed to rethrowing functions such as allSatisfy.
+  - prefer_key_path

@@ -13,7 +13,7 @@ struct SceneNodeRowView: View {
         } else {
             DisclosureGroup {
                 ForEach(node.children) { child in
-                    SceneNodeRowView(node: child, scene: scene, selectedNodeID: $selectedNodeID)
+                    Self(node: child, scene: scene, selectedNodeID: $selectedNodeID)
                 }
             } label: {
                 row

@@ -1,10 +1,10 @@
 import GeometryLite3D
 import Metal
 import SceneSprockets
-import SceneSprocketsShaderMaterial
 import SceneSprocketsBlinnPhong
-import SwiftMesh
+import SceneSprocketsShaderMaterial
 import simd
+import SwiftMesh
 
 // SceneKit-style features in one scene:
 // - Orthographic camera (#87): a toggle swaps the camera's projection.
@@ -171,7 +171,7 @@ final class SceneKitFeaturesDemo: DemoScene {
         ]
     }
 
-    override func update(time: Float, deltaTime: Float) {
+    override func update(time _: Float, deltaTime _: Float) {
         torus.shape = .torus(ringRadius: self[value: "Torus Ring"], pipeRadius: self[value: "Torus Pipe"])
         var angles = bumpyBox.eulerAngles
         (angles.roll, angles.pitch, angles.yaw) = (self[value: "Box Roll"], self[value: "Box Pitch"], self[value: "Box Yaw"])
@@ -180,7 +180,7 @@ final class SceneKitFeaturesDemo: DemoScene {
             shapesGroup.opacity = self[value: "Shapes Opacity"]
         }
         let cullMode = Self.cullModes[min(Int(self[value: "Cull Mode"]), Self.cullModes.count - 1)].1
-        if case .mesh(let mesh, let materials, let castsShadow, let receivesShadow) = cullSphere.content, var material = materials.first as? BlinnPhongSceneMaterial, material.cullMode != cullMode {
+        if case let .mesh(mesh, materials, castsShadow, receivesShadow) = cullSphere.content, var material = materials.first as? BlinnPhongSceneMaterial, material.cullMode != cullMode {
             material.cullMode = cullMode
             cullSphere.content = .mesh(mesh, materials: [material], castsShadow: castsShadow, receivesShadow: receivesShadow)
         }

@@ -11,7 +11,7 @@ struct DiceGeometry {
     var mask: CGImage
     var normalMap: CGImage
 
-    static let atlasSize = 1024
+    static let atlasSize = 1_024
 
     init(_ kind: DiceDemo.Kind) {
         let solid = Self.solid(kind)
@@ -154,11 +154,12 @@ struct DiceGeometry {
 
     // The largest circle centered at the origin inside the convex polygon `points`.
     private static func inradius(_ points: [SIMD2<Float>]) -> Float {
-        points.indices.map { index in
+        let distances = points.indices.map { index in
             let a = points[index], b = points[(index + 1) % points.count]
             let edge = simd_normalize(b - a)
             return abs(a.x * edge.y - a.y * edge.x)
-        }.min() ?? 1
+        }
+        return distances.min() ?? 1
     }
 
     // MARK: Numbers

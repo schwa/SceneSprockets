@@ -3,8 +3,8 @@ import MetalSprocketsPBR
 import MetalSprocketsPBRShaders
 import SceneSprockets
 import SceneSprocketsPBR
-import SwiftMesh
 import simd
+import SwiftMesh
 
 // Materials for the keynote's PBR Extensions slide: speckled gummies (procedural noise texture, sheen, diffuse transmission,
 // clearcoat) and pearls (thin-film iridescence).
@@ -63,7 +63,7 @@ enum PBRExtensionMaterials {
 
     // White with soft value-noise mottling, sparse dark specks and fainter light flecks. Tinted by the base color factor.
     static func makeSpeckleBinding() -> PBRMaterial.Binding {
-        let size = 1024
+        let size = 1_024
         var random = SplitMix(seed: 0xC0FFEE)
         var pixels = [Float](repeating: 1, count: size * size)
         let lattice = (0..<(64 * 64)).map { _ in Float.random(in: 0...1, using: &random) }
@@ -91,7 +91,7 @@ enum PBRExtensionMaterials {
                 }
             }
         }
-        stamp(count: 1400, radius: 1...2, value: 1.15)
+        stamp(count: 1_400, radius: 1...2, value: 1.15)
         stamp(count: 260, radius: 3...6, value: 0.05)
 
         var bytes = [UInt8](repeating: 255, count: size * size * 4)

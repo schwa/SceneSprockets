@@ -40,7 +40,7 @@ public struct TreeAppreciatorView: View {
                 shadows: side == .left ? leftShadows : rightShadows,
                 cameraMatrix: $model.cameraMatrix,
                 cameraTarget: model.cameraTarget,
-                defaultCamera: Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(60), depthMode: .standard(zClip: 0.1 ... 1000))),
+                defaultCamera: Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(60), depthMode: .standard(zClip: 0.1 ... 1_000))),
                 onTapAt: { point, viewport, _ in
                     model.tap(side: side, point: point, viewport: viewport)
                 },

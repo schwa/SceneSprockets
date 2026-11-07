@@ -1,11 +1,8 @@
-# Demo/ and SceneSprocketsComposer/ have their own configs; lint them from their directories.
 excluded:
   - "**/.build"
   - "**/.swiftpm"
   - "**/DerivedData"
   - "**/Package.swift"
-  - Demo
-  - SceneSprocketsComposer
 type_name:
   allowed_symbols: ["_"]
   excluded: [ID]

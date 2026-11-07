@@ -52,7 +52,7 @@ final class GearsDemo: DemoScene {
         ["Driver Teeth", "Second Teeth", "Third Teeth", "Fourth Teeth"].map { Int(self[value: $0].rounded()) }
     }
 
-    override func update(time: Float, deltaTime: Float) {
+    override func update(time _: Float, deltaTime: Float) {
         if requestedTeeth != builtTeeth {
             rebuild()
         }

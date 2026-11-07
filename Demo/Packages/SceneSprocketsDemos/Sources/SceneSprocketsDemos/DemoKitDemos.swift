@@ -17,7 +17,7 @@ public enum SceneGraphDemos {
     // Catalog demos plus demos with their own SwiftUI layout, which DemoCatalog (single-scene, renderable from the CLI)
     // cannot describe.
     public static var all: [any DemoView.Type] {
-        catalog.map { $0 } + [TreeAppreciatorDemoView.self]
+        catalog.map { $0 } + [TreeAppreciatorDemoView.self] // swiftlint:disable:this array_init - upcasts the element type
     }
 }
 

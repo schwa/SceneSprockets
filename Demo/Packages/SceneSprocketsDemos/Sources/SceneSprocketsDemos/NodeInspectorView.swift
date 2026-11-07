@@ -20,7 +20,7 @@ struct NodeInspectorView: View {
             Section("Camera") {
                 LabeledContent("Projection", value: "Perspective")
             }
-        case .mesh(_, let materials, let castsShadow, let receivesShadow):
+        case let .mesh(_, materials, castsShadow, receivesShadow):
             MeshSectionView(materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
         }
     }

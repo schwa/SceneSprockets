@@ -46,7 +46,7 @@ final class ShadowsDemo: DemoScene {
         )
     }
 
-    override func update(time: Float, deltaTime: Float) {
+    override func update(time _: Float, deltaTime _: Float) {
         let angle = self[value: "Light Angle"]
         let position = SIMD3<Float>(cos(angle) * 3, 4, sin(angle) * 3)
         light.transform = .camera(eye: position, target: .zero)

@@ -1,5 +1,5 @@
-import SwiftMesh
 import simd
+import SwiftMesh
 
 // Mesh helpers for the keynote's Deformation slide.
 enum DeformationMeshes {

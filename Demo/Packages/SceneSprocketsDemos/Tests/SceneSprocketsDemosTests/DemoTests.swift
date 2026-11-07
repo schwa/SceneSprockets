@@ -6,8 +6,8 @@ import MetalSprockets
 import SceneSprockets
 import SceneSprocketsBlinnPhong
 @testable import SceneSprocketsDemos
-import Testing
 import simd
+import Testing
 
 @Test(arguments: DemoCatalog.demos)
 @MainActor

@@ -235,7 +235,7 @@ final class SwayDriver: SceneViewDelegate {
     var trees: [SceneGraph.Node] = []
     private let start = CACurrentMediaTime()
 
-    func sceneView(updateAtTime time: Float, deltaTime: Float) {
+    func sceneView(updateAtTime _: Float, deltaTime _: Float) {
         let t = Float(CACurrentMediaTime() - start)
         let rotation = simd_quatf(angle: 0.012 * sin(t * 1.1) + 0.005 * sin(t * 2.3), axis: [0, 0, 1])
             * simd_quatf(angle: 0.008 * cos(t * 0.8), axis: [1, 0, 0])

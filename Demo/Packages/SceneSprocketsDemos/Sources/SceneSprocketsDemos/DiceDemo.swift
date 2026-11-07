@@ -100,7 +100,7 @@ final class DiceDemo: DemoScene {
         roll()
     }
 
-    override func update(time: Float, deltaTime: Float) {
+    override func update(time _: Float, deltaTime: Float) {
         if self[flag: "Line Up"] != isLinedUp || (isLinedUp && (Int(self[value: "Dice Set"]) != rolledSet)) {
             isLinedUp = self[flag: "Line Up"]
             if isLinedUp {
@@ -126,7 +126,7 @@ final class DiceDemo: DemoScene {
         }
     }
 
-    override func didPick(_ hit: SceneGraph.Hit?) {
+    override func didPick(_: SceneGraph.Hit?) {
         roll()
     }
 
@@ -320,5 +320,4 @@ final class DiceDemo: DemoScene {
         loadedParts[kind] = parts
         return parts
     }
-
 }

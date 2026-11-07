@@ -1,8 +1,8 @@
 import DemoKit
 import MetalSprockets
+import MetalSprocketsUI
 import SceneSprockets
 import SceneSprocketsGizmos
-import MetalSprocketsUI
 import simd
 import SwiftUI
 

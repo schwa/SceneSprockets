@@ -4,8 +4,8 @@ import MetalSprocketsGLTF
 import MetalSprocketsParticles
 import SceneSprockets
 import SceneSprocketsPBR
-import SwiftMesh
 import simd
+import SwiftMesh
 
 // The glTF sample Fox, walking, with particles born on its skinned surface. It walks for a moment, catches fire, then
 // cycles between flames with embers and blue sparks that trace the mesh (like the MetalSprocketsParticles teapot).

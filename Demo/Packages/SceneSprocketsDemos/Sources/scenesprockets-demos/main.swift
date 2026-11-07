@@ -68,7 +68,7 @@ case "--list":
         print("\(demo.id)\t\(demo.title)")
     }
 case "--render":
-    let size = option("--size").map { $0.split(separator: "x").compactMap { Int($0) } } ?? [1280, 800]
+    let size = option("--size").map { $0.split(separator: "x").compactMap { Int($0) } } ?? [1_280, 800]
     guard size.count == 2 else {
         fail("--size must look like 1280x800")
     }
@@ -88,7 +88,8 @@ case "--render":
             if let slide, let keynote = scene as? KeynoteDemo {
                 keynote.show(slide: slide)
             }
-        } }
+        }
+        }
         try DemoSnapshot.writePNG(image, to: url)
         print(url.path)
     } catch {
@@ -108,7 +109,8 @@ case "--save":
             if let slide, let keynote = scene as? KeynoteDemo {
                 keynote.show(slide: slide)
             }
-        } }
+        }
+        }
         for warning in warnings {
             FileHandle.standardError.write(Data("warning: \(warning)\n".utf8))
         }
@@ -117,7 +119,7 @@ case "--save":
         fail("\(error)")
     }
 case "--video":
-    let size = option("--size").map { $0.split(separator: "x").compactMap { Int($0) } } ?? [1920, 1080]
+    let size = option("--size").map { $0.split(separator: "x").compactMap { Int($0) } } ?? [1_920, 1_080]
     let frameRate = option("--fps").flatMap { Double($0) } ?? 60
     let requestedSeconds = option("--seconds").flatMap { Double($0) }
     let slide = option("--slide").flatMap { Int($0) }
@@ -146,7 +148,7 @@ case "--video":
                 }
             } progress: { frame, frameCount in
                 let percent = (frame + 1) * 100 / frameCount
-                if percent != lastReported, percent % 5 == 0 {
+                if percent != lastReported, percent.isMultiple(of: 5) {
                     lastReported = percent
                     FileHandle.standardError.write(Data("\(percent)% (\(frame + 1)/\(frameCount) frames)\n".utf8))
                 }
@@ -159,7 +161,7 @@ case "--video":
     }
     RunLoop.main.run()
 case "--benchmark":
-    let size = option("--size").map { $0.split(separator: "x").compactMap { Int($0) } } ?? [1280, 800]
+    let size = option("--size").map { $0.split(separator: "x").compactMap { Int($0) } } ?? [1_280, 800]
     let frames = option("--frames").flatMap { Int($0) } ?? 120
     let slide = option("--slide").flatMap { Int($0) }
     let values = valueOptions()
@@ -172,10 +174,11 @@ case "--benchmark":
             if let slide, let keynote = scene as? KeynoteDemo {
                 keynote.show(slide: slide)
             }
-        } }
+        }
+        }
         let sorted = times.sorted()
         let mean = times.reduce(0, +) / Double(max(times.count, 1))
-        func milliseconds(_ seconds: Double) -> String { String(format: "%.2f ms", seconds * 1000) }
+        func milliseconds(_ seconds: Double) -> String { String(format: "%.2f ms", seconds * 1_000) }
         print("frames \(times.count)  mean \(milliseconds(mean)) (\(String(format: "%.1f", 1 / mean)) fps)  median \(milliseconds(sorted[sorted.count / 2]))  p95 \(milliseconds(sorted[sorted.count * 95 / 100]))  max \(milliseconds(sorted.last ?? 0))")
     } catch {
         fail("\(error)")

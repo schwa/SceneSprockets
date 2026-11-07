@@ -163,7 +163,7 @@ func makeSky(season: Season, device: MTLDevice) -> (MetalMesh, [any SceneSprocke
     var pixels = [UInt8](repeating: 255, count: height * 4)
     func encode(_ linear: Float) -> UInt8 {
         let c = max(0, min(1, linear))
-        let srgb = c <= 0.003_130_8 ? c * 12.92 : 1.055 * pow(c, 1 / 2.4) - 0.055
+        let srgb = c <= 0.0031308 ? c * 12.92 : 1.055 * pow(c, 1 / 2.4) - 0.055
         return UInt8(srgb * 255)
     }
     for row in 0..<height {

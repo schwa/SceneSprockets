@@ -1,13 +1,13 @@
 import GeometryLite3D
 import Metal
-import SceneSprockets
-import SceneSprocketsBlinnPhong
 import MetalSprocketsSupport
 import MetalSupport
 import Observation
+import SceneSprockets
+import SceneSprocketsBlinnPhong
+import simd
 import SwiftMesh
 import SwiftUI
-import simd
 
 public enum DemoSection: String, CaseIterable, Sendable {
     case basics = "Basics"
@@ -31,7 +31,7 @@ public struct Demo: Identifiable, Hashable, Sendable {
         self.make = make
     }
 
-    public static func == (lhs: Demo, rhs: Demo) -> Bool {
+    public static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.id == rhs.id
     }
 
@@ -123,7 +123,7 @@ open class DemoScene {
     }
 
     // Called every frame before rendering. `time` stops while paused; `deltaTime` is 0 while paused.
-    open func update(time: Float, deltaTime: Float) {
+    open func update(time _: Float, deltaTime _: Float) {
     }
 
     public func toggleVisibility(of node: SceneGraph.Node) {
@@ -149,7 +149,7 @@ open class DemoScene {
     }
 
     // Called after `pick`. Override to react to the hit (for example to place a marker).
-    open func didPick(_ hit: SceneGraph.Hit?) {
+    open func didPick(_: SceneGraph.Hit?) {
     }
 }
 

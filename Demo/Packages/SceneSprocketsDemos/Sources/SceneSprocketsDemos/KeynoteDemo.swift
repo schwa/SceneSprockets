@@ -5,13 +5,13 @@ import MetalSprocketsGLTF
 import MetalSprocketsParticles
 import MetalSprocketsParticlesSamples
 import SceneSprockets
-import SceneSprocketsShaderMaterial
 import SceneSprocketsBlinnPhong
 import SceneSprocketsPBR
 import SceneSprocketsPhysics
+import SceneSprocketsShaderMaterial
+import simd
 import SwiftMesh
 import SwiftUI
-import simd
 
 // "Introduction to SceneSprockets", presented like a keynote and built only from scene graph features (#98). Slides sit
 // side by side along +X; the camera flies between them with Transaction.animate, and slides fade in and out with node

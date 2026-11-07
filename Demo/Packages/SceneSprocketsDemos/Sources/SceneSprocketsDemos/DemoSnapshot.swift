@@ -28,7 +28,7 @@ public enum DemoSnapshot {
     @MainActor
     // Renders `frames` frames one after another, each waiting for the GPU, and returns each frame's wall time in
     // seconds (scene update, encoding and GPU). The first `warmUp` frames are rendered but not timed.
-    public static func benchmark(demoID: String, width: Int = 1280, height: Int = 800, frames: Int = 120, warmUp: Int = 10, configure: (DemoScene) -> Void = { _ in }) throws -> [Double] {
+    public static func benchmark(demoID: String, width: Int = 1_280, height: Int = 800, frames: Int = 120, warmUp: Int = 10, configure: (DemoScene) -> Void = { _ in }) throws -> [Double] {
         guard let demo = DemoCatalog.demos.first(where: { $0.id == demoID }) else {
             throw Failure.unknownDemo(demoID)
         }
@@ -55,7 +55,7 @@ public enum DemoSnapshot {
     }
 
     @MainActor
-    public static func render(demoID: String, width: Int = 1280, height: Int = 800, frames: Int = 60, values: [String: Float] = [:], configure: (DemoScene) -> Void = { _ in }) throws -> CGImage {
+    public static func render(demoID: String, width: Int = 1_280, height: Int = 800, frames: Int = 60, values: [String: Float] = [:], configure: (DemoScene) -> Void = { _ in }) throws -> CGImage {
         guard let demo = DemoCatalog.demos.first(where: { $0.id == demoID }) else {
             throw Failure.unknownDemo(demoID)
         }
@@ -98,8 +98,8 @@ public enum DemoSnapshot {
     public static func video(
         demoID: String,
         to url: URL,
-        width: Int = 1920,
-        height: Int = 1080,
+        width: Int = 1_920,
+        height: Int = 1_080,
         seconds: Double,
         frameRate: Double = 60,
         values: [String: Float] = [:],
