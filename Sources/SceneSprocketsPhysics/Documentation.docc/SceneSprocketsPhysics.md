@@ -4,7 +4,7 @@ Rigid-body physics for scene graph nodes, on Jolt.
 
 ## Overview
 
-Give a node a `physicsBody`: static, dynamic or kinematic, with a box, sphere, capsule, cylinder, convex hull or mesh shape. A ``SceneGraphPhysicsWorld`` simulates every node with a body. Call `step(deltaTime:)` each frame, and it writes the new positions and rotations back to the nodes.
+Give a node a `physicsBody`: static, dynamic or kinematic, with a box, sphere, capsule, cylinder, convex hull or mesh shape. A ``SceneGraphPhysicsWorld`` simulates every node with a body. Call `step(deltaTime:)` each frame. The physics world then writes the new positions and rotations to the nodes.
 
 ```swift
 die.physicsBody = .init(type: .dynamic, shape: .convexHull)

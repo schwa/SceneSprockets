@@ -2,9 +2,9 @@
 
 ## Unreleased
 
-The first release of SceneSprockets: a format-neutral 3D scene graph for [MetalSprockets](https://github.com/schwa/MetalSprockets), with an API modelled on SceneKit.
+The first release of SceneSprockets: a format-neutral 3D scene graph for [MetalSprockets](https://github.com/schwa/MetalSprockets), with an API modeled on SceneKit.
 
-Requirements: iOS 26, macOS 26 or visionOS 26.
+SceneSprockets needs Swift 6.2 or later, and iOS, macOS or visionOS 26 or later.
 
 ### Products
 
@@ -21,8 +21,8 @@ Requirements: iOS 26, macOS 26 or visionOS 26.
 - Node hierarchy, TRS or matrix transforms, pivots, and conversion between spaces.
 - Visibility, inherited opacity, rendering order, and category masks for cameras, lights and hit tests.
 - `clone()`, `flattenedClone()`, bounds, scene statistics, and revisions for change tracking.
-- Save and load scenes with `SceneArchive`.
-- Node data is stored in a [SwiftECS](https://github.com/schwa/SwiftECS) `World`, which `SceneGraph.world` exposes for queries and systems.
+- Saving and loading scenes with `SceneArchive`.
+- Node data in a [SwiftECS](https://github.com/schwa/SwiftECS) `World`. `SceneGraph.world` gives your queries and systems access to it.
 
 ### Geometry
 
@@ -53,16 +53,18 @@ Requirements: iOS 26, macOS 26 or visionOS 26.
 
 ### Physics, particles and interaction
 
-- Static, dynamic and kinematic bodies with box, sphere, capsule, cylinder, convex hull and mesh shapes; mass, friction, restitution, gravity, velocities and impulses.
+- Static, dynamic and kinematic bodies with box, sphere, capsule, cylinder, convex hull and mesh shapes.
+- Mass, friction, restitution, gravity, velocities and impulses.
 - GPU particles on nodes, including soft particles and emitters on skinned meshes.
 - Ray and segment hit tests, point projection, and frustum queries.
 - SwiftUI `SceneView` with camera control, taps and delegates.
 
 ### Assets
 
-- glTF: meshes, skins, morph targets, animations, cameras, materials, punctual lights, material variants, animation pointers, node visibility, quantized meshes, GPU instancing, WebP, and optional meshopt and KTX2/Basis Universal support.
+- glTF: meshes, skins, morph targets, animations, cameras, materials and punctual lights.
+- glTF extensions: material variants, animation pointers, node visibility, quantized meshes, GPU instancing and WebP textures. Meshopt compression and KTX2/Basis Universal textures are optional.
 - Model I/O: OBJ, PLY, STL, ABC and USD.
 
 ### Known limitations
 
-See [Limitations](README.md#limitations) in the README.
+The [Limitations](README.md#limitations) section of the README lists them.

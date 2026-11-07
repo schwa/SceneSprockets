@@ -6476,15 +6476,18 @@ README.md has no screenshot, no installation snippet (.package(url:...)), no fea
 ## 293: Docs are not written in Simple English
 
 +++
-status: open
+status: closed
 priority: low
 kind: documentation
 labels: release, area:docs, effort:m
 created: 2026-11-06T18:01:41Z
-updated: 2026-11-06T18:03:13Z
+updated: 2026-11-07T15:11:02Z
+closed: 2026-11-07T15:11:02Z
 +++
 
 The README, Documentation/Features.md and any new DocC articles have not been reviewed against the Simple English (ASD-STE100) rules used for SwiftECS's docs.
+
+- `2026-11-07T15:11:02Z`: Fixed: README, CHANGELOG, demo package README, the Features.md intro, and all DocC pages reviewed against the simple-english skill (pragmatic mode): sentences at most 25 words, no should/may/might/could/would, no semicolons outside code, passive voice with a known agent made active, conditions before commands, one instruction per sentence, American spelling (modeled). The Features.md tables were not rewritten; their content is out of date (save/load, debug views, gizmos and the ECS are listed as missing). just check-docs passes.
 
 ---
 

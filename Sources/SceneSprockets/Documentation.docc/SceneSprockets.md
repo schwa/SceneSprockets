@@ -1,14 +1,14 @@
 # ``SceneSprockets``
 
-A 3D scene graph for MetalSprockets, with an API modelled on SceneKit.
+A 3D scene graph for MetalSprockets, with an API modeled on SceneKit.
 
 ## Overview
 
 A ``SceneGraph`` holds a tree of ``SceneGraph/Node`` values. Nodes have transforms and content: a mesh with materials, a ``Camera``, or a ``Light``. ``SceneView`` shows a scene graph in SwiftUI. ``SceneGraphElement`` draws it inside a MetalSprockets `RenderView`.
 
-Materials are plain values. A renderer for each material family draws the meshes that use it. The Blinn-Phong, PBR and shader material renderers are in their own products, so an app links only what it uses. You can add your own with ``SceneGraphMaterialRenderer``.
+Materials are plain values. A renderer for each material family draws the meshes that use it. The Blinn-Phong, PBR and shader material renderers are in their own products, so an app links only what it uses. To add a material family, write a ``SceneGraphMaterialRenderer``.
 
-Node data is stored in a SwiftECS `World`. Your app can query it and add its own components.
+SceneSprockets stores node data in a SwiftECS `World`. Your app can query this world and add its own components.
 
 ## Topics
 

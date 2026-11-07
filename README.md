@@ -1,6 +1,6 @@
 # SceneSprockets
 
-A 3D scene graph for [MetalSprockets](https://github.com/schwa/MetalSprockets), with an API modelled on SceneKit. You build a tree of nodes with meshes, lights and cameras, then render it with Blinn-Phong, PBR or your own Metal shaders.
+A 3D scene graph for [MetalSprockets](https://github.com/schwa/MetalSprockets), with an API modeled on SceneKit. You build a tree of nodes with meshes, lights and cameras. Then you render it with Blinn-Phong, PBR or your own Metal shaders.
 
 ![The Gears demo: four gears with soft shadows on a gradient background](Images/gears.png)
 
@@ -22,7 +22,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the full list.
 
 ## Requirements
 
-Swift 6.2 or later. iOS, macOS or visionOS 26 or later.
+SceneSprockets needs Swift 6.2 or later, and iOS, macOS or visionOS 26 or later.
 
 ## Installation
 
@@ -73,7 +73,9 @@ The documentation has articles on [getting started](https://schwa.github.io/Scen
 
 ## Demos
 
-`Demo/Packages/SceneSprocketsDemos` has the demos: a keynote-style tour of the features, Gears, Dice, Shadows, a SceneKit feature comparison, and Tree Appreciator, a small game. Open `Demo/SceneSprocketsDemo.xcodeproj`, or run them from the command line:
+`Demo/Packages/SceneSprocketsDemos` has the demos: a keynote-style tour of the features, Gears, Dice, Shadows, a SceneKit feature comparison, and Tree Appreciator, a small game.
+
+To run the demos in Xcode, open `Demo/SceneSprocketsDemo.xcodeproj`. To run them from the command line, use these commands:
 
 ```sh
 cd Demo/Packages/SceneSprocketsDemos
@@ -86,7 +88,7 @@ The demos use third-party models and textures under CC0 and CC BY 4.0. See [CRED
 ## Limitations
 
 - PBR deforms morph targets and skins on the GPU. Blinn-Phong and `ShaderMaterial` deform them on the CPU every frame, which is slower for large meshes.
-- Shadows use 8 shadow map slices (a directional or spot light takes one, a point light six). A light that does not fit casts no shadow and is counted in `SceneGraphShadows.droppedLightCount`. Blinn-Phong samples each light's shadow while shading, so a light only darkens what it lights. PBR and `ShaderMaterial` meshes are darkened afterwards in screen space by all lights' shadows together.
+- Shadows use 8 shadow map slices (a directional or spot light takes one, a point light six). A light that does not fit casts no shadow, and `SceneGraphShadows.droppedLightCount` counts it. Blinn-Phong samples the shadow of each light when it shades a pixel, so a light darkens only what it lights. For PBR and `ShaderMaterial` meshes, a screen-space pass applies the shadows of all lights together, after the renderers draw the meshes.
 - glTF loading skips non-node animation channels. USD loading into a scene graph is a long-term goal.
 - Model I/O loading skips skins, blend shapes and orthographic cameras.
 - Position, bounds and PBR conversion read mesh vertex buffers on the CPU. The buffers must use shared storage.
@@ -97,4 +99,4 @@ The demos use third-party models and textures under CC0 and CC BY 4.0. See [CRED
 
 ## License
 
-MIT, see [LICENSE](LICENSE).
+SceneSprockets uses the MIT license. See [LICENSE](LICENSE).

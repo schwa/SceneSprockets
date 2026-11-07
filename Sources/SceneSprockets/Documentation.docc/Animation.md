@@ -13,7 +13,7 @@ node.run(.sequence([
 ]), forKey: "hop")
 ```
 
-There are actions to move, rotate and scale (by and to), fade, wait, hide, unhide and remove a node, run custom code, and combine actions in sequences, groups and repeats, with timing modes. ``SceneView`` runs actions every frame. Without it, call `sceneGraph.advanceActions(by:)` each frame.
+Actions can move, rotate and scale a node (by and to), fade, hide, unhide or remove it, wait, and run custom code. Sequences, groups and repeats combine actions. Timing modes change the speed curve. ``SceneView`` runs actions every frame. If you do not use `SceneView`, call `sceneGraph.advanceActions(by:)` each frame.
 
 ## Implicit animation
 
@@ -29,7 +29,7 @@ Transactions run as node actions, so they need `advanceActions(by:)`. `Transacti
 
 ## Keyframed clips
 
-A ``SceneGraph/AnimationClip`` has channels that animate node translation, rotation, scale, morph weights or custom properties. Interpolation can be step, linear (slerp for rotations) or glTF cubic spline. Call `clip.apply(at:looping:)`, or use a ``SceneGraph/AnimationPlayer`` and call `advance(by:)` each frame. ``SceneGraph/AnimationMixer`` blends clips in layers, and ``SceneGraph/AnimationStateMachine`` switches between them.
+A ``SceneGraph/AnimationClip`` has channels that animate node translation, rotation, scale, morph weights or custom properties. Interpolation can be step, linear (slerp for rotations) or glTF cubic spline. To show a clip at one time, call `clip.apply(at:looping:)`. To play it, use a ``SceneGraph/AnimationPlayer`` and call `advance(by:)` each frame. ``SceneGraph/AnimationMixer`` blends clips in layers, and ``SceneGraph/AnimationStateMachine`` switches between them.
 
 ## Constraints
 
@@ -39,7 +39,7 @@ A ``SceneGraph/AnimationClip`` has channels that animate node translation, rotat
 node.constraints = [.lookAt(target: other)]
 ```
 
-There are look-at, billboard, distance, replicator, avoid-occluder, inverse kinematics and acceleration constraints, and `.transform` for a custom closure. ``SceneView`` applies them every frame after actions. Without it, call `sceneGraph.applyConstraints(pointOfView:)`.
+There are look-at, billboard, distance, replicator, avoid-occluder, inverse kinematics and acceleration constraints, and `.transform` for a custom closure. ``SceneView`` applies them every frame after actions. If you do not use `SceneView`, call `sceneGraph.applyConstraints(pointOfView:)`.
 
 ## Morph targets and skins
 

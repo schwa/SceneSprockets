@@ -1,7 +1,8 @@
 # Features
 
-What SceneSprockets has (✅) and does not have yet (⬜). 🧩 means it is possible today with MetalSprockets or a ShaderMaterial and needs an example. A ~~struck-through~~ feature is one we will not do. Source says where the feature comes from: SceneKit,
-RealityKit, three.js, Babylon.js, Godot, Unity, Unreal, GameplayKit, Filament, Jolt or glTF; empty for our own; Brainstorm for ideas with no source.
+This table shows what SceneSprockets has (✅) and does not have yet (⬜). 🧩 means that the feature is possible today with MetalSprockets or a ShaderMaterial, but it needs an example. A ~~struck-through~~ feature is one that we will not add.
+
+The Source column shows where the feature comes from: SceneKit, RealityKit, three.js, Babylon.js, Godot, Unity, Unreal, GameplayKit, Filament, Jolt or glTF. An empty Source means our own idea. Brainstorm means an idea with no source.
 
 ## Scene and nodes
 

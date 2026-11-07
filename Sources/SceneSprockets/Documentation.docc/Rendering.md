@@ -18,7 +18,7 @@ RenderView { _, size in
 }
 ```
 
-- **Camera.** The default camera is the first camera node, placed by its world transform. Use `camera:` to select a different camera node. Use `cameraMatrix:` to replace the camera's world transform, for example with an interactive camera.
+- **Camera.** The default camera is the first camera node, at its world transform. To select a different camera node, use `camera:`. To replace the world transform of the camera, for example with an interactive camera, use `cameraMatrix:`.
 - **One pass.** All renderers draw in one render pass and share the depth buffer. The pass uses reversed depth (near 1, far 0, compare `.greater`), because MetalSprocketsPBR needs it. ``SceneGraphRenderContext/projectionMatrix`` already contains the depth flip. If you write a renderer, use `.greater` depth tests.
 - **Unclaimed meshes.** The element does not draw meshes whose material type has no renderer.
 - **Keep the PBR renderer.** `PBRMaterialRenderer` caches its model and rebuilds it only when the structure changes. Keep one instance across frames, for example in `@State`.
@@ -26,18 +26,18 @@ RenderView { _, size in
 ## Environment, fog and post-processing
 
 - **Environment.** `sceneGraph.environment` sets the background (none, a color, the environment map with blur, or a sky gradient that works with any renderer) and the image-based lighting map, intensity and rotation. The PBR renderer uses the map for lighting. Blinn-Phong ignores it.
-- **Fog.** `sceneGraph.fog` takes a ``SceneGraph/Fog-swift.struct``, like SceneKit's fog properties. A screen-space pass after every renderer blends fog into geometry by camera distance. The background is not fogged.
+- **Fog.** `sceneGraph.fog` takes a ``SceneGraph/Fog-swift.struct``, like SceneKit's fog properties. A screen-space pass after every renderer blends fog into geometry by camera distance. Fog does not change the background.
 - **Post-processing.** `sceneGraph.postProcessing` takes a ``SceneGraph/PostProcessing-swift.struct`` with exposure, contrast, saturation and vignette.
 
 ## Shadows
 
-Pass a ``SceneGraphShadows`` to `SceneView(shadows:)` or `SceneGraphElement(shadows:)`, and keep one instance. Directional, spot and point lights cast shadow maps from meshes with `castsShadow`. A screen-space pass then darkens shadowed pixels, so shadows work with every renderer.
+Pass a ``SceneGraphShadows`` to `SceneView(shadows:)` or `SceneGraphElement(shadows:)`. Keep one instance across frames. Directional, spot and point lights cast shadow maps from meshes with `castsShadow`. A screen-space pass then darkens shadowed pixels, so shadows work with every renderer.
 
-Fog and shadows need a color texture with `.shaderWrite` usage and a depth texture with `.shaderRead` usage. ``SceneView`` sets this up.
+Fog and shadows need a color texture with `.shaderWrite` usage and a depth texture with `.shaderRead` usage. ``SceneView`` configures these textures.
 
 ## Custom shaders
 
-`ShaderMaterial(vertexShader:fragmentShader:parameters:)`, in `SceneSprocketsShaderMaterial`, draws a mesh with your own Metal functions, like SceneKit's `SCNProgram`. Add one `ShaderMaterialRenderer()` to the renderers, and it draws every `ShaderMaterial`. The vertex function must declare `constant ShaderMaterialTransforms &transforms` (see `ShaderMaterial.h` in `SceneSprocketsShaders`). `parameters` are bound by name.
+`ShaderMaterial(vertexShader:fragmentShader:parameters:)`, in `SceneSprocketsShaderMaterial`, draws a mesh with your own Metal functions, like SceneKit's `SCNProgram`. Add one `ShaderMaterialRenderer()` to the renderers. It draws every `ShaderMaterial`. The vertex function must declare `constant ShaderMaterialTransforms &transforms` (see `ShaderMaterial.h` in `SceneSprocketsShaders`). The renderer binds `parameters` by name.
 
 ## Add a material family
 

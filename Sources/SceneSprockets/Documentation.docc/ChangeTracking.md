@@ -9,11 +9,11 @@ Skip work when nothing changed, find meshes and lights, hit-test, and measure bo
 - Hierarchy, content, visibility, skin and morph target edits change `structure`.
 - Transform and morph weight edits change `transform`.
 
-Compare revisions to skip work when nothing changed.
+If you compare revisions, you can skip work when nothing changed.
 
 ## Cached queries
 
-`meshEntries()`, `lightNodes()` and `cameraNodes()` share one traversal, cached by revision. Each ``SceneGraph/MeshEntry`` is one submesh of a node, with its material and world transform.
+`meshEntries()`, `lightNodes()` and `cameraNodes()` share one traversal. SceneSprockets caches it by revision. Each ``SceneGraph/MeshEntry`` is one submesh of a node, with its material and world transform.
 
 ## Hit testing
 
@@ -21,6 +21,6 @@ Compare revisions to skip work when nothing changed.
 
 ## Bounds
 
-`node.meshBounds`, `node.subtreeBounds`, `sceneGraph.bounds` and `sceneGraph.worldBounds(of:)` return `BoundingBox3D` values, cached by revision.
+`node.meshBounds`, `node.subtreeBounds`, `sceneGraph.bounds` and `sceneGraph.worldBounds(of:)` return `BoundingBox3D` values. SceneSprockets caches them by revision.
 
 Position, bounds and hit tests read mesh vertex buffers on the CPU. The buffers must use shared storage.
