@@ -20,10 +20,16 @@ import SwiftUI
 // also advances, and Auto-advance moves on every few seconds.
 public final class KeynoteDemo: DemoScene {
     private static let spacing: Float = 24
+    // Basics first, then looks, animation and particles together, then the nerdier features, and UI, picking and
+    // debugging last (#310). Slides are built by title, so reordering only means editing this list.
     public static let titles = [
-        "SceneSprockets", "Scene Graph", "Shapes", "Materials", "Lights", "Actions", "Constraints", "Opacity & Fades", "Blend Modes",
-        "Custom Shaders", "Glass", "PBR Extensions", "Shadows", "Fog", "Particles", "Mesh Emitters", "Implicit Animation", "Animation Blending", "Deformation",
-        "Level of Detail", "glTF & Model I/O", "Hit Testing", "Gizmos", "Physics", "Performance", "Post-Processing", "Debug Views", "SwiftECS World", "SceneView", "Thank You"
+        "SceneSprockets", "SceneView", "Scene Graph", "Shapes", "Materials", "Lights",
+        "Shadows", "Fog", "Opacity & Fades", "Blend Modes", "Glass", "PBR Extensions", "Custom Shaders", "glTF & Model I/O",
+        "Actions", "Implicit Animation", "Constraints", "Animation Blending", "Deformation",
+        "Particles", "Mesh Emitters",
+        "Physics", "Post-Processing", "Level of Detail", "Performance", "SwiftECS World",
+        "Hit Testing", "Gizmos", "Debug Views",
+        "Thank You"
     ]
 
     private let cameraNode: SceneGraph.Node
@@ -48,6 +54,9 @@ public final class KeynoteDemo: DemoScene {
     private var burningFox: BurningFox?
     private var campfireLight: SceneGraph.Node?
     private var gradeLabels: [SceneGraph.Node] = []
+    // The title slide's text: flat on that slide, extruded once the keynote moves on.
+    private var introTitles: [SceneGraph.Node] = []
+    private static let flatDepth: Float = 0.01
     // SwiftECS World slide.
     private var boids: KeynoteBoids?
     // Gizmos slide: the node it selects.
@@ -73,12 +82,13 @@ public final class KeynoteDemo: DemoScene {
             sceneGraph: SceneGraph(root: root),
             renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0.05, 0.05, 0.07]), PBRMaterialRenderer(device: demoDevice), ShaderMaterialRenderer()],
             cameraMatrix: .camera(eye: Self.eye(for: 0), target: Self.target(for: 0)),
-            parameters: [.toggle("Auto-advance", default: false), .slider("Seconds per Slide", 2...15, default: 6)]
+            parameters: [.choice("Slide", Self.titles), .toggle("Auto-advance", default: false), .slider("Seconds per Slide", 2...15, default: 6)]
         )
         usesSceneCamera = true
         for (index, title) in Self.titles.enumerated() {
             let slide = SceneGraph.Node(parent: root, label: "Slide \(index + 1): \(title)", trs: .init(translation: [Float(index) * Self.spacing, 0, 0]))
-            build(slide: slide, index: index, title: title)
+            build(slide: slide, title: title)
+            Self.isolateLights(of: slide, index: index)
             slide.opacity = index == 0 ? 1 : 0
             slide.isVisible = index == 0
             slides.append(slide)
@@ -108,6 +118,11 @@ public final class KeynoteDemo: DemoScene {
     }
 
     override public func update(time: Float, deltaTime: Float) {
+        // The settings' Slide picker (#309): go there when the user picks one.
+        let picked = Int(self[value: "Slide"])
+        if picked != current, slides.indices.contains(picked) {
+            go(by: picked - current)
+        }
         updateSlide(time: time, deltaTime: deltaTime)
         guard self[flag: "Auto-advance"] else {
             sinceAdvance = 0
@@ -230,6 +245,9 @@ public final class KeynoteDemo: DemoScene {
         } else {
             sceneGraph.postProcessing = nil
         }
+    }
+
+    private func resetCurrentSlide() {
         if currentTitle == "Physics" {
             resetPhysics()
         }
@@ -237,6 +255,21 @@ public final class KeynoteDemo: DemoScene {
         if currentTitle == "Mesh Emitters" {
             burningFox?.restart()
         }
+        Self.isolateLights(of: slides[current], index: current)
+    }
+
+    // Both slides show during a transition, so each slide's lights light only that slide (#308). Runs again on
+    // transitions because some slides add nodes later.
+    private static func isolateLights(of slide: SceneGraph.Node, index: Int) {
+        let bit: UInt = 1 << UInt(index % UInt.bitWidth)
+        func tag(_ node: SceneGraph.Node) {
+            node.categoryBitMask = bit
+            if case .light = node.content {
+                node.lightCategoryBitMask = bit
+            }
+            node.children.forEach(tag)
+        }
+        tag(slide)
     }
 
     // Flies the camera to the slide and cross-fades the slides.
@@ -247,15 +280,36 @@ public final class KeynoteDemo: DemoScene {
         }
         sinceAdvance = 0
         let previous = slides[current]
-        previous.run(.sequence([.fadeOut(duration: 0.6), .run { $0.isVisible = false }]), forKey: "fade")
+        // Leaving the title slide, its flat titles extrude into 3D and turn so the depth shows, then the camera flies.
+        // Coming back, they turn back and flatten.
+        let morphsTitles = current == 0
+        let delay: Float = morphsTitles ? 0.7 : 0
+        for title in introTitles {
+            let rotation = morphsTitles ? simd_quatf(angle: -0.35, axis: [0, 1, 0]) : simd_quatf(ix: 0, iy: 0, iz: 0, r: 1)
+            let morph = SceneGraph.Action.group([
+                .scale(to: [1, 1, morphsTitles ? 1 : Self.flatDepth], duration: 0.7),
+                .rotate(to: rotation, duration: 0.7)
+            ])
+            title.run(morph.timingMode(.easeInEaseOut), forKey: "morph")
+        }
+        previous.run(.sequence([.wait(duration: delay + 0.2), .fadeOut(duration: 0.6), .run { $0.isVisible = false }]), forKey: "fade")
         let incoming = slides[next]
         incoming.isVisible = true
-        incoming.run(.sequence([.wait(duration: 0.4), .fadeIn(duration: 0.8)]), forKey: "fade")
-        SceneGraph.Transaction.animate(duration: 1.2, timingMode: .easeInEaseOut) {
-            cameraNode.transform = .camera(eye: Self.eye(for: next), target: Self.target(for: next))
+        incoming.run(.sequence([.wait(duration: delay + 0.4), .fadeIn(duration: 0.8)]), forKey: "fade")
+        let cameraNode = cameraNode
+        let fly = SceneGraph.Action.run { _ in
+            SceneGraph.Transaction.animate(duration: 1.2, timingMode: .easeInEaseOut) {
+                cameraNode.transform = .camera(eye: Self.eye(for: next), target: Self.target(for: next))
+            }
         }
+        cameraNode.run(.sequence([.wait(duration: delay), fly]), forKey: "fly")
         current = next
-        applySceneSettings()
+        // Keeps the Slide picker in step with arrow keys, clicks and auto-advance.
+        values["Slide"] = Float(current)
+        resetCurrentSlide()
+        // Scene-wide settings (shadows, fog, post-processing) change once the old slide has faded out (#308).
+        let settings = SceneGraph.Action.run { [weak self] _ in self?.applySceneSettings() }
+        sceneGraph.root.run(.sequence([.wait(duration: delay + 0.8), settings]), forKey: "settings")
         hierarchyDidChange()
     }
 
@@ -267,8 +321,17 @@ public final class KeynoteDemo: DemoScene {
             slide.isVisible = slideIndex == index
         }
         cameraNode.transform = .camera(eye: Self.eye(for: index), target: Self.target(for: index))
+        cameraNode.removeAction(forKey: "fly")
+        for title in introTitles {
+            title.removeAction(forKey: "morph")
+            title.trs.scale.z = index == 0 ? Self.flatDepth : 1
+            title.trs.rotation = index == 0 ? simd_quatf(ix: 0, iy: 0, iz: 0, r: 1) : simd_quatf(angle: -0.35, axis: [0, 1, 0])
+        }
         current = index
+        values["Slide"] = Float(index)
         sinceAdvance = 0
+        sceneGraph.root.removeAction(forKey: "settings")
+        resetCurrentSlide()
         applySceneSettings()
     }
 
@@ -278,15 +341,20 @@ public final class KeynoteDemo: DemoScene {
 
     // MARK: - Slides
 
-    private func build(slide: SceneGraph.Node, index: Int, title: String) {
-        switch index {
-        case 0:
-            addTitle("SceneSprockets", size: 1.6, y: 2.2, to: slide)
-            addTitle("for MetalSprockets", size: 0.6, y: 0.9, color: [0.6, 0.65, 0.75], to: slide)
-            let torus = SceneGraph.Node(parent: slide, shape: .torus(ringRadius: 1.2, pipeRadius: 0.25), material: BlinnPhongSceneMaterial.plastic([0.3, 0.5, 1], shininess: 64), device: demoDevice, trs: .init(translation: [0, -1.2, -4]))
-            torus.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([1, 1, 0]), duration: 10)))
+    // By title, so the deck can be reordered by editing `titles` (#310).
+    private func build(slide: SceneGraph.Node, title: String) {
+        switch title {
+        case "SceneSprockets":
+            // Flat (2D) until the keynote moves on; go(by:) extrudes them into 3D on the way to the next slide.
+            introTitles = [
+                addTitle("SceneSprockets", size: 1.6, y: 1.8, to: slide),
+                addTitle("for MetalSprockets", size: 0.6, y: 0.5, color: [0.6, 0.65, 0.75], to: slide)
+            ]
+            for title in introTitles {
+                title.trs.scale.z = Self.flatDepth
+            }
             addLight(to: slide, at: [3, 5, 5], color: [1, 0.95, 0.9], intensity: 60)
-        case 1:
+        case "Scene Graph":
             addTitle(title, y: 4, to: slide)
             sceneGraphSlide(slide)
             addCode("""
@@ -295,7 +363,7 @@ public final class KeynoteDemo: DemoScene {
             let planet = Node(parent: orbit, shape: .sphere(radius: 0.4), material: blue, device: device)
             planet.trs.translation = [3.2, 0, 0]
             """, to: slide)
-        case 2:
+        case "Shapes":
             addTitle(title, y: 4, to: slide)
             shapesSlide(slide)
             addCode("""
@@ -303,7 +371,7 @@ public final class KeynoteDemo: DemoScene {
             Node(shape: .torus(ringRadius: 0.5, pipeRadius: 0.18), material: pink, device: device)
             Node(shape: .text("Hello", fontName: "Helvetica-Bold", fontSize: 1), material: white, device: device)
             """, to: slide)
-        case 3:
+        case "Materials":
             addTitle(title, y: 4, to: slide)
             materialsSlide(slide)
             addCode("""
@@ -312,7 +380,7 @@ public final class KeynoteDemo: DemoScene {
             try PBRSceneMaterial(device: device, baseColor: [0.95, 0.75, 0.3, 1],
                                  metallic: 1, roughness: 0.3)
             """, to: slide)
-        case 4:
+        case "Lights":
             addTitle(title, y: 4, to: slide)
             lightsSlide(slide)
             addCode("""
@@ -320,7 +388,7 @@ public final class KeynoteDemo: DemoScene {
             light.range = 14
             Node(parent: pivot, content: .light(light))
             """, to: slide)
-        case 5:
+        case "Actions":
             addTitle(title, y: 4, to: slide)
             actionsSlide(slide)
             addCode("""
@@ -330,21 +398,21 @@ public final class KeynoteDemo: DemoScene {
             let spin = Action.rotate(by: .pi, around: [0, 1, 0], duration: 0.6)
             cube.run(.repeatForever(.sequence([.group([up, spin]), down, .wait(duration: 0.8)])))
             """, to: slide)
-        case 6:
+        case "Constraints":
             addTitle(title, y: 4, to: slide)
             constraintsSlide(slide)
             addCode("""
             // Point each cone's tip (+Y) at the ball.
             cone.constraints = [.lookAt(target: ball, localFront: [0, 1, 0])]
             """, to: slide)
-        case 7:
+        case "Opacity & Fades":
             addTitle(title, y: 4, to: slide)
             fadesSlide(slide)
             addCode("""
             sphere.run(.repeatForever(.sequence([.fadeOut(duration: 1), .fadeIn(duration: 1)])))
             slide.opacity = 0.5 // children inherit it
             """, to: slide)
-        case 8:
+        case "Blend Modes":
             addTitle(title, y: 4, to: slide)
             blendModesSlide(slide)
             addCode("""
@@ -535,13 +603,15 @@ public final class KeynoteDemo: DemoScene {
     }
 
     // White extruded text, centered on x = 0 of `parent`, baseline at `y`, lit by its own light.
-    private func addTitle(_ text: String, size: Float = 0.9, y: Float, color: SIMD3<Float> = [0.95, 0.95, 0.97], to parent: SceneGraph.Node) {
+    @discardableResult
+    private func addTitle(_ text: String, size: Float = 0.9, y: Float, color: SIMD3<Float> = [0.95, 0.95, 0.97], to parent: SceneGraph.Node) -> SceneGraph.Node {
         let holder = SceneGraph.Node(parent: parent, label: "Title \"\(text)\"", trs: .init(translation: [0, y, 0]))
         let material = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(color * 0.4), specular: .color(0.3), shininess: 32, emission: .color(color * 0.6))
         let label = SceneGraph.Node(parent: holder, shape: .text(text, fontName: "Helvetica-Bold", fontSize: size, extrusionDepth: size * 0.15), material: material, device: demoDevice)
         if let bounds = label.meshBounds {
             label.trs.translation.x = -(bounds.min.x + bounds.max.x) / 2
         }
+        return holder
     }
 
     // A code panel below the slide's live content, tilted a little toward the camera.

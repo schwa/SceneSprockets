@@ -6797,11 +6797,13 @@ The Keynote demo does not show that node data lives in a SwiftECS World (SceneGr
 ## 308: Keynote slide transitions change lighting or depth partway through
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:demo, area:renderer, effort:m
 created: 2026-11-07T17:07:45Z
+updated: 2026-11-07T17:55:56Z
+closed: 2026-11-07T17:55:56Z
 +++
 
 During transitions between keynote slides, objects change how they look partway through the transition, as if their lighting, depth or clipping changes.
@@ -6823,12 +6825,13 @@ Actual: parts of the outgoing slide's objects change or disappear (for example, 
 ## 309: Keynote settings have no way to jump to a slide
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:demo, effort:s
 created: 2026-11-07T17:07:55Z
-updated: 2026-11-07T17:07:56Z
+updated: 2026-11-07T17:55:56Z
+closed: 2026-11-07T17:55:56Z
 +++
 
 The keynote demo's settings (inspector) have Auto-advance and Seconds per Slide, but no way to go to a particular slide. Reaching a slide late in the deck means stepping through every slide before it.
@@ -6841,11 +6844,13 @@ Add a "go to slide" picker to the keynote's settings.
 ## 310: Keynote slide order does not follow a clear progression
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:demo, effort:s
 created: 2026-11-07T17:07:56Z
+updated: 2026-11-07T17:55:56Z
+closed: 2026-11-07T17:55:56Z
 +++
 
 The keynote's slides are in the order they were added, not an order that tells a story. For example, SceneView (the usual entry point) comes near the end, related slides are spread apart, and specialist or debugging features sit between basic ones.
@@ -7114,7 +7119,6 @@ priority: low
 kind: feature
 labels: area:renderer, effort:m
 created: 2026-11-07T17:54:10Z
-updated: 2026-11-07T17:54:10Z
 +++
 
 The renderer always uses reverse-Z (projection multiplied by .reverseZ, with a matching depth compare and clear value). There is no way to switch a view between reverse-Z and normal Z, and no automatic choice. Code that reads or writes depth (shadow maps, hit testing, depth debug views, post-processing, custom shader materials, gizmos, the sky background) assumes one convention, so changing it in one place gives wrong results somewhere else.
