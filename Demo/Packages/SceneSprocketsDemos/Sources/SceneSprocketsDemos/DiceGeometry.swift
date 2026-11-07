@@ -22,10 +22,18 @@ struct DiceGeometry {
         let cell = Float(Self.atlasSize) / Float(max(columns, rows))
 
         // Each face is laid flat into its own atlas cell. Corners are not shared, so the mesh has per-face vertices.
+        // Faces are inset by `bevel`; strips along the edges and polygons at the corners close the gaps (#148). Every
+        // vertex keeps its own face's normal, so the normal turns smoothly across a bevel and the edges look rounded.
+        let bevel = solid.circumradius * 0.05
         var positions: [SIMD3<Float>] = []
+        var normals: [SIMD3<Float>] = []
         var meshFaces: [[Int]] = []
         var uvs: [SIMD2<Float>] = []
         var layouts: [FaceLayout] = []
+        // The inset corner of each face at each solid vertex, as (position, face normal).
+        var insetCorners: [[Int: (SIMD3<Float>, SIMD3<Float>)]] = Array(repeating: [:], count: faces.count)
+        // A corner of the atlas that no face cell draws into, so bevels sample no numbers.
+        let blank = SIMD2<Float>(1, 1) / Float(Self.atlasSize)
         for (index, face) in faces.enumerated() {
             let points = face.map { solid.vertices[$0] }
             let centroid = points.reduce(.zero, +) / Float(points.count)
@@ -40,18 +48,75 @@ struct DiceGeometry {
             let scale = cell * 0.46 / radius
             let corners = flat.map { center + $0 * scale }
             layouts.append(FaceLayout(center: center, corners: corners, scale: scale, inradius: Self.inradius(flat) * scale))
-            meshFaces.append(Array(positions.count..<(positions.count + points.count)))
-            positions += points
+            let inset = Self.inset(points, by: bevel)
+            for (vertex, point) in zip(face, inset) {
+                insetCorners[index][vertex] = (point, normal)
+            }
+            meshFaces.append(Array(positions.count..<(positions.count + inset.count)))
+            positions += inset
+            normals += Array(repeating: normal, count: inset.count)
             // Atlas pixels have y up; texture coordinates have v down.
-            uvs += corners.map { SIMD2($0.x / Float(Self.atlasSize), 1 - $0.y / Float(Self.atlasSize)) }
+            uvs += inset.map { point in
+                let corner = center + SIMD2(simd_dot(point - centroid, right), simd_dot(point - centroid, up)) * scale
+                return SIMD2(corner.x / Float(Self.atlasSize), 1 - corner.y / Float(Self.atlasSize))
+            }
         }
-        var mesh = Mesh(positions: positions, faces: meshFaces).withFlatNormals()
-        // No vertex is shared between faces, so each corner's vertex picks its coordinates.
+        func addBevel(_ corners: [(SIMD3<Float>, SIMD3<Float>)]) {
+            meshFaces.append(Array(positions.count..<(positions.count + corners.count)))
+            positions += corners.map(\.0)
+            normals += corners.map(\.1)
+            uvs += Array(repeating: blank, count: corners.count)
+        }
+        // An edge strip: face F runs a to b (counterclockwise from outside), the neighbor runs b to a.
+        for (index, face) in faces.enumerated() {
+            for (offset, a) in face.enumerated() {
+                let b = face[(offset + 1) % face.count]
+                guard let neighbor = faces.indices.first(where: { $0 != index && insetCorners[$0][a] != nil && insetCorners[$0][b] != nil }), index < neighbor,
+                      let fa = insetCorners[index][a], let fb = insetCorners[index][b], let ga = insetCorners[neighbor][a], let gb = insetCorners[neighbor][b]
+                else {
+                    continue
+                }
+                addBevel([fb, fa, ga, gb])
+            }
+        }
+        // A corner polygon: every face's inset corner at the vertex, counterclockwise seen from outside.
+        for vertex in solid.vertices.indices {
+            let around = insetCorners.compactMap { $0[vertex] }
+            guard around.count >= 3 else {
+                continue
+            }
+            let axis = simd_normalize(solid.vertices[vertex])
+            let reference = simd_normalize(around[0].0 - solid.vertices[vertex] - axis * simd_dot(around[0].0 - solid.vertices[vertex], axis))
+            let other = simd_cross(axis, reference)
+            addBevel(around.sorted { first, second in
+                func angle(_ corner: (SIMD3<Float>, SIMD3<Float>)) -> Float {
+                    let offset = corner.0 - solid.vertices[vertex]
+                    return atan2(simd_dot(offset, other), simd_dot(offset, reference))
+                }
+                return angle(first) < angle(second)
+            })
+        }
+        var mesh = Mesh(positions: positions, faces: meshFaces)
+        // No vertex is shared between faces, so each corner's vertex picks its normal and coordinates.
+        mesh.normals = mesh.topology.halfEdges.map { normals[$0.origin.raw] }
         mesh.textureCoordinates = mesh.topology.halfEdges.map { uvs[$0.origin.raw] }
         self.mesh = mesh
         let height = Self.drawMask(kind, layouts: layouts, labels: labels)
         mask = height.mask
         normalMap = Self.normalMap(height: height.alpha)
+    }
+
+    // The polygon with each edge moved inward by `distance`, in its own plane.
+    static func inset(_ points: [SIMD3<Float>], by distance: Float) -> [SIMD3<Float>] {
+        points.indices.map { index in
+            let point = points[index]
+            let previous = simd_normalize(points[(index + points.count - 1) % points.count] - point)
+            let next = simd_normalize(points[(index + 1) % points.count] - point)
+            let bisector = simd_normalize(previous + next)
+            // Half the corner angle sets how far along the bisector the edges are `distance` away.
+            let halfAngle = acos(simd_clamp(simd_dot(previous, next), -1, 1)) / 2
+            return point + bisector * (distance / sin(halfAngle))
+        }
     }
 
     private struct FaceLayout {

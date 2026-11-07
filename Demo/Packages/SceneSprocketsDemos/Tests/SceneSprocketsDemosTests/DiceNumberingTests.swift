@@ -34,6 +34,18 @@ func oppositeFacesAddUp(kind: DiceDemo.Kind, sum: Int) {
     }
 }
 
+// #148: every edge and corner is beveled, and the bevel stays inside the solid.
+@Test(arguments: DiceDemo.Kind.allCases)
+func diceHaveBeveledEdgesAndCorners(kind: DiceDemo.Kind) {
+    let solid = DiceGeometry.solid(kind)
+    let faces = DiceGeometry.faces(of: solid.vertices)
+    let edges = faces.map(\.count).reduce(0, +) / 2
+    let mesh = DiceGeometry(kind).mesh
+    #expect(mesh.topology.faces.count == faces.count + edges + solid.vertices.count)
+    let farthest = mesh.positions.map(simd_length).max() ?? 0
+    #expect(farthest < solid.circumradius)
+}
+
 // Western D6: 1, 2 and 3 meet at a corner in counterclockwise order, seen from outside.
 @Test
 func sixSidedDieIsCounterclockwise() {

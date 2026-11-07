@@ -3030,15 +3030,18 @@ Package.swift and the demo package use branch main because the 0.0.1 tag depends
 ## 148: Dice demo: bevel die edges
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:demo, effort:s
 created: 2026-10-22T01:05:11Z
-updated: 2026-11-07T15:46:17Z
+updated: 2026-11-07T16:14:53Z
+closed: 2026-11-07T16:14:53Z
 +++
 
 DiceGeometry builds dice with sharp edges. Real dice (and the old Dice by PCalc models) have rounded edges, which catch highlights and read as solid objects, especially on the metal and glass styles. Bevel or chamfer each edge in DiceGeometry, keeping per-face texture coordinates and the convex hull used for physics. Done when the dice show rounded edges in the Dice demo and the numbers still sit on their faces.
+
+- `2026-11-07T16:14:53Z`: Fixed: DiceGeometry insets each face by 5% of the circumradius and closes the gaps with a strip along each edge and a polygon at each corner. Each bevel vertex keeps its face's normal, so the normal turns smoothly across the bevel and the edges catch highlights like rounded ones. Faces keep their own atlas mapping (numbers unchanged); bevels sample a blank atlas corner. The physics convex hull comes from the mesh, so it follows the bevel. Checked in a lined-up Dice render (--value "Line Up=1"); diceHaveBeveledEdgesAndCorners tests F+E+V polygons for every kind and that the bevel stays inside the solid.
 
 ---
 
