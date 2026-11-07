@@ -17,9 +17,9 @@ The Source column shows where the feature comes from: SceneKit, RealityKit, thre
 | ✅ | Bounds and scene statistics | | SceneKit | |
 | ✅ | Revisions for change tracking | | | |
 | ⬜ | Presentation tree | | SceneKit | |
-| ⬜ | ~~Entity-component system~~ | | RealityKit, Godot | |
+| ✅ | Entity-component system | #250 | RealityKit, Godot | Node data is in a SwiftECS `World` |
 | ⬜ | ~Prefabs / reusable subtrees | | Godot, Unity | |
-| ⬜ | Save and load scenes | #52 | SceneKit | |
+| ✅ | Save and load scenes | #52 | SceneKit | `SceneArchive` |
 
 ## Geometry
 
@@ -77,15 +77,15 @@ The Source column shows where the feature comes from: SceneKit, RealityKit, thre
 | ⬜ | Ray tracing | | Unity, Unreal, Godot | MetalSprockets can bind acceleration structures |
 | ⬜ | Ray-traced shadows | | Unity, Unreal | |
 | ⬜ | Screen-space and planar reflections, probes | | SceneKit, RealityKit, Godot | |
-| ⬜ | Skybox / procedural sky | | three.js, Godot | |
-| ⬜ | Outlines, selection highlights, glow | | three.js, Babylon.js | |
+| ✅ | Skybox / procedural sky | | three.js, Godot | Sky gradient background |
+| ⬜ | Outlines, selection highlights, glow | | three.js, Babylon.js | `SelectionOutline` draws selection outlines. Glow is not done. |
 | ⬜ | Shadow-only material, contact shadows | | SceneKit, RealityKit, three.js | |
 | ⬜ | Decals | | three.js, Godot | |
 | ⬜ | Order-independent transparency | | Babylon.js | |
 | ⬜ | Lightmaps, global illumination | | three.js, Godot | |
 | ⬜ | Volumetric lighting and fog | | Godot, Filament | |
 | ⬜ | Occlusion culling | | Godot | |
-| ⬜ | Debug views | | SceneKit, three.js | Normals, bounds, light gizmos |
+| ✅ | Debug views | | SceneKit, three.js | Normals, texture coordinates, UV checker, world position, wireframe, material channels. Bounds and light gizmos are only in Composer. |
 | ⬜ | Clustered or tiled lighting, deferred shading | | Godot, Unity, Filament | For many lights |
 | ⬜ | GPU-driven rendering: indirect draws, GPU culling, mesh shaders | | Unreal | |
 | ⬜ | Variable rate shading | | Unreal | Metal rasterization rate maps |
@@ -227,7 +227,7 @@ The Source column shows where the feature comes from: SceneKit, RealityKit, thre
 | ✅ | Ray and segment hit tests with options | | SceneKit | |
 | ✅ | Project and unproject points, frustum queries | | SceneKit | |
 | ✅ | SwiftUI `SceneView`: camera control, taps, delegates | | SceneKit | |
-| ⬜ | Gestures and transform gizmos | #154 | RealityKit, three.js | |
+| ✅ | Gestures and transform gizmos | #154 | RealityKit, three.js | `SceneSprocketsGizmos` |
 
 ## Assets
 
