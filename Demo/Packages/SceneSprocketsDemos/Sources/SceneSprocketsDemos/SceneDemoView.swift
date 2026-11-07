@@ -37,7 +37,8 @@ public struct SceneDemoView: View {
             shadows: scene.shadows,
             cameraMatrix: scene.usesSceneCamera ? .constant(nil) : $cameraMatrix,
             hitTestCategoryBitMask: scene.pickCategoryBitMask,
-            manipulator: gizmo
+            manipulator: gizmo,
+            debugMode: scene.debugMode
         ) { hit in
             scene.pick(hit)
         }

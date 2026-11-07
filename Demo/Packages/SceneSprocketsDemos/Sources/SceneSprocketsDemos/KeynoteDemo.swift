@@ -22,7 +22,7 @@ public final class KeynoteDemo: DemoScene {
     public static let titles = [
         "SceneSprockets", "Scene Graph", "Shapes", "Materials", "Lights", "Actions", "Constraints", "Opacity & Fades", "Blend Modes",
         "Custom Shaders", "Glass", "PBR Extensions", "Shadows", "Fog", "Particles", "Mesh Emitters", "Implicit Animation", "Animation Blending", "Deformation",
-        "Level of Detail", "glTF & Model I/O", "Hit Testing", "Physics", "Performance", "Post-Processing", "SceneView", "Thank You"
+        "Level of Detail", "glTF & Model I/O", "Hit Testing", "Physics", "Performance", "Post-Processing", "Debug Views", "SceneView", "Thank You"
     ]
 
     private let cameraNode: SceneGraph.Node
@@ -47,6 +47,10 @@ public final class KeynoteDemo: DemoScene {
     private var burningFox: BurningFox?
     private var campfireLight: SceneGraph.Node?
     private var gradeLabels: [SceneGraph.Node] = []
+    // Debug Views slide: one label per mode, and the time on the current one.
+    private var debugLabels: [SceneGraph.Node] = []
+    private var debugIndex = 0
+    private var sinceDebugMode: Float = 0
     private var gradeIndex = 0
     private var sinceGrade: Float = 0
     private var morphed: [SceneGraph.Node] = []
@@ -177,6 +181,8 @@ public final class KeynoteDemo: DemoScene {
             waveCrates(time: time)
         case "Post-Processing":
             updateGrade(deltaTime: deltaTime)
+        case "Debug Views":
+            updateDebugView(deltaTime: deltaTime)
         case "glTF & Model I/O":
             importedPlayer?.advance(by: deltaTime)
         case "Particles":
@@ -199,6 +205,10 @@ public final class KeynoteDemo: DemoScene {
     private func applySceneSettings() {
         shadows = currentTitle == "Shadows" ? shadowRenderer : nil
         sceneGraph.fog = currentTitle == "Fog" ? SceneGraph.Fog(color: [0.05, 0.06, 0.1, 1], startDistance: 12, endDistance: 34) : nil
+        // A debug view replaces every material in the view, so it is on only for its slide.
+        debugIndex = 0
+        sinceDebugMode = 0
+        debugMode = nil
         if currentTitle == "Post-Processing" {
             gradeIndex = 0
             sinceGrade = 0
@@ -410,6 +420,12 @@ public final class KeynoteDemo: DemoScene {
             // Same mesh + material: one instanced draw per color.
             // Nodes outside the view are culled.
             Node(parent: grid, content: .mesh(box, material: crate))
+            """, to: slide)
+        case "Debug Views":
+            debugViewsSlide(slide)
+            addCode("""
+            SceneView(sceneGraph: scene, renderers: renderers,
+                      debugMode: .normals)  // .uvChecker, .wireframe, ...
             """, to: slide)
         case "Post-Processing":
             postProcessingSlide(slide)
@@ -1038,6 +1054,50 @@ public final class KeynoteDemo: DemoScene {
             return label
         }
         gradeLabels.first?.isVisible = true
+    }
+
+    // nil shows the materials; the debug views replace them for the whole view, title and code panel included.
+    private static let debugModes: [SceneGraphDebugMode?] = [nil, .normals, .textureCoordinates, .uvChecker, .worldPosition, .wireframe]
+
+    private func debugViewsSlide(_ slide: SceneGraph.Node) {
+        addLight(to: slide, at: [2, 6, 5], intensity: 60)
+        let shapes: [(SceneGraph.Shape, SIMD3<Float>)] = [
+            (.sphere(radius: 0.7), [0.9, 0.4, 0.3]),
+            (.torus(ringRadius: 0.6, pipeRadius: 0.22), [0.4, 0.75, 0.45]),
+            (.box(width: 1.1, height: 1.1, length: 1.1), [0.4, 0.55, 0.95])
+        ]
+        for (index, (shape, color)) in shapes.enumerated() {
+            let node = SceneGraph.Node(parent: slide, shape: shape, material: BlinnPhongSceneMaterial.plastic(color, shininess: 32), device: demoDevice, trs: .init(translation: [Float(index) * 2.4 - 3.6, 1.1, 0]))
+            node.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([0.3, 1, 0.2]), duration: 7)))
+        }
+        if let die = DiceDemo.makeDie(.d20, style: .classicIvory) {
+            die.physicsBody = nil
+            die.trs = .init(translation: [3.6, 1.1, 0], scale: SIMD3(repeating: DiceDemo.dieScale * 2.2))
+            slide.addChild(die)
+            die.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([1, 0.6, 0.2]), duration: 9)))
+        }
+        debugLabels = Self.debugModes.map { mode in
+            let name = mode?.name ?? "Materials"
+            let label = SceneGraph.Node(parent: slide, label: "Debug \(name)")
+            addTitle(name, size: 0.4, y: 3.1, color: [0.85, 0.85, 0.9], to: label)
+            label.isVisible = false
+            return label
+        }
+        debugLabels.first?.isVisible = true
+    }
+
+    private func updateDebugView(deltaTime: Float) {
+        sinceDebugMode += deltaTime
+        if sinceDebugMode >= 2 {
+            sinceDebugMode = 0
+            debugIndex = (debugIndex + 1) % Self.debugModes.count
+        }
+        if debugMode != Self.debugModes[debugIndex] {
+            debugMode = Self.debugModes[debugIndex]
+        }
+        for (index, label) in debugLabels.enumerated() where label.isVisible != (index == debugIndex) {
+            label.isVisible = index == debugIndex
+        }
     }
 
     // Strong, distinct looks so the effect reads from the back of the room.

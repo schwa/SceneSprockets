@@ -44,7 +44,7 @@ public enum DemoSnapshot {
             scene.sceneGraph.advanceParticles(by: deltaTime)
             scene.sceneGraph.applyConstraints(pointOfView: scene.initialCameraMatrix, deltaTime: deltaTime)
             let sceneCamera = scene.usesSceneCamera ? scene.sceneGraph.cameraNodes().first?.worldTransform : nil
-            let element = SceneGraphElement(sceneGraph: scene.sceneGraph, cameraMatrix: sceneCamera ?? scene.initialCameraMatrix, aspectRatio: Float(width) / Float(height), renderers: scene.renderers, shadows: scene.shadows)
+            let element = SceneGraphElement(sceneGraph: scene.sceneGraph, cameraMatrix: sceneCamera ?? scene.initialCameraMatrix, aspectRatio: Float(width) / Float(height), renderers: scene.renderers, shadows: scene.shadows, debugMode: scene.debugMode)
             _ = try renderer.render(element)
             let elapsed = ContinuousClock.now - start
             if frame >= warmUp {
@@ -65,7 +65,7 @@ public enum DemoSnapshot {
         let renderer = try OffscreenRenderer(size: CGSize(width: width, height: height), colorUsage: SceneGraphShadows.requiredColorUsage, depthUsage: SceneGraphShadows.requiredDepthUsage)
         func makeElement() -> SceneGraphElement {
             let sceneCamera = scene.usesSceneCamera ? scene.sceneGraph.cameraNodes().first?.worldTransform : nil
-            return SceneGraphElement(sceneGraph: scene.sceneGraph, cameraMatrix: sceneCamera ?? scene.initialCameraMatrix, aspectRatio: Float(width) / Float(height), renderers: scene.renderers, shadows: scene.shadows)
+            return SceneGraphElement(sceneGraph: scene.sceneGraph, cameraMatrix: sceneCamera ?? scene.initialCameraMatrix, aspectRatio: Float(width) / Float(height), renderers: scene.renderers, shadows: scene.shadows, debugMode: scene.debugMode)
         }
         let deltaTime: Float = 1 / 60
         for frame in 0..<frames {
@@ -130,7 +130,7 @@ public enum DemoSnapshot {
             scene.sceneGraph.advanceParticles(by: deltaTime)
             scene.sceneGraph.applyConstraints(pointOfView: scene.initialCameraMatrix, deltaTime: deltaTime)
             let sceneCamera = scene.usesSceneCamera ? scene.sceneGraph.cameraNodes().first?.worldTransform : nil
-            try await renderer.render(SceneGraphElement(sceneGraph: scene.sceneGraph, cameraMatrix: sceneCamera ?? scene.initialCameraMatrix, aspectRatio: Float(width) / Float(height), renderers: scene.renderers, shadows: scene.shadows))
+            try await renderer.render(SceneGraphElement(sceneGraph: scene.sceneGraph, cameraMatrix: sceneCamera ?? scene.initialCameraMatrix, aspectRatio: Float(width) / Float(height), renderers: scene.renderers, shadows: scene.shadows, debugMode: scene.debugMode))
             progress(frame, frameCount)
         }
         try await renderer.finalize()

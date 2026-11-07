@@ -95,6 +95,8 @@ open class DemoScene {
     // Set to draw shadows from directional lights.
     // Observed: the view needs different texture settings with and without shadows.
     public var shadows: SceneGraphShadows?
+    // Set to draw every mesh in a debug view instead of its material.
+    public var debugMode: SceneGraphDebugMode?
     // Bumped when the hierarchy or visibility changes, so outline views refresh.
     public private(set) var outlineRevision = 0
     // Shared by the outline and click-to-select in the view.

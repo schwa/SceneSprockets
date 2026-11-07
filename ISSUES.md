@@ -6718,14 +6718,18 @@ Levels of detail (Node.levelsOfDetail, like SCNLevelOfDetail) are not shown anyw
 ## 305: Keynote has no debug views slide
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:demo, effort:m
 created: 2026-11-07T15:44:43Z
+updated: 2026-11-07T16:41:44Z
+closed: 2026-11-07T16:41:44Z
 +++
 
 The debug views (SceneGraphDebugMode: shaded, normals, texture coordinates, UV checker, world position, wireframe) and material channels (SceneGraphMaterialChannel) are not shown in the Keynote demo. The demo framework (SceneDemo) has no way to set a debug mode or material channel on the view for one slide.
+
+- `2026-11-07T16:41:45Z`: Fixed: DemoScene has a debugMode, passed to SceneView and to the offscreen renderers (DemoSnapshot). New 'Debug Views' slide after Post-Processing: a sphere, torus, box and a D20 cycle through materials, normals, texture coordinates, UV checker, world position and wireframe, 2 s each, with a label naming the mode; leaving the slide clears it. A debug view replaces every material in the view, so the title and code panel change too; the panel is readable in the Materials phase. Verified with renders of all six phases; 15 demo tests pass. Material channels are not shown (the PBR renderer does not support them yet).
 
 ---
 
