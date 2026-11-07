@@ -11,7 +11,7 @@ import SwiftMesh
 /// A Model I/O asset converted to a scene graph, with its object hierarchy.
 ///
 /// Model I/O reads OBJ, PLY, STL, ABC, USD and more. The conversion keeps meshes, materials, cameras, lights and
-/// keyframed transforms. It does not import skins, blend shapes or orthographic cameras.
+/// keyframed transforms, including orthographic cameras. It does not import skins or blend shapes.
 public struct ModelIOSceneGraph {
     /// The kind of scene material to make from the asset's materials.
     public enum MaterialKind: Sendable {
@@ -110,11 +110,17 @@ private struct ModelIOConverter {
                 node.content = .mesh(metalMesh, materials: materials)
             }
         case let camera as MDLCamera:
-            if camera.projection == .perspective {
-                let far = max(camera.farVisibilityDistance, camera.nearVisibilityDistance)
-                node.content = .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(camera.fieldOfView), depthMode: .standard(zClip: camera.nearVisibilityDistance ... far))))
-            } else {
-                warnings.append("Camera \(object.name) skipped: only perspective cameras are supported")
+            let far = max(camera.farVisibilityDistance, camera.nearVisibilityDistance)
+            let zClip = camera.nearVisibilityDistance ... far
+            switch camera.projection {
+            case .perspective:
+                node.content = .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(camera.fieldOfView), depthMode: .standard(zClip: zClip))))
+            case .orthographic:
+                // Model I/O passes USD's verticalAperture through; for orthographic cameras USD measures it in tenths
+                // of a scene unit (#302).
+                node.content = .camera(Camera(projection: OrthographicProjection(halfHeight: camera.sensorVerticalAperture / 20, depthMode: .standard(zClip: zClip))))
+            @unknown default:
+                warnings.append("Camera \(object.name) skipped: unsupported projection \(camera.projection.rawValue)")
             }
         case let light as MDLLight:
             if let converted = convert(light) {

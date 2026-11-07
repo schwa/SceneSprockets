@@ -6660,7 +6660,7 @@ GLTFSceneGraph skips KHR_animation_pointer channels whose pointer it does not su
 
 ---
 
-## 302: Model I/O loading skips skins, blend shapes and orthographic cameras
+## 302: Model I/O loading skips skins and blend shapes
 
 +++
 status: open
@@ -6668,9 +6668,12 @@ priority: low
 kind: enhancement
 labels: area:assets, effort:l
 created: 2026-11-07T15:41:13Z
+updated: 2026-11-07T16:25:15Z
 +++
 
 ModelIOSceneGraph does not import skins or blend shapes, and imports only perspective MDLCameras (orthographic cameras are skipped). glTF loading supports all three. Listed under Limitations in the README.
+
+- `2026-11-07T16:25:15Z`: Orthographic cameras fixed: MDLCamera with .orthographic projection becomes an OrthographicProjection with halfHeight = sensorVerticalAperture / 20 (Model I/O passes USD's verticalAperture through, which USD measures in tenths of a scene unit for orthographic cameras; checked with a USDA file). Test orthographicCameraLoads failed before (camera skipped), passes now. Title narrowed to skins and blend shapes, still open: they need MDLSkeleton/MDLAnimationBindComponent and blend-shape support plus test assets.
 
 ---
 

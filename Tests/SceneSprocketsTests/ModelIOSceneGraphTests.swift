@@ -1,4 +1,5 @@
 import Foundation
+import GeometryLite3D
 import Metal
 import MetalKit
 import MetalSprocketsPBR
@@ -146,4 +147,36 @@ func pbrMaterialMapsAreImported() throws {
     // RGBA: roughness (no map) 255 in green, metallic map in blue.
     #expect(pixels == [255, 255, 0, 255, 255, 255, 200, 255])
     #expect(result.warnings.isEmpty)
+}
+
+// #302: an orthographic USD camera loads. USD orthographic apertures are in tenths of a scene unit.
+@Test
+func orthographicCameraLoads() throws {
+    let url = try temporaryDirectory().appendingPathComponent("ortho.usda")
+    let usda = """
+    #usda 1.0
+    (
+        upAxis = "Y"
+    )
+    def Camera "Ortho"
+    {
+        token projection = "orthographic"
+        float verticalAperture = 40
+        float horizontalAperture = 60
+        float2 clippingRange = (0.5, 200)
+    }
+    """
+    try Data(usda.utf8).write(to: url)
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let result = try ModelIOSceneGraph(url: url, device: device)
+    var cameras: [Camera] = []
+    result.sceneGraph.visit { node, _ in
+        if case let .camera(camera) = node.content {
+            cameras.append(camera)
+        }
+    }
+    let projection = try #require(cameras.first?.projection as? OrthographicProjection)
+    #expect(abs(projection.halfHeight - 2) < 1e-5)
+    #expect(projection.depthMode == .standard(zClip: 0.5 ... 200))
+    #expect(!result.warnings.contains { $0.contains("Camera") })
 }
