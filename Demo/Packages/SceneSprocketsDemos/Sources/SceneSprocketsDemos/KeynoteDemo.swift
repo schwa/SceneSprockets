@@ -22,7 +22,7 @@ public final class KeynoteDemo: DemoScene {
     public static let titles = [
         "SceneSprockets", "Scene Graph", "Shapes", "Materials", "Lights", "Actions", "Constraints", "Opacity & Fades", "Blend Modes",
         "Custom Shaders", "Glass", "PBR Extensions", "Shadows", "Fog", "Particles", "Mesh Emitters", "Implicit Animation", "Animation Blending", "Deformation",
-        "glTF & Model I/O", "Hit Testing", "Physics", "Performance", "Post-Processing", "SceneView", "Thank You"
+        "Level of Detail", "glTF & Model I/O", "Hit Testing", "Physics", "Performance", "Post-Processing", "SceneView", "Thank You"
     ]
 
     private let cameraNode: SceneGraph.Node
@@ -51,6 +51,8 @@ public final class KeynoteDemo: DemoScene {
     private var sinceGrade: Float = 0
     private var morphed: [SceneGraph.Node] = []
     private var bendingJoints: [SceneGraph.Node] = []
+    // Level of Detail slide: spheres that move away from and toward the camera.
+    private var detailed: [SceneGraph.Node] = []
     private var crates: [SceneGraph.Node] = []
     private static let crateGridSize = 22
 
@@ -165,6 +167,11 @@ public final class KeynoteDemo: DemoScene {
             let rotation = simd_quatf(angle: sin(time * 1.5) * 1.4 / Float(Self.tubeJointCount - 1), axis: [0, 0, 1])
             for joint in bendingJoints {
                 joint.trs.rotation = rotation
+            }
+        case "Level of Detail":
+            // Out of phase, 11 to 27 units from the camera, so each crosses both switch distances.
+            for (index, node) in detailed.enumerated() {
+                node.trs.translation.z = -6 + sin(time * 0.8 + Float(index) * 2.1) * 8
             }
         case "Performance":
             waveCrates(time: time)
@@ -388,6 +395,14 @@ public final class KeynoteDemo: DemoScene {
             blob.morphTargets = [bumps, squash]
             blob.morphWeights = [0.5, 0.2]
             tube.skin = Skin(joints: joints, inverseBindMatrices: inverseBind)
+            """, to: slide)
+        case "Level of Detail":
+            levelOfDetailSlide(slide)
+            addCode("""
+            node.levelsOfDetail = [
+                LevelOfDetail(mesh: medium, distance: 15),
+                LevelOfDetail(mesh: low, distance: 22),
+            ]
             """, to: slide)
         case "Performance":
             performanceSlide(slide)
@@ -918,6 +933,24 @@ public final class KeynoteDemo: DemoScene {
 
     // A morphing blob and a skinned tube. The bumps move vertices along the direction from the center, not the vertex
     // normal: each face has its own vertices, so moving along normals would tear the faces apart (#70).
+    // Faceted spheres switch to coarser meshes 15 and 22 units from the camera.
+    private func levelOfDetailSlide(_ slide: SceneGraph.Node) {
+        addLight(to: slide, at: [2, 6, 5], intensity: 60)
+        addLight(to: slide, at: [-4, 2, 2], color: [0.6, 0.7, 1], intensity: 20)
+        // The spheres travel back to z = -14; light their camera-facing sides there too.
+        addLight(to: slide, at: [0, 3, -3], intensity: 120)
+        func sphere(_ subdivisions: Int) -> MetalMesh {
+            MetalMesh(mesh: Mesh.icoSphere(subdivisions: subdivisions).withFlatNormals(), device: demoDevice)
+        }
+        let high = sphere(3), medium = sphere(1), low = sphere(0)
+        let colors: [SIMD3<Float>] = [[0.95, 0.45, 0.3], [0.35, 0.75, 0.45], [0.35, 0.55, 0.95]]
+        detailed = colors.enumerated().map { index, color in
+            let node = SceneGraph.Node(parent: slide, label: "Detail \(index + 1)", trs: .init(translation: [Float(index - 1) * 3.2, 0.9, -6], scale: SIMD3(repeating: 1.3)), content: .mesh(high, material: BlinnPhongSceneMaterial.plastic(color, shininess: 24)))
+            node.levelsOfDetail = [SceneGraph.LevelOfDetail(mesh: medium, distance: 15), SceneGraph.LevelOfDetail(mesh: low, distance: 22)]
+            return node
+        }
+    }
+
     private func deformationSlide(_ slide: SceneGraph.Node) {
         addLight(to: slide, at: [2, 6, 5], intensity: 50)
         addLight(to: slide, at: [-3, 1, 3], color: [0.5, 0.6, 1], intensity: 15)

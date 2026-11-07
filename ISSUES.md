@@ -6698,14 +6698,18 @@ Positions for hit tests, bounds and PBR model conversion are read from mesh vert
 ## 304: Keynote has no level of detail slide
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:demo, effort:s
 created: 2026-11-07T15:44:43Z
+updated: 2026-11-07T16:29:59Z
+closed: 2026-11-07T16:29:59Z
 +++
 
 Levels of detail (Node.levelsOfDetail, like SCNLevelOfDetail) are not shown anywhere in the Keynote demo. Nothing on a slide shows a node switching meshes as its distance from the camera changes.
+
+- `2026-11-07T16:29:59Z`: Fixed: new 'Level of Detail' slide after Deformation. Three faceted icospheres (flat normals, so the triangle count is visible) slide back and forth in depth, out of phase, 11-27 units from the camera; each switches from a subdivision-3 icosphere to subdivision 1 at 15 units and subdivision 0 at 22. The code panel shows node.levelsOfDetail. Verified with offscreen renders (slide 19, frames 20 and 120); 15 demo tests pass (golden images are looked up by title, so the inserted slide does not shift them).
 
 ---
 
