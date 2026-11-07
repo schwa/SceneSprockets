@@ -31,7 +31,7 @@ RenderView { _, size in
 
 ## Shadows
 
-Pass a ``SceneGraphShadows`` to `SceneView(shadows:)` or `SceneGraphElement(shadows:)`. Keep one instance across frames. Directional, spot and point lights cast shadow maps from meshes with `castsShadow`. A screen-space pass then darkens shadowed pixels, so shadows work with every renderer.
+Pass a ``SceneGraphShadows`` to `SceneView(shadows:)` or `SceneGraphElement(shadows:)`. Keep one instance across frames. Directional, spot and point lights cast shadow maps from meshes with `castsShadow`. Blinn-Phong and PBR sample the shadows when they shade a pixel. For other materials, a screen-space pass darkens shadowed pixels after the scene pass, so shadows work with every renderer.
 
 Fog and shadows need a color texture with `.shaderWrite` usage and a depth texture with `.shaderRead` usage. ``SceneView`` configures these textures.
 

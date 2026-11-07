@@ -6568,3 +6568,89 @@ All tests pass. Tests run in parallel, so the log does not show which test trigg
 - `2026-11-07T15:07:41Z`: Fixed: a test bug, not a renderer bug. ambientOcclusionDarkensContactsOnly read its 'open floor' point [2, 0, 2], which projects to pixel (72, 56), outside the 64x64 texture; getBytes then read out of bounds (the AGX assertion), and the test's second expectation compared garbage. pixel() now requires the pixel to be inside the texture, and the open point is [1.5, 0, 1.5]. The full suite runs with no AGX assertion.
 
 ---
+
+## 298: Blinn-Phong and ShaderMaterial deform morph targets and skins on the CPU every frame
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:renderer, effort:l
+created: 2026-11-07T15:41:12Z
++++
+
+The PBR renderer deforms morph targets and skins on the GPU. Blinn-Phong and ShaderMaterial meshes are deformed on the CPU each frame (SceneGraph.MeshEntry.deformed(revision:)), which is slow for large meshes. Listed under Limitations in the README.
+
+---
+
+## 299: Lights beyond 8 shadow map slices cast no shadow
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:renderer, effort:m
+created: 2026-11-07T15:41:12Z
++++
+
+SceneGraphShadows has 8 shadow map slices: a directional or spot light takes one, a point light six. Lights that do not fit cast no shadow; SceneGraphShadows.droppedLightCount counts them (#68). A scene with two point lights already loses one light's shadows. Listed under Limitations in the README.
+
+---
+
+## 300: ShaderMaterial meshes get every light's shadow, not only the lights that light them
+
++++
+status: open
+priority: low
+kind: bug
+labels: area:renderer, effort:m
+created: 2026-11-07T15:41:12Z
+updated: 2026-11-07T15:41:13Z
++++
+
+Blinn-Phong and PBR sample each light's shadow while shading (#102), so a light darkens only what it lights. ShaderMaterial meshes are darkened afterwards by a screen-space pass that applies all lights' shadows together, so a shadow from one light also darkens areas that other lights light. Listed under Limitations in the README.
+
+---
+
+## 301: glTF animation channels with unsupported pointers are skipped
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:assets, area:animation, effort:s
+created: 2026-11-07T15:41:13Z
++++
+
+GLTFSceneGraph skips KHR_animation_pointer channels whose pointer it does not support, such as camera xmag and aspectRatio, and reports '<n> animation channels skipped' in warnings. Listed under Limitations in the README.
+
+---
+
+## 302: Model I/O loading skips skins, blend shapes and orthographic cameras
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:assets, effort:l
+created: 2026-11-07T15:41:13Z
++++
+
+ModelIOSceneGraph does not import skins or blend shapes, and imports only perspective MDLCameras (orthographic cameras are skipped). glTF loading supports all three. Listed under Limitations in the README.
+
+---
+
+## 303: Hit testing, bounds and PBR conversion need vertex buffers in shared storage
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:scenegraph, effort:m
+created: 2026-11-07T15:41:13Z
+updated: 2026-11-07T15:41:14Z
++++
+
+Positions for hit tests, bounds and PBR model conversion are read from mesh vertex buffers on the CPU. Meshes whose vertex buffers use private storage cannot be hit-tested, have no bounds, and cannot be converted. Listed under Limitations in the README.
+
+---
