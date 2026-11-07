@@ -5607,6 +5607,7 @@ Problems:
 
 - `2026-11-04T20:54:25Z`: Looked at the ~70 sites. Punting: this is a public API break across actions, animation, particles, constraints, transactions, SceneView and physics, and the target type is a design decision the code cannot answer. Options seen: (a) TimeInterval/Double everywhere (simple, matches CADisplayLink and AVFoundation); (b) Swift Duration for durations plus Double for accumulated time (typed, but awkward arithmetic and no Float conversion in shaders); (c) Double only for accumulated/absolute time (particle time, animation playhead), keep Float for small per-frame deltas and durations. Also: whether to keep Float overloads as deprecated shims. Unblocker: pick a/b/c and say whether to keep deprecated Float overloads.
 - `2026-11-04T21:10:48Z`: Part of #255 (very large worlds).
+- `2026-11-07T16:22:23Z`: Autonomous run: still waiting on the 2026-11-04 decision (time type a/b/c, and whether to keep deprecated Float overloads). Not changed.
 
 ---
 
@@ -6603,6 +6604,8 @@ created: 2026-11-07T15:41:12Z
 +++
 
 The PBR renderer deforms morph targets and skins on the GPU. Blinn-Phong and ShaderMaterial meshes are deformed on the CPU each frame (SceneGraph.MeshEntry.deformed(revision:)), which is slow for large meshes. Listed under Limitations in the README.
+
+- `2026-11-07T16:22:50Z`: Autonomous run: scoped, not changed. Design that fits the renderer: a compute pre-pass in SceneGraphElement that, for each morphed or skinned mesh entry drawn by a CPU-deforming renderer, writes deformed positions and normals into an output vertex buffer with the mesh's layout (one per frame in flight, like the shadow map slots), from the rest buffers, GPU morph-delta buffers (cached per node) and the skin influence buffer the shadow pass already builds (Shadows.swift caster .skinned) plus joint matrices. A QueueBarrier(after: .dispatch, before: .vertex) orders it before the scene pass. Blinn-Phong, ShaderMaterial and the debug view then draw the GPU-deformed mesh; hit testing keeps the CPU path. Punting: it is a renderer-wide change with frames-in-flight synchronization (the class of bug behind #59 and #242, which only shows live), and it adds per-frame GPU memory (deformed vertex buffers x frames in flight). Unblocker: approve this design (or prefer skinning in the Blinn-Phong vertex shader instead, which avoids extra buffers but leaves ShaderMaterial on the CPU).
 
 ---
 
