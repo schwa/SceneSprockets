@@ -1,6 +1,9 @@
+import AVFAudio
 import Foundation
 import MetalSprocketsParticles
+import SceneSprocketsAudio
 import simd
+import SwiftMesh
 
 // Morph targets, skins, physics bodies and particle systems in scene.json (#162). Skin joints are stored as
 // child-index paths from the root, like constraint targets, and resolved once the whole tree is read.
@@ -15,6 +18,21 @@ struct ArchivedParticleSystem: Codable {
     var seed: UInt32
     // Nil means true.
     var usesNodeTransform: Bool?
+}
+
+// A level of detail's mesh is a file written by the archive's mesh codec, like a node mesh that is not a shape (#182).
+// Nil draws nothing.
+struct ArchivedLevelOfDetail: Codable {
+    var file: String?
+    var distance: Float
+}
+
+// An audio player's buffer is a CAF file in the package; players that share a buffer share the file (#182). The
+// position is not saved: SceneAudio sets it from the node every frame.
+struct ArchivedAudioPlayer: Codable {
+    var file: String
+    var loops: Bool
+    var volume: Float
 }
 
 extension SceneGraph.MorphTarget: Codable {
@@ -120,6 +138,44 @@ extension SceneGraph.PhysicsBody: Codable {
 }
 
 extension SceneArchiveContext {
+    // The package path of the mesh's codec file, written once for meshes that share buffers.
+    func meshFile(for mesh: MetalMesh, materials: [any Material], name: String?, codec: any ArchivableMeshCodec) throws -> String {
+        let key = meshKey(mesh)
+        if let path = meshFiles[key] {
+            return path
+        }
+        let path = try codec.encode(mesh, materials: materials, name: name, context: self)
+        meshFiles[key] = path
+        return path
+    }
+
+    func mesh(atPath path: String, codec: any ArchivableMeshCodec) throws -> MetalMesh {
+        if let mesh = decodedMeshes[path] {
+            return mesh
+        }
+        let mesh = try codec.decode(path: path, context: self)
+        decodedMeshes[path] = mesh
+        return mesh
+    }
+
+    // The package path of the buffer's CAF file, written once for players that share a buffer.
+    func audioFile(for buffer: AVAudioPCMBuffer) throws -> String {
+        if let path = audioFiles[ObjectIdentifier(buffer)] {
+            return path
+        }
+        let temporary = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("caf")
+        defer { try? FileManager.default.removeItem(at: temporary) }
+        // Scoped so the file is closed before it is read.
+        do {
+            let file = try AVAudioFile(forWriting: temporary, settings: buffer.format.settings, commonFormat: buffer.format.commonFormat, interleaved: buffer.format.isInterleaved)
+            try file.write(from: buffer)
+        }
+        let path = newFile(in: "audio", pathExtension: "caf")
+        addFile(path, data: try Data(contentsOf: temporary))
+        audioFiles[ObjectIdentifier(buffer)] = path
+        return path
+    }
+
     func resolveSkins(root: SceneGraph.Node) throws {
         for (node, archived) in pendingSkins {
             let joints = archived.joints.compactMap { root.archiveNode(at: $0) }

@@ -1,5 +1,6 @@
 import Foundation
 import GeometryLite3D
+import SceneSprocketsAudio
 import simd
 
 // Codable for the scene graph types, used by SceneArchive. Metal-backed content (textures, environment maps,
@@ -44,7 +45,7 @@ extension SceneGraph.Node: Codable {
     enum ArchiveKeys: String, CodingKey {
         case label, transform, pivot, isVisible, isActive, opacity, categoryBitMask, lightCategoryBitMask, renderingOrder
         case subdivisionLevel, actionSpeed, mesh, light, camera, constraints, children, model
-        case morphTargets, morphWeights, skin, skinVertices, physicsBody, particleSystems
+        case morphTargets, morphWeights, skin, skinVertices, physicsBody, particleSystems, levelsOfDetail, audioPlayers
     }
 
     enum MeshKeys: String, CodingKey {
@@ -112,10 +113,7 @@ extension SceneGraph.Node: Codable {
                         context.warn("\(nodeDescription): the mesh's morph targets and skin are not saved")
                     }
                     // Nodes that share a mesh share its file.
-                    let key = context.meshKey(metalMesh)
-                    let path = try context.meshFiles[key] ?? codec.encode(metalMesh, materials: materials, name: label, context: context)
-                    context.meshFiles[key] = path
-                    try mesh.encode(path, forKey: .file)
+                    try mesh.encode(context.meshFile(for: metalMesh, materials: materials, name: label, codec: codec), forKey: .file)
                 }
                 try mesh.encode(castsShadow, forKey: .castsShadow)
                 try mesh.encode(receivesShadow, forKey: .receivesShadow)
@@ -205,9 +203,7 @@ extension SceneGraph.Node: Codable {
                 } else if let path = try mesh.decodeIfPresent(String.self, forKey: .file) {
                     if let codec = context.meshCodec {
                         // Nodes that shared a mesh share it again.
-                        let decoded = try context.decodedMeshes[path] ?? codec.decode(path: path, context: context)
-                        context.decodedMeshes[path] = decoded
-                        content = .mesh(decoded, materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
+                        content = .mesh(try context.mesh(atPath: path, codec: codec), materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
                     } else {
                         context.warn("\(label ?? "node"): no mesh codec to read \(path); mesh dropped")
                     }
@@ -228,6 +224,12 @@ extension SceneGraph.Node: Codable {
             let system = SceneParticleSystem($0.system, seed: $0.seed)
             system.usesNodeTransform = $0.usesNodeTransform ?? true
             return system
+        }
+        if let levels = try container.decodeIfPresent([ArchivedLevelOfDetail].self, forKey: .levelsOfDetail) {
+            levelsOfDetail = try decodeLevelsOfDetail(levels, context: context)
+        }
+        audioPlayers = try (container.decodeIfPresent([ArchivedAudioPlayer].self, forKey: .audioPlayers) ?? []).map {
+            try AudioPlayer(url: context.url(forPath: $0.file), loops: $0.loops, volume: $0.volume)
         }
         // After the content, so subdivision applies to the shape's mesh.
         subdivisionLevel = try container.decodeIfPresent(Int.self, forKey: .subdivisionLevel) ?? 0
@@ -286,6 +288,41 @@ extension SceneGraph.Node: Codable {
             }
             try container.encode(archived, forKey: .particleSystems)
         }
+        try encodeLevelsOfDetail(into: &container, context: context)
+        if !audioPlayers.isEmpty {
+            let archived = try audioPlayers.map {
+                ArchivedAudioPlayer(file: try context.audioFile(for: $0.buffer), loops: $0.loops, volume: $0.volume)
+            }
+            try container.encode(archived, forKey: .audioPlayers)
+        }
+    }
+
+    private func encodeLevelsOfDetail(into container: inout KeyedEncodingContainer<ArchiveKeys>, context: SceneArchiveContext) throws {
+        guard !levelsOfDetail.isEmpty else {
+            return
+        }
+        guard let codec = context.meshCodec else {
+            context.warn("\(nodeDescription): the archive has no mesh codec; levels of detail not saved")
+            return
+        }
+        let materials: [any Material] = if case let .mesh(_, materials, _, _) = content { materials } else { [] }
+        let archived = try levelsOfDetail.map { level in
+            ArchivedLevelOfDetail(file: try level.mesh.map { try context.meshFile(for: $0, materials: materials, name: label, codec: codec) }, distance: level.distance)
+        }
+        try container.encode(archived, forKey: .levelsOfDetail)
+    }
+
+    private func decodeLevelsOfDetail(_ levels: [ArchivedLevelOfDetail], context: SceneArchiveContext) throws -> [SceneGraph.LevelOfDetail] {
+        guard let codec = context.meshCodec else {
+            if levels.contains(where: { $0.file != nil }) {
+                context.warn("\(label ?? "node"): no mesh codec to read levels of detail; dropped")
+                return []
+            }
+            return levels.map { SceneGraph.LevelOfDetail(mesh: nil, distance: $0.distance) }
+        }
+        return try levels.map { level in
+            SceneGraph.LevelOfDetail(mesh: try level.file.map { try context.mesh(atPath: $0, codec: codec) }, distance: level.distance)
+        }
     }
 
     private var nodeDescription: String {
@@ -295,8 +332,6 @@ extension SceneGraph.Node: Codable {
     // Later steps of #52.
     private func warnAboutUnsavedFeatures(_ context: SceneArchiveContext) {
         let unsaved: [(String, Bool)] = [
-            ("audio players", !audioPlayers.isEmpty),
-            ("levels of detail", !levelsOfDetail.isEmpty),
             ("running actions", !runningActions.isEmpty)
         ]
         for (feature, isPresent) in unsaved where isPresent {

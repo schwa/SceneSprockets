@@ -3976,16 +3976,19 @@ Found while working on #178. `xcb build -d ios` (generic/platform=iOS) fails bef
 ## 182: Scene archive: save audio players and levels of detail
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: effort:m, area:document
 depends: 158
 created: 2026-10-24T11:29:39Z
-updated: 2026-11-07T15:46:16Z
+updated: 2026-11-07T15:54:11Z
+closed: 2026-11-07T15:54:11Z
 +++
 
 Split from #162. Saving a scene still warns for these two node features. Audio players hold an AVAudioPCMBuffer and live in SceneSprocketsAudio, so the core archive needs a hook (or the audio file kept by reference). Levels of detail hold MetalMesh values, so they need the generated-mesh path from #158.
+
+- `2026-11-07T15:54:12Z`: Fixed: scene archives save levels of detail (each level's distance, and its mesh as a mesh-codec file shared like node meshes; nil meshes kept) and audio players (each buffer as a CAF file in audio/, shared between players that share a buffer, plus loops and volume; position is set by SceneAudio each frame). Without a mesh codec, levels of detail are skipped with a warning. Tests: AudioAndDetailArchiveTests (both failed before the fix with the 'not saved yet' warning and nothing read back).
 
 ---
 

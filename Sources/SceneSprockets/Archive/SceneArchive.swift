@@ -341,6 +341,8 @@ public final class SceneArchiveContext: @unchecked Sendable {
     // Files already written for meshes, by the identity of their GPU buffers; and meshes already read, by file.
     var meshFiles: [[ObjectIdentifier]: String] = [:]
     var decodedMeshes: [String: MetalMesh] = [:]
+    // Audio files already written, by the identity of their buffers (#182).
+    var audioFiles: [ObjectIdentifier: String] = [:]
     // Model files already copied into the package, by source, so shared ones are written once.
     var modelFiles: [SceneGraph.ModelSource: String] = [:]
 
