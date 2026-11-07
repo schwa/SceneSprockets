@@ -685,12 +685,33 @@ public final class KeynoteDemo: DemoScene {
 
     private func materialsSlide(_ slide: SceneGraph.Node) {
         addLight(to: slide, at: [0, 5, 6], intensity: 80)
-        // Blinn-Phong on the top row; PBR below, from rough to smooth.
-        for index in 0..<4 {
-            let x = Float(index) * 2 - 3
-            _ = SceneGraph.Node(parent: slide, shape: .sphere(radius: 0.7), material: BlinnPhongSceneMaterial.plastic([0.9, 0.35, 0.25], shininess: 4 + Float(index) * 40), device: demoDevice, trs: .init(translation: [x, 2.2, 0]))
-            if let pbr = try? PBRSceneMaterial(device: demoDevice, baseColor: [0.95, 0.75, 0.3, 1], metallic: 1, roughness: 0.8 - Float(index) * 0.25) {
-                _ = SceneGraph.Node(parent: slide, shape: .sphere(radius: 0.7), material: pbr, device: demoDevice, trs: .init(translation: [x, 0.4, 0]))
+        addLight(to: slide, at: [-6, 2, 4], color: [0.6, 0.7, 1], intensity: 30)
+        // Top row Blinn-Phong, getting shinier; middle row PBR metals, then PBR plastics, both from rough to smooth.
+        let shapes: [SceneGraph.Shape] = [
+            .sphere(radius: 0.55), .torus(ringRadius: 0.42, pipeRadius: 0.17), .box(width: 0.8, height: 0.8, length: 0.8),
+            .capsule(capRadius: 0.3, height: 1.1), .cone(topRadius: 0, bottomRadius: 0.5, height: 1), .cylinder(radius: 0.4, height: 0.9)
+        ]
+        let paints: [SIMD3<Float>] = [[0.9, 0.3, 0.25], [0.95, 0.6, 0.2], [0.9, 0.85, 0.3], [0.35, 0.8, 0.45], [0.3, 0.55, 0.95], [0.7, 0.4, 0.9]]
+        let metals: [SIMD3<Float>] = [[1, 0.77, 0.34], [0.95, 0.64, 0.54], [0.97, 0.96, 0.91], [0.56, 0.57, 0.58], [0.62, 0.6, 0.66], [1, 0.86, 0.57]]
+        let plastics: [SIMD3<Float>] = [[0.8, 0.1, 0.1], [0.1, 0.1, 0.12], [0.95, 0.95, 0.95], [0.1, 0.5, 0.8], [0.2, 0.7, 0.3], [0.9, 0.5, 0.1]]
+        for column in 0..<6 {
+            let x = Float(column) * 1.6 - 4
+            let smoothness = Float(column) / 5
+            var materials: [any SceneSprockets.Material] = [BlinnPhongSceneMaterial.plastic(paints[column], shininess: 4 + smoothness * 120)]
+            if let metal = try? PBRSceneMaterial(device: demoDevice, baseColor: SIMD4(metals[column], 1), metallic: 1, roughness: 0.75 - smoothness * 0.7) {
+                materials.append(metal)
+            }
+            if let plastic = try? PBRSceneMaterial(device: demoDevice, baseColor: SIMD4(plastics[column], 1), metallic: 0, roughness: 0.8 - smoothness * 0.7) {
+                // The glossiest plastics get a clear coat, like car paint.
+                if column >= 4 {
+                    plastic.pbrMaterial.uniforms.clearcoatFactor = 1
+                    plastic.pbrMaterial.uniforms.clearcoatRoughnessFactor = 0.05
+                }
+                materials.append(plastic)
+            }
+            for (row, material) in materials.enumerated() {
+                let node = SceneGraph.Node(parent: slide, shape: shapes[(column + row * 2) % shapes.count], material: material, device: demoDevice, trs: .init(translation: [x, 2.7 - Float(row) * 1.3, 0]))
+                node.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([0.3, 1, 0.2]), duration: 8 + Float(column + row))))
             }
         }
     }

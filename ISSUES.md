@@ -7349,12 +7349,13 @@ Like the Physics slide's dice tray: keep the camera at the deck's fixed height a
 ## 335: Keynote Materials slide shows too few objects to be interesting
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:demo, effort:s
 created: 2026-11-07T18:04:52Z
-updated: 2026-11-07T18:04:53Z
+updated: 2026-11-07T18:26:45Z
+closed: 2026-11-07T18:26:45Z
 +++
 
 The keynote's Materials slide shows only a few objects, so it looks sparse and does not show much of what the materials can do.
