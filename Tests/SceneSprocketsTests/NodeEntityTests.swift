@@ -155,7 +155,7 @@ func directSetParentMovesNodeLast() throws {
     let moving = SceneGraph.Node(parent: first)
     let graph = SceneGraph(root: root)
     let before = graph.revision
-    try #require(graph.world[moving.id]).setParent(try #require(graph.world[second.id]))
+    try #require(graph.world[moving.id]).setParent(graph.world[second.id])
     #expect(moving.parent === second)
     #expect(second.children.map(\.id) == [existing.id, moving.id])
     #expect(first.children.isEmpty)

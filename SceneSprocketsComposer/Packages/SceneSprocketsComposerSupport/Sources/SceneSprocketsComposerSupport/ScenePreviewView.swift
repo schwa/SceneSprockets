@@ -59,8 +59,8 @@ struct ScenePreviewView: View {
                 let grid = try settings.decorations(context: context, drawableSize: drawableSize)
                 // Sized in view points, like hit testing. The scene's reversed depth does not change x and y.
                 let viewport = SceneViewport(cameraMatrix: context.cameraMatrix, projectionMatrix: context.projectionMatrix, viewSize: drawableSize / Float(displayScale), drawableSize: drawableSize)
-                let shapes = settings.showsLightsAndCameras ? try DebugShapes.element(sceneGraph: sceneGraph, selected: selectedIDs, viewport: viewport) : nil
-                let boxes = try BoundingBoxes.element(mode: settings.boundingBoxes, sceneGraph: sceneGraph, selected: selectedIDs, selectedColor: accentColor, viewProjection: viewport.projectionMatrix * viewport.viewMatrix, drawableSize: drawableSize)
+                let shapes = settings.showsLightsAndCameras ? DebugShapes.element(sceneGraph: sceneGraph, selected: selectedIDs, viewport: viewport) : nil
+                let boxes = BoundingBoxes.element(mode: settings.boundingBoxes, sceneGraph: sceneGraph, selected: selectedIDs, selectedColor: accentColor, viewProjection: viewport.projectionMatrix * viewport.viewMatrix, drawableSize: drawableSize)
                 guard shapes != nil || boxes != nil else {
                     return grid
                 }

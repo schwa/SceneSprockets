@@ -279,7 +279,8 @@ public final class TransformGizmo: SceneViewManipulator {
     }
 
     // Closest point on the line through `origin` along `direction` to `ray`, as a distance along the line.
-    static func closestParameter(origin: SIMD3<Float>, direction: SIMD3<Float>, ray: Ray3D) -> Float? {
+    // GeometryLite3D.Ray3D: visionOS's Spatial framework also has a Ray3D.
+    static func closestParameter(origin: SIMD3<Float>, direction: SIMD3<Float>, ray: GeometryLite3D.Ray3D) -> Float? {
         let w = origin - ray.origin
         let b = simd_dot(direction, ray.direction)
         let denominator = 1 - b * b
@@ -289,7 +290,7 @@ public final class TransformGizmo: SceneViewManipulator {
         return (b * simd_dot(ray.direction, w) - simd_dot(direction, w)) / denominator
     }
 
-    static func intersect(_ ray: Ray3D, planeOrigin: SIMD3<Float>, normal: SIMD3<Float>) -> SIMD3<Float>? {
+    static func intersect(_ ray: GeometryLite3D.Ray3D, planeOrigin: SIMD3<Float>, normal: SIMD3<Float>) -> SIMD3<Float>? {
         let denominator = simd_dot(normal, ray.direction)
         guard abs(denominator) > 1e-5 else {
             return nil

@@ -14,9 +14,9 @@ func testEmptySceneGraph() {
 func testHierarchyTraversal() {
     let root = SceneGraph.Node(label: "root")
     let child1 = SceneGraph.Node(parent: root, label: "child1")
-    let child2 = SceneGraph.Node(parent: root, label: "child2")
+    _ = SceneGraph.Node(parent: root, label: "child2")
 
-    let grandchild = SceneGraph.Node(parent: child1, label: "grandchild")
+    _ = SceneGraph.Node(parent: child1, label: "grandchild")
 
     let sceneGraph = SceneGraph(root: root)
     let nodes = sceneGraph.nodesWithWorldTransforms()
@@ -43,12 +43,12 @@ func traversalIsDepthFirstAndAccumulatesTransforms() {
 @Test
 func testLightNodeQuery() {
     let root = SceneGraph.Node(label: "root")
-    let lightNode = SceneGraph.Node(
+    _ = SceneGraph.Node(
         parent: root,
         label: "light",
         content: .light(Light(type: .point))
     )
-    let emptyNode = SceneGraph.Node(parent: root, label: "empty")
+    _ = SceneGraph.Node(parent: root, label: "empty")
 
     let sceneGraph = SceneGraph(root: root)
     let lights = sceneGraph.lightNodes()

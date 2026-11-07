@@ -219,7 +219,7 @@ func pbrShadowsDimOnlyTheirOwnLight() throws {
     let fillWithoutShadows = try brightness(sceneGraph, at: pixel, shadows: nil, renderers: renderers)
     #expect(withFill > 30)
     #expect(Double(withFill) > Double(fillWithoutShadows) * 0.3)
-    #expect(PBRSceneMaterial.self is any SamplesShadowsInShader.Type)
+    #expect((PBRSceneMaterial.self as Any) is any SamplesShadowsInShader.Type)
 }
 
 @MainActor

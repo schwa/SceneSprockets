@@ -269,7 +269,7 @@ struct SceneEditBoundaryTests {
     let projected = try #require(viewport.project(shape.lines[1][1]))
     #expect(DebugShapes.hitTest(projected.xy, sceneGraph: cameraOnly, viewport: viewport) === camera)
     #expect(DebugShapes.hitTest([5, 5], sceneGraph: cameraOnly, viewport: viewport) == nil)
-    #expect(try DebugShapes.element(sceneGraph: cameraOnly, selected: [camera.id], viewport: viewport) != nil)
+    #expect(DebugShapes.element(sceneGraph: cameraOnly, selected: [camera.id], viewport: viewport) != nil)
 }
 
 // #189

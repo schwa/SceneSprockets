@@ -75,7 +75,7 @@ func viewPointRayGoesThroughCenter() {
         [0, 0, far / (near - far), -1],
         [0, 0, near * far / (near - far), 0]
     ))
-    let viewProjection = ViewProjection(viewMatrix: camera.inverse, projectionMatrix: projection, isReversedDepth: false, viewSize: [100, 100])
+    let viewProjection = ViewProjection(viewMatrix: camera.inverse, projectionMatrix: projection, isReverseZ: false, viewSize: [100, 100])
     let center = viewProjection.ray(through: [50, 50])
     #expect(simd_distance(center.direction, [0, 0, -1]) < 1e-4)
     #expect(simd_distance(center.origin, [1, 2, 3 - near]) < 1e-3)
