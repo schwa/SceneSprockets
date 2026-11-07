@@ -185,7 +185,8 @@ private struct GLTFSceneGraphBuilder {
         func node(_ index: Int) -> [SceneGraph.Node] {
             nodes.indices.contains(index) ? nodes[index].map { [$0] } ?? [] : []
         }
-        var skippedChannels = 0
+        // The pointers of channels that cannot be mapped, for the warning (#301).
+        var skippedPointers: [String] = []
         var animatedMaterials: [Int: AnimatedMaterial] = [:]
         func animatedMaterial(_ index: Int) -> AnimatedMaterial? {
             guard asset.materials.indices.contains(index) else {
@@ -225,7 +226,14 @@ private struct GLTFSceneGraphBuilder {
                     }
                 }
                 if targets.isEmpty {
-                    skippedChannels += 1
+                    let pointer = switch channel.target {
+                    case let .node(index, property): "/nodes/\(index) (\(property))"
+                    case let .visibility(index): "/nodes/\(index)/extensions/KHR_node_visibility/visible"
+                    case let .light(index, name): "/extensions/KHR_lights_punctual/lights/\(index)/\(name)"
+                    case let .camera(index, name): "/cameras/\(index)/\(name)"
+                    case let .material(index, name): "/materials/\(index)/\(name)"
+                    }
+                    skippedPointers.append(pointer)
                 }
                 let interpolation: SceneGraph.AnimationClip.Interpolation = switch channel.interpolation {
                 case .step: .step
@@ -236,8 +244,11 @@ private struct GLTFSceneGraphBuilder {
                 return targets.map { SceneGraph.AnimationClip.Channel(target: $0.node, path: $0.path, sampler: sampler) }
             })
         }
-        if skippedChannels > 0 {
-            warnings.append("\(skippedChannels) animation channels skipped: unsupported pointers (such as camera xmag/aspectRatio) or missing targets")
+        if !skippedPointers.isEmpty {
+            // Camera xmag and aspectRatio cannot be mapped: a camera's aspect ratio follows the view.
+            let distinct = Array(Set(skippedPointers)).sorted()
+            let listed = distinct.prefix(5).joined(separator: ", ") + (distinct.count > 5 ? ", and \(distinct.count - 5) more" : "")
+            warnings.append("\(skippedPointers.count) animation channels skipped (unsupported pointer or missing target): \(listed)")
         }
 
         let sceneGraph = SceneGraph(root: root)

@@ -169,6 +169,40 @@ func gltfInstancingAndVisibilityAreMapped() throws {
     #expect(result.sceneGraph.meshEntries().count == 2)
 }
 
+// #301: a channel whose pointer cannot be mapped (the aspect ratio follows the view) is named in the warning.
+@Test
+func gltfSkippedPointerIsNamedInTheWarning() throws {
+    var data = Data()
+    [Float](arrayLiteral: 0, 1, 1.5, 2).withUnsafeBytes { data.append(contentsOf: $0) }
+    let json = """
+    {
+      "asset": {"version": "2.0"},
+      "extensionsUsed": ["KHR_animation_pointer"],
+      "scenes": [{"nodes": [0]}],
+      "nodes": [{"name": "Eye", "camera": 0}],
+      "cameras": [{"type": "perspective", "perspective": {"yfov": 0.5, "aspectRatio": 1.5, "znear": 0.1, "zfar": 100}}],
+      "animations": [{
+        "samplers": [{"input": 0, "output": 1}],
+        "channels": [{"sampler": 0, "target": {"path": "pointer", "extensions": {"KHR_animation_pointer": {"pointer": "/cameras/0/perspective/aspectRatio"}}}}]
+      }],
+      "accessors": [
+        {"bufferView": 0, "componentType": 5126, "count": 2, "type": "SCALAR", "min": [0], "max": [1]},
+        {"bufferView": 1, "componentType": 5126, "count": 2, "type": "SCALAR"}
+      ],
+      "bufferViews": [
+        {"buffer": 0, "byteOffset": 0, "byteLength": 8},
+        {"buffer": 0, "byteOffset": 8, "byteLength": 8}
+      ],
+      "buffers": [{"byteLength": \(data.count), "uri": "data:application/octet-stream;base64,\(data.base64EncodedString())"}]
+    }
+    """
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
+    try Data(json.utf8).write(to: url)
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let result = try GLTFAsset(url: url, device: device).makeSceneGraph(device: device)
+    #expect(result.warnings.contains { $0.contains("/cameras/0/perspective/aspectRatio") }, "\(result.warnings)")
+}
+
 // #54: KHR_animation_pointer channels for visibility, lights and cameras become property channels.
 @Test
 func gltfPointerAnimationsAreMapped() throws {

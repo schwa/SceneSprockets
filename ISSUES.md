@@ -6639,14 +6639,18 @@ Blinn-Phong and PBR sample each light's shadow while shading (#102), so a light 
 ## 301: glTF animation channels with unsupported pointers are skipped
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:assets, area:animation, effort:s
 created: 2026-11-07T15:41:13Z
+updated: 2026-11-07T16:17:30Z
+closed: 2026-11-07T16:17:30Z
 +++
 
 GLTFSceneGraph skips KHR_animation_pointer channels whose pointer it does not support, such as camera xmag and aspectRatio, and reports '<n> animation channels skipped' in warnings. Listed under Limitations in the README.
+
+- `2026-11-07T16:17:31Z`: Closed as by design, with a better warning. Every KHR_animation_pointer target the scene graph can represent is mapped: node TRS/weights/visibility, all KHR_lights_punctual properties, camera yfov/ymag/znear/zfar, and every animatable material factor and texture transform (MetalSprocketsGLTF). The only pointers that cannot map are camera orthographic/xmag and perspective/aspectRatio: a camera's aspect ratio follows the view, as in SceneKit, so there is nothing to animate. The warning now names the skipped pointers (up to five, then a count) instead of only counting them. Test gltfSkippedPointerIsNamedInTheWarning failed before (count only), passes now.
 
 ---
 
