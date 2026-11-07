@@ -7385,3 +7385,27 @@ SceneGraph.Shape has no teapot. The Utah teapot is the usual test object in 3D g
 - Show it on the keynote's Shapes slide. The shapes on that slide could be reordered to fit it; their current sizes are good and should stay.
 
 ---
+
+## 337: No spatial acceleration structure for culling, hit testing and queries
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:scenegraph, effort:l
+created: 2026-11-07T18:39:49Z
++++
+
+SceneSprockets has no spatial acceleration structure (for example a bounding volume hierarchy, octree or grid). Work that asks "what is near here?" or "what does this ray or frustum touch?" goes through every node or every triangle:
+
+- Frustum culling tests every mesh entry each frame.
+- Hit testing walks every node and then every triangle of each mesh it reaches.
+- There is no general query for nodes in a region (box, sphere) or nearest to a point.
+
+This costs more as scenes grow (thousands of nodes, high-poly meshes).
+
+Open question (per schwa): where should this live? Candidates: SceneSprockets (node-level structure that follows the scene graph and its change tracking), SwiftMesh (per-mesh triangle structure, reusable outside SceneSprockets), or a separate package. A split is also possible: per-mesh triangle structures in SwiftMesh, node-level structure in SceneSprockets.
+
+- `2026-11-07T18:39:49Z`: Question 1 (decision): Where should the spatial acceleration structure live: SceneSprockets, SwiftMesh, a separate package, or split (triangles in SwiftMesh, nodes in SceneSprockets)?
+
+---
