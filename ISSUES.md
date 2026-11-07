@@ -5846,6 +5846,7 @@ Left over from #257. Particle simulation and drawing (SceneParticleSystem simula
 Part of #255.
 
 - `2026-11-07T16:00:59Z`: Transform gizmo part fixed: the overlay draws camera-relative (origin minus camera position, computed in Double) with a rotation-only view, and SceneViewport.worldSizeOfPoint (which sizes the handles) projects camera-relative too. New SceneViewport.rotationOnlyViewMatrix inverts the camera rotation alone, so it stays precise far away. Test drawsTheSameFarFromOrigin (translate/rotate/scale at 2^20) failed before with 1159-9846 of 40000 pixels differing; now passes. Title narrowed to the particle part, which is still open: particle positions live in MetalSprocketsParticles buffers, so it needs a change in that package.
+- `2026-11-08T02:26:28Z`: Autonomous run: not changed. Particle positions are simulated and stored in world-space Float inside MetalSprocketsParticles buffers, so a fix needs a reference-frame choice in that package (simulate relative to the emitter or a floating origin, and pass a camera-relative view to render). That is the same design question as #255 (floating origin vs Double transforms vs moving reference frame). Unblocker: answer #255's question, then this can follow the chosen frame in MetalSprocketsParticles.
 
 ---
 
@@ -6077,6 +6078,7 @@ Leaving open for the steady-state cost. Further gains likely need SwiftECS chang
 - `2026-11-06T01:29:09Z`: Second autoresearch session (#283), geomean of the 5 benchmark metrics 419 -> 284 (-32%). Mostly SwiftECS: entity location holds its archetype, lazy ComponentType names, typed entity creation, specialized swapRemove and change dispatch, reuse of the last creation archetype, skipping storage publish with no observers. SceneSprockets: typed node creation, static key paths for Observation, cheaper transaction check. Now (ns/node): traversal ~142, flatten ~137, read ~38, write ~192, create+attach ~13,000. Pre-ECS: traversal ~100, read ~30, write ~180.
 - `2026-11-07T16:17:46Z`: Autonomous run: not changed. Per the 2026-11-05 answer ('keep open, measure later') and two autoresearch sessions since: traversal ~142 ns/node (pre-ECS ~100), read ~38 (~30), write ~192 (~180). The remaining cost is mostly ComponentRef retain/release; the next real gain needs a non-retaining read path in SwiftECS, which is outside this repo. Tuning SceneSprockets further against the benchmark would be overfitting. Unblocker: decide whether to add that SwiftECS read path, or accept the current cost and close.
 - `2026-11-07T16:59:56Z`: Question 2 (decision): Add a non-retaining read path to SwiftECS to close the remaining gap, or accept the current cost (traversal ~142 vs ~100 ns/node) and close?
+- `2026-11-07T23:23:50Z`: Answer 2: file issues on swiftecs
 
 ---
 
@@ -6628,6 +6630,7 @@ The PBR renderer deforms morph targets and skins on the GPU. Blinn-Phong and Sha
 
 - `2026-11-07T16:22:50Z`: Autonomous run: scoped, not changed. Design that fits the renderer: a compute pre-pass in SceneGraphElement that, for each morphed or skinned mesh entry drawn by a CPU-deforming renderer, writes deformed positions and normals into an output vertex buffer with the mesh's layout (one per frame in flight, like the shadow map slots), from the rest buffers, GPU morph-delta buffers (cached per node) and the skin influence buffer the shadow pass already builds (Shadows.swift caster .skinned) plus joint matrices. A QueueBarrier(after: .dispatch, before: .vertex) orders it before the scene pass. Blinn-Phong, ShaderMaterial and the debug view then draw the GPU-deformed mesh; hit testing keeps the CPU path. Punting: it is a renderer-wide change with frames-in-flight synchronization (the class of bug behind #59 and #242, which only shows live), and it adds per-frame GPU memory (deformed vertex buffers x frames in flight). Unblocker: approve this design (or prefer skinning in the Blinn-Phong vertex shader instead, which avoids extra buffers but leaves ShaderMaterial on the CPU).
 - `2026-11-07T16:59:56Z`: Question 1 (decision): Approve the GPU compute pre-pass design for deforming Blinn-Phong and ShaderMaterial meshes (one output buffer per frame in flight), or prefer skinning in the Blinn-Phong vertex shader (cheaper, but ShaderMaterial stays on the CPU)?
+- `2026-11-07T23:24:12Z`: Answer 1: approved pre-pass
 
 ---
 
@@ -6664,6 +6667,7 @@ Blinn-Phong and PBR sample each light's shadow while shading (#102), so a light 
 
 - `2026-11-07T16:01:17Z`: Autonomous run: scoped, not changed. ShaderMaterial gets no lights and no shadow data (ShaderMaterial.h has only ShaderMaterialTransforms), so its lighting is whatever the user's shader does, and the renderer cannot know which lights affect a pixel. Per-light shadows therefore need new API: pass the lights and the shadow map (slices, matrices, comparison sampler) to shader materials, add a sampling helper to ShaderMaterial.h, and let a ShaderMaterial opt into in-shader shadows (as SamplesShadowsInShader does for Blinn-Phong and PBR), keeping the screen-space mask for materials that do not. Punting: that is an API design decision. Question: should ShaderMaterial get lights and shadow sampling (opt-in), or is the screen-space approximation the intended behavior for custom shaders?
 - `2026-11-07T16:59:55Z`: Question 1 (decision): Should ShaderMaterial get opt-in lights and in-shader shadow sampling (like Blinn-Phong and PBR), or is the screen-space shadow mask the intended behavior for custom shaders?
+- `2026-11-07T23:24:45Z`: Answer 1: we need to be consistent
 
 ---
 
@@ -6924,6 +6928,8 @@ SceneView offers no keyboard or game controller navigation. There is no built-in
 Related: Documentation/Features.md lists 'Camera controllers: first person, fly, follow' and 'Game controller and keyboard input mapping' as not done.
 
 - `2026-11-07T17:56:37Z`: Related: #312 (configurable camera control; WASD/controller could be one of its modes).
+- `2026-11-08T01:33:09Z`: Unblocked: Interaction3D fixed the FPV gaps that made us drop our own FlyNavigation (Interaction3D #39 start from bound camera pose and follow external changes, #40 cross-platform and opt-in toolbar, #41 WASD gated on view focus, #42 Q/E altitude, arrow-key look, Shift fast-move). Fixes are on Interaction3D main after 0.1.16 and are not yet in a tagged release. SceneSprockets still pins upToNextMinor 0.1.16.
+- `2026-11-08T02:26:12Z`: Autonomous run: blocked on a release. Interaction3D main (cc8f4e5c) is pushed with the FPV fixes (#39-#42), but the newest tag is still 0.1.16. SceneSprockets pins upToNextMinor(from: 0.1.16) in Package.swift and the Demo and Composer packages; pinning a branch or revision in a library manifest is not acceptable, and I may not create or push tags. Unblocker: tag Interaction3D 0.1.17 (and push it); then this can use FPVMovementModifier behind SceneCameraControl.
 
 ---
 
@@ -7184,7 +7190,11 @@ Steps to reproduce:
 Expected: the glass objects fade in and out smoothly with the rest of the slide.
 Actual: the glass objects look wrong during both transitions.
 
-- `2026-11-07T18:17:59Z`: Investigated with renders of Blend Modes -> Glass -> PBR Extensions (auto-advance, 2 s per slide). Observed: (1) the checkered wall and colored bars look about as bright mid-fade as when fully faded in, while the title and code panel fade normally; (2) the three glass objects are missing for most of the fade-in and fade-out. Ruled out: instanced drawing of the tiles (one mesh per tile looks the same) and the PBR transmission pre-pass (transmissionFactor 0 looks the same). Blinn-Phong outputs straight alpha with emission included, and faded entries are classified as transparent, so neither explains it. Punting: root cause still unclear. Unblocker: a GPU capture of one mid-fade frame (Glass at about 40% opacity) to see which pass draws the wall and with what blend state, or confirmation that what you see matches (1) and (2).
+\- `2026-11-07T18:17:59Z`: Investigated with renders of Blend Modes -> Glass -> PBR Extensions (auto-advance, 2 s per slide). Observed: (1) the checkered wall and colored bars look about as bright mid-fade as when fully faded in, while the title and code panel fade normally; (2) the three glass objects are missing for most of the fade-in and fade-out. Ruled out: instanced drawing of the tiles (one mesh per tile looks the same) and the PBR transmission pre-pass (transmissionFactor 0 looks the same). Blinn-Phong outputs straight alpha with emission included, and faded entries are classified as transparent, so neither explains it. Punting: root cause still unclear. Unblocker: a GPU capture of one mid-fade frame (Glass at about 40% opacity) to see which pass draws the wall and with what blend state, or confirmation that what you see matches (1) and (2).
+\- `2026-11-08T02:25:28Z`: Root cause found (renders of the Glass slide with the slide node at opacity 0.5, using scenesprockets-demos --render and a temporary debug hook, now reverted):
+1. Wall and bars too bright mid-fade: Blinn-Phong materials default to cullMode .none, and transparent entries draw back faces then front faces (#120). A faded closed box therefore blends twice: 0.5 + 0.5 x 0.5 = 75% coverage. Measured: a light wall tile is sRGB 172 at opacity 0.5 vs 184 at 1; one blended layer would be about 145. The same applies to every faded closed Blinn-Phong mesh, not only this slide.
+2. Glass missing mid-fade: the PBR transmission backdrop is built by makeOpaqueContent (SceneGraphRenderer.swift:286), which keeps only !isTransparent entries. Once the slide fades, the wall and bars become transparent, so the backdrop is empty and the faded glass refracts black; only its highlights remain.
+Punting: both fixes change renderer behavior for every fade, so they need a decision. Question: for node-opacity fades, should a mesh fade as one surface (depth prepass for faded entries, so only the nearest face blends), or should faded entries just cull back faces (cheap, but double-sided planes seen from behind vanish while fading)? And should the transmission backdrop include transparent and faded entries of other renderers?
 
 ---
 
@@ -7422,12 +7432,13 @@ Open question (per schwa): where should this live? Candidates: SceneSprockets (n
 ## 338: Level of detail switches meshes abruptly (visible pops)
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:renderer, effort:m
 created: 2026-11-07T18:52:49Z
-updated: 2026-11-07T18:52:50Z
+updated: 2026-11-07T23:25:11Z
+closed: 2026-11-07T23:25:11Z
 +++
 
 When a node with levelsOfDetail crosses a switch distance, its mesh changes from one frame to the next with no transition. The change is easy to see as a pop. The keynote's Level of Detail slide shows it: the shapes move back and forth across both switch distances, and each crossing is abrupt.
@@ -7642,9 +7653,10 @@ priority: low
 kind: feature
 labels: area:ui, effort:m
 created: 2026-11-07T19:00:30Z
-updated: 2026-11-07T19:00:30Z
 +++
 
 SceneView's camera control (configured with SceneCameraControl, #312) stops as soon as a drag or scroll ends: there is no inertia (the camera does not keep moving and slow down). It also has no fly or pan-only interaction modes, which SCNCameraController offers. Interaction3D, which SceneView uses for camera control, has neither.
+
+- `2026-11-08T01:33:09Z`: Related: #313. Interaction3D now has an FPV fly mode that can start from the bound camera matrix (Interaction3D #39-#42, on main after 0.1.16, untagged). That covers the fly-mode part of this issue once SceneSprockets uses it; inertia and pan-only modes are still missing.
 
 ---
