@@ -5,27 +5,44 @@ import Metal
 import SwiftMesh
 import UniformTypeIdentifiers
 
-/// Saves and loads a scene graph as a package directory (`.scenesprocketsd`): `scene.json` for the graph, and
-/// `textures/` for textures read back from the GPU. Material and environment map types register themselves, because
-/// the core module does not know the renderer modules (#52, #156).
+/// Saves and loads a scene graph as a package directory.
+///
+/// The package (`.scenesprocketsd`) holds `scene.json` for the graph and `textures/` for textures that the archive
+/// reads back from the GPU. The core module does not know the renderer modules, so you give the archive the material
+/// and environment map types that the scene uses.
 public struct SceneArchive {
+    /// The file extension of a scene package.
     public static let pathExtension = "scenesprocketsd"
     static let sceneFileName = "scene.json"
     static let texturesDirectoryName = "textures"
     static let formatVersion = 1
 
+    /// The material types that the archive can save and load.
     public var materialTypes: [any ArchivableMaterial.Type]
+    /// The environment map types that the archive can save and load.
     public var environmentMapTypes: [any ArchivableEnvironmentMap.Type]
-    /// Saves meshes that are not shapes, such as generated geometry. Without one they are skipped with a warning
-    /// (#158).
+    /// The codec that saves meshes that are not shapes, such as generated geometry.
+    ///
+    /// If it is `nil`, the archive skips these meshes and adds a warning.
     public var meshCodec: (any ArchivableMeshCodec)?
-    /// Loads model files kept by reference (#157). Nodes with a modelSource are saved as their file only when the
-    /// archive has one; otherwise their subtree is saved like any other.
+    /// The loader for model files that the package keeps by reference.
+    ///
+    /// The archive saves a node with a `modelSource` as a reference to its file only when it has a loader. Otherwise
+    /// it saves the node's subtree like any other.
     public var modelLoader: (any ArchivableModelLoader)?
-    /// Metal libraries that saved shaders (ShaderMaterial) refer to by name. A compiled function does not say where
-    /// its library came from, so the app names the libraries it uses.
+    /// The Metal libraries that saved shader materials refer to, by name.
+    ///
+    /// A compiled function does not record its library, so the app names the libraries that it uses.
     public var shaderLibraries: [String: any MTLLibrary]
 
+    /// Creates an archive.
+    ///
+    /// - Parameters:
+    ///   - materialTypes: The material types that the archive can save and load.
+    ///   - environmentMapTypes: The environment map types that the archive can save and load.
+    ///   - shaderLibraries: The Metal libraries that shader materials use, by name.
+    ///   - meshCodec: The codec for meshes that are not shapes.
+    ///   - modelLoader: The loader for model files that the package keeps by reference.
     public init(materialTypes: [any ArchivableMaterial.Type] = [], environmentMapTypes: [any ArchivableEnvironmentMap.Type] = [], shaderLibraries: [String: any MTLLibrary] = [:], meshCodec: (any ArchivableMeshCodec)? = nil, modelLoader: (any ArchivableModelLoader)? = nil) {
         self.materialTypes = materialTypes
         self.environmentMapTypes = environmentMapTypes
@@ -34,7 +51,10 @@ public struct SceneArchive {
         self.modelLoader = modelLoader
     }
 
-    /// Replaces anything at `url`. Returns warnings for what could not be saved.
+    /// Saves a scene graph as a package, and replaces anything at the URL.
+    ///
+    /// - Returns: Messages about parts of the scene that the archive could not save.
+    /// - Throws: An error if encoding or writing fails.
     @discardableResult
     public func write(_ sceneGraph: SceneGraph, to url: URL) throws -> [String] {
         let capture = try capture(sceneGraph)
@@ -42,9 +62,16 @@ public struct SceneArchive {
         return capture.warnings
     }
 
-    /// Everything the archive's files hold, as values. Read the graph on the thread that owns it; later edits do not
-    /// change the capture, and it can be written on any thread (#238). `textureCache` keeps texture bytes between
-    /// captures, so unchanged textures are read back from the GPU once.
+    /// Returns the contents of the package files as values, to write later.
+    ///
+    /// Call this method on the thread that owns the scene graph. Later edits do not change the capture, and you can
+    /// write it on any thread.
+    ///
+    /// - Parameters:
+    ///   - sceneGraph: The scene graph to save.
+    ///   - textureCache: A cache that keeps texture bytes between captures, so that the archive reads each unchanged
+    ///     texture from the GPU only once.
+    /// - Throws: An error if encoding fails or a texture cannot be read.
     public func capture(_ sceneGraph: SceneGraph, textureCache: TextureCache? = nil) throws -> Capture {
         let context = SceneArchiveContext(directory: nil, device: nil, archive: self)
         let encoder = JSONEncoder()
@@ -67,11 +94,14 @@ public struct SceneArchive {
         let file: String
     }
 
-    /// Texture file bytes by texture. Textures are not edited in place, so the bytes stay valid while the texture
-    /// lives. Use from one thread.
+    /// A cache of texture file bytes for repeated captures.
+    ///
+    /// Textures do not change in place, so the bytes stay correct while the texture exists. Use a cache from one
+    /// thread only.
     public final class TextureCache {
         private var entries: [ObjectIdentifier: (texture: any MTLTexture, isPNG: Bool, data: Data)] = [:]
 
+        /// Creates an empty cache.
         public init() {}
 
         func data(for texture: any MTLTexture, isPNG: Bool) throws -> Data {
@@ -90,13 +120,17 @@ public struct SceneArchive {
         }
     }
 
+    /// The contents of a package's files, made by ``SceneArchive/capture(_:textureCache:)``.
     public struct Capture: Sendable {
         let scene: Data
         // Textures and mesh files by path in the package.
         let files: [String: Data]
+        /// Messages about parts of the scene that the archive could not save.
         public let warnings: [String]
 
-        /// Replaces anything at `url`.
+        /// Writes the package files, and replaces anything at the URL.
+        ///
+        /// - Throws: An error if a file cannot be written.
         public func write(to url: URL) throws {
             let fileManager = FileManager.default
             if fileManager.fileExists(atPath: url.path) {
@@ -112,6 +146,13 @@ public struct SceneArchive {
         }
     }
 
+    /// Loads a scene graph from a package.
+    ///
+    /// - Parameters:
+    ///   - url: The package to read.
+    ///   - device: The device for meshes and textures.
+    /// - Returns: The scene graph, and messages about parts of the package that the archive could not load.
+    /// - Throws: A ``SceneArchiveError``, or an error if a file cannot be read or decoded.
     public func read(from url: URL, device: MTLDevice) throws -> (sceneGraph: SceneGraph, warnings: [String]) {
         let context = SceneArchiveContext(directory: url, device: device, archive: self)
         let decoder = JSONDecoder()
@@ -122,48 +163,84 @@ public struct SceneArchive {
     }
 }
 
-/// Loads a model file kept by reference in the package (#157), for example a glTF.
+/// A loader for model files that a scene package keeps by reference, such as glTF files.
 public protocol ArchivableModelLoader {
-    // The file's subtree under one root node, and loader warnings.
+    /// Loads a model file.
+    ///
+    /// - Parameters:
+    ///   - url: The model file.
+    ///   - context: The archive context, for the device and warnings.
+    /// - Returns: The file's subtree under one root node, and messages from the loader.
     func load(_ url: URL, context: SceneArchiveContext) throws -> (node: SceneGraph.Node, warnings: [String])
 }
 
-/// Writes and reads meshes that are not shapes as files in the package (#158). Materials stay in scene.json; a codec
-/// may also write them into its file for other tools.
+/// A codec that saves meshes that are not shapes as files in a scene package.
+///
+/// The exact materials stay in `scene.json`. A codec can also write materials into its file for other tools.
 public protocol ArchivableMeshCodec {
-    // Adds the mesh's file to the package through `context` and returns its path.
+    /// Adds a file for the mesh to the package and returns its path.
+    ///
+    /// - Parameters:
+    ///   - mesh: The mesh to save.
+    ///   - materials: The materials of the mesh's submeshes.
+    ///   - name: A name for the mesh, for example the node label.
+    ///   - context: The archive context. Use ``SceneArchiveContext/newFile(in:pathExtension:)`` and
+    ///     ``SceneArchiveContext/addFile(_:data:)`` to add the file.
+    /// - Returns: The path of the file in the package.
     func encode(_ mesh: MetalMesh, materials: [any Material], name: String?, context: SceneArchiveContext) throws -> String
+    /// Reads a mesh from a file in the package.
+    ///
+    /// - Parameters:
+    ///   - path: The path that ``encode(_:materials:name:context:)`` returned.
+    ///   - context: The archive context, for the device and the file.
     func decode(path: String, context: SceneArchiveContext) throws -> MetalMesh
 }
 
-/// A material that can be saved: it encodes itself, textures through `SceneArchiveContext`.
+/// A material that a scene archive can save and load.
+///
+/// The material encodes itself with `Codable`. It encodes textures through the ``SceneArchiveContext`` of the coder.
 public protocol ArchivableMaterial: Material, Codable {
-    // Stored in scene.json to find the type again; unique among registered types.
+    /// The name that identifies the material type in `scene.json`. It must be unique among the archive's types.
     static var archiveTypeName: String { get }
-    // Why this material cannot be saved with `context`, or nil. Checked before encoding; a reason skips the material
-    // with a warning instead of failing the whole archive.
+    /// Returns why the material cannot be saved, or `nil` if it can.
+    ///
+    /// The archive calls this method before it encodes the material. If there is a reason, the archive skips the
+    /// material and adds a warning, instead of failing. The default implementation returns `nil`.
     func archiveProblem(context: SceneArchiveContext) -> String?
 }
 
 public extension ArchivableMaterial {
+    /// Returns `nil`: the material can always be saved.
     func archiveProblem(context _: SceneArchiveContext) -> String? {
         nil
     }
 }
 
-/// An environment map that can be saved. Environment maps are classes, so decoding is a static function.
+/// An environment map that a scene archive can save and load.
+///
+/// Environment maps are classes, so decoding is a static function instead of an initializer.
 public protocol ArchivableEnvironmentMap: EnvironmentMap {
+    /// The name that identifies the map type in `scene.json`. It must be unique among the archive's types.
     static var archiveTypeName: String { get }
+    /// Encodes the map. Encode textures through the coder's ``SceneArchiveContext``.
     func encode(to encoder: Encoder) throws
+    /// Decodes a map that ``encode(to:)`` encoded.
     static func decodeEnvironmentMap(from decoder: Decoder) throws -> any EnvironmentMap
 }
 
+/// Errors from saving or loading a scene archive.
 public enum SceneArchiveError: Error, CustomStringConvertible {
+    /// The coder has no ``SceneArchiveContext``. Encode and decode scene graphs through ``SceneArchive``.
     case missingContext
+    /// Reading needs a device, and there is none.
     case missingDevice
+    /// The archive cannot save the texture. The value gives the reason.
     case unsupportedTexture(String)
+    /// The texture file cannot be read. The value is the file name.
     case unreadableTexture(String)
+    /// The archive cannot save or read the mesh. The value gives the reason.
     case unsupportedMesh(String)
+    /// The package has a newer format version than this code can read.
     case unsupportedFormatVersion(Int)
 
     public var description: String {
@@ -179,11 +256,14 @@ public enum SceneArchiveError: Error, CustomStringConvertible {
 }
 
 public extension CodingUserInfoKey {
-    // swiftlint:disable:next force_unwrapping - init(rawValue:) never fails
-    static let sceneArchive = CodingUserInfoKey(rawValue: "io.schwa.SceneSprockets.sceneArchive")!
+    /// The key for the ``SceneArchiveContext`` in a coder's user info.
+    static let sceneArchive = CodingUserInfoKey(rawValue: "io.schwa.SceneSprockets.sceneArchive")! // swiftlint:disable:this force_unwrapping
 }
 
 public extension Encoder {
+    /// The archive context of the encoder.
+    ///
+    /// - Throws: ``SceneArchiveError/missingContext`` if the encoder is not encoding a scene archive.
     var sceneArchive: SceneArchiveContext {
         get throws {
             try (userInfo[.sceneArchive] as? SceneArchiveContext).orThrow(SceneArchiveError.missingContext)
@@ -192,6 +272,9 @@ public extension Encoder {
 }
 
 public extension Decoder {
+    /// The archive context of the decoder.
+    ///
+    /// - Throws: ``SceneArchiveError/missingContext`` if the decoder is not decoding a scene archive.
     var sceneArchive: SceneArchiveContext {
         get throws {
             try (userInfo[.sceneArchive] as? SceneArchiveContext).orThrow(SceneArchiveError.missingContext)
@@ -208,14 +291,17 @@ private extension Optional {
     }
 }
 
-/// State shared by everything coded in one archive: the registered types, textures already written or read, and
-/// warnings. Unchecked Sendable: coder userInfo values must be Sendable, but a context lives for one write or read on
-/// one thread.
+/// The state that everything coded in one archive shares.
+///
+/// The context holds the archive's types, the textures that are already written or read, the package files, and the
+/// warnings. Materials and other coded values get it from their coder's ``Swift/Encoder/sceneArchive`` or
+/// ``Swift/Decoder/sceneArchive``. A context exists for one write or read, on one thread.
 public final class SceneArchiveContext: @unchecked Sendable {
     // Where to read from; nil while capturing, which only encodes.
     let directory: URL?
     let archive: SceneArchive
     private let readDevice: MTLDevice?
+    /// Messages about parts of the scene that the archive skipped or changed.
     public private(set) var warnings: [String] = []
     private var writtenTextures: [ObjectIdentifier: TextureReference] = [:]
     // Textures named while encoding, written after (#238).
@@ -223,25 +309,31 @@ public final class SceneArchiveContext: @unchecked Sendable {
     // Other files to write, such as meshes (#158), by path in the package.
     private(set) var files: [String: Data] = [:]
 
-    /// A new file path in the package: `directory`/N.`pathExtension`.
+    /// Returns a new file path in the package, `directory/N.pathExtension`, with the next free number.
     public func newFile(in directory: String, pathExtension: String) -> String {
         "\(directory)/\(files.keys.count { $0.hasPrefix(directory + "/") }).\(pathExtension)"
     }
 
-    /// Adds a file to the package at `path`.
+    /// Adds a file to the package at a path.
     public func addFile(_ path: String, data: Data) {
         files[path] = data
     }
 
-    /// A file read from the package.
+    /// Returns the contents of a file in the package that the archive reads.
+    ///
+    /// - Throws: An error if the file cannot be read, or if the context is not reading.
     public func data(atPath path: String) throws -> Data {
         try Data(contentsOf: readDirectory.appendingPathComponent(path))
     }
 
+    /// Returns the URL of a file in the package that the archive reads.
+    ///
+    /// - Throws: An error if the context is not reading.
     public func url(forPath path: String) throws -> URL {
         try readDirectory.appendingPathComponent(path)
     }
 
+    /// The archive's mesh codec, if any.
     public var meshCodec: (any ArchivableMeshCodec)? {
         archive.meshCodec
     }
@@ -252,6 +344,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
     // Model files already copied into the package, by source, so shared ones are written once.
     var modelFiles: [SceneGraph.ModelSource: String] = [:]
 
+    /// The archive's model loader, if any.
     public var modelLoader: (any ArchivableModelLoader)? {
         archive.modelLoader
     }
@@ -302,6 +395,9 @@ public final class SceneArchiveContext: @unchecked Sendable {
         self.archive = archive
     }
 
+    /// The device for meshes and textures that the archive reads.
+    ///
+    /// - Throws: ``SceneArchiveError/missingDevice`` if the context is not reading.
     public var device: MTLDevice {
         get throws {
             try readDevice.orThrow(SceneArchiveError.missingDevice)
@@ -328,14 +424,18 @@ public final class SceneArchiveContext: @unchecked Sendable {
         pendingConstraints = []
     }
 
+    /// Returns the name of a shader library in ``SceneArchive/shaderLibraries``, or `nil` if the archive does not
+    /// have it.
     public func shaderLibraryName(for library: any MTLLibrary) -> String? {
         archive.shaderLibraries.first { $0.value === library }?.key
     }
 
+    /// Returns the shader library with a name in ``SceneArchive/shaderLibraries``, or `nil` if there is none.
     public func shaderLibrary(named name: String) -> (any MTLLibrary)? {
         archive.shaderLibraries[name]
     }
 
+    /// Adds a message to ``warnings``.
     public func warn(_ message: String) {
         warnings.append(message)
     }
@@ -350,32 +450,48 @@ public final class SceneArchiveContext: @unchecked Sendable {
 
     // MARK: Textures
 
-    /// Where a texture is stored in the package, and what to rebuild it as.
+    /// The location of a texture in the package, and the properties to rebuild it with.
     public struct TextureReference: Codable, Equatable, Sendable {
+        /// The path of the texture file in the package.
         public var file: String
-        /// MTLPixelFormat raw value.
+        /// The raw value of the `MTLPixelFormat`.
         public var pixelFormat: UInt
+        /// The width, in pixels.
         public var width: Int
+        /// The height, in pixels.
         public var height: Int
+        /// Whether the texture has mipmaps.
         public var mipmapped: Bool
-        /// Only in .bin files (#180): nil for 2D, otherwise "2DArray", "cube", "cubeArray" or "3D".
+        /// The texture type of a `.bin` file: `nil` for 2D, or `"2DArray"`, `"cube"`, `"cubeArray"` or `"3D"`.
         public var type: String?
+        /// The depth of a 3D texture.
         public var depth: Int?
+        /// The number of slices of an array texture.
         public var arrayLength: Int?
-        /// Mip levels stored in the file, every slice's levels in turn. Nil stores level 0 and regenerates the rest.
+        /// The number of mip levels in the file, for every slice in turn.
+        ///
+        /// If it is `nil`, the file has only level 0, and the archive generates the other levels.
         public var levels: Int?
     }
 
-    /// A sampler's filters and address modes (#180), from the MTLSamplerDescriptor a material keeps.
+    /// The filters and address modes of a sampler, saved from the `MTLSamplerDescriptor` that a material keeps.
     public struct SamplerReference: Codable, Equatable, Sendable {
+        /// The minification filter.
         public var minFilter: String
+        /// The magnification filter.
         public var magFilter: String
+        /// The mipmap filter.
         public var mipFilter: String
+        /// The address mode for the s (u) coordinate.
         public var sAddressMode: String
+        /// The address mode for the t (v) coordinate.
         public var tAddressMode: String
+        /// The address mode for the r coordinate.
         public var rAddressMode: String
+        /// The maximum anisotropy.
         public var maxAnisotropy: Int
 
+        /// Creates a reference from a sampler descriptor.
         public init(_ descriptor: MTLSamplerDescriptor) {
             minFilter = Self.name(descriptor.minFilter)
             magFilter = Self.name(descriptor.magFilter)
@@ -386,6 +502,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
             maxAnisotropy = descriptor.maxAnisotropy
         }
 
+        /// A new sampler descriptor with these filters and address modes.
         public var descriptor: MTLSamplerDescriptor {
             let descriptor = MTLSamplerDescriptor()
             descriptor.minFilter = minFilter == "nearest" ? .nearest : .linear
@@ -491,6 +608,10 @@ public final class SceneArchiveContext: @unchecked Sendable {
         try Data(contentsOf: readDirectory.appendingPathComponent(reference.file))
     }
 
+    /// Returns the texture for a reference, and reads it from the package the first time.
+    ///
+    /// - Throws: ``SceneArchiveError/unreadableTexture(_:)`` if the file does not match the reference, or an error if
+    ///   it cannot be read.
     public func texture(for reference: TextureReference) throws -> MTLTexture {
         if let texture = readTextures[reference.file] {
             return texture
