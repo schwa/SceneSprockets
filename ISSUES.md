@@ -7615,3 +7615,18 @@ Starting points in MetalSprocketsExamples: Ray Traced Shadows (hardware-accelera
 Related: #337 (spatial acceleration structure; Metal acceleration structures could also serve hit testing).
 
 ---
+
+## 348: SceneView camera control has no inertia or fly mode
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:ui, effort:m
+created: 2026-11-07T19:00:30Z
+updated: 2026-11-07T19:00:30Z
++++
+
+SceneView's camera control (configured with SceneCameraControl, #312) stops as soon as a drag or scroll ends: there is no inertia (the camera does not keep moving and slow down). It also has no fly or pan-only interaction modes, which SCNCameraController offers. Interaction3D, which SceneView uses for camera control, has neither.
+
+---
