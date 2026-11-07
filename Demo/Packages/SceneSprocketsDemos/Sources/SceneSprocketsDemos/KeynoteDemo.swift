@@ -65,7 +65,7 @@ public final class KeynoteDemo: DemoScene {
     private static let flatDepth: Float = 0.01
     // The title slide's text; leaving the slide, it breaks into one 3D block per letter that tumbles away (#311).
     private static let introTitleSpecs: [(text: String, size: Float, y: Float, color: SIMD3<Float>)] = [
-        ("SceneSprockets", 1.6, 1.8, [0.95, 0.95, 0.97]),
+        ("SceneSprockets", 1.2, 1.7, [0.95, 0.95, 0.97]),
         ("for MetalSprockets", 0.6, 0.5, [0.6, 0.65, 0.75])
     ]
     private struct TumblingLetter {

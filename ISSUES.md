@@ -7542,12 +7542,13 @@ Expected (per schwa): a more exciting slide, with better lighting and more inter
 ## 344: Keynote title slide: "SceneSprockets" title is too big
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:demo, effort:xs
 created: 2026-11-07T18:53:55Z
-updated: 2026-11-07T18:53:56Z
+updated: 2026-11-07T19:08:53Z
+closed: 2026-11-07T19:08:53Z
 +++
 
 On the keynote's first slide, the "SceneSprockets" title (font size 1.6) is too big for the frame.
