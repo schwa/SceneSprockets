@@ -67,6 +67,19 @@ func keynoteShowing(_ title: String) throws -> KeynoteDemo {
     return keynote
 }
 
+// #329: picking a slide from the settings switches at once, with no transition.
+@Test
+@MainActor
+func keynoteSlidePickerSwitchesInstantly() throws {
+    let keynote = KeynoteDemo()
+    let index = try #require(KeynoteDemo.titles.firstIndex(of: "Physics"))
+    keynote[value: "Slide"] = Float(index)
+    keynote.update(time: 0, deltaTime: 1.0 / 60)
+    let slide = try #require(keynote.sceneGraph.root.children.first { $0.label == "Slide \(index + 1): Physics" })
+    #expect(slide.opacity == 1)
+    #expect(keynote[value: "Slide"] == Float(index))
+}
+
 // #70: the bump target moves vertices along the direction from the center, so vertices that share a position (one
 // per face) move together and the surface does not tear.
 @Test

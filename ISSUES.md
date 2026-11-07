@@ -7202,11 +7202,13 @@ Actual: the object gets a gizmo.
 ## 329: Keynote Slide picker jumps animate across the deck and show nothing
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:demo, effort:xs
 created: 2026-11-07T17:57:16Z
+updated: 2026-11-07T18:01:04Z
+closed: 2026-11-07T18:01:04Z
 +++
 
 Choosing a slide from the keynote's Slide picker (#309) runs the normal transition from the current slide. For a far-away slide, the camera flies across the deck while every slide between them is hidden, so nothing shows until the new slide fades in.
@@ -7272,7 +7274,6 @@ kind: feature
 labels: area:demo, effort:m
 depends: 331
 created: 2026-11-07T18:01:00Z
-updated: 2026-11-07T18:01:00Z
 +++
 
 None of the keynote's slides have presenter notes: there is no text describing what to say for each slide.

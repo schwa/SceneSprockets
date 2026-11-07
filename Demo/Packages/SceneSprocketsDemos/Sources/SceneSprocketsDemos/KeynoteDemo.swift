@@ -118,10 +118,11 @@ public final class KeynoteDemo: DemoScene {
     }
 
     override public func update(time: Float, deltaTime: Float) {
-        // The settings' Slide picker (#309): go there when the user picks one.
+        // The settings' Slide picker (#309) jumps straight to the slide: flying across the deck shows only empty space
+        // (#329).
         let picked = Int(self[value: "Slide"])
         if picked != current, slides.indices.contains(picked) {
-            go(by: picked - current)
+            show(slide: picked)
         }
         updateSlide(time: time, deltaTime: deltaTime)
         guard self[flag: "Auto-advance"] else {
