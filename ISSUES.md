@@ -2592,12 +2592,13 @@ Expected: each snippet compiles, given the obvious names (materials, nodes) it r
 ## 127: Keynote code panels: snippets do not match what the slide does
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:demo, effort:s
 created: 2026-10-16T00:06:57Z
-updated: 2026-11-07T15:46:17Z
+updated: 2026-11-07T15:57:48Z
+closed: 2026-11-07T15:57:48Z
 +++
 
 Some code panels in KeynoteDemo.swift differ from the code that builds the slide, or show demo-only API.
@@ -2605,6 +2606,8 @@ Some code panels in KeynoteDemo.swift differ from the code that builds the slide
 - Shadows slide: 'scene.shadows = SceneGraphShadows(...)' is a DemoScene property, not library API. Library users pass shadows to SceneView(..., shadows:).
 - Scene Graph slide: the orbit's parent is shown as 'sun', but the demo parents it to the slide (the sun is a sibling).
 - Actions slide: leaves out the rotate that runs in a group with the hop.
+
+- `2026-11-07T15:57:48Z`: Fixed: Shadows panel shows the library API, SceneView(..., shadows:), and aims the light with trs.translation and look(at:) instead of the demo-only .camera(eye:target:) (which did not compile either); the Scene Graph demo now parents the orbit to the sun, as the panel shows; the Actions panel includes the spin grouped with the hop. The changed snippets were compiled in a temporary test file (removed); slides 1, 5 and 12 checked in offscreen renders.
 
 ---
 

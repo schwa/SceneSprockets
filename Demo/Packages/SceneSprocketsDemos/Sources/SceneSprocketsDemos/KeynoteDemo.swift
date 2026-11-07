@@ -295,7 +295,8 @@ public final class KeynoteDemo: DemoScene {
             var up = Action.move(by: [0, 2, 0], duration: 0.6)
             up.timingMode = .easeInEaseOut
             let down = up.reversed()
-            cube.run(.repeatForever(.sequence([up, down, .wait(duration: 0.8)])))
+            let spin = Action.rotate(by: .pi, around: [0, 1, 0], duration: 0.6)
+            cube.run(.repeatForever(.sequence([.group([up, spin]), down, .wait(duration: 0.8)])))
             """, to: slide)
         case 6:
             addTitle(title, y: 4, to: slide)
@@ -343,8 +344,10 @@ public final class KeynoteDemo: DemoScene {
             shadowsSlide(slide)
             addCode("""
             let sun = Node(content: .light(Light(type: .directional, intensity: 1.5)))
-            sun.transform = .camera(eye: [3, 6, 4], target: .zero)
-            scene.shadows = SceneGraphShadows(intensity: 0.75, softness: 2)
+            sun.trs.translation = [3, 6, 4]
+            sun.look(at: .zero)
+            SceneView(sceneGraph: scene, renderers: renderers,
+                      shadows: SceneGraphShadows(intensity: 0.75, softness: 2))
             """, to: slide)
         case "Custom Shaders":
             customShadersSlide(slide)
@@ -495,8 +498,9 @@ public final class KeynoteDemo: DemoScene {
     private func sceneGraphSlide(_ slide: SceneGraph.Node) {
         // A sun, a planet orbiting it and a moon orbiting the planet: each orbit is a parent node that turns.
         addLight(to: slide, at: [0, 1.5, 0], color: [1, 0.85, 0.6], intensity: 40)
-        _ = SceneGraph.Node(parent: slide, shape: .sphere(radius: 0.8), material: BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([1, 0.75, 0.3])), device: demoDevice, trs: .init(translation: [0, 1.5, 0]))
-        let orbit = SceneGraph.Node(parent: slide, label: "Planet Orbit", trs: .init(translation: [0, 1.5, 0]))
+        let sun = SceneGraph.Node(parent: slide, shape: .sphere(radius: 0.8), material: BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([1, 0.75, 0.3])), device: demoDevice, trs: .init(translation: [0, 1.5, 0]))
+        // Parented to the sun, as the code panel shows; the sun does not turn, so only the orbit spins the planet.
+        let orbit = SceneGraph.Node(parent: sun, label: "Planet Orbit")
         orbit.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 8)))
         let planet = SceneGraph.Node(parent: orbit, shape: .sphere(radius: 0.4), material: BlinnPhongSceneMaterial.plastic([0.3, 0.55, 1]), device: demoDevice, trs: .init(translation: [3.2, 0, 0]))
         let moonOrbit = SceneGraph.Node(parent: planet, label: "Moon Orbit")
