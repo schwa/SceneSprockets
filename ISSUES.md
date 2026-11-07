@@ -7281,3 +7281,92 @@ None of the keynote's slides have presenter notes: there is no text describing w
 Expected: every slide has notes, shown in the presenter notes window (#331).
 
 ---
+
+## 333: Keynote Fog slide: fog switches on abruptly at the end of the transition
+
++++
+status: open
+priority: medium
+kind: bug
+labels: area:demo, effort:s
+created: 2026-11-07T18:04:39Z
+updated: 2026-11-07T18:04:40Z
++++
+
+Moving to the Fog slide in the keynote demo, the slide fades in without fog, then the fog switches on all at once near the end of the transition. The change is abrupt.
+
+Steps to reproduce:
+1. Open the Introduction to SceneSprockets demo (keynote).
+2. Go to the slide before Fog (Shadows) and advance to Fog.
+
+Expected: the fog is visible as the slide appears, or fades in smoothly.
+Actual: no fog during most of the transition, then a sudden jump to full fog.
+
+Related: #308. Scene-wide settings (fog, shadows, post-processing) now change once the outgoing slide has faded out, about 0.8 s into the transition; the same timing affects shadows in #326.
+
+---
+
+## 334: Keynote camera angle changes between slides instead of staying fixed
+
++++
+status: open
+priority: medium
+kind: bug
+labels: area:demo, effort:s
+created: 2026-11-07T18:04:45Z
+updated: 2026-11-07T18:04:49Z
++++
+
+The Shadows slide uses its own camera position (higher, looking down), unlike every other slide. Moving between Shadows and its neighbors (Lights before it, Fog after it) makes the camera swing up or down a lot during the transition.
+
+Steps to reproduce:
+1. Open the Introduction to SceneSprockets demo (keynote).
+2. Go to Shadows, then advance to Fog (or go back to Lights).
+
+Expected: the camera keeps the same height and angle as on other slides; only the sideways fly changes.
+Actual: the camera tilts sharply as it flies.
+
+Related: #326 (Lights to Shadows transition).
+
+## Proposed fix (per schwa)
+Like the Physics slide's dice tray: keep the camera at the deck's fixed height and angle, and tilt the Shadows slide's models instead so the shadows on the floor still show.
+
+- `2026-11-07T18:04:49Z`: Scope widened (per schwa): apply this to every slide where it makes sense, not only Shadows. Any slide that needs a different viewing angle should keep the deck's fixed camera height and angle and tilt its models instead, as the Physics slide does with the dice tray.
+
+---
+
+## 335: Keynote Materials slide shows too few objects to be interesting
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:demo, effort:s
+created: 2026-11-07T18:04:52Z
+updated: 2026-11-07T18:04:53Z
++++
+
+The keynote's Materials slide shows only a few objects, so it looks sparse and does not show much of what the materials can do.
+
+Expected (per schwa): a more exciting slide with more elements.
+
+---
+
+## 336: No built-in teapot shape
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:scenegraph, effort:s
+created: 2026-11-07T18:04:58Z
+updated: 2026-11-07T18:04:59Z
++++
+
+SceneGraph.Shape has no teapot. The Utah teapot is the usual test object in 3D graphics, but apps and demos that want one must load or build it themselves. The keynote's Shapes slide therefore cannot show one.
+
+## Proposed (per schwa)
+- Add a teapot as a built-in shape (.shape(.teapot)).
+- Show it on the keynote's Shapes slide. The shapes on that slide could be reordered to fit it; their current sizes are good and should stay.
+
+---
