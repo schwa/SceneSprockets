@@ -6626,6 +6626,8 @@ updated: 2026-11-07T15:41:13Z
 
 Blinn-Phong and PBR sample each light's shadow while shading (#102), so a light darkens only what it lights. ShaderMaterial meshes are darkened afterwards by a screen-space pass that applies all lights' shadows together, so a shadow from one light also darkens areas that other lights light. Listed under Limitations in the README.
 
+- `2026-11-07T16:01:17Z`: Autonomous run: scoped, not changed. ShaderMaterial gets no lights and no shadow data (ShaderMaterial.h has only ShaderMaterialTransforms), so its lighting is whatever the user's shader does, and the renderer cannot know which lights affect a pixel. Per-light shadows therefore need new API: pass the lights and the shadow map (slices, matrices, comparison sampler) to shader materials, add a sampling helper to ShaderMaterial.h, and let a ShaderMaterial opt into in-shader shadows (as SamplesShadowsInShader does for Blinn-Phong and PBR), keeping the screen-space mask for materials that do not. Punting: that is an API design decision. Question: should ShaderMaterial get lights and shadow sampling (opt-in), or is the screen-space approximation the intended behavior for custom shaders?
+
 ---
 
 ## 301: glTF animation channels with unsupported pointers are skipped
