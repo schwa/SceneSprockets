@@ -93,6 +93,14 @@ func keynotePresenterNotesFollowTheSlide() throws {
     #expect(model.slideIndex == index)
     #expect(model.title == KeynoteDemo.titles[index])
     #expect(model.nextTitle == KeynoteDemo.titles[index + 1])
+    #expect(!model.notes.isEmpty)
+}
+
+// #332: every slide has presenter notes, and no notes belong to a slide that does not exist.
+@Test
+@MainActor
+func keynoteEverySlideHasNotes() {
+    #expect(Set(KeynoteDemo.notes.keys) == Set(KeynoteDemo.titles))
 }
 
 // #311: leaving the title slide breaks its titles into 3D letters that fall away; coming back restores them.

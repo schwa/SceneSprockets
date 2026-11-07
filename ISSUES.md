@@ -7283,12 +7283,14 @@ Expected: a presenter notes window that shows the current slide's notes and stay
 ## 332: Keynote slides have no presenter notes content
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:demo, effort:m
 depends: 331
 created: 2026-11-07T18:01:00Z
+updated: 2026-11-07T18:52:26Z
+closed: 2026-11-07T18:52:26Z
 +++
 
 None of the keynote's slides have presenter notes: there is no text describing what to say for each slide.

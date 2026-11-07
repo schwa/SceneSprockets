@@ -179,7 +179,136 @@ public final class KeynoteDemo: DemoScene {
     }
 
     // Presenter notes by slide title (#331, #332).
-    static let notes: [String: String] = [:]
+    static let notes: [String: String] = [
+        "SceneSprockets": """
+        • SceneSprockets is a scene graph for Swift, built on MetalSprockets.
+        • Every slide in this talk is a live scene, rendered with the library.
+        • Watch the title: it breaks into 3D letters when we move on.
+        """,
+        "SceneView": """
+        • SceneView is the SwiftUI view: give it a scene graph and some renderers.
+        • Options such as allowsCameraControl give you orbit and zoom for free.
+        • Shadows are one more argument.
+        """,
+        "Scene Graph": """
+        • A tree of nodes. Each node has a transform, and children move with their parent.
+        • The planet orbits because its parent spins; the moon rides along on the planet.
+        • Nodes are stored in a SwiftECS world, so large scenes stay fast.
+        """,
+        "Shapes": """
+        • Built-in shapes: box, sphere, cylinder, teapot, cone, capsule, torus, plus 3D text and extruded paths.
+        • One line each: Node(shape:material:device:).
+        • The Utah teapot is a built-in shape now.
+        """,
+        "Materials": """
+        • Top row: Blinn-Phong, getting shinier from left to right.
+        • Middle row: PBR metals, from rough to polished.
+        • Bottom row: PBR plastics; the last two have a clear coat, like car paint.
+        • Both material types render in the same scene.
+        """,
+        "Lights": """
+        • Point, spot and directional lights are nodes like everything else.
+        • These three colored point lights orbit because their parent node spins.
+        • Range limits how far each light reaches.
+        """,
+        "Shadows": """
+        • Shadow maps from a directional sun light.
+        • Turn them on in SceneView with SceneGraphShadows; softness and intensity are settings.
+        """,
+        "Fog": """
+        • Distance fog: one property on the scene graph.
+        • The pillars fade into the fog between the start and end distances.
+        """,
+        "Opacity & Fades": """
+        • Node opacity is inherited: fade a parent and its children fade too.
+        • fadeIn and fadeOut are actions. These slide transitions use them.
+        """,
+        "Blend Modes": """
+        • Each material has a render state: blend mode, fill mode, culling, depth.
+        • Additive blending mixes the colored lights; the wireframe uses the lines fill mode.
+        """,
+        "Glass": """
+        • PBR transmission: the glass refracts what is behind it.
+        • Blinn-Phong and PBR objects behind the glass are refracted the same way.
+        """,
+        "PBR Extensions": """
+        • glTF PBR extensions: sheen, clear coat, iridescence, diffuse transmission and more.
+        • Each one is a few uniforms on the material.
+        """,
+        "Custom Shaders": """
+        • ShaderMaterial runs your own Metal vertex and fragment functions.
+        • Built-in samples: normals and rim lighting. Parameters such as time pass straight to the shader.
+        """,
+        "glTF & Model I/O": """
+        • Load glTF files and anything Model I/O reads (OBJ, USD) into a scene graph.
+        • The plant is glTF with its animation; the fireflies carry point lights.
+        """,
+        "Actions": """
+        • Actions are like SpriteKit and SceneKit actions: move, rotate, scale, fade, wait.
+        • Combine them with sequence, group and repeatForever. Timing modes ease them in and out.
+        """,
+        "Implicit Animation": """
+        • Change properties inside a transaction and they animate, like SwiftUI's withAnimation.
+        • The cubes shuffle to new random positions every few seconds.
+        """,
+        "Constraints": """
+        • Constraints run after actions: look at, distance, follow and more.
+        • Each cone points its tip at the moving ball.
+        """,
+        "Animation Blending": """
+        • Animation clips mix with weights, for example walk into run.
+        • The controller blends a bounce and a sway; the mixer applies the result.
+        """,
+        "Deformation": """
+        • Morph targets blend shapes with weights: the blob bumps and squashes.
+        • Skins bend meshes with joints: the tube follows its skeleton.
+        """,
+        "Particles": """
+        • GPU particle systems from MetalSprocketsParticles, attached to nodes.
+        • Campfire, geyser and fireworks are built-in presets.
+        """,
+        "Mesh Emitters": """
+        • Particles can be born on a mesh surface.
+        • The fire follows the fox's skinned, walking mesh, frame by frame.
+        """,
+        "Physics": """
+        • Rigid body physics: give a node a physics body and step the world.
+        • Each die uses a convex hull collision shape. They land on real faces.
+        """,
+        "Post-Processing": """
+        • Post-processing on the whole frame: color grading, contrast, saturation, vignette and more.
+        • The slide cycles through a few looks, such as noir.
+        """,
+        "Level of Detail": """
+        • Each node can switch to simpler meshes as it moves away from the camera.
+        • The far shapes switch to meshes with fewer triangles.
+        """,
+        "Performance": """
+        • The same mesh and material draw as one instanced call.
+        • Nodes outside the view are culled, so thousands of nodes stay fast.
+        """,
+        "SwiftECS World": """
+        • The scene graph's nodes live in a SwiftECS world, which you can use directly.
+        • These boids are a SwiftECS system that writes node transforms in bulk.
+        """,
+        "Hit Testing": """
+        • Click a shape: SceneView returns the hit node, and the shape hops.
+        • hitTest(ray) gives every hit, nearest first, with position and normal.
+        """,
+        "Gizmos": """
+        • Transform gizmos move, rotate and scale nodes; a selection outline shows what is selected.
+        • Both come from SceneSprocketsGizmos and plug into SceneView.
+        """,
+        "Debug Views": """
+        • One switch replaces every material with a debug view: normals, texture coordinates, UV checker, world position and more.
+        • Useful when a model looks wrong.
+        """,
+        "Thank You": """
+        • Thank you!
+        • Everything in the finale is the same library: particles, lights, glass, metal and actions.
+        • Questions?
+        """
+    ]
 
     // Sends the current slide to the presenter notes window.
     private func publishNotes() {
