@@ -63,7 +63,7 @@ struct DiceGeometry {
 
     // MARK: Solids
 
-    private static func solid(_ kind: DiceDemo.Kind) -> (vertices: [SIMD3<Float>], circumradius: Float) {
+    static func solid(_ kind: DiceDemo.Kind) -> (vertices: [SIMD3<Float>], circumradius: Float) {
         let phi = (1 + sqrt(Float(5))) / 2
         let vertices: [SIMD3<Float>]
         let circumradius: Float
@@ -112,7 +112,7 @@ struct DiceGeometry {
     }
 
     // The faces of the convex hull of `vertices`, each wound counterclockwise seen from outside.
-    private static func faces(of vertices: [SIMD3<Float>]) -> [[Int]] {
+    static func faces(of vertices: [SIMD3<Float>]) -> [[Int]] {
         let center = vertices.reduce(.zero, +) / Float(vertices.count)
         let tolerance: Float = 1e-3 * (vertices.map { simd_length($0 - center) }.max() ?? 1)
         var faces: [[Int]] = []
@@ -165,18 +165,30 @@ struct DiceGeometry {
     // MARK: Numbers
 
     // Per face: one number, or (for the D4) one number per corner.
-    private static func labels(_ kind: DiceDemo.Kind, faces: [[Int]], vertices: [SIMD3<Float>]) -> [[String]] {
+    static func labels(_ kind: DiceDemo.Kind, faces: [[Int]], vertices: [SIMD3<Float>]) -> [[String]] {
         if kind == .d4 {
             // Each corner shows its vertex's number, so the top vertex reads the same on every visible face.
             return faces.map { face in face.map { "\($0 + 1)" } }
         }
-        // Opposite faces add up to n + 1 (n - 1 for the D10's 0 to 9).
+        // Opposite faces add up to n + 1 (n - 1 for the D10's 0 to 9), as on store-bought dice.
         let normals = faces.map { face -> SIMD3<Float> in
             let points = face.map { vertices[$0] }
             return simd_normalize(points.reduce(.zero, +))
         }
         let count = faces.count
         var values = [Int](repeating: -1, count: count)
+        if kind == .d10 {
+            // Odd numbers around the top tip (vertex 0), so each opposite face, 9 minus it, is even.
+            let top = faces.indices.filter { faces[$0].contains(0) }
+            for (offset, index) in top.enumerated() {
+                values[index] = 2 * offset + 1
+                let opposite = faces.indices.min { simd_dot(normals[$0], normals[index]) < simd_dot(normals[$1], normals[index]) }
+                if let opposite {
+                    values[opposite] = 9 - values[index]
+                }
+            }
+            return values.map { ["\($0)"] }
+        }
         var next = 0
         for index in 0..<count where values[index] < 0 {
             let opposite = (0..<count).filter { values[$0] < 0 && $0 != index }.min { simd_dot(normals[$0], normals[index]) < simd_dot(normals[$1], normals[index]) }
@@ -186,7 +198,15 @@ struct DiceGeometry {
             }
             next += 1
         }
-        return values.map { [kind == .d10 ? "\($0)" : "\($0 + 1)"] }
+        if kind == .d6 {
+            // Western dice: 1, 2 and 3 meet at a corner counterclockwise, seen from outside. Swapping 3 and 4 mirrors
+            // the layout and keeps opposite faces adding up to 7.
+            func normal(_ value: Int) -> SIMD3<Float> { normals[values.firstIndex(of: value) ?? 0] }
+            if simd_dot(normal(0), simd_cross(normal(1), normal(2))) < 0 {
+                values = values.map { $0 == 2 ? 3 : $0 == 3 ? 2 : $0 }
+            }
+        }
+        return values.map { ["\($0 + 1)"] }
     }
 
     // The numbers mask and its alpha (for the normal map).

@@ -3045,15 +3045,18 @@ DiceGeometry builds dice with sharp edges. Real dice (and the old Dice by PCalc 
 ## 149: Dice demo: use real-world face numbering
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:demo, effort:xs
 created: 2026-10-22T01:05:11Z
-updated: 2026-11-07T15:46:17Z
+updated: 2026-11-07T16:08:32Z
+closed: 2026-11-07T16:08:32Z
 +++
 
 DiceGeometry numbers faces with a simple scheme: opposite faces add up to n + 1 (n - 1 for the D10, numbered 0 to 9), but the arrangement around each corner is arbitrary. Store-bought dice follow conventions (for example, a D6 with 1, 2, 3 meeting counterclockwise at a corner; a balanced D20). Done when each die kind matches a standard layout.
+
+- `2026-11-07T16:08:32Z`: Fixed: D6 now follows the Western layout (1, 2, 3 counterclockwise at a corner, seen from outside; swapping 3 and 4 when the generic numbering came out mirrored), and the D10 has its odd numbers around one tip and even numbers around the other (opposite faces add to 9). D8, D12 and D20 keep the standard opposite-sum rule (9, 13, 21); D4 shows vertex numbers as before. Not done: a 'balanced' D20 layout (several competing schemes); the D20 uses the common opposite-sum-21 convention. Tests: DiceNumberingTests (D6 chirality and D10 halves failed before; opposite sums for every kind).
 
 ---
 
