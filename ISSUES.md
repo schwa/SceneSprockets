@@ -7178,6 +7178,8 @@ Steps to reproduce:
 Expected: the glass objects fade in and out smoothly with the rest of the slide.
 Actual: the glass objects look wrong during both transitions.
 
+- `2026-11-07T18:17:59Z`: Investigated with renders of Blend Modes -> Glass -> PBR Extensions (auto-advance, 2 s per slide). Observed: (1) the checkered wall and colored bars look about as bright mid-fade as when fully faded in, while the title and code panel fade normally; (2) the three glass objects are missing for most of the fade-in and fade-out. Ruled out: instanced drawing of the tiles (one mesh per tile looks the same) and the PBR transmission pre-pass (transmissionFactor 0 looks the same). Blinn-Phong outputs straight alpha with emission included, and faded entries are classified as transparent, so neither explains it. Punting: root cause still unclear. Unblocker: a GPU capture of one mid-fade frame (Glass at about 40% opacity) to see which pass draws the wall and with what blend state, or confirmation that what you see matches (1) and (2).
+
 ---
 
 ## 328: Keynote slides show transform gizmos when objects are tapped
@@ -7250,6 +7252,8 @@ Expected: every face of the d20 shows its numeral.
 Actual: many faces show no numeral.
 
 Cause not investigated (for example whether the numerals are missing from the geometry or are hidden only by the debug view).
+
+- `2026-11-07T18:21:07Z`: Investigated. The d20 numbers atlas has all 20 numerals (dumped DiceGeometry(.d20).mask), and the base color and normal map use the same vertical flip, so the data is not missing. In Materials mode (the only mode that shows the dice texture; the debug modes replace every material, so no numerals there is expected), numerals on faces turned toward the camera render black and clear (15, 16, 17), while faces seen at a steep angle show only faint silver outlines or almost nothing (9, 13, 14, 18, 20), independent of atlas row. My guess (unverified): at grazing angles, Fresnel and the 0.15 clearcoat reflect the environment over the near-black numbers, so they nearly match the ivory body. Punting: fixing this is a look decision. Unblocker: which do you prefer: (a) stronger number color/less clearcoat for Classic Ivory, (b) a different die style on this slide, or (c) is the numeral loss you see in the Dice demo too (then it is a dice-material issue, not a keynote one)?
 
 ---
 
