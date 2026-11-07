@@ -926,7 +926,10 @@ public final class KeynoteDemo: DemoScene {
                 ? BlinnPhongSceneMaterial.plastic([0.95, 0.4, 0.6], shininess: 48)
                 : (try? PBRSceneMaterial(device: demoDevice, baseColor: [0.4, 0.6, 1, 1], metallic: 0, roughness: 0.3)) ?? BlinnPhongSceneMaterial.plastic([0.4, 0.6, 1])
             let sphere = SceneGraph.Node(parent: slide, shape: .sphere(radius: 0.6), material: material, device: demoDevice, trs: .init(translation: [Float(index) * 1.6 - 4, 1.2, 0]))
-            sphere.run(.sequence([.wait(duration: Float(index) * 0.3), .repeatForever(.sequence([.fadeOut(duration: 1), .fadeIn(duration: 1), .wait(duration: 0.5)]))]))
+            // Eased, with a pause while invisible: linear fades that turn around at once look abrupt (#340).
+            let fadeOut = SceneGraph.Action.fadeOut(duration: 1.2).timingMode(.easeInEaseOut)
+            let fadeIn = SceneGraph.Action.fadeIn(duration: 1.2).timingMode(.easeInEaseOut)
+            sphere.run(.sequence([.wait(duration: Float(index) * 0.3), .repeatForever(.sequence([fadeOut, .wait(duration: 0.3), fadeIn, .wait(duration: 0.6)]))]))
         }
     }
 

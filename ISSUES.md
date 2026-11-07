@@ -7461,12 +7461,13 @@ Expected (per schwa): a more exciting slide that shows off the blend modes, and 
 ## 340: Keynote Opacity & Fades slide looks abrupt
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:demo, effort:s
 created: 2026-11-07T18:53:15Z
-updated: 2026-11-07T18:53:16Z
+updated: 2026-11-07T19:15:14Z
+closed: 2026-11-07T19:15:14Z
 +++
 
 On the keynote's Opacity & Fades slide, the spheres' fades look abrupt rather than smooth.
@@ -7481,6 +7482,8 @@ Expected: each sphere fades smoothly out and back in.
 Actual: the fades look abrupt.
 
 Cause not investigated. Unverified possibilities: linear timing (no easing) makes the start and end of each fade sudden; or the change from opaque (opacity 1) to transparent rendering (opacity below 1) changes how a sphere looks at the moment a fade starts or ends (draw order, PBR faded-material switch).
+
+- `2026-11-07T19:15:14Z`: Measured: a lit sphere at opacity 1 and 0.99 differs by at most 2/255 per channel in both Blinn-Phong and PBR, so the opaque-to-transparent switch causes no pop. Changed the slide's fades to ease in and out (1.2 s each) with a 0.3 s pause while invisible; linear fades that reverse at once were the likely cause. Not checked by eye in the app.
 
 ---
 
