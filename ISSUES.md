@@ -2568,12 +2568,13 @@ SceneGraph.Constraint now has influenceFactor, isEnabled and an acceleration kin
 ## 126: Keynote code panels: snippets would not compile as written
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:demo, effort:s
 created: 2026-10-16T00:06:57Z
-updated: 2026-11-07T15:46:16Z
+updated: 2026-11-07T15:55:52Z
+closed: 2026-11-07T15:55:52Z
 +++
 
 The code panels in KeynoteDemo.swift show Swift that does not compile if pasted.
@@ -2583,6 +2584,8 @@ The code panels in KeynoteDemo.swift show Swift that does not compile if pasted.
 - Actions slide: 'down' is not defined.
 
 Expected: each snippet compiles, given the obvious names (materials, nodes) it refers to.
+
+- `2026-11-07T15:55:53Z`: Fixed: Scene Graph and Shapes snippets pass device:; Actions defines down as up.reversed(); Animation Blending declares the mixer and makes the controller var; Materials uses BlinnPhongSceneMaterial's initializer instead of the demo-only .plastic helper. Verified by compiling all five snippets in a temporary test file (short type names via private typealiases, per #128), then removed. Materials and Animation Blending panels checked in offscreen renders.
 
 ---
 

@@ -260,22 +260,23 @@ public final class KeynoteDemo: DemoScene {
             addCode("""
             let orbit = Node(parent: sun, label: "Planet Orbit")
             orbit.run(.repeatForever(.rotate(by: 2 * .pi, around: [0, 1, 0], duration: 8)))
-            let planet = Node(parent: orbit, shape: .sphere(radius: 0.4), material: blue)
+            let planet = Node(parent: orbit, shape: .sphere(radius: 0.4), material: blue, device: device)
             planet.trs.translation = [3.2, 0, 0]
             """, to: slide)
         case 2:
             addTitle(title, y: 4, to: slide)
             shapesSlide(slide)
             addCode("""
-            Node(shape: .box(width: 1, height: 1, length: 1), material: red)
-            Node(shape: .torus(ringRadius: 0.5, pipeRadius: 0.18), material: pink)
-            Node(shape: .text("Hello", fontName: "Helvetica-Bold", fontSize: 1), material: white)
+            Node(shape: .box(width: 1, height: 1, length: 1), material: red, device: device)
+            Node(shape: .torus(ringRadius: 0.5, pipeRadius: 0.18), material: pink, device: device)
+            Node(shape: .text("Hello", fontName: "Helvetica-Bold", fontSize: 1), material: white, device: device)
             """, to: slide)
         case 3:
             addTitle(title, y: 4, to: slide)
             materialsSlide(slide)
             addCode("""
-            BlinnPhongSceneMaterial.plastic([0.9, 0.35, 0.25], shininess: 44)
+            BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color([0.9, 0.35, 0.25]),
+                                    specular: .color(0.5), shininess: 44)
             try PBRSceneMaterial(device: device, baseColor: [0.95, 0.75, 0.3, 1],
                                  metallic: 1, roughness: 0.3)
             """, to: slide)
@@ -293,6 +294,7 @@ public final class KeynoteDemo: DemoScene {
             addCode("""
             var up = Action.move(by: [0, 2, 0], duration: 0.6)
             up.timingMode = .easeInEaseOut
+            let down = up.reversed()
             cube.run(.repeatForever(.sequence([up, down, .wait(duration: 0.8)])))
             """, to: slide)
         case 6:
@@ -416,7 +418,8 @@ public final class KeynoteDemo: DemoScene {
         case "Animation Blending":
             animationBlendingSlide(slide)
             addCode("""
-            let controller = AnimationController(clips: [bounce, sway])
+            let mixer = AnimationMixer(clips: [bounce, sway])
+            var controller = AnimationController(clips: [bounce, sway])
             controller.blend([0, 1], parameter: weight)
             controller.advance(by: deltaTime)
             mixer.apply(controller.layers)
