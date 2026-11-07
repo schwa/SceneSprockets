@@ -292,6 +292,11 @@ public final class KeynoteDemo: DemoScene {
         }
         sinceAdvance = 0
         let previous = slides[current]
+        // Shadows stay on while the Shadows slide is on screen, so they do not pop in or out (#326). Light masks keep the
+        // sun's shadows off the other slide.
+        if Self.titles[current] == "Shadows" || Self.titles[next] == "Shadows" {
+            shadows = shadowRenderer
+        }
         // Leaving the title slide, its flat titles extrude into 3D and turn so the depth shows, then the camera flies.
         // Coming back, they turn back and flatten.
         let morphsTitles = current == 0

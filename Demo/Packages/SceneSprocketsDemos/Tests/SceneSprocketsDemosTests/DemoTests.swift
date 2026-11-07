@@ -80,6 +80,19 @@ func keynoteSlidePickerSwitchesInstantly() throws {
     #expect(keynote[value: "Slide"] == Float(index))
 }
 
+// #326: shadows are on from the start of a transition into the Shadows slide, and stay on until it has faded out.
+@Test
+@MainActor
+func keynoteShadowsCoverTheShadowsSlideTransitions() throws {
+    let keynote = try keynoteShowing("Lights")
+    let next = try #require(keynote.actions.first { $0.name == "Next" })
+    next.perform()
+    #expect(keynote.shadows != nil)
+    next.perform()
+    keynote.update(time: 0, deltaTime: 0.1)
+    #expect(keynote.shadows != nil)
+}
+
 // #334: every slide uses the same camera height, so transitions only fly sideways.
 @Test
 @MainActor

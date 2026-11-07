@@ -7136,12 +7136,13 @@ Switch between normal Z and reverse-Z automatically, with no side effects: every
 ## 326: Keynote transition between Lights and Shadows slides still looks wrong
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:demo, effort:s
 created: 2026-11-07T17:55:56Z
-updated: 2026-11-07T17:55:57Z
+updated: 2026-11-07T18:14:14Z
+closed: 2026-11-07T18:14:14Z
 +++
 
 Moving between the Lights and Shadows slides in the keynote demo still shows a visible jump, even after the per-slide light fix (#308).
