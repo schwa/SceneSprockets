@@ -130,11 +130,19 @@ public extension SceneViewManipulator {
     }
 }
 
-// The manipulator's overlay over the finished scene: keeps the color, clears depth so it is never hidden.
-struct ManipulatorOverlayPass: Element {
+/// A render pass that draws a manipulator's overlay over the finished scene.
+///
+/// The pass keeps the scene's color and clears depth, so the overlay is never hidden. `SceneView` uses it for its
+/// `manipulator`. Use it after a ``SceneGraphElement`` in your own `RenderView`.
+public struct ManipulatorOverlayPass: Element {
     var content: AnyElement
 
-    var body: some Element {
+    /// Creates the pass, usually with the element that ``SceneViewManipulator/overlay(viewport:)`` returns.
+    public init(content: AnyElement) {
+        self.content = content
+    }
+
+    public var body: some Element {
         get throws {
             try RenderPass(label: "Manipulator") {
                 // Metal 4 does not order passes: without this, blending loaded scene color that the scene pass (and

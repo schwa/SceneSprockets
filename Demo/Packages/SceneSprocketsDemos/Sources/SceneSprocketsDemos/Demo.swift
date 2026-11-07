@@ -5,6 +5,7 @@ import MetalSupport
 import Observation
 import SceneSprockets
 import SceneSprocketsBlinnPhong
+import SceneSprocketsGizmos
 import simd
 import SwiftMesh
 import SwiftUI
@@ -101,6 +102,10 @@ open class DemoScene {
     public private(set) var outlineRevision = 0
     // Shared by the outline and click-to-select in the view.
     public var selectedNodeID: SceneGraph.Node.ID?
+    // Draws an outline around the selected node.
+    public var showsSelectionOutline = false
+    // Overrides the view's gizmo mode picker while set, so a demo can show each mode.
+    public var gizmoMode: TransformGizmo.Mode?
     // Only nodes in these categories can be picked.
     public var pickCategoryBitMask: UInt = .max
     // True when the demo moves its own camera node: the view then turns off user camera control.

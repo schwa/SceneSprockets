@@ -6,6 +6,7 @@ import MetalSprockets
 import MetalSprocketsPBR
 import SceneSprockets
 import SceneSprocketsBlinnPhong
+import SceneSprocketsGizmos
 import SceneSprocketsPBR
 import SceneSprocketsShaderMaterial
 import UniformTypeIdentifiers
@@ -63,9 +64,9 @@ public enum DemoSnapshot {
         scene.values.merge(values) { $1 }
         configure(scene)
         let renderer = try OffscreenRenderer(size: CGSize(width: width, height: height), colorUsage: SceneGraphShadows.requiredColorUsage, depthUsage: SceneGraphShadows.requiredDepthUsage)
-        func makeElement() -> SceneGraphElement {
-            let sceneCamera = scene.usesSceneCamera ? scene.sceneGraph.cameraNodes().first?.worldTransform : nil
-            return SceneGraphElement(sceneGraph: scene.sceneGraph, cameraMatrix: sceneCamera ?? scene.initialCameraMatrix, aspectRatio: Float(width) / Float(height), renderers: scene.renderers, shadows: scene.shadows, debugMode: scene.debugMode)
+        let outline = SelectionOutline()
+        func makeElement() throws -> AnyElement {
+            try frameElement(scene, width: width, height: height, outline: outline)
         }
         let deltaTime: Float = 1 / 60
         for frame in 0..<frames {
@@ -75,10 +76,10 @@ public enum DemoSnapshot {
             scene.sceneGraph.applyConstraints(pointOfView: scene.initialCameraMatrix, deltaTime: deltaTime)
             // Particles simulate on the GPU one step per rendered frame, so draw the frames before the last too.
             if frame < frames - 1, scene.sceneGraph.hasParticleSystems {
-                _ = try renderer.render(makeElement())
+                _ = try renderer.render(try makeElement())
             }
         }
-        let texture = try renderer.render(makeElement()).texture
+        let texture = try renderer.render(try makeElement()).texture
         let bytesPerRow = width * 4
         guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: bytesPerRow, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue),
               let data = context.data
@@ -90,6 +91,34 @@ public enum DemoSnapshot {
             throw Failure.imageCreationFailed
         }
         return image
+    }
+
+    // One frame of a demo as SceneView draws it: the scene, then, when a node is selected, its outline (if the demo
+    // shows one) and the transform gizmo.
+    @MainActor
+    static func frameElement(_ scene: DemoScene, width: Int, height: Int, outline: SelectionOutline) throws -> AnyElement {
+        let cameraNode = scene.usesSceneCamera ? scene.sceneGraph.cameraNodes().first : nil
+        let cameraMatrix = cameraNode?.worldTransform ?? scene.initialCameraMatrix
+        let selected = scene.selectedNode
+        let element = SceneGraphElement(sceneGraph: scene.sceneGraph, cameraMatrix: cameraMatrix, aspectRatio: Float(width) / Float(height), renderers: scene.renderers, shadows: scene.shadows, storesDepth: selected != nil && scene.showsSelectionOutline, debugMode: scene.debugMode)
+        guard let selected else {
+            return element.eraseToAnyElement()
+        }
+        let camera = cameraNode?.camera ?? SceneView.defaultCamera
+        let size = SIMD2<Float>(Float(width), Float(height))
+        let viewport = SceneViewport(cameraMatrix: cameraMatrix, camera: camera, viewSize: size, drawableSize: size)
+        let outlineElement = scene.showsSelectionOutline ? try outline.element(nodes: [selected], sceneGraph: scene.sceneGraph, viewport: viewport) : nil
+        let gizmoOverlay = try TransformGizmo(target: selected, mode: scene.gizmoMode ?? .translate).overlay(viewport: viewport)
+        return try MetalSprockets.Group {
+            element
+            if let outlineElement {
+                outlineElement
+            }
+            if let gizmoOverlay {
+                ManipulatorOverlayPass(content: gizmoOverlay)
+            }
+        }
+        .eraseToAnyElement()
     }
 
     // Records `seconds` of a demo to a movie at `frameRate`, stepping it one frame at a time like render(...). Calls
@@ -124,13 +153,13 @@ public enum DemoSnapshot {
         )
         let deltaTime = Float(1 / frameRate)
         let frameCount = Int((seconds * frameRate).rounded())
+        let outline = SelectionOutline()
         for frame in 0..<frameCount {
             scene.update(time: Float(frame) * deltaTime, deltaTime: deltaTime)
             scene.sceneGraph.advanceActions(by: deltaTime)
             scene.sceneGraph.advanceParticles(by: deltaTime)
             scene.sceneGraph.applyConstraints(pointOfView: scene.initialCameraMatrix, deltaTime: deltaTime)
-            let sceneCamera = scene.usesSceneCamera ? scene.sceneGraph.cameraNodes().first?.worldTransform : nil
-            try await renderer.render(SceneGraphElement(sceneGraph: scene.sceneGraph, cameraMatrix: sceneCamera ?? scene.initialCameraMatrix, aspectRatio: Float(width) / Float(height), renderers: scene.renderers, shadows: scene.shadows, debugMode: scene.debugMode))
+            try await renderer.render(try frameElement(scene, width: width, height: height, outline: outline))
             progress(frame, frameCount)
         }
         try await renderer.finalize()

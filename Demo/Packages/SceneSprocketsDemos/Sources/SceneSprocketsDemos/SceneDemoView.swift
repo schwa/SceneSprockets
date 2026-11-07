@@ -18,6 +18,7 @@ public struct SceneDemoView: View {
     @State private var gizmo = TransformGizmo()
     @State private var gizmoMode = TransformGizmo.Mode.translate
     @State private var gizmoSpace = TransformGizmo.Space.world
+    @State private var selectionOutline = SelectionOutline()
 
     public init(demo: Demo) {
         self.demo = demo
@@ -38,16 +39,25 @@ public struct SceneDemoView: View {
             cameraMatrix: scene.usesSceneCamera ? .constant(nil) : $cameraMatrix,
             hitTestCategoryBitMask: scene.pickCategoryBitMask,
             manipulator: gizmo,
-            debugMode: scene.debugMode
-        ) { hit in
-            scene.pick(hit)
-        }
+            debugMode: scene.debugMode,
+            onTap: { hit in
+                scene.pick(hit)
+            },
+            overlay: scene.showsSelectionOutline ? { [scene, selectionOutline] viewport in
+                try selectionOutline.element(nodes: scene.selectedNode.map { [$0] } ?? [], sceneGraph: scene.sceneGraph, viewport: viewport)
+            } : nil
+        )
         .onFrameTimingChange { frameTimingStatistics = $0 }
         .onChange(of: scene.selectedNodeID, initial: true) {
             gizmo.target = scene.selectedNode
         }
         .onChange(of: gizmoMode, initial: true) {
             gizmo.mode = gizmoMode
+        }
+        .onChange(of: scene.gizmoMode) {
+            if let mode = scene.gizmoMode {
+                gizmo.mode = mode
+            }
         }
         .onChange(of: gizmoSpace, initial: true) {
             gizmo.space = gizmoSpace

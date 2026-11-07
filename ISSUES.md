@@ -6736,14 +6736,18 @@ The debug views (SceneGraphDebugMode: shaded, normals, texture coordinates, UV c
 ## 306: Keynote has no transform gizmo or selection outline slide
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:demo, effort:m
 created: 2026-11-07T15:44:43Z
+updated: 2026-11-07T16:47:56Z
+closed: 2026-11-07T16:47:56Z
 +++
 
 SceneSprocketsGizmos (TransformGizmo, SelectionOutline) is not shown in the Keynote demo. The Keynote's SceneView has no manipulator or overlay, so a slide cannot show the gizmo's handles or an outline around a selected node.
+
+- `2026-11-07T16:47:56Z`: Fixed: new 'Gizmos' slide after Hit Testing selects a box, outlines it (SelectionOutline) and cycles the TransformGizmo through translate, rotate and scale (2.5 s each). Support: DemoScene.showsSelectionOutline and gizmoMode; SceneDemoView passes the outline as SceneView's overlay and follows gizmoMode; DemoSnapshot draws the outline and gizmo after the scene when a node is selected, like SceneView, so CLI renders and videos show them. ManipulatorOverlayPass is now public (with docs) so code outside SceneView can draw a manipulator overlay. Verified with renders of all three modes; 15 demo tests and 333 package tests pass.
 
 ---
 

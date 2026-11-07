@@ -6,6 +6,7 @@ import MetalSprocketsParticles
 import MetalSprocketsParticlesSamples
 import SceneSprockets
 import SceneSprocketsBlinnPhong
+import SceneSprocketsGizmos
 import SceneSprocketsPBR
 import SceneSprocketsPhysics
 import SceneSprocketsShaderMaterial
@@ -22,7 +23,7 @@ public final class KeynoteDemo: DemoScene {
     public static let titles = [
         "SceneSprockets", "Scene Graph", "Shapes", "Materials", "Lights", "Actions", "Constraints", "Opacity & Fades", "Blend Modes",
         "Custom Shaders", "Glass", "PBR Extensions", "Shadows", "Fog", "Particles", "Mesh Emitters", "Implicit Animation", "Animation Blending", "Deformation",
-        "Level of Detail", "glTF & Model I/O", "Hit Testing", "Physics", "Performance", "Post-Processing", "Debug Views", "SceneView", "Thank You"
+        "Level of Detail", "glTF & Model I/O", "Hit Testing", "Gizmos", "Physics", "Performance", "Post-Processing", "Debug Views", "SceneView", "Thank You"
     ]
 
     private let cameraNode: SceneGraph.Node
@@ -47,6 +48,8 @@ public final class KeynoteDemo: DemoScene {
     private var burningFox: BurningFox?
     private var campfireLight: SceneGraph.Node?
     private var gradeLabels: [SceneGraph.Node] = []
+    // Gizmos slide: the node it selects.
+    private var gizmoTarget: SceneGraph.Node?
     // Debug Views slide: one label per mode, and the time on the current one.
     private var debugLabels: [SceneGraph.Node] = []
     private var debugIndex = 0
@@ -183,6 +186,9 @@ public final class KeynoteDemo: DemoScene {
             updateGrade(deltaTime: deltaTime)
         case "Debug Views":
             updateDebugView(deltaTime: deltaTime)
+        case "Gizmos":
+            let modes: [TransformGizmo.Mode] = [.translate, .rotate, .scale]
+            gizmoMode = modes[Int(time / 2.5) % modes.count]
         case "glTF & Model I/O":
             importedPlayer?.advance(by: deltaTime)
         case "Particles":
@@ -205,6 +211,11 @@ public final class KeynoteDemo: DemoScene {
     private func applySceneSettings() {
         shadows = currentTitle == "Shadows" ? shadowRenderer : nil
         sceneGraph.fog = currentTitle == "Fog" ? SceneGraph.Fog(color: [0.05, 0.06, 0.1, 1], startDistance: 12, endDistance: 34) : nil
+        // The Gizmos slide selects its box; other slides show no selection.
+        let showsGizmo = currentTitle == "Gizmos"
+        showsSelectionOutline = showsGizmo
+        selectedNodeID = showsGizmo ? gizmoTarget?.id : nil
+        gizmoMode = showsGizmo ? .translate : nil
         // A debug view replaces every material in the view, so it is on only for its slide.
         debugIndex = 0
         sinceDebugMode = 0
@@ -420,6 +431,15 @@ public final class KeynoteDemo: DemoScene {
             // Same mesh + material: one instanced draw per color.
             // Nodes outside the view are culled.
             Node(parent: grid, content: .mesh(box, material: crate))
+            """, to: slide)
+        case "Gizmos":
+            gizmosSlide(slide)
+            addCode("""
+            SceneView(sceneGraph: scene, renderers: renderers,
+                      manipulator: TransformGizmo(target: box, mode: .rotate),
+                      overlay: { viewport in
+                          try outline.element(nodes: [box], sceneGraph: scene, viewport: viewport)
+                      })
             """, to: slide)
         case "Debug Views":
             debugViewsSlide(slide)
@@ -1058,6 +1078,14 @@ public final class KeynoteDemo: DemoScene {
 
     // nil shows the materials; the debug views replace them for the whole view, title and code panel included.
     private static let debugModes: [SceneGraphDebugMode?] = [nil, .normals, .textureCoordinates, .uvChecker, .worldPosition, .wireframe]
+
+    // A selected box with its outline and the transform gizmo, which cycles through its modes.
+    private func gizmosSlide(_ slide: SceneGraph.Node) {
+        addLight(to: slide, at: [2, 6, 5], intensity: 60)
+        _ = SceneGraph.Node(parent: slide, shape: .sphere(radius: 0.6), material: BlinnPhongSceneMaterial.plastic([0.4, 0.75, 0.45], shininess: 32), device: demoDevice, trs: .init(translation: [-3.2, 0.9, 0]))
+        _ = SceneGraph.Node(parent: slide, shape: .cone(topRadius: 0, bottomRadius: 0.6, height: 1.3), material: BlinnPhongSceneMaterial.plastic([0.4, 0.55, 0.95], shininess: 32), device: demoDevice, trs: .init(translation: [3.2, 0.9, 0]))
+        gizmoTarget = SceneGraph.Node(parent: slide, label: "Box", shape: .box(width: 1.2, height: 1.2, length: 1.2), material: BlinnPhongSceneMaterial.plastic([0.95, 0.55, 0.3], shininess: 32), device: demoDevice, trs: .init(translation: [0, 0.9, 0], rotation: simd_quatf(angle: 0.5, axis: [0, 1, 0])))
+    }
 
     private func debugViewsSlide(_ slide: SceneGraph.Node) {
         addLight(to: slide, at: [2, 6, 5], intensity: 60)
