@@ -54,7 +54,7 @@ enum MaterialEdit {
 
     // The edited material, or nil when no edit applied. The original is never changed; textures and render state
     // are kept by PBR edits.
-    static func applying(_ edits: [MaterialEdit], to material: any SceneSprockets.Material, device: MTLDevice) throws -> (any SceneSprockets.Material)? {
+    static func applying(_ edits: [Self], to material: any SceneSprockets.Material, device: MTLDevice) throws -> (any SceneSprockets.Material)? {
         var draft = Draft(material)
         var changed = false
         for edit in edits {

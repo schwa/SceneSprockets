@@ -1,16 +1,16 @@
 import CollaborationKit
 import CollaborationKitUI
 import CoreGraphics
-import MetalSprocketsAddOns
-import MetalSprocketsPBR
-import Metal
-import SceneSprocketsBlinnPhong
-import SceneSprocketsPBR
 import Foundation
 import GeometryLite3D
-import simd
+import Metal
+import MetalSprocketsAddOns
+import MetalSprocketsPBR
 import SceneSprockets
+import SceneSprocketsBlinnPhong
 @testable import SceneSprocketsComposerSupport
+import SceneSprocketsPBR
+import simd
 import Testing
 import UniformTypeIdentifiers
 
@@ -55,7 +55,7 @@ struct SceneEditBoundaryTests {
         Edit(actionName: "Color") { model, _ in model.editSelection("Color") { model, node in model.setBaseColor([1, 0, 0], of: node) } },
         Edit(actionName: "Metal Material") { model, node in try? model.editMaterials(of: node, at: 0, actionName: "Metal Material", [.preset(.metal), .uniforms { $0.roughnessFactor = 0.6 }]) },
         Edit(actionName: "Environment Rotation") { model, _ in model[environment: "Environment Rotation"].rotationDegrees = 45 },
-        Edit(actionName: "Drop to Floor") { model, _ in model.dropSelectionToFloor() },
+        Edit(actionName: "Drop to Floor") { model, _ in model.dropSelectionToFloor() }
     ]
 
     func sceneJSON(_ model: EditorModel) throws -> String {
@@ -143,7 +143,7 @@ struct SceneEditBoundaryTests {
     defer { try? FileManager.default.removeItem(at: url) }
     try wrapper.write(to: url, options: [], originalContentsURL: nil)
     let image = try #require(DocumentPreview.image(inBundleAt: url))
-    #expect(image.width == 1024)
+    #expect(image.width == 1_024)
     #expect(image.height == 768)
     // The box is in the middle; the clear color is black.
     let pixel = try #require(image.cropping(to: CGRect(x: 512, y: 384, width: 1, height: 1)))
@@ -370,7 +370,7 @@ struct SceneEditBoundaryTests {
 
 // #191, #202: the scene tools, called directly as the model would.
 @MainActor
-@Test func sceneToolsQueryAndEditTheScene() async throws {
+@Test func sceneToolsQueryAndEditTheScene() throws {
     let model = EditorModel(sceneGraph: SceneGraph.empty())
     let tools = SceneTools(model: model)
     #expect(Set(tools.collaborationTools.map(\.name)) == ["query", "select", "create", "update", "delete", "setEnvironment", "dropToFloor"])
@@ -600,7 +600,7 @@ struct SceneEditBoundaryTests {
     // Distribute along x with one call.
     let positions = (0..<8).map { [Double($0) * 2, 0, 0] }
     _ = try tools.update(ids: ids, label: nil, parent: nil, translation: nil, translations: positions, rotationDegrees: nil, scale: nil, color: nil, metallic: nil, roughness: nil, isVisible: nil, isActive: nil)
-    #expect(model.sceneGraph.root.children.map { $0.localTransform.trs.translation.x } == [0, 2, 4, 6, 8, 10, 12, 14])
+    #expect(model.sceneGraph.root.children.map(\.localTransform.trs.translation.x) == [0, 2, 4, 6, 8, 10, 12, 14])
 
     // translations alone sets the count.
     let row = try tools.create(kind: "box", count: nil, label: nil, parent: nil, translation: nil, translations: [[0, 3, 0], [1, 3, 0]], rotationDegrees: nil, scale: nil, color: nil)
@@ -1021,7 +1021,7 @@ struct SceneEditBoundaryTests {
 
 // #183: Explode turns an imported model into plain nodes that can take children; undo restores the model.
 @MainActor
-@Test func explodeImportedModel() throws {
+@Test func explodeImportedModel() {
     let model = EditorModel(sceneGraph: SceneGraph.empty())
     let modelRoot = SceneGraph.Node(label: "Imported")
     let part = SceneGraph.Node(parent: modelRoot, label: "Part")

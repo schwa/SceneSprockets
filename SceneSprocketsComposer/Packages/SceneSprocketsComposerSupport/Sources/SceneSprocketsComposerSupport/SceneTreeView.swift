@@ -87,6 +87,7 @@ struct SceneTreeView: View {
         } label: {
             Image(systemName: isVisible ? "eye" : "eye.slash")
                 .foregroundStyle(isVisible ? .tertiary : .primary)
+                .accessibilityLabel(isVisible ? "Hide" : "Show")
         }
         .buttonStyle(.plain)
         .help(isVisible ? "Hide" : "Show")
@@ -101,6 +102,7 @@ struct SceneTreeView: View {
         } label: {
             Image(systemName: isLocked ? "lock.fill" : "lock.open")
                 .foregroundStyle(isLockedItself ? .primary : .tertiary)
+                .accessibilityLabel(isLockedItself ? "Unlock" : "Lock")
         }
         .buttonStyle(.plain)
         .help(isLockedItself ? "Unlock" : "Lock")

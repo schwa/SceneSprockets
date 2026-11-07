@@ -115,7 +115,6 @@ struct ScenePreviewView: View {
             ScenePreviewContextMenuView(model: model, pointer: pointer)
         }
     }
-
 }
 
 // Right-click menu (#220). Each action first selects what is under the pointer, then acts on the selection, so it

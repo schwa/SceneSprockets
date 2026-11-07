@@ -64,7 +64,6 @@ struct RenderSettingsView: View {
         }
         .formStyle(.grouped)
     }
-
 }
 
 // Display Maximum follows the display (it changes with the monitor and Low Power Mode); the others are fixed caps.

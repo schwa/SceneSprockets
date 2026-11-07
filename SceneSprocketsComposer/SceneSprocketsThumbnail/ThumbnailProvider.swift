@@ -9,6 +9,7 @@ final class ThumbnailProvider: QLThumbnailProvider {
         case noPreview
     }
 
+    // swiftlint:disable:next unneeded_escaping - the superclass signature has @escaping
     override func provideThumbnail(for request: QLFileThumbnailRequest, _ handler: @escaping (QLThumbnailReply?, (any Error)?) -> Void) {
         guard let image = DocumentPreview.image(inBundleAt: request.fileURL) else {
             handler(nil, Failure.noPreview)

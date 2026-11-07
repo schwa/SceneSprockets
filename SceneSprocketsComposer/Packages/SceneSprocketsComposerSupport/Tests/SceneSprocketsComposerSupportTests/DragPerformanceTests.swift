@@ -1,6 +1,6 @@
 import Foundation
-import Observation
 import GeometryLite3D
+import Observation
 import SceneSprockets
 @testable import SceneSprocketsComposerSupport
 import simd
@@ -52,8 +52,8 @@ import Testing
     let viewport = SceneViewport(
         cameraMatrix: LookAt(position: [0, 10, 30], target: .zero, up: [0, 1, 0]).cameraMatrix,
         projectionMatrix: PerspectiveProjection(verticalAngleOfView: .degrees(60)).projectionMatrix(aspectRatio: 1.5),
-        viewSize: [1200, 800],
-        drawableSize: [2400, 1600]
+        viewSize: [1_200, 800],
+        drawableSize: [2_400, 1_600]
     )
 
     func milliseconds(_ iterations: Int = 60, _ work: () -> Void) -> Double {
@@ -78,7 +78,7 @@ import Testing
         ("isHidden x500", milliseconds { nodes.forEach { _ = model.isHidden($0) } }),
         ("DebugShapes.shapes", milliseconds { _ = DebugShapes.shapes(sceneGraph: model.sceneGraph, viewport: viewport) }),
         ("BoundingBoxes all", milliseconds { _ = BoundingBoxes.nodes(mode: .all, sceneGraph: model.sceneGraph, selected: model.selectedIDs).compactMap { model.sceneGraph.worldBounds(of: $0.node) } }),
-        ("statistics", milliseconds { _ = model.sceneGraph.statistics }),
+        ("statistics", milliseconds { _ = model.sceneGraph.statistics })
     ]
     model.endGizmoDrag(nodes[0])
     let report = costs.map { "\($0.0): \($0.1.formatted(.number.precision(.fractionLength(3)))) ms" }.joined(separator: ", ")

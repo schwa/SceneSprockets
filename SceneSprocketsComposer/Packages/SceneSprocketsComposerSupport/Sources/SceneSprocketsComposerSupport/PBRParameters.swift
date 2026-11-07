@@ -72,7 +72,7 @@ enum PBRParameters {
         Scalar(name: "Anisotropy", keyPath: \.anisotropyStrength, range: 0 ... 1, group: .anisotropy),
         Scalar(name: "Anisotropy Rotation", keyPath: \.anisotropyRotation, range: -.pi ... .pi, group: .anisotropy, isAngle: true),
         Scalar(name: "Retroreflection", keyPath: \.retroreflectionFactor, range: 0 ... 1, group: .other),
-        Scalar(name: "Glossiness", keyPath: \.glossinessFactor, range: 0 ... 1, group: .other),
+        Scalar(name: "Glossiness", keyPath: \.glossinessFactor, range: 0 ... 1, group: .other)
     ]
 
     static let colors: [Color] = [
@@ -81,12 +81,12 @@ enum PBRParameters {
         Color(name: "Multiscatter Color", keyPath: \.multiscatterColorFactor, group: .transmission),
         Color(name: "Diffuse Transmission Color", keyPath: \.diffuseTransmissionColorFactor, group: .diffuseTransmission),
         Color(name: "Specular Color", keyPath: \.specularColorFactor, group: .specular),
-        Color(name: "Sheen Color", keyPath: \.sheenColorFactor, group: .sheen),
+        Color(name: "Sheen Color", keyPath: \.sheenColorFactor, group: .sheen)
     ]
 
     static let toggles: [Toggle] = [
         Toggle(name: "Unlit", keyPath: \.unlit, group: .base),
         Toggle(name: "Volume Scattering", keyPath: \.volumeScatter, group: .transmission),
-        Toggle(name: "Specular-Glossiness", keyPath: \.specularGlossiness, group: .other),
+        Toggle(name: "Specular-Glossiness", keyPath: \.specularGlossiness, group: .other)
     ]
 }

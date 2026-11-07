@@ -456,6 +456,7 @@ final class SceneTools {
     private static func json(_ value: some Encodable) throws -> String {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
+        // swiftlint:disable:next optional_data_string_conversion - JSONEncoder output is valid UTF-8
         return String(decoding: try encoder.encode(value), as: UTF8.self)
     }
 }

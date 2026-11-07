@@ -1,6 +1,6 @@
 import CoreGraphics
-import GeometryLite3D
 import Foundation
+import GeometryLite3D
 import ImageIO
 import Metal
 import MetalSprockets
@@ -12,7 +12,7 @@ import UniformTypeIdentifiers
 // Preview.png in the document bundle, so Quick Look can show the scene without loading it or starting Metal.
 public enum DocumentPreview {
     public static let fileName = "Preview.png"
-    static let size = CGSize(width: 1024, height: 768)
+    static let size = CGSize(width: 1_024, height: 768)
 
     public enum Failure: Error {
         case imageCreationFailed
@@ -35,7 +35,7 @@ public enum DocumentPreview {
             renderers: [BlinnPhongMaterialRenderer(), PBRMaterialRenderer(device: device)],
             // Without a camera node the element draws nothing unless it has a default camera.
             // Like SceneView.defaultCamera, which is main-actor isolated.
-            defaultCamera: Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(60), depthMode: .standard(zClip: 0.01 ... 1000))),
+            defaultCamera: Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(60), depthMode: .standard(zClip: 0.01 ... 1_000))),
             defaultLight: Light(type: .directional, color: [1, 1, 1], intensity: 1)
         )
         let texture = try renderer.render(element).texture

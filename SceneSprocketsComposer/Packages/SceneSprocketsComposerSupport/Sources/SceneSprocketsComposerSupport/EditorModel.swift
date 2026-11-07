@@ -3,12 +3,12 @@ import GeometryLite3D
 import Metal
 import MetalSprocketsPBR
 import Observation
-import SwiftUI
 import SceneSprockets
 import SceneSprocketsBlinnPhong
 import SceneSprocketsGizmos
 import SceneSprocketsPBR
 import simd
+import SwiftUI
 
 @MainActor
 @Observable

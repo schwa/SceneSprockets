@@ -84,7 +84,7 @@ enum DebugShapes {
     }
 
     @MainActor
-    static func element(sceneGraph: SceneGraph, selected: Set<SceneGraph.Node.ID>, viewport: SceneViewport) throws -> AnyElement? {
+    static func element(sceneGraph: SceneGraph, selected: Set<SceneGraph.Node.ID>, viewport: SceneViewport) -> AnyElement? {
         let shapes = shapes(sceneGraph: sceneGraph, viewport: viewport)
         guard !shapes.isEmpty else {
             return nil

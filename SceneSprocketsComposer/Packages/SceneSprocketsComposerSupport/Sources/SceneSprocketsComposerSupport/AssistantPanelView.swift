@@ -84,6 +84,7 @@ struct AssistantPanelView: View {
                 .collaborationComposerHeader {
                     HStack(spacing: 4) {
                         Image(systemName: "cpu")
+                            .accessibilityHidden(true)
                         Text("\(credentials.backend.displayName) \u{00B7} \(credentials.selectedModel)")
                         Spacer()
                     }

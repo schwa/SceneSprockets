@@ -1,8 +1,8 @@
 import AppKit
 import SceneSprockets
+@testable import SceneSprocketsComposerSupport
 import SwiftUI
 import Testing
-@testable import SceneSprocketsComposerSupport
 
 // #241: the inspector must survive the selection's light or material going away under it, as when the assistant
 // converts or deletes things between view updates.

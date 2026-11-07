@@ -48,7 +48,7 @@ enum BoundingBoxes {
     }
 
     @MainActor
-    static func element(mode: Mode, sceneGraph: SceneGraph, selected: Set<SceneGraph.Node.ID>, selectedColor: SwiftUI.Color, viewProjection: simd_float4x4, drawableSize: SIMD2<Float>) throws -> AnyElement? {
+    static func element(mode: Mode, sceneGraph: SceneGraph, selected: Set<SceneGraph.Node.ID>, selectedColor: SwiftUI.Color, viewProjection: simd_float4x4, drawableSize: SIMD2<Float>) -> AnyElement? {
         let boxes = nodes(mode: mode, sceneGraph: sceneGraph, selected: selected).compactMap { entry in
             sceneGraph.worldBounds(of: entry.node).map { ($0, entry.isSelected) }
         }
