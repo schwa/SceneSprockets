@@ -6,12 +6,21 @@ extension SceneGraph {
     public struct Fog: Sendable, Equatable, Codable {
         /// Linear RGB; alpha scales the maximum fog amount.
         public var color: SIMD4<Float>
-        /// Camera distance where fog starts and where it reaches full strength.
+        /// The camera distance where the fog starts.
         public var startDistance: Float
+        /// The camera distance where the fog reaches full strength.
         public var endDistance: Float
         /// 1 is linear between start and end; higher values thin the fog near the start.
         public var densityExponent: Float
 
+        /// Creates fog.
+        ///
+        /// - Parameters:
+        ///   - color: The color in linear RGB. Alpha scales the maximum amount of fog.
+        ///   - startDistance: The camera distance where the fog starts.
+        ///   - endDistance: The camera distance where the fog reaches full strength.
+        ///   - densityExponent: The shape of the change. 1 is linear, and higher values make the fog thinner near the
+        ///     start.
         public init(color: SIMD4<Float> = [0.7, 0.75, 0.8, 1], startDistance: Float = 5, endDistance: Float = 30, densityExponent: Float = 1) {
             self.color = color
             self.startDistance = startDistance

@@ -4,12 +4,19 @@ extension SceneGraph {
     /// A reusable description of a change over time, like SceneKit's SCNAction. Run it with `Node.run(_:forKey:)`
     /// and advance all running actions with `SceneGraph.advanceActions(by:)`.
     public struct Action {
+        /// How an action's progress follows its elapsed time.
         public enum TimingMode: Sendable {
+            /// Progress follows time at a constant rate.
             case linear
+            /// Progress starts slowly, then speeds up.
             case easeIn
+            /// Progress starts quickly, then slows down.
             case easeOut
+            /// Progress starts and ends slowly.
             case easeInEaseOut
-            // Maps elapsed fraction (0...1) to progress, like SCNAction.timingFunction. Should map 0 to 0 and 1 to 1.
+            /// A function that maps the elapsed fraction (0...1) to progress, like `SCNAction.timingFunction`.
+            ///
+            /// The function must map 0 to 0 and 1 to 1.
             case custom(@Sendable (Float) -> Float)
 
             func apply(_ fraction: Float) -> Float {
@@ -58,12 +65,14 @@ extension SceneGraph {
             self.makeReversed = reversed
         }
 
+        /// Returns a copy of the action with a timing mode.
         public func timingMode(_ mode: TimingMode) -> Self {
             var copy = self
             copy.timingMode = mode
             return copy
         }
 
+        /// Returns a copy of the action with a speed. 2 runs it twice as fast, and 0 pauses it.
         public func speed(_ speed: Float) -> Self {
             var copy = self
             copy.speed = speed
@@ -95,12 +104,22 @@ extension SceneGraph {
             )
         }
 
+        /// Moves the node by an offset in its parent's space.
+        ///
+        /// - Parameters:
+        ///   - delta: The offset.
+        ///   - duration: The duration, in seconds.
         public static func move(by delta: SIMD3<Float>, duration: Float) -> Self {
             interval(duration, reversed: { .move(by: -delta, duration: duration) }) { node, from, to in
                 node.trs.translation += delta * (to - from)
             }
         }
 
+        /// Moves the node to a position in its parent's space. The action cannot be reversed.
+        ///
+        /// - Parameters:
+        ///   - target: The position.
+        ///   - duration: The duration, in seconds.
         public static func move(to target: SIMD3<Float>, duration: Float) -> Self {
             let start = Box<SIMD3<Float>>()
             return interval(duration, start: { start.value = $0.trs.translation }) { node, _, to in
@@ -130,6 +149,11 @@ extension SceneGraph {
             rotate(to: eulerRotation(x: x, y: y, z: z), duration: duration)
         }
 
+        /// Rotates the node to an orientation, with spherical interpolation. The action cannot be reversed.
+        ///
+        /// - Parameters:
+        ///   - target: The orientation in the parent's space.
+        ///   - duration: The duration, in seconds.
         public static func rotate(to target: simd_quatf, duration: Float) -> Self {
             let start = Box<simd_quatf>()
             return interval(duration, start: { start.value = $0.trs.rotation }) { node, _, to in
@@ -137,6 +161,11 @@ extension SceneGraph {
             }
         }
 
+        /// Multiplies the node's scale by a factor.
+        ///
+        /// - Parameters:
+        ///   - factor: The factor. At the end of the action, the scale is exactly the start scale times the factor.
+        ///   - duration: The duration, in seconds.
         public static func scale(by factor: Float, duration: Float) -> Self {
             interval(duration, reversed: { .scale(by: 1 / factor, duration: duration) }) { node, from, to in
                 // Multiplicative, so the total over the duration is exactly `factor`.
@@ -144,14 +173,17 @@ extension SceneGraph {
             }
         }
 
+        /// Changes the node's opacity to 1.
         public static func fadeIn(duration: Float) -> Self {
             fadeOpacity(to: 1, duration: duration)
         }
 
+        /// Changes the node's opacity to 0.
         public static func fadeOut(duration: Float) -> Self {
             fadeOpacity(to: 0, duration: duration)
         }
 
+        /// Changes the node's opacity to a value. The action cannot be reversed.
         public static func fadeOpacity(to target: Float, duration: Float) -> Self {
             let start = Box<Float>()
             return interval(duration, start: { start.value = $0.opacity }) { node, _, to in
@@ -160,12 +192,14 @@ extension SceneGraph {
             }
         }
 
+        /// Adds a value to the node's opacity.
         public static func fadeOpacity(by delta: Float, duration: Float) -> Self {
             interval(duration, reversed: { .fadeOpacity(by: -delta, duration: duration) }) { node, from, to in
                 node.opacity += delta * (to - from)
             }
         }
 
+        /// Changes the node's scale to a value. The action cannot be reversed.
         public static func scale(to target: SIMD3<Float>, duration: Float) -> Self {
             let start = Box<SIMD3<Float>>()
             return interval(duration, start: { start.value = $0.trs.scale }) { node, _, to in
@@ -173,6 +207,7 @@ extension SceneGraph {
             }
         }
 
+        /// Does nothing for a duration, in seconds. Use it in a sequence.
         public static func wait(duration: Float) -> Self {
             interval(duration, reversed: { .wait(duration: duration) }) { _, _, _ in }
         }
@@ -199,28 +234,35 @@ extension SceneGraph {
 
         // MARK: Instant actions
 
+        /// Calls a closure with the node one time, immediately.
         public static func run(_ body: @escaping (Node) -> Void) -> Self {
             interval(0) { node, _, _ in body(node) }
         }
 
+        /// Sets the node's `isVisible` to false. The reverse is ``unhide()``.
         public static func hide() -> Self {
             var action = run { $0.isVisible = false }
             action.makeReversed = { .unhide() }
             return action
         }
 
+        /// Sets the node's `isVisible` to true. The reverse is ``hide()``.
         public static func unhide() -> Self {
             var action = run { $0.isVisible = true }
             action.makeReversed = { .hide() }
             return action
         }
 
+        /// Removes the node from its parent.
         public static func removeFromParent() -> Self {
             run { $0.removeFromParent() }
         }
 
         // MARK: Composite actions
 
+        /// Runs actions one after another.
+        ///
+        /// The duration is the sum of their durations, or `nil` if one of them repeats forever.
         public static func sequence(_ actions: [Self]) -> Self {
             let total = actions.reduce(Float?(0)) { sum, action in
                 guard let sum, let duration = action.duration else {
@@ -231,6 +273,9 @@ extension SceneGraph {
             return Self(duration: total, makeRunner: { _ in SequenceRunner(actions: actions) }, reversed: { .sequence(actions.reversed().map { $0.reversed() }) })
         }
 
+        /// Runs actions at the same time.
+        ///
+        /// The duration is the longest of their durations, or `nil` if one of them repeats forever.
         public static func group(_ actions: [Self]) -> Self {
             let total = actions.reduce(Float?(0)) { longest, action in
                 guard let longest, let duration = action.duration else {
@@ -241,10 +286,12 @@ extension SceneGraph {
             return Self(duration: total, makeRunner: { _ in GroupRunner(actions: actions) }, reversed: { .group(actions.map { $0.reversed() }) })
         }
 
+        /// Runs an action a number of times.
         public static func `repeat`(_ action: Self, count: Int) -> Self {
             Self(duration: action.duration.map { $0 * Float(max(count, 0)) }, makeRunner: { _ in RepeatRunner(action: action, count: max(count, 0)) }, reversed: { .repeat(action.reversed(), count: count) })
         }
 
+        /// Runs an action again and again until you remove it. The duration is `nil`.
         public static func repeatForever(_ action: Self) -> Self {
             Self(duration: nil, makeRunner: { _ in RepeatRunner(action: action, count: nil) }, reversed: { .repeatForever(action.reversed()) })
         }
@@ -297,18 +344,22 @@ extension SceneGraph.Node {
         runningActions.first { $0.key == key }?.action
     }
 
+    /// Removes the running action with a key.
     public func removeAction(forKey key: String) {
         runningActions.removeAll { $0.key == key }
     }
 
+    /// Removes every running action of the node.
     public func removeAllActions() {
         runningActions.removeAll()
     }
 
+    /// Whether the node has running actions.
     public var hasActions: Bool {
         !runningActions.isEmpty
     }
 
+    /// Returns whether the node has a running action with a key.
     public func hasAction(forKey key: String) -> Bool {
         runningActions.contains { $0.key == key }
     }

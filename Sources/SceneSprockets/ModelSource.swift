@@ -9,6 +9,11 @@ extension SceneGraph {
         /// File contents by path relative to the main file's folder.
         public var files: [String: Data]
 
+        /// Creates a model source.
+        ///
+        /// - Parameters:
+        ///   - mainFile: The file to load. It must be a key of `files`.
+        ///   - files: The file contents, by path relative to the main file's folder.
         public init(mainFile: String, files: [String: Data]) {
             self.mainFile = mainFile
             self.files = files

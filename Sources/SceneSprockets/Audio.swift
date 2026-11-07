@@ -6,12 +6,20 @@ import simd
 /// with the listener's world transform (usually the camera); players on hidden nodes are paused, and players that
 /// leave the graph are detached.
 public final class SceneAudio {
+    /// The mixer that plays and positions the players.
     public let mixer: SpatialAudioMixer
 
+    /// Creates scene audio that plays through a mixer.
     public init(mixer: SpatialAudioMixer = SpatialAudioMixer()) {
         self.mixer = mixer
     }
 
+    /// Moves each player to its node, and attaches, plays, pauses or detaches players to match the scene graph.
+    ///
+    /// - Parameters:
+    ///   - sceneGraph: The scene graph whose nodes have the audio players.
+    ///   - listener: The world transform of the listener, usually the camera.
+    /// - Throws: An error if the audio engine cannot start.
     public func update(sceneGraph: SceneGraph, listener: simd_float4x4) throws {
         mixer.listenerTransform = listener
         var visible: [ObjectIdentifier: (player: AudioPlayer, position: SIMD3<Float>)] = [:]

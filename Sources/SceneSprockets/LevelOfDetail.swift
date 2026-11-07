@@ -7,9 +7,16 @@ extension SceneGraph {
     /// origin) onwards, like SCNLevelOfDetail(geometry:worldSpaceDistance:). Materials map to its submeshes as for
     /// the node's own mesh. A nil mesh draws nothing.
     public struct LevelOfDetail {
+        /// The mesh to draw, or `nil` to draw nothing.
         public var mesh: MetalMesh?
+        /// The distance from the camera to the node's origin, in world units, where this level starts.
         public var distance: Float
 
+        /// Creates a level of detail.
+        ///
+        /// - Parameters:
+        ///   - mesh: The mesh to draw, or `nil` to draw nothing.
+        ///   - distance: The camera distance, in world units, where this level starts.
         public init(mesh: MetalMesh?, distance: Float) {
             self.mesh = mesh
             self.distance = distance

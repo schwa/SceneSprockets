@@ -6,7 +6,9 @@ import SwiftMesh
 // CPU morphing and skinning, for renderers without GPU support for them.
 
 extension SceneGraph.MeshEntry {
+    /// A mesh with morph targets and skinning applied on the CPU.
     public struct Deformed {
+        /// The deformed mesh.
         public var mesh: MetalMesh
         /// Skinned meshes are already in world space, so this is identity for them.
         public var modelMatrix: simd_float4x4

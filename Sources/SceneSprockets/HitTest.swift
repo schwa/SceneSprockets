@@ -5,13 +5,17 @@ import simd
 import SwiftMesh
 
 extension SceneGraph {
+    /// A place where a ray hits a mesh.
     public struct Hit {
+        /// The node of the mesh.
         public var node: Node
+        /// The index of the submesh that the ray hits.
         public var submeshIndex: Int
         /// -1 for bounding box hits.
         public var triangleIndex: Int
         /// World-space distance from the ray origin.
         public var distance: Float
+        /// The world-space position of the hit.
         public var position: SIMD3<Float>
         /// World-space face normal, facing the ray origin.
         public var normal: SIMD3<Float>
@@ -37,7 +41,7 @@ extension SceneGraph {
         }
     }
 
-    /// Like SCNHitTestOption.
+    /// Options for a hit test, like SceneKit's `SCNHitTestOption`.
     public struct HitTestOptions {
         /// Only nodes whose categoryBitMask shares a bit with this can be hit.
         public var categoryBitMask: UInt = .max
@@ -52,6 +56,7 @@ extension SceneGraph {
         /// Only this node and its descendants can be hit.
         public var rootNode: Node?
 
+        /// Creates hit test options. The default options hit every visible mesh triangle.
         public init(categoryBitMask: UInt = .max, backFaceCulling: Bool = false, boundingBoxOnly: Bool = false, firstFoundOnly: Bool = false, maximumDistance: Float = .infinity, rootNode: Node? = nil) {
             self.categoryBitMask = categoryBitMask
             self.backFaceCulling = backFaceCulling
@@ -79,6 +84,9 @@ extension SceneGraph {
         return hitTest(Ray3D(origin: start, direction: end - start), options: options)
     }
 
+    /// Returns every place where a world-space ray hits a mesh, nearest first.
+    ///
+    /// Only triangle and triangle strip submeshes can be hit. The vertex buffers must be CPU-visible.
     public func hitTest(_ ray: Ray3D, options: HitTestOptions) -> [Hit] {
         let revision = self.revision
         var hits: [Hit] = []

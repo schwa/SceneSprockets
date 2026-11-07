@@ -21,6 +21,15 @@ extension SceneGraph {
             activeCount.load(ordering: .relaxed) > 0 ? current : nil
         }
 
+        /// Animates the transform and morph weight changes that a closure makes, from their old values.
+        ///
+        /// The animation runs as node actions, so it needs `advanceActions(by:)` each frame. `SceneView` does this.
+        ///
+        /// - Parameters:
+        ///   - duration: The duration, in seconds. If it is 0 or less, the changes apply immediately.
+        ///   - timingMode: The easing of the animation.
+        ///   - body: The closure that changes nodes.
+        ///   - completion: Called when the animation finishes.
         public static func animate(duration: Float, timingMode: Action.TimingMode = .easeInEaseOut, _ body: () throws -> Void, completion: (() -> Void)? = nil) rethrows {
             guard duration > 0 else {
                 try body()

@@ -4,9 +4,12 @@ import simd
 extension SceneGraph {
     /// A node's local transform: either a raw matrix or decomposed translation/rotation/scale.
     public enum LocalTransform: Sendable {
+        /// A matrix.
         case matrix(simd_float4x4)
+        /// Translation, rotation and scale.
         case trs(Transform3D)
 
+        /// The transform as a matrix.
         public var matrix: simd_float4x4 {
             switch self {
             case .matrix(let matrix):
@@ -16,6 +19,7 @@ extension SceneGraph {
             }
         }
 
+        /// The transform as translation, rotation and scale. A matrix is decomposed.
         public var trs: Transform3D {
             switch self {
             case .trs(let trs):
