@@ -13,22 +13,23 @@ extension SceneGraph {
         case sphere(radius: Float = 0.5)
         case plane(width: Float = 1, height: Float = 1)
         case cylinder(radius: Float = 0.5, height: Float = 1)
-        // A pointed cone when topRadius is 0.
+        /// A pointed cone when topRadius is 0.
         case cone(topRadius: Float = 0, bottomRadius: Float = 0.5, height: Float = 1)
-        // `height` includes the caps.
+        /// `height` includes the caps.
         case capsule(capRadius: Float = 0.25, height: Float = 1)
         case torus(ringRadius: Float = 0.5, pipeRadius: Float = 0.25)
         case text(String, fontName: String = "Helvetica", fontSize: Float = 1, extrusionDepth: Float = 0.1)
-        // A cylinder with a round hole along its axis, like SCNTube.
+        /// A cylinder with a round hole along its axis, like SCNTube.
         case tube(innerRadius: Float = 0.25, outerRadius: Float = 0.5, height: Float = 1)
-        // A rectangular base at y = -height/2 and an apex at y = height/2, like SCNPyramid but centered.
+        /// A rectangular base at y = -height/2 and an apex at y = height/2, like SCNPyramid but centered.
         case pyramid(width: Float = 1, height: Float = 1, length: Float = 1)
-        // A large flat XZ plane facing +y, a finite stand-in for SCNFloor (no reflections).
+        /// A large flat XZ plane facing +y, a finite stand-in for SCNFloor (no reflections).
         case floor(width: Float = 100, length: Float = 100)
-        // A path extruded along +z from z = 0, like SCNShape. `path` is a SwiftUI Path description
-        // (Path(_: String)), so the shape stays Codable; y points up as on screen.
+        /// A path extruded along +z from z = 0, like SCNShape. `path` is a SwiftUI Path description
+        /// (Path(_: String)), so the shape stays Codable; y points up as on screen.
         case extrudedPath(String, extrusionDepth: Float = 0.1)
 
+        /// Returns the shape as a SwiftMesh mesh, with normals and texture coordinates.
         public func mesh() -> Mesh {
             // SwiftMesh defaults to flat normals; curved shapes need smooth ones (#118).
             let smooth: MeshAttributes = [.smoothNormals, .textureCoordinates]

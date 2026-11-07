@@ -28,6 +28,7 @@ extension SceneGraph.Node {
         }
     }
 
+    /// The position of the node's origin in world space. Setting it moves the node.
     public var worldPosition: SIMD3<Float> {
         get { worldTransform.columns.3.xyz }
         set {
@@ -37,6 +38,7 @@ extension SceneGraph.Node {
         }
     }
 
+    /// The orientation of the node in world space. Setting it turns the node.
     public var worldOrientation: simd_quatf {
         get { Transform3D(decomposing: worldTransform).rotation }
         set {
@@ -67,14 +69,19 @@ extension SceneGraph.Node {
         (conversion(from: node) * SIMD4(vector, 0)).xyz
     }
 
+    /// Converts a direction from this node's space to a node's space, or to world space if the node is `nil`.
+    ///
+    /// Directions ignore translation. The result is not normalized.
     public func convertVector(_ vector: SIMD3<Float>, to node: SceneGraph.Node?) -> SIMD3<Float> {
         (conversion(to: node) * SIMD4(vector, 0)).xyz
     }
 
+    /// Converts a transform from a node's space, or from world space if the node is `nil`, to this node's space.
     public func convertTransform(_ transform: float4x4, from node: SceneGraph.Node?) -> float4x4 {
         conversion(from: node) * transform
     }
 
+    /// Converts a transform from this node's space to a node's space, or to world space if the node is `nil`.
     public func convertTransform(_ transform: float4x4, to node: SceneGraph.Node?) -> float4x4 {
         conversion(to: node) * transform
     }

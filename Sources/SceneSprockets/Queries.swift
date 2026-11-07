@@ -8,14 +8,19 @@ extension SceneGraph {
     /// Counts for visible content, like SCNView's statistics overlay. Uses the cached flattening, so it is cheap
     /// between changes.
     public struct Statistics: Sendable, Equatable {
+        /// The number of visible nodes.
         public var nodeCount: Int
         /// One per submesh.
         public var meshCount: Int
+        /// The number of triangles in visible meshes.
         public var triangleCount: Int
+        /// The number of visible lights.
         public var lightCount: Int
+        /// The number of visible cameras.
         public var cameraCount: Int
     }
 
+    /// Counts of the visible content.
     public var statistics: Statistics {
         var nodeCount = 0
         visit { _, _ in nodeCount += 1 }

@@ -70,16 +70,21 @@ extension SceneGraph.Node {
         NodeFieldSlot(\.subdivisionBase, \.subdivisionBaseStorage)
     ]
 
+    /// The node's transform relative to its parent, as a matrix or as translation, rotation and scale.
+    ///
+    /// Use ``transform`` or ``trs`` to read or write one form.
     public var localTransform: SceneGraph.LocalTransform {
         get { getField(FieldKeyPaths.localTransform, \.localTransformStorage) }
         set { setField(FieldKeyPaths.localTransform, \.localTransformStorage, newValue) }
     }
 
+    /// What the node shows: nothing, a mesh, a light or a camera.
     public var content: Content {
         get { getField(FieldKeyPaths.content, \.contentStorage) }
         set { setField(FieldKeyPaths.content, \.contentStorage, newValue) }
     }
 
+    /// A name for the node, for debugging, outlines and archives.
     public var label: String? {
         get { getField(FieldKeyPaths.label, \.labelStorage) }
         set { setField(FieldKeyPaths.label, \.labelStorage, newValue) }

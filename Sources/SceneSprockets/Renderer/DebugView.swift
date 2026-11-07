@@ -9,19 +9,20 @@ import SwiftMesh
 /// Shows every mesh in a scene in one debug view instead of its material (#132). Give it to
 /// SceneGraphElement(debugMode:) or SceneView(debugMode:). Back faces are tinted red in every mode except wireframe.
 public enum SceneGraphDebugMode: Int32, CaseIterable, Sendable, Codable {
-    // Grey, lit from the camera: shape only.
+    /// Grey, lit from the camera: shape only.
     case shaded = 0
-    // World-space normals as color.
+    /// World-space normals as color.
     case normals = 1
-    // Texture coordinates as red and green; magenta without them.
+    /// Texture coordinates as red and green; magenta without them.
     case textureCoordinates = 2
-    // An 8×8 checkerboard in texture space, to see stretching and seams; magenta without texture coordinates.
+    /// An 8×8 checkerboard in texture space, to see stretching and seams; magenta without texture coordinates.
     case uvChecker = 3
-    // The fraction of the world position, repeating every unit.
+    /// The fraction of the world position, repeating every unit.
     case worldPosition = 4
-    // Triangle edges only.
+    /// Triangle edges only.
     case wireframe = 5
 
+    /// A name for the mode, for menus.
     public var name: String {
         switch self {
         case .shaded: "Shaded"
@@ -38,15 +39,16 @@ public enum SceneGraphDebugMode: Int32, CaseIterable, Sendable, Codable {
 /// material: every renderer shows its own version of the channel. Blinn-Phong has no metallic (black) and maps
 /// shininess to roughness.
 public enum SceneGraphMaterialChannel: Int32, CaseIterable, Sendable, Codable {
-    // Diffuse for Blinn-Phong.
+    /// Diffuse for Blinn-Phong.
     case baseColor = 1
     case alpha = 2
     case metallic = 3
     case roughness = 4
-    // Specular color for Blinn-Phong, reflectance at normal incidence (F0) for PBR.
+    /// Specular color for Blinn-Phong, reflectance at normal incidence (F0) for PBR.
     case specular = 5
     case emission = 6
 
+    /// A name for the channel, for menus.
     public var name: String {
         switch self {
         case .baseColor: "Base Color"

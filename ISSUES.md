@@ -682,15 +682,18 @@ Split from #21. Morph targets (Node.morphTargets + morphWeights) render in the P
 ## 35: DocC comments on public symbols
 
 +++
-status: open
+status: closed
 priority: low
 kind: documentation
 labels: effort:m, area:docs, release
 created: 2026-10-12T15:17:53Z
-updated: 2026-11-06T18:01:47Z
+updated: 2026-11-07T15:34:54Z
+closed: 2026-11-07T15:34:54Z
 +++
 
 Split from #18, which got a README guide (scene building, rendering, custom renderers, reversed depth, change tracking, bounds, animation, limitations). Per-symbol DocC comments were left out on purpose: the API is changing quickly, and AGENTS.md asks for no doc comments unless asked. Do this once the API settles (after glTF loading, #16).
+
+- `2026-11-07T15:34:54Z`: Fixed: every public declaration in all seven modules has a /// doc comment, except protocol witnesses (body, encode/init(from:), materialType, makeElement, isTransparent, appliesNodeOpacity, archive and manipulator methods), which inherit the documented protocol requirements. Done in steps: existing // comments above public declarations, enum cases and protocol requirements became doc comments; the rest were written by hand (the 21 NodeField components share one template). just check-docs (warnings as errors) passes; build 0 warnings; 327 tests pass; lint clean.
 
 ---
 

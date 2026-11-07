@@ -11,13 +11,20 @@ extension SceneGraph {
     /// renderer writes them every frame.
     @Observable
     public final class Node: Identifiable {
+        /// What a node shows.
         public enum Content {
+            /// Nothing. The node only groups and moves its children.
             case empty
-            // materials[i] applies to submesh i; the last material covers any extra submeshes.
+            /// A mesh with one material for each submesh.
+            ///
+            /// `materials[i]` applies to submesh `i`. The last material covers any extra submeshes.
             case mesh(MetalMesh, materials: [any Material], castsShadow: Bool = true, receivesShadow: Bool = true)
+            /// A light.
             case light(Light)
+            /// A camera.
             case camera(Camera)
 
+            /// A mesh with one material for all submeshes.
             public static func mesh(_ mesh: MetalMesh, material: any Material, castsShadow: Bool = true, receivesShadow: Bool = true) -> Self {
                 .mesh(mesh, materials: [material], castsShadow: castsShadow, receivesShadow: receivesShadow)
             }
@@ -38,6 +45,8 @@ extension SceneGraph {
                 child.parent = nil
             }
         }
+        /// The child nodes, in order. Use ``addChild(_:)``, ``insertChild(_:at:)`` and ``removeChild(_:)`` to change
+        /// them.
         public private(set) var children: [Node] = []
         // Set while the node is in a graph; see Node+Entity.swift.
         @ObservationIgnored @exclusivity(unchecked) var entityBinding: EntityBinding?
@@ -152,6 +161,14 @@ extension SceneGraph {
             set { localTransform = .trs(newValue) }
         }
 
+        /// Creates a node with a matrix transform.
+        ///
+        /// - Parameters:
+        ///   - parent: The parent to add the node to, if any.
+        ///   - children: The children to add to the node.
+        ///   - label: A name for the node, for debugging and outlines.
+        ///   - transform: The local transform, as a matrix.
+        ///   - content: What the node shows.
         public init(
             parent: Node? = nil,
             children: [Node] = [],
@@ -174,6 +191,14 @@ extension SceneGraph {
             try decodeArchive(from: decoder)
         }
 
+        /// Creates a node with a translation, rotation and scale.
+        ///
+        /// - Parameters:
+        ///   - parent: The parent to add the node to, if any.
+        ///   - children: The children to add to the node.
+        ///   - label: A name for the node, for debugging and outlines.
+        ///   - trs: The local translation, rotation and scale.
+        ///   - content: What the node shows.
         public convenience init(
             parent: Node? = nil,
             children: [Node] = [],
@@ -187,6 +212,7 @@ extension SceneGraph {
 
         // MARK: - Hierarchy
 
+        /// Returns whether this node is the parent of a node, or an ancestor of its parent.
         public func isAncestor(of node: Node) -> Bool {
             var current = node.parent
             while let ancestor = current {
@@ -203,6 +229,9 @@ extension SceneGraph {
             child !== self && !child.isAncestor(of: self)
         }
 
+        /// Adds a node at the end of the children, and removes it from its old parent first.
+        ///
+        /// A child that makes a cycle causes a precondition failure.
         public func addChild(_ child: Node) {
             insertChild(child, at: children.count)
         }
@@ -226,6 +255,7 @@ extension SceneGraph {
             bump(structure: true)
         }
 
+        /// Removes a child. A node that is not a child does not change.
         public func removeChild(_ child: Node) {
             guard child.parent === self else {
                 return
@@ -275,10 +305,12 @@ extension SceneGraph {
             bump(structure: true)
         }
 
+        /// Removes the node from its parent.
         public func removeFromParent() {
             parent?.removeChild(self)
         }
 
+        /// Removes every child of the node.
         public func removeAllChildren() {
             for child in children {
                 child.parent = nil

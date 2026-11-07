@@ -4,12 +4,19 @@ import MetalSprockets
 import MetalSupport
 import simd
 
+/// The camera, lights and settings of one frame, that ``SceneGraphElement`` gives each material renderer.
 public struct SceneGraphRenderContext {
+    /// The view matrix: the inverse of ``cameraMatrix``.
     public var viewMatrix: simd_float4x4
+    /// The projection matrix. It already contains the reversed-depth flip, so use `.greater` depth tests.
     public var projectionMatrix: simd_float4x4
+    /// The camera's world transform.
     public var cameraMatrix: simd_float4x4
+    /// The lights that the camera sees, with their world transforms.
     public var lights: [(worldTransform: simd_float4x4, light: Light)]
+    /// The scene graph's revision, to find out whether cached data is still correct.
     public var revision: SceneGraph.Revision
+    /// The scene graph's background and image-based lighting.
     public var environment: SceneGraph.Environment
     /// The camera's categoryBitMask.
     public var categoryBitMask: UInt = .max
@@ -23,15 +30,27 @@ public struct SceneGraphRenderContext {
     public internal(set) var materialChannel: SceneGraphMaterialChannel?
 }
 
-/// One renderer per material family. Add a family by conforming a new type; the scene graph core does not change.
+/// A renderer for one material family.
+///
+/// To add a material family, write a type that conforms to this protocol. The scene graph does not change.
 public protocol SceneGraphMaterialRenderer {
+    /// The material type that the renderer draws.
     var materialType: any SceneSprockets.Material.Type { get }
+    /// Returns an element that draws mesh entries whose material is ``materialType``.
+    ///
+    /// The element draws inside the scene's render pass. ``SceneGraphElement`` can call this method several times in
+    /// a frame, for batches with different lights or rendering order.
+    ///
+    /// - Parameters:
+    ///   - entries: The mesh entries to draw.
+    ///   - context: The camera, lights and settings of the frame.
     func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement
 }
 
 /// A renderer that can draw `SceneGraph.Environment.Background.environment`. The element asks each one in order and
 /// draws the first non-nil result before any meshes, even when the renderer has no entries.
 public protocol SceneGraphBackgroundRenderer {
+    /// Returns an element that draws the environment background, or `nil` if this renderer cannot draw it.
     func makeBackgroundElement(context: SceneGraphRenderContext) throws -> AnyElement?
 }
 
@@ -70,6 +89,22 @@ public struct SceneGraphElement: Element {
     @MSEnvironment(\.renderPassDescriptor)
     private var renderPassDescriptor
 
+    /// Creates an element that draws a scene graph.
+    ///
+    /// - Parameters:
+    ///   - sceneGraph: The scene to draw.
+    ///   - camera: The camera node. If `nil`, the element uses the first camera node.
+    ///   - cameraMatrix: A world transform that replaces the camera node's transform.
+    ///   - aspectRatio: The width of the view divided by its height.
+    ///   - renderers: One renderer for each material family that the scene uses.
+    ///   - defaultCamera: The camera to use when the scene has no camera node.
+    ///   - cameraOverride: A camera that replaces the camera node's camera.
+    ///   - defaultLight: A light at the camera when the scene has no lights.
+    ///   - shadows: The shadow settings and state, or `nil` for no shadows.
+    ///   - storesDepth: Whether to keep the scene depth for later passes.
+    ///   - decorations: A closure that returns extra elements to draw in the scene pass.
+    ///   - debugMode: A debug view to show instead of the materials.
+    ///   - materialChannel: A material value to show instead of lighting.
     public init(sceneGraph: SceneGraph, camera: SceneGraph.Node? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any SceneGraphMaterialRenderer], defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, shadows: SceneGraphShadows? = nil, storesDepth: Bool = false, decorations: ((SceneGraphRenderContext) throws -> AnyElement?)? = nil, debugMode: SceneGraphDebugMode? = nil, materialChannel: SceneGraphMaterialChannel? = nil) {
         self.debugMode = debugMode
         self.materialChannel = materialChannel
@@ -407,6 +442,7 @@ func partitionMeshEntries(_ entries: [SceneGraph.MeshEntry], renderers: [any Sce
 }
 
 extension Element {
+    /// Binds vertex buffers at their indices.
     public func vertexBuffers(_ buffers: [Int: MTLBuffer]) -> some Element {
         buffers.sorted { $0.key < $1.key }.reduce(AnyElement(self)) { element, entry in
             AnyElement(element.vertexBuffer(entry.value, index: entry.key))

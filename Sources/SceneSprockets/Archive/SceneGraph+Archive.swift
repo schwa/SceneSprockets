@@ -48,7 +48,7 @@ extension SceneGraph.Node: Codable {
     }
 
     enum MeshKeys: String, CodingKey {
-        // A mesh is a `shape`, or a `file` written by the archive's mesh codec (#158).
+        /// A mesh is a `shape`, or a `file` written by the archive's mesh codec (#158).
         case shape, file, materials, castsShadow, receivesShadow
     }
 

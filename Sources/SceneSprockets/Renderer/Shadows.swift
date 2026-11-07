@@ -36,8 +36,11 @@ public final class SceneGraphShadows {
     /// Soft-shadow filter half-size in shadow map texels, like SCNLight.shadowRadius: 1 filters 3x3, 0 is hard.
     /// Cost grows with (2 * softness + 1)^2 per light.
     public var softness: Int
+    /// The width and height of each shadow map slice, in texels.
     public var resolution: Int
+    /// The constant depth bias when the shadow map is drawn.
     public var depthBias: Float
+    /// The depth bias that increases with the slope of the surface.
     public var slopeScale: Float
     /// World-space push of directional-light casters away from the light, in shadow map texels. The hardware
     /// constant bias is tiny with depth32Float, so this is what stops acne on lit faces (#60).
@@ -51,6 +54,7 @@ public final class SceneGraphShadows {
     // One per frame in flight, like the shadow map's depth textures.
     private var receiverMasks: [MTLTexture] = []
 
+    /// Creates shadow settings. Keep one instance for each view, because it keeps the shadow map between frames.
     public init(intensity: Float = 0.6, color: SIMD3<Float> = .zero, softness: Int = 1, resolution: Int = 2_048, depthBias: Float = 2, slopeScale: Float = 2, depthOffsetTexels: Float = 1.5) {
         self.depthOffsetTexels = depthOffsetTexels
         self.intensity = intensity
@@ -63,16 +67,20 @@ public final class SceneGraphShadows {
 
     /// What an in-shader renderer needs to sample the shadow map.
     public struct Sampling {
+        /// The shadow map of the frame.
         public internal(set) var shadowMap: SceneGraphShadowMap
+        /// The shadow strength, from 0 to 1.
         public internal(set) var intensity: Float
+        /// The color that multiplies shadowed pixels, in linear RGB.
         public internal(set) var color: SIMD3<Float>
+        /// The filter half-size, in shadow map texels.
         public internal(set) var softness: Int
     }
 
     struct Caster {
         enum Placement {
             case model(simd_float4x4)
-            // Skinned on the GPU: rest positions moved by these joint matrices (joint world * inverse bind).
+            /// Skinned on the GPU: rest positions moved by these joint matrices (joint world * inverse bind).
             case skinned(influences: MTLBuffer, jointMatrices: [simd_float4x4])
         }
 

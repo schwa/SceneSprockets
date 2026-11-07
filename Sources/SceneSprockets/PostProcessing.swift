@@ -22,6 +22,7 @@ extension SceneGraph {
         /// Nil turns ambient occlusion off.
         public var ambientOcclusion: AmbientOcclusion?
 
+        /// Creates post-processing settings. The defaults change nothing.
         public init(exposure: Float = 0, contrast: Float = 1, saturation: Float = 1, vignetteIntensity: Float = 0, vignetteRadius: Float = 0.6, ambientOcclusion: AmbientOcclusion? = nil) {
             self.exposure = exposure
             self.contrast = contrast
@@ -45,6 +46,7 @@ extension SceneGraph {
         /// Samples per pixel; more is smoother and slower.
         public var sampleCount: Int
 
+        /// Creates ambient occlusion settings.
         public init(radius: Float = 0.5, intensity: Float = 0.8, sampleCount: Int = 12) {
             self.radius = radius
             self.intensity = intensity

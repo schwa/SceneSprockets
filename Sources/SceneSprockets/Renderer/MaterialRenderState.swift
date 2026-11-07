@@ -7,29 +7,32 @@ import SwiftMesh
 public struct MaterialRenderState: Sendable, Hashable {
     /// Straight (not premultiplied) alpha.
     public enum BlendMode: String, Sendable, Hashable, CaseIterable, Codable {
-        // Over what is behind, by alpha. Blends only when the material is transparent.
+        /// Over what is behind, by alpha. Blends only when the material is transparent.
         case alpha
-        // Adds color times alpha.
+        /// Adds color times alpha.
         case add
-        // Subtracts color times alpha from what is behind.
+        /// Subtracts color times alpha from what is behind.
         case subtract
-        // Multiplies what is behind by the color.
+        /// Multiplies what is behind by the color.
         case multiply
-        // 1 - (1 - behind) * (1 - color): brightens.
+        /// 1 - (1 - behind) * (1 - color): brightens.
         case screen
-        // Writes the color with no blending, even when transparent.
+        /// Writes the color with no blending, even when transparent.
         case replace
     }
 
+    /// How the material's color combines with what is already drawn.
     public var blendMode: BlendMode
     /// Transparent draws never write depth.
     public var writesToDepthBuffer: Bool
     /// False draws on top of what is already drawn.
     public var readsFromDepthBuffer: Bool
+    /// The color channels that the draw writes.
     public var colorWriteMask: MTLColorWriteMask
     /// `.lines` draws triangle edges.
     public var fillMode: MTLTriangleFillMode
 
+    /// Creates render state. The defaults draw normally, with alpha blending for transparent materials.
     public init(blendMode: BlendMode = .alpha, writesToDepthBuffer: Bool = true, readsFromDepthBuffer: Bool = true, colorWriteMask: MTLColorWriteMask = .all, fillMode: MTLTriangleFillMode = .fill) {
         self.blendMode = blendMode
         self.writesToDepthBuffer = writesToDepthBuffer

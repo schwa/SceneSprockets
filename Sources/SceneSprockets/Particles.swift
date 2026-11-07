@@ -7,9 +7,11 @@ import simd
 /// Emitters follow the node's world transform times their own motion. SceneView advances them with
 /// advanceParticles(by:); SceneGraphElement simulates them before the scene pass and draws them after the meshes.
 public final class SceneParticleSystem {
+    /// The MetalSprocketsParticles description of the emitters. Changes apply on the next update.
     public var system: ParticleSystem {
         didSet { needsApply = true }
     }
+    /// The random seed. Two systems with the same description and seed make the same particles.
     public let seed: UInt32
     /// When false, emitters and colliders ignore the node's transform (the node only shows and hides them), for effects
     /// already in world space, such as emitters on a skinned mesh's world-space positions.
@@ -25,11 +27,19 @@ public final class SceneParticleSystem {
     // Each emitter's isEmitting from before the node was hidden.
     private var emittingBeforeHidden: [Bool] = []
 
+    /// Creates a particle system for a node.
+    ///
+    /// - Parameters:
+    ///   - system: The description of the emitters.
+    ///   - seed: The random seed.
     public init(_ system: ParticleSystem, seed: UInt32 = 0) {
         self.system = system
         self.seed = seed
     }
 
+    /// Returns the GPU runtime of the system, and creates it the first time.
+    ///
+    /// - Throws: An error if the runtime's buffers or pipelines cannot be created.
     public func runtime() throws -> ParticleSystemRuntime {
         if let storedRuntime {
             if needsApply {
@@ -139,6 +149,7 @@ extension SceneGraph {
         }
     }
 
+    /// Whether any node in the graph has a particle system.
     public var hasParticleSystems: Bool {
         !allParticleSystems().isEmpty
     }

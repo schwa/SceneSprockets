@@ -8,11 +8,11 @@ import SwiftUI
 /// Per-frame callbacks, like SCNSceneRendererDelegate. All are optional.
 @MainActor
 public protocol SceneViewDelegate: AnyObject {
-    // Before actions run. Change the scene here.
+    /// Before actions run. Change the scene here.
     func sceneView(updateAtTime time: Float, deltaTime: Float)
-    // After actions ran, before constraints.
+    /// After actions ran, before constraints.
     func sceneView(didApplyActionsAtTime time: Float)
-    // After constraints ran, just before the frame is drawn.
+    /// After constraints ran, just before the frame is drawn.
     func sceneView(didApplyConstraintsAtTime time: Float)
 }
 
@@ -24,9 +24,12 @@ public extension SceneViewDelegate {
 
 /// Shows a scene graph, like SceneKit's SwiftUI SceneView. Runs node actions every frame.
 public struct SceneView: View {
+    /// Behaviors of a scene view.
     public struct Options: OptionSet, Sendable {
+        /// The bits of the options.
         public let rawValue: Int
 
+        /// Creates options from bits.
         public init(rawValue: Int) {
             self.rawValue = rawValue
         }
@@ -390,6 +393,7 @@ public struct SceneView: View {
         shadows != nil || sceneGraph.fog != nil || sceneGraph.postProcessing != nil
     }
 
+    /// The camera that the view uses when the scene has no camera node: a 60° perspective camera.
     public static let defaultCamera = Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(60), depthMode: .standard(zClip: 0.01 ... 1_000)))
 
     // The starting camera transform, and the point camera control orbits around.

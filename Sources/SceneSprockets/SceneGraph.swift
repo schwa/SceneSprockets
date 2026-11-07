@@ -4,8 +4,13 @@ import simd
 import SwiftECS
 import SwiftMesh
 
+/// A tree of nodes with meshes, lights and cameras, and the settings that apply to the whole scene.
+///
+/// The scene graph caches traversals, bounds and mesh entries by ``revision``, and stores node data in a SwiftECS
+/// ``world``. It is `@Observable`, so SwiftUI views update when it changes.
 @Observable
 public class SceneGraph {
+    /// The root node. Its descendants are the scene.
     public var root: Node {
         didSet {
             if oldValue !== root {
@@ -37,6 +42,7 @@ public class SceneGraph {
     /// Nil: no post-processing. Read every frame, like `fog`.
     public var postProcessing: PostProcessing?
 
+    /// Creates a scene graph with a new SwiftECS world.
     public convenience init(root: Node) {
         self.init(root: root, world: World())
     }
@@ -92,11 +98,13 @@ public class SceneGraph {
         try Self.visit(node: root, parentTransform: initialTransform, includeHidden: includeHidden, visitor)
     }
 
+    /// What a traversal does after a visitor returns.
     public enum VisitResult: Sendable {
+        /// The traversal continues with the node's children.
         case `continue`
-        // Skips this node's descendants.
+        /// The traversal skips the node's descendants.
         case skipChildren
-        // Ends the traversal.
+        /// The traversal ends.
         case stop
     }
 
@@ -168,6 +176,7 @@ public class SceneGraph {
 
         private var storage: Storage
 
+        /// Creates a mesh entry.
         public init(node: Node, worldTransform: float4x4, mesh: MetalMesh, submeshIndex: Int, material: any Material, castsShadow: Bool, receivesShadow: Bool, opacity: Float = 1) {
             storage = Storage(node: node, worldTransform: worldTransform, mesh: mesh, submeshIndex: submeshIndex, material: material, castsShadow: castsShadow, receivesShadow: receivesShadow, opacity: opacity)
         }
@@ -179,36 +188,43 @@ public class SceneGraph {
             return storage
         }
 
+        /// The node that has the mesh.
         public var node: Node {
             get { storage.node }
             set { uniqueStorage().node = newValue }
         }
 
+        /// The node's world transform.
         public var worldTransform: float4x4 {
             get { storage.worldTransform }
             set { uniqueStorage().worldTransform = newValue }
         }
 
+        /// The mesh, or its level of detail for the camera distance.
         public var mesh: MetalMesh {
             get { storage.mesh }
             set { uniqueStorage().mesh = newValue }
         }
 
+        /// The index of the submesh to draw.
         public var submeshIndex: Int {
             get { storage.submeshIndex }
             set { uniqueStorage().submeshIndex = newValue }
         }
 
+        /// The material of the submesh.
         public var material: any Material {
             get { storage.material }
             set { uniqueStorage().material = newValue }
         }
 
+        /// Whether the submesh casts shadows.
         public var castsShadow: Bool {
             get { storage.castsShadow }
             set { uniqueStorage().castsShadow = newValue }
         }
 
+        /// Whether shadows darken the submesh.
         public var receivesShadow: Bool {
             get { storage.receivesShadow }
             set { uniqueStorage().receivesShadow = newValue }
@@ -271,6 +287,7 @@ public class SceneGraph {
         return result
     }
 
+    /// Returns one entry for each visible submesh, with world transforms. The result is cached by revision.
     public func meshEntries(worldTransform initialTransform: float4x4 = .identity) -> [MeshEntry] {
         flattened(worldTransform: initialTransform).meshes
     }

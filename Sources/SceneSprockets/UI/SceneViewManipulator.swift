@@ -5,12 +5,22 @@ import simd
 /// The camera a SceneView draws with, for overlays and pointer input. Points are view coordinates (origin top-left,
 /// y down); `drawableSize` is in pixels.
 public struct SceneViewport {
+    /// The camera's world transform.
     public var cameraMatrix: simd_float4x4
     /// Standard depth (near 0, far 1), whatever depth the scene itself uses.
     public var projectionMatrix: simd_float4x4
+    /// The size of the view, in points.
     public var viewSize: SIMD2<Float>
+    /// The size of the drawable, in pixels.
     public var drawableSize: SIMD2<Float>
 
+    /// Creates a viewport.
+    ///
+    /// - Parameters:
+    ///   - cameraMatrix: The camera's world transform.
+    ///   - projectionMatrix: The projection, with standard depth.
+    ///   - viewSize: The size of the view, in points.
+    ///   - drawableSize: The size of the drawable, in pixels.
     public init(cameraMatrix: simd_float4x4, projectionMatrix: simd_float4x4, viewSize: SIMD2<Float>, drawableSize: SIMD2<Float>) {
         self.cameraMatrix = cameraMatrix
         self.projectionMatrix = projectionMatrix
@@ -26,14 +36,17 @@ public struct SceneViewport {
         self.init(cameraMatrix: cameraMatrix, projectionMatrix: projection.isReverseZ ? .reverseZ * matrix : matrix, viewSize: viewSize, drawableSize: drawableSize)
     }
 
+    /// The view matrix: the inverse of ``cameraMatrix``.
     public var viewMatrix: simd_float4x4 {
         cameraMatrix.inverse
     }
 
+    /// The view and projection, for projecting points and making rays.
     public var viewProjection: ViewProjection {
         ViewProjection(viewMatrix: viewMatrix, projectionMatrix: projectionMatrix, isReverseZ: false, viewSize: viewSize)
     }
 
+    /// Returns the world-space ray through a point in view coordinates.
     public func ray(through point: SIMD2<Float>) -> Ray3D {
         viewProjection.ray(through: point)
     }
@@ -58,19 +71,34 @@ public struct SceneViewport {
 /// and keeps camera control off it. It also asks while the pointer hovers, for highlighting.
 @MainActor
 public protocol SceneViewManipulator: AnyObject {
-    // Drawn after the scene, in its own render pass that loads the scene's color and clears depth to 1 (standard).
+    /// Returns an element to draw after the scene, or `nil` to draw nothing.
+    ///
+    /// The element draws in its own render pass. The pass loads the scene's color and clears depth to 1, for standard
+    /// depth.
     func overlay(viewport: SceneViewport) throws -> AnyElement?
-    // Whether a drag starting at `point` belongs to the manipulator. May update hover state.
+    /// Returns whether a drag that starts at a point belongs to the manipulator. The method can update hover state.
     func hitTest(_ point: SIMD2<Float>, viewport: SceneViewport) -> Bool
+    /// Starts a drag at a point that ``hitTest(_:viewport:)`` claimed.
     func beginDrag(at point: SIMD2<Float>, viewport: SceneViewport)
+    /// Continues a drag to a point.
     func drag(to point: SIMD2<Float>, viewport: SceneViewport)
+    /// Ends a drag.
     func endDrag()
-    // Two-finger pinch and twist (iOS, visionOS). A gesture starting where `claimsTwoFingerGesture` is true goes here,
-    // and camera control does not zoom with it. `scale` is relative to the start; `rotation` is radians, clockwise
-    // on screen.
+    /// Returns whether a two-finger pinch and twist that starts at a point belongs to the manipulator.
+    ///
+    /// Two-finger gestures are available on iOS and visionOS. If the manipulator claims a gesture, camera control does
+    /// not zoom with it. The default implementation returns false.
     func claimsTwoFingerGesture(at point: SIMD2<Float>, viewport: SceneViewport) -> Bool
+    /// Starts a two-finger gesture that the manipulator claimed.
     func beginTwoFingerGesture(viewport: SceneViewport)
+    /// Continues a two-finger gesture.
+    ///
+    /// - Parameters:
+    ///   - scale: The pinch scale, relative to the start of the gesture.
+    ///   - rotation: The twist angle in radians, clockwise on screen, relative to the start of the gesture.
+    ///   - viewport: The camera and view size.
     func twoFingerGesture(scale: Float, rotation: Float, viewport: SceneViewport)
+    /// Ends a two-finger gesture.
     func endTwoFingerGesture()
 }
 
