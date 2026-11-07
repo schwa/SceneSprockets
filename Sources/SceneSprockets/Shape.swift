@@ -28,6 +28,8 @@ extension SceneGraph {
         /// A path extruded along +z from z = 0, like SCNShape. `path` is a SwiftUI Path description
         /// (Path(_: String)), so the shape stays Codable; y points up as on screen.
         case extrudedPath(String, extrusionDepth: Float = 0.1)
+        /// The Utah teapot, scaled so its widest side is `diameter`, centered at the origin.
+        case teapot(diameter: Float = 1)
 
         /// Returns the shape as a SwiftMesh mesh, with normals and texture coordinates.
         public func mesh() -> Mesh {
@@ -61,6 +63,8 @@ extension SceneGraph {
             case let .extrudedPath(description, extrusionDepth):
                 // Same as text: triangulate the n-gon caps before adding normals (#101).
                 Mesh.extruded(SwiftUI.Path(description) ?? SwiftUI.Path(), depth: extrusionDepth, attributes: []).triangulated().withFlatNormals()
+            case let .teapot(diameter):
+                .teapot(diameter: diameter, attributes: smooth)
             }
         }
 
@@ -126,6 +130,7 @@ extension SceneGraph {
             case .pyramid: "Pyramid"
             case .floor: "Floor"
             case .extrudedPath: "Extruded Path"
+            case .teapot: "Teapot"
             }
         }
     }

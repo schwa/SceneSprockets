@@ -7367,12 +7367,13 @@ Expected (per schwa): a more exciting slide with more elements.
 ## 336: No built-in teapot shape
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:scenegraph, effort:s
 created: 2026-11-07T18:04:58Z
-updated: 2026-11-07T18:04:59Z
+updated: 2026-11-07T18:31:27Z
+closed: 2026-11-07T18:31:27Z
 +++
 
 SceneGraph.Shape has no teapot. The Utah teapot is the usual test object in 3D graphics, but apps and demos that want one must load or build it themselves. The keynote's Shapes slide therefore cannot show one.

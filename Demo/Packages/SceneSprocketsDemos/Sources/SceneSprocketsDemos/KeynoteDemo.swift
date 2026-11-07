@@ -388,6 +388,7 @@ public final class KeynoteDemo: DemoScene {
             addCode("""
             Node(shape: .box(width: 1, height: 1, length: 1), material: red, device: device)
             Node(shape: .torus(ringRadius: 0.5, pipeRadius: 0.18), material: pink, device: device)
+            Node(shape: .teapot(diameter: 2.2), material: porcelain, device: device)
             Node(shape: .text("Hello", fontName: "Helvetica-Bold", fontSize: 1), material: white, device: device)
             """, to: slide)
         case "Materials":
@@ -673,12 +674,14 @@ public final class KeynoteDemo: DemoScene {
             (.box(width: 1, height: 1, length: 1), [1, 0.4, 0.3]),
             (.sphere(radius: 0.6), [1, 0.8, 0.3]),
             (.cylinder(radius: 0.5, height: 1.2), [0.4, 0.9, 0.4]),
+            // The diameter spans spout to handle, so the body is about half of it.
+            (.teapot(diameter: 2.2), [0.95, 0.93, 0.88]),
             (.cone(bottomRadius: 0.6, height: 1.2), [0.3, 0.8, 1]),
             (.capsule(capRadius: 0.4, height: 1.4), [0.6, 0.5, 1]),
             (.torus(ringRadius: 0.5, pipeRadius: 0.18), [1, 0.5, 0.8])
         ]
         for (index, (shape, color)) in shapes.enumerated() {
-            let node = SceneGraph.Node(parent: slide, shape: shape, material: BlinnPhongSceneMaterial.plastic(color, shininess: 48), device: demoDevice, trs: .init(translation: [Float(index) * 1.8 - 4.5, 1.2, 0]))
+            let node = SceneGraph.Node(parent: slide, shape: shape, material: BlinnPhongSceneMaterial.plastic(color, shininess: 48), device: demoDevice, trs: .init(translation: [Float(index) * 1.6 - 4.8, 1.2, 0]))
             node.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([0.3, 1, 0.2]), duration: 5 + Float(index))))
         }
     }

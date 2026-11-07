@@ -47,6 +47,19 @@ func newShapesFaceOutward(shape: SceneGraph.Shape, volume: Float) {
     #expect(abs(signedVolume - volume) / volume < 0.02)
 }
 
+// #336: the teapot is a built-in shape whose widest side is its diameter, with smooth normals.
+@Test
+func teapotShapeFitsItsDiameter() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let node = SceneGraph.Node(shape: .teapot(diameter: 2), material: material, device: device)
+    let bounds = try #require(node.meshBounds)
+    let size = bounds.max - bounds.min
+    #expect(abs(max(size.x, size.y, size.z) - 2) < 0.02)
+    #expect(node.label == "Teapot")
+    let data = try JSONEncoder().encode(SceneGraph.Shape.teapot(diameter: 2))
+    #expect(try JSONDecoder().decode(SceneGraph.Shape.self, from: data) == .teapot(diameter: 2))
+}
+
 @Test
 func floorFacesUp() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())

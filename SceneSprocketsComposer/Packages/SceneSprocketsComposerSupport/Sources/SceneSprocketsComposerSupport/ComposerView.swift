@@ -243,7 +243,7 @@ struct AddShapeMenuView: View {
 }
 
 enum ShapeKind: CaseIterable, Identifiable {
-    case box, sphere, plane, cylinder, cone, capsule, torus, tube, pyramid, floor, star
+    case box, sphere, plane, cylinder, cone, capsule, torus, tube, pyramid, teapot, floor, star
 
     var id: Self { self }
 
@@ -258,6 +258,7 @@ enum ShapeKind: CaseIterable, Identifiable {
         case .torus: "Torus"
         case .tube: "Tube"
         case .pyramid: "Pyramid"
+        case .teapot: "Teapot"
         case .floor: "Floor"
         case .star: "Star"
         }
@@ -274,6 +275,7 @@ enum ShapeKind: CaseIterable, Identifiable {
         case .torus: "circle.circle"
         case .tube: "circle.dotted.circle"
         case .pyramid: "pyramid"
+        case .teapot: "mug"
         case .floor: "square.bottomhalf.filled"
         case .star: "star"
         }
@@ -290,6 +292,7 @@ enum ShapeKind: CaseIterable, Identifiable {
         case .torus: .torus()
         case .tube: .tube()
         case .pyramid: .pyramid()
+        case .teapot: .teapot()
         case .floor: .floor()
         case .star: .extrudedPath(Self.starPath, extrusionDepth: 0.2)
         }
