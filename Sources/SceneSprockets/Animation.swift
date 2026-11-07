@@ -2,15 +2,21 @@ import GeometryLite3D
 import simd
 
 extension SceneGraph {
-    /// Format-neutral keyframe animation. Channels target node translation, rotation, scale, morph weights, or any
-    /// other value through a Property.
+    /// A keyframe animation that does not depend on a file format.
+    ///
+    /// Channels animate node translation, rotation, scale, morph weights, or any other value through a ``Property``.
     public struct AnimationClip {
+        /// The value of a node that a channel animates.
         public enum Path: Hashable {
+            /// The translation, as 3 values.
             case translation
+            /// The rotation, as a quaternion in 4 values (x, y, z, w).
             case rotation
+            /// The scale, as 3 values.
             case scale
+            /// The morph weights, one value for each morph target.
             case weights
-            // Anything else (light intensity, a material value, ...), like a CAAnimation key path.
+            /// Any other value, such as a light intensity or a material value, like a `CAAnimation` key path.
             case property(Property)
 
             func set(_ value: [Float], on node: Node) {
@@ -31,14 +37,23 @@ extension SceneGraph {
             }
         }
 
-        /// A named animatable value. Equal when names are equal, so use one name per value.
-        /// Not Sendable: get and set mutate a non-Sendable Node and often captured state (#228).
+        /// A named value that a channel can animate.
+        ///
+        /// Two properties are equal when their names are equal, so use one name for each value.
         public struct Property: Hashable {
+            /// The name that identifies the value.
             public var name: String
-            /// The node's current value, used as the rest value by AnimationMixer.
+            /// Reads the node's current value. ``AnimationMixer`` uses it as the rest value.
             public var get: (Node) -> [Float]
+            /// Writes a value to the node.
             public var set: (Node, [Float]) -> Void
 
+            /// Creates a property.
+            ///
+            /// - Parameters:
+            ///   - name: The name that identifies the value.
+            ///   - get: Reads the node's current value.
+            ///   - set: Writes a value to the node.
             public init(name: String, get: @escaping (Node) -> [Float], set: @escaping (Node, [Float]) -> Void) {
                 self.name = name
                 self.get = get
@@ -96,8 +111,11 @@ extension SceneGraph {
                 }
             }
 
+            /// The range of a light node.
             public static var lightRange: Self { light("range", \.range) }
+            /// The inner cone angle of a spot light node, in radians.
             public static var lightInnerConeAngle: Self { light("innerConeAngle", \.innerConeAngle) }
+            /// The outer cone angle of a spot light node, in radians.
             public static var lightOuterConeAngle: Self { light("outerConeAngle", \.outerConeAngle) }
 
             /// A perspective camera's vertical field of view, in radians.
@@ -171,41 +189,68 @@ extension SceneGraph {
                 }
             }
 
+            /// The near clip distance of a camera node with a clip range.
             public static var cameraNear: Self { cameraClip(isNear: true) }
+            /// The far clip distance of a camera node with a clip range.
             public static var cameraFar: Self { cameraClip(isNear: false) }
         }
 
-        /// Calls `handler` when playback passes `time` (clip seconds), like SCNAnimationEvent. `isPlayingBackward`
-        /// is true during the reversed half of an autoreversing cycle.
+        /// A callback at a time in a clip, like SceneKit's `SCNAnimationEvent`.
+        ///
+        /// ``AnimationPlayer`` calls the handler when playback passes ``time``. The handler's argument is true during
+        /// the reversed half of an autoreversing cycle.
         public struct Event {
+            /// The time in the clip, in seconds.
             public var time: Float
+            /// The callback. Its argument is true when the clip plays backward.
             public var handler: (_ isPlayingBackward: Bool) -> Void
 
+            /// Creates an event.
+            ///
+            /// - Parameters:
+            ///   - time: The time in the clip, in seconds.
+            ///   - handler: The callback. Its argument is true when the clip plays backward.
             public init(time: Float, handler: @escaping (_ isPlayingBackward: Bool) -> Void) {
                 self.time = time
                 self.handler = handler
             }
         }
 
+        /// How a sampler finds values between keys.
         public enum Interpolation: Sendable {
+            /// The value of the previous key, until the next key.
             case step
+            /// A straight line between keys. Rotations use spherical interpolation.
             case linear
-            // Values are [in-tangent, value, out-tangent] per key, as in glTF.
+            /// A cubic spline, as in glTF. Each key has an in-tangent, a value and an out-tangent.
             case cubicSpline
         }
 
+        /// Keyframes for one animated value.
         public struct Sampler: Sendable {
+            /// The time of each key, in seconds, in increasing order.
             public var times: [Float]
-            /// Flat: componentCount values per key (three times that for cubicSpline).
+            /// The values of all keys, in one flat array.
+            ///
+            /// Each key has ``componentCount`` values. For ``Interpolation/cubicSpline``, each key has three times as
+            /// many: the in-tangent, the value and the out-tangent.
             public var values: [Float]
+            /// How the sampler finds values between keys.
             public var interpolation: Interpolation
 
+            /// Creates a sampler.
+            ///
+            /// - Parameters:
+            ///   - times: The time of each key, in seconds, in increasing order.
+            ///   - values: The values of all keys, in one flat array.
+            ///   - interpolation: How the sampler finds values between keys.
             public init(times: [Float], values: [Float], interpolation: Interpolation) {
                 self.times = times
                 self.values = values
                 self.interpolation = interpolation
             }
 
+            /// The number of values for each key, for example 3 for a translation.
             public var componentCount: Int {
                 guard !times.isEmpty else {
                     return 0
@@ -213,7 +258,14 @@ extension SceneGraph {
                 return values.count / times.count / (interpolation == .cubicSpline ? 3 : 1)
             }
 
-            /// Clamps outside the key range.
+            /// Returns the value at a time.
+            ///
+            /// Before the first key and after the last key, the value is the value of that key.
+            ///
+            /// - Parameters:
+            ///   - time: The time, in seconds.
+            ///   - isRotation: Whether the values are quaternions. If true, linear interpolation uses spherical
+            ///     interpolation, and cubic splines normalize the result.
             public func sample(at time: Float, isRotation: Bool = false) -> [Float] {
                 let count = componentCount
                 guard let first = times.first, let last = times.last, count > 0 else {
@@ -269,11 +321,16 @@ extension SceneGraph {
             }
         }
 
+        /// The keyframes for one value of one node.
         public struct Channel {
+            /// The node that the channel animates.
             public var target: Node
+            /// The value of the node that the channel animates.
             public var path: Path
+            /// The keyframes.
             public var sampler: Sampler
 
+            /// Creates a channel.
             public init(target: Node, path: Path, sampler: Sampler) {
                 self.target = target
                 self.path = path
@@ -281,22 +338,35 @@ extension SceneGraph {
             }
         }
 
+        /// The name of the clip, for example from the glTF file.
         public var name: String?
+        /// The channels that the clip animates.
         public var channels: [Channel]
-        /// Fired by AnimationPlayer.
+        /// The callbacks that ``AnimationPlayer`` calls during playback.
         public var events: [Event] = []
 
+        /// Creates a clip.
+        ///
+        /// - Parameters:
+        ///   - name: The name of the clip.
+        ///   - channels: The channels that the clip animates.
+        ///   - events: The callbacks that ``AnimationPlayer`` calls during playback.
         public init(name: String? = nil, channels: [Channel], events: [Event] = []) {
             self.name = name
             self.channels = channels
             self.events = events
         }
 
+        /// The length of the clip in seconds: the time of the last key of any channel.
         public var duration: Float {
             channels.compactMap(\.sampler.times.last).max() ?? 0
         }
 
-        /// Sets every target to its value at `time`.
+        /// Sets every channel's node to its value at a time.
+        ///
+        /// - Parameters:
+        ///   - time: The time in the clip, in seconds.
+        ///   - looping: Whether to wrap `time` into the duration of the clip.
         public func apply(at time: Float, looping: Bool = false) {
             var time = time
             if looping, duration > 0 {
@@ -311,21 +381,34 @@ extension SceneGraph {
         }
     }
 
-    /// Plays one clip: holds the time and applies the clip as time advances, like SCNAnimationPlayer.
+    /// A player for one clip, like SceneKit's `SCNAnimationPlayer`.
+    ///
+    /// The player keeps the playback time and applies the clip each time you call ``advance(by:)``.
     public final class AnimationPlayer {
+        /// The clip that the player plays.
         public var clip: AnimationClip
-        /// Seconds of playback since the start, across repeats.
+        /// The playback time since the start, in seconds, across repeats.
         public var time: Float = 0
+        /// The playback speed. 1 is normal speed.
         public var speed: Float = 1
-        /// Repeats forever; otherwise plays `repeatCount` cycles and stops on the last frame.
+        /// Whether the clip repeats forever.
+        ///
+        /// If false, the player plays ``repeatCount`` cycles and stops on the last frame.
         public var isLooping: Bool
+        /// The number of cycles to play when ``isLooping`` is false.
         public var repeatCount = 1
-        /// Each cycle plays forwards, then backwards.
+        /// Whether each cycle plays forward, then backward.
         public var autoreverses = false
-        /// Eases each pass through the clip.
+        /// The easing of each pass through the clip.
         public var timingMode: Action.TimingMode = .linear
+        /// Whether the player advances. It becomes false when a clip that does not loop finishes.
         public var isPlaying = true
 
+        /// Creates a player.
+        ///
+        /// - Parameters:
+        ///   - clip: The clip to play.
+        ///   - isLooping: Whether the clip repeats forever.
         public init(clip: AnimationClip, isLooping: Bool = true) {
             self.clip = clip
             self.isLooping = isLooping
@@ -349,6 +432,9 @@ extension SceneGraph {
             return cycle > duration ? (2 * duration - cycle, true) : (cycle, false)
         }
 
+        /// Advances the playback time, calls the events that it passes, and applies the clip.
+        ///
+        /// - Parameter deltaTime: The time to advance, in seconds. ``speed`` multiplies it.
         public func advance(by deltaTime: Float) {
             guard isPlaying else {
                 return

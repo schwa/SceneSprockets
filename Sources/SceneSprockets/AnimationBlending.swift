@@ -1,20 +1,32 @@
 import simd
 
 extension SceneGraph {
-    /// One clip's contribution to a mix. `clip` indexes AnimationMixer.clips.
+    /// The contribution of one clip to a mix.
     public struct AnimationLayer: Sendable, Equatable {
+        /// How a layer combines with the other layers.
         public enum Mode: Sendable, Equatable {
-            // Blended with the other override layers by normalized weight.
+            /// The layer blends with the other override layers by normalized weight.
             case override
-            // Adds the clip's offset from rest, scaled by the weight, on top of the override layers.
+            /// The layer adds the clip's offset from the rest pose, scaled by the weight, on top of the override layers.
             case additive
         }
 
+        /// The index of the clip in ``AnimationMixer/clips``.
         public var clip: Int
+        /// The time in the clip, in seconds.
         public var time: Float
+        /// The weight of the layer, from 0 (no effect) to 1.
         public var weight: Float
+        /// How the layer combines with the other layers.
         public var mode: Mode
 
+        /// Creates a layer.
+        ///
+        /// - Parameters:
+        ///   - clip: The index of the clip in ``AnimationMixer/clips``.
+        ///   - time: The time in the clip, in seconds.
+        ///   - weight: The weight of the layer, from 0 to 1.
+        ///   - mode: How the layer combines with the other layers.
         public init(clip: Int, time: Float, weight: Float = 1, mode: Mode = .override) {
             self.clip = clip
             self.time = time
@@ -23,9 +35,12 @@ extension SceneGraph {
         }
     }
 
-    /// Blends layers of clips into the nodes they target. Rest values are captured from the nodes when the mixer is
-    /// created (or by captureRest()); a node a layer does not animate counts as its rest value for that layer.
+    /// A mixer that blends layers of clips into the nodes that the clips target.
+    ///
+    /// The mixer records rest values from the nodes when you create it, or when you call ``captureRest()``. For a layer
+    /// that does not animate a node, the node has its rest value.
     public final class AnimationMixer {
+        /// The clips that layers refer to by index.
         public let clips: [AnimationClip]
 
         struct Key: Hashable {
@@ -36,6 +51,7 @@ extension SceneGraph {
         private var nodes: [ObjectIdentifier: Node] = [:]
         private var rest: [Key: [Float]] = [:]
 
+        /// Creates a mixer and records the rest values of the nodes that the clips target.
         public init(clips: [AnimationClip]) {
             self.clips = clips
             captureRest()
@@ -191,30 +207,45 @@ extension SceneGraph {
         }
     }
 
-    /// Plays clips by index: cross-fades, per-clip speed and looping, a one-parameter blend with phase sync, and
-    /// additive clips. A value type: call advance(by:) each frame, then mixer.apply(controller.layers).
+    /// A controller that plays clips by index, with cross-fades, blends and additive clips.
+    ///
+    /// Each clip has its own speed and looping. ``blend(_:parameter:speed:syncsPhase:)`` mixes clips by one parameter
+    /// and can keep their cycles in phase. The controller is a value: call `advance(by:)` each frame, then apply its
+    /// layers with an ``AnimationMixer``.
     public struct AnimationController: Sendable {
+        /// A clip that the controller plays, with its time and weight.
         public struct Track: Sendable, Equatable {
+            /// The index of the clip.
             public var clip: Int
+            /// The time in the clip, in seconds.
             public var time: Float = 0
+            /// The playback speed. 1 is normal speed.
             public var speed: Float = 1
+            /// Whether the clip repeats.
             public var loops = true
+            /// The current weight of the track. It changes during a cross-fade.
             public internal(set) var weight: Float
             var targetWeight: Float
             var fadeRate: Float = 0
         }
 
+        /// The duration of each clip, in seconds, by clip index.
         public let durations: [Float]
+        /// The override tracks that play now, including tracks that fade out.
         public private(set) var tracks: [Track] = []
+        /// The shared fraction of the cycle of a phase-synced blend, or `nil` when no synced blend plays.
         public private(set) var syncedPhase: Float?
+        /// The additive tracks that play on top of the override tracks.
         public private(set) var additiveTracks: [Track] = []
         /// How far the root node moved (x, z) during the last advance(by:mixer:rootMotionNode:).
         public private(set) var rootMotion: SIMD3<Float> = .zero
 
+        /// Creates a controller for clips with these durations, in seconds.
         public init(durations: [Float]) {
             self.durations = durations
         }
 
+        /// Creates a controller for these clips.
         public init(clips: [AnimationClip]) {
             self.init(durations: clips.map(\.duration))
         }
@@ -383,14 +414,28 @@ extension SceneGraph {
         }
     }
 
-    /// Chooses which clip plays from named states and transitions, driving an AnimationController.
+    /// A state machine that chooses which clip plays, from named states and transitions.
+    ///
+    /// The state machine plays its clips with an ``AnimationController``.
     public struct AnimationStateMachine {
+        /// A named state that plays one clip.
         public struct State: Sendable {
+            /// The name of the state. Transitions refer to it.
             public var name: String
+            /// The index of the clip that the state plays.
             public var clip: Int
+            /// The playback speed of the clip.
             public var speed: Float
+            /// Whether the clip repeats.
             public var loops: Bool
 
+            /// Creates a state.
+            ///
+            /// - Parameters:
+            ///   - name: The name of the state.
+            ///   - clip: The index of the clip that the state plays.
+            ///   - speed: The playback speed of the clip.
+            ///   - loops: Whether the clip repeats.
             public init(_ name: String, clip: Int, speed: Float = 1, loops: Bool = true) {
                 self.name = name
                 self.clip = clip
@@ -399,20 +444,36 @@ extension SceneGraph {
             }
         }
 
+        /// The values that a transition condition can test.
         public struct Context: Sendable {
+            /// The parameters of the state machine, by name.
             public var parameters: [String: Float]
-            /// How far through its clip the current state is, 0...1 (above 1 once a non-looping clip has finished).
+            /// How far through its clip the current state is, from 0 to 1.
+            ///
+            /// The value is more than 1 after a clip that does not loop has finished.
             public var normalizedTime: Float
+            /// The time since the current state started, in seconds.
             public var stateTime: Float
         }
 
+        /// A change from one state to another when a condition is true.
         public struct Transition {
-            /// Nil leaves any state.
+            /// The name of the state that the transition leaves, or `nil` to leave any state.
             public var from: String?
+            /// The name of the state that the transition enters.
             public var to: String
+            /// The duration of the cross-fade, in seconds. 0 cuts.
             public var fadeDuration: Float
+            /// The test that starts the transition.
             public var condition: (Context) -> Bool
 
+            /// Creates a transition.
+            ///
+            /// - Parameters:
+            ///   - from: The name of the state that the transition leaves, or `nil` for any state.
+            ///   - to: The name of the state that the transition enters.
+            ///   - fadeDuration: The duration of the cross-fade, in seconds.
+            ///   - condition: The test that starts the transition.
             public init(from: String?, to: String, fadeDuration: Float = 0.25, when condition: @escaping (Context) -> Bool) {
                 self.from = from
                 self.to = to
@@ -421,14 +482,28 @@ extension SceneGraph {
             }
         }
 
+        /// The states, by name.
         public let states: [String: State]
+        /// The transitions, in the order that the state machine tests them.
         public let transitions: [Transition]
+        /// Values that transition conditions can test, by name. Set them from your game logic.
         public var parameters: [String: Float] = [:]
+        /// The name of the current state.
         public private(set) var currentState: String
+        /// The time since the current state started, in seconds.
         public private(set) var stateTime: Float = 0
+        /// The controller that plays the clips. Apply its layers with an ``AnimationMixer``.
         public var controller: AnimationController
 
-        /// Transitions are checked in order; the first whose condition holds is taken.
+        /// Creates a state machine in its initial state.
+        ///
+        /// The state machine tests transitions in order and takes the first one whose condition is true.
+        ///
+        /// - Parameters:
+        ///   - controller: The controller that plays the clips.
+        ///   - states: The states. Their names must be different.
+        ///   - transitions: The transitions, in the order to test them.
+        ///   - initial: The name of the first state. It must be one of `states`.
         public init(controller: AnimationController, states: [State], transitions: [Transition], initial: String) {
             precondition(states.contains { $0.name == initial }, "The initial state must be one of the states")
             self.states = Dictionary(states.map { ($0.name, $0) }) { first, _ in first }
@@ -438,6 +513,7 @@ extension SceneGraph {
             enter(initial, fadeDuration: 0)
         }
 
+        /// The values that transition conditions test now.
         public var context: Context {
             let state = states[currentState]
             let duration = state.map { controller.durations[$0.clip] } ?? 0

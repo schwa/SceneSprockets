@@ -6,21 +6,27 @@ import SwiftMesh
 // Components a node in a graph stores in the graph's World. Public so ECS apps can query and write them (#269);
 // see SceneGraph.world for what direct writes do.
 
-/// ChildOf does not keep an order we can change, so each child stores its index among its siblings. Writing it
-/// reorders the node's siblings (#273).
+/// The position of a node among its siblings.
+///
+/// SwiftECS's `ChildOf` relationship has no order, so each child stores its index among its siblings. Writing the
+/// index in ``SceneGraph/world`` moves the node among its siblings.
 public struct SiblingIndexComponent: Component {
+    /// The position of the node among its siblings, from 0.
     public var index: Int
 
+    /// Creates the component with an index.
     public init(index: Int) {
         self.index = index
     }
 }
 
-/// Finds the node for an entity, so writes made directly to the World can reach it. Its presence also marks the
-/// entity as a live scene graph node.
-/// Unowned, not weak: a weak reference moves the node's reference count to a side table, which slows every retain of
-/// every node (#283). The entity never outlives its node: it is destroyed when the node leaves the graph.
+/// The node of an entity in ``SceneGraph/world``.
+///
+/// Writes made directly to the world use this component to find the node. The component also marks the entity as a
+/// node of a scene graph. The reference is unowned, because the entity never lives longer than its node: the world
+/// destroys the entity when the node leaves the graph.
 public struct NodeReferenceComponent: Component {
+    /// The node of the entity.
     public internal(set) unowned var node: SceneGraph.Node?
 
     init(node: SceneGraph.Node) {
@@ -28,14 +34,20 @@ public struct NodeReferenceComponent: Component {
     }
 }
 
-/// Which graph an entity belongs to, when several share a World (#269).
+/// The scene graph of an entity, when several scene graphs share one world.
 public struct SceneGraphMembershipComponent: Component {
+    /// The entity of the root node of the scene graph that the entity belongs to.
     public let rootID: EntityID
 }
 
+/// The component that stores ``SceneGraph/Node/transform`` and ``SceneGraph/Node/trs`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
 public struct NodeTransformComponent: NodeField {
+    /// The node's local transform, as a matrix or as translation, rotation and scale.
     public var value: SceneGraph.LocalTransform
 
+    /// Creates the component with a value.
     public init(value: SceneGraph.LocalTransform) {
         self.value = value
     }
@@ -54,9 +66,14 @@ public struct NodeTransformComponent: NodeField {
     }
 }
 
+/// The component that stores ``SceneGraph/Node/content`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
 public struct NodeContentComponent: NodeField {
+    /// The value of ``SceneGraph/Node/content``.
     public var value: SceneGraph.Node.Content
 
+    /// Creates the component with a value.
     public init(value: SceneGraph.Node.Content) {
         self.value = value
     }
@@ -65,9 +82,14 @@ public struct NodeContentComponent: NodeField {
     static var revision: NodeFieldRevision { .structure }
 }
 
+/// The component that stores ``SceneGraph/Node/label`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
 public struct NodeLabelComponent: NodeField {
+    /// The value of ``SceneGraph/Node/label``.
     public var value: String?
 
+    /// Creates the component with a value.
     public init(value: String?) {
         self.value = value
     }
@@ -76,9 +98,14 @@ public struct NodeLabelComponent: NodeField {
     static var revision: NodeFieldRevision { .none }
 }
 
+/// The component that stores ``SceneGraph/Node/isVisible`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
 public struct NodeIsVisibleComponent: NodeField {
+    /// The value of ``SceneGraph/Node/isVisible``.
     public var value: Bool
 
+    /// Creates the component with a value.
     public init(value: Bool) {
         self.value = value
     }
@@ -87,9 +114,14 @@ public struct NodeIsVisibleComponent: NodeField {
     static var revision: NodeFieldRevision { .structure }
 }
 
+/// The component that stores ``SceneGraph/Node/isActive`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
 public struct NodeIsActiveComponent: NodeField {
+    /// The value of ``SceneGraph/Node/isActive``.
     public var value: Bool
 
+    /// Creates the component with a value.
     public init(value: Bool) {
         self.value = value
     }
@@ -99,9 +131,14 @@ public struct NodeIsActiveComponent: NodeField {
 }
 
 /// Bumps the transform revision, not the structure one, so fading does not rebuild renderer caches.
+/// The component that stores ``SceneGraph/Node/opacity`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
 public struct NodeOpacityComponent: NodeField {
+    /// The value of ``SceneGraph/Node/opacity``.
     public var value: Float
 
+    /// Creates the component with a value.
     public init(value: Float) {
         self.value = value
     }
@@ -110,9 +147,14 @@ public struct NodeOpacityComponent: NodeField {
     static var revision: NodeFieldRevision { .transform }
 }
 
+/// The component that stores ``SceneGraph/Node/pivot`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
 public struct NodePivotComponent: NodeField {
+    /// The value of ``SceneGraph/Node/pivot``.
     public var value: simd_float4x4
 
+    /// Creates the component with a value.
     public init(value: simd_float4x4) {
         self.value = value
     }
@@ -121,9 +163,14 @@ public struct NodePivotComponent: NodeField {
     static var revision: NodeFieldRevision { .transform }
 }
 
+/// The component that stores ``SceneGraph/Node/categoryBitMask`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
 public struct NodeCategoryBitMaskComponent: NodeField {
+    /// The value of ``SceneGraph/Node/categoryBitMask``.
     public var value: UInt
 
+    /// Creates the component with a value.
     public init(value: UInt) {
         self.value = value
     }
@@ -132,9 +179,14 @@ public struct NodeCategoryBitMaskComponent: NodeField {
     static var revision: NodeFieldRevision { .structure }
 }
 
+/// The component that stores ``SceneGraph/Node/lightCategoryBitMask`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
 public struct NodeLightCategoryBitMaskComponent: NodeField {
+    /// The value of ``SceneGraph/Node/lightCategoryBitMask``.
     public var value: UInt
 
+    /// Creates the component with a value.
     public init(value: UInt) {
         self.value = value
     }
@@ -143,9 +195,14 @@ public struct NodeLightCategoryBitMaskComponent: NodeField {
     static var revision: NodeFieldRevision { .structure }
 }
 
+/// The component that stores ``SceneGraph/Node/renderingOrder`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
 public struct NodeRenderingOrderComponent: NodeField {
+    /// The value of ``SceneGraph/Node/renderingOrder``.
     public var value: Int
 
+    /// Creates the component with a value.
     public init(value: Int) {
         self.value = value
     }
@@ -154,9 +211,14 @@ public struct NodeRenderingOrderComponent: NodeField {
     static var revision: NodeFieldRevision { .structure }
 }
 
+/// The component that stores ``SceneGraph/Node/physicsBody`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
 public struct NodePhysicsBodyComponent: NodeField {
+    /// The value of ``SceneGraph/Node/physicsBody``.
     public var value: SceneGraph.PhysicsBody?
 
+    /// Creates the component with a value.
     public init(value: SceneGraph.PhysicsBody?) {
         self.value = value
     }
@@ -165,9 +227,14 @@ public struct NodePhysicsBodyComponent: NodeField {
     static var revision: NodeFieldRevision { .structure }
 }
 
+/// The component that stores ``SceneGraph/Node/levelsOfDetail`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
 public struct NodeLevelsOfDetailComponent: NodeField {
+    /// The value of ``SceneGraph/Node/levelsOfDetail``.
     public var value: [SceneGraph.LevelOfDetail]
 
+    /// Creates the component with a value.
     public init(value: [SceneGraph.LevelOfDetail]) {
         self.value = value
     }
@@ -176,9 +243,14 @@ public struct NodeLevelsOfDetailComponent: NodeField {
     static var revision: NodeFieldRevision { .structure }
 }
 
+/// The component that stores ``SceneGraph/Node/particleSystems`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
 public struct NodeParticleSystemsComponent: NodeField {
+    /// The value of ``SceneGraph/Node/particleSystems``.
     public var value: [SceneParticleSystem]
 
+    /// Creates the component with a value.
     public init(value: [SceneParticleSystem]) {
         self.value = value
     }
@@ -187,9 +259,14 @@ public struct NodeParticleSystemsComponent: NodeField {
     static var revision: NodeFieldRevision { .none }
 }
 
+/// The component that stores ``SceneGraph/Node/audioPlayers`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
 public struct NodeAudioPlayersComponent: NodeField {
+    /// The value of ``SceneGraph/Node/audioPlayers``.
     public var value: [AudioPlayer]
 
+    /// Creates the component with a value.
     public init(value: [AudioPlayer]) {
         self.value = value
     }
@@ -198,9 +275,14 @@ public struct NodeAudioPlayersComponent: NodeField {
     static var revision: NodeFieldRevision { .none }
 }
 
+/// The component that stores ``SceneGraph/Node/skin`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
 public struct NodeSkinComponent: NodeField {
+    /// The value of ``SceneGraph/Node/skin``.
     public var value: SceneGraph.Skin?
 
+    /// Creates the component with a value.
     public init(value: SceneGraph.Skin?) {
         self.value = value
     }
@@ -209,9 +291,14 @@ public struct NodeSkinComponent: NodeField {
     static var revision: NodeFieldRevision { .structure }
 }
 
+/// The component that stores ``SceneGraph/Node/skinVertices`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
 public struct NodeSkinVerticesComponent: NodeField {
+    /// The value of ``SceneGraph/Node/skinVertices``.
     public var value: [SceneGraph.SkinVertex]
 
+    /// Creates the component with a value.
     public init(value: [SceneGraph.SkinVertex]) {
         self.value = value
     }
@@ -220,9 +307,14 @@ public struct NodeSkinVerticesComponent: NodeField {
     static var revision: NodeFieldRevision { .structure }
 }
 
+/// The component that stores ``SceneGraph/Node/morphTargets`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
 public struct NodeMorphTargetsComponent: NodeField {
+    /// The value of ``SceneGraph/Node/morphTargets``.
     public var value: [SceneGraph.MorphTarget]
 
+    /// Creates the component with a value.
     public init(value: [SceneGraph.MorphTarget]) {
         self.value = value
     }
@@ -231,9 +323,14 @@ public struct NodeMorphTargetsComponent: NodeField {
     static var revision: NodeFieldRevision { .structure }
 }
 
+/// The component that stores ``SceneGraph/Node/morphWeights`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
 public struct NodeMorphWeightsComponent: NodeField {
+    /// The value of ``SceneGraph/Node/morphWeights``.
     public var value: [Float]
 
+    /// Creates the component with a value.
     public init(value: [Float]) {
         self.value = value
     }
@@ -258,9 +355,14 @@ struct NodeRunningActionsComponent: NodeField {
     static var revision: NodeFieldRevision { .none }
 }
 
+/// The component that stores ``SceneGraph/Node/actionSpeed`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
 public struct NodeActionSpeedComponent: NodeField {
+    /// The value of ``SceneGraph/Node/actionSpeed``.
     public var value: Float
 
+    /// Creates the component with a value.
     public init(value: Float) {
         self.value = value
     }
@@ -270,9 +372,14 @@ public struct NodeActionSpeedComponent: NodeField {
 }
 
 /// Replacing constraints resets their acceleration smoothing, however the change is made.
+/// The component that stores ``SceneGraph/Node/constraints`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
 public struct NodeConstraintsComponent: NodeField {
+    /// The value of ``SceneGraph/Node/constraints``.
     public var value: [SceneGraph.Constraint]
 
+    /// Creates the component with a value.
     public init(value: [SceneGraph.Constraint]) {
         self.value = value
     }
@@ -296,9 +403,14 @@ struct NodeAccelerationStatesComponent: NodeField {
 }
 
 /// Changing the level rebuilds `content` from `subdivisionBase`, however the change is made.
+/// The component that stores ``SceneGraph/Node/subdivisionLevel`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
 public struct NodeSubdivisionLevelComponent: NodeField {
+    /// The value of ``SceneGraph/Node/subdivisionLevel``.
     public var value: Int
 
+    /// Creates the component with a value.
     public init(value: Int) {
         self.value = value
     }
