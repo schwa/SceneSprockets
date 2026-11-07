@@ -7180,11 +7180,13 @@ Actual: the glass objects look wrong during both transitions.
 ## 328: Keynote slides show transform gizmos when objects are tapped
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:demo, effort:s
 created: 2026-11-07T17:56:13Z
+updated: 2026-11-07T18:05:03Z
+closed: 2026-11-07T18:05:03Z
 +++
 
 In the keynote demo, tapping an object on some slides (possibly all) selects it and shows a transform gizmo (widget). Only the Gizmos slide is meant to show selection and gizmos; on other slides tapping objects should not bring up editing widgets.

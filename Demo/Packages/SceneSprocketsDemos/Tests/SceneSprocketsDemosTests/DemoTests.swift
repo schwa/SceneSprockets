@@ -80,6 +80,29 @@ func keynoteSlidePickerSwitchesInstantly() throws {
     #expect(keynote[value: "Slide"] == Float(index))
 }
 
+// #328: tapping an object outside the Gizmos slide selects nothing, so no gizmo appears.
+@Test
+@MainActor
+func keynoteTapOutsideGizmosSlideSelectsNothing() throws {
+    let keynote = try keynoteShowing("Materials")
+    let index = try #require(KeynoteDemo.titles.firstIndex(of: "Materials"))
+    let slide = try #require(keynote.sceneGraph.root.children.first { $0.label == "Slide \(index + 1): Materials" })
+    let hits = keynote.sceneGraph.meshEntries().lazy.compactMap { entry -> SceneGraph.Hit? in
+        var node: SceneGraph.Node? = entry.node
+        while let current = node, current !== slide {
+            node = current.parent
+        }
+        guard node != nil else {
+            return nil
+        }
+        let target = entry.node.worldPosition
+        return keynote.sceneGraph.hitTest(segmentFrom: target + [0, 0, 20], to: target - [0, 0, 20]).first
+    }
+    let hit = try #require(hits.first)
+    keynote.pick(hit)
+    #expect(keynote.selectedNodeID == nil)
+}
+
 // #70: the bump target moves vertices along the direction from the center, so vertices that share a position (one
 // per face) move together and the surface does not tear.
 @Test

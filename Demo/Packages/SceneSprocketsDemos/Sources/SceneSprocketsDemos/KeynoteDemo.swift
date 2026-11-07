@@ -137,6 +137,8 @@ public final class KeynoteDemo: DemoScene {
 
     // Clicking a hit-test target makes it jump; any other click advances.
     override public func didPick(_ hit: SceneGraph.Hit?) {
+        // Taps do not select: only the Gizmos slide shows a selection, always its own box (#328).
+        selectedNodeID = currentTitle == "Gizmos" ? gizmoTarget?.id : nil
         if let hit, let target = hitTarget(containing: hit.node) {
             target.run(.group([
                 .sequence([.move(by: [0, 1, 0], duration: 0.25), .move(by: [0, -1, 0], duration: 0.25)]),
