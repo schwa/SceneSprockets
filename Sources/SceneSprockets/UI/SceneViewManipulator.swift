@@ -41,6 +41,16 @@ public struct SceneViewport {
         cameraMatrix.inverse
     }
 
+    /// The view matrix without translation, for drawing camera-relative positions.
+    ///
+    /// It is the inverse of the camera's rotation alone, so it stays precise when the camera is far from the world
+    /// origin.
+    public var rotationOnlyViewMatrix: simd_float4x4 {
+        var rotation = cameraMatrix
+        rotation.columns.3 = [0, 0, 0, 1]
+        return rotation.inverse
+    }
+
     /// The view and projection, for projecting points and making rays.
     public var viewProjection: ViewProjection {
         ViewProjection(viewMatrix: viewMatrix, projectionMatrix: projectionMatrix, isReverseZ: false, viewSize: viewSize)
@@ -59,7 +69,10 @@ public struct SceneViewport {
     /// World units per view point at `worldPoint`, for things drawn at a constant size on screen.
     public func worldSizeOfPoint(at worldPoint: SIMD3<Float>) -> Float {
         let right = simd_normalize(cameraMatrix.columns.0.xyz)
-        guard let a = project(worldPoint), let b = project(worldPoint + right) else {
+        // Camera-relative, so the size stays precise far from the world origin (#262).
+        let relative = cameraRelative(worldPoint, to: cameraMatrix.columns.3.xyz)
+        let viewProjection = ViewProjection(viewMatrix: rotationOnlyViewMatrix, projectionMatrix: projectionMatrix, isReverseZ: false, viewSize: viewSize)
+        guard let a = viewProjection.project(relative), let b = viewProjection.project(relative + right) else {
             return 1
         }
         return 1 / max(simd_distance(a.xy, b.xy), .ulpOfOne)

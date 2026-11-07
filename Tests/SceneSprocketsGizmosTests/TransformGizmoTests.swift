@@ -155,6 +155,35 @@ struct TransformGizmoTests {
         #expect(pixels[offset + 2] > 200 && Int(pixels[offset + 2]) - Int(pixels[offset + 1]) > 80, "\(pixels[offset ..< offset + 4])")
     }
 
+    // #262: the handles draw the same far from the world origin, with the camera and target moved together.
+    @Test(.enabled(if: MTLCreateSystemDefaultDevice() != nil), arguments: [TransformGizmo.Mode.translate, .rotate, .scale])
+    func drawsTheSameFarFromOrigin(mode: TransformGizmo.Mode) throws {
+        func render(offset: SIMD3<Float>) throws -> [UInt8] {
+            let viewport = SceneViewport(
+                cameraMatrix: LookAt(position: offset + [3, 4, 10], target: offset, up: [0, 1, 0]).cameraMatrix,
+                projectionMatrix: self.viewport.projectionMatrix,
+                viewSize: [200, 200],
+                drawableSize: [200, 200]
+            )
+            let node = SceneGraph.Node(label: "Target")
+            node.worldPosition = offset
+            let gizmo = TransformGizmo(target: node, mode: mode)
+            let overlay = try #require(try gizmo.overlay(viewport: viewport))
+            let renderer = try OffscreenRenderer(size: CGSize(width: 200, height: 200), clearDepth: 0)
+            let texture = try renderer.render(ManipulatorOverlayPass(content: overlay)).texture
+            var pixels = [UInt8](repeating: 0, count: 200 * 200 * 4)
+            texture.getBytes(&pixels, bytesPerRow: 800, from: MTLRegionMake2D(0, 0, 200, 200), mipmapLevel: 0)
+            return pixels
+        }
+        let near = try render(offset: .zero)
+        // 2^20: exact in Float, so only the drawing math can differ.
+        let far = try render(offset: [1_048_576, 0, 1_048_576])
+        let differing = stride(from: 0, to: near.count, by: 4).count { index in
+            (0..<3).contains { abs(Int(near[index + $0]) - Int(far[index + $0])) > 40 }
+        }
+        #expect(differing < 40, "\(differing) of 40000 pixels differ")
+    }
+
     // #178: pinch and twist on the gizmo scale and turn the target.
     @Test
     func pinchAndTwistScaleAndTurnTheTarget() {

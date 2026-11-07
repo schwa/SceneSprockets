@@ -5803,7 +5803,7 @@ Part of #255.
 
 ---
 
-## 262: Particles and the transform gizmo use world-space Float matrices
+## 262: Particles use world-space Float matrices
 
 +++
 status: open
@@ -5811,12 +5811,14 @@ priority: low
 kind: bug
 labels: area:renderer, effort:m, subtask
 created: 2026-11-04T21:19:04Z
-updated: 2026-11-04T21:19:14Z
+updated: 2026-11-07T16:00:59Z
 +++
 
 Left over from #257. Particle simulation and drawing (SceneParticleSystem simulate(view:) and runtime render(projection:view:), MetalSprocketsParticles) and the transform gizmo (TransformGizmo, GraphicsContext3DRenderPipeline with projection * view) still work in world-space Float, so far from the origin they jitter or misplace like the other paths did before #251/#253/#257. Particle positions live in MetalSprocketsParticles buffers, so a fix spans that package.
 
 Part of #255.
+
+- `2026-11-07T16:00:59Z`: Transform gizmo part fixed: the overlay draws camera-relative (origin minus camera position, computed in Double) with a rotation-only view, and SceneViewport.worldSizeOfPoint (which sizes the handles) projects camera-relative too. New SceneViewport.rotationOnlyViewMatrix inverts the camera rotation alone, so it stays precise far away. Test drawsTheSameFarFromOrigin (translate/rotate/scale at 2^20) failed before with 1159-9846 of 40000 pixels differing; now passes. Title narrowed to the particle part, which is still open: particle positions live in MetalSprocketsParticles buffers, so it needs a change in that package.
 
 ---
 

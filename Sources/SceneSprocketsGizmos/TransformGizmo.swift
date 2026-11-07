@@ -501,9 +501,12 @@ public final class TransformGizmo: SceneViewManipulator {
 
     // swiftlint:disable:next unneeded_throws_rethrows
     public func overlay(viewport: SceneViewport) throws -> AnyElement? {
-        guard let frame = frame(viewport: viewport) else {
+        guard var frame = frame(viewport: viewport) else {
             return nil
         }
+        // Drawn camera-relative, so the handles stay precise far from the world origin (#262). Hit testing and drags
+        // keep the world-space frame.
+        frame.origin = cameraRelative(frame.origin, to: viewport.cameraMatrix.columns.3.xyz)
         let highlighted = activeHandle ?? hoveredHandle
         var context = GraphicsContext3D()
         for (handle, points) in outlines(frame) {
@@ -571,7 +574,7 @@ public final class TransformGizmo: SceneViewManipulator {
             context.fill(square, with: highlighted == .center ? .yellow : .white)
         }
         // No depth test, like most editors' gizmos: handles always draw on top.
-        return GraphicsContext3DRenderPipeline(context: context, viewProjection: viewport.projectionMatrix * viewport.viewMatrix, viewport: viewport.drawableSize, depthCompareFunction: .always, writesDepth: false).eraseToAnyElement()
+        return GraphicsContext3DRenderPipeline(context: context, viewProjection: viewport.projectionMatrix * viewport.rotationOnlyViewMatrix, viewport: viewport.drawableSize, depthCompareFunction: .always, writesDepth: false).eraseToAnyElement()
     }
 
     // An arrowhead for translate, a box for scale, in the plane facing the camera.
