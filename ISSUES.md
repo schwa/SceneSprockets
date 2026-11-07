@@ -7415,3 +7415,199 @@ Open question (per schwa): where should this live? Candidates: SceneSprockets (n
 - `2026-11-07T18:39:49Z`: Question 1 (decision): Where should the spatial acceleration structure live: SceneSprockets, SwiftMesh, a separate package, or split (triangles in SwiftMesh, nodes in SceneSprockets)?
 
 ---
+
+## 338: Level of detail switches meshes abruptly (visible pops)
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:renderer, effort:m
+created: 2026-11-07T18:52:49Z
+updated: 2026-11-07T18:52:50Z
++++
+
+When a node with levelsOfDetail crosses a switch distance, its mesh changes from one frame to the next with no transition. The change is easy to see as a pop. The keynote's Level of Detail slide shows it: the shapes move back and forth across both switch distances, and each crossing is abrupt.
+
+The library has no fade or blend between levels and no hysteresis (a node that sits near a switch distance can flip back and forth).
+
+The pop is partly intentional on the slide, because the slide demonstrates the switch. But apps using level of detail have no way to hide it.
+
+Related: SceneKit's SCNLevelOfDetail also switches abruptly; engines often cross-fade or dither between levels.
+
+---
+
+## 339: Keynote Blend Modes slide shows only one blend mode
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:demo, effort:s
+created: 2026-11-07T18:53:03Z
++++
+
+The keynote's Blend Modes slide shows only additive blending (three overlapping colored discs). The library has six blend modes (alpha, add, subtract, multiply, screen, replace), so most are not shown.
+
+The slide also has a turning wireframe sphere behind the discs. It shows fillMode .lines, which is a render state, not a blend mode, so it does not explain anything about blending and is confusing on this slide.
+
+Expected (per schwa): a more exciting slide that shows off the blend modes, and no unrelated content.
+
+---
+
+## 340: Keynote Opacity & Fades slide looks abrupt
+
++++
+status: open
+priority: low
+kind: bug
+labels: area:demo, effort:s
+created: 2026-11-07T18:53:15Z
+updated: 2026-11-07T18:53:16Z
++++
+
+On the keynote's Opacity & Fades slide, the spheres' fades look abrupt rather than smooth.
+
+The slide: six spheres (Blinn-Phong and PBR, alternating) each repeat fadeOut(1 s), fadeIn(1 s), wait(0.5 s), started 0.3 s apart.
+
+Steps to reproduce:
+1. Open the Introduction to SceneSprockets demo (keynote).
+2. Go to the Opacity & Fades slide and watch the spheres.
+
+Expected: each sphere fades smoothly out and back in.
+Actual: the fades look abrupt.
+
+Cause not investigated. Unverified possibilities: linear timing (no easing) makes the start and end of each fade sudden; or the change from opaque (opacity 1) to transparent rendering (opacity below 1) changes how a sphere looks at the moment a fade starts or ends (draw order, PBR faded-material switch).
+
+---
+
+## 341: Adding a texture to a material takes too much code
+
++++
+status: open
+priority: medium
+kind: enhancement
+labels: area:renderer, effort:s
+created: 2026-11-07T18:53:39Z
++++
+
+Materials support textures, but setting one up is hard:
+
+- BlinnPhongSceneMaterial.Source.texture takes an MTLTexture. There is no way to give an image file URL, CGImage or asset name; apps must create the texture with MTKTextureLoader (and choose sRGB, mipmaps and origin options) themselves.
+- PBRSceneMaterial has no texture parameters at all. Apps must build PBRMaterial texture bindings and set the matching uniforms' enabled flags by hand (the demo's DiceStyles.material(mask:normal:) needs about 10 lines per texture).
+
+SceneKit, for comparison: material.diffuse.contents = NSImage(named:) (or a URL, CGImage, color, layer or AVPlayer).
+
+---
+
+## 342: Materials cannot show video
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:renderer, effort:m
+created: 2026-11-07T18:53:39Z
++++
+
+There is no way to play a video on a surface (for example a TV screen or a billboard in a scene). Material textures are fixed MTLTextures; nothing updates a texture from an AVPlayer frame by frame, and materials have no notion of a texture that changes every frame.
+
+SceneKit, for comparison: material.diffuse.contents = AVPlayer.
+
+Related: #341 (texture convenience).
+
+---
+
+## 343: Keynote Scene Graph slide has flat lighting and plain spheres
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:demo, effort:s
+created: 2026-11-07T18:53:49Z
++++
+
+The keynote's Scene Graph slide (a sun with an orbiting planet and moon, showing parent-child transforms) looks dull: the lighting is flat and the sun, planet and moon are plain colored spheres.
+
+Expected (per schwa): a more exciting slide, with better lighting and more interesting bodies, that still shows how children follow their parent's transform.
+
+---
+
+## 344: Keynote title slide: "SceneSprockets" title is too big
+
++++
+status: open
+priority: low
+kind: bug
+labels: area:demo, effort:xs
+created: 2026-11-07T18:53:55Z
+updated: 2026-11-07T18:53:56Z
++++
+
+On the keynote's first slide, the "SceneSprockets" title (font size 1.6) is too big for the frame.
+
+Steps to reproduce:
+1. Open the Introduction to SceneSprockets demo (keynote) on slide 1.
+
+Expected: the title fits comfortably, with margin on both sides.
+Actual: the title is too big.
+
+---
+
+## 345: Unclear which parts of the keynote demo need code and which could be stored as scene data
+
++++
+status: open
+priority: low
+kind: task
+labels: area:demo, effort:m
+created: 2026-11-07T18:54:14Z
+updated: 2026-11-07T18:54:15Z
++++
+
+The keynote demo builds every slide in Swift (KeynoteDemo.swift is over 1,500 lines). Much of it is static content (shapes, materials, lights, positions, titles, code panels) that SceneArchive could already store, but some needs code (slide transitions, per-frame updates such as boids, physics and fog easing, hit-test reactions, the finale's timing).
+
+There is no inventory of which parts could move into a stored scene definition and which must stay in code, or of what SceneArchive is missing (for example running actions, see #179) to store more of it.
+
+Expected: a list, per slide, of what is data and what needs code, and the archive gaps that block moving data out.
+
+---
+
+## 346: No scripting: scene logic can only be written in Swift
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:scenegraph, effort:xl
+created: 2026-11-07T18:54:15Z
++++
+
+All scene behavior (reacting to taps, per-frame updates, custom actions, game logic) must be written in Swift and compiled into the app. There is no way to attach logic to a scene as data, for example in a stored scene file or from a tool like Composer, without rebuilding.
+
+## Proposed (per schwa)
+A JavaScript API (for example through JavaScriptCore) so logic can be added to scenes with JavaScript.
+
+Related: #345 (what in the keynote needs code).
+
+---
+
+## 347: No hardware ray tracing in the renderer
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:renderer, effort:xl
+created: 2026-11-07T18:54:26Z
+updated: 2026-11-07T18:54:26Z
++++
+
+The renderer is raster-only. It does not use Metal ray tracing (acceleration structures, intersection functions), so effects that ray tracing does well are missing or approximated: ray-traced shadows (sharp contact and soft area-light shadows without shadow maps), reflections, ambient occlusion, global illumination, and offline path tracing of a scene for reference images.
+
+Starting points in MetalSprocketsExamples: Ray Traced Shadows (hardware-accelerated shadows with acceleration structures), Ray Tracing (Cornell box path tracer), Meadow (ray-traced procedural meadow).
+
+Related: #337 (spatial acceleration structure; Metal acceleration structures could also serve hit testing).
+
+---
