@@ -80,6 +80,27 @@ func keynoteSlidePickerSwitchesInstantly() throws {
     #expect(keynote[value: "Slide"] == Float(index))
 }
 
+// #311: leaving the title slide breaks its titles into 3D letters that fall away; coming back restores them.
+@Test
+@MainActor
+func keynoteTitleBreaksIntoTumblingLetters() throws {
+    let keynote = KeynoteDemo()
+    func letters() -> [SceneGraph.Node] {
+        keynote.sceneGraph.nodesWithWorldTransforms(includeHidden: true).map(\.node).filter { $0.label?.hasPrefix("Letter ") == true }
+    }
+    let title = try #require(keynote.sceneGraph.nodesWithWorldTransforms(includeHidden: true).first { $0.node.label == "Title \"SceneSprockets\"" }?.node)
+    try #require(keynote.actions.first { $0.name == "Next" }).perform()
+    #expect(!title.isVisible)
+    // "SceneSprockets" and "for MetalSprockets" without the space.
+    #expect(letters().count == 31)
+    for _ in 0 ..< 180 {
+        keynote.update(time: 0, deltaTime: 1.0 / 60)
+    }
+    #expect(letters().isEmpty)
+    keynote.show(slide: 0)
+    #expect(title.isVisible)
+}
+
 // #317: the Thank You slide shows the title alone for half a second, then the finale.
 @Test
 @MainActor

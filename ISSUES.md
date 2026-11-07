@@ -6868,12 +6868,13 @@ The keynote's slides are in the order they were added, not an order that tells a
 ## 311: Keynote title slide has no playful exit into the deck
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:demo, effort:m
 created: 2026-11-07T17:08:06Z
-updated: 2026-11-07T17:08:07Z
+updated: 2026-11-07T18:44:16Z
+closed: 2026-11-07T18:44:16Z
 +++
 
 The keynote's first slide shows flat (2D) title text. Moving to the next slide only extrudes and turns the titles before the camera flies away, which does not show off the library much.

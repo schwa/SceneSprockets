@@ -63,6 +63,18 @@ public final class KeynoteDemo: DemoScene {
     // The title slide's text: flat on that slide, extruded once the keynote moves on.
     private var introTitles: [SceneGraph.Node] = []
     private static let flatDepth: Float = 0.01
+    // The title slide's text; leaving the slide, it breaks into one 3D block per letter that tumbles away (#311).
+    private static let introTitleSpecs: [(text: String, size: Float, y: Float, color: SIMD3<Float>)] = [
+        ("SceneSprockets", 1.6, 1.8, [0.95, 0.95, 0.97]),
+        ("for MetalSprockets", 0.6, 0.5, [0.6, 0.65, 0.75])
+    ]
+    private struct TumblingLetter {
+        var node: SceneGraph.Node
+        var velocity: SIMD3<Float>
+        var spinAxis: SIMD3<Float>
+        var spinRate: Float
+    }
+    private var tumblingLetters: [TumblingLetter] = []
     // SwiftECS World slide.
     private var boids: KeynoteBoids?
     // Gizmos slide: the node it selects.
@@ -179,6 +191,7 @@ public final class KeynoteDemo: DemoScene {
 
     private func updateSlide(time: Float, deltaTime: Float) {
         updateFog(deltaTime: deltaTime)
+        updateTumblingLetters(deltaTime: deltaTime)
         switch currentTitle {
         case "Implicit Animation":
             sinceShuffle += deltaTime
@@ -305,17 +318,14 @@ public final class KeynoteDemo: DemoScene {
         if Self.titles[current] == "Shadows" || Self.titles[next] == "Shadows" {
             shadows = shadowRenderer
         }
-        // Leaving the title slide, its flat titles extrude into 3D and turn so the depth shows, then the camera flies.
-        // Coming back, they turn back and flatten.
-        let morphsTitles = current == 0
-        let delay: Float = morphsTitles ? 0.7 : 0
-        for title in introTitles {
-            let rotation = morphsTitles ? simd_quatf(angle: -0.35, axis: [0, 1, 0]) : simd_quatf(ix: 0, iy: 0, iz: 0, r: 1)
-            let morph = SceneGraph.Action.group([
-                .scale(to: [1, 1, morphsTitles ? 1 : Self.flatDepth], duration: 0.7),
-                .rotate(to: rotation, duration: 0.7)
-            ])
-            title.run(morph.timingMode(.easeInEaseOut), forKey: "morph")
+        // Leaving the title slide, its flat titles break into 3D letters that fall and tumble out of frame, then the
+        // deck cross-fades. Coming back, the flat titles return.
+        let breaksTitles = current == 0
+        let delay: Float = breaksTitles ? 0.9 : 0
+        if breaksTitles {
+            breakIntroTitles()
+        } else if next == 0 {
+            restoreIntroTitles()
         }
         previous.run(.sequence([.wait(duration: delay + 0.2), .fadeOut(duration: 0.6), .run { $0.isVisible = false }]), forKey: "fade")
         let incoming = slides[next]
@@ -348,11 +358,7 @@ public final class KeynoteDemo: DemoScene {
         }
         cameraNode.transform = .camera(eye: Self.eye(for: index), target: Self.target(for: index))
         cameraNode.removeAction(forKey: "fly")
-        for title in introTitles {
-            title.removeAction(forKey: "morph")
-            title.trs.scale.z = index == 0 ? Self.flatDepth : 1
-            title.trs.rotation = index == 0 ? simd_quatf(ix: 0, iy: 0, iz: 0, r: 1) : simd_quatf(angle: -0.35, axis: [0, 1, 0])
-        }
+        restoreIntroTitles()
         current = index
         values["Slide"] = Float(index)
         sinceAdvance = 0
@@ -373,13 +379,11 @@ public final class KeynoteDemo: DemoScene {
     private func build(slide: SceneGraph.Node, title: String) {
         switch title {
         case "SceneSprockets":
-            // Flat (2D) until the keynote moves on; go(by:) extrudes them into 3D on the way to the next slide.
-            introTitles = [
-                addTitle("SceneSprockets", size: 1.6, y: 1.8, to: slide),
-                addTitle("for MetalSprockets", size: 0.6, y: 0.5, color: [0.6, 0.65, 0.75], to: slide)
-            ]
-            for title in introTitles {
+            // Flat (2D) until the keynote moves on; go(by:) breaks them into tumbling 3D letters.
+            introTitles = Self.introTitleSpecs.map { spec in
+                let title = addTitle(spec.text, size: spec.size, y: spec.y, color: spec.color, to: slide)
                 title.trs.scale.z = Self.flatDepth
+                return title
             }
             addLight(to: slide, at: [3, 5, 5], color: [1, 0.95, 0.9], intensity: 60)
         case "Scene Graph":
@@ -843,6 +847,71 @@ public final class KeynoteDemo: DemoScene {
         torus.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([1, 0.5, 0]), duration: 6)))
         _ = SceneGraph.Node(parent: slide, shape: .box(width: 1, height: 1, length: 1), material: BlinnPhongSceneMaterial.plastic([0.9, 0.35, 0.3]), device: demoDevice, trs: .init(translation: [-3, 0.5, 0]))
         _ = SceneGraph.Node(parent: slide, shape: .cylinder(radius: 0.35, height: 2), material: BlinnPhongSceneMaterial.plastic([0.4, 0.8, 0.5]), device: demoDevice, trs: .init(translation: [3, 1, 0]))
+    }
+
+    // Hides the flat titles and puts one extruded letter in place of each character, with a random kick and spin.
+    private func breakIntroTitles() {
+        removeTumblingLetters()
+        let slide = slides[0]
+        for (title, spec) in zip(introTitles, Self.introTitleSpecs) {
+            title.isVisible = false
+            let font = CTFontCreateWithName("Helvetica-Bold" as CFString, CGFloat(spec.size), nil)
+            func advance(_ text: String) -> Float {
+                let line = CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: [.font: font]))
+                return Float(CTLineGetTypographicBounds(line, nil, nil, nil))
+            }
+            let width = advance(spec.text)
+            let material = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(spec.color * 0.4), specular: .color(0.3), shininess: 32, emission: .color(spec.color * 0.6))
+            for (offset, character) in spec.text.enumerated() where character != " " {
+                let prefix = String(spec.text.prefix(offset))
+                let holder = SceneGraph.Node(parent: slide, label: "Letter \(character)")
+                let letter = SceneGraph.Node(parent: holder, shape: .text(String(character), fontName: "Helvetica-Bold", fontSize: spec.size, extrusionDepth: spec.size * 0.15), material: material, device: demoDevice)
+                guard let bounds = letter.meshBounds else {
+                    continue
+                }
+                let center = (bounds.min + bounds.max) / 2
+                // The holder sits at the letter's center, so the letter spins about its middle.
+                letter.trs.translation = -center
+                holder.trs.translation = [advance(prefix) - width / 2 + center.x, spec.y + center.y, center.z]
+                tumblingLetters.append(TumblingLetter(
+                    node: holder,
+                    velocity: [Float.random(in: -1.5...1.5), Float.random(in: 1.5...4), Float.random(in: 0.5...3)],
+                    spinAxis: simd_normalize(SIMD3<Float>.random(in: -1...1) + [0, 0, 0.01]),
+                    spinRate: Float.random(in: 2...7)
+                ))
+            }
+        }
+        Self.isolateLights(of: slide, index: 0)
+        hierarchyDidChange()
+    }
+
+    private func updateTumblingLetters(deltaTime: Float) {
+        guard !tumblingLetters.isEmpty, deltaTime > 0 else {
+            return
+        }
+        for index in tumblingLetters.indices {
+            tumblingLetters[index].velocity.y -= 9.81 * deltaTime
+            let letter = tumblingLetters[index]
+            letter.node.trs.translation += letter.velocity * deltaTime
+            letter.node.trs.rotation = simd_quatf(angle: letter.spinRate * deltaTime, axis: letter.spinAxis) * letter.node.trs.rotation
+        }
+        // Out of frame: no need to keep them.
+        let fallen = tumblingLetters.filter { $0.node.trs.translation.y < -10 }
+        if !fallen.isEmpty {
+            fallen.forEach { $0.node.removeFromParent() }
+            tumblingLetters.removeAll { $0.node.trs.translation.y < -10 }
+            hierarchyDidChange()
+        }
+    }
+
+    private func removeTumblingLetters() {
+        tumblingLetters.forEach { $0.node.removeFromParent() }
+        tumblingLetters = []
+    }
+
+    private func restoreIntroTitles() {
+        removeTumblingLetters()
+        introTitles.forEach { $0.isVisible = true }
     }
 
     // Glass orbiting the title, colored lights, fireworks and confetti. Hidden until `startFinale`.
