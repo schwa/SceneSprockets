@@ -7287,12 +7287,13 @@ Expected: every slide has notes, shown in the presenter notes window (#331).
 ## 333: Keynote Fog slide: fog switches on abruptly at the end of the transition
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:demo, effort:s
 created: 2026-11-07T18:04:39Z
-updated: 2026-11-07T18:04:40Z
+updated: 2026-11-07T18:07:40Z
+closed: 2026-11-07T18:07:40Z
 +++
 
 Moving to the Fog slide in the keynote demo, the slide fades in without fog, then the fog switches on all at once near the end of the transition. The change is abrupt.

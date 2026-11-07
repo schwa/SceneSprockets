@@ -80,6 +80,21 @@ func keynoteSlidePickerSwitchesInstantly() throws {
     #expect(keynote[value: "Slide"] == Float(index))
 }
 
+// #333: the fog fades in with the transition to the Fog slide instead of switching on at the end.
+@Test
+@MainActor
+func keynoteFogFadesInDuringTransition() throws {
+    let keynote = try keynoteShowing("Shadows")
+    try #require(keynote.actions.first { $0.name == "Next" }).perform()
+    keynote.update(time: 0, deltaTime: 0.25)
+    let fog = try #require(keynote.sceneGraph.fog)
+    #expect(fog.endDistance > 34)
+    for _ in 0 ..< 10 {
+        keynote.update(time: 0, deltaTime: 0.25)
+    }
+    #expect(keynote.sceneGraph.fog?.endDistance == 34)
+}
+
 // #328: tapping an object outside the Gizmos slide selects nothing, so no gizmo appears.
 @Test
 @MainActor

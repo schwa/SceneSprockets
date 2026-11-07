@@ -36,6 +36,8 @@ public final class KeynoteDemo: DemoScene {
     private var slides: [SceneGraph.Node] = []
     private var current = 0
     private var sinceAdvance: Float = 0
+    // 0 = no fog, 1 = the Fog slide's fog. Eases with the transition so the fog does not pop in (#333).
+    private var fogAmount: Float = 0
 
     // Per-slide state: each is used only while its slide is showing.
     private let shadowRenderer = SceneGraphShadows(intensity: 0.75, softness: 2)
@@ -164,7 +166,20 @@ public final class KeynoteDemo: DemoScene {
         Self.titles[current]
     }
 
+    private func updateFog(deltaTime: Float) {
+        let target: Float = currentTitle == "Fog" ? 1 : 0
+        fogAmount += min(max(target - fogAmount, -deltaTime), deltaTime)
+        guard fogAmount > 0 else {
+            sceneGraph.fog = nil
+            return
+        }
+        // Pushes the fog out of sight as the amount drops.
+        let distance = (1 - fogAmount) * 300
+        sceneGraph.fog = SceneGraph.Fog(color: [0.05, 0.06, 0.1, 1], startDistance: 12 + distance, endDistance: 34 + distance)
+    }
+
     private func updateSlide(time: Float, deltaTime: Float) {
+        updateFog(deltaTime: deltaTime)
         switch currentTitle {
         case "Implicit Animation":
             sinceShuffle += deltaTime
@@ -232,7 +247,6 @@ public final class KeynoteDemo: DemoScene {
     // Shadows and fog apply to the whole scene, so they are switched on only for their slides.
     private func applySceneSettings() {
         shadows = currentTitle == "Shadows" ? shadowRenderer : nil
-        sceneGraph.fog = currentTitle == "Fog" ? SceneGraph.Fog(color: [0.05, 0.06, 0.1, 1], startDistance: 12, endDistance: 34) : nil
         // The Gizmos slide selects its box; other slides show no selection.
         let showsGizmo = currentTitle == "Gizmos"
         showsSelectionOutline = showsGizmo
@@ -334,6 +348,8 @@ public final class KeynoteDemo: DemoScene {
         values["Slide"] = Float(index)
         sinceAdvance = 0
         sceneGraph.root.removeAction(forKey: "settings")
+        fogAmount = currentTitle == "Fog" ? 1 : 0
+        updateFog(deltaTime: 0)
         resetCurrentSlide()
         applySceneSettings()
     }
