@@ -5791,6 +5791,8 @@ At orbital speeds (several km/s) the active object's coordinates change by kilom
 
 Part of #255.
 
+- `2026-11-07T16:30:16Z`: Autonomous run: not changed. A Krakensbane-style moving reference frame (subtract the active object's velocity from the whole world each step, keep the object near rest) needs a world-space origin that can shift, which is #259 (physics far from the origin, floating origin) and #256 (Double transforms, effort:xl). Without those, the frame offset just moves the precision loss elsewhere. Punting: depends on #259 and #256 and on the #255 design for how origin shifts reach physics, rendering and node transforms. Unblocker: settle #255's origin-shift design (or do #259 first).
+
 ---
 
 ## 261: One depth range cannot hold centimeter parts and planets millions of km away
