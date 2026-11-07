@@ -1203,9 +1203,9 @@ Want:
 status: open
 priority: medium
 kind: bug
-labels: area:renderer, effort:m, deferred
+labels: area:renderer, effort:m
 created: 2026-10-14T01:11:25Z
-updated: 2026-10-21T21:03:02Z
+updated: 2026-11-07T15:46:16Z
 +++
 
 In the Imported Assets demo, shadowed pixels sometimes flash unshadowed for a frame. It is mostly the fox's self-shadowed side. It happens with the camera still and the animation paused (speed 0). The flashes are random and rare. They are clearly less frequent with the inspector sidebar closed, so they likely depend on frame timing.
@@ -1228,6 +1228,8 @@ Next steps: capture a GPU trace of a flashing frame, or render into renderer-own
 Setup: one directional light (Sun, eye [2.5, 7, 3] looking at the origin, intensity 2.5) plus a point fill light; SceneGraphShadows(intensity: 0.65, softness: 2); Blinn-Phong tray (pine texture), PBR dice.
 
 Not reproducible offscreen: DemoSnapshot renders one frame at a time and waits for the GPU, and those frames are stable. That fits the frame-timing theory above (frames in flight sharing the view depth texture). #60 acne is also visible on the tray floor at this angle, but acne should not flicker on a still frame unless the inputs change.
+
+- `2026-11-07T15:50:34Z`: Autonomous run: investigated, no fix. Findings: (1) The Dice sighting (2026-10-21) is after Blinn-Phong (#71, 10-15) and PBR (#102, 10-16) started sampling shadows in their shaders, and the dice scene is Blinn-Phong plus PBR, so the flicker is not only in the screen-space ShadowMaskPass that the original theory centers on. (2) Shadow map slots are picked by submission index and the caster pass ends with barrierAfterPass(after: .fragment, ...); 6 slots made no difference, so slot reuse looks ruled out. Remaining suspects on the in-shader path: per-frame data the shaders read (light view-projection matrices, shadow slices) living in a buffer that the CPU rewrites while an earlier frame is still in flight. Punting: it only reproduces live, by timing, and I cannot verify a guess offscreen. Unblocker: a GPU trace of a flashing frame in the settled Dice demo, or permission to add per-frame logging of the shadow uniforms' buffer identity and contents and run the app to compare.
 
 ---
 
@@ -2569,9 +2571,9 @@ SceneGraph.Constraint now has influenceFactor, isEnabled and an acceleration kin
 status: open
 priority: low
 kind: bug
-labels: area:demo, deferred, effort:s
+labels: area:demo, effort:s
 created: 2026-10-16T00:06:57Z
-updated: 2026-10-20T02:26:42Z
+updated: 2026-11-07T15:46:16Z
 +++
 
 The code panels in KeynoteDemo.swift show Swift that does not compile if pasted.
@@ -2590,9 +2592,9 @@ Expected: each snippet compiles, given the obvious names (materials, nodes) it r
 status: open
 priority: low
 kind: bug
-labels: area:demo, deferred, effort:s
+labels: area:demo, effort:s
 created: 2026-10-16T00:06:57Z
-updated: 2026-10-20T02:26:42Z
+updated: 2026-11-07T15:46:17Z
 +++
 
 Some code panels in KeynoteDemo.swift differ from the code that builds the slide, or show demo-only API.
@@ -2781,9 +2783,9 @@ There is no way to give the scene graph a single node holding a mesh, a material
 status: open
 priority: medium
 kind: bug
-labels: effort:m, area:renderer, deferred
+labels: effort:m, area:renderer
 created: 2026-10-17T13:09:48Z
-updated: 2026-10-20T02:27:43Z
+updated: 2026-11-07T15:46:16Z
 +++
 
 Screen-space ambient occlusion is configured as SceneGraph.PostProcessing.ambientOcclusion, next to exposure, contrast, saturation and vignette, and runs as a post pass (ambient_occlusion in PostProcessing.metal) that multiplies the final rendered color.
@@ -2794,6 +2796,8 @@ Problems:
 - Material renderers never see the occlusion: Blinn-Phong ambient and PBR image-based lighting cannot apply it to their ambient terms.
 
 Expected: ambient occlusion reduces only ambient and indirect lighting, and is configured as a lighting setting, separate from post-processing color adjustments.
+
+- `2026-11-07T15:50:56Z`: Autonomous run: scoped, not changed. Doing this needs (1) the AO texture computed before the material passes (a depth prepass, or reordering so AO runs between a depth-only pass and shading), (2) Blinn-Phong to multiply only its ambient term by it, (3) PBR to multiply only its IBL/indirect term by it; MetalSprocketsPBR has no screen-space occlusion input today, so that is a change in MetalSprocketsPBR, and (4) a public API move of PostProcessing.ambientOcclusion to a lighting setting (for example SceneGraph.ambientOcclusion or Environment.ambientOcclusion). Punting: it is a cross-package design change, and the API placement is your call. Questions: where should the setting live, and is a depth prepass for AO acceptable (it costs a second geometry pass when AO is on)?
 
 ---
 
@@ -3023,9 +3027,9 @@ Package.swift and the demo package use branch main because the 0.0.1 tag depends
 status: open
 priority: low
 kind: enhancement
-labels: deferred, area:demo, effort:s
+labels: area:demo, effort:s
 created: 2026-10-22T01:05:11Z
-updated: 2026-10-23T13:22:39Z
+updated: 2026-11-07T15:46:17Z
 +++
 
 DiceGeometry builds dice with sharp edges. Real dice (and the old Dice by PCalc models) have rounded edges, which catch highlights and read as solid objects, especially on the metal and glass styles. Bevel or chamfer each edge in DiceGeometry, keeping per-face texture coordinates and the convex hull used for physics. Done when the dice show rounded edges in the Dice demo and the numbers still sit on their faces.
@@ -3038,9 +3042,9 @@ DiceGeometry builds dice with sharp edges. Real dice (and the old Dice by PCalc 
 status: open
 priority: low
 kind: enhancement
-labels: deferred, area:demo, effort:xs
+labels: area:demo, effort:xs
 created: 2026-10-22T01:05:11Z
-updated: 2026-10-23T13:22:39Z
+updated: 2026-11-07T15:46:17Z
 +++
 
 DiceGeometry numbers faces with a simple scheme: opposite faces add up to n + 1 (n - 1 for the D10, numbered 0 to 9), but the arrangement around each corner is arbitrary. Store-bought dice follow conventions (for example, a D6 with 1, 2, 3 meeting counterclockwise at a corner; a balanced D20). Done when each die kind matches a standard layout.
@@ -3975,10 +3979,10 @@ Found while working on #178. `xcb build -d ios` (generic/platform=iOS) fails bef
 status: open
 priority: medium
 kind: feature
-labels: effort:m, area:document, deferred
+labels: effort:m, area:document
 depends: 158
 created: 2026-10-24T11:29:39Z
-updated: 2026-10-24T11:44:53Z
+updated: 2026-11-07T15:46:16Z
 +++
 
 Split from #162. Saving a scene still warns for these two node features. Audio players hold an AVAudioPCMBuffer and live in SceneSprocketsAudio, so the core archive needs a hook (or the audio file kept by reference). Levels of detail hold MetalMesh values, so they need the generated-mesh path from #158.
@@ -5339,6 +5343,7 @@ Fix: MetalSprocketsPBR #22, commit 168a00f6 (local, not pushed): QueueBarrier(af
 To finish: push MetalSprocketsPBR, update the MetalSprocketsPBR pin in the 4 Package.resolved files, re-test in Debug with the inspector visible, and re-capture to confirm the barrier is on the first pass.
 
 - `2026-11-04T20:48:50Z`: Checked: the MetalSprocketsPBR fix (168a00f6, queue barrier before the PBR Transmission Scene pass) is pushed and included in MetalSprocketsPBR 0.0.3, which SceneSprockets already resolves (Package.resolved pins 693714e4, tag 0.0.3). No code change left here. Not closing: the bug is timing-dependent and needs a manual repro (Debug build, inspector visible, orbit the BMW scene). Unblocker: confirm the pink frames are gone, then close.
+- `2026-11-07T15:49:55Z`: Autonomous run: re-checked. The resolved MetalSprocketsPBR checkout has QueueBarrier(after: [.fragment, .blit], before: .fragment) at the start of the PBR Transmission Scene pass (PBRTransmissionPass.swift:147), so the fix is in the build. Punting: the bug is timing-dependent and only reproduces by hand (Debug build, Composer inspector visible, orbiting the BMW glTF scene); no automated test can show it. Unblocker: run that repro once; if no pink frames appear, close.
 
 ---
 
@@ -6652,5 +6657,65 @@ updated: 2026-11-07T15:41:14Z
 +++
 
 Positions for hit tests, bounds and PBR model conversion are read from mesh vertex buffers on the CPU. Meshes whose vertex buffers use private storage cannot be hit-tested, have no bounds, and cannot be converted. Listed under Limitations in the README.
+
+---
+
+## 304: Keynote has no level of detail slide
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:demo, effort:s
+created: 2026-11-07T15:44:43Z
++++
+
+Levels of detail (Node.levelsOfDetail, like SCNLevelOfDetail) are not shown anywhere in the Keynote demo. Nothing on a slide shows a node switching meshes as its distance from the camera changes.
+
+---
+
+## 305: Keynote has no debug views slide
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:demo, effort:m
+created: 2026-11-07T15:44:43Z
++++
+
+The debug views (SceneGraphDebugMode: shaded, normals, texture coordinates, UV checker, world position, wireframe) and material channels (SceneGraphMaterialChannel) are not shown in the Keynote demo. The demo framework (SceneDemo) has no way to set a debug mode or material channel on the view for one slide.
+
+---
+
+## 306: Keynote has no transform gizmo or selection outline slide
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:demo, effort:m
+created: 2026-11-07T15:44:43Z
++++
+
+SceneSprocketsGizmos (TransformGizmo, SelectionOutline) is not shown in the Keynote demo. The Keynote's SceneView has no manipulator or overlay, so a slide cannot show the gizmo's handles or an outline around a selected node.
+
+---
+
+## 307: Keynote has no slide for the SwiftECS world
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:demo, effort:m
+created: 2026-11-07T15:45:06Z
+updated: 2026-11-07T15:45:07Z
++++
+
+The Keynote demo does not show that node data lives in a SwiftECS World (SceneGraph.world, #250), or that an ECS app can query and write node components directly.
+
+## Proposed slide (per schwa)
+3D boids: a flock of nodes moved by a SwiftECS system that reads and writes NodeTransformComponent through sceneGraph.world. SwiftECS has a 2D Boids demo with a parallel flocking system to draw from.
 
 ---
