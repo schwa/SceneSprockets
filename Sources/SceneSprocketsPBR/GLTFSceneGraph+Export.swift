@@ -11,12 +11,15 @@ import SwiftMesh
 private typealias GLTFMesh = SwiftGLTF.Mesh
 private typealias GLTFMaterial = SwiftGLTF.Material
 
-/// Saves meshes that are not shapes (generated geometry such as dice) as `meshes/N.glb` in a scene package, so other
-/// tools can open them too (#158). The glTF holds every vertex attribute, one primitive per submesh, and a glTF
-/// version of each material (PBR values; Blinn-Phong approximated; core textures referenced from the package's
-/// textures/ folder). The exact materials stay in scene.json, so reading takes only the geometry back.
-/// The mesh's extras record the attribute order and buffer layout, so the vertex descriptor comes back unchanged.
+/// The codec that `SceneArchive` uses to save meshes as glTF files.
+///
+/// The codec saves meshes that are not shapes, such as generated geometry, as `meshes/N.glb` in a scene package. Other
+/// tools can open these files. Each file holds every vertex attribute, one primitive for each submesh, and a glTF
+/// version of each material. Blinn-Phong materials are approximations. The exact materials stay in `scene.json`, so
+/// reading takes back only the geometry. The extras of the mesh record the attribute order and buffer layout, so the
+/// vertex descriptor does not change.
 public struct GLTFMeshCodec: ArchivableMeshCodec {
+    /// Creates a glTF mesh codec.
     public init() {}
 
     public func encode(_ mesh: MetalMesh, materials: [any SceneSprockets.Material], name: String?, context: SceneArchiveContext) throws -> String {

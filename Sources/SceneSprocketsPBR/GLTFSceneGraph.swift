@@ -7,17 +7,25 @@ import simd
 import SwiftGLTF
 import SwiftMesh
 
-/// A glTF scene as a scene graph. EXT_mesh_gpu_instancing copies become child nodes; KHR_node_visibility sets
-/// isVisible. KHR_animation_pointer channels for visibility, materials, lights and cameras become property channels. Not
-/// supported: camera xmag and aspectRatio.
+/// A glTF scene converted to a scene graph.
+///
+/// The conversion keeps the hierarchy, meshes with PBR materials, cameras, lights, skins, morph targets and
+/// animations. `EXT_mesh_gpu_instancing` copies become child nodes, and `KHR_node_visibility` sets `isVisible`.
+/// `KHR_animation_pointer` channels for visibility, materials, lights and cameras become property channels. The
+/// conversion does not support the camera properties `xmag` and `aspectRatio`.
 public struct GLTFSceneGraph {
+    /// The converted scene.
     public var sceneGraph: SceneGraph
+    /// The glTF animations, as clips that animate nodes of ``sceneGraph``.
     public var animations: [SceneGraph.AnimationClip]
-    /// Indexed like the glTF document's nodes; nil for nodes outside the loaded scene.
+    /// The scene graph node for each glTF node, in document order. The value is `nil` for nodes outside the loaded
+    /// scene.
     public var nodes: [SceneGraph.Node?]
-    /// KHR_materials_variants names. The scene graph starts with the variant the asset was loaded with;
-    /// selectVariant(_:) switches it.
+    /// The names of the `KHR_materials_variants` variants.
+    ///
+    /// The scene graph starts with the variant that the asset was loaded with. `selectVariant(_:)` changes it.
     public var variantNames: [String]
+    /// Messages about parts of the file that the conversion skipped or changed.
     public var warnings: [String]
     let asset: GLTFAsset
     // Every scene node showing a glTF mesh, with that mesh's index.

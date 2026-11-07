@@ -5,23 +5,38 @@ import SceneSprockets
 import simd
 import SwiftUI
 
-/// Move, rotate and scale handles for one node, drawn at a constant size on screen with MetalSprocketsAddOns'
-/// GraphicsContext3D, like three.js TransformControls (#154). Give it to SceneView(manipulator:).
+/// Handles that move, rotate and scale one node, like three.js `TransformControls`.
+///
+/// The gizmo draws its handles at a constant size on screen with MetalSprocketsAddOns' `GraphicsContext3D`. Pass it to
+/// `SceneView(manipulator:)`. It also responds to pinch and twist gestures.
 @MainActor
 public final class TransformGizmo: SceneViewManipulator {
+    /// The kind of change that the handles make.
     public enum Mode: String, CaseIterable, Sendable {
-        case translate, rotate, scale
+        /// The handles move the node.
+        case translate
+        /// The handles rotate the node.
+        case rotate
+        /// The handles scale the node.
+        case scale
     }
 
+    /// The axes that the handles follow.
     public enum Space: String, CaseIterable, Sendable {
-        // Handles follow the world axes.
+        /// The handles follow the world axes.
         case world
-        // Handles follow the node's rotation.
+        /// The handles follow the node's rotation.
         case local
     }
 
+    /// An axis of the gizmo.
     public enum Axis: Int, CaseIterable, Sendable {
-        case x, y, z
+        /// The x axis.
+        case x
+        /// The y axis.
+        case y
+        /// The z axis.
+        case z
 
         // The axes after this one, in x, y, z order, wrapping around.
         var next: Self {
@@ -45,24 +60,29 @@ public final class TransformGizmo: SceneViewManipulator {
         }
     }
 
+    /// A part of the gizmo that the user can drag.
     public enum Handle: Equatable, Sendable {
+        /// The handle along an axis, or the rotation ring about it.
         case axis(Axis)
-        // The plane perpendicular to the axis.
+        /// The handle for the plane perpendicular to the axis.
         case plane(Axis)
-        // Translate: in the view plane. Scale: uniform. Rotate: free (trackball) rotation inside the rings.
+        /// The center handle. It moves the node in the view plane, scales it uniformly, or rotates it freely
+        /// (trackball) inside the rings.
         case center
-        // Rotate: the ring facing the camera, about the view direction.
+        /// The rotation ring that faces the camera. It rotates about the view direction.
         case view
     }
 
+    /// The step sizes that drags snap to. A `nil` step does not snap.
     public struct Snapping: Sendable {
-        /// World units; nil is no snapping.
+        /// The step for moves, in world units.
         public var translation: Float?
-        /// Radians.
+        /// The step for rotations, in radians.
         public var rotation: Float?
-        /// Scale factor steps.
+        /// The step for scale factors.
         public var scale: Float?
 
+        /// Creates snapping steps. A `nil` step does not snap.
         public init(translation: Float? = nil, rotation: Float? = nil, scale: Float? = nil) {
             self.translation = translation
             self.rotation = rotation
@@ -70,25 +90,41 @@ public final class TransformGizmo: SceneViewManipulator {
         }
     }
 
+    /// The node that the gizmo edits. If `nil`, the gizmo is hidden.
     public var target: SceneGraph.Node?
+    /// The kind of change that the handles make.
     public var mode: Mode = .translate
+    /// The axes that the handles follow.
     public var space: Space = .world
+    /// The step sizes that drags snap to.
     public var snapping = Snapping()
-    /// Length of the axis handles in view points.
+    /// The length of the axis handles, in view points.
     public var size: Float = 110
-    /// When set, the handles are this long in world units instead, so the gizmo scales with the camera like the scene.
+    /// The length of the axis handles in world units, which replaces ``size``.
+    ///
+    /// When set, the gizmo gets bigger and smaller with the camera distance, like the scene.
     public var worldSize: Float?
+    /// The handle under the pointer, if any.
     public private(set) var hoveredHandle: Handle?
+    /// The handle that the user drags now, if any.
     public private(set) var activeHandle: Handle?
-    /// Called when a drag starts and ends, and with the node after each change, for undo and inspectors.
+    /// Called with the target when a drag starts, for example to record an undo step.
     public var onBegin: ((SceneGraph.Node) -> Void)?
+    /// Called with the target after each change during a drag.
     public var onChange: ((SceneGraph.Node) -> Void)?
+    /// Called with the target when a drag ends.
     public var onEnd: ((SceneGraph.Node) -> Void)?
 
     private var drag: DragState?
     // The target's scale and world orientation when a pinch or twist started.
     private var twoFingerStart: (scale: SIMD3<Float>, orientation: simd_quatf, cameraForward: SIMD3<Float>)?
 
+    /// Creates a transform gizmo.
+    ///
+    /// - Parameters:
+    ///   - target: The node to edit.
+    ///   - mode: The kind of change that the handles make.
+    ///   - space: The axes that the handles follow.
     public init(target: SceneGraph.Node? = nil, mode: Mode = .translate, space: Space = .world) {
         self.target = target
         self.mode = mode

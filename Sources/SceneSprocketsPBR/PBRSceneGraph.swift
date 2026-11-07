@@ -7,9 +7,15 @@ import SceneSprockets
 import simd
 import SwiftMesh
 
+/// A physically based material for scene graph meshes.
+///
+/// The material wraps a MetalSprocketsPBR `PBRMaterial`: metallic-roughness with most glTF material extensions. A
+/// ``PBRMaterialRenderer`` draws it.
 public struct PBRSceneMaterial: SceneSprockets.Material, SamplesShadowsInShader {
+    /// The MetalSprocketsPBR material. It is a class, so copies of this value share it.
     public var pbrMaterial: PBRMaterial
 
+    /// Creates a scene material that wraps a PBR material.
     public init(_ pbrMaterial: PBRMaterial) {
         self.pbrMaterial = pbrMaterial
     }
@@ -22,8 +28,9 @@ public struct PBRSceneMaterial: SceneSprockets.Material, SamplesShadowsInShader 
         true
     }
 
-    /// Blend mode, depth test and write, color write mask and fill mode. Stored on the shared PBRMaterial, so every
-    /// PBRSceneMaterial wrapping it sees the change.
+    /// The blend mode, depth test and write, color write mask and fill mode.
+    ///
+    /// The value is stored on the shared ``pbrMaterial``, so every `PBRSceneMaterial` that wraps it sees a change.
     public var renderState: PBRRenderState {
         get { pbrMaterial.renderState }
         nonmutating set { pbrMaterial.renderState = newValue }
@@ -40,20 +47,34 @@ public struct PBRSceneMaterial: SceneSprockets.Material, SamplesShadowsInShader 
         return material
     }
 
+    /// Creates a material without textures.
+    ///
+    /// - Parameters:
+    ///   - device: The device for the material's buffers.
+    ///   - baseColor: The base color in linear RGB, with alpha in `w`.
+    ///   - metallic: The metalness, from 0 (dielectric) to 1 (metal).
+    ///   - roughness: The roughness, from 0 (smooth) to 1 (rough).
+    /// - Throws: An error if the material's buffers cannot be created.
     public init(device: MTLDevice, baseColor: SIMD4<Float> = [1, 1, 1, 1], metallic: Float = 0, roughness: Float = 0.5) throws {
         let uniforms = PBRMaterialUniforms.defaults(baseColor: baseColor, metallic: metallic, roughness: roughness)
         pbrMaterial = try PBRMaterial(uniforms: uniforms, placeholder: PBRMaterial.placeholderBinding(device: device), device: device)
     }
 }
 
-/// Maps scene graph nodes to PBR node indices: entries first (index N is entries[N]), then skin joints.
+/// The map from scene graph nodes to node indices in a `PBRModel`.
+///
+/// The mesh entries come first, so index `N` is `entries[N]`. The joints of the skins come after them.
 public struct PBRNodeLayout {
+    /// The mesh entries, in node index order.
     public var entries: [SceneGraph.MeshEntry]
+    /// The joint nodes of the skins, after the entries in node index order.
     public private(set) var jointNodes: [SceneGraph.Node] = []
+    /// The skins that the entries use, each one time.
     public private(set) var skins: [SceneGraph.Skin] = []
     private var jointIndices: [ObjectIdentifier: Int] = [:]
     private var skinIndices: [ObjectIdentifier: Int] = [:]
 
+    /// Creates the layout for mesh entries and the joints of their skins.
     public init(entries: [SceneGraph.MeshEntry]) {
         self.entries = entries
         for entry in entries {
@@ -105,17 +126,30 @@ func validSkin(of entry: SceneGraph.MeshEntry) -> SceneGraph.Skin? {
     return skin
 }
 
+/// A builder that converts scene graph mesh entries into a MetalSprocketsPBR `PBRModel`.
+///
+/// ``PBRMaterialRenderer`` uses it. Use it directly to draw scene graph meshes with your own MetalSprocketsPBR pipeline.
 public struct PBRSceneGraphModelBuilder {
+    /// The device for the model's buffers.
     public var device: MTLDevice
 
+    /// Creates a model builder.
     public init(device: MTLDevice) {
         self.device = device
     }
 
+    /// Returns a model for the entries, with the default node layout.
+    ///
+    /// Entries whose material is not a ``PBRSceneMaterial`` are not drawn.
+    ///
+    /// - Throws: An error if the geometry or the model cannot be built.
     public func makeModel(entries: [SceneGraph.MeshEntry]) throws -> PBRModel {
         try makeModel(entries: entries, layout: PBRNodeLayout(entries: entries))
     }
 
+    /// Returns a model for the entries, with a node layout that you made.
+    ///
+    /// - Throws: An error if the geometry or the model cannot be built.
     public func makeModel(entries: [SceneGraph.MeshEntry], layout: PBRNodeLayout) throws -> PBRModel {
         try makeModelAndKeys(entries: entries, layout: layout).model
     }
@@ -151,15 +185,23 @@ public struct PBRSceneGraphModelBuilder {
     }
 }
 
-/// Equal by identity: it holds GPU state, and SceneView only needs to know it is the same renderer (#235).
+/// The renderer that draws every mesh with a ``PBRSceneMaterial``.
+///
+/// The renderer caches its model and rebuilds it only when the scene structure changes. Keep one instance across frames,
+/// for example in `@State`. Instances are equal only to themselves, because `SceneView` only needs to know whether the
+/// renderer is the same.
 public final class PBRMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
     public static func == (lhs: PBRMaterialRenderer, rhs: PBRMaterialRenderer) -> Bool {
         lhs === rhs
     }
 
+    /// The device for the renderer's buffers and textures.
     public var device: MTLDevice
+    /// The image-based lighting that the renderer uses when the scene graph's environment has no map.
     public var environment: PBREnvironment
+    /// The strength of ``environment``.
     public var environmentIntensity: Float
+    /// The exposure, as a multiplier of the light before tone mapping.
     public var exposure: Float
     // One model per entry set (SceneGraphElement may split entries into batches), for the current structure.
     private var cachedModels: [EntrySetKey: (model: PBRModel, keys: [PBRModel.Primitive.Key?])] = [:]
@@ -171,6 +213,13 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
     // Set by the pre-pass when this frame has transmissive entries; the batches' renderers refract it.
     private var frameTransmissionTarget: PBRTransmissionTarget?
 
+    /// Creates a PBR renderer.
+    ///
+    /// - Parameters:
+    ///   - device: The device for the renderer's buffers and textures.
+    ///   - environment: The lighting to use when the scene graph's environment has no map.
+    ///   - environmentIntensity: The strength of `environment`.
+    ///   - exposure: The exposure, as a multiplier of the light before tone mapping.
     public init(device: MTLDevice, environment: PBREnvironment = .studio, environmentIntensity: Float = 1, exposure: Float = 1) {
         self.device = device
         self.environment = environment

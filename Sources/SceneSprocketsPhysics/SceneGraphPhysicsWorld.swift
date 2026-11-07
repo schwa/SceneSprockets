@@ -4,11 +4,19 @@ import SceneSprockets
 import simd
 import SwiftMesh
 
-/// Simulates the scene graph's nodes that have a physicsBody, with Jolt. Each step adds bodies for new nodes,
-/// removes bodies for removed or hidden nodes, rebuilds bodies whose description changed, moves kinematic bodies to
-/// their nodes, advances the simulation and writes dynamic bodies' poses back to their nodes (world position and
-/// orientation; scale is kept). Writing only changes the transform revision.
+/// A Jolt simulation of the nodes in a scene graph that have a `physicsBody`.
+///
+/// Each ``step(deltaTime:collisionSteps:)`` does these things in order:
+///
+/// - It adds bodies for new nodes, and removes the bodies of removed or hidden nodes.
+/// - It rebuilds the bodies whose `physicsBody` changed.
+/// - It moves kinematic bodies to their nodes.
+/// - It advances the simulation.
+/// - It writes the world position and orientation of each dynamic body to its node. Scale does not change.
+///
+/// Writing poses changes only the transform revision of the scene graph.
 public final class SceneGraphPhysicsWorld {
+    /// The scene graph whose nodes the world simulates.
     public let sceneGraph: SceneGraph
     /// The Jolt world, for anything this type does not wrap (constraints, contacts, queries).
     public let world: PhysicsWorld
@@ -21,11 +29,18 @@ public final class SceneGraphPhysicsWorld {
 
     private(set) var entries: [ObjectIdentifier: Entry] = [:]
 
+    /// Creates a physics world for a scene graph.
+    ///
+    /// - Parameters:
+    ///   - sceneGraph: The scene graph to simulate.
+    ///   - gravity: The acceleration of gravity in world space, in meters per second squared.
+    /// - Throws: An error if the Jolt engine cannot start.
     public init(sceneGraph: SceneGraph, gravity: SIMD3<Float> = [0, -9.81, 0]) throws {
         self.sceneGraph = sceneGraph
         world = PhysicsWorld(engine: try JoltEngine(), gravity: gravity)
     }
 
+    /// The acceleration of gravity in world space, in meters per second squared.
     public var gravity: SIMD3<Float> {
         get { world.gravity }
         set { world.gravity = newValue }
@@ -36,11 +51,14 @@ public final class SceneGraphPhysicsWorld {
         entries[ObjectIdentifier(node)]?.body
     }
 
+    /// Returns the linear velocity of the node's body, or `nil` if the node has no body yet.
     public func velocity(of node: SceneGraph.Node) -> SIMD3<Float>? {
         body(of: node).map { world.linearVelocity(of: $0) }
     }
 
-    /// Syncs first, so it works on a node added since the last step.
+    /// Sets the linear velocity of the node's body, in world units per second.
+    ///
+    /// The method calls ``sync()`` first, so it works for a node that was added after the last step.
     public func setVelocity(_ velocity: SIMD3<Float>, of node: SceneGraph.Node) {
         sync()
         if let body = body(of: node) {
@@ -48,7 +66,9 @@ public final class SceneGraphPhysicsWorld {
         }
     }
 
-    /// Radians per second about each world axis. Syncs first, like setVelocity.
+    /// Sets the angular velocity of the node's body, in radians per second about each world axis.
+    ///
+    /// The method calls ``sync()`` first, like ``setVelocity(_:of:)``.
     public func setAngularVelocity(_ velocity: SIMD3<Float>, of node: SceneGraph.Node) {
         sync()
         if let body = body(of: node) {
@@ -56,6 +76,9 @@ public final class SceneGraphPhysicsWorld {
         }
     }
 
+    /// Adds an impulse to the node's body at its center of mass.
+    ///
+    /// The method calls ``sync()`` first, like ``setVelocity(_:of:)``.
     public func applyImpulse(_ impulse: SIMD3<Float>, to node: SceneGraph.Node) {
         sync()
         if let body = body(of: node) {
@@ -63,6 +86,11 @@ public final class SceneGraphPhysicsWorld {
         }
     }
 
+    /// Advances the simulation and writes the new poses to the nodes.
+    ///
+    /// - Parameters:
+    ///   - deltaTime: The time to advance, in seconds. A value of zero or less does nothing.
+    ///   - collisionSteps: The number of collision steps in this update. Use more steps for fast or small bodies.
     public func step(deltaTime: Float, collisionSteps: Int = 1) {
         guard deltaTime > 0 else {
             return
@@ -81,7 +109,10 @@ public final class SceneGraphPhysicsWorld {
         }
     }
 
-    /// Matches bodies to the graph's visible nodes with a physicsBody. `step` calls it.
+    /// Adds, removes and rebuilds bodies to match the visible nodes that have a `physicsBody`.
+    ///
+    /// ``step(deltaTime:collisionSteps:)`` calls this method. Call it yourself to get the body of a new node before
+    /// the next step.
     public func sync() {
         var seen: Set<ObjectIdentifier> = []
         sceneGraph.visit { node, _ in

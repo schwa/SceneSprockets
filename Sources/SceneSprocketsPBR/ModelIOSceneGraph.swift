@@ -8,19 +8,33 @@ import SceneSprocketsBlinnPhong
 import simd
 import SwiftMesh
 
-/// An MDLAsset (OBJ, PLY, STL, ABC, USD, ...) as a scene graph, keeping its object hierarchy.
-/// Not imported: skins and blend shapes (see #31).
+/// A Model I/O asset converted to a scene graph, with its object hierarchy.
+///
+/// Model I/O reads OBJ, PLY, STL, ABC, USD and more. The conversion keeps meshes, materials, cameras, lights and
+/// keyframed transforms. It does not import skins, blend shapes or orthographic cameras.
 public struct ModelIOSceneGraph {
+    /// The kind of scene material to make from the asset's materials.
     public enum MaterialKind: Sendable {
+        /// ``PBRSceneMaterial`` materials.
         case pbr
+        /// Blinn-Phong materials.
         case blinnPhong
     }
 
+    /// The converted scene.
     public var sceneGraph: SceneGraph
-    /// Keyframed transforms, sampled at their key times. Nil when nothing is animated.
+    /// The keyframed transforms, sampled at their key times, or `nil` if nothing is animated.
     public var animation: SceneGraph.AnimationClip?
+    /// Messages about parts of the asset that the conversion skipped or changed.
     public var warnings: [String]
 
+    /// Loads a file with Model I/O and converts it.
+    ///
+    /// - Parameters:
+    ///   - url: The file to load.
+    ///   - device: The device for meshes and textures.
+    ///   - materials: The kind of scene material to make.
+    /// - Throws: An error if the file is empty or the conversion fails.
     public init(url: URL, device: MTLDevice, materials: MaterialKind = .pbr) throws {
         let allocator = MTKMeshBufferAllocator(device: device)
         let asset = MDLAsset(url: url, vertexDescriptor: nil, bufferAllocator: allocator)
@@ -31,6 +45,14 @@ public struct ModelIOSceneGraph {
         try self.init(asset: asset, device: device, materials: materials, label: url.deletingPathExtension().lastPathComponent)
     }
 
+    /// Converts an asset that is already loaded.
+    ///
+    /// - Parameters:
+    ///   - asset: The asset to convert.
+    ///   - device: The device for meshes and textures.
+    ///   - materials: The kind of scene material to make.
+    ///   - label: The label of the root node.
+    /// - Throws: An error if the conversion fails.
     public init(asset: MDLAsset, device: MTLDevice, materials: MaterialKind = .pbr, label: String? = nil) throws {
         var converter = try ModelIOConverter(device: device, materialKind: materials)
         let root = SceneGraph.Node(label: label)

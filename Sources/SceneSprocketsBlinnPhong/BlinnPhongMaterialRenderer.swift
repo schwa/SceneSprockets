@@ -8,38 +8,66 @@ import SceneSprocketsShaders
 import simd
 import SwiftMesh
 
-/// A Blinn-Phong surface: ambient (lit by the renderer's ambient light), diffuse and specular, each a color or a
-/// texture tinted by a color. A mesh's first vertex color set multiplies ambient, diffuse and opacity.
+/// A Blinn-Phong surface with ambient, diffuse, specular and emission terms.
+///
+/// Each term is a color, or a texture tinted by a color. The renderer's ambient light lights the ambient term. If a
+/// mesh has vertex colors, the first color set multiplies the ambient, diffuse and opacity terms.
 public struct BlinnPhongSceneMaterial: SceneSprockets.Material, SamplesShadowsInShader {
+    /// Where a term of the material gets its color.
     public enum Source {
-        // Linear RGB.
+        /// A color in linear RGB.
         case color(SIMD3<Float>)
-        // Sampled at the mesh's first texture coordinates and multiplied by `tint`. A nil sampler uses linear
-        // filtering with repeat. A descriptor, not a sampler state, so scenes can save it (#180).
+        /// A texture, sampled at the mesh's first texture coordinates and multiplied by `tint`.
+        ///
+        /// A `nil` sampler uses linear filtering with repeat. The sampler is a descriptor, not a sampler state, so that
+        /// `SceneArchive` can save it.
         case texture(MTLTexture, sampler: MTLSamplerDescriptor? = nil, tint: SIMD3<Float> = .one)
 
+        /// A grey color with the same value in red, green and blue.
         public static func color(_ grey: Float) -> Self {
             .color(SIMD3(repeating: grey))
         }
     }
 
+    /// The color that the ambient light lights.
     public var ambient: Source
+    /// The color that the lights scatter in all directions.
     public var diffuse: Source
+    /// The color of the highlights.
     public var specular: Source
+    /// The specular exponent. Higher values make smaller, sharper highlights.
     public var shininess: Float
-    /// 0 is invisible, 1 opaque. Below 1 the material blends over what is behind it and does not write depth;
-    /// transparent meshes draw after opaque ones of the same rendering order, farthest first.
+    /// The opacity, from 0 (invisible) to 1 (opaque).
+    ///
+    /// Below 1, the material blends over what is behind it and does not write depth. Transparent meshes draw after
+    /// opaque meshes with the same rendering order, farthest first.
     public var opacity: Float
-    /// Multiplies opacity by the diffuse texture's alpha (and makes the material transparent).
+    /// Whether the diffuse texture's alpha multiplies ``opacity``. If true, the material is transparent.
     public var usesDiffuseTextureAlpha: Bool
-    /// Added unlit, like SCNMaterial.emission.
+    /// The color that the material adds without lighting, like `SCNMaterial.emission`.
     public var emission: Source
-    /// Tangent-space normal map (+Y up, as in glTF), sampled at the first texture coordinates. Meshes need no tangents.
+    /// A tangent-space normal map, with +Y up as in glTF, sampled at the first texture coordinates.
+    ///
+    /// Meshes do not need tangents.
     public var normalMap: MTLTexture?
-    /// Counter-clockwise triangles are front faces. `.none` draws both sides.
+    /// The faces to cull. Counter-clockwise triangles are front faces. `.none` draws both sides.
     public var cullMode: MTLCullMode
+    /// The depth, color mask, blend and fill settings for the draw.
     public var renderState: MaterialRenderState
 
+    /// Creates a Blinn-Phong material.
+    ///
+    /// - Parameters:
+    ///   - ambient: The color that the ambient light lights.
+    ///   - diffuse: The color that the lights scatter in all directions.
+    ///   - specular: The color of the highlights.
+    ///   - shininess: The specular exponent.
+    ///   - opacity: The opacity, from 0 to 1.
+    ///   - usesDiffuseTextureAlpha: Whether the diffuse texture's alpha multiplies the opacity.
+    ///   - emission: The color that the material adds without lighting.
+    ///   - normalMap: A tangent-space normal map.
+    ///   - cullMode: The faces to cull.
+    ///   - renderState: The depth, color mask, blend and fill settings for the draw.
     public init(ambient: Source, diffuse: Source, specular: Source, shininess: Float, opacity: Float = 1, usesDiffuseTextureAlpha: Bool = false, emission: Source = .color(0), normalMap: MTLTexture? = nil, cullMode: MTLCullMode = .none, renderState: MaterialRenderState = .init()) {
         self.ambient = ambient
         self.diffuse = diffuse
@@ -62,8 +90,13 @@ public struct BlinnPhongSceneMaterial: SceneSprockets.Material, SamplesShadowsIn
     }
 }
 
-/// Equatable so SceneView can tell an unchanged renderer list (#235).
+/// The renderer that draws every mesh with a ``BlinnPhongSceneMaterial``.
+///
+/// The renderer draws repeated meshes with automatic instancing. Copies share one cache, so a SwiftUI view can
+/// re-create the renderer each update. The type is `Equatable` so that `SceneView` can find an unchanged renderer
+/// list.
 public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
+    /// The color of the ambient light, in linear RGB. It lights the ambient term of each material.
     public var ambientLightColor: SIMD3<Float>
     // Shared by copies of the renderer, so SwiftUI re-creating the struct keeps the cache.
     private let batchPlans = BatchPlanCache()
@@ -72,6 +105,9 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer, Equatable 
         lhs.ambientLightColor == rhs.ambientLightColor && lhs.batchPlans === rhs.batchPlans
     }
 
+    /// Creates a Blinn-Phong renderer.
+    ///
+    /// - Parameter ambientLightColor: The color of the ambient light, in linear RGB.
     public init(ambientLightColor: SIMD3<Float> = [0.15, 0.15, 0.2]) {
         self.ambientLightColor = ambientLightColor
     }
@@ -696,6 +732,14 @@ public struct BlinnPhongSceneGraphElement: Element {
     var aspectRatio: Float
     var ambientLightColor: SIMD3<Float>
 
+    /// Creates an element that draws a scene with only the Blinn-Phong renderer.
+    ///
+    /// - Parameters:
+    ///   - sceneGraph: The scene to draw.
+    ///   - camera: The camera node. If `nil`, the element uses the first camera node.
+    ///   - cameraMatrix: A world transform that replaces the camera node's transform.
+    ///   - aspectRatio: The width of the view divided by its height.
+    ///   - ambientLightColor: The color of the ambient light, in linear RGB.
     public init(
         sceneGraph: SceneGraph,
         camera: SceneGraph.Node? = nil,

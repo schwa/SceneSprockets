@@ -5,25 +5,41 @@ import MetalSprocketsSupport
 import SceneSprockets
 import simd
 
-/// Outlines nodes (and their descendants) with MetalSprocketsAddOns' jump flood outline (#166). Objects in front hide the
-/// outline unless `xray`; that needs the scene depth kept after the scene pass (SceneView does this when it has an
-/// `overlay`). Use from SceneView's `overlay`. Keeps its mask and seed textures between frames, so keep one instance per
-/// view.
+/// An outline around nodes and their descendants, drawn with MetalSprocketsAddOns' jump flood outline.
+///
+/// Return the outline's element from the `overlay` of a `SceneView`. Objects in front hide the outline, unless
+/// ``xray`` is true. To hide the outline, the view must keep the scene depth after the scene pass. `SceneView` does this
+/// when it has an `overlay`.
+///
+/// The outline keeps its mask and seed textures between frames, so keep one instance for each view.
 public final class SelectionOutline {
+    /// The color of the outline, in linear RGB with alpha.
     public var color: SIMD4<Float>
-    /// Pixels.
+    /// The width of the outline, in pixels.
     public var width: Float
-    /// Draw over everything instead of hiding behind objects in front.
+    /// Whether the outline draws over everything, instead of behind objects in front.
     public var xray = false
 
     private var mask: MTLTexture?
     private var seeds: MTLTexture?
 
+    /// Creates a selection outline.
+    ///
+    /// - Parameters:
+    ///   - color: The color of the outline, in linear RGB with alpha.
+    ///   - width: The width of the outline, in pixels.
     public init(color: SIMD4<Float> = [1, 0.6, 0.1, 1], width: Float = 3) {
         self.color = color
         self.width = width
     }
 
+    /// Returns the element that draws the outline around the nodes, or `nil` if there is nothing to draw.
+    ///
+    /// - Parameters:
+    ///   - nodes: The nodes to outline, with their descendants.
+    ///   - sceneGraph: The scene graph that contains the nodes.
+    ///   - viewport: The camera and view size of the overlay.
+    /// - Throws: An error if the outline's textures or pipelines cannot be created.
     public func element(nodes: [SceneGraph.Node], sceneGraph: SceneGraph, viewport: SceneViewport) throws -> AnyElement? {
         guard !nodes.isEmpty, width > 0 else {
             return nil

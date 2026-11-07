@@ -7,37 +7,63 @@ import SceneSprocketsShaders
 import simd
 import SwiftMesh
 
-/// A material drawn with your own vertex and fragment functions, like SceneKit's SCNProgram. One
-/// ShaderMaterialRenderer draws every ShaderMaterial, so a new look needs shaders, not a new renderer.
-/// 
-/// The vertex function must declare `constant ShaderMaterialTransforms &transforms` (SceneSprocketsShaders,
-/// ShaderMaterial.h); the fragment function may declare it too. Each entry of `parameters` is bound by name and must
-/// exist in at least one of the two functions. The mesh's vertex descriptor is used as is.
+/// A material that draws with your own vertex and fragment functions, like SceneKit's `SCNProgram`.
+///
+/// One ``ShaderMaterialRenderer`` draws every shader material, so a new look needs new shaders, not a new renderer.
+///
+/// The vertex function must declare `constant ShaderMaterialTransforms &transforms`, from `ShaderMaterial.h` in
+/// SceneSprocketsShaders. The fragment function can declare it too. The renderer binds each entry of ``parameters`` by
+/// name, and the name must exist in at least one of the two functions. The renderer uses the mesh's vertex descriptor
+/// as it is.
 public struct ShaderMaterial: SceneSprockets.Material {
+    /// A value to bind to a shader argument.
     public enum Value {
+        /// A `float`.
         case float(Float)
+        /// A `float2`.
         case float2(SIMD2<Float>)
+        /// A `float3`.
         case float3(SIMD3<Float>)
+        /// A `float4`.
         case float4(SIMD4<Float>)
+        /// A `float4x4`.
         case float4x4(simd_float4x4)
+        /// A texture.
         case texture(MTLTexture)
+        /// A sampler state.
         case sampler(MTLSamplerState)
+        /// A buffer.
         case buffer(MTLBuffer)
     }
 
+    /// The vertex function.
     public var vertexShader: VertexShader
+    /// The fragment function.
     public var fragmentShader: FragmentShader
+    /// The values to bind to shader arguments, by argument name.
     public var parameters: [String: Value]
+    /// The depth, color mask, blend and fill settings for the draw.
     public var renderState: MaterialRenderState
     var alphaBlends: Bool
 
-    /// Alpha-blends over what is already drawn and does not write depth. Drawn after opaque meshes of the same
-    /// Node.renderingOrder, farthest first. Also true for blend modes that mix with what is behind (add, multiply...).
+    /// Whether the material blends over what is already drawn.
+    ///
+    /// A transparent material does not write depth. It draws after opaque meshes with the same `renderingOrder`,
+    /// farthest first. The value is also true when ``renderState`` has a blend mode that mixes with the background,
+    /// such as add or multiply.
     public var isTransparent: Bool {
         get { alphaBlends || renderState.blendsWithBackground }
         set { alphaBlends = newValue }
     }
 
+    /// Creates a shader material.
+    ///
+    /// - Parameters:
+    ///   - vertexShader: The vertex function. It must declare `ShaderMaterialTransforms`.
+    ///   - fragmentShader: The fragment function.
+    ///   - parameters: The values to bind to shader arguments, by argument name.
+    ///   - isTransparent: Whether the material blends over what is already drawn.
+    ///   - renderState: The depth, color mask, blend and fill settings for the draw.
     public init(vertexShader: VertexShader, fragmentShader: FragmentShader, parameters: [String: Value] = [:], isTransparent: Bool = false, renderState: MaterialRenderState = .init()) {
         self.vertexShader = vertexShader
         self.fragmentShader = fragmentShader
@@ -46,27 +72,39 @@ public struct ShaderMaterial: SceneSprockets.Material {
         self.renderState = renderState
     }
 
-    /// The renderer blends below opacity 1 and passes it as transforms.opacity; the fragment shader must multiply
-    /// its alpha by it (the samples do).
+    /// Always true. When the node opacity is less than 1, the renderer blends and passes the opacity as
+    /// `transforms.opacity`.
+    ///
+    /// The fragment shader must multiply its alpha by `transforms.opacity`. The sample shaders do this.
     public var appliesNodeOpacity: Bool {
         true
     }
 
-    /// World-space normals as color.
+    /// A sample material that shows world-space normals as colors.
+    ///
+    /// - Throws: An error if the sample shader library cannot load.
     public static func normals() throws -> Self {
         let library = try ShaderMaterialSampleLibrary.shared()
         return Self(vertexShader: try library.vertex_main, fragmentShader: try library.fragment_normals)
     }
 
-    /// A flat color that darkens where the surface turns away from the camera. Needs no lights.
-    /// Transparent when color.w < 1.
+    /// A sample material with a flat color that darkens where the surface turns away from the camera.
+    ///
+    /// The material needs no lights. It is transparent when `color.w` is less than 1.
+    ///
+    /// - Parameter color: The color, with alpha in `w`.
+    /// - Throws: An error if the sample shader library cannot load.
     public static func rim(color: SIMD4<Float>) throws -> Self {
         let library = try ShaderMaterialSampleLibrary.shared()
         return Self(vertexShader: try library.vertex_main, fragmentShader: try library.fragment_rim, parameters: ["color": .float4(color)], isTransparent: color.w < 1)
     }
 }
 
+/// The renderer that draws every mesh with a ``ShaderMaterial``.
+///
+/// Add one instance to the renderers of a `SceneView` or `SceneGraphElement`.
 public struct ShaderMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
+    /// Creates a shader material renderer.
     public init() {
     }
 

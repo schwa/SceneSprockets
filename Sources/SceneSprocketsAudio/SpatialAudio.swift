@@ -1,17 +1,21 @@
 import AVFAudio
 import simd
 
-/// A sound with a 3D position, like SCNAudioPlayer. Attach it to a SpatialAudioMixer to hear it. Only mono buffers are
-/// positioned; AVAudioEnvironmentNode passes stereo through.
+/// A sound with a 3D position, like SceneKit's `SCNAudioPlayer`.
+///
+/// Attach the player to a ``SpatialAudioMixer`` to hear it. The mixer positions only mono buffers. Stereo buffers play
+/// without positioning.
 public final class AudioPlayer {
+    /// The audio that the player plays.
     public let buffer: AVAudioPCMBuffer
+    /// Whether the player repeats the buffer. Changes apply the next time the buffer is scheduled.
     public var loops: Bool
-    /// 0...1.
+    /// The volume, from 0 (silent) to 1 (full).
     public var volume: Float {
         didSet { playerNode.volume = volume }
     }
 
-    /// World position.
+    /// The position of the sound in world space.
     public var position: SIMD3<Float> {
         get {
             let position = playerNode.position
@@ -22,6 +26,7 @@ public final class AudioPlayer {
         }
     }
 
+    /// Whether the player is playing now.
     public var isPlaying: Bool {
         playerNode.isPlaying
     }
@@ -29,6 +34,12 @@ public final class AudioPlayer {
     let playerNode = AVAudioPlayerNode()
     var isScheduled = false
 
+    /// Creates a player for a buffer that is already in memory.
+    ///
+    /// - Parameters:
+    ///   - buffer: The audio to play. Use a mono buffer to hear it at ``position``.
+    ///   - loops: Whether the player repeats the buffer.
+    ///   - volume: The volume, from 0 to 1.
     public init(buffer: AVAudioPCMBuffer, loops: Bool = true, volume: Float = 1) {
         self.buffer = buffer
         self.loops = loops
@@ -36,7 +47,13 @@ public final class AudioPlayer {
         playerNode.volume = volume
     }
 
-    /// Loads a whole file into memory.
+    /// Creates a player that loads a whole audio file into memory.
+    ///
+    /// - Parameters:
+    ///   - url: The audio file to load.
+    ///   - loops: Whether the player repeats the audio.
+    ///   - volume: The volume, from 0 to 1.
+    /// - Throws: An `AVAudioFile` error if the file cannot be read, or ``AudioError/bufferCreationFailed``.
     public convenience init(url: URL, loops: Bool = true, volume: Float = 1) throws {
         let file = try AVAudioFile(forReading: url)
         guard let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length)) else {
@@ -47,28 +64,41 @@ public final class AudioPlayer {
     }
 }
 
+/// Errors from loading audio.
 public enum AudioError: Error {
+    /// The audio buffer for the file could not be allocated.
     case bufferCreationFailed
 }
 
-/// AVAudioEngine plus an AVAudioEnvironmentNode that positions attached players around a listener.
+/// An audio engine that positions attached players around a listener.
+///
+/// The mixer connects an `AVAudioEnvironmentNode` to the engine's main mixer. Set ``listenerTransform`` from the camera
+/// each frame. `SceneView` does this for the scene graph's audio.
 public final class SpatialAudioMixer {
+    /// The engine that plays the attached players.
     public let engine: AVAudioEngine
+    /// The node that positions the attached players. Change its rendering algorithm or reverb here.
     public let environment = AVAudioEnvironmentNode()
     private var attached: [ObjectIdentifier: AudioPlayer] = [:]
 
-    /// Pass an engine in manual rendering mode for offline use (tests); otherwise the engine's output is used.
+    /// Creates a mixer.
+    ///
+    /// - Parameter engine: The engine to use. For offline rendering, for example in tests, pass an engine in manual
+    ///   rendering mode. By default, the mixer plays through the engine's output.
     public init(engine: AVAudioEngine = AVAudioEngine()) {
         self.engine = engine
         engine.attach(environment)
         engine.connect(environment, to: engine.mainMixerNode, format: nil)
     }
 
+    /// The players that are attached to the mixer, in no particular order.
     public var attachedPlayers: [AudioPlayer] {
         Array(attached.values)
     }
 
-    /// The listener's world transform: its position, -Z forward and +Y up.
+    /// The world transform of the listener.
+    ///
+    /// The mixer uses the translation as the listener position, -Z as forward and +Y as up, like a camera.
     public var listenerTransform: simd_float4x4 = matrix_identity_float4x4 {
         didSet {
             let matrix = listenerTransform
@@ -79,10 +109,12 @@ public final class SpatialAudioMixer {
         }
     }
 
+    /// Returns whether the player is attached to this mixer.
     public func isAttached(_ player: AudioPlayer) -> Bool {
         attached[ObjectIdentifier(player)] != nil
     }
 
+    /// Connects the player to the mixer so that it can play. Attaching an attached player does nothing.
     public func attach(_ player: AudioPlayer) {
         guard !isAttached(player) else {
             return
@@ -102,7 +134,11 @@ public final class SpatialAudioMixer {
         player.isScheduled = false
     }
 
-    /// Starts the engine if needed, then plays (or resumes) an attached player.
+    /// Plays or resumes an attached player, and starts the engine if it is stopped.
+    ///
+    /// A player that is not attached does not play.
+    ///
+    /// - Throws: An `AVAudioEngine` error if the engine cannot start.
     public func play(_ player: AudioPlayer) throws {
         guard isAttached(player) else {
             return
@@ -119,6 +155,7 @@ public final class SpatialAudioMixer {
         }
     }
 
+    /// Pauses the player. Call ``play(_:)`` to resume it.
     public func pause(_ player: AudioPlayer) {
         player.playerNode.pause()
     }

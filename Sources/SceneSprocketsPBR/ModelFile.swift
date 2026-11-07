@@ -4,17 +4,24 @@ import MetalSprocketsGLTF
 import SceneSprockets
 import UniformTypeIdentifiers
 
-/// Loads a model file into one subtree, whatever its format: glTF (.gltf, .glb) with GLTFSceneGraph, and everything
-/// Model I/O reads (.usdz, .usd, .obj, .ply, .stl, .abc) with ModelIOSceneGraph. For inserting into a scene.
+/// Loads a model file of any supported format into one subtree, to insert into a scene.
+///
+/// glTF files (`.gltf`, `.glb`) load with ``GLTFSceneGraph``. The formats that Model I/O reads (`.usdz`, `.usd`, `.obj`,
+/// `.ply`, `.stl`, `.abc`) load with ``ModelIOSceneGraph``.
 public enum ModelFile {
+    /// The file extensions that load with ``GLTFSceneGraph``.
     public static let glTFExtensions: Set<String> = ["gltf", "glb"]
+    /// The file extensions that load with ``ModelIOSceneGraph``.
     public static let modelIOExtensions: Set<String> = ["usdz", "usd", "usda", "usdc", "obj", "ply", "stl", "abc"]
 
+    /// The content types of all supported files, for example for a file importer.
     public static var contentTypes: [UTType] {
         (glTFExtensions.union(modelIOExtensions)).sorted().compactMap { UTType(filenameExtension: $0) }
     }
 
+    /// Errors from loading a model file.
     public enum Failure: Error, CustomStringConvertible {
+        /// The file extension is not a supported format. The value is the extension.
         case unsupportedFormat(String)
 
         public var description: String {
@@ -80,8 +87,9 @@ public enum ModelFile {
     }
 }
 
-/// Reads models kept by reference in a scene package (#157).
+/// The loader that `SceneArchive` uses for models that a scene package keeps by reference.
 public struct ModelFileLoader: ArchivableModelLoader {
+    /// Creates a model file loader.
     public init() {}
 
     public func load(_ url: URL, context: SceneArchiveContext) throws -> (node: SceneGraph.Node, warnings: [String]) {
