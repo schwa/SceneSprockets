@@ -7516,11 +7516,13 @@ SceneKit, for comparison: material.diffuse.contents = NSImage(named:) (or a URL,
 ## 342: Materials cannot show video
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:renderer, effort:m
 created: 2026-11-07T18:53:39Z
+updated: 2026-11-07T19:28:11Z
+closed: 2026-11-07T19:28:11Z
 +++
 
 There is no way to play a video on a surface (for example a TV screen or a billboard in a scene). Material textures are fixed MTLTextures; nothing updates a texture from an AVPlayer frame by frame, and materials have no notion of a texture that changes every frame.
@@ -7528,6 +7530,8 @@ There is no way to play a video on a surface (for example a TV screen or a billb
 SceneKit, for comparison: material.diffuse.contents = AVPlayer.
 
 Related: #341 (texture convenience).
+
+- `2026-11-07T19:28:11Z`: Done: VideoTexture (SceneSprockets) wraps an AVPlayer; its texture is stable, so any material slot can use it, and update(atHostTime:) copies the latest frame (call it per frame, e.g. from SceneViewDelegate). VideoTexture.load(contentsOf:device:) sizes it from the video track. The frame copy is unit-tested with a generated pixel buffer; playback through a real AVPlayer and video file was not tested.
 
 ---
 

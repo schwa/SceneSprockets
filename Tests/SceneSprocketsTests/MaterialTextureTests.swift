@@ -75,6 +75,28 @@ func colorTexturesKeepTheirValues() throws {
     #expect(abs(Int(value.y) - 128) < 12, "\(value)")
 }
 
+// Loaded textures are private (and may be sRGB views); scene archives still save and load them.
+@Test
+@MainActor
+func loadedTexturesSurviveAnArchive() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let red = try MaterialTexture.load(solidImage(red: 1, green: 0, blue: 0), device: device)
+    let root = SceneGraph.Node(label: "Root")
+    _ = SceneGraph.Node(parent: root, shape: .plane(), material: BlinnPhongSceneMaterial(ambient: .texture(red), diffuse: .color(0), specular: .color(0), shininess: 1), device: device)
+    let archive = SceneArchive(materialTypes: [BlinnPhongSceneMaterial.self], meshCodec: GLTFMeshCodec())
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("MaterialTexture-\(UUID().uuidString).scenesprockets")
+    defer { try? FileManager.default.removeItem(at: url) }
+    _ = try archive.write(SceneGraph(root: root), to: url)
+    let (read, _) = try archive.read(from: url, device: device)
+    guard case let .mesh(_, materials, _, _) = try #require(read.root.children.first).content,
+          let material = materials.first as? BlinnPhongSceneMaterial, case let .texture(texture, _, _) = material.ambient else {
+        Issue.record("No textured material after reading")
+        return
+    }
+    #expect(texture.width == 4 && texture.height == 4)
+    #expect(texture.pixelFormat.isSRGB)
+}
+
 @Test
 func dataTexturesAreLinear() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())

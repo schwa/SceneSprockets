@@ -106,7 +106,8 @@ The Source column shows where the feature comes from: SceneKit, RealityKit, thre
 | ✅ | Custom vertex and fragment shaders | | SceneKit | |
 | ⬜ | Shader modifiers / node material graph | | SceneKit, RealityKit, three.js | |
 | 🧩 | Toon and matcap materials | | three.js | ShaderMaterial |
-| ⬜ | Video, cube-map and 3D textures | | SceneKit, RealityKit, three.js | |
+| ✅ | Video textures | #342 | SceneKit, RealityKit, three.js | `VideoTexture` |
+| ⬜ | Cube-map and 3D textures | | SceneKit, RealityKit, three.js | |
 | ⬜ | Parallax, triplanar, detail maps | | Godot, Babylon.js | |
 
 ## PBR
