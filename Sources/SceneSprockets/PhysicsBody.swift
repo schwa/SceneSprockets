@@ -1,8 +1,8 @@
 import simd
 
 extension SceneGraph {
-    // How a node takes part in a physics simulation, like SCNPhysicsBody. A description only: the
-    // SceneSprocketsPhysics target turns it into a simulated body.
+    /// How a node takes part in a physics simulation, like SCNPhysicsBody. A description only: the
+    /// SceneSprocketsPhysics target turns it into a simulated body.
     public struct PhysicsBody: Sendable, Equatable {
         public enum BodyType: Sendable, Equatable {
             // Never moves; other bodies collide with it.
@@ -13,7 +13,7 @@ extension SceneGraph {
             case kinematic
         }
 
-        // Sizes are in the node's local space; the node's world scale is applied when the body is created.
+        /// Sizes are in the node's local space; the node's world scale is applied when the body is created.
         public enum Shape: Sendable, Equatable, Codable {
             case box(size: SIMD3<Float>)
             case sphere(radius: Float)
@@ -31,10 +31,10 @@ extension SceneGraph {
 
         public var type: BodyType
         public var shape: Shape
-        // Nil uses the shape's volume at density 1000 (water).
+        /// Nil uses the shape's volume at density 1000 (water).
         public var mass: Float?
         public var friction: Float
-        // 0 does not bounce, 1 bounces fully.
+        /// 0 does not bounce, 1 bounces fully.
         public var restitution: Float
 
         public init(type: BodyType, shape: Shape, mass: Float? = nil, friction: Float = 0.5, restitution: Float = 0) {

@@ -2,8 +2,8 @@ import GeometryLite3D
 import simd
 
 extension SceneGraph {
-    // Format-neutral keyframe animation. Channels target node translation, rotation, scale, morph weights, or any
-    // other value through a Property.
+    /// Format-neutral keyframe animation. Channels target node translation, rotation, scale, morph weights, or any
+    /// other value through a Property.
     public struct AnimationClip {
         public enum Path: Hashable {
             case translation
@@ -31,11 +31,11 @@ extension SceneGraph {
             }
         }
 
-        // A named animatable value. Equal when names are equal, so use one name per value.
-        // Not Sendable: get and set mutate a non-Sendable Node and often captured state (#228).
+        /// A named animatable value. Equal when names are equal, so use one name per value.
+        /// Not Sendable: get and set mutate a non-Sendable Node and often captured state (#228).
         public struct Property: Hashable {
             public var name: String
-            // The node's current value, used as the rest value by AnimationMixer.
+            /// The node's current value, used as the rest value by AnimationMixer.
             public var get: (Node) -> [Float]
             public var set: (Node, [Float]) -> Void
 
@@ -53,7 +53,7 @@ extension SceneGraph {
                 hasher.combine(name)
             }
 
-            // The intensity of a light node.
+            /// The intensity of a light node.
             public static var lightIntensity: Self { Self(name: "light.intensity") { node in
                 if case let .light(light) = node.content { [light.intensity] } else { [] }
             } set: { node, value in
@@ -64,7 +64,7 @@ extension SceneGraph {
             }
             }
 
-            // The linear RGB color of a light node.
+            /// The linear RGB color of a light node.
             public static var lightColor: Self { Self(name: "light.color") { node in
                 if case let .light(light) = node.content { [light.color.x, light.color.y, light.color.z] } else { [] }
             } set: { node, value in
@@ -75,7 +75,7 @@ extension SceneGraph {
             }
             }
 
-            // isVisible as 0 or 1; values above 0.5 show the node.
+            /// isVisible as 0 or 1; values above 0.5 show the node.
             public static var visibility: Self { Self(name: "isVisible") { node in
                 [node.isVisible ? 1 : 0]
             } set: { node, value in
@@ -100,7 +100,7 @@ extension SceneGraph {
             public static var lightInnerConeAngle: Self { light("innerConeAngle", \.innerConeAngle) }
             public static var lightOuterConeAngle: Self { light("outerConeAngle", \.outerConeAngle) }
 
-            // A perspective camera's vertical field of view, in radians.
+            /// A perspective camera's vertical field of view, in radians.
             public static var cameraVerticalFieldOfView: Self { Self(name: "camera.verticalFieldOfView") { node in
                 if case let .camera(camera) = node.content, let projection = camera.projection as? PerspectiveProjection { [projection.verticalAngleOfView.radians] } else { [] }
             } set: { node, value in
@@ -112,7 +112,7 @@ extension SceneGraph {
             }
             }
 
-            // An orthographic camera's half height.
+            /// An orthographic camera's half height.
             public static var cameraHalfHeight: Self { Self(name: "camera.halfHeight") { node in
                 if case let .camera(camera) = node.content, let projection = camera.projection as? OrthographicProjection { [projection.halfHeight] } else { [] }
             } set: { node, value in
@@ -175,8 +175,8 @@ extension SceneGraph {
             public static var cameraFar: Self { cameraClip(isNear: false) }
         }
 
-        // Calls `handler` when playback passes `time` (clip seconds), like SCNAnimationEvent. `isPlayingBackward`
-        // is true during the reversed half of an autoreversing cycle.
+        /// Calls `handler` when playback passes `time` (clip seconds), like SCNAnimationEvent. `isPlayingBackward`
+        /// is true during the reversed half of an autoreversing cycle.
         public struct Event {
             public var time: Float
             public var handler: (_ isPlayingBackward: Bool) -> Void
@@ -196,7 +196,7 @@ extension SceneGraph {
 
         public struct Sampler: Sendable {
             public var times: [Float]
-            // Flat: componentCount values per key (three times that for cubicSpline).
+            /// Flat: componentCount values per key (three times that for cubicSpline).
             public var values: [Float]
             public var interpolation: Interpolation
 
@@ -213,7 +213,7 @@ extension SceneGraph {
                 return values.count / times.count / (interpolation == .cubicSpline ? 3 : 1)
             }
 
-            // Clamps outside the key range.
+            /// Clamps outside the key range.
             public func sample(at time: Float, isRotation: Bool = false) -> [Float] {
                 let count = componentCount
                 guard let first = times.first, let last = times.last, count > 0 else {
@@ -283,7 +283,7 @@ extension SceneGraph {
 
         public var name: String?
         public var channels: [Channel]
-        // Fired by AnimationPlayer.
+        /// Fired by AnimationPlayer.
         public var events: [Event] = []
 
         public init(name: String? = nil, channels: [Channel], events: [Event] = []) {
@@ -296,7 +296,7 @@ extension SceneGraph {
             channels.compactMap(\.sampler.times.last).max() ?? 0
         }
 
-        // Sets every target to its value at `time`.
+        /// Sets every target to its value at `time`.
         public func apply(at time: Float, looping: Bool = false) {
             var time = time
             if looping, duration > 0 {
@@ -311,18 +311,18 @@ extension SceneGraph {
         }
     }
 
-    // Plays one clip: holds the time and applies the clip as time advances, like SCNAnimationPlayer.
+    /// Plays one clip: holds the time and applies the clip as time advances, like SCNAnimationPlayer.
     public final class AnimationPlayer {
         public var clip: AnimationClip
-        // Seconds of playback since the start, across repeats.
+        /// Seconds of playback since the start, across repeats.
         public var time: Float = 0
         public var speed: Float = 1
-        // Repeats forever; otherwise plays `repeatCount` cycles and stops on the last frame.
+        /// Repeats forever; otherwise plays `repeatCount` cycles and stops on the last frame.
         public var isLooping: Bool
         public var repeatCount = 1
-        // Each cycle plays forwards, then backwards.
+        /// Each cycle plays forwards, then backwards.
         public var autoreverses = false
-        // Eases each pass through the clip.
+        /// Eases each pass through the clip.
         public var timingMode: Action.TimingMode = .linear
         public var isPlaying = true
 

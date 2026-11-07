@@ -2,7 +2,7 @@ import GeometryLite3D
 import simd
 
 extension SceneGraph {
-    // A node's local transform: either a raw matrix or decomposed translation/rotation/scale.
+    /// A node's local transform: either a raw matrix or decomposed translation/rotation/scale.
     public enum LocalTransform: Sendable {
         case matrix(simd_float4x4)
         case trs(Transform3D)
@@ -28,8 +28,8 @@ extension SceneGraph {
 }
 
 extension Transform3D {
-    // Unlike init?(matrix:), keeps the nearest TRS for matrices with skew, perspective or negative scale, and falls
-    // back to identity if the matrix does not decompose.
+    /// Unlike init?(matrix:), keeps the nearest TRS for matrices with skew, perspective or negative scale, and falls
+    /// back to identity if the matrix does not decompose.
     public init(decomposing matrix: simd_float4x4) {
         guard let components = matrix.decompose else {
             self = .identity

@@ -7,24 +7,24 @@ import simd
 import SwiftGLTF
 import SwiftMesh
 
-// A glTF scene as a scene graph. EXT_mesh_gpu_instancing copies become child nodes; KHR_node_visibility sets
-// isVisible. KHR_animation_pointer channels for visibility, materials, lights and cameras become property channels. Not
-// supported: camera xmag and aspectRatio.
+/// A glTF scene as a scene graph. EXT_mesh_gpu_instancing copies become child nodes; KHR_node_visibility sets
+/// isVisible. KHR_animation_pointer channels for visibility, materials, lights and cameras become property channels. Not
+/// supported: camera xmag and aspectRatio.
 public struct GLTFSceneGraph {
     public var sceneGraph: SceneGraph
     public var animations: [SceneGraph.AnimationClip]
-    // Indexed like the glTF document's nodes; nil for nodes outside the loaded scene.
+    /// Indexed like the glTF document's nodes; nil for nodes outside the loaded scene.
     public var nodes: [SceneGraph.Node?]
-    // KHR_materials_variants names. The scene graph starts with the variant the asset was loaded with;
-    // selectVariant(_:) switches it.
+    /// KHR_materials_variants names. The scene graph starts with the variant the asset was loaded with;
+    /// selectVariant(_:) switches it.
     public var variantNames: [String]
     public var warnings: [String]
     let asset: GLTFAsset
     // Every scene node showing a glTF mesh, with that mesh's index.
     let meshNodes: [(node: SceneGraph.Node, mesh: Int)]
 
-    // Swaps every mesh node's materials for variant `index` (into variantNames; nil for the default materials).
-    // Node state and animation players are kept. Throws for an out-of-range index.
+    /// Swaps every mesh node's materials for variant `index` (into variantNames; nil for the default materials).
+    /// Node state and animation players are kept. Throws for an out-of-range index.
     public func selectVariant(_ index: Int?) throws {
         var materials: [Int: [any SceneSprockets.Material]] = [:]
         for (node, meshIndex) in meshNodes {

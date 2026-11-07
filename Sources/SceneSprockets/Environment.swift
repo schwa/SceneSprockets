@@ -1,7 +1,7 @@
 import simd
 
-// An environment image for image-based lighting and backgrounds. Renderer modules conform their own types
-// (for example PBREnvironment); renderers ignore maps they do not understand.
+/// An environment image for image-based lighting and backgrounds. Renderer modules conform their own types
+/// (for example PBREnvironment); renderers ignore maps they do not understand.
 public protocol EnvironmentMap: AnyObject {}
 
 extension SceneGraph {
@@ -17,8 +17,8 @@ extension SceneGraph {
             case gradient(SkyGradient)
         }
 
-        // Linear RGB. Straight up is `zenith`, level is `horizon`, straight down is `ground`. `exponent` bends the
-        // blend: above 1 keeps the horizon color over a wider band.
+        /// Linear RGB. Straight up is `zenith`, level is `horizon`, straight down is `ground`. `exponent` bends the
+        /// blend: above 1 keeps the horizon color over a wider band.
         public struct SkyGradient: Equatable, Codable, Sendable {
             public var zenith: SIMD3<Float>
             public var horizon: SIMD3<Float>
@@ -34,10 +34,10 @@ extension SceneGraph {
         }
 
         public var background: Background
-        // Image-based lighting source, also used by `.environment` backgrounds. Nil lets renderers use their defaults.
+        /// Image-based lighting source, also used by `.environment` backgrounds. Nil lets renderers use their defaults.
         public var map: (any EnvironmentMap)?
         public var intensity: Float
-        // Radians about +Y.
+        /// Radians about +Y.
         public var rotation: Float
 
         public init(background: Background = .none, map: (any EnvironmentMap)? = nil, intensity: Float = 1, rotation: Float = 0) {

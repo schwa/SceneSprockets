@@ -8,23 +8,23 @@ extension SceneGraph {
     public struct Hit {
         public var node: Node
         public var submeshIndex: Int
-        // -1 for bounding box hits.
+        /// -1 for bounding box hits.
         public var triangleIndex: Int
-        // World-space distance from the ray origin.
+        /// World-space distance from the ray origin.
         public var distance: Float
         public var position: SIMD3<Float>
-        // World-space face normal, facing the ray origin.
+        /// World-space face normal, facing the ray origin.
         public var normal: SIMD3<Float>
-        // The hit point in the mesh's own space (after skinning and morphing).
+        /// The hit point in the mesh's own space (after skinning and morphing).
         public var localPosition: SIMD3<Float>
-        // Weights of the triangle's three vertices at the hit point; zero for bounding box hits.
+        /// Weights of the triangle's three vertices at the hit point; zero for bounding box hits.
         public var barycentric: SIMD3<Float>
-        // The triangle's vertex indices; zero for bounding box hits.
+        /// The triangle's vertex indices; zero for bounding box hits.
         public var vertexIndices: SIMD3<UInt32>
         var mesh: MetalMesh?
 
-        // The interpolated texture coordinate of set `index` at the hit point, like
-        // SCNHitTestResult.textureCoordinates(withMappingChannel:). Nil without float2 coordinates or for box hits.
+        /// The interpolated texture coordinate of set `index` at the hit point, like
+        /// SCNHitTestResult.textureCoordinates(withMappingChannel:). Nil without float2 coordinates or for box hits.
         public func textureCoordinates(index: Int = 0) -> SIMD2<Float>? {
             guard triangleIndex >= 0, let coordinates = mesh?.float2Values(.texcoord(index)) else {
                 return nil
@@ -37,19 +37,19 @@ extension SceneGraph {
         }
     }
 
-    // Like SCNHitTestOption.
+    /// Like SCNHitTestOption.
     public struct HitTestOptions {
-        // Only nodes whose categoryBitMask shares a bit with this can be hit.
+        /// Only nodes whose categoryBitMask shares a bit with this can be hit.
         public var categoryBitMask: UInt = .max
-        // Skips triangles facing away from the ray (counter-clockwise is front).
+        /// Skips triangles facing away from the ray (counter-clockwise is front).
         public var backFaceCulling = false
-        // Tests each mesh's bounding box instead of its triangles.
+        /// Tests each mesh's bounding box instead of its triangles.
         public var boundingBoxOnly = false
-        // Stops at the first hit found, which is not always the nearest.
+        /// Stops at the first hit found, which is not always the nearest.
         public var firstFoundOnly = false
-        // Ignores hits farther than this from the ray origin; segment tests set it.
+        /// Ignores hits farther than this from the ray origin; segment tests set it.
         public var maximumDistance: Float = .infinity
-        // Only this node and its descendants can be hit.
+        /// Only this node and its descendants can be hit.
         public var rootNode: Node?
 
         public init(categoryBitMask: UInt = .max, backFaceCulling: Bool = false, boundingBoxOnly: Bool = false, firstFoundOnly: Bool = false, maximumDistance: Float = .infinity, rootNode: Node? = nil) {
@@ -62,14 +62,14 @@ extension SceneGraph {
         }
     }
 
-    // Every triangle hit by `ray`, nearest first. Uses CPU-deformed geometry for skinned and morphed meshes.
-    // Only triangle and triangle strip submeshes can be hit; vertex buffers must be CPU-visible.
-    // Only nodes whose categoryBitMask shares a bit with `categoryBitMask` can be hit.
+    /// Every triangle hit by `ray`, nearest first. Uses CPU-deformed geometry for skinned and morphed meshes.
+    /// Only triangle and triangle strip submeshes can be hit; vertex buffers must be CPU-visible.
+    /// Only nodes whose categoryBitMask shares a bit with `categoryBitMask` can be hit.
     public func hitTest(_ ray: Ray3D, categoryBitMask: UInt = .max) -> [Hit] {
         hitTest(ray, options: HitTestOptions(categoryBitMask: categoryBitMask))
     }
 
-    // Hits between two world points, nearest first, like SCNNode.hitTestWithSegment(from:to:options:).
+    /// Hits between two world points, nearest first, like SCNNode.hitTestWithSegment(from:to:options:).
     public func hitTest(segmentFrom start: SIMD3<Float>, to end: SIMD3<Float>, options: HitTestOptions = HitTestOptions()) -> [Hit] {
         guard simd_distance(start, end) > 0 else {
             return []
@@ -185,7 +185,7 @@ extension MetalMesh {
         }
     }
 
-    // float3 positions read from the vertex buffers; empty if there are none.
+    /// float3 positions read from the vertex buffers; empty if there are none.
     public func positions() -> [SIMD3<Float>] {
         float3Values(.position) ?? []
     }

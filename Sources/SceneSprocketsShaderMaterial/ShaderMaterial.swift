@@ -7,12 +7,12 @@ import SceneSprocketsShaders
 import simd
 import SwiftMesh
 
-// A material drawn with your own vertex and fragment functions, like SceneKit's SCNProgram. One
-// ShaderMaterialRenderer draws every ShaderMaterial, so a new look needs shaders, not a new renderer.
-//
-// The vertex function must declare `constant ShaderMaterialTransforms &transforms` (SceneSprocketsShaders,
-// ShaderMaterial.h); the fragment function may declare it too. Each entry of `parameters` is bound by name and must
-// exist in at least one of the two functions. The mesh's vertex descriptor is used as is.
+/// A material drawn with your own vertex and fragment functions, like SceneKit's SCNProgram. One
+/// ShaderMaterialRenderer draws every ShaderMaterial, so a new look needs shaders, not a new renderer.
+/// 
+/// The vertex function must declare `constant ShaderMaterialTransforms &transforms` (SceneSprocketsShaders,
+/// ShaderMaterial.h); the fragment function may declare it too. Each entry of `parameters` is bound by name and must
+/// exist in at least one of the two functions. The mesh's vertex descriptor is used as is.
 public struct ShaderMaterial: SceneSprockets.Material {
     public enum Value {
         case float(Float)
@@ -31,8 +31,8 @@ public struct ShaderMaterial: SceneSprockets.Material {
     public var renderState: MaterialRenderState
     var alphaBlends: Bool
 
-    // Alpha-blends over what is already drawn and does not write depth. Drawn after opaque meshes of the same
-    // Node.renderingOrder, farthest first. Also true for blend modes that mix with what is behind (add, multiply...).
+    /// Alpha-blends over what is already drawn and does not write depth. Drawn after opaque meshes of the same
+    /// Node.renderingOrder, farthest first. Also true for blend modes that mix with what is behind (add, multiply...).
     public var isTransparent: Bool {
         get { alphaBlends || renderState.blendsWithBackground }
         set { alphaBlends = newValue }
@@ -46,20 +46,20 @@ public struct ShaderMaterial: SceneSprockets.Material {
         self.renderState = renderState
     }
 
-    // The renderer blends below opacity 1 and passes it as transforms.opacity; the fragment shader must multiply
-    // its alpha by it (the samples do).
+    /// The renderer blends below opacity 1 and passes it as transforms.opacity; the fragment shader must multiply
+    /// its alpha by it (the samples do).
     public var appliesNodeOpacity: Bool {
         true
     }
 
-    // World-space normals as color.
+    /// World-space normals as color.
     public static func normals() throws -> Self {
         let library = try ShaderMaterialSampleLibrary.shared()
         return Self(vertexShader: try library.vertex_main, fragmentShader: try library.fragment_normals)
     }
 
-    // A flat color that darkens where the surface turns away from the camera. Needs no lights.
-    // Transparent when color.w < 1.
+    /// A flat color that darkens where the surface turns away from the camera. Needs no lights.
+    /// Transparent when color.w < 1.
     public static func rim(color: SIMD4<Float>) throws -> Self {
         let library = try ShaderMaterialSampleLibrary.shared()
         return Self(vertexShader: try library.vertex_main, fragmentShader: try library.fragment_rim, parameters: ["color": .float4(color)], isTransparent: color.w < 1)

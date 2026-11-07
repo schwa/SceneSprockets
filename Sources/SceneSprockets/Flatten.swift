@@ -5,10 +5,10 @@ import simd
 import SwiftMesh
 
 extension SceneGraph.Node {
-    // Like SCNNode.flattenedClone(): a node with this node's label and transform whose one mesh holds every visible
-    // mesh in the subtree, with child transforms baked into positions, normals and tangents. Each source submesh
-    // keeps its material. Lights, cameras and other content are dropped. Nil when the meshes have different vertex
-    // layouts, or when any is skinned or morphed. Runs on the CPU; vertex buffers must be CPU-visible.
+    /// Like SCNNode.flattenedClone(): a node with this node's label and transform whose one mesh holds every visible
+    /// mesh in the subtree, with child transforms baked into positions, normals and tangents. Each source submesh
+    /// keeps its material. Lights, cameras and other content are dropped. Nil when the meshes have different vertex
+    /// layouts, or when any is skinned or morphed. Runs on the CPU; vertex buffers must be CPU-visible.
     public func flattenedClone() -> SceneGraph.Node? {
         var parts: [(mesh: MetalMesh, materials: [any Material], transform: simd_float4x4, castsShadow: Bool, receivesShadow: Bool)] = []
         func collect(_ node: SceneGraph.Node, transform: simd_float4x4) -> Bool {

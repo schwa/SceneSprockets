@@ -6,8 +6,8 @@ import SceneSprocketsShaders
 import simd
 import SwiftMesh
 
-// Shows every mesh in a scene in one debug view instead of its material (#132). Give it to
-// SceneGraphElement(debugMode:) or SceneView(debugMode:). Back faces are tinted red in every mode except wireframe.
+/// Shows every mesh in a scene in one debug view instead of its material (#132). Give it to
+/// SceneGraphElement(debugMode:) or SceneView(debugMode:). Back faces are tinted red in every mode except wireframe.
 public enum SceneGraphDebugMode: Int32, CaseIterable, Sendable, Codable {
     // Grey, lit from the camera: shape only.
     case shaded = 0
@@ -34,9 +34,9 @@ public enum SceneGraphDebugMode: Int32, CaseIterable, Sendable, Codable {
     }
 }
 
-// Shows one material value instead of the lit result (#195). Unlike SceneGraphDebugMode it keeps each mesh's
-// material: every renderer shows its own version of the channel. Blinn-Phong has no metallic (black) and maps
-// shininess to roughness.
+/// Shows one material value instead of the lit result (#195). Unlike SceneGraphDebugMode it keeps each mesh's
+/// material: every renderer shows its own version of the channel. Blinn-Phong has no metallic (black) and maps
+/// shininess to roughness.
 public enum SceneGraphMaterialChannel: Int32, CaseIterable, Sendable, Codable {
     // Diffuse for Blinn-Phong.
     case baseColor = 1

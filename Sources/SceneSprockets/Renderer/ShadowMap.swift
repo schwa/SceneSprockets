@@ -3,13 +3,13 @@ import MetalSprocketsSupport
 import MetalSupport
 import simd
 
-// Depth array textures with one slice per shadow view, and the matrices and bias to render and sample them.
-// Reversed depth: the depth test and the comparison sampler use greater-equal.
+/// Depth array textures with one slice per shadow view, and the matrices and bias to render and sample them.
+/// Reversed depth: the depth test and the comparison sampler use greater-equal.
 public struct SceneGraphShadowMap {
     // One texture per in-flight submission, so a frame never clears a map an earlier frame still samples.
     let depthTextures: [MTLTexture]
     public let sampler: MTLSamplerState
-    // Camera-relative: they take world position minus the camera position (#257).
+    /// Camera-relative: they take world position minus the camera position (#257).
     public internal(set) var lightViewProjectionMatrices: [simd_float4x4]
     var depthBias: Float
     var slopeScale: Float
@@ -54,7 +54,7 @@ public struct SceneGraphShadowMap {
         self.sampler = sampler
     }
 
-    // The texture for a submission (MSEnvironmentValues.submissionIndex).
+    /// The texture for a submission (MSEnvironmentValues.submissionIndex).
     public func depthTexture(forSubmission submissionIndex: UInt64) -> MTLTexture {
         depthTextures[Int(submissionIndex % UInt64(depthTextures.count))]
     }

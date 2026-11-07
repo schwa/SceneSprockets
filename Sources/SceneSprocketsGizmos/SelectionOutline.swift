@@ -5,15 +5,15 @@ import MetalSprocketsSupport
 import SceneSprockets
 import simd
 
-// Outlines nodes (and their descendants) with MetalSprocketsAddOns' jump flood outline (#166). Objects in front hide the
-// outline unless `xray`; that needs the scene depth kept after the scene pass (SceneView does this when it has an
-// `overlay`). Use from SceneView's `overlay`. Keeps its mask and seed textures between frames, so keep one instance per
-// view.
+/// Outlines nodes (and their descendants) with MetalSprocketsAddOns' jump flood outline (#166). Objects in front hide the
+/// outline unless `xray`; that needs the scene depth kept after the scene pass (SceneView does this when it has an
+/// `overlay`). Use from SceneView's `overlay`. Keeps its mask and seed textures between frames, so keep one instance per
+/// view.
 public final class SelectionOutline {
     public var color: SIMD4<Float>
-    // Pixels.
+    /// Pixels.
     public var width: Float
-    // Draw over everything instead of hiding behind objects in front.
+    /// Draw over everything instead of hiding behind objects in front.
     public var xray = false
 
     private var mask: MTLTexture?

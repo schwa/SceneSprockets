@@ -11,44 +11,44 @@ public struct SceneGraphRenderContext {
     public var lights: [(worldTransform: simd_float4x4, light: Light)]
     public var revision: SceneGraph.Revision
     public var environment: SceneGraph.Environment
-    // The camera's categoryBitMask.
+    /// The camera's categoryBitMask.
     public var categoryBitMask: UInt = .max
-    // Parallel to `lights`: each light node's lightCategoryBitMask.
+    /// Parallel to `lights`: each light node's lightCategoryBitMask.
     public var lightCategoryBitMasks: [UInt] = []
-    // Set when shadows are on, for renderers that sample them while shading.
+    /// Set when shadows are on, for renderers that sample them while shading.
     public internal(set) var shadow: SceneGraphShadows.Sampling?
-    // Parallel to `lights` when `shadow` is set: each light's shadow map slices (empty for none).
+    /// Parallel to `lights` when `shadow` is set: each light's shadow map slices (empty for none).
     public internal(set) var lightShadowSlices: [Range<Int>] = []
-    // When set, renderers output this material value instead of lighting (#195).
+    /// When set, renderers output this material value instead of lighting (#195).
     public internal(set) var materialChannel: SceneGraphMaterialChannel?
 }
 
-// One renderer per material family. Add a family by conforming a new type; the scene graph core does not change.
+/// One renderer per material family. Add a family by conforming a new type; the scene graph core does not change.
 public protocol SceneGraphMaterialRenderer {
     var materialType: any SceneSprockets.Material.Type { get }
     func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement
 }
 
-// A renderer that can draw `SceneGraph.Environment.Background.environment`. The element asks each one in order and
-// draws the first non-nil result before any meshes, even when the renderer has no entries.
+/// A renderer that can draw `SceneGraph.Environment.Background.environment`. The element asks each one in order and
+/// draws the first non-nil result before any meshes, even when the renderer has no entries.
 public protocol SceneGraphBackgroundRenderer {
     func makeBackgroundElement(context: SceneGraphRenderContext) throws -> AnyElement?
 }
 
-// A renderer that needs its own passes before the scene pass, such as one that draws what is behind glass.
-// `entries` are all of this renderer's entries; `makeElement` is called after this for each batch.
-// `otherOpaqueContent` makes the other renderers' opaque batches, for a pass that needs the rest of the scene; nil
-// when there are none.
+/// A renderer that needs its own passes before the scene pass, such as one that draws what is behind glass.
+/// `entries` are all of this renderer's entries; `makeElement` is called after this for each batch.
+/// `otherOpaqueContent` makes the other renderers' opaque batches, for a pass that needs the rest of the scene; nil
+/// when there are none.
 public protocol SceneGraphPrePassRenderer {
     func makePrePassElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, viewSize: (width: Int, height: Int), otherOpaqueContent: () throws -> AnyElement?) throws -> AnyElement?
 }
 
-// Renders every mesh entry in one pass by handing each material family to its renderer.
-// Entries whose material type has no renderer are skipped.
-// The view comes from `camera` (default: the first camera node) unless `cameraMatrix` overrides its world transform.
-// With no camera node, `defaultCamera` is used at `cameraMatrix` (identity if nil).
-// `cameraOverride` replaces the camera node's camera (projection and masks) even when there is one, for editor cameras.
-// `defaultLight` is added at the camera when the scene has no lights, like SceneKit's autoenablesDefaultLighting.
+/// Renders every mesh entry in one pass by handing each material family to its renderer.
+/// Entries whose material type has no renderer are skipped.
+/// The view comes from `camera` (default: the first camera node) unless `cameraMatrix` overrides its world transform.
+/// With no camera node, `defaultCamera` is used at `cameraMatrix` (identity if nil).
+/// `cameraOverride` replaces the camera node's camera (projection and masks) even when there is one, for editor cameras.
+/// `defaultLight` is added at the camera when the scene has no lights, like SceneKit's autoenablesDefaultLighting.
 public struct SceneGraphElement: Element {
     var sceneGraph: SceneGraph
     var camera: SceneGraph.Node?
@@ -345,9 +345,9 @@ func makeRenderContext(sceneGraph: SceneGraph, camera: SceneGraph.Node?, cameraM
     )
 }
 
-// Groups entries by rendering order (ascending), then opaque before transparent, then by the lights whose masks
-// match, keeping first-seen order. Transparent entries are sorted farthest first. Each batch's context holds only
-// its lights.
+/// Groups entries by rendering order (ascending), then opaque before transparent, then by the lights whose masks
+/// match, keeping first-seen order. Transparent entries are sorted farthest first. Each batch's context holds only
+/// its lights.
 public func renderBatches(_ entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) -> [(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext)] {
     struct Key: Hashable {
         var order: Int
@@ -414,7 +414,7 @@ extension Element {
     }
 }
 
-// Groups entries by vertex descriptor, keeping first-seen order.
+/// Groups entries by vertex descriptor, keeping first-seen order.
 public func groupedByVertexDescriptor<Entry>(_ entries: [Entry], vertexDescriptor: (Entry) -> VertexDescriptor) -> [(vertexDescriptor: VertexDescriptor, entries: [Entry])] {
     var groups: [(vertexDescriptor: VertexDescriptor, entries: [Entry])] = []
     for entry in entries {

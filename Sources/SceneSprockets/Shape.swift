@@ -6,8 +6,8 @@ import SwiftMesh
 import SwiftUI
 
 extension SceneGraph {
-    // Parametric geometry, like SceneKit's SCNBox, SCNSphere, SCNText and so on. Sizes are full extents, centered on
-    // the origin, except text (baseline on y = 0, starting at x = 0, extruded towards +z) and plane (XY).
+    /// Parametric geometry, like SceneKit's SCNBox, SCNSphere, SCNText and so on. Sizes are full extents, centered on
+    /// the origin, except text (baseline on y = 0, starting at x = 0, extruded towards +z) and plane (XY).
     public enum Shape: Sendable, Equatable, Codable {
         case box(width: Float = 1, height: Float = 1, length: Float = 1)
         case sphere(radius: Float = 0.5)
@@ -96,7 +96,7 @@ extension SceneGraph {
             return Mesh(positions: positions, faces: faces).withFlatNormals()
         }
 
-        // Always has texture coordinates (renderers such as Blinn-Phong need them); text gets a planar XY mapping.
+        /// Always has texture coordinates (renderers such as Blinn-Phong need them); text gets a planar XY mapping.
         public func metalMesh(device: MTLDevice) -> MetalMesh {
             let metalMesh = MetalMesh(mesh: mesh(), device: device, label: label)
             guard !metalMesh.vertexDescriptor.attributes.contains(where: { $0.semantic == .texcoord(0) }) else {
@@ -131,13 +131,13 @@ extension SceneGraph {
 }
 
 extension SceneGraph.Node {
-    // A mesh node for `shape`. Set `shape` later to rebuild its mesh, keeping the materials.
+    /// A mesh node for `shape`. Set `shape` later to rebuild its mesh, keeping the materials.
     public convenience init(parent: SceneGraph.Node? = nil, label: String? = nil, shape: SceneGraph.Shape, material: any Material, device: MTLDevice, trs: Transform3D = .identity) {
         self.init(parent: parent, label: label ?? shape.label, trs: trs, content: .mesh(shape.metalMesh(device: device), material: material))
         shapeStorage = (shape, device)
     }
 
-    // The shape this node's mesh was built from; nil for other nodes. Setting it on a mesh node rebuilds the mesh.
+    /// The shape this node's mesh was built from; nil for other nodes. Setting it on a mesh node rebuilds the mesh.
     public var shape: SceneGraph.Shape? {
         get { shapeStorage?.shape }
         set {

@@ -1,17 +1,17 @@
 import AVFAudio
 import simd
 
-// A sound with a 3D position, like SCNAudioPlayer. Attach it to a SpatialAudioMixer to hear it. Only mono buffers are
-// positioned; AVAudioEnvironmentNode passes stereo through.
+/// A sound with a 3D position, like SCNAudioPlayer. Attach it to a SpatialAudioMixer to hear it. Only mono buffers are
+/// positioned; AVAudioEnvironmentNode passes stereo through.
 public final class AudioPlayer {
     public let buffer: AVAudioPCMBuffer
     public var loops: Bool
-    // 0...1.
+    /// 0...1.
     public var volume: Float {
         didSet { playerNode.volume = volume }
     }
 
-    // World position.
+    /// World position.
     public var position: SIMD3<Float> {
         get {
             let position = playerNode.position
@@ -36,7 +36,7 @@ public final class AudioPlayer {
         playerNode.volume = volume
     }
 
-    // Loads a whole file into memory.
+    /// Loads a whole file into memory.
     public convenience init(url: URL, loops: Bool = true, volume: Float = 1) throws {
         let file = try AVAudioFile(forReading: url)
         guard let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length)) else {
@@ -51,13 +51,13 @@ public enum AudioError: Error {
     case bufferCreationFailed
 }
 
-// AVAudioEngine plus an AVAudioEnvironmentNode that positions attached players around a listener.
+/// AVAudioEngine plus an AVAudioEnvironmentNode that positions attached players around a listener.
 public final class SpatialAudioMixer {
     public let engine: AVAudioEngine
     public let environment = AVAudioEnvironmentNode()
     private var attached: [ObjectIdentifier: AudioPlayer] = [:]
 
-    // Pass an engine in manual rendering mode for offline use (tests); otherwise the engine's output is used.
+    /// Pass an engine in manual rendering mode for offline use (tests); otherwise the engine's output is used.
     public init(engine: AVAudioEngine = AVAudioEngine()) {
         self.engine = engine
         engine.attach(environment)
@@ -68,7 +68,7 @@ public final class SpatialAudioMixer {
         Array(attached.values)
     }
 
-    // The listener's world transform: its position, -Z forward and +Y up.
+    /// The listener's world transform: its position, -Z forward and +Y up.
     public var listenerTransform: simd_float4x4 = matrix_identity_float4x4 {
         didSet {
             let matrix = listenerTransform
@@ -92,7 +92,7 @@ public final class SpatialAudioMixer {
         attached[ObjectIdentifier(player)] = player
     }
 
-    // Stops the player and removes it from the engine.
+    /// Stops the player and removes it from the engine.
     public func detach(_ player: AudioPlayer) {
         guard attached.removeValue(forKey: ObjectIdentifier(player)) != nil else {
             return
@@ -102,7 +102,7 @@ public final class SpatialAudioMixer {
         player.isScheduled = false
     }
 
-    // Starts the engine if needed, then plays (or resumes) an attached player.
+    /// Starts the engine if needed, then plays (or resumes) an attached player.
     public func play(_ player: AudioPlayer) throws {
         guard isAttached(player) else {
             return

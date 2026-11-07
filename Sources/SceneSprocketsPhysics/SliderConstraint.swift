@@ -4,15 +4,15 @@ import SceneSprockets
 import simd
 
 extension SceneGraphPhysicsWorld {
-    // The node of a Jolt body, if this world created it.
+    /// The node of a Jolt body, if this world created it.
     public func node(of body: BodyID) -> SceneGraph.Node? {
         entries.values.first { $0.body == body }?.node
     }
 
-    // Keeps a node from moving into physics bodies, like SCNSliderConstraint. The node is a sphere of `radius`. Each
-    // time constraints run, it sweeps from where the constraint last left it to where it is now; at a body whose
-    // node is in `categoryBitMask` it stops and slides along the surface. Bodies of the node itself and its
-    // descendants are ignored. Call sync() or step(deltaTime:) first so the bodies exist.
+    /// Keeps a node from moving into physics bodies, like SCNSliderConstraint. The node is a sphere of `radius`. Each
+    /// time constraints run, it sweeps from where the constraint last left it to where it is now; at a body whose
+    /// node is in `categoryBitMask` it stops and slides along the surface. Bodies of the node itself and its
+    /// descendants are ignored. Call sync() or step(deltaTime:) first so the bodies exist.
     public func sliderConstraint(radius: Float, categoryBitMask: UInt = .max) -> SceneGraph.Constraint {
         let state = SliderState()
         return .transform { [weak self] node, world in

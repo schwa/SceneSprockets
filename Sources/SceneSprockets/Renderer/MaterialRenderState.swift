@@ -2,10 +2,10 @@ import Metal
 import MetalSprockets
 import SwiftMesh
 
-// How a material's draws blend, use depth, write color and fill, like SCNMaterial's blendMode,
-// readsFromDepthBuffer/writesToDepthBuffer, colorBufferWriteMask and fillMode. Used by Blinn-Phong and ShaderMaterial.
+/// How a material's draws blend, use depth, write color and fill, like SCNMaterial's blendMode,
+/// readsFromDepthBuffer/writesToDepthBuffer, colorBufferWriteMask and fillMode. Used by Blinn-Phong and ShaderMaterial.
 public struct MaterialRenderState: Sendable, Hashable {
-    // Straight (not premultiplied) alpha.
+    /// Straight (not premultiplied) alpha.
     public enum BlendMode: String, Sendable, Hashable, CaseIterable, Codable {
         // Over what is behind, by alpha. Blends only when the material is transparent.
         case alpha
@@ -22,12 +22,12 @@ public struct MaterialRenderState: Sendable, Hashable {
     }
 
     public var blendMode: BlendMode
-    // Transparent draws never write depth.
+    /// Transparent draws never write depth.
     public var writesToDepthBuffer: Bool
-    // False draws on top of what is already drawn.
+    /// False draws on top of what is already drawn.
     public var readsFromDepthBuffer: Bool
     public var colorWriteMask: MTLColorWriteMask
-    // `.lines` draws triangle edges.
+    /// `.lines` draws triangle edges.
     public var fillMode: MTLTriangleFillMode
 
     public init(blendMode: BlendMode = .alpha, writesToDepthBuffer: Bool = true, readsFromDepthBuffer: Bool = true, colorWriteMask: MTLColorWriteMask = .all, fillMode: MTLTriangleFillMode = .fill) {
@@ -38,7 +38,7 @@ public struct MaterialRenderState: Sendable, Hashable {
         self.fillMode = fillMode
     }
 
-    // Add, subtract, multiply and screen blend with what is behind, so they draw with transparent meshes.
+    /// Add, subtract, multiply and screen blend with what is behind, so they draw with transparent meshes.
     public var blendsWithBackground: Bool {
         switch blendMode {
         case .alpha, .replace: false
@@ -46,7 +46,7 @@ public struct MaterialRenderState: Sendable, Hashable {
         }
     }
 
-    // MTLColorWriteMask is not Hashable.
+    /// MTLColorWriteMask is not Hashable.
     public static func == (lhs: Self, rhs: Self) -> Bool {
         (lhs.blendMode, lhs.writesToDepthBuffer, lhs.readsFromDepthBuffer, lhs.colorWriteMask.rawValue, lhs.fillMode) == (rhs.blendMode, rhs.writesToDepthBuffer, rhs.readsFromDepthBuffer, rhs.colorWriteMask.rawValue, rhs.fillMode)
     }
@@ -61,7 +61,7 @@ public struct MaterialRenderState: Sendable, Hashable {
 }
 
 extension Element {
-    // Reversed depth. `isTransparent` draws do not write depth and blend by alpha unless the blend mode says otherwise.
+    /// Reversed depth. `isTransparent` draws do not write depth and blend by alpha unless the blend mode says otherwise.
     public func materialRenderState(_ state: MaterialRenderState, isTransparent: Bool) -> some Element {
         depthCompare(function: state.readsFromDepthBuffer ? .greater : .always, writes: state.writesToDepthBuffer && !isTransparent)
             .renderPipelineDescriptorTransformer { descriptor in
@@ -98,8 +98,8 @@ extension Element {
     }
 }
 
-// Draw resets cull and fill mode, so draws that need them set them in their own closure. Mirrored transforms flip the
-// winding.
+/// Draw resets cull and fill mode, so draws that need them set them in their own closure. Mirrored transforms flip the
+/// winding.
 public func materialDraw(_ submesh: MetalMesh.Submesh, instanceCount: Int = 1, cullMode: MTLCullMode = .none, isMirrored: Bool = false, fillMode: MTLTriangleFillMode = .fill) -> AnyElement {
     guard cullMode != .none || fillMode != .fill else {
         return Draw(primitiveType: submesh.primitiveType, indexBuffer: submesh.indexBuffer, indexType: submesh.indexType, indexCount: submesh.indexCount, indexBufferOffset: submesh.indexBufferOffset, instanceCount: instanceCount).eraseToAnyElement()

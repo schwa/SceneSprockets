@@ -3,18 +3,18 @@ import MetalSprockets
 import MetalSprocketsParticles
 import simd
 
-// A MetalSprocketsParticles effect at a node. The description is `system`; the GPU state is made on first use.
-// Emitters follow the node's world transform times their own motion. SceneView advances them with
-// advanceParticles(by:); SceneGraphElement simulates them before the scene pass and draws them after the meshes.
+/// A MetalSprocketsParticles effect at a node. The description is `system`; the GPU state is made on first use.
+/// Emitters follow the node's world transform times their own motion. SceneView advances them with
+/// advanceParticles(by:); SceneGraphElement simulates them before the scene pass and draws them after the meshes.
 public final class SceneParticleSystem {
     public var system: ParticleSystem {
         didSet { needsApply = true }
     }
     public let seed: UInt32
-    // When false, emitters and colliders ignore the node's transform (the node only shows and hides them), for effects
-    // already in world space, such as emitters on a skinned mesh's world-space positions.
+    /// When false, emitters and colliders ignore the node's transform (the node only shows and hides them), for effects
+    /// already in world space, such as emitters on a skinned mesh's world-space positions.
     public var usesNodeTransform = true
-    // Seconds simulated, for emitter motion and animated colliders.
+    /// Seconds simulated, for emitter motion and animated colliders.
     public private(set) var time: Float = 0
 
     private var storedRuntime: ParticleSystemRuntime?
@@ -51,7 +51,7 @@ public final class SceneParticleSystem {
         system.layers.contains { ($0.modules[SpriteModule.self]?.softness ?? 0) > 0 }
     }
 
-    // Removes every particle and restarts the clock.
+    /// Removes every particle and restarts the clock.
     public func restart() {
         time = 0
         pendingDeltaTime = 0
@@ -123,7 +123,7 @@ extension Collider {
 }
 
 extension SceneGraph {
-    // Advances every particle system in the graph. Systems on hidden nodes keep simulating but stop emitting.
+    /// Advances every particle system in the graph. Systems on hidden nodes keep simulating but stop emitting.
     public func advanceParticles(by deltaTime: Float) {
         var visible = Set<ObjectIdentifier>()
         visit { node, _ in

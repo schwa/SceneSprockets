@@ -5,9 +5,9 @@ import Metal
 import SwiftMesh
 import UniformTypeIdentifiers
 
-// Saves and loads a scene graph as a package directory (`.scenesprocketsd`): `scene.json` for the graph, and
-// `textures/` for textures read back from the GPU. Material and environment map types register themselves, because
-// the core module does not know the renderer modules (#52, #156).
+/// Saves and loads a scene graph as a package directory (`.scenesprocketsd`): `scene.json` for the graph, and
+/// `textures/` for textures read back from the GPU. Material and environment map types register themselves, because
+/// the core module does not know the renderer modules (#52, #156).
 public struct SceneArchive {
     public static let pathExtension = "scenesprocketsd"
     static let sceneFileName = "scene.json"
@@ -16,14 +16,14 @@ public struct SceneArchive {
 
     public var materialTypes: [any ArchivableMaterial.Type]
     public var environmentMapTypes: [any ArchivableEnvironmentMap.Type]
-    // Saves meshes that are not shapes, such as generated geometry. Without one they are skipped with a warning
-    // (#158).
+    /// Saves meshes that are not shapes, such as generated geometry. Without one they are skipped with a warning
+    /// (#158).
     public var meshCodec: (any ArchivableMeshCodec)?
-    // Loads model files kept by reference (#157). Nodes with a modelSource are saved as their file only when the
-    // archive has one; otherwise their subtree is saved like any other.
+    /// Loads model files kept by reference (#157). Nodes with a modelSource are saved as their file only when the
+    /// archive has one; otherwise their subtree is saved like any other.
     public var modelLoader: (any ArchivableModelLoader)?
-    // Metal libraries that saved shaders (ShaderMaterial) refer to by name. A compiled function does not say where
-    // its library came from, so the app names the libraries it uses.
+    /// Metal libraries that saved shaders (ShaderMaterial) refer to by name. A compiled function does not say where
+    /// its library came from, so the app names the libraries it uses.
     public var shaderLibraries: [String: any MTLLibrary]
 
     public init(materialTypes: [any ArchivableMaterial.Type] = [], environmentMapTypes: [any ArchivableEnvironmentMap.Type] = [], shaderLibraries: [String: any MTLLibrary] = [:], meshCodec: (any ArchivableMeshCodec)? = nil, modelLoader: (any ArchivableModelLoader)? = nil) {
@@ -34,7 +34,7 @@ public struct SceneArchive {
         self.modelLoader = modelLoader
     }
 
-    // Replaces anything at `url`. Returns warnings for what could not be saved.
+    /// Replaces anything at `url`. Returns warnings for what could not be saved.
     @discardableResult
     public func write(_ sceneGraph: SceneGraph, to url: URL) throws -> [String] {
         let capture = try capture(sceneGraph)
@@ -42,9 +42,9 @@ public struct SceneArchive {
         return capture.warnings
     }
 
-    // Everything the archive's files hold, as values. Read the graph on the thread that owns it; later edits do not
-    // change the capture, and it can be written on any thread (#238). `textureCache` keeps texture bytes between
-    // captures, so unchanged textures are read back from the GPU once.
+    /// Everything the archive's files hold, as values. Read the graph on the thread that owns it; later edits do not
+    /// change the capture, and it can be written on any thread (#238). `textureCache` keeps texture bytes between
+    /// captures, so unchanged textures are read back from the GPU once.
     public func capture(_ sceneGraph: SceneGraph, textureCache: TextureCache? = nil) throws -> Capture {
         let context = SceneArchiveContext(directory: nil, device: nil, archive: self)
         let encoder = JSONEncoder()
@@ -67,8 +67,8 @@ public struct SceneArchive {
         let file: String
     }
 
-    // Texture file bytes by texture. Textures are not edited in place, so the bytes stay valid while the texture
-    // lives. Use from one thread.
+    /// Texture file bytes by texture. Textures are not edited in place, so the bytes stay valid while the texture
+    /// lives. Use from one thread.
     public final class TextureCache {
         private var entries: [ObjectIdentifier: (texture: any MTLTexture, isPNG: Bool, data: Data)] = [:]
 
@@ -96,7 +96,7 @@ public struct SceneArchive {
         let files: [String: Data]
         public let warnings: [String]
 
-        // Replaces anything at `url`.
+        /// Replaces anything at `url`.
         public func write(to url: URL) throws {
             let fileManager = FileManager.default
             if fileManager.fileExists(atPath: url.path) {
@@ -122,21 +122,21 @@ public struct SceneArchive {
     }
 }
 
-// Loads a model file kept by reference in the package (#157), for example a glTF.
+/// Loads a model file kept by reference in the package (#157), for example a glTF.
 public protocol ArchivableModelLoader {
     // The file's subtree under one root node, and loader warnings.
     func load(_ url: URL, context: SceneArchiveContext) throws -> (node: SceneGraph.Node, warnings: [String])
 }
 
-// Writes and reads meshes that are not shapes as files in the package (#158). Materials stay in scene.json; a codec
-// may also write them into its file for other tools.
+/// Writes and reads meshes that are not shapes as files in the package (#158). Materials stay in scene.json; a codec
+/// may also write them into its file for other tools.
 public protocol ArchivableMeshCodec {
     // Adds the mesh's file to the package through `context` and returns its path.
     func encode(_ mesh: MetalMesh, materials: [any Material], name: String?, context: SceneArchiveContext) throws -> String
     func decode(path: String, context: SceneArchiveContext) throws -> MetalMesh
 }
 
-// A material that can be saved: it encodes itself, textures through `SceneArchiveContext`.
+/// A material that can be saved: it encodes itself, textures through `SceneArchiveContext`.
 public protocol ArchivableMaterial: Material, Codable {
     // Stored in scene.json to find the type again; unique among registered types.
     static var archiveTypeName: String { get }
@@ -151,7 +151,7 @@ public extension ArchivableMaterial {
     }
 }
 
-// An environment map that can be saved. Environment maps are classes, so decoding is a static function.
+/// An environment map that can be saved. Environment maps are classes, so decoding is a static function.
 public protocol ArchivableEnvironmentMap: EnvironmentMap {
     static var archiveTypeName: String { get }
     func encode(to encoder: Encoder) throws
@@ -208,9 +208,9 @@ private extension Optional {
     }
 }
 
-// State shared by everything coded in one archive: the registered types, textures already written or read, and
-// warnings. Unchecked Sendable: coder userInfo values must be Sendable, but a context lives for one write or read on
-// one thread.
+/// State shared by everything coded in one archive: the registered types, textures already written or read, and
+/// warnings. Unchecked Sendable: coder userInfo values must be Sendable, but a context lives for one write or read on
+/// one thread.
 public final class SceneArchiveContext: @unchecked Sendable {
     // Where to read from; nil while capturing, which only encodes.
     let directory: URL?
@@ -223,17 +223,17 @@ public final class SceneArchiveContext: @unchecked Sendable {
     // Other files to write, such as meshes (#158), by path in the package.
     private(set) var files: [String: Data] = [:]
 
-    // A new file path in the package: `directory`/N.`pathExtension`.
+    /// A new file path in the package: `directory`/N.`pathExtension`.
     public func newFile(in directory: String, pathExtension: String) -> String {
         "\(directory)/\(files.keys.count { $0.hasPrefix(directory + "/") }).\(pathExtension)"
     }
 
-    // Adds a file to the package at `path`.
+    /// Adds a file to the package at `path`.
     public func addFile(_ path: String, data: Data) {
         files[path] = data
     }
 
-    // A file read from the package.
+    /// A file read from the package.
     public func data(atPath path: String) throws -> Data {
         try Data(contentsOf: readDirectory.appendingPathComponent(path))
     }
@@ -350,23 +350,23 @@ public final class SceneArchiveContext: @unchecked Sendable {
 
     // MARK: Textures
 
-    // Where a texture is stored in the package, and what to rebuild it as.
+    /// Where a texture is stored in the package, and what to rebuild it as.
     public struct TextureReference: Codable, Equatable, Sendable {
         public var file: String
-        // MTLPixelFormat raw value.
+        /// MTLPixelFormat raw value.
         public var pixelFormat: UInt
         public var width: Int
         public var height: Int
         public var mipmapped: Bool
-        // Only in .bin files (#180): nil for 2D, otherwise "2DArray", "cube", "cubeArray" or "3D".
+        /// Only in .bin files (#180): nil for 2D, otherwise "2DArray", "cube", "cubeArray" or "3D".
         public var type: String?
         public var depth: Int?
         public var arrayLength: Int?
-        // Mip levels stored in the file, every slice's levels in turn. Nil stores level 0 and regenerates the rest.
+        /// Mip levels stored in the file, every slice's levels in turn. Nil stores level 0 and regenerates the rest.
         public var levels: Int?
     }
 
-    // A sampler's filters and address modes (#180), from the MTLSamplerDescriptor a material keeps.
+    /// A sampler's filters and address modes (#180), from the MTLSamplerDescriptor a material keeps.
     public struct SamplerReference: Codable, Equatable, Sendable {
         public var minFilter: String
         public var magFilter: String
@@ -428,9 +428,9 @@ public final class SceneArchiveContext: @unchecked Sendable {
         }
     }
 
-    // Reads `texture` back from the GPU and writes it once per archive. 2D 8-bit RGBA and BGRA textures are a PNG of
-    // level 0 (mips are regenerated on load); everything else is raw bytes of every slice and mip level.
-    // Names the texture's file. The bytes are written now, or by SceneArchive.Capture.write when capturing (#238).
+    /// Reads `texture` back from the GPU and writes it once per archive. 2D 8-bit RGBA and BGRA textures are a PNG of
+    /// level 0 (mips are regenerated on load); everything else is raw bytes of every slice and mip level.
+    /// Names the texture's file. The bytes are written now, or by SceneArchive.Capture.write when capturing (#238).
     public func encode(texture: MTLTexture) throws -> TextureReference {
         if let reference = writtenTextures[ObjectIdentifier(texture)] {
             return reference
@@ -486,7 +486,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
         return try pngData(bytes: bytes, width: texture.width, height: texture.height)
     }
 
-    // The stored file's bytes: PNG data, or raw rows of `pixelFormat` texels.
+    /// The stored file's bytes: PNG data, or raw rows of `pixelFormat` texels.
     public func data(for reference: TextureReference) throws -> Data {
         try Data(contentsOf: readDirectory.appendingPathComponent(reference.file))
     }

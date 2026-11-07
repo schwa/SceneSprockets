@@ -8,8 +8,8 @@ import SceneSprocketsBlinnPhong
 import simd
 import SwiftMesh
 
-// An MDLAsset (OBJ, PLY, STL, ABC, USD, ...) as a scene graph, keeping its object hierarchy.
-// Not imported: skins and blend shapes (see #31).
+/// An MDLAsset (OBJ, PLY, STL, ABC, USD, ...) as a scene graph, keeping its object hierarchy.
+/// Not imported: skins and blend shapes (see #31).
 public struct ModelIOSceneGraph {
     public enum MaterialKind: Sendable {
         case pbr
@@ -17,7 +17,7 @@ public struct ModelIOSceneGraph {
     }
 
     public var sceneGraph: SceneGraph
-    // Keyframed transforms, sampled at their key times. Nil when nothing is animated.
+    /// Keyframed transforms, sampled at their key times. Nil when nothing is animated.
     public var animation: SceneGraph.AnimationClip?
     public var warnings: [String]
 

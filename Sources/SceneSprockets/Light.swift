@@ -1,4 +1,4 @@
-// A light's color and shape, like SCNLight. Its node places it: lights point down their node's -Z axis.
+/// A light's color and shape, like SCNLight. Its node places it: lights point down their node's -Z axis.
 public struct Light: Sendable, Equatable, Codable {
     public enum LightType: String, Sendable, Equatable, CaseIterable, Codable {
         // Parallel rays along the node's -Z; position does not matter.
@@ -9,12 +9,12 @@ public struct Light: Sendable, Equatable, Codable {
     }
 
     public var type: LightType
-    // Linear RGB.
+    /// Linear RGB.
     public var color: SIMD3<Float>
     public var intensity: Float
-    // Distance at which point and spot lights fade to nothing.
+    /// Distance at which point and spot lights fade to nothing.
     public var range: Float
-    // Spot cone half-angles in radians: full intensity inside `innerConeAngle`, none outside `outerConeAngle`.
+    /// Spot cone half-angles in radians: full intensity inside `innerConeAngle`, none outside `outerConeAngle`.
     public var innerConeAngle: Float
     public var outerConeAngle: Float
 

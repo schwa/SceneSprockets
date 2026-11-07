@@ -5,21 +5,21 @@ import SceneSprocketsShaders
 import simd
 
 extension SceneGraph {
-    // Screen-space effects after the scene, like SCNCamera's colorGrading, vignetting and screenSpaceAmbientOcclusion
-    // settings. Applied by SceneGraphElement on the view's own (low dynamic range) color, so there is no HDR, bloom or
-    // tone mapping. Like fog, it needs a readable depth texture and a writable color texture.
+    /// Screen-space effects after the scene, like SCNCamera's colorGrading, vignetting and screenSpaceAmbientOcclusion
+    /// settings. Applied by SceneGraphElement on the view's own (low dynamic range) color, so there is no HDR, bloom or
+    /// tone mapping. Like fog, it needs a readable depth texture and a writable color texture.
     public struct PostProcessing: Sendable, Equatable, Codable {
-        // In stops: 1 doubles brightness.
+        /// In stops: 1 doubles brightness.
         public var exposure: Float
-        // 1 leaves color unchanged; above 1 pushes away from mid grey.
+        /// 1 leaves color unchanged; above 1 pushes away from mid grey.
         public var contrast: Float
-        // 0 is grey, 1 unchanged.
+        /// 0 is grey, 1 unchanged.
         public var saturation: Float
-        // Darkening at the corners, 0...1.
+        /// Darkening at the corners, 0...1.
         public var vignetteIntensity: Float
-        // Fraction of the center-to-corner distance where the vignette starts.
+        /// Fraction of the center-to-corner distance where the vignette starts.
         public var vignetteRadius: Float
-        // Nil turns ambient occlusion off.
+        /// Nil turns ambient occlusion off.
         public var ambientOcclusion: AmbientOcclusion?
 
         public init(exposure: Float = 0, contrast: Float = 1, saturation: Float = 1, vignetteIntensity: Float = 0, vignetteRadius: Float = 0.6, ambientOcclusion: AmbientOcclusion? = nil) {
@@ -36,13 +36,13 @@ extension SceneGraph {
         }
     }
 
-    // Screen-space ambient occlusion: creases and contacts get darker.
+    /// Screen-space ambient occlusion: creases and contacts get darker.
     public struct AmbientOcclusion: Sendable, Equatable, Codable {
-        // World units searched around each pixel.
+        /// World units searched around each pixel.
         public var radius: Float
-        // 0...1.
+        /// 0...1.
         public var intensity: Float
-        // Samples per pixel; more is smoother and slower.
+        /// Samples per pixel; more is smoother and slower.
         public var sampleCount: Int
 
         public init(radius: Float = 0.5, intensity: Float = 0.8, sampleCount: Int = 12) {

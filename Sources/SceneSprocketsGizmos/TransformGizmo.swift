@@ -5,8 +5,8 @@ import SceneSprockets
 import simd
 import SwiftUI
 
-// Move, rotate and scale handles for one node, drawn at a constant size on screen with MetalSprocketsAddOns'
-// GraphicsContext3D, like three.js TransformControls (#154). Give it to SceneView(manipulator:).
+/// Move, rotate and scale handles for one node, drawn at a constant size on screen with MetalSprocketsAddOns'
+/// GraphicsContext3D, like three.js TransformControls (#154). Give it to SceneView(manipulator:).
 @MainActor
 public final class TransformGizmo: SceneViewManipulator {
     public enum Mode: String, CaseIterable, Sendable {
@@ -56,11 +56,11 @@ public final class TransformGizmo: SceneViewManipulator {
     }
 
     public struct Snapping: Sendable {
-        // World units; nil is no snapping.
+        /// World units; nil is no snapping.
         public var translation: Float?
-        // Radians.
+        /// Radians.
         public var rotation: Float?
-        // Scale factor steps.
+        /// Scale factor steps.
         public var scale: Float?
 
         public init(translation: Float? = nil, rotation: Float? = nil, scale: Float? = nil) {
@@ -74,13 +74,13 @@ public final class TransformGizmo: SceneViewManipulator {
     public var mode: Mode = .translate
     public var space: Space = .world
     public var snapping = Snapping()
-    // Length of the axis handles in view points.
+    /// Length of the axis handles in view points.
     public var size: Float = 110
-    // When set, the handles are this long in world units instead, so the gizmo scales with the camera like the scene.
+    /// When set, the handles are this long in world units instead, so the gizmo scales with the camera like the scene.
     public var worldSize: Float?
     public private(set) var hoveredHandle: Handle?
     public private(set) var activeHandle: Handle?
-    // Called when a drag starts and ends, and with the node after each change, for undo and inspectors.
+    /// Called when a drag starts and ends, and with the node after each change, for undo and inspectors.
     public var onBegin: ((SceneGraph.Node) -> Void)?
     public var onChange: ((SceneGraph.Node) -> Void)?
     public var onEnd: ((SceneGraph.Node) -> Void)?
@@ -402,8 +402,8 @@ public final class TransformGizmo: SceneViewManipulator {
 
     // MARK: Two-finger gestures
 
-    // Pinches and twists that start within the gizmo's reach on screen (its handle length) scale and turn the
-    // target, whatever the mode.
+    /// Pinches and twists that start within the gizmo's reach on screen (its handle length) scale and turn the
+    /// target, whatever the mode.
     public func claimsTwoFingerGesture(at point: SIMD2<Float>, viewport: SceneViewport) -> Bool {
         guard target != nil, let frame = frame(viewport: viewport), let center = viewport.project(frame.origin)?.xy else {
             return false
@@ -420,8 +420,8 @@ public final class TransformGizmo: SceneViewManipulator {
         onBegin?(target)
     }
 
-    // Scales uniformly by `scale` and turns about the view direction by `rotation` (clockwise on screen, as seen from
-    // the camera), each snapped like the handles.
+    /// Scales uniformly by `scale` and turns about the view direction by `rotation` (clockwise on screen, as seen from
+    /// the camera), each snapped like the handles.
     public func twoFingerGesture(scale: Float, rotation: Float, viewport _: SceneViewport) {
         guard let target, let start = twoFingerStart else {
             return

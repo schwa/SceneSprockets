@@ -2,11 +2,11 @@ import GeometryLite3D
 import MetalSprockets
 import simd
 
-// The camera a SceneView draws with, for overlays and pointer input. Points are view coordinates (origin top-left,
-// y down); `drawableSize` is in pixels.
+/// The camera a SceneView draws with, for overlays and pointer input. Points are view coordinates (origin top-left,
+/// y down); `drawableSize` is in pixels.
 public struct SceneViewport {
     public var cameraMatrix: simd_float4x4
-    // Standard depth (near 0, far 1), whatever depth the scene itself uses.
+    /// Standard depth (near 0, far 1), whatever depth the scene itself uses.
     public var projectionMatrix: simd_float4x4
     public var viewSize: SIMD2<Float>
     public var drawableSize: SIMD2<Float>
@@ -18,8 +18,8 @@ public struct SceneViewport {
         self.drawableSize = drawableSize
     }
 
-    // The viewport `camera` sees from `cameraMatrix`, as SceneView draws and hit tests it (#240). Reversed-depth
-    // projections are converted to standard depth.
+    /// The viewport `camera` sees from `cameraMatrix`, as SceneView draws and hit tests it (#240). Reversed-depth
+    /// projections are converted to standard depth.
     public init(cameraMatrix: simd_float4x4, camera: Camera, viewSize: SIMD2<Float>, drawableSize: SIMD2<Float>) {
         let projection = camera.projection
         let matrix = projection.projectionMatrix(aspectRatio: viewSize.x / viewSize.y)
@@ -38,12 +38,12 @@ public struct SceneViewport {
         viewProjection.ray(through: point)
     }
 
-    // The point in view coordinates and its depth; nil behind the camera.
+    /// The point in view coordinates and its depth; nil behind the camera.
     public func project(_ worldPoint: SIMD3<Float>) -> SIMD3<Float>? {
         viewProjection.project(worldPoint)
     }
 
-    // World units per view point at `worldPoint`, for things drawn at a constant size on screen.
+    /// World units per view point at `worldPoint`, for things drawn at a constant size on screen.
     public func worldSizeOfPoint(at worldPoint: SIMD3<Float>) -> Float {
         let right = simd_normalize(cameraMatrix.columns.0.xyz)
         guard let a = project(worldPoint), let b = project(worldPoint + right) else {
@@ -53,9 +53,9 @@ public struct SceneViewport {
     }
 }
 
-// Something a SceneView draws on top of the scene and that can take pointer drags before camera control does, such
-// as a transform gizmo. SceneView asks `hitTest` at the start of each drag; a hit routes that drag here
-// and keeps camera control off it. It also asks while the pointer hovers, for highlighting.
+/// Something a SceneView draws on top of the scene and that can take pointer drags before camera control does, such
+/// as a transform gizmo. SceneView asks `hitTest` at the start of each drag; a hit routes that drag here
+/// and keeps camera control off it. It also asks while the pointer hovers, for highlighting.
 @MainActor
 public protocol SceneViewManipulator: AnyObject {
     // Drawn after the scene, in its own render pass that loads the scene's color and clears depth to 1 (standard).

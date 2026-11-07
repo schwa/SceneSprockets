@@ -8,8 +8,8 @@ import SceneSprocketsShaders
 import simd
 import SwiftMesh
 
-// A Blinn-Phong surface: ambient (lit by the renderer's ambient light), diffuse and specular, each a color or a
-// texture tinted by a color. A mesh's first vertex color set multiplies ambient, diffuse and opacity.
+/// A Blinn-Phong surface: ambient (lit by the renderer's ambient light), diffuse and specular, each a color or a
+/// texture tinted by a color. A mesh's first vertex color set multiplies ambient, diffuse and opacity.
 public struct BlinnPhongSceneMaterial: SceneSprockets.Material, SamplesShadowsInShader {
     public enum Source {
         // Linear RGB.
@@ -27,16 +27,16 @@ public struct BlinnPhongSceneMaterial: SceneSprockets.Material, SamplesShadowsIn
     public var diffuse: Source
     public var specular: Source
     public var shininess: Float
-    // 0 is invisible, 1 opaque. Below 1 the material blends over what is behind it and does not write depth;
-    // transparent meshes draw after opaque ones of the same rendering order, farthest first.
+    /// 0 is invisible, 1 opaque. Below 1 the material blends over what is behind it and does not write depth;
+    /// transparent meshes draw after opaque ones of the same rendering order, farthest first.
     public var opacity: Float
-    // Multiplies opacity by the diffuse texture's alpha (and makes the material transparent).
+    /// Multiplies opacity by the diffuse texture's alpha (and makes the material transparent).
     public var usesDiffuseTextureAlpha: Bool
-    // Added unlit, like SCNMaterial.emission.
+    /// Added unlit, like SCNMaterial.emission.
     public var emission: Source
-    // Tangent-space normal map (+Y up, as in glTF), sampled at the first texture coordinates. Meshes need no tangents.
+    /// Tangent-space normal map (+Y up, as in glTF), sampled at the first texture coordinates. Meshes need no tangents.
     public var normalMap: MTLTexture?
-    // Counter-clockwise triangles are front faces. `.none` draws both sides.
+    /// Counter-clockwise triangles are front faces. `.none` draws both sides.
     public var cullMode: MTLCullMode
     public var renderState: MaterialRenderState
 
@@ -62,7 +62,7 @@ public struct BlinnPhongSceneMaterial: SceneSprockets.Material, SamplesShadowsIn
     }
 }
 
-// Equatable so SceneView can tell an unchanged renderer list (#235).
+/// Equatable so SceneView can tell an unchanged renderer list (#235).
 public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
     public var ambientLightColor: SIMD3<Float>
     // Shared by copies of the renderer, so SwiftUI re-creating the struct keeps the cache.

@@ -8,11 +8,11 @@ import SwiftMesh
 extension SceneGraph.MeshEntry {
     public struct Deformed {
         public var mesh: MetalMesh
-        // Skinned meshes are already in world space, so this is identity for them.
+        /// Skinned meshes are already in world space, so this is identity for them.
         public var modelMatrix: simd_float4x4
     }
 
-    // Nil when the node has no active morph targets and no valid skin. Cached on the node until `revision` changes.
+    /// Nil when the node has no active morph targets and no valid skin. Cached on the node until `revision` changes.
     public func deformed(revision: SceneGraph.Revision) -> Deformed? {
         let skin = node.validSkin(vertexCount: mesh.vertexCount)
         let hasMorphs = node.morphTargets.contains { $0.isValid(vertexCount: mesh.vertexCount) } && node.morphWeights.contains { $0 != 0 }

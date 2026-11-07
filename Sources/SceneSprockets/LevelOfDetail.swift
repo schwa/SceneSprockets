@@ -3,9 +3,9 @@ import simd
 import SwiftMesh
 
 extension SceneGraph {
-    // A simpler mesh drawn instead of a node's mesh from `distance` (world units from the camera to the node's
-    // origin) onwards, like SCNLevelOfDetail(geometry:worldSpaceDistance:). Materials map to its submeshes as for
-    // the node's own mesh. A nil mesh draws nothing.
+    /// A simpler mesh drawn instead of a node's mesh from `distance` (world units from the camera to the node's
+    /// origin) onwards, like SCNLevelOfDetail(geometry:worldSpaceDistance:). Materials map to its submeshes as for
+    /// the node's own mesh. A nil mesh draws nothing.
     public struct LevelOfDetail {
         public var mesh: MetalMesh?
         public var distance: Float

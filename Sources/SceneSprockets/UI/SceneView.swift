@@ -5,7 +5,7 @@ import MetalSprocketsUI
 import simd
 import SwiftUI
 
-// Per-frame callbacks, like SCNSceneRendererDelegate. All are optional.
+/// Per-frame callbacks, like SCNSceneRendererDelegate. All are optional.
 @MainActor
 public protocol SceneViewDelegate: AnyObject {
     // Before actions run. Change the scene here.
@@ -22,7 +22,7 @@ public extension SceneViewDelegate {
     func sceneView(didApplyConstraintsAtTime _: Float) {}
 }
 
-// Shows a scene graph, like SceneKit's SwiftUI SceneView. Runs node actions every frame.
+/// Shows a scene graph, like SceneKit's SwiftUI SceneView. Runs node actions every frame.
 public struct SceneView: View {
     public struct Options: OptionSet, Sendable {
         public let rawValue: Int
@@ -31,16 +31,16 @@ public struct SceneView: View {
             self.rawValue = rawValue
         }
 
-        // Orbit, pan and zoom with the mouse or trackpad. The point of view's node is not moved.
+        /// Orbit, pan and zoom with the mouse or trackpad. The point of view's node is not moved.
         public static let allowsCameraControl = Self(rawValue: 1 << 0)
-        // Adds a white directional light at the camera when the scene has no lights.
+        /// Adds a white directional light at the camera when the scene has no lights.
         public static let autoenablesDefaultLighting = Self(rawValue: 1 << 1)
-        // Overlays scene statistics (meshes, triangles, lights), like SCNView.showsStatistics.
+        /// Overlays scene statistics (meshes, triangles, lights), like SCNView.showsStatistics.
         public static let showsStatistics = Self(rawValue: 1 << 2)
-        // Overlays MetalSprocketsUI's frame timing readout.
+        /// Overlays MetalSprocketsUI's frame timing readout.
         public static let showsFrameTiming = Self(rawValue: 1 << 4)
-        // Keeps the drawable readable (framebufferOnly false) even without post passes, for example to inspect it in a
-        // GPU capture. Costs some bandwidth.
+        /// Keeps the drawable readable (framebufferOnly false) even without post passes, for example to inspect it in a
+        /// GPU capture. Costs some bandwidth.
         public static let disablesFramebufferOnly = Self(rawValue: 1 << 3)
     }
 
@@ -84,16 +84,16 @@ public struct SceneView: View {
     @State private var clock = SceneClock()
     @State private var frameTimingStatistics: FrameTimingStatistics?
 
-    // `pointOfView` defaults to the first camera node; with no camera node a camera framing the scene is used.
-    // `renderers` draw the material families, e.g. BlinnPhongMaterialRenderer (SceneSprocketsBlinnPhong) or
-    // PBRMaterialRenderer (SceneSprocketsPBR). `isPlaying` false freezes scene time (delegate time and actions).
-    // `cameraMatrix` exposes the camera-control transform (nil: start from the point of view; set nil to reset).
-    // Without `.allowsCameraControl`, a non-nil `cameraMatrix` still sets the camera, for callers with their own
-    // camera control.
-    // `onTap` gets the nearest hit under a tap or click. `manipulator` draws over the scene and takes drags that start
-    // on it (for example a transform gizmo). `decorations` draws extra content in the scene pass after the meshes, with
-    // the scene's reversed depth (compare `.greater`), given the frame's context and drawable size in pixels; for
-    // editor aids such as grids that objects should hide.
+    /// `pointOfView` defaults to the first camera node; with no camera node a camera framing the scene is used.
+    /// `renderers` draw the material families, e.g. BlinnPhongMaterialRenderer (SceneSprocketsBlinnPhong) or
+    /// PBRMaterialRenderer (SceneSprocketsPBR). `isPlaying` false freezes scene time (delegate time and actions).
+    /// `cameraMatrix` exposes the camera-control transform (nil: start from the point of view; set nil to reset).
+    /// Without `.allowsCameraControl`, a non-nil `cameraMatrix` still sets the camera, for callers with their own
+    /// camera control.
+    /// `onTap` gets the nearest hit under a tap or click. `manipulator` draws over the scene and takes drags that start
+    /// on it (for example a transform gizmo). `decorations` draws extra content in the scene pass after the meshes, with
+    /// the scene's reversed depth (compare `.greater`), given the frame's context and drawable size in pixels; for
+    /// editor aids such as grids that objects should hide.
     public init(
         sceneGraph: SceneGraph,
         pointOfView: SceneGraph.Node? = nil,

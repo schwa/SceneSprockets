@@ -4,11 +4,11 @@ import simd
 import SwiftMesh
 
 extension MetalMesh {
-    // Loop subdivision, like SCNGeometry.subdivisionLevel: each level splits every triangle in four. With `smooth`,
-    // positions move by Loop's rules (vertices with the same position count as one, so texture seams stay closed)
-    // and float3 normals are recomputed; otherwise new vertices sit at edge midpoints. Other float attributes are
-    // interpolated; non-float attributes (such as joint indices) copy an endpoint's value. Nil without float3
-    // positions or with non-triangle submeshes. Runs on the CPU; vertex buffers must be CPU-visible.
+    /// Loop subdivision, like SCNGeometry.subdivisionLevel: each level splits every triangle in four. With `smooth`,
+    /// positions move by Loop's rules (vertices with the same position count as one, so texture seams stay closed)
+    /// and float3 normals are recomputed; otherwise new vertices sit at edge midpoints. Other float attributes are
+    /// interpolated; non-float attributes (such as joint indices) copy an endpoint's value. Nil without float3
+    /// positions or with non-triangle submeshes. Runs on the CPU; vertex buffers must be CPU-visible.
     public func subdivided(levels: Int, smooth: Bool = true) -> MetalMesh? {
         guard levels > 0 else {
             return self

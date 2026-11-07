@@ -2,12 +2,12 @@ import GeometryLite3D
 import simd
 
 extension SceneGraph {
-    // Changes a node's transform from other nodes each frame, like SceneKit's SCNConstraint subclasses. Constraints
-    // set the node's local TRS, keeping its world scale; run them with `SceneGraph.applyConstraints(pointOfView:)`
-    // after animation and actions.
+    /// Changes a node's transform from other nodes each frame, like SceneKit's SCNConstraint subclasses. Constraints
+    /// set the node's local TRS, keeping its world scale; run them with `SceneGraph.applyConstraints(pointOfView:)`
+    /// after animation and actions.
     public struct Constraint {
         public var kind: Kind
-        // 0 leaves the node as it was, 1 applies the constraint fully; in between blends, like SCNConstraint.
+        /// 0 leaves the node as it was, 1 applies the constraint fully; in between blends, like SCNConstraint.
         public var influenceFactor: Float = 1
         public var isEnabled = true
 
@@ -94,8 +94,8 @@ extension SceneGraph {
         public static let all: Self = [.x, .y, .z]
     }
 
-    // Applies every node's constraints, parents before children. `pointOfView` is the camera's world transform,
-    // used by billboards. `deltaTime` (seconds since the last call) drives acceleration constraints.
+    /// Applies every node's constraints, parents before children. `pointOfView` is the camera's world transform,
+    /// used by billboards. `deltaTime` (seconds since the last call) drives acceleration constraints.
     public func applyConstraints(pointOfView: simd_float4x4, deltaTime: Float = 0) {
         var constrained: [Node] = []
         visitActive { node, _ in

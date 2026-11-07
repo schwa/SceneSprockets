@@ -1,12 +1,12 @@
 import Foundation
 
 extension SceneGraph {
-    // A model file (such as a glTF and the buffers and images it loads), kept in memory so a scene archive can copy
-    // it into the package even when the original is no longer readable, as in the App Sandbox (#157).
+    /// A model file (such as a glTF and the buffers and images it loads), kept in memory so a scene archive can copy
+    /// it into the package even when the original is no longer readable, as in the App Sandbox (#157).
     public struct ModelSource: Sendable, Hashable {
-        // The file to load, a key of `files`.
+        /// The file to load, a key of `files`.
         public var mainFile: String
-        // File contents by path relative to the main file's folder.
+        /// File contents by path relative to the main file's folder.
         public var files: [String: Data]
 
         public init(mainFile: String, files: [String: Data]) {
@@ -14,7 +14,7 @@ extension SceneGraph {
             self.files = files
         }
 
-        // Reads `url` and the files it names, given relative to its folder.
+        /// Reads `url` and the files it names, given relative to its folder.
         public init(url: URL, relatedFiles: [String]) throws {
             let folder = url.deletingLastPathComponent()
             var files = [url.lastPathComponent: try Data(contentsOf: url)]

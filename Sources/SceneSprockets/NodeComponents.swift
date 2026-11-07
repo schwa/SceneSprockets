@@ -6,8 +6,8 @@ import SwiftMesh
 // Components a node in a graph stores in the graph's World. Public so ECS apps can query and write them (#269);
 // see SceneGraph.world for what direct writes do.
 
-// ChildOf does not keep an order we can change, so each child stores its index among its siblings. Writing it
-// reorders the node's siblings (#273).
+/// ChildOf does not keep an order we can change, so each child stores its index among its siblings. Writing it
+/// reorders the node's siblings (#273).
 public struct SiblingIndexComponent: Component {
     public var index: Int
 
@@ -16,10 +16,10 @@ public struct SiblingIndexComponent: Component {
     }
 }
 
-// Finds the node for an entity, so writes made directly to the World can reach it. Its presence also marks the
-// entity as a live scene graph node.
-// Unowned, not weak: a weak reference moves the node's reference count to a side table, which slows every retain of
-// every node (#283). The entity never outlives its node: it is destroyed when the node leaves the graph.
+/// Finds the node for an entity, so writes made directly to the World can reach it. Its presence also marks the
+/// entity as a live scene graph node.
+/// Unowned, not weak: a weak reference moves the node's reference count to a side table, which slows every retain of
+/// every node (#283). The entity never outlives its node: it is destroyed when the node leaves the graph.
 public struct NodeReferenceComponent: Component {
     public internal(set) unowned var node: SceneGraph.Node?
 
@@ -28,7 +28,7 @@ public struct NodeReferenceComponent: Component {
     }
 }
 
-// Which graph an entity belongs to, when several share a World (#269).
+/// Which graph an entity belongs to, when several share a World (#269).
 public struct SceneGraphMembershipComponent: Component {
     public let rootID: EntityID
 }
@@ -98,7 +98,7 @@ public struct NodeIsActiveComponent: NodeField {
     static var revision: NodeFieldRevision { .structure }
 }
 
-// Bumps the transform revision, not the structure one, so fading does not rebuild renderer caches.
+/// Bumps the transform revision, not the structure one, so fading does not rebuild renderer caches.
 public struct NodeOpacityComponent: NodeField {
     public var value: Float
 
@@ -269,7 +269,7 @@ public struct NodeActionSpeedComponent: NodeField {
     static var revision: NodeFieldRevision { .none }
 }
 
-// Replacing constraints resets their acceleration smoothing, however the change is made.
+/// Replacing constraints resets their acceleration smoothing, however the change is made.
 public struct NodeConstraintsComponent: NodeField {
     public var value: [SceneGraph.Constraint]
 
@@ -295,7 +295,7 @@ struct NodeAccelerationStatesComponent: NodeField {
     static var revision: NodeFieldRevision { .none }
 }
 
-// Changing the level rebuilds `content` from `subdivisionBase`, however the change is made.
+/// Changing the level rebuilds `content` from `subdivisionBase`, however the change is made.
 public struct NodeSubdivisionLevelComponent: NodeField {
     public var value: Int
 

@@ -8,41 +8,41 @@ import SceneSprocketsShaders
 import simd
 import SwiftMesh
 
-// Materials whose renderer samples the shadow map per light while shading (Blinn-Phong). The screen-space mask skips
-// their pixels.
+/// Materials whose renderer samples the shadow map per light while shading (Blinn-Phong). The screen-space mask skips
+/// their pixels.
 public protocol SamplesShadowsInShader {}
 
-// Shadow-mapped shadows from directional, spot and point lights, for every renderer: casters are drawn into a shadow
-// map from each light. Blinn-Phong and PBR sample it per light while shading, so a light only darkens what it lights;
-// other materials (ShaderMaterial) are darkened in screen space after the scene pass, by every light's shadow at
-// once. Keep one instance across frames (it holds the shadow map and caster buffers) and pass it to
-// SceneGraphElement or SceneView.
-//
-// The shadow map has 8 slices: a directional or spot light uses one, a point light six; a light that does not fit
-// casts none and is counted in `droppedLightCount`. Meshes with `castsShadow: false` cast none; meshes with
-// `receivesShadow: false` receive none.
-// The view's color texture needs `.shaderWrite` and its depth texture `.shaderRead` usage (see
-// `requiredColorUsage`); otherwise no shadows are drawn.
+/// Shadow-mapped shadows from directional, spot and point lights, for every renderer: casters are drawn into a shadow
+/// map from each light. Blinn-Phong and PBR sample it per light while shading, so a light only darkens what it lights;
+/// other materials (ShaderMaterial) are darkened in screen space after the scene pass, by every light's shadow at
+/// once. Keep one instance across frames (it holds the shadow map and caster buffers) and pass it to
+/// SceneGraphElement or SceneView.
+/// 
+/// The shadow map has 8 slices: a directional or spot light uses one, a point light six; a light that does not fit
+/// casts none and is counted in `droppedLightCount`. Meshes with `castsShadow: false` cast none; meshes with
+/// `receivesShadow: false` receive none.
+/// The view's color texture needs `.shaderWrite` and its depth texture `.shaderRead` usage (see
+/// `requiredColorUsage`); otherwise no shadows are drawn.
 public final class SceneGraphShadows {
-    // Usage the view's color texture needs: the shadow and post-processing passes write it from compute.
+    /// Usage the view's color texture needs: the shadow and post-processing passes write it from compute.
     public static let requiredColorUsage: MTLTextureUsage = [.renderTarget, .shaderRead, .shaderWrite]
-    // Usage the view's depth texture needs: the passes sample it.
+    /// Usage the view's depth texture needs: the passes sample it.
     public static let requiredDepthUsage: MTLTextureUsage = [.renderTarget, .shaderRead]
 
-    // 0 leaves shadowed pixels unchanged, 1 multiplies them by `color`.
+    /// 0 leaves shadowed pixels unchanged, 1 multiplies them by `color`.
     public var intensity: Float
-    // Linear RGB multiplied into shadowed pixels, like SCNLight.shadowColor; black darkens.
+    /// Linear RGB multiplied into shadowed pixels, like SCNLight.shadowColor; black darkens.
     public var color: SIMD3<Float>
-    // Soft-shadow filter half-size in shadow map texels, like SCNLight.shadowRadius: 1 filters 3x3, 0 is hard.
-    // Cost grows with (2 * softness + 1)^2 per light.
+    /// Soft-shadow filter half-size in shadow map texels, like SCNLight.shadowRadius: 1 filters 3x3, 0 is hard.
+    /// Cost grows with (2 * softness + 1)^2 per light.
     public var softness: Int
     public var resolution: Int
     public var depthBias: Float
     public var slopeScale: Float
-    // World-space push of directional-light casters away from the light, in shadow map texels. The hardware
-    // constant bias is tiny with depth32Float, so this is what stops acne on lit faces (#60).
+    /// World-space push of directional-light casters away from the light, in shadow map texels. The hardware
+    /// constant bias is tiny with depth32Float, so this is what stops acne on lit faces (#60).
     public var depthOffsetTexels: Float
-    // Lights that cast no shadow in the last frame because their views did not fit in the 8 slices.
+    /// Lights that cast no shadow in the last frame because their views did not fit in the 8 slices.
     public private(set) var droppedLightCount = 0
 
     private var shadowMap: SceneGraphShadowMap?
@@ -61,7 +61,7 @@ public final class SceneGraphShadows {
         self.slopeScale = slopeScale
     }
 
-    // What an in-shader renderer needs to sample the shadow map.
+    /// What an in-shader renderer needs to sample the shadow map.
     public struct Sampling {
         public internal(set) var shadowMap: SceneGraphShadowMap
         public internal(set) var intensity: Float

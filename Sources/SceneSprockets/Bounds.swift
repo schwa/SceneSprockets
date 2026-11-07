@@ -33,7 +33,7 @@ extension MetalMesh {
 }
 
 extension SceneGraph.Node {
-    // Bounds of this node's mesh in its own space; nil for non-mesh nodes.
+    /// Bounds of this node's mesh in its own space; nil for non-mesh nodes.
     public var meshBounds: BoundingBox3D? {
         if let cache = boundsCache.mesh, cache.revision == revision.structure {
             return cache.bounds
@@ -46,7 +46,7 @@ extension SceneGraph.Node {
         return bounds
     }
 
-    // Bounds of this node and its descendants in the parent's space (this node's transform applied). Nil if hidden.
+    /// Bounds of this node and its descendants in the parent's space (this node's transform applied). Nil if hidden.
     public var subtreeBounds: BoundingBox3D? {
         guard isShown else {
             return nil
@@ -67,12 +67,12 @@ extension SceneGraph.Node {
 }
 
 extension SceneGraph {
-    // World-space bounds of every mesh in the graph.
+    /// World-space bounds of every mesh in the graph.
     public var bounds: BoundingBox3D? {
         root.subtreeBounds
     }
 
-    // World-space bounds of `node` and its descendants. Nil if it or an ancestor is hidden.
+    /// World-space bounds of `node` and its descendants. Nil if it or an ancestor is hidden.
     public func worldBounds(of node: Node) -> BoundingBox3D? {
         var ancestor = node.parent
         while let current = ancestor {

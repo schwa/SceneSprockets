@@ -4,13 +4,13 @@ import SceneSprockets
 import simd
 import SwiftMesh
 
-// Simulates the scene graph's nodes that have a physicsBody, with Jolt. Each step adds bodies for new nodes,
-// removes bodies for removed or hidden nodes, rebuilds bodies whose description changed, moves kinematic bodies to
-// their nodes, advances the simulation and writes dynamic bodies' poses back to their nodes (world position and
-// orientation; scale is kept). Writing only changes the transform revision.
+/// Simulates the scene graph's nodes that have a physicsBody, with Jolt. Each step adds bodies for new nodes,
+/// removes bodies for removed or hidden nodes, rebuilds bodies whose description changed, moves kinematic bodies to
+/// their nodes, advances the simulation and writes dynamic bodies' poses back to their nodes (world position and
+/// orientation; scale is kept). Writing only changes the transform revision.
 public final class SceneGraphPhysicsWorld {
     public let sceneGraph: SceneGraph
-    // The Jolt world, for anything this type does not wrap (constraints, contacts, queries).
+    /// The Jolt world, for anything this type does not wrap (constraints, contacts, queries).
     public let world: PhysicsWorld
 
     struct Entry {
@@ -31,7 +31,7 @@ public final class SceneGraphPhysicsWorld {
         set { world.gravity = newValue }
     }
 
-    // The Jolt body of `node`, once a step or sync has created it.
+    /// The Jolt body of `node`, once a step or sync has created it.
     public func body(of node: SceneGraph.Node) -> BodyID? {
         entries[ObjectIdentifier(node)]?.body
     }
@@ -40,7 +40,7 @@ public final class SceneGraphPhysicsWorld {
         body(of: node).map { world.linearVelocity(of: $0) }
     }
 
-    // Syncs first, so it works on a node added since the last step.
+    /// Syncs first, so it works on a node added since the last step.
     public func setVelocity(_ velocity: SIMD3<Float>, of node: SceneGraph.Node) {
         sync()
         if let body = body(of: node) {
@@ -48,7 +48,7 @@ public final class SceneGraphPhysicsWorld {
         }
     }
 
-    // Radians per second about each world axis. Syncs first, like setVelocity.
+    /// Radians per second about each world axis. Syncs first, like setVelocity.
     public func setAngularVelocity(_ velocity: SIMD3<Float>, of node: SceneGraph.Node) {
         sync()
         if let body = body(of: node) {
@@ -81,7 +81,7 @@ public final class SceneGraphPhysicsWorld {
         }
     }
 
-    // Matches bodies to the graph's visible nodes with a physicsBody. `step` calls it.
+    /// Matches bodies to the graph's visible nodes with a physicsBody. `step` calls it.
     public func sync() {
         var seen: Set<ObjectIdentifier> = []
         sceneGraph.visit { node, _ in

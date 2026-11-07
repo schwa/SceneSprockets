@@ -22,8 +22,8 @@ public struct PBRSceneMaterial: SceneSprockets.Material, SamplesShadowsInShader 
         true
     }
 
-    // Blend mode, depth test and write, color write mask and fill mode. Stored on the shared PBRMaterial, so every
-    // PBRSceneMaterial wrapping it sees the change.
+    /// Blend mode, depth test and write, color write mask and fill mode. Stored on the shared PBRMaterial, so every
+    /// PBRSceneMaterial wrapping it sees the change.
     public var renderState: PBRRenderState {
         get { pbrMaterial.renderState }
         nonmutating set { pbrMaterial.renderState = newValue }
@@ -46,7 +46,7 @@ public struct PBRSceneMaterial: SceneSprockets.Material, SamplesShadowsInShader 
     }
 }
 
-// Maps scene graph nodes to PBR node indices: entries first (index N is entries[N]), then skin joints.
+/// Maps scene graph nodes to PBR node indices: entries first (index N is entries[N]), then skin joints.
 public struct PBRNodeLayout {
     public var entries: [SceneGraph.MeshEntry]
     public private(set) var jointNodes: [SceneGraph.Node] = []
@@ -85,7 +85,7 @@ public struct PBRNodeLayout {
         }
     }
 
-    // `cameraPosition` is subtracted from every matrix (in Double), for camera-relative rendering (#254).
+    /// `cameraPosition` is subtracted from every matrix (in Double), for camera-relative rendering (#254).
     public func pose(cameraPosition: SIMD3<Float> = .zero) -> PBRPose {
         PBRPose(
             worldMatrices: (entries.map(\.worldTransform) + jointNodes.map(\.worldTransform)).map { $0.cameraRelative(to: cameraPosition) },
@@ -151,7 +151,7 @@ public struct PBRSceneGraphModelBuilder {
     }
 }
 
-// Equal by identity: it holds GPU state, and SceneView only needs to know it is the same renderer (#235).
+/// Equal by identity: it holds GPU state, and SceneView only needs to know it is the same renderer (#235).
 public final class PBRMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
     public static func == (lhs: PBRMaterialRenderer, rhs: PBRMaterialRenderer) -> Bool {
         lhs === rhs
@@ -265,8 +265,8 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
 }
 
 extension PBRMaterialRenderer: SceneGraphPrePassRenderer {
-    // Draws the opaque scene behind transmissive surfaces, so glass refracts it: PBR with the same batches (lights,
-    // fades) as the main pass, then the other renderers' opaque batches. Their output must be linear (not tone-mapped).
+    /// Draws the opaque scene behind transmissive surfaces, so glass refracts it: PBR with the same batches (lights,
+    /// fades) as the main pass, then the other renderers' opaque batches. Their output must be linear (not tone-mapped).
     public func makePrePassElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, viewSize: (width: Int, height: Int), otherOpaqueContent: () throws -> AnyElement?) throws -> AnyElement? {
         frameTransmissionTarget = nil
         let hasTransmission = entries.contains { ($0.material as? PBRSceneMaterial)?.pbrMaterial.isTransmissive ?? false }

@@ -7,8 +7,8 @@ import SwiftECS
 import SwiftMesh
 
 extension SceneGraph {
-    // Observable, so SwiftUI views that read a node update when it changes. Caches and revisions are ignored: the
-    // renderer writes them every frame.
+    /// Observable, so SwiftUI views that read a node update when it changes. Caches and revisions are ignored: the
+    /// renderer writes them every frame.
     @Observable
     public final class Node: Identifiable {
         public enum Content {
@@ -23,7 +23,7 @@ extension SceneGraph {
             }
         }
 
-        // Also the id of this node's entity while it is in a graph.
+        /// Also the id of this node's entity while it is in a graph.
         public let id = EntityID()
 
         // Unowned, not weak: a weak reference gives the parent a side-table reference count, which slows every retain,
@@ -66,7 +66,7 @@ extension SceneGraph {
         @ObservationIgnored @exclusivity(unchecked) var accelerationStatesStorage = NodeFieldStorage<NodeAccelerationStatesComponent>()
         @ObservationIgnored @exclusivity(unchecked) var subdivisionLevelStorage = NodeFieldStorage<NodeSubdivisionLevelComponent>()
         @ObservationIgnored @exclusivity(unchecked) var subdivisionBaseStorage = NodeFieldStorage<NodeSubdivisionBaseComponent>()
-        // Drawn, hit and counted in bounds, if its ancestors are too: visible and active.
+        /// Drawn, hit and counted in bounds, if its ancestors are too: visible and active.
         public var isShown: Bool {
             isVisible && isActive
         }
@@ -81,7 +81,7 @@ extension SceneGraph {
             return result
         }
 
-        // Revision of this node's subtree; changes propagate to ancestors.
+        /// Revision of this node's subtree; changes propagate to ancestors.
         @ObservationIgnored public private(set) var revision = Revision(structure: Revision.next(), transform: Revision.next())
 
         struct BoundsCache {
@@ -102,8 +102,8 @@ extension SceneGraph {
             content = .mesh(result, materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
         }
 
-        // The model file this node's subtree was loaded from. A scene archive then stores the file instead of the
-        // subtree, so the subtree should not be edited (#157).
+        /// The model file this node's subtree was loaded from. A scene archive then stores the file instead of the
+        /// subtree, so the subtree should not be edited (#157).
         @ObservationIgnored public var modelSource: ModelSource?
         func bump(structure: Bool) {
             let value = Revision.next()
@@ -121,7 +121,7 @@ extension SceneGraph {
         // Keyed by the pivot it inverts, so a pivot written directly to the World is not missed.
         @ObservationIgnored private var pivotInverseCache: (pivot: float4x4, inverse: float4x4)?
 
-        // The local transform with the pivot applied; what world transforms and bounds are built from.
+        /// The local transform with the pivot applied; what world transforms and bounds are built from.
         public var composedTransform: float4x4 {
             composedTransform(transform: transform, pivot: pivot)
         }
@@ -140,13 +140,13 @@ extension SceneGraph {
             return transform * inverse
         }
 
-        // Setting this stores a matrix. Does not include `pivot`.
+        /// Setting this stores a matrix. Does not include `pivot`.
         public var transform: float4x4 {
             get { localTransform.matrix }
             set { localTransform = .matrix(newValue) }
         }
 
-        // Setting this stores TRS. Reading a matrix transform decomposes it.
+        /// Setting this stores TRS. Reading a matrix transform decomposes it.
         public var trs: Transform3D {
             get { localTransform.trs }
             set { localTransform = .trs(newValue) }
@@ -168,7 +168,7 @@ extension SceneGraph {
             parent?.addChild(self)
         }
 
-        // For SceneArchive; see SceneGraph+Archive.swift.
+        /// For SceneArchive; see SceneGraph+Archive.swift.
         public required convenience init(from decoder: Decoder) throws {
             self.init()
             try decodeArchive(from: decoder)
@@ -198,7 +198,7 @@ extension SceneGraph {
             return false
         }
 
-        // False if `child` is this node or one of its ancestors.
+        /// False if `child` is this node or one of its ancestors.
         public func canAddChild(_ child: Node) -> Bool {
             child !== self && !child.isAncestor(of: self)
         }
@@ -207,7 +207,7 @@ extension SceneGraph {
             insertChild(child, at: children.count)
         }
 
-        // Moves `child` from its current parent, if any.
+        /// Moves `child` from its current parent, if any.
         public func insertChild(_ child: Node, at index: Int) {
             precondition(canAddChild(child), "Adding this child would create a cycle")
             var index = index
@@ -288,8 +288,8 @@ extension SceneGraph {
             bump(structure: true)
         }
 
-        // Puts `newChild` where `child` was, like SCNNode.replaceChildNode(_:with:). Does nothing when `child` is not
-        // a child of this node.
+        /// Puts `newChild` where `child` was, like SCNNode.replaceChildNode(_:with:). Does nothing when `child` is not
+        /// a child of this node.
         public func replaceChild(_ child: Node, with newChild: Node) {
             guard child !== newChild, let index = children.firstIndex(where: { $0 === child }) else {
                 return
@@ -298,8 +298,8 @@ extension SceneGraph {
             insertChild(newChild, at: min(index, children.count))
         }
 
-        // A copy of this node and its subtree, like SCNNode.clone(). Meshes, materials, skins and constraints are
-        // shared, not copied; running actions are not copied. The copy has no parent.
+        /// A copy of this node and its subtree, like SCNNode.clone(). Meshes, materials, skins and constraints are
+        /// shared, not copied; running actions are not copied. The copy has no parent.
         public func clone() -> Node {
             let copy = Node(label: label, content: content)
             copy.localTransform = localTransform
@@ -332,8 +332,8 @@ extension SceneGraph {
 }
 
 extension SceneGraph.Node {
-    // The first node named `label` in depth-first order (this node excluded), like
-    // SCNNode.childNode(withName:recursively:).
+    /// The first node named `label` in depth-first order (this node excluded), like
+    /// SCNNode.childNode(withName:recursively:).
     public func childNode(withLabel label: String, recursively: Bool = true) -> SceneGraph.Node? {
         for child in children {
             if child.label == label {

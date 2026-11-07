@@ -18,30 +18,30 @@ public class SceneGraph {
     }
     @ObservationIgnored let store: NodeStore
 
-    // Holds every node under `root` as an entity with Node*Component values (#250, #269). An ECS app can add its own
-    // components to these entities and query or write the node components directly:
-    // - Writes update the nodes, their revisions and SwiftUI observation, like the Node API.
-    // - They are not animated by Transaction.animate (#272).
-    // - ChildOf and SiblingIndexComponent edits move nodes in the tree; setParent(nil) removes the node from the
-    //   graph, like removeFromParent(). Destroying an entity removes its node from the tree (#271, #273).
-    // - Entities without a Node, and ChildOf edges to them, are ignored.
-    // Several graphs can share one World; SceneGraphMembershipComponent tells their entities apart.
+    /// Holds every node under `root` as an entity with Node*Component values (#250, #269). An ECS app can add its own
+    /// components to these entities and query or write the node components directly:
+    /// - Writes update the nodes, their revisions and SwiftUI observation, like the Node API.
+    /// - They are not animated by Transaction.animate (#272).
+    /// - ChildOf and SiblingIndexComponent edits move nodes in the tree; setParent(nil) removes the node from the
+    ///   graph, like removeFromParent(). Destroying an entity removes its node from the tree (#271, #273).
+    /// - Entities without a Node, and ChildOf edges to them, are ignored.
+    /// Several graphs can share one World; SceneGraphMembershipComponent tells their entities apart.
     public var world: World {
         store.world
     }
     @ObservationIgnored private var rootRevision = Revision.next()
-    // Background and image-based lighting; read every frame, so changing it does not change `revision`.
+    /// Background and image-based lighting; read every frame, so changing it does not change `revision`.
     public var environment = Environment()
-    // Nil: no fog. Read every frame, so changing it does not change `revision`.
+    /// Nil: no fog. Read every frame, so changing it does not change `revision`.
     public var fog: Fog?
-    // Nil: no post-processing. Read every frame, like `fog`.
+    /// Nil: no post-processing. Read every frame, like `fog`.
     public var postProcessing: PostProcessing?
 
     public convenience init(root: Node) {
         self.init(root: root, world: World())
     }
 
-    // Uses an app-owned World, held strongly, instead of creating one.
+    /// Uses an app-owned World, held strongly, instead of creating one.
     public init(root: Node, world: World) {
         store = NodeStore(world: world, rootID: root.id)
         self.root = root
@@ -53,13 +53,13 @@ public class SceneGraph {
         root.detach(from: store)
     }
 
-    // For SceneArchive; see SceneGraph+Archive.swift.
+    /// For SceneArchive; see SceneGraph+Archive.swift.
     public required convenience init(from decoder: Decoder) throws {
         self.init(root: Node())
         try decodeArchive(from: decoder)
     }
 
-    // Changes whenever anything in the graph changes. Compare to skip work when nothing (or only transforms) changed.
+    /// Changes whenever anything in the graph changes. Compare to skip work when nothing (or only transforms) changed.
     public var revision: Revision {
         Revision(structure: max(root.revision.structure, rootRevision), transform: root.revision.transform)
     }
@@ -100,7 +100,7 @@ public class SceneGraph {
         case stop
     }
 
-    // Depth-first traversal that the visitor can prune or end early, like enumerateHierarchy's stop flag.
+    /// Depth-first traversal that the visitor can prune or end early, like enumerateHierarchy's stop flag.
     public func traverse(worldTransform initialTransform: float4x4 = .identity, includeHidden: Bool = false, _ visitor: (Node, float4x4) throws -> VisitResult) rethrows {
         _ = try Self.traverse(node: root, parentTransform: initialTransform, includeHidden: includeHidden, visitor)
     }
@@ -137,8 +137,8 @@ public class SceneGraph {
 
     // MARK: - Queries
 
-    // Copy-on-write: renderers copy entries through several stages every frame, so the fields live in one shared
-    // object and a copy is a single retain (#133).
+    /// Copy-on-write: renderers copy entries through several stages every frame, so the fields live in one shared
+    /// object and a copy is a single retain (#133).
     public struct MeshEntry {
         private final class Storage {
             var node: Node
@@ -214,13 +214,13 @@ public class SceneGraph {
             set { uniqueStorage().receivesShadow = newValue }
         }
 
-        // The node's opacity times its ancestors'.
+        /// The node's opacity times its ancestors'.
         public var opacity: Float {
             get { storage.opacity }
             set { uniqueStorage().opacity = newValue }
         }
 
-        // Blends: the material is transparent, or it applies node opacity and that is below 1.
+        /// Blends: the material is transparent, or it applies node opacity and that is below 1.
         public var isTransparent: Bool {
             material.isTransparent || (material.appliesNodeOpacity && opacity < 1)
         }

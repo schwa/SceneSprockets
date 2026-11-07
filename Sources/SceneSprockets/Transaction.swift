@@ -3,12 +3,12 @@ import simd
 import Synchronization
 
 extension SceneGraph {
-    // Implicit animation, like SCNTransaction: transform and morph weight changes made in `body` animate from their
-    // old values over `duration` instead of jumping. Animations run as node actions (keys "implicit.transform" and
-    // "implicit.morphWeights"), so they need `SceneGraph.advanceActions(by:)` each frame (SceneView does this).
-    // A new implicit animation of the same property replaces the running one, starting from the current value.
-    // Only changes made through Node animate; components written directly to the graph's World apply at once
-    // (#272).
+    /// Implicit animation, like SCNTransaction: transform and morph weight changes made in `body` animate from their
+    /// old values over `duration` instead of jumping. Animations run as node actions (keys "implicit.transform" and
+    /// "implicit.morphWeights"), so they need `SceneGraph.advanceActions(by:)` each frame (SceneView does this).
+    /// A new implicit animation of the same property replaces the running one, starting from the current value.
+    /// Only changes made through Node animate; components written directly to the graph's World apply at once
+    /// (#272).
     public enum Transaction {
         @TaskLocal static var current: Recorder?
 
@@ -36,7 +36,7 @@ extension SceneGraph {
             recorder.start(duration: duration, timingMode: timingMode, completion: completion)
         }
 
-        // Changes made in `body` apply at once, even inside an animating transaction.
+        /// Changes made in `body` apply at once, even inside an animating transaction.
         public static func withoutAnimation(_ body: () throws -> Void) rethrows {
             try $current.withValue(nil) {
                 try body()

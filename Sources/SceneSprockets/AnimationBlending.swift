@@ -1,7 +1,7 @@
 import simd
 
 extension SceneGraph {
-    // One clip's contribution to a mix. `clip` indexes AnimationMixer.clips.
+    /// One clip's contribution to a mix. `clip` indexes AnimationMixer.clips.
     public struct AnimationLayer: Sendable, Equatable {
         public enum Mode: Sendable, Equatable {
             // Blended with the other override layers by normalized weight.
@@ -23,8 +23,8 @@ extension SceneGraph {
         }
     }
 
-    // Blends layers of clips into the nodes they target. Rest values are captured from the nodes when the mixer is
-    // created (or by captureRest()); a node a layer does not animate counts as its rest value for that layer.
+    /// Blends layers of clips into the nodes they target. Rest values are captured from the nodes when the mixer is
+    /// created (or by captureRest()); a node a layer does not animate counts as its rest value for that layer.
     public final class AnimationMixer {
         public let clips: [AnimationClip]
 
@@ -41,7 +41,7 @@ extension SceneGraph {
             captureRest()
         }
 
-        // Records every targeted node's current translation, rotation, scale and morph weights as its rest value.
+        /// Records every targeted node's current translation, rotation, scale and morph weights as its rest value.
         public func captureRest() {
             rest = [:]
             for clip in clips {
@@ -53,7 +53,7 @@ extension SceneGraph {
             }
         }
 
-        // Sets every targeted node from `layers`. With `rootMotionNode`, that node's x and z translation stay at rest.
+        /// Sets every targeted node from `layers`. With `rootMotionNode`, that node's x and z translation stay at rest.
         public func apply(_ layers: [AnimationLayer], rootMotionNode: Node? = nil) {
             let active = layers.filter { clips.indices.contains($0.clip) && $0.weight > 0 }
             var values = rest
@@ -79,7 +79,7 @@ extension SceneGraph {
             }
         }
 
-        // The translation the override layers give `node`, before root motion is removed.
+        /// The translation the override layers give `node`, before root motion is removed.
         public func rootTranslation(layers: [AnimationLayer], node: Node) -> SIMD3<Float> {
             let key = Key(node: ObjectIdentifier(node), path: .translation)
             let overrides = layers.filter { clips.indices.contains($0.clip) && $0.weight > 0 && $0.mode == .override }
@@ -191,8 +191,8 @@ extension SceneGraph {
         }
     }
 
-    // Plays clips by index: cross-fades, per-clip speed and looping, a one-parameter blend with phase sync, and
-    // additive clips. A value type: call advance(by:) each frame, then mixer.apply(controller.layers).
+    /// Plays clips by index: cross-fades, per-clip speed and looping, a one-parameter blend with phase sync, and
+    /// additive clips. A value type: call advance(by:) each frame, then mixer.apply(controller.layers).
     public struct AnimationController: Sendable {
         public struct Track: Sendable, Equatable {
             public var clip: Int
@@ -208,7 +208,7 @@ extension SceneGraph {
         public private(set) var tracks: [Track] = []
         public private(set) var syncedPhase: Float?
         public private(set) var additiveTracks: [Track] = []
-        // How far the root node moved (x, z) during the last advance(by:mixer:rootMotionNode:).
+        /// How far the root node moved (x, z) during the last advance(by:mixer:rootMotionNode:).
         public private(set) var rootMotion: SIMD3<Float> = .zero
 
         public init(durations: [Float]) {
@@ -219,7 +219,7 @@ extension SceneGraph {
             self.init(durations: clips.map(\.duration))
         }
 
-        // Fades `clip` in and every other track out over `fadeDuration` (0 cuts).
+        /// Fades `clip` in and every other track out over `fadeDuration` (0 cuts).
         public mutating func play(_ clip: Int, fadeDuration: Float = 0.25, speed: Float = 1, loops: Bool = true, restarts: Bool = false) {
             guard durations.indices.contains(clip) else {
                 return
@@ -248,8 +248,8 @@ extension SceneGraph {
             }
         }
 
-        // Plays `clips` together, weighted by `parameter` along them. With `syncsPhase`, all clips stay at the same
-        // fraction of their cycle, and the cycle lasts the weighted mix of their durations.
+        /// Plays `clips` together, weighted by `parameter` along them. With `syncsPhase`, all clips stay at the same
+        /// fraction of their cycle, and the cycle lasts the weighted mix of their durations.
         public mutating func blend(_ clips: [Int], parameter: Float, speed: Float = 1, syncsPhase: Bool = true) {
             let clips = clips.filter { durations.indices.contains($0) }
             let weights = Self.blendWeights(parameter: parameter, count: clips.count)
@@ -273,7 +273,7 @@ extension SceneGraph {
             }
         }
 
-        // Weights for `count` clips evenly spaced along `parameter` (clamped to 0...1); they sum to 1.
+        /// Weights for `count` clips evenly spaced along `parameter` (clamped to 0...1); they sum to 1.
         public static func blendWeights(parameter: Float, count: Int) -> [Float] {
             guard count > 1 else {
                 return count == 1 ? [1] : []
@@ -287,7 +287,7 @@ extension SceneGraph {
             return weights
         }
 
-        // Adds `clip` on top of the playing clips at `weight` (0 removes it).
+        /// Adds `clip` on top of the playing clips at `weight` (0 removes it).
         public mutating func setAdditive(_ clip: Int, weight: Float, speed: Float = 1) {
             guard durations.indices.contains(clip) else {
                 return
@@ -302,7 +302,7 @@ extension SceneGraph {
             }
         }
 
-        // Advances like advance(by:), and measures how far the clips moved `rootMotionNode` horizontally.
+        /// Advances like advance(by:), and measures how far the clips moved `rootMotionNode` horizontally.
         public mutating func advance(by seconds: Float, mixer: AnimationMixer, rootMotionNode node: Node) {
             let before = tracks
             advance(by: seconds)
@@ -330,7 +330,7 @@ extension SceneGraph {
             rootMotion.y = 0
         }
 
-        // Moves clip times and fades forward; fully faded-out tracks are dropped.
+        /// Moves clip times and fades forward; fully faded-out tracks are dropped.
         public mutating func advance(by seconds: Float) {
             for index in additiveTracks.indices {
                 additiveTracks[index].time = wrapped(additiveTracks[index].time + seconds * additiveTracks[index].speed, duration: durations[additiveTracks[index].clip])
@@ -357,7 +357,7 @@ extension SceneGraph {
             tracks.removeAll { $0.weight <= 0 && $0.targetWeight <= 0 }
         }
 
-        // Override weights normalized to sum to 1, then the additive tracks.
+        /// Override weights normalized to sum to 1, then the additive tracks.
         public var layers: [AnimationLayer] {
             let additive = additiveTracks.map { AnimationLayer(clip: $0.clip, time: $0.time, weight: $0.weight, mode: .additive) }
             let total = tracks.reduce(0) { $0 + $1.weight }
@@ -383,7 +383,7 @@ extension SceneGraph {
         }
     }
 
-    // Chooses which clip plays from named states and transitions, driving an AnimationController.
+    /// Chooses which clip plays from named states and transitions, driving an AnimationController.
     public struct AnimationStateMachine {
         public struct State: Sendable {
             public var name: String
@@ -401,13 +401,13 @@ extension SceneGraph {
 
         public struct Context: Sendable {
             public var parameters: [String: Float]
-            // How far through its clip the current state is, 0...1 (above 1 once a non-looping clip has finished).
+            /// How far through its clip the current state is, 0...1 (above 1 once a non-looping clip has finished).
             public var normalizedTime: Float
             public var stateTime: Float
         }
 
         public struct Transition {
-            // Nil leaves any state.
+            /// Nil leaves any state.
             public var from: String?
             public var to: String
             public var fadeDuration: Float
@@ -428,7 +428,7 @@ extension SceneGraph {
         public private(set) var stateTime: Float = 0
         public var controller: AnimationController
 
-        // Transitions are checked in order; the first whose condition holds is taken.
+        /// Transitions are checked in order; the first whose condition holds is taken.
         public init(controller: AnimationController, states: [State], transitions: [Transition], initial: String) {
             precondition(states.contains { $0.name == initial }, "The initial state must be one of the states")
             self.states = Dictionary(states.map { ($0.name, $0) }) { first, _ in first }
@@ -452,7 +452,7 @@ extension SceneGraph {
             return Context(parameters: parameters, normalizedTime: normalized, stateTime: stateTime)
         }
 
-        // Takes at most one transition, then advances the controller.
+        /// Takes at most one transition, then advances the controller.
         public mutating func advance(by seconds: Float) {
             let context = context
             if let transition = transitions.first(where: { ($0.from == nil || $0.from == currentState) && $0.to != currentState && states[$0.to] != nil && $0.condition(context) }) {
