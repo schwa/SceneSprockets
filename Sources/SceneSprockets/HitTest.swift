@@ -105,7 +105,8 @@ extension SceneGraph {
                 break
             }
             let deformed = entry.deformed(revision: revision)
-            let mesh = deformed?.mesh ?? entry.mesh
+            // Private-storage buffers are read through shared copies (#303).
+            let mesh = (deformed?.mesh ?? entry.mesh).cpuReadable()
             let modelMatrix = deformed?.modelMatrix ?? entry.worldTransform
             let submesh = mesh.submeshes[entry.submeshIndex]
             guard submesh.primitiveType == .triangle || submesh.primitiveType == .triangleStrip else {
@@ -186,7 +187,7 @@ extension MetalMesh {
             return nil
         }
         let stride = vertexDescriptor.layouts[attribute.bufferIndex]?.stride ?? 8
-        let base = buffer.contents().advanced(by: (vertexBufferOffsets[attribute.bufferIndex] ?? 0) + attribute.offset)
+        let base = buffer.cpuReadable.contents().advanced(by: (vertexBufferOffsets[attribute.bufferIndex] ?? 0) + attribute.offset)
         return (0..<vertexCount).map { index in
             let pointer = base.advanced(by: index * stride)
             return SIMD2(pointer.loadUnaligned(fromByteOffset: 0, as: Float.self), pointer.loadUnaligned(fromByteOffset: 4, as: Float.self))
@@ -208,7 +209,7 @@ extension MetalMesh {
             return nil
         }
         let stride = vertexDescriptor.layouts[attribute.bufferIndex]?.stride ?? 12
-        let base = buffer.contents().advanced(by: (vertexBufferOffsets[attribute.bufferIndex] ?? 0) + attribute.offset)
+        let base = buffer.cpuReadable.contents().advanced(by: (vertexBufferOffsets[attribute.bufferIndex] ?? 0) + attribute.offset)
         return (0..<vertexCount).map { index in
             let pointer = base.advanced(by: index * stride)
             return SIMD3(pointer.loadUnaligned(fromByteOffset: 0, as: Float.self), pointer.loadUnaligned(fromByteOffset: 4, as: Float.self), pointer.loadUnaligned(fromByteOffset: 8, as: Float.self))

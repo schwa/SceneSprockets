@@ -6674,15 +6674,18 @@ ModelIOSceneGraph does not import skins or blend shapes, and imports only perspe
 ## 303: Hit testing, bounds and PBR conversion need vertex buffers in shared storage
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:scenegraph, effort:m
 created: 2026-11-07T15:41:13Z
-updated: 2026-11-07T15:41:14Z
+updated: 2026-11-07T16:22:10Z
+closed: 2026-11-07T16:22:10Z
 +++
 
 Positions for hit tests, bounds and PBR model conversion are read from mesh vertex buffers on the CPU. Meshes whose vertex buffers use private storage cannot be hit-tested, have no bounds, and cannot be converted. Listed under Limitations in the README.
+
+- `2026-11-07T16:22:10Z`: Fixed: new MTLBuffer.cpuReadable and MetalMesh.cpuReadable() copy private-storage vertex and index buffers into shared buffers with a GPU blit, cached per buffer for as long as the original lives. Bounds, hit testing (positions, texcoords, indices), CPU deformation, flattening, subdivision and PBR conversion read through them. Note: on Apple silicon (unified memory) contents() on a private buffer happened to return readable memory, so the new test PrivateStorageTests passed before the fix too; the change follows Metal's contract (no CPU access to private storage), which matters on discrete GPUs. The test stays as a regression check.
 
 ---
 

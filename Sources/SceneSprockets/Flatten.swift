@@ -31,20 +31,21 @@ extension SceneGraph.Node {
         guard let first = parts.first else {
             return flat
         }
-        let layout = first.mesh.vertexAttributeData().map { ($0.semantic, $0.format) }
+        let layout = first.mesh.cpuReadable().vertexAttributeData().map { ($0.semantic, $0.format) }
         var attributes = layout.map { MergedAttribute(semantic: $0.0, format: $0.1) }
         var submeshes: [MetalMesh.SubmeshIndices] = []
         var materials: [any Material] = []
         var vertexCount = 0
         for part in parts {
-            let data = part.mesh.vertexAttributeData()
+            let readable = part.mesh.cpuReadable()
+            let data = readable.vertexAttributeData()
             guard data.map(\.semantic) == layout.map(\.0), data.map(\.format) == layout.map(\.1) else {
                 return nil
             }
             for (index, attribute) in data.enumerated() {
                 attributes[index].append(attribute.bytes, transform: part.transform)
             }
-            for (index, submesh) in part.mesh.submeshes.enumerated() {
+            for (index, submesh) in readable.submeshes.enumerated() {
                 submeshes.append(MetalMesh.SubmeshIndices(label: submesh.label, indices: submesh.indices.map { $0 + UInt32(vertexCount) }, primitiveType: submesh.primitiveType))
                 if let material = index < part.materials.count ? part.materials[index] : part.materials.last {
                     materials.append(material)

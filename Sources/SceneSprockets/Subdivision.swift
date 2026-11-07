@@ -53,6 +53,7 @@ private struct SubdivisionMesh {
     var submeshes: [(label: String?, indices: [UInt32])]
 
     init?(_ mesh: MetalMesh) {
+        let mesh = mesh.cpuReadable()
         attributes = mesh.vertexAttributeData().map { data in
             let components = switch data.format {
             case .float: 1

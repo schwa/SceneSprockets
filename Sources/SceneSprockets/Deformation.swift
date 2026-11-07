@@ -55,7 +55,7 @@ extension MetalMesh {
     func deformed(morphTargets: [SceneGraph.MorphTarget], weights: [Float], jointMatrices: [simd_float4x4]?, skinVertices: [SceneGraph.SkinVertex]) -> MetalMesh? {
         var copies: [Int: MTLBuffer] = [:]
         for (index, buffer) in vertexBuffers {
-            guard let copy = buffer.device.makeBuffer(bytes: buffer.contents(), length: buffer.length, options: .storageModeShared) else {
+            guard let copy = buffer.device.makeBuffer(bytes: buffer.cpuReadable.contents(), length: buffer.length, options: .storageModeShared) else {
                 return nil
             }
             copy.label = buffer.label.map { "\($0) (deformed)" }

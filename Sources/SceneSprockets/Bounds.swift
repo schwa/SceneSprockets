@@ -5,7 +5,8 @@ import simd
 import SwiftMesh
 
 extension MetalMesh {
-    // Reads positions from the vertex buffers (shared storage). Nil if there is no float3 position attribute.
+    // Reads positions from the vertex buffers, through a shared copy for private storage (#303). Nil if there is no
+    // float3 position attribute.
     func positionBounds() -> BoundingBox3D? {
         guard let attribute = vertexDescriptor.attributes.first(where: { $0.semantic == .position }),
               attribute.format == .float3,
@@ -15,7 +16,7 @@ extension MetalMesh {
             return nil
         }
         let stride = vertexDescriptor.layouts[attribute.bufferIndex]?.stride ?? 12
-        let base = buffer.contents().advanced(by: attribute.offset)
+        let base = buffer.cpuReadable.contents().advanced(by: attribute.offset)
         var lower = SIMD3<Float>(repeating: .infinity)
         var upper = SIMD3<Float>(repeating: -.infinity)
         for index in 0..<vertexCount {

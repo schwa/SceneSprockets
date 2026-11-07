@@ -162,7 +162,7 @@ public struct PBRSceneGraphModelBuilder {
         var primitiveIDs: [Int] = []
         for entry in entries {
             let key = ObjectIdentifier(entry.mesh.vertexBuffer)
-            let attributes = attributeCache[key] ?? entry.mesh.vertexAttributeData()
+            let attributes = attributeCache[key] ?? entry.mesh.cpuReadable().vertexAttributeData()
             attributeCache[key] = attributes
             let input = pbrPrimitiveInput(entry: entry, attributes: attributes, skinned: layout.skinIndex(of: entry) != nil)
             primitiveIDs.append(try geometry.add(attributes: input.attributes, indices: input.indices, primitiveType: input.primitiveType, morphTargets: input.morphTargets, label: entry.mesh.label))
@@ -446,7 +446,8 @@ struct PBRPrimitiveInput {
 }
 
 func pbrPrimitiveInput(entry: SceneGraph.MeshEntry, attributes: [MetalMesh.VertexAttributeData], skinned: Bool) -> PBRPrimitiveInput {
-    let mesh = entry.mesh
+    // Private-storage buffers are read through shared copies (#303).
+    let mesh = entry.mesh.cpuReadable()
     let submesh = mesh.submeshes[entry.submeshIndex]
     var attributes = attributes
     if skinned {
