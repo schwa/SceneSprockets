@@ -1230,6 +1230,7 @@ Setup: one directional light (Sun, eye [2.5, 7, 3] looking at the origin, intens
 Not reproducible offscreen: DemoSnapshot renders one frame at a time and waits for the GPU, and those frames are stable. That fits the frame-timing theory above (frames in flight sharing the view depth texture). #60 acne is also visible on the tray floor at this angle, but acne should not flicker on a still frame unless the inputs change.
 
 - `2026-11-07T15:50:34Z`: Autonomous run: investigated, no fix. Findings: (1) The Dice sighting (2026-10-21) is after Blinn-Phong (#71, 10-15) and PBR (#102, 10-16) started sampling shadows in their shaders, and the dice scene is Blinn-Phong plus PBR, so the flicker is not only in the screen-space ShadowMaskPass that the original theory centers on. (2) Shadow map slots are picked by submission index and the caster pass ends with barrierAfterPass(after: .fragment, ...); 6 slots made no difference, so slot reuse looks ruled out. Remaining suspects on the in-shader path: per-frame data the shaders read (light view-projection matrices, shadow slices) living in a buffer that the CPU rewrites while an earlier frame is still in flight. Punting: it only reproduces live, by timing, and I cannot verify a guess offscreen. Unblocker: a GPU trace of a flashing frame in the settled Dice demo, or permission to add per-frame logging of the shadow uniforms' buffer identity and contents and run the app to compare.
+- `2026-11-07T16:59:58Z`: Question 1: Can you capture a GPU trace of a flashing frame in the settled Dice demo, or should I add per-frame logging of the shadow uniforms and compare?
 
 ---
 
@@ -2423,6 +2424,8 @@ MetalSprocketsAddOns has a Slug text renderer (Sources/MetalSprocketsAddOns/Slug
 
 Want: 2D text in the scene graph using Slug from MetalSprocketsAddOns.
 
+- `2026-11-07T17:19:23Z`: Possible starting point: the Slug text examples in MetalSprocketsExamples (Slug Debug, Text Panel, Spinning Sphere, Matrix Rain), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/Slug*Demo/.
+
 ---
 
 ## 120: Keynote Materials slide: horizontal banding on spheres while animating
@@ -2804,6 +2807,7 @@ Problems:
 Expected: ambient occlusion reduces only ambient and indirect lighting, and is configured as a lighting setting, separate from post-processing color adjustments.
 
 - `2026-11-07T15:50:56Z`: Autonomous run: scoped, not changed. Doing this needs (1) the AO texture computed before the material passes (a depth prepass, or reordering so AO runs between a depth-only pass and shading), (2) Blinn-Phong to multiply only its ambient term by it, (3) PBR to multiply only its IBL/indirect term by it; MetalSprocketsPBR has no screen-space occlusion input today, so that is a change in MetalSprocketsPBR, and (4) a public API move of PostProcessing.ambientOcclusion to a lighting setting (for example SceneGraph.ambientOcclusion or Environment.ambientOcclusion). Punting: it is a cross-package design change, and the API placement is your call. Questions: where should the setting live, and is a depth prepass for AO acceptable (it costs a second geometry pass when AO is on)?
+- `2026-11-07T16:59:55Z`: Question 1 (design): Where should the ambient occlusion setting live (for example SceneGraph.ambientOcclusion or Environment.ambientOcclusion), and is a depth prepass acceptable when AO is on?
 
 ---
 
@@ -4046,6 +4050,8 @@ To investigate:
 - Does it still look wrong with an outdoor HDR?
 
 - `2026-11-04T21:00:28Z`: Checked: GridShader in MetalSprocketsAddOns 0.2.x has no distance-fade option, so the likely fix is a change in that package (new fade parameters, tag, bump here), not in SceneSprockets. Punting: the bug is perceptual and needs a visual judgement in the running Composer (Studio vs an outdoor HDR, with and without a fade), which I cannot make from tests. Unblocker: OK to add a distance fade to GridShader in MetalSprocketsAddOns and use it in the Composer grid? And, if possible, check once with an outdoor HDR whether it still looks wrong.
+- `2026-11-07T16:54:09Z`: Autonomous run: still waiting on the 2026-11-04 question (OK to add a distance fade to GridShader in MetalSprocketsAddOns?). Not changed.
+- `2026-11-07T16:59:57Z`: Question 1 (decision): OK to add a distance fade to GridShader in MetalSprocketsAddOns and use it for the Composer grid?
 
 ---
 
@@ -5359,6 +5365,7 @@ To finish: push MetalSprocketsPBR, update the MetalSprocketsPBR pin in the 4 Pac
 
 - `2026-11-04T20:48:50Z`: Checked: the MetalSprocketsPBR fix (168a00f6, queue barrier before the PBR Transmission Scene pass) is pushed and included in MetalSprocketsPBR 0.0.3, which SceneSprockets already resolves (Package.resolved pins 693714e4, tag 0.0.3). No code change left here. Not closing: the bug is timing-dependent and needs a manual repro (Debug build, inspector visible, orbit the BMW scene). Unblocker: confirm the pink frames are gone, then close.
 - `2026-11-07T15:49:55Z`: Autonomous run: re-checked. The resolved MetalSprocketsPBR checkout has QueueBarrier(after: [.fragment, .blit], before: .fragment) at the start of the PBR Transmission Scene pass (PBRTransmissionPass.swift:147), so the fix is in the build. Punting: the bug is timing-dependent and only reproduces by hand (Debug build, Composer inspector visible, orbiting the BMW glTF scene); no automated test can show it. Unblocker: run that repro once; if no pink frames appear, close.
+- `2026-11-07T16:59:58Z`: Question 1 (verify): Debug build, Composer inspector visible, orbit the BMW glTF scene: are the pink frames gone with MetalSprocketsPBR 0.0.3?
 
 ---
 
@@ -5473,6 +5480,8 @@ Comparing two scenes side by side (TreeAppreciator shows two trees with a shared
 SceneView has no way to draw several scene graphs into split viewports of one RenderView. SceneGraphElement inside a custom RenderView is possible, but then SceneView features (camera control, onTapAt with SceneViewport, actions, constraints, particles advance) must be rebuilt by hand.
 
 - `2026-11-04T20:59:53Z`: Looked at SceneView (one RenderView, one SceneGraphElement, one camera/manipulator, onTapAt with one SceneViewport). Punting: this needs API design decisions the code cannot answer. (1) Shape of the API: a SceneView taking [(sceneGraph, camera, rect)] viewports, a separate MultiSceneView, or making SceneGraphElement + a reusable 'scene runtime' (actions/constraints/particles advance, tap handling) public so apps compose their own RenderView. (2) Camera control: shared camera across viewports (TreeAppreciator's case) vs per-viewport manipulators, and which viewport gets gestures. (3) Shared resources: one shadow map per viewport or reused across them; particle runtimes per scene graph. (4) onTapAt must report which viewport was hit. Unblocker: pick (1) and (2); the TreeAppreciator side-by-side case with one shared camera is a good first target.
+- `2026-11-07T16:53:24Z`: Autonomous run: still waiting on the 2026-11-04 API decisions (API shape and camera control). Not changed.
+- `2026-11-07T16:59:57Z`: Question 1 (design): Which API shape for several scene graphs or viewports: a SceneView taking viewports, a separate MultiSceneView, or public building blocks (SceneGraphElement plus a reusable scene runtime) for custom RenderViews? And is camera control shared across viewports or per viewport?
 
 ---
 
@@ -5593,9 +5602,9 @@ Provide camera-relative transforms to materials: subtract the camera position fr
 status: open
 priority: low
 kind: enhancement
-labels: area:scenegraph, effort:l
+labels: area:scenegraph, effort:l, large-worlds
 created: 2026-11-04T20:42:33Z
-updated: 2026-11-04T20:45:00Z
+updated: 2026-11-07T16:59:36Z
 +++
 
 Times, durations and delta times are plain `Float` across the public API: `Action` durations, `advanceActions(by:)`, `applyConstraints(deltaTime:)`, `Transaction.animate(duration:)`, particle `time` and `advanceParticles(by:)`, animation clip time and blending, `SceneView`, and physics stepping (~70 sites in Action, Animation, AnimationBlending, Particles, Constraint, Transaction, SceneView, SceneGraphPhysicsWorld, ModelIOSceneGraph).
@@ -5608,6 +5617,7 @@ Problems:
 - `2026-11-04T20:54:25Z`: Looked at the ~70 sites. Punting: this is a public API break across actions, animation, particles, constraints, transactions, SceneView and physics, and the target type is a design decision the code cannot answer. Options seen: (a) TimeInterval/Double everywhere (simple, matches CADisplayLink and AVFoundation); (b) Swift Duration for durations plus Double for accumulated time (typed, but awkward arithmetic and no Float conversion in shaders); (c) Double only for accumulated/absolute time (particle time, animation playhead), keep Float for small per-frame deltas and durations. Also: whether to keep Float overloads as deprecated shims. Unblocker: pick a/b/c and say whether to keep deprecated Float overloads.
 - `2026-11-04T21:10:48Z`: Part of #255 (very large worlds).
 - `2026-11-07T16:22:23Z`: Autonomous run: still waiting on the 2026-11-04 decision (time type a/b/c, and whether to keep deprecated Float overloads). Not changed.
+- `2026-11-07T16:59:57Z`: Question 1 (decision): Which time type: (a) TimeInterval/Double everywhere, (b) Duration for durations plus Double for accumulated time, or (c) Double only for accumulated/absolute time? And keep the Float overloads as deprecated shims?
 
 ---
 
@@ -5617,9 +5627,9 @@ Problems:
 status: closed
 priority: medium
 kind: bug
-labels: area:renderer, effort:m
+labels: area:renderer, effort:m, large-worlds
 created: 2026-11-04T21:06:11Z
-updated: 2026-11-04T21:15:18Z
+updated: 2026-11-07T16:59:36Z
 closed: 2026-11-04T21:15:18Z
 +++
 
@@ -5643,9 +5653,9 @@ Expected: Blinn-Phong surfaces near a camera far from the origin shade like the 
 status: closed
 priority: medium
 kind: bug
-labels: area:renderer, effort:m
+labels: area:renderer, effort:m, large-worlds
 created: 2026-11-04T21:06:11Z
-updated: 2026-11-04T21:20:43Z
+updated: 2026-11-07T16:59:36Z
 closed: 2026-11-04T21:20:43Z
 +++
 
@@ -5665,10 +5675,10 @@ Expected: PBR surfaces near a camera far from the origin render like the same sc
 status: open
 priority: low
 kind: feature
-labels: area:scenegraph, effort:xl, umbrella
+labels: area:scenegraph, effort:xl, umbrella, large-worlds
 depends: 256, 257, 258, 259, 260, 261, 253, 254, 252, 262
 created: 2026-11-04T21:06:11Z
-updated: 2026-11-04T21:19:04Z
+updated: 2026-11-07T16:59:36Z
 +++
 
 Node transforms and accumulated world transforms are simd_float4x4. Float32 resolves about 4-8 mm at 100 km and about 1 km at 1e10 m, so worlds at solar-system scale (Kerbal Space Program style; see #251 comments) cannot be represented, even though the renderers can now draw camera-relative (#251).
@@ -5692,6 +5702,8 @@ No orbit work planned.
 Doable now without a huge refactor: #253, #254, #257, #258. These work with today's Float world transforms (camera-relative rendering helps SidraLine-scale scenes immediately) and do not depend on #256.
 Blocked or big: #256 (core refactor); #259 and #260 build on #256 and #258; #261 is a renderer architecture change; #252 waits on a decision.
 
+- `2026-11-07T16:59:58Z`: Question 1 (design): How should origin shifts work across node transforms, physics and rendering (floating origin, Double node transforms, or a moving reference frame)? #256, #259, #260 and #261 depend on it.
+
 ---
 
 ## 256: Node and world transforms are Float
@@ -5700,9 +5712,9 @@ Blocked or big: #256 (core refactor); #259 and #260 build on #256 and #258; #261
 status: open
 priority: low
 kind: feature
-labels: area:scenegraph, effort:xl, subtask
+labels: area:scenegraph, effort:xl, subtask, large-worlds
 created: 2026-11-04T21:10:37Z
-updated: 2026-11-04T21:10:47Z
+updated: 2026-11-07T16:59:37Z
 +++
 
 Node local transforms and accumulated world transforms (SceneGraph.visit/traverse, MeshEntry.worldTransform, bounds, hit testing) are simd_float4x4. Float32 resolves about 4-8 mm at 100 km and about 1 km at 1e10 m, so positions in very large worlds cannot be stored.
@@ -5717,9 +5729,9 @@ Part of #255.
 status: closed
 priority: medium
 kind: bug
-labels: area:renderer, effort:m, subtask
+labels: area:renderer, effort:m, subtask, large-worlds
 created: 2026-11-04T21:10:37Z
-updated: 2026-11-04T21:19:14Z
+updated: 2026-11-07T16:59:37Z
 closed: 2026-11-04T21:19:14Z
 +++
 
@@ -5737,9 +5749,9 @@ Part of #255.
 status: closed
 priority: low
 kind: task
-labels: area:physics, effort:s, subtask
+labels: area:physics, effort:s, subtask, large-worlds
 created: 2026-11-04T21:10:37Z
-updated: 2026-11-04T21:21:09Z
+updated: 2026-11-07T16:59:37Z
 closed: 2026-11-04T21:21:09Z
 +++
 
@@ -5765,14 +5777,16 @@ For #259 the alternative needs no SwiftJolt change: keep Jolt in float and simul
 status: open
 priority: low
 kind: feature
-labels: area:physics, effort:l, subtask
+labels: area:physics, effort:l, subtask, large-worlds
 created: 2026-11-04T21:10:37Z
-updated: 2026-11-04T21:10:47Z
+updated: 2026-11-07T16:59:37Z
 +++
 
 SceneSprocketsPhysics hands world-space Float positions to Jolt. Far from the origin, simulation near the active area loses precision. There is no floating origin or local physics frame around the active area.
 
 Part of #255.
+
+- `2026-11-07T16:53:42Z`: Autonomous run: scoped, not changed. A local physics frame is easy to add (subtract an origin from node world positions before Jolt, add it back when writing poses), but node world transforms are Float (#256): at 2^20 m a position can only change in 0.125 m steps, so writing the precise result back to the nodes still quantizes it, and dynamic bodies would visibly jump. A real fix needs Double (or origin-relative) node transforms and the #255 origin-shift design that #260 also depends on. Punting: depends on #256/#255. Unblocker: settle how origin shifts work across nodes, physics and rendering (#255), or do #256 first.
 
 ---
 
@@ -5782,9 +5796,9 @@ Part of #255.
 status: open
 priority: low
 kind: feature
-labels: area:physics, effort:m, subtask
+labels: area:physics, effort:m, subtask, large-worlds
 created: 2026-11-04T21:10:37Z
-updated: 2026-11-04T21:10:47Z
+updated: 2026-11-07T16:59:37Z
 +++
 
 At orbital speeds (several km/s) the active object's coordinates change by kilometers per second, so precision near it degrades and rendering and physics jitter. There is no reference frame that keeps the active object near rest (KSP's Krakensbane).
@@ -5801,14 +5815,17 @@ Part of #255.
 status: open
 priority: low
 kind: feature
-labels: area:renderer, effort:l, subtask
+labels: area:renderer, effort:l, subtask, large-worlds
 created: 2026-11-04T21:10:38Z
-updated: 2026-11-04T21:10:47Z
+updated: 2026-11-07T16:59:38Z
 +++
 
 Reverse-Z Float depth cannot resolve both nearby parts and very distant bodies in one pass. There is no scaled-space pass or multi-range (nested frusta) rendering. Related: #248 (several viewports/passes in one view).
 
 Part of #255.
+
+- `2026-11-07T16:53:58Z`: Autonomous run: not changed. The renderer already uses reverse-Z Float depth; the remaining fix is architectural: either a scaled-space pass (distant bodies drawn first, scaled toward the camera, then near geometry over them with cleared depth) or nested frusta (several depth ranges, far to near, each with its own pass). Both need decisions about how nodes are assigned to a range or scale (per node flag, by distance, by category mask) and how SceneGraphElement runs several passes, which overlaps #248's multi-pass/viewport API and #255's design. Punting: needs that design. Unblocker: pick scaled space vs nested frusta and how nodes opt in.
+- `2026-11-07T16:59:57Z`: Question 1 (design): Scaled-space pass or nested frusta for huge depth ranges, and how do nodes opt in (per-node flag, by distance, or by category mask)?
 
 ---
 
@@ -5818,9 +5835,9 @@ Part of #255.
 status: open
 priority: low
 kind: bug
-labels: area:renderer, effort:m, subtask
+labels: area:renderer, effort:m, subtask, large-worlds
 created: 2026-11-04T21:19:04Z
-updated: 2026-11-07T16:00:59Z
+updated: 2026-11-07T16:59:38Z
 +++
 
 Left over from #257. Particle simulation and drawing (SceneParticleSystem simulate(view:) and runtime render(projection:view:), MetalSprocketsParticles) and the transform gizmo (TransformGizmo, GraphicsContext3DRenderPipeline with projection * view) still work in world-space Float, so far from the origin they jitter or misplace like the other paths did before #251/#253/#257. Particle positions live in MetalSprocketsParticles buffers, so a fix spans that package.
@@ -6058,6 +6075,7 @@ Leaving open for the steady-state cost. Further gains likely need SwiftECS chang
 - `2026-11-06T00:25:58Z`: Autoresearch session (#283), commit 'Speed up node access and writes after the ECS port': traversal 276 -> ~153 ns/node, write 511 -> 260, flatten 296 -> ~155, read 107 -> ~45, create+attach 65,800 -> ~38,000. Pre-ECS reference: traversal ~100, read ~30, write ~180. Remaining traversal cost is mostly ComponentRef retain/release; further gains likely need a non-retaining SwiftECS read path.
 - `2026-11-06T01:29:09Z`: Second autoresearch session (#283), geomean of the 5 benchmark metrics 419 -> 284 (-32%). Mostly SwiftECS: entity location holds its archetype, lazy ComponentType names, typed entity creation, specialized swapRemove and change dispatch, reuse of the last creation archetype, skipping storage publish with no observers. SceneSprockets: typed node creation, static key paths for Observation, cheaper transaction check. Now (ns/node): traversal ~142, flatten ~137, read ~38, write ~192, create+attach ~13,000. Pre-ECS: traversal ~100, read ~30, write ~180.
 - `2026-11-07T16:17:46Z`: Autonomous run: not changed. Per the 2026-11-05 answer ('keep open, measure later') and two autoresearch sessions since: traversal ~142 ns/node (pre-ECS ~100), read ~38 (~30), write ~192 (~180). The remaining cost is mostly ComponentRef retain/release; the next real gain needs a non-retaining read path in SwiftECS, which is outside this repo. Tuning SceneSprockets further against the benchmark would be overfitting. Unblocker: decide whether to add that SwiftECS read path, or accept the current cost and close.
+- `2026-11-07T16:59:56Z`: Question 2 (decision): Add a non-retaining read path to SwiftECS to close the remaining gap, or accept the current cost (traversal ~142 vs ~100 ns/node) and close?
 
 ---
 
@@ -6608,6 +6626,7 @@ created: 2026-11-07T15:41:12Z
 The PBR renderer deforms morph targets and skins on the GPU. Blinn-Phong and ShaderMaterial meshes are deformed on the CPU each frame (SceneGraph.MeshEntry.deformed(revision:)), which is slow for large meshes. Listed under Limitations in the README.
 
 - `2026-11-07T16:22:50Z`: Autonomous run: scoped, not changed. Design that fits the renderer: a compute pre-pass in SceneGraphElement that, for each morphed or skinned mesh entry drawn by a CPU-deforming renderer, writes deformed positions and normals into an output vertex buffer with the mesh's layout (one per frame in flight, like the shadow map slots), from the rest buffers, GPU morph-delta buffers (cached per node) and the skin influence buffer the shadow pass already builds (Shadows.swift caster .skinned) plus joint matrices. A QueueBarrier(after: .dispatch, before: .vertex) orders it before the scene pass. Blinn-Phong, ShaderMaterial and the debug view then draw the GPU-deformed mesh; hit testing keeps the CPU path. Punting: it is a renderer-wide change with frames-in-flight synchronization (the class of bug behind #59 and #242, which only shows live), and it adds per-frame GPU memory (deformed vertex buffers x frames in flight). Unblocker: approve this design (or prefer skinning in the Blinn-Phong vertex shader instead, which avoids extra buffers but leaves ShaderMaterial on the CPU).
+- `2026-11-07T16:59:56Z`: Question 1 (decision): Approve the GPU compute pre-pass design for deforming Blinn-Phong and ShaderMaterial meshes (one output buffer per frame in flight), or prefer skinning in the Blinn-Phong vertex shader (cheaper, but ShaderMaterial stays on the CPU)?
 
 ---
 
@@ -6624,6 +6643,8 @@ created: 2026-11-07T15:41:12Z
 SceneGraphShadows has 8 shadow map slices: a directional or spot light takes one, a point light six. Lights that do not fit cast no shadow; SceneGraphShadows.droppedLightCount counts them (#68). A scene with two point lights already loses one light's shadows. Listed under Limitations in the README.
 
 - `2026-11-07T16:18:08Z`: Autonomous run: scoped, not changed. The 8 is a fixed array size in shader uniforms in three places: BlinnPhong.h (sliceViewProjections[8]), ShadowMask.h (SCENE_SHADOW_MAX_SLICES 8), and MetalSprocketsPBR's PBRShaderTypes.h (kPBRMaxShadowSliceCount 8). Raising it here alone would leave PBR at 8, so a fix needs a MetalSprocketsPBR change and release too (the depth array texture also grows with it: 2048x2048 depth32 is 16 MB per slice per frame in flight). Punting: cross-package, and two decisions are yours: (1) the new limit (16? configurable on SceneGraphShadows?), and (2) which lights get shadows when they still do not fit (today: first come, first served; alternatives: brightest, or nearest to the camera).
+- `2026-11-07T16:59:55Z`: Question 1 (decision): What should the shadow slice limit be: a fixed 16, or configurable on SceneGraphShadows? (Needs the same change in MetalSprocketsPBR.)
+- `2026-11-07T16:59:56Z`: Question 2 (decision): When lights still do not fit, which get shadows: first come first served (today), brightest, or nearest to the camera?
 
 ---
 
@@ -6641,6 +6662,7 @@ updated: 2026-11-07T15:41:13Z
 Blinn-Phong and PBR sample each light's shadow while shading (#102), so a light darkens only what it lights. ShaderMaterial meshes are darkened afterwards by a screen-space pass that applies all lights' shadows together, so a shadow from one light also darkens areas that other lights light. Listed under Limitations in the README.
 
 - `2026-11-07T16:01:17Z`: Autonomous run: scoped, not changed. ShaderMaterial gets no lights and no shadow data (ShaderMaterial.h has only ShaderMaterialTransforms), so its lighting is whatever the user's shader does, and the renderer cannot know which lights affect a pixel. Per-light shadows therefore need new API: pass the lights and the shadow map (slices, matrices, comparison sampler) to shader materials, add a sampling helper to ShaderMaterial.h, and let a ShaderMaterial opt into in-shader shadows (as SamplesShadowsInShader does for Blinn-Phong and PBR), keeping the screen-space mask for materials that do not. Punting: that is an API design decision. Question: should ShaderMaterial get lights and shadow sampling (opt-in), or is the screen-space approximation the intended behavior for custom shaders?
+- `2026-11-07T16:59:55Z`: Question 1 (decision): Should ShaderMaterial get opt-in lights and in-shader shadow sampling (like Blinn-Phong and PBR), or is the screen-space shadow mask the intended behavior for custom shaders?
 
 ---
 
@@ -6769,5 +6791,335 @@ The Keynote demo does not show that node data lives in a SwiftECS World (SceneGr
 3D boids: a flock of nodes moved by a SwiftECS system that reads and writes NodeTransformComponent through sceneGraph.world. SwiftECS has a 2D Boids demo with a parallel flocking system to draw from.
 
 - `2026-11-07T16:53:11Z`: Fixed: new 'SwiftECS World' slide before SceneView. 120 cone boids are scene graph nodes; the demo adds a BoidVelocity component to their entities through sceneGraph.world, and each frame a SwiftECS System (query Write<NodeTransformComponent>, Write<BoidVelocity>) applies cohesion, alignment, separation and a bounding box, and writes the node transforms directly in the World, which moves the nodes. Neighbors come from a world.query snapshot taken before the system runs (callbacks cannot read the World). The demo package now depends on SwiftECS directly. Verified with renders at frames 30, 240 and 480 (the flock forms and stays below the title); 15 demo tests pass.
+
+---
+
+## 308: Keynote slide transitions change lighting or depth partway through
+
++++
+status: open
+priority: medium
+kind: bug
+labels: area:demo, area:renderer, effort:m
+created: 2026-11-07T17:07:45Z
++++
+
+During transitions between keynote slides, objects change how they look partway through the transition, as if their lighting, depth or clipping changes.
+
+Example: going from the Lights slide to the Actions slide, the lit spheres on the Lights slide lose their bottom half when the transition starts.
+
+Most transitions show some problem like this, not only Lights to Actions.
+
+Steps to reproduce:
+1. Open the Introduction to SceneSprockets demo (keynote).
+2. Go to the Lights slide.
+3. Advance to the Actions slide and watch the spheres on the Lights slide.
+
+Expected: the outgoing slide fades out unchanged while the camera moves.
+Actual: parts of the outgoing slide's objects change or disappear (for example, the bottom half of the lit spheres) as the transition starts.
+
+---
+
+## 309: Keynote settings have no way to jump to a slide
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:demo, effort:s
+created: 2026-11-07T17:07:55Z
+updated: 2026-11-07T17:07:56Z
++++
+
+The keynote demo's settings (inspector) have Auto-advance and Seconds per Slide, but no way to go to a particular slide. Reaching a slide late in the deck means stepping through every slide before it.
+
+## Proposed fix (per schwa)
+Add a "go to slide" picker to the keynote's settings.
+
+---
+
+## 310: Keynote slide order does not follow a clear progression
+
++++
+status: open
+priority: low
+kind: task
+labels: area:demo, effort:s
+created: 2026-11-07T17:07:56Z
++++
+
+The keynote's slides are in the order they were added, not an order that tells a story. For example, SceneView (the usual entry point) comes near the end, related slides are spread apart, and specialist or debugging features sit between basic ones.
+
+## Proposed order rules (per schwa)
+- SceneView near the start.
+- The more esoteric, debug-oriented or nerdy a slide, the later in the deck.
+- Animation slides close together.
+- Particle slides close together.
+- UI, picking and debug slides at the end.
+
+---
+
+## 311: Keynote title slide has no playful exit into the deck
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:demo, effort:m
+created: 2026-11-07T17:08:06Z
+updated: 2026-11-07T17:08:07Z
++++
+
+The keynote's first slide shows flat (2D) title text. Moving to the next slide only extrudes and turns the titles before the camera flies away, which does not show off the library much.
+
+## Proposed behavior (per schwa)
+- When the user moves to the next slide, convert the 2D title text into 3D blocks (for example, one per letter).
+- Give the blocks physics so they fall and tumble out of frame.
+- Then cross-fade, or cut straight, to slide 2.
+
+Related: the current extrude-and-turn transition from the title slide (uncommitted at the time of filing).
+
+---
+
+## 312: SceneView camera control is not configurable like SceneKit's
+
++++
+status: open
+priority: medium
+kind: feature
+labels: area:ui, effort:m
+created: 2026-11-07T17:16:02Z
++++
+
+SceneView has one built-in camera control (options: .allowsCameraControl) with no way to configure it. SceneKit's SCNView exposes defaultCameraController (SCNCameraController) with interaction modes (orbitTurntable, orbitArcball, fly, pan, truck), inertia, a target point, and limits such as maximum and minimum vertical angle, which apps tune with a few properties.
+
+There is no equivalent here: an app cannot pick a mode, turn inertia on or off, set orbit limits, or read and drive the controller from code without building its own camera control (Interaction3D) around SceneView's cameraMatrix binding.
+
+---
+
+## 313: No keyboard (WASD) or game controller camera navigation
+
++++
+status: open
+priority: medium
+kind: feature
+labels: area:ui, effort:m
+created: 2026-11-07T17:16:02Z
++++
+
+SceneView offers no keyboard or game controller navigation. There is no built-in way to fly or walk the camera with WASD (and arrow keys or mouse look), or with a game controller's sticks and triggers (GameController framework). Apps and demos that want first-person or fly-through navigation must handle key events and GCController input themselves and drive the cameraMatrix binding.
+
+Related: Documentation/Features.md lists 'Camera controllers: first person, fly, follow' and 'Game controller and keyboard input mapping' as not done.
+
+---
+
+## 314: No SceneSprocketsAddOns target for optional, larger features
+
++++
+status: open
+priority: low
+kind: task
+labels: area:addons, effort:s
+created: 2026-11-07T17:16:52Z
+updated: 2026-11-07T17:16:53Z
++++
+
+SceneSprockets has no product for optional features that build on the scene graph but do not belong in the core library or a material renderer (for example terrain, voxels or other content generators). Such features would currently have to go into SceneSprockets itself, which every app links, or live in the demos where apps cannot use them.
+
+## Proposed fix (per schwa)
+Add a new target and product, SceneSprocketsAddOns.
+
+---
+
+## 315: No terrain, heightmap or voxel content in SceneSprockets
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:addons, effort:xl
+depends: 314
+created: 2026-11-07T17:16:53Z
++++
+
+SceneSprockets has no way to build landscapes: no terrain or heightmap meshes (with level of detail for large areas), and no voxel worlds (a 'Minecraft lite': chunked block grids with meshing, editing and texturing). Documentation/Features.md lists 'Terrain / heightmaps' as not done.
+
+## Proposed scope (per schwa)
+Add these, and similar content, to the SceneSprocketsAddOns target (#314): landscape/terrain rendering, voxels, etc.
+
+- `2026-11-07T17:19:23Z`: Starting points in MetalSprocketsExamples: the Voxel example (compute-raymarched voxel volumes) and its MagicaVoxel .vox loader, MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/VoxelDemo/.
+
+---
+
+## 316: No signed distance field (SDF) blobs
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:addons, effort:l
+created: 2026-11-07T17:17:05Z
++++
+
+SceneSprockets cannot show signed distance field shapes, such as metaballs or blobs that merge smoothly when they move close together. There is no way to describe a shape as a distance function (spheres, capsules and boxes combined with smooth union, subtraction or intersection) and draw it in a scene with the other nodes, lit and depth-tested like meshes.
+
+Related: SceneSprocketsAddOns target (#314).
+
+- `2026-11-07T17:19:23Z`: Starting points in MetalSprocketsExamples: the SDF example (3D SDF raymarching), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/SDFDemo/, and Tiled SDF (tile-culled 2D SDF), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/TiledSDFDemo/.
+
+---
+
+## 317: Keynote Thank You slide is a plain title
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:demo, effort:m
+created: 2026-11-07T17:18:35Z
++++
+
+The keynote's last slide only shows "Thank You" with one light. It ends the deck quietly instead of showing off what the library can do.
+
+## Proposed behavior (per schwa)
+Show "Thank You" on its own for about 0.5 seconds, then go wild: particles, moving lights, glass and other effects together.
+
+---
+
+## 318: No ocean or water surface, or procedural sky
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:addons, effort:l
+depends: 314
+created: 2026-11-07T17:19:21Z
++++
+
+SceneSprockets has no ocean or water surface node, and no procedural sky. Documentation/Features.md lists 'Water and ocean surfaces' and 'Skybox / procedural sky' (the sky gradient exists, but no physical sky) as missing.
+
+Starting point: the Open Sea example in MetalSprocketsExamples (Gerstner-wave ocean with an analytic sky), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/OpenSeaDemo/. Candidate for SceneSprocketsAddOns (#314).
+
+---
+
+## 319: No grass or foliage fields
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:addons, effort:l
+depends: 314
+created: 2026-11-07T17:19:21Z
++++
+
+SceneSprockets cannot cover ground with grass or similar foliage: there is no node that scatters many blades or plants over a surface cheaply, with wind. Documentation/Features.md lists 'Foliage with wind' as missing.
+
+Starting points in MetalSprocketsExamples: Grass (mesh-shader procedural grass), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/GrassDemo/, and Meadow (ray-traced procedural meadow), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/MeadowDemo/. Candidate for SceneSprocketsAddOns (#314); pairs with terrain (#315).
+
+---
+
+## 320: No reusable procedural tree generator
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:addons, effort:m
+depends: 314
+created: 2026-11-07T17:19:21Z
++++
+
+SceneSprockets has no reusable way to generate trees. The demos' Tree Appreciator grows trees, but that code lives in the demo package, where apps cannot use it.
+
+Starting points: the Tree Generator example in MetalSprocketsExamples (space-colonization trees), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/TreeGeneratorDemo/, and the demos' Demo/Packages/SceneSprocketsDemos/Sources/SceneSprocketsDemos/TreeAppreciator/. Candidate for SceneSprocketsAddOns (#314).
+
+---
+
+## 321: No point cloud node
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:addons, effort:m
+depends: 314
+created: 2026-11-07T17:19:22Z
++++
+
+SceneSprockets has no node for point clouds (for example scanned data or PLY points) drawn as sized, colored points. Documentation/Features.md marks point clouds as possible with ShaderMaterial but needing an example.
+
+Starting point: the Point Cloud example in MetalSprocketsExamples, MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/PointCloudDemo/. Candidate for SceneSprocketsAddOns (#314).
+
+---
+
+## 322: No dissolve effect for nodes
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:addons, effort:m
+depends: 314
+created: 2026-11-07T17:19:22Z
++++
+
+SceneSprockets has no way to dissolve a node in or out (for example for teleport, spawn or destroy effects); only opacity fades exist.
+
+Starting point: the Mesh Dissolve example in MetalSprocketsExamples (triplanar-grid dissolve effects), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/MeshDissolveDemo/. Candidate for SceneSprocketsAddOns (#314).
+
+---
+
+## 323: No volumetric clouds
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:addons, effort:l
+depends: 314
+created: 2026-11-07T17:19:22Z
+updated: 2026-11-07T17:19:23Z
++++
+
+SceneSprockets cannot show volumetric clouds in a scene's sky. Documentation/Features.md lists 'Volumetric lighting and fog' as missing.
+
+Starting point: the cloud demo in MetalSprocketsExamples (sun-lit volumetric cloud with progressive accumulation), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/CloudDemo/CloudDemoView.swift. It is not in the examples README and still has temporary #242 bisect code. Candidate for SceneSprocketsAddOns (#314).
+
+---
+
+## 324: No fluid simulation
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:addons, effort:xl
+depends: 314
+created: 2026-11-07T17:19:23Z
++++
+
+SceneSprockets has no fluid simulation, such as a water volume that splashes and flows around objects.
+
+Starting point: the FLIP Fluid example in MetalSprocketsExamples (3D PIC/FLIP simulation), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/MetalFLIPDemo/. A later candidate for SceneSprocketsAddOns (#314): heavier than the others.
+
+---
+
+## 325: Depth direction (reverse-Z or normal Z) cannot be switched at run time
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:renderer, effort:m
+created: 2026-11-07T17:54:10Z
+updated: 2026-11-07T17:54:10Z
++++
+
+The renderer always uses reverse-Z (projection multiplied by .reverseZ, with a matching depth compare and clear value). There is no way to switch a view between reverse-Z and normal Z, and no automatic choice. Code that reads or writes depth (shadow maps, hit testing, depth debug views, post-processing, custom shader materials, gizmos, the sky background) assumes one convention, so changing it in one place gives wrong results somewhere else.
+
+## Proposed behavior (per schwa)
+Switch between normal Z and reverse-Z automatically, with no side effects: everything that uses depth keeps working in both modes.
 
 ---
