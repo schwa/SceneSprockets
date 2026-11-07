@@ -7263,17 +7263,20 @@ Cause not investigated (for example whether the numerals are missing from the ge
 ## 331: Keynote has no presenter notes window
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:demo, effort:m
 created: 2026-11-07T18:00:59Z
-updated: 2026-11-07T18:01:00Z
+updated: 2026-11-07T18:48:37Z
+closed: 2026-11-07T18:48:37Z
 +++
 
 The keynote demo has no way to show presenter notes. When presenting, there is no separate window (for example on a second display) that shows notes for the current slide and follows the slide as it changes.
 
 Expected: a presenter notes window that shows the current slide's notes and stays in step with the deck (arrow keys, clicks, auto-advance, Slide picker).
+
+- `2026-11-07T18:48:37Z`: Done on macOS: Window > Presenter Notes (Option-Command-P) shows the current slide's title, number, notes and next slide, following arrow keys, clicks, auto-advance and the Slide picker. Not on iOS/visionOS. Not checked in the running app (only unit-tested and built); please open it once to confirm the layout.
 
 ---
 

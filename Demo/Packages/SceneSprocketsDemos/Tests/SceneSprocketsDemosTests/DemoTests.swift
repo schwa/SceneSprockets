@@ -80,6 +80,21 @@ func keynoteSlidePickerSwitchesInstantly() throws {
     #expect(keynote[value: "Slide"] == Float(index))
 }
 
+// #331: the presenter notes model follows the keynote's slide.
+@Test
+@MainActor
+func keynotePresenterNotesFollowTheSlide() throws {
+    let keynote = try keynoteShowing("Lights")
+    let model = PresenterNotes.shared
+    #expect(model.title == "Lights")
+    #expect(model.slideCount == KeynoteDemo.titles.count)
+    try #require(keynote.actions.first { $0.name == "Next" }).perform()
+    let index = try #require(KeynoteDemo.titles.firstIndex(of: "Lights")) + 1
+    #expect(model.slideIndex == index)
+    #expect(model.title == KeynoteDemo.titles[index])
+    #expect(model.nextTitle == KeynoteDemo.titles[index + 1])
+}
+
 // #311: leaving the title slide breaks its titles into 3D letters that fall away; coming back restores them.
 @Test
 @MainActor

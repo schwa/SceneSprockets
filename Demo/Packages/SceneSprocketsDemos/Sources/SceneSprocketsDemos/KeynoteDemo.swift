@@ -118,6 +118,7 @@ public final class KeynoteDemo: DemoScene {
             DemoAction("Previous", systemImage: "chevron.left", shortcut: .leftArrow) { [weak self] in self?.go(by: -1) },
             DemoAction("Next", systemImage: "chevron.right", shortcut: .rightArrow) { [weak self] in self?.go(by: 1) }
         ]
+        publishNotes()
     }
 
     private static func eye(for index: Int) -> SIMD3<Float> {
@@ -175,6 +176,19 @@ public final class KeynoteDemo: DemoScene {
 
     private var currentTitle: String {
         Self.titles[current]
+    }
+
+    // Presenter notes by slide title (#331, #332).
+    static let notes: [String: String] = [:]
+
+    // Sends the current slide to the presenter notes window.
+    private func publishNotes() {
+        let model = PresenterNotes.shared
+        model.slideIndex = current
+        model.slideCount = Self.titles.count
+        model.title = currentTitle
+        model.notes = Self.notes[currentTitle] ?? ""
+        model.nextTitle = current + 1 < Self.titles.count ? Self.titles[current + 1] : nil
     }
 
     private func updateFog(deltaTime: Float) {
@@ -346,6 +360,7 @@ public final class KeynoteDemo: DemoScene {
         // Scene-wide settings (shadows, fog, post-processing) change once the old slide has faded out (#308).
         let settings = SceneGraph.Action.run { [weak self] _ in self?.applySceneSettings() }
         sceneGraph.root.run(.sequence([.wait(duration: delay + 0.8), settings]), forKey: "settings")
+        publishNotes()
         hierarchyDidChange()
     }
 
@@ -367,6 +382,7 @@ public final class KeynoteDemo: DemoScene {
         updateFog(deltaTime: 0)
         resetCurrentSlide(visibleAfter: 0)
         applySceneSettings()
+        publishNotes()
     }
 
     public var slideCount: Int {

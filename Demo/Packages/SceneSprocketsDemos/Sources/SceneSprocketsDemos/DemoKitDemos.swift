@@ -31,6 +31,9 @@ public struct SceneGraphDemosScene: Scene {
             .commands {
                 DemosCommandMenu()
             }
+        #if os(macOS)
+        PresenterNotesWindow()
+        #endif
     }
 }
 
