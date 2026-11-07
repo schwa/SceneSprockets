@@ -6452,15 +6452,18 @@ Package.swift declares swift-tools-version 6.4, but README.md says Swift 6.2. Ei
 ## 292: README is not ready for a public release
 
 +++
-status: open
+status: closed
 priority: medium
 kind: documentation
 labels: release, area:docs, effort:m
 created: 2026-11-06T18:01:41Z
-updated: 2026-11-06T18:03:13Z
+updated: 2026-11-07T00:19:09Z
+closed: 2026-11-07T00:19:09Z
 +++
 
 README.md has no screenshot, no installation snippet (.package(url:...)), no feature list linking to docs, and no docs link. It links MetalSprocketsPBR as ../MetalSprocketsPBR, which is broken on GitHub. Much of the README is detailed usage that would belong in DocC. SwiftECS's README is a short pitch, captioned screenshot, linked feature list, requirements, install snippet, short usage, docs link and license.
+
+- `2026-11-07T00:19:09Z`: Fixed: README rewritten after SwiftECS's: pitch, captioned Gears screenshot (Images/gears.png), feature list linked to the DocC pages (paths checked against a local build), requirements, install snippet, product table, a short compiled usage sample, demos, limitations, docs link, license. Broken ../MetalSprocketsPBR link removed. Detailed usage moved to Documentation/Usage.md (until the DocC catalog, #284); two stale claims fixed there (fade actions and IK exist). The install snippet assumes the first tag is 0.1.0 (#295).
 
 ---
 

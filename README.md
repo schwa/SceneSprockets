@@ -1,126 +1,100 @@
 # SceneSprockets
 
-A format-neutral 3D scene graph for [MetalSprockets](https://github.com/schwa/MetalSprockets). You build a tree of nodes with meshes, lights and cameras. Then you render it with one or more material renderers: Blinn-Phong, PBR (through [MetalSprocketsPBR](../MetalSprocketsPBR)), or your own.
+A 3D scene graph for [MetalSprockets](https://github.com/schwa/MetalSprockets), with an API modelled on SceneKit. You build a tree of nodes with meshes, lights and cameras, then render it with Blinn-Phong, PBR or your own Metal shaders.
 
-## Library
+![The Gears demo: four gears with soft shadows on a gradient background](Images/gears.png)
 
-The core is `SceneSprockets`. Each material family is its own product, so an app links only what it uses:
+*The Gears demo. The source is in `Demo/Packages/SceneSprocketsDemos`.*
+
+## Features
+
+- A [node hierarchy](https://schwa.github.io/SceneSprockets/documentation/scenesprockets/scenegraph/node/) with transforms, visibility, opacity, category masks and [built-in shapes](https://schwa.github.io/SceneSprockets/documentation/scenesprockets/scenegraph/shape/)
+- [Blinn-Phong](https://schwa.github.io/SceneSprockets/documentation/scenesprocketsblinnphong/), [PBR](https://schwa.github.io/SceneSprockets/documentation/scenesprocketspbr/) with most glTF material extensions, and [custom shaders](https://schwa.github.io/SceneSprockets/documentation/scenesprocketsshadermaterial/)
+- [Shadows](https://schwa.github.io/SceneSprockets/documentation/scenesprockets/scenegraphshadows/) for every light type, fog, ambient occlusion and post-processing
+- [Actions](https://schwa.github.io/SceneSprockets/documentation/scenesprockets/scenegraph/action/), [implicit animation](https://schwa.github.io/SceneSprockets/documentation/scenesprockets/scenegraph/transaction/), [keyframed clips](https://schwa.github.io/SceneSprockets/documentation/scenesprockets/scenegraph/animationclip/) with blending, morph targets and skinning
+- [Constraints](https://schwa.github.io/SceneSprockets/documentation/scenesprockets/scenegraph/constraint/), including inverse kinematics
+- Rigid-body [physics](https://schwa.github.io/SceneSprockets/documentation/scenesprocketsphysics/) on Jolt, [GPU particles](https://schwa.github.io/SceneSprockets/documentation/scenesprockets/sceneparticlesystem/) and positional [audio](https://schwa.github.io/SceneSprockets/documentation/scenesprocketsaudio/)
+- Loading from [glTF](https://schwa.github.io/SceneSprockets/documentation/scenesprocketspbr/gltfscenegraph/) and [Model I/O](https://schwa.github.io/SceneSprockets/documentation/scenesprocketspbr/modelioscenegraph/) (OBJ, PLY, STL, ABC, USD), and saving with [`SceneArchive`](https://schwa.github.io/SceneSprockets/documentation/scenesprockets/scenearchive/)
+- [`SceneView`](https://schwa.github.io/SceneSprockets/documentation/scenesprockets/sceneview/) for SwiftUI, with camera control, hit testing and [transform gizmos](https://schwa.github.io/SceneSprockets/documentation/scenesprocketsgizmos/)
+- Node data stored in a [SwiftECS](https://github.com/schwa/SwiftECS) world that you can query with your own systems
+
+See [CHANGELOG.md](CHANGELOG.md) for the full list.
+
+## Requirements
+
+Swift 6.2 or later. iOS, macOS or visionOS 26 or later.
+
+## Installation
+
+```swift
+.package(url: "https://github.com/schwa/SceneSprockets", from: "0.1.0")
+```
+
+Each material family is its own product, so an app links only what it uses:
 
 | Product | Contents |
 |---|---|
-| `SceneSprockets` | `SceneGraph`, `SceneGraph.Node`, transforms (GeometryLite3D's `Transform3D`), the materials protocol, bounds, change tracking, animation clips, morph targets, skins; `SceneGraphElement` and the `SceneGraphMaterialRenderer` protocol; shadows, fog, post-processing, particles; `SceneView`, a SwiftUI view like SceneKit's `SceneView`. |
-| `SceneSprocketsBlinnPhong` | `BlinnPhongSceneMaterial`, `BlinnPhongMaterialRenderer` and `BlinnPhongSceneGraphElement`. |
-| `SceneSprocketsShaderMaterial` | `ShaderMaterial` and `ShaderMaterialRenderer`. |
-| `SceneSprocketsPBR` | `PBRSceneMaterial` and `PBRMaterialRenderer`. `GLTFAsset.makeSceneGraph(device:)` loads a glTF scene (hierarchy, meshes with PBR materials, cameras, lights, skins, morph targets, node animations). `ModelIOSceneGraph(url:device:materials:)` loads any format `MDLAsset` reads (OBJ, PLY, STL, ABC, USD), with PBR or Blinn-Phong materials, cameras, lights and keyframed transforms. |
+| `SceneSprockets` | The scene graph, renderer, shadows, fog, post-processing, particles and `SceneView` |
+| `SceneSprocketsBlinnPhong` | Blinn-Phong materials |
+| `SceneSprocketsPBR` | PBR materials, glTF and Model I/O loading |
+| `SceneSprocketsShaderMaterial` | Materials with your own vertex and fragment shaders |
+| `SceneSprocketsPhysics` | Rigid-body physics on Jolt |
+| `SceneSprocketsAudio` | Positional audio on nodes |
+| `SceneSprocketsGizmos` | Transform gizmos and selection outlines |
 
-Requirements: iOS 26, macOS 26 or visionOS 26; Swift 6.2.
-
-## Build a scene
+## Usage
 
 ```swift
-let device = MTLCreateSystemDefaultDevice()!
-let box = MetalMesh(mesh: .box(), device: device)
+import SceneSprockets
+import SceneSprocketsBlinnPhong
+import SwiftUI
 
+// Build a tree of nodes: a light and a box.
 let root = SceneGraph.Node(label: "Root")
-let camera = SceneGraph.Node(parent: root, label: "Camera", content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45)))))
-camera.trs.translation = [0, 1, 6]
-let light = SceneGraph.Node(parent: root, label: "Light", content: .light(Light(type: .point, color: [1, 1, 1], intensity: 20, range: 100)))
+let light = SceneGraph.Node(parent: root, content: .light(Light(type: .point, color: [1, 1, 1], intensity: 20, range: 100)))
 light.trs.translation = [2, 3, 2]
-let crate = SceneGraph.Node(parent: root, label: "Crate", content: .mesh(box, material: BlinnPhongSceneMaterial(
-    ambient: .color(0.1), diffuse: .color([0.8, 0.5, 0.2]), specular: .color(0.3), shininess: 16
-)))
+let material = BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color([0.8, 0.5, 0.2]), specular: .color(0.3), shininess: 16)
+let box = SceneGraph.Node(parent: root, shape: .box(), material: material, device: MTLCreateSystemDefaultDevice()!)
 
-let sceneGraph = SceneGraph(root: root)
-```
+// Spin the box forever.
+box.run(.repeatForever(.rotate(by: 2 * .pi, around: [0, 1, 0], duration: 4)))
 
-- **Hierarchy.** `Node(parent:)` adds the node to its parent. You can also use `addChild`, `insertChild(_:at:)`, `removeFromParent()` and `removeAllChildren()`. You cannot set `parent` and `children` directly. A child that would make a cycle causes a precondition failure.
-- **Transforms.** A node stores a raw matrix (`transform`) or translation, rotation and scale (`trs`). Edits through `trs` are lossless. If you read `trs` from a matrix node, the matrix is decomposed. `worldTransform` gives the node's world-space matrix.
-- **Category masks and order.** Like SceneKit: `node.categoryBitMask` (default 1) is matched against `Camera.categoryBitMask`, a light node's `lightCategoryBitMask` and `hitTest(_:categoryBitMask:)`. `node.renderingOrder` draws lower values first; within one value each renderer keeps its own order. Depth testing stays on, so order alone does not make overlays draw on top; it matters for transparent materials (`ShaderMaterial(isTransparent: true)`), which blend in this order. `SceneView` taps only hit nodes the camera sees, further limited by `hitTestCategoryBitMask`.
-- **Visibility.** Set `isVisible = false` to hide a node and its subtree in rendering, queries and bounds.
-- **Shapes.** `Node(shape:material:device:)` makes a mesh node from a `SceneGraph.Shape` (box, sphere, plane, cylinder, cone, capsule, torus, extruded text), like SceneKit's `SCNBox` or `SCNText`. Set `node.shape` to change the parameters; the mesh is rebuilt and the materials are kept.
-- **Materials.** `.mesh(mesh, material:)` uses one material for all submeshes. `.mesh(mesh, materials:)` sets one material per submesh. The last material is used for submeshes after the end of the array.
+// Show it in SwiftUI. With no camera node, SceneView frames the scene with a default camera.
+struct ContentView: View {
+    let sceneGraph = SceneGraph(root: root)
 
-## Render
-
-The simplest way is `SceneView`, like SceneKit's SwiftUI `SceneView`:
-
-```swift
-SceneView(sceneGraph: sceneGraph, options: [.allowsCameraControl, .autoenablesDefaultLighting], renderers: [BlinnPhongMaterialRenderer()]) { hit in
-    print(hit?.node.label ?? "nothing")
-}
-```
-
-It runs node actions every frame, calls an optional `SceneViewDelegate` for per-frame updates, and frames the scene with a default camera when it has no camera node. For more control, put a `SceneGraphElement` in a `RenderView`. Give it one renderer for each material family that the scene uses:
-
-```swift
-@State private var pbrRenderer = PBRMaterialRenderer(device: MTLCreateSystemDefaultDevice()!)
-
-RenderView { _, size in
-    SceneGraphElement(
-        sceneGraph: sceneGraph,
-        aspectRatio: Float(size.width / size.height),
-        renderers: [BlinnPhongMaterialRenderer(), pbrRenderer]
-    )
-}
-```
-
-- **Camera.** The default camera is the first camera node, placed by its world transform. Use `camera:` to select a different camera node. Use `cameraMatrix:` to override the camera's world transform, for example with an interactive camera.
-- **One pass.** All renderers draw in one render pass and share the depth buffer. The pass uses **reversed depth** (near 1, far 0, compare `.greater`), because MetalSprocketsPBR requires it. `SceneGraphRenderContext.projectionMatrix` already contains the depth flip. If you write a renderer, use `.greater` depth tests.
-- **Environment.** `sceneGraph.environment` sets the background (`.none`, `.color`, `.environment(blur:)`, or `.gradient(SkyGradient)`, a zenith/horizon/ground sky that works with any renderer) and the image-based lighting map, intensity and rotation. A `PBREnvironment` (procedural, equirectangular or cube map) works as the map. `PBRMaterialRenderer` uses it for lighting and draws the `.environment` background; without a map it uses its own `environment`. Blinn-Phong ignores the map.
-- **Fog.** `sceneGraph.fog = SceneGraph.Fog(color:startDistance:endDistance:densityExponent:)`, like SceneKit's fog properties. A screen-space pass after every renderer blends it into geometry by camera distance (the background is not fogged), so it needs the same texture usage as shadows; `SceneView` sets this up.
-- **Shadows.** Pass a `SceneGraphShadows` (keep one instance) to `SceneView(shadows:)` or `SceneGraphElement(shadows:)`. Directional, spot and point lights cast shadow maps from meshes with `castsShadow`; a screen-space pass then darkens shadowed pixels, so it works with every renderer. The view's color texture needs `.shaderWrite` and its depth texture `.shaderRead` usage; `SceneView` sets this up.
-- **Unclaimed meshes.** The element does not draw meshes whose material type has no renderer.
-- **Blinn-Phong only.** `BlinnPhongSceneGraphElement` is a shortcut for a `SceneGraphElement` with only the Blinn-Phong renderer.
-- **Keep the PBR renderer.** `PBRMaterialRenderer` caches its `PBRModel` and rebuilds it only for structure changes. Keep one instance across frames, for example in `@State`, so that the cache is used.
-
-### Custom shaders
-
-`ShaderMaterial(vertexShader:fragmentShader:parameters:)` draws a mesh with your own Metal functions, like SceneKit's `SCNProgram`. Add one `ShaderMaterialRenderer()` to the renderers and it draws every `ShaderMaterial`. The vertex function must declare `constant ShaderMaterialTransforms &transforms` (see `ShaderMaterial.h` in `SceneSprocketsShaders`); `parameters` are bound by name. `ShaderMaterial.normals()` and `ShaderMaterial.rim(color:)` are samples.
-
-### Add a material family
-
-```swift
-struct UnlitMaterial: SceneSprockets.Material { var color: SIMD3<Float> }
-
-struct UnlitRenderer: SceneGraphMaterialRenderer {
-    var materialType: any SceneSprockets.Material.Type { UnlitMaterial.self }
-    func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement {
-        // Draw entries[i].mesh.submeshes[entries[i].submeshIndex] at entries[i].worldTransform.
+    var body: some View {
+        SceneView(sceneGraph: sceneGraph, options: [.allowsCameraControl], renderers: [BlinnPhongMaterialRenderer()])
     }
 }
 ```
 
-You do not change the scene graph core.
+[Documentation/Usage.md](Documentation/Usage.md) covers rendering with `SceneGraphElement`, environments, fog, shadows, custom materials, change tracking and animation in more detail.
 
-## Change tracking, bounds, queries
+## Demos
 
-- **Revisions.** `SceneGraph.revision` has a `structure` and a `transform` value. Hierarchy, content, visibility, skin and morph target edits change `structure`. Transform and morph weight edits change `transform`. Compare revisions to skip work.
-- **Cached queries.** `meshEntries()`, `lightNodes()` and `cameraNodes()` share one traversal, cached by revision.
-- **Hit testing.** `SceneGraph.hitTest(_:)` returns every triangle a GeometryLite3D `Ray3D` hits, nearest first, with node, submesh, triangle index, distance, position and normal. Skinned and morphed meshes use their deformed positions. `ViewProjection.ray(through:)` makes the ray for a point in a view.
-- **Bounds.** `Node.meshBounds`, `Node.subtreeBounds`, `SceneGraph.bounds` and `SceneGraph.worldBounds(of:)` return `BoundingBox3D` values. They are cached by revision.
+`Demo/Packages/SceneSprocketsDemos` has the demos: a keynote-style tour of the features, Gears, Dice, Shadows, a SceneKit feature comparison, and Tree Appreciator, a small game. Open `Demo/SceneSprocketsDemo.xcodeproj`, or run them from the command line:
 
-## Animation, morph targets, skins
+```sh
+cd Demo/Packages/SceneSprocketsDemos
+xcb run scenesprockets-demos                                   # opens the demo picker
+scenesprockets-demos --render gears gears.png --size 1280x800  # renders a demo to a PNG
+```
 
-- **Clips.** `SceneGraph.AnimationClip` has channels that animate node translation, rotation, scale or morph weights. Interpolation can be step, linear (slerp for rotations) or glTF cubic spline. Call `clip.apply(at:looping:)`, or use an `AnimationPlayer` and call `advance(by:)` each frame.
-- **Actions.** Like SceneKit's `SCNAction`: `node.run(.sequence([.move(by: [0, 1, 0], duration: 1), .rotate(by: .pi, around: [0, 1, 0], duration: 1)]), forKey: "hop")`. There are move, rotate and scale (by and to), wait, custom, run, hide, unhide, removeFromParent, sequence, group, repeat and repeatForever, with timing modes. Call `sceneGraph.advanceActions(by:)` each frame. No fade actions (nodes have no opacity).
-- **Implicit animation.** Like `SCNTransaction`: `SceneGraph.Transaction.animate(duration: 0.5) { node.trs.translation = [0, 2, 0] }` animates transform and morph weight changes from their old values. It runs as node actions, so it needs `advanceActions(by:)` (SceneView does this). `Transaction.withoutAnimation { }` applies changes at once.
-- **Constraints.** Like SceneKit's constraints: `node.constraints = [.lookAt(target: other)]`, `.billboard()` (or `.billboard(freeAxes: .y)`) and `.distance(target:minimum:maximum:)`. `SceneView` applies them each frame after actions; otherwise call `sceneGraph.applyConstraints(pointOfView:)`. No IK yet.
-- **Morph targets.** `Node.morphTargets` holds per-vertex deltas. `Node.morphWeights` holds the weights. Morph targets are on the node because `MetalMesh` cannot hold them.
-- **Skins.** `Node.skin` (a `SceneGraph.Skin` with joint nodes and inverse bind matrices) and `Node.skinVertices` hold skinning data. Joints are ordinary nodes, so you can animate them like other nodes.
+The demos use third-party models and textures under CC0 and CC BY 4.0. See [CREDITS.md](CREDITS.md).
 
 ## Limitations
 
 - PBR deforms morph targets and skins on the GPU. Blinn-Phong and `ShaderMaterial` deform them on the CPU every frame, which is slower for large meshes.
-- Shadows use 8 shadow map slices (a directional or spot light takes one, a point light six). A light that does not fit casts no shadow and is counted in `SceneGraphShadows.droppedLightCount`. Blinn-Phong samples each light's shadow while shading, so a light only darkens what it lights. PBR and `ShaderMaterial` meshes are darkened afterwards in screen space by all lights' shadows together (#102).
-- glTF loading skips non-node animation channels. USD is a long-term goal (#31).
+- Shadows use 8 shadow map slices (a directional or spot light takes one, a point light six). A light that does not fit casts no shadow and is counted in `SceneGraphShadows.droppedLightCount`. Blinn-Phong samples each light's shadow while shading, so a light only darkens what it lights. PBR and `ShaderMaterial` meshes are darkened afterwards in screen space by all lights' shadows together.
+- glTF loading skips non-node animation channels. USD loading into a scene graph is a long-term goal.
 - Model I/O loading skips skins, blend shapes and orthographic cameras.
 - Position, bounds and PBR conversion read mesh vertex buffers on the CPU. The buffers must use shared storage.
 
-## Demo
+## Documentation
 
-The demos live in a separate package, `Demo/Packages/SceneSprocketsDemos`, with the `SceneSprocketsDemos` library (all demos and a DemoKit picker, `SceneGraphDemosScene`; depends on DemoKit and SwiftJolt), the `scenesprockets-demos` executable and the demo render tests. Each has a scene outline, a node inspector, an interactive camera and click-to-pick.
+[SceneSprockets documentation](https://schwa.github.io/SceneSprockets/documentation/)
 
-- **Xcode:** `Demo/SceneSprocketsDemo.xcodeproj` is a thin app around `SceneGraphDemosScene`.
-- **Command line:** from `Demo/Packages/SceneSprocketsDemos`, `xcb run scenesprockets-demos` opens the picker. `scenesprockets-demos --list` lists demo ids, and `scenesprockets-demos --render <id> [file.png] [--size 1280x800] [--frames 60]` renders a demo offscreen to a PNG without opening a window.
-- **Assets:** the demos bundle third-party models and textures under CC0 and CC BY 4.0. See [CREDITS.md](CREDITS.md).
-- **Golden images:** the demo package's tests render some demos offscreen and compare them with images in `Tests/SceneSprocketsDemosTests/Golden Images`. A missing golden fails the test and writes the render to `$TMPDIR/SceneSprocketsDemos-GoldenImages`; check it, then copy it in.
+## License
+
+MIT, see [LICENSE](LICENSE).
