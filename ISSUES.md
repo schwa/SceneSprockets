@@ -7688,3 +7688,51 @@ SceneView's camera control (configured with SceneCameraControl, #312) stops as s
 - `2026-11-08T02:43:06Z`: Autonomous run: checked, not changed. Inertia: SceneView's orbit drag already has momentum (Interaction3D InteractiveCameraModifier uses CoreDragModifier with momentum: true for rotation); pan (Command-drag, momentum: false) and zoom have none, and Interaction3D exposes no option to turn momentum on or off, so SceneCameraControl cannot make it configurable without an Interaction3D change. Fly mode: same as #313, waiting on an Interaction3D release (0.1.17) with the FPV fixes. Punting: both parts need Interaction3D. Unblocker: tag Interaction3D 0.1.17, and decide whether pan and zoom should coast too (an Interaction3D issue).
 
 ---
+
+## 349: SignedDistanceShape meshing is too slow to rebuild while a shape moves
+
++++
+status: new
+priority: medium
+kind: enhancement
+labels: area:addons, effort:m
+created: 2026-11-08T03:32:43Z
++++
+
+SignedDistanceShape.surface(cellSize:) / makeMesh(device:cellSize:) take far too long for shapes that change, such as metaballs moving every frame. Even small shapes take tens to hundreds of milliseconds in Release and seconds in Debug.
+
+Measured on this Mac (swift test, one call each):
+
+| Shape | cellSize | Triangles | Debug | Release |
+|---|---|---|---|---|
+| sphere r=1 | 0.1 | 10,950 | 0.14 s | 5 ms |
+| sphere r=1 | 0.05 | 44,598 | 0.62 s | 23 ms |
+| sphere r=1 | 0.025 | 179,760 | 2.97 s | 131 ms |
+| 6 spheres, smooth union 0.6 | 0.1 | 31,550 | 1.33 s | 51 ms |
+| 6 spheres, smooth union 0.6 | 0.05 | 125,921 | 5.91 s | 243 ms |
+| 6 spheres, smooth union 0.6 | 0.025 | 505,570 | 27.98 s | 1.31 s |
+
+Expected: a few metaballs can be re-meshed every frame (under a few ms) at a cell size that looks smooth.
+Actual: 51-243 ms in Release for 6 blobs at usable cell sizes, so animated SDF shapes are not practical; Debug builds are about 20x slower again.
+
+Observations (not profiled): the distance function is evaluated at every grid corner of the whole bounding box, and normal(at:) (6 more evaluations) runs once per output vertex and once per triangle. Time grows with the cube of size/cellSize.
+
+Part of #316.
+
+---
+
+## 350: SignedDistanceShape meshes do not share vertices
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:addons,effort:s
+created: 2026-11-08T03:32:43Z
++++
+
+makeMesh(device:cellSize:) emits three new vertices for every triangle; neighboring triangles never share a vertex. A sphere at cellSize 0.025 has 179,760 triangles and therefore 539,280 vertices, about six times more than a mesh with shared vertices would need. This makes the meshes large in memory and adds work for every vertex that is drawn or deformed, and it adds normal evaluations to meshing time (see the meshing speed issue).
+
+Part of #316.
+
+---
