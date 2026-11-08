@@ -5,6 +5,7 @@ import MetalSprocketsGLTF
 import MetalSprocketsParticles
 import MetalSprocketsParticlesSamples
 import SceneSprockets
+import SceneSprocketsAddOns
 import SceneSprocketsBlinnPhong
 import SceneSprocketsGizmos
 import SceneSprocketsPBR
@@ -26,7 +27,7 @@ public final class KeynoteDemo: DemoScene {
         "SceneSprockets", "SceneView", "Scene Graph", "Shapes", "Materials", "Lights",
         "Shadows", "Fog", "Opacity & Fades", "Blend Modes", "Glass", "PBR Extensions", "Custom Shaders", "glTF & Model I/O",
         "Actions", "Implicit Animation", "Constraints", "Animation Blending", "Deformation",
-        "Particles", "Mesh Emitters",
+        "Particles", "Mesh Emitters", "Point Clouds",
         "Physics", "Post-Processing", "Level of Detail", "Performance", "SwiftECS World",
         "Hit Testing", "Gizmos", "Debug Views",
         "Thank You"
@@ -98,7 +99,7 @@ public final class KeynoteDemo: DemoScene {
         root.addChild(cameraNode)
         super.init(
             sceneGraph: SceneGraph(root: root),
-            renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0.05, 0.05, 0.07]), PBRMaterialRenderer(device: demoDevice), ShaderMaterialRenderer()],
+            renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0.05, 0.05, 0.07]), PBRMaterialRenderer(device: demoDevice), ShaderMaterialRenderer(), PointCloudRenderer()],
             cameraMatrix: .camera(eye: Self.eye(for: 0), target: Self.target(for: 0)),
             parameters: [.choice("Slide", Self.titles), .toggle("Auto-advance", default: false), .slider("Seconds per Slide", 2...15, default: 6)]
         )
@@ -270,6 +271,11 @@ public final class KeynoteDemo: DemoScene {
         "Mesh Emitters": """
         • Particles can be born on a mesh surface.
         • The fire follows the fox's skinned, walking mesh, frame by frame.
+        """,
+        "Point Clouds": """
+        • An add-on, not built in: import SceneSprocketsAddOns and add PointCloudRenderer.
+        • Points are rasterized with compute shaders (MetalSprocketsAddOns), nearest point per pixel.
+        • They depth-test against the rest of the scene like any mesh.
         """,
         "Physics": """
         • Rigid body physics: give a node a physics body and step the world.
@@ -653,6 +659,16 @@ public final class KeynoteDemo: DemoScene {
             geyser.particleSystems = [SceneParticleSystem(.geyser)]
             sky.particleSystems = [SceneParticleSystem(.fireworks)]
             """, to: slide)
+        case "Point Clouds":
+            pointCloudsSlide(slide)
+            addTag("Add-On", below: 4, to: slide)
+            addCode("""
+            import SceneSprocketsAddOns
+
+            let galaxy = PointCloud(points: stars, pointSize: 2)
+            scene.root.addChild(try galaxy.makeNode(device: device))
+            SceneView(sceneGraph: scene, renderers: renderers + [PointCloudRenderer()])
+            """, to: slide)
         case "Mesh Emitters":
             meshEmittersSlide(slide)
             addCode("""
@@ -795,6 +811,51 @@ public final class KeynoteDemo: DemoScene {
             label.content = .mesh(mesh, materials: materials, castsShadow: false, receivesShadow: receivesShadow)
         }
         return holder
+    }
+
+    // A small pill under a title at height `titleY`, for marking slides such as add-ons that are not built in.
+    private func addTag(_ text: String, below titleY: Float, to slide: SceneGraph.Node) {
+        let accent: SIMD3<Float> = [1, 0.62, 0.12]
+        let tag = SceneGraph.Node(parent: slide, label: "Tag \"\(text)\"", trs: .init(translation: [0, titleY - 0.75, 0.1]))
+        let pill = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(accent * 0.3), specular: .color(0.2), shininess: 16, emission: .color(accent * 0.7))
+        let label = SceneGraph.Node(parent: tag, shape: .text(text.uppercased(), fontName: "Helvetica-Bold", fontSize: 0.32, extrusionDepth: 0.04), material: BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0.08, 0.05, 0.02])), device: demoDevice)
+        let bounds = label.meshBounds
+        let width = (bounds.map { $0.max.x - $0.min.x } ?? 1) + 0.4
+        if let bounds {
+            label.trs.translation = [-(bounds.min.x + bounds.max.x) / 2, -(bounds.min.y + bounds.max.y) / 2, 0.08]
+        }
+        // A capsule on its side, flattened into a pill.
+        _ = SceneGraph.Node(parent: tag, shape: .capsule(capRadius: 0.24, height: width), material: pill, device: demoDevice, trs: .init(rotation: simd_quatf(angle: .pi / 2, axis: [0, 0, 1]), scale: [1, 1, 0.25]))
+    }
+
+    // A spiral galaxy of colored points, turning slowly.
+    private func pointCloudsSlide(_ slide: SceneGraph.Node) {
+        // Seeded, so every run draws the same galaxy.
+        var random = SeededRandom("galaxy")
+        func gaussian() -> Float {
+            // Box-Muller.
+            let u = max(random.next(), .ulpOfOne)
+            return sqrt(-2 * log(u)) * cos(2 * .pi * random.next())
+        }
+        var stars: [PointCloud.Point] = []
+        stars.reserveCapacity(60_000)
+        for index in 0..<60_000 {
+            let arm = Float(index % 3) * 2 * .pi / 3
+            let distance = pow(random.next(), 0.6) * 3.2
+            let angle = arm + distance * 1.6 + gaussian() * 0.25
+            let height = gaussian() * 0.12 * (1.2 - distance / 3.2)
+            let position = SIMD3<Float>(cos(angle) * distance, height, sin(angle) * distance) + SIMD3(gaussian(), gaussian() * 0.3, gaussian()) * 0.08
+            // Warm core, blue arms.
+            let warmth = max(0, 1 - distance / 1.4)
+            let color = simd_mix(SIMD3<Float>(0.35, 0.55, 1), SIMD3<Float>(1, 0.8, 0.45), SIMD3(repeating: warmth)) * random.range(0.6, 1.2)
+            stars.append(PointCloud.Point(position: position, color: SIMD4(color, 1)))
+        }
+        guard let galaxy = try? PointCloud(points: stars, pointSize: 2).makeNode(device: demoDevice) else {
+            return
+        }
+        let holder = SceneGraph.Node(parent: slide, label: "Galaxy", trs: .init(translation: [0, 1.4, 0], rotation: simd_quatf(angle: 0.45, axis: [1, 0, 0])))
+        holder.addChild(galaxy)
+        galaxy.run(.repeatForever(.rotate(by: 2 * .pi, around: [0, 1, 0], duration: 40)))
     }
 
     // A code panel below the slide's live content, tilted a little toward the camera.
