@@ -15,7 +15,7 @@ SceneSprockets needs Swift 6.2 or later, and iOS, macOS or visionOS 26 or later.
 - `SceneSprocketsPhysics`: rigid-body physics on Jolt.
 - `SceneSprocketsAudio`: positional audio on nodes.
 - `SceneSprocketsGizmos`: transform gizmos and selection outlines.
-- `SceneSprocketsAddOns`: optional generators: `PointCloud` and `SignedDistanceShape` (metaballs and other distance-function shapes, meshed with marching tetrahedra).
+- `SceneSprocketsAddOns`: optional generators, starting with `PointCloud`.
 
 ### Scene graph
 

@@ -6979,21 +6979,24 @@ Add these, and similar content, to the SceneSprocketsAddOns target (#314): lands
 ## 316: No signed distance field (SDF) blobs
 
 +++
-status: closed
+status: open
 priority: low
 kind: feature
 labels: area:addons, effort:l
 created: 2026-11-07T17:17:05Z
-updated: 2026-11-08T02:45:53Z
-closed: 2026-11-08T02:45:53Z
+updated: 2026-11-08T03:34:47Z
 +++
 
 SceneSprockets cannot show signed distance field shapes, such as metaballs or blobs that merge smoothly when they move close together. There is no way to describe a shape as a distance function (spheres, capsules and boxes combined with smooth union, subtraction or intersection) and draw it in a scene with the other nodes, lit and depth-tested like meshes.
 
 Related: SceneSprocketsAddOns target (#314).
 
-- `2026-11-07T17:19:23Z`: Starting points in MetalSprocketsExamples: the SDF example (3D SDF raymarching), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/SDFDemo/, and Tiled SDF (tile-culled 2D SDF), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/TiledSDFDemo/.
-- `2026-11-08T02:45:53Z`: Added SignedDistanceShape to SceneSprocketsAddOns: sphere, rounded box and capsule primitives with smooth union, subtraction and intersection; distance(at:), normal(at:), bounds, surface(cellSize:) and makeMesh(device:cellSize:). The shape is meshed on the CPU with marching tetrahedra (no case tables) and gradient normals, so it is an ordinary mesh: lit, depth-tested and shadowed with any material, no new renderer. Tests: primitive distances, smooth union merges nearby spheres, subtraction/intersection, a meshed sphere lies on the sphere with outward winding and normals, and empty shapes make no mesh. Not done: GPU raymarching (the MetalSprocketsExamples approach); rebuild the mesh when the shape moves.
+\- `2026-11-07T17:19:23Z`: Starting points in MetalSprocketsExamples: the SDF example (3D SDF raymarching), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/SDFDemo/, and Tiled SDF (tile-culled 2D SDF), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/TiledSDFDemo/.
+\- `2026-11-08T02:45:53Z`: Added SignedDistanceShape to SceneSprocketsAddOns: sphere, rounded box and capsule primitives with smooth union, subtraction and intersection; distance(at:), normal(at:), bounds, surface(cellSize:) and makeMesh(device:cellSize:). The shape is meshed on the CPU with marching tetrahedra (no case tables) and gradient normals, so it is an ordinary mesh: lit, depth-tested and shadowed with any material, no new renderer. Tests: primitive distances, smooth union merges nearby spheres, subtraction/intersection, a meshed sphere lies on the sphere with outward winding and normals, and empty shapes make no mesh. Not done: GPU raymarching (the MetalSprocketsExamples approach); rebuild the mesh when the shape moves.
+\- `2026-11-08T03:34:47Z`: Reopened. The CPU-meshed SignedDistanceShape (marching tetrahedra) was removed: meshing took 23-243 ms in Release and seconds in Debug for a few blobs (#349), too slow for shapes that move.
+
+## Proposed fix (per schwa)
+Render SDFs the normal way (raymarching on the GPU) and tie them into the existing material shaders (Blinn-Phong, PBR), so SDF shapes are lit, shadowed and depth-tested like meshes.
 
 ---
 
@@ -7692,11 +7695,13 @@ SceneView's camera control (configured with SceneCameraControl, #312) stops as s
 ## 349: SignedDistanceShape meshing is too slow to rebuild while a shape moves
 
 +++
-status: new
+status: closed
 priority: medium
 kind: enhancement
 labels: area:addons, effort:m
 created: 2026-11-08T03:32:43Z
+updated: 2026-11-08T03:34:47Z
+closed: 2026-11-08T03:34:47Z
 +++
 
 SignedDistanceShape.surface(cellSize:) / makeMesh(device:cellSize:) take far too long for shapes that change, such as metaballs moving every frame. Even small shapes take tens to hundreds of milliseconds in Release and seconds in Debug.
@@ -7719,20 +7724,26 @@ Observations (not profiled): the distance function is evaluated at every grid co
 
 Part of #316.
 
+- `2026-11-08T03:34:47Z`: Obsolete: the CPU-meshed SignedDistanceShape was removed; #316 will raymarch on the GPU instead.
+
 ---
 
 ## 350: SignedDistanceShape meshes do not share vertices
 
 +++
-status: new
+status: closed
 priority: low
 kind: enhancement
-labels: area:addons,effort:s
+labels: area:addons, effort:s
 created: 2026-11-08T03:32:43Z
+updated: 2026-11-08T03:34:48Z
+closed: 2026-11-08T03:34:48Z
 +++
 
 makeMesh(device:cellSize:) emits three new vertices for every triangle; neighboring triangles never share a vertex. A sphere at cellSize 0.025 has 179,760 triangles and therefore 539,280 vertices, about six times more than a mesh with shared vertices would need. This makes the meshes large in memory and adds work for every vertex that is drawn or deformed, and it adds normal evaluations to meshing time (see the meshing speed issue).
 
 Part of #316.
+
+- `2026-11-08T03:34:47Z`: Obsolete: the CPU-meshed SignedDistanceShape was removed; #316 will raymarch on the GPU instead.
 
 ---
