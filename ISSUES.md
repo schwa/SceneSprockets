@@ -7072,6 +7072,7 @@ SceneSprockets has no reusable way to generate trees. The demos' Tree Appreciato
 Starting points: the Tree Generator example in MetalSprocketsExamples (space-colonization trees), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/TreeGeneratorDemo/, and the demos' Demo/Packages/SceneSprocketsDemos/Sources/SceneSprocketsDemos/TreeAppreciator/. Candidate for SceneSprocketsAddOns (#314).
 
 - `2026-11-08T02:37:56Z`: Added ProceduralTree to SceneSprocketsAddOns: Parameters (with random(seed:)), deterministic growth from a seed, public branches and leaves for custom geometry, and makeNode(device:) for a flat-shaded Blinn-Phong mesh. The algorithm is the demo's (TreeAppreciator) without its game-only parts (differences, fruit, blossoms, birds); the demo still uses its own copy because its growth is interleaved with those differences. 5 tests in SceneSprocketsAddOnsTests (determinism, shape, branch limit, bare tree, node submeshes).
+- `2026-11-08T03:30:21Z`: Removed ProceduralTree from SceneSprocketsAddOns (per schwa: the tree can die). Not doing a reusable tree generator; the demo's Tree Appreciator keeps its own code. Closed as won't do.
 
 ---
 

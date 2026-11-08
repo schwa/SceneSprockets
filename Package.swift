@@ -115,7 +115,6 @@ let package = Package(
             name: "SceneSprocketsAddOns",
             dependencies: [
                 "SceneSprockets",
-                "SceneSprocketsBlinnPhong",
                 "SceneSprocketsShaderMaterial",
                 "SceneSprocketsShaders",
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
@@ -127,7 +126,6 @@ let package = Package(
             dependencies: [
                 "SceneSprockets",
                 "SceneSprocketsAddOns",
-                "SceneSprocketsBlinnPhong",
                 "SceneSprocketsShaderMaterial",
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
