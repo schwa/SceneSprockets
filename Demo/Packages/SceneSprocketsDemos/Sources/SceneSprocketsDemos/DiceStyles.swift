@@ -181,7 +181,7 @@ enum DiceStyle: String, CaseIterable {
         guard let image = context.makeImage() else {
             throw CocoaError(.featureUnsupported)
         }
-        return try MTKTextureLoader(device: demoDevice).newTexture(cgImage: image, options: [.SRGB: sRGB, .generateMipmaps: true, .textureStorageMode: MTLStorageMode.private.rawValue, .origin: MTKTextureLoader.Origin.flippedVertically])
+        return try MTKTextureLoader(device: demoDevice).newTexture(cgImage: image, options: [.SRGB: sRGB, .generateMipmaps: true, .textureStorageMode: MTLStorageMode.private.rawValue])
     }
 
     // The alpha of `image` as a grayscale mask image (white where opaque).

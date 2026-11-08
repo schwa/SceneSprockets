@@ -7290,11 +7290,13 @@ Picker jumps switch instantly (a pop) to the new slide. Arrow keys, clicks and a
 ## 330: Twenty-sided die is missing many numerals in the debug view
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:demo, effort:s
 created: 2026-11-07T17:59:02Z
+updated: 2026-11-08T03:49:13Z
+closed: 2026-11-08T03:49:13Z
 +++
 
 In the keynote's debug view, the twenty-sided die (d20) shows numerals on only some of its faces; many faces have no numeral.
@@ -7309,6 +7311,7 @@ Actual: many faces show no numeral.
 Cause not investigated (for example whether the numerals are missing from the geometry or are hidden only by the debug view).
 
 - `2026-11-07T18:21:07Z`: Investigated. The d20 numbers atlas has all 20 numerals (dumped DiceGeometry(.d20).mask), and the base color and normal map use the same vertical flip, so the data is not missing. In Materials mode (the only mode that shows the dice texture; the debug modes replace every material, so no numerals there is expected), numerals on faces turned toward the camera render black and clear (15, 16, 17), while faces seen at a steep angle show only faint silver outlines or almost nothing (9, 13, 14, 18, 20), independent of atlas row. My guess (unverified): at grazing angles, Fresnel and the 0.15 clearcoat reflect the environment over the near-black numbers, so they nearly match the ivory body. Punting: fixing this is a look decision. Unblocker: which do you prefer: (a) stronger number color/less clearcoat for Classic Ivory, (b) a different die style on this slide, or (c) is the numeral loss you see in the Dice demo too (then it is a dice-material issue, not a keynote one)?
+- `2026-11-08T03:49:13Z`: Fixed. Not lighting: test renders of D4-D20 from 24 directions showed faces pointing straight at the camera with no numeral (and the D10 showing only 2, 4, 6, 8), while an unlit mask-only material showed every face numbered. Two bugs partly cancelled: DiceGeometry laid faces out with right = cross(normal, up), which points left seen from outside, so every numeral was mirrored; the style textures and the normal map were then loaded flippedVertically, which made the numerals readable again but moved every face to the wrong atlas row, so faces mapped onto the atlas's empty row were blank and the rest showed another face's number. Now right = cross(up, normal) and nothing is flipped; all faces of all dice show their own numeral. No automated test: the check was visual (render sheets); demo tests pass.
 
 ---
 
@@ -7797,7 +7800,7 @@ Part of #315.
 status: new
 priority: low
 kind: task
-labels: area:addons,effort:m
+labels: area:addons, effort:m
 created: 2026-11-08T03:48:56Z
 +++
 

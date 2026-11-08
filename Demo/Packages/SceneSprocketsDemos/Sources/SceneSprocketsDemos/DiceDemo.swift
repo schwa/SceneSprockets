@@ -312,8 +312,7 @@ final class DiceDemo: DemoScene {
             return parts
         }
         let geometry = DiceGeometry(kind)
-        // Flipped like the style textures (DiceStyle.split), to match the atlas's texture coordinates.
-        guard let normal = try? MTKTextureLoader(device: demoDevice).newTexture(cgImage: geometry.normalMap, options: [.SRGB: false, .generateMipmaps: true, .origin: MTKTextureLoader.Origin.flippedVertically]) else {
+        guard let normal = try? MTKTextureLoader(device: demoDevice).newTexture(cgImage: geometry.normalMap, options: [.SRGB: false, .generateMipmaps: true]) else {
             return nil
         }
         let parts = Parts(mesh: MetalMesh(mesh: geometry.mesh, device: demoDevice, label: kind.rawValue), mask: geometry.mask, normal: normal)

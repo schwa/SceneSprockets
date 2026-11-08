@@ -40,8 +40,8 @@ struct DiceGeometry {
             let normal = simd_normalize(simd_cross(points[1] - points[0], points[2] - points[0]))
             // "Up" in the cell points at the first corner, so numbers read toward a vertex; on squares, at an edge.
             let up = simd_normalize((kind == .d6 ? (points[0] + points[1]) / 2 : points[0]) - centroid)
-            // Seen from outside, right is up turned clockwise about the normal.
-            let right = simd_cross(normal, up)
+            // Seen from outside, right is up turned clockwise about the normal (#330).
+            let right = simd_cross(up, normal)
             let flat = points.map { SIMD2(simd_dot($0 - centroid, right), simd_dot($0 - centroid, up)) }
             let radius = flat.map(simd_length).max() ?? 1
             let center = SIMD2(Float(index % columns) + 0.5, Float(index / columns) + 0.5) * cell
