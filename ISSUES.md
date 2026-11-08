@@ -7104,6 +7104,8 @@ SceneSprockets has no way to dissolve a node in or out (for example for teleport
 
 Starting point: the Mesh Dissolve example in MetalSprocketsExamples (triplanar-grid dissolve effects), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/MeshDissolveDemo/. Candidate for SceneSprocketsAddOns (#314).
 
+- `2026-11-08T02:42:41Z`: Autonomous run: scoped, not changed. The MetalSprocketsExamples dissolve discards fragments by a 3D noise field and draws an edge glow, in its own shader. In SceneSprockets that can be done two ways: (a) a ShaderMaterial in SceneSprocketsAddOns that replaces the node's material while it dissolves (self-contained, but unlit: ShaderMaterial gets no lights, so a Blinn-Phong or PBR node changes look when the dissolve starts); or (b) a node-level dissolve amount (like opacity) that Blinn-Phong, PBR (MetalSprocketsPBR) and ShaderMaterial shaders all honor (looks right, but touches every material renderer and the PBR package). Punting: this is a design choice. Question: (a) add-on material, or (b) node-level dissolve in every renderer?
+
 ---
 
 ## 323: No volumetric clouds
@@ -7155,6 +7157,8 @@ The renderer always uses reverse-Z (projection multiplied by .reverseZ, with a m
 
 ## Proposed behavior (per schwa)
 Switch between normal Z and reverse-Z automatically, with no side effects: everything that uses depth keeps working in both modes.
+
+- `2026-11-08T02:42:54Z`: Autonomous run: scoped, not changed. The reverse-Z assumption is in 11 SceneSprockets source files plus 16 in MetalSprocketsPBR, MetalSprocketsAddOns (ShadowMaskPass, grid) and MetalSprocketsParticles (depth compare, clear value, projection, or shaders that read depth). Supporting both modes means a depth-mode value passed through all of them and shader variants in three external packages. Punting: cross-package, and 'automatic' needs a rule. Question: what should pick the mode automatically (for example normal Z only when the depth format is not float, or a SceneView option with an automatic default), and is changing MetalSprocketsPBR, MetalSprocketsAddOns and MetalSprocketsParticles in step acceptable?
 
 ---
 
@@ -7671,5 +7675,6 @@ created: 2026-11-07T19:00:30Z
 SceneView's camera control (configured with SceneCameraControl, #312) stops as soon as a drag or scroll ends: there is no inertia (the camera does not keep moving and slow down). It also has no fly or pan-only interaction modes, which SCNCameraController offers. Interaction3D, which SceneView uses for camera control, has neither.
 
 - `2026-11-08T01:33:09Z`: Related: #313. Interaction3D now has an FPV fly mode that can start from the bound camera matrix (Interaction3D #39-#42, on main after 0.1.16, untagged). That covers the fly-mode part of this issue once SceneSprockets uses it; inertia and pan-only modes are still missing.
+- `2026-11-08T02:43:06Z`: Autonomous run: checked, not changed. Inertia: SceneView's orbit drag already has momentum (Interaction3D InteractiveCameraModifier uses CoreDragModifier with momentum: true for rotation); pan (Command-drag, momentum: false) and zoom have none, and Interaction3D exposes no option to turn momentum on or off, so SceneCameraControl cannot make it configurable without an Interaction3D change. Fly mode: same as #313, waiting on an Interaction3D release (0.1.17) with the FPV fixes. Punting: both parts need Interaction3D. Unblocker: tag Interaction3D 0.1.17, and decide whether pan and zoom should coast too (an Interaction3D issue).
 
 ---
