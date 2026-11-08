@@ -7797,11 +7797,13 @@ Part of #315.
 ## 353: SceneSprocketsAddOns has its own point cloud instead of MetalSprocketsAddOns' PointCloud
 
 +++
-status: new
+status: closed
 priority: low
 kind: task
 labels: area:addons, effort:m
 created: 2026-11-08T03:48:56Z
+updated: 2026-11-08T04:05:14Z
+closed: 2026-11-08T04:05:14Z
 +++
 
 SceneSprocketsAddOns.PointCloud (#321) is a point renderer written for SceneSprockets: a .point-primitive mesh drawn by a ShaderMaterial with new shaders in SceneSprocketsShaders (PointCloud.metal). MetalSprocketsAddOns, which SceneSprockets already depends on, has its own point cloud pipeline (Pipelines/PointCloud.swift: PointCloudRasterizePass, PointCloudResolvePipeline, PointCloudPointFunction, with shaders in MetalSprocketsAddOnsShaders). So there are two point cloud implementations, and the SceneSprockets one does not use the existing one.
@@ -7810,5 +7812,7 @@ SceneSprocketsAddOns.PointCloud (#321) is a point renderer written for SceneSpro
 Use the point cloud in MetalSprocketsAddOns, not the one SceneSprockets rolled itself.
 
 Related: #321.
+
+- `2026-11-08T04:05:14Z`: Done: SceneSprocketsAddOns.PointCloud now draws with MetalSprocketsAddOns' compute rasterizer. New PointCloudMaterial (points buffer of PointCloudPoint, size, size units, shape) and PointCloudRenderer (SceneGraphPrePassRenderer: one PointCloudRasterizePass per node before the scene pass, PointCloudResolvePipeline in the scene pass, reverse-Z). Removed the ShaderMaterial version and PointCloud.metal from SceneSprocketsShaders. Needs Apple GPU family 8+; otherwise not drawn. Tests: disc size/color, node transform, packed point data.
 
 ---

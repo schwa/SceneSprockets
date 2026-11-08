@@ -36,7 +36,7 @@ The Source column shows where the feature comes from: SceneKit, RealityKit, thre
 | ⬜ | Tube, pyramid, floor, extruded Bézier path | #81 | SceneKit | |
 | ⬜ | Flat 2D text | #119 | three.js | MetalSprocketsAddOns has this. |
 | ⬜ | Lines with width, sprites | ||MetalSprocketsAddOns has this.|
-| ✅ | Point clouds | #321 | three.js | `PointCloud` in `SceneSprocketsAddOns` |
+| ✅ | Point clouds | #321 | three.js | `PointCloud` in `SceneSprocketsAddOns`, drawn with MetalSprocketsAddOns' compute rasterizer (#353) |
 | ⬜ | Terrain / heightmaps | | Babylon.js, Godot | |
 | ⬜ | Boolean (CSG) meshes in the scene graph | | Godot | SwiftMesh has this |
 | ⬜ | Bend, twist, noise modifiers | | Babylon.js | |
