@@ -5333,12 +5333,12 @@ Fix direction: don't unwrap model-derived optionals with Binding($x). Give the s
 ## 242: Composer: pink garbage frames in complex scenes while the inspector is visible and the camera moves
 
 +++
-status: open
+status: blocked
 priority: high
 kind: bug
-labels: area:renderer, area:composer, effort:m
+labels: area:renderer, area:composer, effort:m, external
 created: 2026-10-25T14:33:10Z
-updated: 2026-11-04T20:44:59Z
+updated: 2026-11-08T03:38:39Z
 +++
 
 Video: '/Users/schwa/Shared/Desktop Stuff/Pink Bug.mov' (stays there until fixed). Scene: 114 meshes, 792,746 triangles, imported BMW glTF, PBR, no lights.
@@ -5367,6 +5367,7 @@ To finish: push MetalSprocketsPBR, update the MetalSprocketsPBR pin in the 4 Pac
 - `2026-11-04T20:48:50Z`: Checked: the MetalSprocketsPBR fix (168a00f6, queue barrier before the PBR Transmission Scene pass) is pushed and included in MetalSprocketsPBR 0.0.3, which SceneSprockets already resolves (Package.resolved pins 693714e4, tag 0.0.3). No code change left here. Not closing: the bug is timing-dependent and needs a manual repro (Debug build, inspector visible, orbit the BMW scene). Unblocker: confirm the pink frames are gone, then close.
 - `2026-11-07T15:49:55Z`: Autonomous run: re-checked. The resolved MetalSprocketsPBR checkout has QueueBarrier(after: [.fragment, .blit], before: .fragment) at the start of the PBR Transmission Scene pass (PBRTransmissionPass.swift:147), so the fix is in the build. Punting: the bug is timing-dependent and only reproduces by hand (Debug build, Composer inspector visible, orbiting the BMW glTF scene); no automated test can show it. Unblocker: run that repro once; if no pink frames appear, close.
 - `2026-11-07T16:59:58Z`: Question 1 (verify): Debug build, Composer inspector visible, orbit the BMW glTF scene: are the pink frames gone with MetalSprocketsPBR 0.0.3?
+- `2026-11-08T03:38:39Z`: Verified (per schwa): the pink frames still happen with MetalSprocketsPBR 0.0.3. Nothing more to do in SceneSprockets; schwa is filing a report with Apple. Blocked on Apple.
 
 ---
 
@@ -6959,12 +6960,14 @@ Add a new target and product, SceneSprocketsAddOns.
 ## 315: No terrain, heightmap or voxel content in SceneSprockets
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
-labels: area:addons, effort:xl
-depends: 314
+labels: area:addons, effort:xl, has-subtasks
+depends: 314, 351, 352
 created: 2026-11-07T17:16:53Z
+updated: 2026-11-08T03:36:47Z
+closed: 2026-11-08T03:36:47Z
 +++
 
 SceneSprockets has no way to build landscapes: no terrain or heightmap meshes (with level of detail for large areas), and no voxel worlds (a 'Minecraft lite': chunked block grids with meshing, editing and texturing). Documentation/Features.md lists 'Terrain / heightmaps' as not done.
@@ -6973,6 +6976,8 @@ SceneSprockets has no way to build landscapes: no terrain or heightmap meshes (w
 Add these, and similar content, to the SceneSprocketsAddOns target (#314): landscape/terrain rendering, voxels, etc.
 
 - `2026-11-07T17:19:23Z`: Starting points in MetalSprocketsExamples: the Voxel example (compute-raymarched voxel volumes) and its MagicaVoxel .vox loader, MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/VoxelDemo/.
+- `2026-11-08T03:35:04Z`: Split (per schwa) into #351 (heightmap terrain) and #352 (voxel worlds). This issue now tracks both.
+- `2026-11-08T03:36:47Z`: Closed (per schwa). Remaining work tracked in #351 (heightmap terrain); voxels are #352 (deferred).
 
 ---
 
@@ -6982,9 +6987,9 @@ Add these, and similar content, to the SceneSprocketsAddOns target (#314): lands
 status: open
 priority: low
 kind: feature
-labels: area:addons, effort:l
+labels: area:addons, effort:l, deferred
 created: 2026-11-07T17:17:05Z
-updated: 2026-11-08T03:34:47Z
+updated: 2026-11-08T03:35:02Z
 +++
 
 SceneSprockets cannot show signed distance field shapes, such as metaballs or blobs that merge smoothly when they move close together. There is no way to describe a shape as a distance function (spheres, capsules and boxes combined with smooth union, subtraction or intersection) and draw it in a scene with the other nodes, lit and depth-tested like meshes.
@@ -7025,9 +7030,10 @@ Show "Thank You" on its own for about 0.5 seconds, then go wild: particles, movi
 status: open
 priority: low
 kind: feature
-labels: area:addons, effort:l
+labels: area:addons, effort:l, deferred
 depends: 314
 created: 2026-11-07T17:19:21Z
+updated: 2026-11-08T03:35:02Z
 +++
 
 SceneSprockets has no ocean or water surface node, and no procedural sky. Documentation/Features.md lists 'Water and ocean surfaces' and 'Skybox / procedural sky' (the sky gradient exists, but no physical sky) as missing.
@@ -7044,9 +7050,10 @@ Starting point: the Open Sea example in MetalSprocketsExamples (Gerstner-wave oc
 status: open
 priority: low
 kind: feature
-labels: area:addons, effort:l
+labels: area:addons, effort:l, deferred
 depends: 314
 created: 2026-11-07T17:19:21Z
+updated: 2026-11-08T03:35:02Z
 +++
 
 SceneSprockets cannot cover ground with grass or similar foliage: there is no node that scatters many blades or plants over a surface cheaply, with wind. Documentation/Features.md lists 'Foliage with wind' as missing.
@@ -7106,9 +7113,10 @@ Starting point: the Point Cloud example in MetalSprocketsExamples, MetalSprocket
 status: open
 priority: low
 kind: feature
-labels: area:addons, effort:m
+labels: area:addons, effort:m, deferred
 depends: 314
 created: 2026-11-07T17:19:22Z
+updated: 2026-11-08T03:35:02Z
 +++
 
 SceneSprockets has no way to dissolve a node in or out (for example for teleport, spawn or destroy effects); only opacity fades exist.
@@ -7125,10 +7133,10 @@ Starting point: the Mesh Dissolve example in MetalSprocketsExamples (triplanar-g
 status: open
 priority: low
 kind: feature
-labels: area:addons, effort:l
+labels: area:addons, effort:l, deferred
 depends: 314
 created: 2026-11-07T17:19:22Z
-updated: 2026-11-07T17:19:23Z
+updated: 2026-11-08T03:35:03Z
 +++
 
 SceneSprockets cannot show volumetric clouds in a scene's sky. Documentation/Features.md lists 'Volumetric lighting and fog' as missing.
@@ -7145,9 +7153,10 @@ Starting point: the cloud demo in MetalSprocketsExamples (sun-lit volumetric clo
 status: open
 priority: low
 kind: feature
-labels: area:addons, effort:xl
+labels: area:addons, effort:xl, deferred
 depends: 314
 created: 2026-11-07T17:19:23Z
+updated: 2026-11-08T03:35:03Z
 +++
 
 SceneSprockets has no fluid simulation, such as a water volume that splashes and flows around objects.
@@ -7745,5 +7754,58 @@ makeMesh(device:cellSize:) emits three new vertices for every triangle; neighbor
 Part of #316.
 
 - `2026-11-08T03:34:47Z`: Obsolete: the CPU-meshed SignedDistanceShape was removed; #316 will raymarch on the GPU instead.
+
+---
+
+## 351: No heightmap terrain in SceneSprocketsAddOns
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:addons, effort:l, subtask
+created: 2026-11-08T03:35:03Z
+updated: 2026-11-08T03:35:13Z
++++
+
+SceneSprockets cannot build a landscape from a heightmap: there is no terrain mesh made from height data (an image or a height array) with level of detail for large areas. Documentation/Features.md lists 'Terrain / heightmaps' as not done.
+
+Part of #315.
+
+---
+
+## 352: No voxel worlds in SceneSprocketsAddOns
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:addons, effort:l, subtask, deferred
+created: 2026-11-08T03:35:03Z
+updated: 2026-11-08T03:36:30Z
++++
+
+SceneSprockets cannot show voxel worlds (a 'Minecraft lite'): there are no chunked block grids with meshing, editing and texturing. Starting point: the Voxel example in MetalSprocketsExamples (compute-raymarched voxel volumes) and its MagicaVoxel .vox loader, MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/VoxelDemo/.
+
+Part of #315.
+
+---
+
+## 353: SceneSprocketsAddOns has its own point cloud instead of MetalSprocketsAddOns' PointCloud
+
++++
+status: new
+priority: low
+kind: task
+labels: area:addons,effort:m
+created: 2026-11-08T03:48:56Z
++++
+
+SceneSprocketsAddOns.PointCloud (#321) is a point renderer written for SceneSprockets: a .point-primitive mesh drawn by a ShaderMaterial with new shaders in SceneSprocketsShaders (PointCloud.metal). MetalSprocketsAddOns, which SceneSprockets already depends on, has its own point cloud pipeline (Pipelines/PointCloud.swift: PointCloudRasterizePass, PointCloudResolvePipeline, PointCloudPointFunction, with shaders in MetalSprocketsAddOnsShaders). So there are two point cloud implementations, and the SceneSprockets one does not use the existing one.
+
+## Proposed fix (per schwa)
+Use the point cloud in MetalSprocketsAddOns, not the one SceneSprockets rolled itself.
+
+Related: #321.
 
 ---
