@@ -6979,11 +6979,13 @@ Add these, and similar content, to the SceneSprocketsAddOns target (#314): lands
 ## 316: No signed distance field (SDF) blobs
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:addons, effort:l
 created: 2026-11-07T17:17:05Z
+updated: 2026-11-08T02:45:53Z
+closed: 2026-11-08T02:45:53Z
 +++
 
 SceneSprockets cannot show signed distance field shapes, such as metaballs or blobs that merge smoothly when they move close together. There is no way to describe a shape as a distance function (spheres, capsules and boxes combined with smooth union, subtraction or intersection) and draw it in a scene with the other nodes, lit and depth-tested like meshes.
@@ -6991,6 +6993,7 @@ SceneSprockets cannot show signed distance field shapes, such as metaballs or bl
 Related: SceneSprocketsAddOns target (#314).
 
 - `2026-11-07T17:19:23Z`: Starting points in MetalSprocketsExamples: the SDF example (3D SDF raymarching), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/SDFDemo/, and Tiled SDF (tile-culled 2D SDF), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/TiledSDFDemo/.
+- `2026-11-08T02:45:53Z`: Added SignedDistanceShape to SceneSprocketsAddOns: sphere, rounded box and capsule primitives with smooth union, subtraction and intersection; distance(at:), normal(at:), bounds, surface(cellSize:) and makeMesh(device:cellSize:). The shape is meshed on the CPU with marching tetrahedra (no case tables) and gradient normals, so it is an ordinary mesh: lit, depth-tested and shadowed with any material, no new renderer. Tests: primitive distances, smooth union merges nearby spheres, subtraction/intersection, a meshed sphere lies on the sphere with outward winding and normals, and empty shapes make no mesh. Not done: GPU raymarching (the MetalSprocketsExamples approach); rebuild the mesh when the shape moves.
 
 ---
 
