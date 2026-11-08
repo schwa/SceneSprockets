@@ -7071,17 +7071,21 @@ Starting points: the Tree Generator example in MetalSprocketsExamples (space-col
 ## 321: No point cloud node
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:addons, effort:m
 depends: 314
 created: 2026-11-07T17:19:22Z
+updated: 2026-11-08T02:42:24Z
+closed: 2026-11-08T02:42:24Z
 +++
 
 SceneSprockets has no node for point clouds (for example scanned data or PLY points) drawn as sized, colored points. Documentation/Features.md marks point clouds as possible with ShaderMaterial but needing an example.
 
 Starting point: the Point Cloud example in MetalSprocketsExamples, MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/PointCloudDemo/. Candidate for SceneSprocketsAddOns (#314).
+
+- `2026-11-08T02:42:24Z`: Added PointCloud to SceneSprocketsAddOns: points with position and color, a pointSize in screen points, makeMaterial() (a ShaderMaterial with new PointCloud.metal shaders in SceneSprocketsShaders: round points via point_coord, node opacity applied) and makeNode(device:) (a .point-primitive mesh that casts no shadow). Tests: an 8-point dot renders round, centered and red (52 pixels, square would be 64); empty clouds make empty nodes; translucent colors make a transparent material. Note: the first version put pointSize at [[buffer(0)]], which collides with the mesh's vertex buffer and drew nothing; ShaderMaterial parameters in vertex functions must use slots above the vertex buffers.
 
 ---
 

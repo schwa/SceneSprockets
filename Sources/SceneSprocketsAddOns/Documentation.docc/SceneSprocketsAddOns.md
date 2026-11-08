@@ -11,3 +11,4 @@ The add-ons are content generators and other features that build on SceneSprocke
 ### Generators
 
 - ``ProceduralTree``
+- ``PointCloud``

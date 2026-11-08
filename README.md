@@ -41,7 +41,7 @@ Each material family is its own product, so an app links only what it uses:
 | `SceneSprocketsPhysics` | Rigid-body physics on Jolt |
 | `SceneSprocketsAudio` | Positional audio on nodes |
 | `SceneSprocketsGizmos` | Transform gizmos and selection outlines |
-| `SceneSprocketsAddOns` | Optional generators, such as procedural trees |
+| `SceneSprocketsAddOns` | Optional generators: procedural trees and point clouds |
 
 ## Usage
 
