@@ -6692,17 +6692,19 @@ GLTFSceneGraph skips KHR_animation_pointer channels whose pointer it does not su
 ## 302: Model I/O loading skips skins and blend shapes
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:assets, effort:l
 created: 2026-11-07T15:41:13Z
-updated: 2026-11-07T16:25:15Z
+updated: 2026-11-08T02:33:45Z
+closed: 2026-11-08T02:33:45Z
 +++
 
 ModelIOSceneGraph does not import skins or blend shapes, and imports only perspective MDLCameras (orthographic cameras are skipped). glTF loading supports all three. Listed under Limitations in the README.
 
 - `2026-11-07T16:25:15Z`: Orthographic cameras fixed: MDLCamera with .orthographic projection becomes an OrthographicProjection with halfHeight = sensorVerticalAperture / 20 (Model I/O passes USD's verticalAperture through, which USD measures in tenths of a scene unit for orthographic cameras; checked with a USDA file). Test orthographicCameraLoads failed before (camera skipped), passes now. Title narrowed to skins and blend shapes, still open: they need MDLSkeleton/MDLAnimationBindComponent and blend-shape support plus test assets.
+- `2026-11-08T02:33:45Z`: Fixed skins: ModelIOSceneGraph now makes joint nodes under each MDLSkeleton's node (rest transforms), reads joint indices and weights (after addNormals, which can split vertices; largest 4 influences, normalized), sets a Skin with inverse bind matrices inverse(bindTransform) * geometryBindTransform, and samples MDLPackedJointAnimation into TRS channels. Tests skinLoadsAndDeformsTheMesh and jointAnimationBecomesChannels failed before (no skin, no animation) and pass now. Blend shapes cannot be done: Model I/O has no blend-shape API (checked the SDK headers), so USD blend shapes need a different loader (see #31).
 
 ---
 

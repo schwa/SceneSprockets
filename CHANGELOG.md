@@ -66,4 +66,4 @@ SceneSprockets needs Swift 6.2 or later, and iOS, macOS or visionOS 26 or later.
 
 - glTF: meshes, skins, morph targets, animations, cameras, materials and punctual lights.
 - glTF extensions: material variants, animation pointers, node visibility, quantized meshes, GPU instancing and WebP textures. Meshopt compression and KTX2/Basis Universal textures are optional.
-- Model I/O: OBJ, PLY, STL, ABC and USD.
+- Model I/O: OBJ, PLY, STL, ABC and USD, including USD skins and their joint animation. Model I/O does not expose blend shapes.

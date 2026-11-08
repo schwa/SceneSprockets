@@ -180,3 +180,87 @@ func orthographicCameraLoads() throws {
     #expect(projection.depthMode == .standard(zClip: 0.5 ... 200))
     #expect(!result.warnings.contains { $0.contains("Camera") })
 }
+
+// A two-joint leg. The knee's rest pose is 1 unit above its bind pose, so the top of the leg moves up by 1.
+private func skinnedLegUSDA(animation: String = "") -> String {
+    """
+    #usda 1.0
+    (
+        defaultPrim = "Root"
+        upAxis = "Y"
+    )
+    def SkelRoot "Root"
+    {
+        double3 xformOp:translate = (10, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+        def Skeleton "Skel" (
+            prepend apiSchemas = ["SkelBindingAPI"]
+        )
+        {
+            uniform token[] joints = ["Hip", "Hip/Knee"]
+            uniform matrix4d[] bindTransforms = [((1,0,0,0),(0,1,0,0),(0,0,1,0),(0,0,0,1)), ((1,0,0,0),(0,1,0,0),(0,0,1,0),(0,1,0,1))]
+            uniform matrix4d[] restTransforms = [((1,0,0,0),(0,1,0,0),(0,0,1,0),(0,0,0,1)), ((1,0,0,0),(0,1,0,0),(0,0,1,0),(0,2,0,1))]
+            \(animation.isEmpty ? "" : "rel skel:animationSource = </Root/Skel/Anim>")
+            \(animation)
+        }
+        def Mesh "Leg" (
+            prepend apiSchemas = ["SkelBindingAPI"]
+        )
+        {
+            int[] faceVertexCounts = [4]
+            int[] faceVertexIndices = [0, 1, 2, 3]
+            point3f[] points = [(-0.5,0,0), (0.5,0,0), (0.5,2,0), (-0.5,2,0)]
+            int[] primvars:skel:jointIndices = [0, 0, 1, 1] (
+                elementSize = 1
+                interpolation = "vertex"
+            )
+            float[] primvars:skel:jointWeights = [1, 1, 1, 1] (
+                elementSize = 1
+                interpolation = "vertex"
+            )
+            rel skel:skeleton = </Root/Skel>
+        }
+    }
+    """
+}
+
+@Test
+func skinLoadsAndDeformsTheMesh() throws {
+    let url = try temporaryDirectory().appendingPathComponent("skin.usda")
+    try Data(skinnedLegUSDA().utf8).write(to: url)
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let result = try ModelIOSceneGraph(url: url, device: device)
+    let entry = try #require(result.sceneGraph.meshEntries().first)
+    let skin = try #require(entry.node.skin)
+    #expect(skin.joints.map(\.label) == ["Hip", "Knee"])
+    #expect(entry.node.skinVertices.count == entry.mesh.vertexCount)
+    let deformed = try #require(entry.deformed(revision: result.sceneGraph.revision))
+    let bounds = try #require(deformed.mesh.positionBounds())
+    #expect(abs(bounds.min.x - 9.5) < 1e-4)
+    #expect(abs(bounds.min.y) < 1e-4)
+    #expect(abs(bounds.max.y - 3) < 1e-4)
+    #expect(!result.warnings.contains { $0.contains("skin") })
+}
+
+@Test
+func jointAnimationBecomesChannels() throws {
+    let url = try temporaryDirectory().appendingPathComponent("skinAnimation.usda")
+    let animation = """
+    def SkelAnimation "Anim"
+    {
+        uniform token[] joints = ["Hip/Knee"]
+        float3[] translations.timeSamples = { 0: [(0, 1, 0)], 24: [(0, 3, 0)] }
+        quatf[] rotations = [(1, 0, 0, 0)]
+        half3[] scales = [(1, 1, 1)]
+    }
+    """
+    try Data(skinnedLegUSDA(animation: animation).utf8).write(to: url)
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let result = try ModelIOSceneGraph(url: url, device: device)
+    let clip = try #require(result.animation)
+    let knee = try #require(result.sceneGraph.meshEntries().first?.node.skin?.joints.last)
+    let translation = try #require(clip.channels.first { $0.target === knee && $0.path == .translation })
+    #expect(translation.sampler.values.first.map { abs($0) < 1e-4 } == true)
+    #expect(translation.sampler.values.count == translation.sampler.times.count * 3)
+    #expect(translation.sampler.values.suffix(2).first.map { abs($0 - 3) < 1e-4 } == true)
+}

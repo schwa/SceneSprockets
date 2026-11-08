@@ -11,7 +11,8 @@ import SwiftMesh
 /// A Model I/O asset converted to a scene graph, with its object hierarchy.
 ///
 /// Model I/O reads OBJ, PLY, STL, ABC, USD and more. The conversion keeps meshes, materials, cameras, lights and
-/// keyframed transforms, including orthographic cameras. It does not import skins or blend shapes.
+/// keyframed transforms, including orthographic cameras, and skins with their joint animation. It does not import
+/// blend shapes: Model I/O does not expose them.
 public struct ModelIOSceneGraph {
     /// The kind of scene material to make from the asset's materials.
     public enum MaterialKind: Sendable {
@@ -59,6 +60,7 @@ public struct ModelIOSceneGraph {
         for index in 0..<asset.count {
             try converter.visit(asset.object(at: index), parent: root)
         }
+        converter.resolveSkins()
         sceneGraph = SceneGraph(root: root)
         animation = converter.channels.isEmpty ? nil : SceneGraph.AnimationClip(name: label, channels: converter.channels)
         warnings = converter.warnings
@@ -79,6 +81,10 @@ private struct ModelIOConverter {
     var warnings: [String] = []
     var materialCache: [ObjectIdentifier: any SceneSprockets.Material] = [:]
     var textureCache: [ObjectIdentifier: MTLTexture] = [:]
+    // Joint nodes per MDLSkeleton, in its jointPaths order.
+    var skeletonJoints: [ObjectIdentifier: [SceneGraph.Node]] = [:]
+    // Skinned meshes, resolved after the walk because a mesh can come before its skeleton.
+    var pendingSkins: [(node: SceneGraph.Node, bind: MDLAnimationBindComponent, skeleton: MDLSkeleton)] = []
 
     init(device: MTLDevice, materialKind: ModelIOSceneGraph.MaterialKind) throws {
         self.device = device
@@ -106,9 +112,20 @@ private struct ModelIOConverter {
         }
         switch object {
         case let mesh as MDLMesh:
-            if let (metalMesh, materials) = try convert(mesh) {
+            let bind = mesh.componentConforming(to: MDLComponent.self) as? MDLAnimationBindComponent
+            if let (metalMesh, materials, skinVertices) = try convert(mesh) {
                 node.content = .mesh(metalMesh, materials: materials)
+                if let bind, let skeleton = bind.skeleton {
+                    if let skinVertices {
+                        node.skinVertices = skinVertices
+                        pendingSkins.append((node, bind, skeleton))
+                    } else {
+                        warnings.append("Mesh \(object.name): skin skipped, no joint indices and weights")
+                    }
+                }
             }
+        case let skeleton as MDLSkeleton:
+            makeJoints(skeleton, parent: node)
         case let camera as MDLCamera:
             let far = max(camera.farVisibilityDistance, camera.nearVisibilityDistance)
             let zClip = camera.nearVisibilityDistance ... far
@@ -136,6 +153,151 @@ private struct ModelIOConverter {
         }
     }
 
+    // Joint nodes under the skeleton's node, posed with the rest transforms. A joint path's parent is the path
+    // without its last component, as in USD.
+    mutating func makeJoints(_ skeleton: MDLSkeleton, parent: SceneGraph.Node) {
+        let rest = skeleton.jointRestTransforms.float4x4Array
+        var nodesByPath: [String: SceneGraph.Node] = [:]
+        var joints: [SceneGraph.Node] = []
+        for (index, path) in skeleton.jointPaths.enumerated() {
+            let components = path.split(separator: "/")
+            let parentPath = components.dropLast().joined(separator: "/")
+            let jointParent = nodesByPath[parentPath] ?? parent
+            let joint = SceneGraph.Node(parent: jointParent, label: components.last.map(String.init))
+            if rest.indices.contains(index) {
+                joint.transform = rest[index]
+            }
+            nodesByPath[path] = joint
+            joints.append(joint)
+        }
+        skeletonJoints[ObjectIdentifier(skeleton)] = joints
+        if let animation = (skeleton.componentConforming(to: MDLComponent.self) as? MDLAnimationBindComponent)?.jointAnimation as? MDLPackedJointAnimation {
+            sampleJointAnimation(animation, nodesByPath: nodesByPath)
+        }
+    }
+
+    // Each animated joint gets TRS channels sampled at the union of the key times.
+    mutating func sampleJointAnimation(_ animation: MDLPackedJointAnimation, nodesByPath: [String: SceneGraph.Node]) {
+        let keyTimes = Set(animation.translations.times + animation.rotations.times + animation.scales.times).sorted()
+        guard keyTimes.count > 1 else {
+            return
+        }
+        let translations = keyTimes.map { animation.translations.float3Array(atTime: $0) }
+        let rotations = keyTimes.map { animation.rotations.floatQuaternionArray(atTime: $0) }
+        let scales = keyTimes.map { animation.scales.float3Array(atTime: $0) }
+        let times = keyTimes.map { Float($0) }
+        for (index, path) in animation.jointPaths.enumerated() {
+            guard let joint = nodesByPath[path] else {
+                warnings.append("Joint animation for \(path) skipped: no such joint")
+                continue
+            }
+            var channelValues: [(SceneGraph.AnimationClip.Path, [Float])] = []
+            if translations.allSatisfy({ $0.indices.contains(index) }) {
+                channelValues.append((.translation, translations.flatMap { [$0[index].x, $0[index].y, $0[index].z] }))
+            }
+            if rotations.allSatisfy({ $0.indices.contains(index) }) {
+                channelValues.append((.rotation, rotations.flatMap { [$0[index].vector.x, $0[index].vector.y, $0[index].vector.z, $0[index].vector.w] }))
+            }
+            if scales.allSatisfy({ $0.indices.contains(index) }) {
+                channelValues.append((.scale, scales.flatMap { [$0[index].x, $0[index].y, $0[index].z] }))
+            }
+            channels += channelValues.map { .init(target: joint, path: $0.0, sampler: .init(times: times, values: $0.1, interpolation: .linear)) }
+        }
+    }
+
+    // Up to four influences per vertex, the largest weights, normalized.
+    // swiftlint:disable:next discouraged_optional_collection - nil means the mesh has no joint attributes
+    func skinVertices(_ mesh: MDLMesh) -> [SceneGraph.SkinVertex]? {
+        guard let indices = mesh.vertexAttributeData(forAttributeNamed: MDLVertexAttributeJointIndices),
+              let weights = mesh.vertexAttributeData(forAttributeNamed: MDLVertexAttributeJointWeights) else {
+            return nil
+        }
+        let indexCount = Int(indices.format.rawValue & 0xFFFF)
+        let weightCount = Int(weights.format.rawValue & 0xFFFF)
+        guard indexCount > 0, indexCount == weightCount else {
+            return nil
+        }
+        var result: [SceneGraph.SkinVertex] = []
+        result.reserveCapacity(mesh.vertexCount)
+        for vertex in 0..<mesh.vertexCount {
+            let indexPointer = UnsafeRawPointer(indices.dataStart).advanced(by: vertex * indices.stride)
+            let weightPointer = UnsafeRawPointer(weights.dataStart).advanced(by: vertex * weights.stride)
+            var influences: [(joint: UInt16, weight: Float)] = []
+            for slot in 0..<indexCount {
+                guard let joint = Self.integer(indexPointer, slot: slot, format: indices.format), let weight = Self.float(weightPointer, slot: slot, format: weights.format) else {
+                    return nil
+                }
+                influences.append((UInt16(clamping: joint), weight))
+            }
+            let strongest = influences.sorted { $0.weight > $1.weight }.prefix(4)
+            var joints = SIMD4<UInt16>.zero
+            var values = SIMD4<Float>.zero
+            for (slot, influence) in strongest.enumerated() {
+                joints[slot] = influence.joint
+                values[slot] = influence.weight
+            }
+            let total = values.sum()
+            result.append(SceneGraph.SkinVertex(joints: joints, weights: total > 0 ? values / total : [1, 0, 0, 0]))
+        }
+        return result
+    }
+
+    static func integer(_ pointer: UnsafeRawPointer, slot: Int, format: MDLVertexFormat) -> Int? {
+        switch format.rawValue & 0xFFFF0000 {
+        case MDLVertexFormat.uCharBits.rawValue: Int(pointer.loadUnaligned(fromByteOffset: slot, as: UInt8.self))
+        case MDLVertexFormat.charBits.rawValue: Int(pointer.loadUnaligned(fromByteOffset: slot, as: Int8.self))
+        case MDLVertexFormat.uShortBits.rawValue: Int(pointer.loadUnaligned(fromByteOffset: slot * 2, as: UInt16.self))
+        case MDLVertexFormat.shortBits.rawValue: Int(pointer.loadUnaligned(fromByteOffset: slot * 2, as: Int16.self))
+        case MDLVertexFormat.uIntBits.rawValue: Int(pointer.loadUnaligned(fromByteOffset: slot * 4, as: UInt32.self))
+        case MDLVertexFormat.intBits.rawValue: Int(pointer.loadUnaligned(fromByteOffset: slot * 4, as: Int32.self))
+        case MDLVertexFormat.floatBits.rawValue: Int(pointer.loadUnaligned(fromByteOffset: slot * 4, as: Float.self))
+        default: nil
+        }
+    }
+
+    static func float(_ pointer: UnsafeRawPointer, slot: Int, format: MDLVertexFormat) -> Float? {
+        switch format.rawValue & 0xFFFF0000 {
+        case MDLVertexFormat.floatBits.rawValue: pointer.loadUnaligned(fromByteOffset: slot * 4, as: Float.self)
+        case MDLVertexFormat.halfBits.rawValue: Float(pointer.loadUnaligned(fromByteOffset: slot * 2, as: Float16.self))
+        case MDLVertexFormat.uCharNormalizedBits.rawValue: Float(pointer.loadUnaligned(fromByteOffset: slot, as: UInt8.self)) / 255
+        case MDLVertexFormat.uShortNormalizedBits.rawValue: Float(pointer.loadUnaligned(fromByteOffset: slot * 2, as: UInt16.self)) / 65_535
+        default: nil
+        }
+    }
+
+    // Inverse bind matrices map the mesh's bind pose into each joint's space: inverse(bind) * geometryBindTransform.
+    mutating func resolveSkins() {
+        for (node, bind, skeleton) in pendingSkins {
+            guard let skeletonJoints = skeletonJoints[ObjectIdentifier(skeleton)] else {
+                warnings.append("Skin on \(node.label ?? "mesh") skipped: its skeleton is not in the asset's hierarchy")
+                continue
+            }
+            let bindTransforms = skeleton.jointBindTransforms.float4x4Array
+            var jointIndices = Array(skeletonJoints.indices)
+            if let paths = bind.jointPaths, !paths.isEmpty {
+                let lookup = Dictionary(skeleton.jointPaths.enumerated().map { ($1, $0) }) { first, _ in first }
+                let mapped = paths.compactMap { lookup[$0] }
+                guard mapped.count == paths.count else {
+                    warnings.append("Skin on \(node.label ?? "mesh") skipped: joints missing from its skeleton")
+                    node.skinVertices = []
+                    continue
+                }
+                jointIndices = mapped
+            }
+            guard jointIndices.allSatisfy({ bindTransforms.indices.contains($0) }) else {
+                warnings.append("Skin on \(node.label ?? "mesh") skipped: missing bind transforms")
+                node.skinVertices = []
+                continue
+            }
+            let double = bind.geometryBindTransform
+            let geometryBind = simd_float4x4(columns: (SIMD4<Float>(double.columns.0), SIMD4<Float>(double.columns.1), SIMD4<Float>(double.columns.2), SIMD4<Float>(double.columns.3)))
+            node.skin = SceneGraph.Skin(
+                joints: jointIndices.map { skeletonJoints[$0] },
+                inverseBindMatrices: jointIndices.map { bindTransforms[$0].inverse * geometryBind }
+            )
+        }
+    }
+
     // Keyframed transforms become one TRS channel set, sampled at the key times with linear interpolation.
     mutating func sampleAnimation(_ transform: MDLTransformComponent, node: SceneGraph.Node) {
         let times = transform.keyTimes.map { Float($0.doubleValue) }
@@ -154,13 +316,17 @@ private struct ModelIOConverter {
     }
 
     // Repacks to position, normal and texture coordinates (the layout both renderers read), one buffer.
-    mutating func convert(_ mesh: MDLMesh) throws -> (MetalMesh, [any SceneSprockets.Material])? {
+    // Also returns the skin vertices, if the mesh has joint attributes.
+    // swiftlint:disable:next large_tuple discouraged_optional_collection
+    mutating func convert(_ mesh: MDLMesh) throws -> (MetalMesh, [any SceneSprockets.Material], [SceneGraph.SkinVertex]?)? {
         guard mesh.vertexCount > 0, let submeshes = mesh.submeshes as? [MDLSubmesh], !submeshes.isEmpty else {
             return nil
         }
         if mesh.vertexAttributeData(forAttributeNamed: MDLVertexAttributeNormal) == nil {
             mesh.addNormals(withAttributeNamed: MDLVertexAttributeNormal, creaseThreshold: 0.5)
         }
+        // After addNormals, which can split vertices; before the repack, which drops the joint attributes.
+        let skinVertices = skinVertices(mesh)
         let descriptor = MDLVertexDescriptor()
         descriptor.attributes[0] = MDLVertexAttribute(name: MDLVertexAttributePosition, format: .float3, offset: 0, bufferIndex: 0)
         descriptor.attributes[1] = MDLVertexAttribute(name: MDLVertexAttributeNormal, format: .float3, offset: 12, bufferIndex: 0)
@@ -171,7 +337,7 @@ private struct ModelIOConverter {
         let mtkMesh = try MTKMesh(mesh: mesh, device: device)
         let metalMesh = MetalMesh(mtkMesh: mtkMesh)
         let materials = try submeshes.map { try material($0.material) }
-        return (metalMesh, materials)
+        return (metalMesh, materials, skinVertices)
     }
 
     mutating func material(_ source: MDLMaterial?) throws -> any SceneSprockets.Material {
