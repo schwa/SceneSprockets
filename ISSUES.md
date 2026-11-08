@@ -7031,6 +7031,8 @@ SceneSprockets has no ocean or water surface node, and no procedural sky. Docume
 
 Starting point: the Open Sea example in MetalSprocketsExamples (Gerstner-wave ocean with an analytic sky), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/OpenSeaDemo/. Candidate for SceneSprocketsAddOns (#314).
 
+- `2026-11-08T02:46:09Z`: Autonomous run: scoped, not changed. Two parts with design choices: (1) Ocean: the Open Sea example is a Gerstner-wave vertex shader with its own sun and analytic sky reflection (375 lines of Metal). As a ShaderMaterial in SceneSprocketsAddOns it would not see the scene's lights or shadows (ShaderMaterial gets none), only a sun direction parameter, and needs the app to pass time each frame; the alternative is CPU Gerstner displacement of a mesh drawn with PBR (lit, but CPU cost per frame). Same lit-vs-self-contained question as #322 and #300. (2) Procedural sky: needs a new Environment.Background case in the core (it is Codable and archived), plus a sun direction that could also drive a directional light. Question: for the ocean, unlit ShaderMaterial with its own sun, or CPU-displaced PBR mesh? For the sky, OK to add a Background case such as .physicalSky(sunDirection:turbidity:) to the core?
+
 ---
 
 ## 319: No grass or foliage fields
@@ -7047,6 +7049,8 @@ created: 2026-11-07T17:19:21Z
 SceneSprockets cannot cover ground with grass or similar foliage: there is no node that scatters many blades or plants over a surface cheaply, with wind. Documentation/Features.md lists 'Foliage with wind' as missing.
 
 Starting points in MetalSprocketsExamples: Grass (mesh-shader procedural grass), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/GrassDemo/, and Meadow (ray-traced procedural meadow), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/MeadowDemo/. Candidate for SceneSprocketsAddOns (#314); pairs with terrain (#315).
+
+- `2026-11-08T02:46:17Z`: Autonomous run: scoped, not changed. 'Cheap, many blades, with wind' needs per-frame GPU vertex animation (the Grass example uses a mesh shader). In SceneSprockets that is either a ShaderMaterial in SceneSprocketsAddOns (no scene lights or shadows, own sun parameter) or wind support in the Blinn-Phong/PBR vertex shaders (lit, but touches every renderer). Static scattered blades on the CPU would be lit but have no wind and cost a lot of vertices. Punting: same lit-vs-self-contained decision as #318, #322 and #300. Question: which approach, and should it wait for terrain (#315) to scatter on?
 
 ---
 
@@ -7126,6 +7130,8 @@ updated: 2026-11-07T17:19:23Z
 SceneSprockets cannot show volumetric clouds in a scene's sky. Documentation/Features.md lists 'Volumetric lighting and fog' as missing.
 
 Starting point: the cloud demo in MetalSprocketsExamples (sun-lit volumetric cloud with progressive accumulation), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/CloudDemo/CloudDemoView.swift. It is not in the examples README and still has temporary #242 bisect code. Candidate for SceneSprocketsAddOns (#314).
+
+- `2026-11-08T02:46:26Z`: Autonomous run: scoped, not changed. Volumetric clouds are a raymarched full-screen pass that needs the scene depth (to stop at geometry), a sun direction and a sky to sit in. That means a new pass in SceneGraphRenderer's post-pass chain (like FogPass) or an Environment.Background option, not a self-contained add-on node; the CloudDemo source also relies on progressive accumulation over frames, which does not fit a moving camera. Punting: depends on the procedural sky decision in #318 and on where sky effects live. Question: should clouds be part of the sky/background (#318) or a post pass like fog?
 
 ---
 
