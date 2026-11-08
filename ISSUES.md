@@ -6938,18 +6938,21 @@ Related: Documentation/Features.md lists 'Camera controllers: first person, fly,
 ## 314: No SceneSprocketsAddOns target for optional, larger features
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:addons, effort:s
 created: 2026-11-07T17:16:52Z
-updated: 2026-11-07T17:16:53Z
+updated: 2026-11-08T02:37:57Z
+closed: 2026-11-08T02:37:57Z
 +++
 
 SceneSprockets has no product for optional features that build on the scene graph but do not belong in the core library or a material renderer (for example terrain, voxels or other content generators). Such features would currently have to go into SceneSprockets itself, which every app links, or live in the demos where apps cannot use them.
 
 ## Proposed fix (per schwa)
 Add a new target and product, SceneSprocketsAddOns.
+
+- `2026-11-08T02:37:56Z`: Added the SceneSprocketsAddOns product and target (depends on SceneSprockets, SceneSprocketsBlinnPhong, SwiftMesh) with a test target and DocC catalog; listed in README, CHANGELOG and just check-docs. Landed in the same commit as #320 (ProceduralTree), because a SwiftPM target needs at least one source file.
 
 ---
 
@@ -7047,17 +7050,21 @@ Starting points in MetalSprocketsExamples: Grass (mesh-shader procedural grass),
 ## 320: No reusable procedural tree generator
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:addons, effort:m
 depends: 314
 created: 2026-11-07T17:19:21Z
+updated: 2026-11-08T02:37:57Z
+closed: 2026-11-08T02:37:57Z
 +++
 
 SceneSprockets has no reusable way to generate trees. The demos' Tree Appreciator grows trees, but that code lives in the demo package, where apps cannot use it.
 
 Starting points: the Tree Generator example in MetalSprocketsExamples (space-colonization trees), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/TreeGeneratorDemo/, and the demos' Demo/Packages/SceneSprocketsDemos/Sources/SceneSprocketsDemos/TreeAppreciator/. Candidate for SceneSprocketsAddOns (#314).
+
+- `2026-11-08T02:37:56Z`: Added ProceduralTree to SceneSprocketsAddOns: Parameters (with random(seed:)), deterministic growth from a seed, public branches and leaves for custom geometry, and makeNode(device:) for a flat-shaded Blinn-Phong mesh. The algorithm is the demo's (TreeAppreciator) without its game-only parts (differences, fruit, blossoms, birds); the demo still uses its own copy because its growth is interleaved with those differences. 5 tests in SceneSprocketsAddOnsTests (determinism, shape, branch limit, bare tree, node submeshes).
 
 ---
 
