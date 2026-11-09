@@ -56,12 +56,12 @@ public struct SceneCameraControl: Sendable, Equatable {
 
     var transforms: InteractionAxisTransforms {
         let base = interactionMode.defaultTransforms
-        let rotation = Double(rotationSpeed), zoom = Double(zoomSpeed), pan = panSpeed
+        let rotation = Double(rotationSpeed), zoom = Double(zoomSpeed), pan = Double(panSpeed)
         return InteractionAxisTransforms(
-            yaw: { base.yaw($0) * rotation },
-            pitch: { base.pitch($0) * rotation },
-            zoom: { base.zoom($0) * zoom },
-            pan: { base.pan($0) * pan }
+            yaw: base.yawScale * rotation,
+            pitch: base.pitchScale * rotation,
+            zoom: base.zoomScale * zoom,
+            pan: base.panScale * pan
         )
     }
 

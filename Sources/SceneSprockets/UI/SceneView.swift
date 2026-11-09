@@ -221,8 +221,8 @@ public struct SceneView: View {
             }
         }
         // Camera control leaves drags that start on the manipulator alone.
-        .interactionDragFilter { location in !manipulatorHit(at: location) }
-        .interactionMagnifyFilter { location in !manipulatorClaimsTwoFingers(at: location) }
+        .interactionDragFilter(LocationFilter { location in !manipulatorHit(at: location) })
+        .interactionMagnifyFilter(LocationFilter { location in !manipulatorClaimsTwoFingers(at: location) })
         #if os(iOS) || os(visionOS)
         .simultaneousGesture(twoFingerGesture, including: manipulator != nil ? .all : .subviews)
         #endif
@@ -515,5 +515,14 @@ private struct CameraControl: ViewModifier {
         } else {
             content
         }
+    }
+}
+
+// Adapts a closure to Interaction3D's location filters.
+private struct LocationFilter: InteractionLocationFilter {
+    let accepts: @MainActor (CGPoint) -> Bool
+
+    func accepts(_ location: CGPoint) -> Bool {
+        accepts(location)
     }
 }
