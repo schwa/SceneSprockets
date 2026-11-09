@@ -17,7 +17,6 @@ let package = Package(
         .library(name: "SceneSprocketsShaderMaterial", targets: ["SceneSprocketsShaderMaterial"]),
         .library(name: "SceneSprocketsAudio", targets: ["SceneSprocketsAudio"]),
         .library(name: "SceneSprocketsGizmos", targets: ["SceneSprocketsGizmos"]),
-        .library(name: "SceneSprocketsAddOns", targets: ["SceneSprocketsAddOns"]),
     ],
     dependencies: [
         .package(url: "https://github.com/schwa/GeometryLite3D", .upToNextMinor(from: "0.2.7")),
@@ -108,27 +107,6 @@ let package = Package(
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
                 .product(name: "SwiftMesh", package: "SwiftMesh"),
-            ]
-        ),
-        // Optional features built on the scene graph, such as content generators, that most apps do not need (#314).
-        .target(
-            name: "SceneSprocketsAddOns",
-            dependencies: [
-                "SceneSprockets",
-                .product(name: "MetalSprockets", package: "MetalSprockets"),
-                .product(name: "MetalSprocketsAddOns", package: "MetalSprocketsAddOns"),
-                .product(name: "MetalSprocketsAddOnsShaders", package: "MetalSprocketsAddOns"),
-                .product(name: "SwiftMesh", package: "SwiftMesh"),
-            ]
-        ),
-        .testTarget(
-            name: "SceneSprocketsAddOnsTests",
-            dependencies: [
-                "SceneSprockets",
-                "SceneSprocketsAddOns",
-                .product(name: "GeometryLite3D", package: "GeometryLite3D"),
-                .product(name: "MetalSprocketsAddOnsShaders", package: "MetalSprocketsAddOns"),
-                .product(name: "MetalSprockets", package: "MetalSprockets"),
             ]
         ),
         .target(name: "SceneSprocketsAudio"),
