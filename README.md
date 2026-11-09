@@ -42,6 +42,8 @@ Each material family is its own product, so an app links only what it uses:
 | `SceneSprocketsAudio` | Positional audio on nodes |
 | `SceneSprocketsGizmos` | Transform gizmos and selection outlines |
 
+Optional generators, such as point clouds, are in the separate [SceneSprocketsAddOns](https://github.com/schwa/SceneSprocketsAddOns) package.
+
 ## Usage
 
 ```swift
