@@ -230,6 +230,10 @@ public final class SceneGraphShadows {
         var dropped = 0
         var slices: [Range<Int>] = []
         for (transform, light) in lights {
+            guard light.castsShadow else {
+                slices.append(0..<0)
+                continue
+            }
             var lightViews: [simd_float4x4] = []
             let position = transform.columns.3.xyz
             let forward = simd_normalize(-transform.columns.2.xyz)

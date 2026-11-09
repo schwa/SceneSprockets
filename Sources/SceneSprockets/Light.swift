@@ -22,6 +22,9 @@ public struct Light: Sendable, Equatable, Codable {
     public var innerConeAngle: Float
     /// The half-angle of a spot light's cone, in radians. Outside it, the light has no effect.
     public var outerConeAngle: Float
+    /// Whether the light casts shadows when the scene has shadows, like SCNLight.castsShadow. Each shadow-casting light
+    /// draws the casters again (a point light six times), so turn it off for fill and decorative lights.
+    public var castsShadow: Bool
 
     /// Creates a light.
     ///
@@ -32,13 +35,30 @@ public struct Light: Sendable, Equatable, Codable {
     ///   - range: The distance where a point or spot light stops having an effect.
     ///   - innerConeAngle: The half-angle of a spot light's full-intensity cone, in radians.
     ///   - outerConeAngle: The half-angle of a spot light's cone, in radians.
-    public init(type: LightType, color: SIMD3<Float> = [1, 1, 1], intensity: Float = 1, range: Float = .infinity, innerConeAngle: Float = .pi / 8, outerConeAngle: Float = .pi / 6) {
+    public init(type: LightType, color: SIMD3<Float> = [1, 1, 1], intensity: Float = 1, range: Float = .infinity, innerConeAngle: Float = .pi / 8, outerConeAngle: Float = .pi / 6, castsShadow: Bool = true) {
+        self.castsShadow = castsShadow
         self.type = type
         self.color = color
         self.intensity = intensity
         self.range = range
         self.innerConeAngle = innerConeAngle
         self.outerConeAngle = outerConeAngle
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case type, color, intensity, range, innerConeAngle, outerConeAngle, castsShadow
+    }
+
+    /// Decodes a light. Archives from before `castsShadow` decode with shadows on.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        type = try container.decode(LightType.self, forKey: .type)
+        color = try container.decode(SIMD3<Float>.self, forKey: .color)
+        intensity = try container.decode(Float.self, forKey: .intensity)
+        range = try container.decode(Float.self, forKey: .range)
+        innerConeAngle = try container.decode(Float.self, forKey: .innerConeAngle)
+        outerConeAngle = try container.decode(Float.self, forKey: .outerConeAngle)
+        castsShadow = try container.decodeIfPresent(Bool.self, forKey: .castsShadow) ?? true
     }
 
     /// Creates a spot light.
