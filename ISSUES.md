@@ -5472,9 +5472,9 @@ To get a sky gradient, TreeAppreciator draws an inside-out sphere mesh with an e
 status: open
 priority: low
 kind: feature
-labels: effort:l, area:ui
+labels: effort:l, area:ui, deferred
 created: 2026-10-30T14:40:29Z
-updated: 2026-11-04T20:45:00Z
+updated: 2026-11-10T17:37:51Z
 +++
 
 Comparing two scenes side by side (TreeAppreciator shows two trees with a shared camera) needs two SceneViews. Each one makes its own RenderView, drawable, shadow maps, particle runtimes and pipeline setup, so a new pair pays the setup cost twice.
@@ -5604,9 +5604,9 @@ Provide camera-relative transforms to materials: subtract the camera position fr
 status: open
 priority: low
 kind: enhancement
-labels: area:scenegraph, effort:l, large-worlds
+labels: area:scenegraph, effort:l, large-worlds, deferred
 created: 2026-11-04T20:42:33Z
-updated: 2026-11-07T16:59:36Z
+updated: 2026-11-10T17:37:50Z
 +++
 
 Times, durations and delta times are plain `Float` across the public API: `Action` durations, `advanceActions(by:)`, `applyConstraints(deltaTime:)`, `Transaction.animate(duration:)`, particle `time` and `advanceParticles(by:)`, animation clip time and blending, `SceneView`, and physics stepping (~70 sites in Action, Animation, AnimationBlending, Particles, Constraint, Transaction, SceneView, SceneGraphPhysicsWorld, ModelIOSceneGraph).
@@ -5677,10 +5677,10 @@ Expected: PBR surfaces near a camera far from the origin render like the same sc
 status: open
 priority: low
 kind: feature
-labels: area:scenegraph, effort:xl, umbrella, large-worlds
+labels: area:scenegraph, effort:xl, umbrella, large-worlds, deferred
 depends: 256, 257, 258, 259, 260, 261, 253, 254, 252, 262
 created: 2026-11-04T21:06:11Z
-updated: 2026-11-07T16:59:36Z
+updated: 2026-11-10T17:37:50Z
 +++
 
 Node transforms and accumulated world transforms are simd_float4x4. Float32 resolves about 4-8 mm at 100 km and about 1 km at 1e10 m, so worlds at solar-system scale (Kerbal Space Program style; see #251 comments) cannot be represented, even though the renderers can now draw camera-relative (#251).
@@ -5714,9 +5714,9 @@ Blocked or big: #256 (core refactor); #259 and #260 build on #256 and #258; #261
 status: open
 priority: low
 kind: feature
-labels: area:scenegraph, effort:xl, subtask, large-worlds
+labels: area:scenegraph, effort:xl, subtask, large-worlds, deferred
 created: 2026-11-04T21:10:37Z
-updated: 2026-11-07T16:59:37Z
+updated: 2026-11-10T17:37:50Z
 +++
 
 Node local transforms and accumulated world transforms (SceneGraph.visit/traverse, MeshEntry.worldTransform, bounds, hit testing) are simd_float4x4. Float32 resolves about 4-8 mm at 100 km and about 1 km at 1e10 m, so positions in very large worlds cannot be stored.
@@ -5779,9 +5779,9 @@ For #259 the alternative needs no SwiftJolt change: keep Jolt in float and simul
 status: open
 priority: low
 kind: feature
-labels: area:physics, effort:l, subtask, large-worlds
+labels: area:physics, effort:l, subtask, large-worlds, deferred
 created: 2026-11-04T21:10:37Z
-updated: 2026-11-07T16:59:37Z
+updated: 2026-11-10T17:37:50Z
 +++
 
 SceneSprocketsPhysics hands world-space Float positions to Jolt. Far from the origin, simulation near the active area loses precision. There is no floating origin or local physics frame around the active area.
@@ -5798,9 +5798,9 @@ Part of #255.
 status: open
 priority: low
 kind: feature
-labels: area:physics, effort:m, subtask, large-worlds
+labels: area:physics, effort:m, subtask, large-worlds, deferred
 created: 2026-11-04T21:10:37Z
-updated: 2026-11-07T16:59:37Z
+updated: 2026-11-10T17:37:50Z
 +++
 
 At orbital speeds (several km/s) the active object's coordinates change by kilometers per second, so precision near it degrades and rendering and physics jitter. There is no reference frame that keeps the active object near rest (KSP's Krakensbane).
@@ -5817,9 +5817,9 @@ Part of #255.
 status: open
 priority: low
 kind: feature
-labels: area:renderer, effort:l, subtask, large-worlds
+labels: area:renderer, effort:l, subtask, large-worlds, deferred
 created: 2026-11-04T21:10:38Z
-updated: 2026-11-07T16:59:38Z
+updated: 2026-11-10T17:37:50Z
 +++
 
 Reverse-Z Float depth cannot resolve both nearby parts and very distant bodies in one pass. There is no scaled-space pass or multi-range (nested frusta) rendering. Related: #248 (several viewports/passes in one view).
@@ -5837,9 +5837,9 @@ Part of #255.
 status: open
 priority: low
 kind: bug
-labels: area:renderer, effort:m, subtask, large-worlds
+labels: area:renderer, effort:m, subtask, large-worlds, deferred
 created: 2026-11-04T21:19:04Z
-updated: 2026-11-07T16:59:38Z
+updated: 2026-11-10T17:37:51Z
 +++
 
 Left over from #257. Particle simulation and drawing (SceneParticleSystem simulate(view:) and runtime render(projection:view:), MetalSprocketsParticles) and the transform gizmo (TransformGizmo, GraphicsContext3DRenderPipeline with projection * view) still work in world-space Float, so far from the origin they jitter or misplace like the other paths did before #251/#253/#257. Particle positions live in MetalSprocketsParticles buffers, so a fix spans that package.
@@ -6922,8 +6922,9 @@ There is no equivalent here: an app cannot pick a mode, turn inertia on or off, 
 status: open
 priority: medium
 kind: feature
-labels: area:ui, effort:m
+labels: area:ui, effort:m, deferred
 created: 2026-11-07T17:16:02Z
+updated: 2026-11-10T17:37:51Z
 +++
 
 SceneView offers no keyboard or game controller navigation. There is no built-in way to fly or walk the camera with WASD (and arrow keys or mouse look), or with a game controller's sticks and triggers (GameController framework). Apps and demos that want first-person or fly-through navigation must handle key events and GCController input themselves and drive the cameraMatrix binding.
@@ -7171,8 +7172,9 @@ Starting point: the FLIP Fluid example in MetalSprocketsExamples (3D PIC/FLIP si
 status: open
 priority: low
 kind: feature
-labels: area:renderer, effort:m
+labels: area:renderer, effort:m, deferred
 created: 2026-11-07T17:54:10Z
+updated: 2026-11-10T17:37:51Z
 +++
 
 The renderer always uses reverse-Z (projection multiplied by .reverseZ, with a matching depth compare and clear value). There is no way to switch a view between reverse-Z and normal Z, and no automatic choice. Code that reads or writes depth (shadow maps, hit testing, depth debug views, post-processing, custom shader materials, gizmos, the sky background) assumes one convention, so changing it in one place gives wrong results somewhere else.
@@ -7453,8 +7455,9 @@ SceneGraph.Shape has no teapot. The Utah teapot is the usual test object in 3D g
 status: open
 priority: low
 kind: feature
-labels: area:scenegraph, effort:l
+labels: area:scenegraph, effort:l, deferred
 created: 2026-11-07T18:39:49Z
+updated: 2026-11-10T17:37:51Z
 +++
 
 SceneSprockets has no spatial acceleration structure (for example a bounding volume hierarchy, octree or grid). Work that asks "what is near here?" or "what does this ray or frustum touch?" goes through every node or every triangle:
@@ -7656,8 +7659,9 @@ Expected: a list, per slide, of what is data and what needs code, and the archiv
 status: open
 priority: low
 kind: feature
-labels: area:scenegraph, effort:xl
+labels: area:scenegraph, effort:xl, deferred
 created: 2026-11-07T18:54:15Z
+updated: 2026-11-10T17:37:51Z
 +++
 
 All scene behavior (reacting to taps, per-frame updates, custom actions, game logic) must be written in Swift and compiled into the app. There is no way to attach logic to a scene as data, for example in a stored scene file or from a tool like Composer, without rebuilding.
@@ -7675,8 +7679,9 @@ Related: #345 (what in the keynote needs code).
 status: open
 priority: low
 kind: feature
-labels: area:renderer, effort:xl
+labels: area:renderer, effort:xl, deferred
 created: 2026-11-07T18:54:26Z
+updated: 2026-11-10T17:37:52Z
 +++
 
 The renderer is raster-only. It does not use Metal ray tracing (acceleration structures, intersection functions), so effects that ray tracing does well are missing or approximated: ray-traced shadows (sharp contact and soft area-light shadows without shadow maps), reflections, ambient occlusion, global illumination, and offline path tracing of a scene for reference images.
@@ -7693,8 +7698,9 @@ Related: #337 (spatial acceleration structure; Metal acceleration structures cou
 status: open
 priority: low
 kind: feature
-labels: area:ui, effort:m
+labels: area:ui, effort:m, deferred
 created: 2026-11-07T19:00:30Z
+updated: 2026-11-10T17:37:52Z
 +++
 
 SceneView's camera control (configured with SceneCameraControl, #312) stops as soon as a drag or scroll ends: there is no inertia (the camera does not keep moving and slow down). It also has no fly or pan-only interaction modes, which SCNCameraController offers. Interaction3D, which SceneView uses for camera control, has neither.
@@ -7766,9 +7772,9 @@ Part of #316.
 status: open
 priority: low
 kind: feature
-labels: area:addons, effort:l, subtask
+labels: area:addons, effort:l, subtask, deferred
 created: 2026-11-08T03:35:03Z
-updated: 2026-11-08T03:35:13Z
+updated: 2026-11-10T17:37:52Z
 +++
 
 SceneSprockets cannot build a landscape from a heightmap: there is no terrain mesh made from height data (an image or a height array) with level of detail for large areas. Documentation/Features.md lists 'Terrain / heightmaps' as not done.
@@ -7820,10 +7826,12 @@ Related: #321.
 ## 354: SceneGraph.Node init requires a MTLDevice for every node
 
 +++
-status: new
+status: open
 priority: medium
 kind: enhancement
+labels: effort:m, area:scenegraph
 created: 2026-11-10T17:29:35Z
+updated: 2026-11-10T17:36:57Z
 +++
 
 Creating a node with a shape requires passing `device:` on every call:
@@ -7834,20 +7842,24 @@ let box = SceneGraph.Node(parent: root, shape: .box(), material: material, devic
 
 Every node construction has to thread the device through, which is noisy and repetitive at call sites. Building a scene graph should not require passing the device to each node.
 
-- `2026-11-10T17:31:51Z`: ## Proposed fix (per schwa)
+\- `2026-11-10T17:31:51Z`: ## Proposed fix (per schwa)
 Resolve the MTLDevice when the scene is placed in a RenderView (or other render context) instead of at construction time.
 
 Related device-threading issues filed for materials, textures, PBRMaterialRenderer, loaders and Composer.
+
+- `2026-11-10T17:36:20Z`: Part of #360 (architecture: scene construction is coupled to MTLDevice; see the constraint about creating GPU resources up front).
 
 ---
 
 ## 355: PBR material construction requires a MTLDevice
 
 +++
-status: new
+status: open
 priority: medium
 kind: enhancement
+labels: effort:m, area:renderer
 created: 2026-11-10T17:31:50Z
+updated: 2026-11-10T17:36:57Z
 +++
 
 Creating PBR materials requires passing a device:
@@ -7861,15 +7873,19 @@ Every material created in a scene has to carry a device through. Related: #354.
 ## Proposed fix (per schwa)
 Resolve the MTLDevice when the scene is placed in a RenderView (or other render context) instead of at construction time.
 
+- `2026-11-10T17:36:21Z`: Part of #360 (architecture: scene construction is coupled to MTLDevice; see the constraint about creating GPU resources up front).
+
 ---
 
 ## 356: Material texture loading requires a MTLDevice
 
 +++
-status: new
+status: open
 priority: medium
 kind: enhancement
+labels: effort:m, area:assets
 created: 2026-11-10T17:31:50Z
+updated: 2026-11-10T17:36:57Z
 +++
 
 Loading textures for materials requires passing a device:
@@ -7883,15 +7899,19 @@ Related: #354.
 ## Proposed fix (per schwa)
 Resolve the MTLDevice when the scene is placed in a RenderView (or other render context) instead of at construction time.
 
+- `2026-11-10T17:36:21Z`: Part of #360 (architecture: scene construction is coupled to MTLDevice; see the constraint about creating GPU resources up front).
+
 ---
 
 ## 357: PBRMaterialRenderer requires a MTLDevice at init
 
 +++
-status: new
+status: open
 priority: medium
 kind: enhancement
+labels: effort:s, area:renderer
 created: 2026-11-10T17:31:50Z
+updated: 2026-11-10T17:36:57Z
 +++
 
 `PBRMaterialRenderer(device:)` (`Sources/SceneSprocketsPBR/PBRSceneGraph.swift:280`) requires a device, unlike `BlinnPhongMaterialRenderer()` and `ShaderMaterialRenderer()`. Renderer lists end up like:
@@ -7905,15 +7925,19 @@ Related: #354.
 ## Proposed fix (per schwa)
 Resolve the MTLDevice when the scene is placed in a RenderView (or other render context) instead of at construction time.
 
+- `2026-11-10T17:36:21Z`: Part of #360 (architecture: scene construction is coupled to MTLDevice; see the constraint about creating GPU resources up front).
+
 ---
 
 ## 358: Model loaders require a MTLDevice
 
 +++
-status: new
+status: open
 priority: medium
 kind: enhancement
+labels: effort:l, area:assets
 created: 2026-11-10T17:31:50Z
+updated: 2026-11-10T17:36:57Z
 +++
 
 Loading models requires a device:
@@ -7927,15 +7951,20 @@ Related: #354.
 ## Proposed fix (per schwa)
 Resolve the MTLDevice when the scene is placed in a RenderView (or other render context) instead of at construction time.
 
+- `2026-11-10T17:36:21Z`: Part of #360 (architecture: scene construction is coupled to MTLDevice; see the constraint about creating GPU resources up front).
+
 ---
 
 ## 359: Composer material editing threads MTLDevice through every edit
 
 +++
-status: new
+status: open
 priority: medium
 kind: enhancement
+labels: effort:s, area:composer
+depends: 355
 created: 2026-11-10T17:31:51Z
+updated: 2026-11-10T17:36:58Z
 +++
 
 In `SceneSprocketsComposerSupport`, material edits require a device on every call:
@@ -7948,5 +7977,37 @@ Related: #354.
 
 ## Proposed fix (per schwa)
 Resolve the MTLDevice when the scene is placed in a RenderView (or other render context) instead of at construction time.
+
+- `2026-11-10T17:36:21Z`: Part of #360 (architecture: scene construction is coupled to MTLDevice; see the constraint about creating GPU resources up front).
+
+---
+
+## 360: Scene construction is coupled to MTLDevice
+
++++
+status: open
+priority: medium
+kind: task
+labels: effort:xl, area:scenegraph
+created: 2026-11-10T17:36:18Z
+updated: 2026-11-10T17:36:58Z
++++
+
+Building a scene (nodes, meshes, materials, textures, loaded models) requires a `MTLDevice` up front, so the device is threaded through nearly every construction API. See #354, #355, #356, #357, #358, #359.
+
+## Constraint
+Several of these create GPU resources eagerly at construction time:
+
+- Texture loading (`MTKTextureLoader`) and `VideoTexture` allocate textures immediately.
+- Model loaders (ModelIO, GLTF, SceneArchive) build `MetalMesh`es and textures while parsing.
+- `Shape` → `MetalMesh` conversion allocates buffers at node init.
+- PBR materials create placeholder texture bindings at init.
+
+Getting the device later (e.g. from the RenderView, as proposed in #354) means these would need to create GPU resources later, when the scene is first drawn. Otherwise they still need a device up front, or a fallback to a default device.
+
+## Open questions
+- Which types can hold CPU-side data and create GPU resources on first render?
+- What happens when the same scene is shown in two views with different devices?
+- Is falling back to `MTLCreateSystemDefaultDevice()` acceptable when no device is given?
 
 ---
