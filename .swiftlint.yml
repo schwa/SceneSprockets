@@ -3,6 +3,7 @@ excluded:
   - "**/.swiftpm"
   - "**/DerivedData"
   - "**/Package.swift"
+  - "**/*.docc"
 type_name:
   allowed_symbols: ["_"]
   excluded: [ID]
