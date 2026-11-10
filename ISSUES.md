@@ -7823,7 +7823,7 @@ Related: #321.
 
 ---
 
-## 354: SceneGraph.Node init requires a MTLDevice for every node
+## 354: Node(shape:material:device:) requires a MTLDevice
 
 +++
 status: open
@@ -7831,35 +7831,34 @@ priority: medium
 kind: enhancement
 labels: effort:m, area:scenegraph
 created: 2026-11-10T17:29:35Z
-updated: 2026-11-10T17:36:57Z
+updated: 2026-11-10T17:50:38Z
 +++
 
-Creating a node with a shape requires passing `device:` on every call:
+The `SceneGraph.Node(parent:label:shape:material:device:trs:)` convenience init needs a device because it builds the `MetalMesh` for the shape inside the node init:
 
 ```swift
 let box = SceneGraph.Node(parent: root, shape: .box(), material: material, device: device)
 ```
 
-Every node construction has to thread the device through, which is noisy and repetitive at call sites. Building a scene graph should not require passing the device to each node.
+Nodes are not GPU objects and should not need a device. `MetalMesh` and `PBRMaterial` need one by design (SwiftMesh#188 and MetalSprocketsPBR#23 were closed as won't fix).
 
-\- `2026-11-10T17:31:51Z`: ## Proposed fix (per schwa)
-Resolve the MTLDevice when the scene is placed in a RenderView (or other render context) instead of at construction time.
-
-Related device-threading issues filed for materials, textures, PBRMaterialRenderer, loaders and Composer.
+The node also stores the device (`shapeStorage`) so that setting `shape` later can rebuild the mesh.
 
 - `2026-11-10T17:36:20Z`: Part of #360 (architecture: scene construction is coupled to MTLDevice; see the constraint about creating GPU resources up front).
+- `2026-11-10T17:45:53Z`: Tried: lazy device for Node(shape:). Punting: Node.Content.mesh holds a MetalMesh, which needs a device to exist (SwiftMesh#188). Bounds, hit tests, flatten, subdivision and deformation all read it synchronously, so a lazy form means a new core content type, which is #360. Unblocker: decide the device-free mesh representation (SwiftMesh change, or a SceneSprockets CPU-mesh content case resolved per device at render).
 
 ---
 
 ## 355: PBR material construction requires a MTLDevice
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: effort:m, area:renderer
 created: 2026-11-10T17:31:50Z
-updated: 2026-11-10T17:36:57Z
+updated: 2026-11-10T17:50:36Z
+closed: 2026-11-10T17:50:36Z
 +++
 
 Creating PBR materials requires passing a device:
@@ -7874,18 +7873,21 @@ Every material created in a scene has to carry a device through. Related: #354.
 Resolve the MTLDevice when the scene is placed in a RenderView (or other render context) instead of at construction time.
 
 - `2026-11-10T17:36:21Z`: Part of #360 (architecture: scene construction is coupled to MTLDevice; see the constraint about creating GPU resources up front).
+- `2026-11-10T17:45:53Z`: Tried: device-free PBRSceneMaterial inits. Punting: PBRSceneMaterial wraps PBRMaterial, which builds its resource buffer and samplers at init (MetalSprocketsPBR#23). About 70 call sites read .pbrMaterial directly. Unblocker: decide whether PBRMaterial becomes device-free upstream, or PBRSceneMaterial stores a description and makes a PBRMaterial per device at render (#360).
+- `2026-11-10T17:50:36Z`: Won't fix: MetalMesh, PBRMaterial and textures are GPU types and are meant to need a device. Nodes are not. See #354.
 
 ---
 
 ## 356: Material texture loading requires a MTLDevice
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: effort:m, area:assets
 created: 2026-11-10T17:31:50Z
-updated: 2026-11-10T17:36:57Z
+updated: 2026-11-10T17:50:37Z
+closed: 2026-11-10T17:50:37Z
 +++
 
 Loading textures for materials requires passing a device:
@@ -7900,6 +7902,8 @@ Related: #354.
 Resolve the MTLDevice when the scene is placed in a RenderView (or other render context) instead of at construction time.
 
 - `2026-11-10T17:36:21Z`: Part of #360 (architecture: scene construction is coupled to MTLDevice; see the constraint about creating GPU resources up front).
+- `2026-11-10T17:45:53Z`: Punting: MTLTexture is device-bound by nature. A lazy form needs a texture source (URL, CGImage, asset name) that renderers resolve with context.device, plus caching and archive support. That's a design decision under #360. Unblocker: confirm that MaterialTexture should become a source description resolved at render.
+- `2026-11-10T17:50:37Z`: Won't fix: MetalMesh, PBRMaterial and textures are GPU types and are meant to need a device. Nodes are not. See #354.
 
 ---
 
@@ -7933,12 +7937,13 @@ Resolve the MTLDevice when the scene is placed in a RenderView (or other render 
 ## 358: Model loaders require a MTLDevice
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: effort:l, area:assets
 created: 2026-11-10T17:31:50Z
-updated: 2026-11-10T17:36:57Z
+updated: 2026-11-10T17:50:37Z
+closed: 2026-11-10T17:50:37Z
 +++
 
 Loading models requires a device:
@@ -7953,19 +7958,22 @@ Related: #354.
 Resolve the MTLDevice when the scene is placed in a RenderView (or other render context) instead of at construction time.
 
 - `2026-11-10T17:36:21Z`: Part of #360 (architecture: scene construction is coupled to MTLDevice; see the constraint about creating GPU resources up front).
+- `2026-11-10T17:45:53Z`: Punting: loaders output MetalMesh and PBRMaterial, so they stay device-bound until SwiftMesh#188 and MetalSprocketsPBR#23 (or the in-repo alternative in #360) land. The duplicate device in GLTFAsset(url:device:).makeSceneGraph(device:) could be fixed alone. Should I do just that part?
+- `2026-11-10T17:50:37Z`: Won't fix: MetalMesh, PBRMaterial and textures are GPU types and are meant to need a device. Nodes are not. See #354.
 
 ---
 
 ## 359: Composer material editing threads MTLDevice through every edit
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: effort:s, area:composer
 depends: 355
 created: 2026-11-10T17:31:51Z
-updated: 2026-11-10T17:36:58Z
+updated: 2026-11-10T17:50:37Z
+closed: 2026-11-10T17:50:37Z
 +++
 
 In `SceneSprocketsComposerSupport`, material edits require a device on every call:
@@ -7980,18 +7988,21 @@ Related: #354.
 Resolve the MTLDevice when the scene is placed in a RenderView (or other render context) instead of at construction time.
 
 - `2026-11-10T17:36:21Z`: Part of #360 (architecture: scene construction is coupled to MTLDevice; see the constraint about creating GPU resources up front).
+- `2026-11-10T17:45:53Z`: Punting: blocked on #355. Composer edits build new PBRMaterials, which need a device until PBR materials are device-free. Removed the unused EditorModel.init(device:) parameter as part of #357.
+- `2026-11-10T17:50:38Z`: Won't fix: MetalMesh, PBRMaterial and textures are GPU types and are meant to need a device. Nodes are not. See #354.
 
 ---
 
 ## 360: Scene construction is coupled to MTLDevice
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: effort:xl, area:scenegraph
 created: 2026-11-10T17:36:18Z
-updated: 2026-11-10T17:36:58Z
+updated: 2026-11-10T17:50:38Z
+closed: 2026-11-10T17:50:38Z
 +++
 
 Building a scene (nodes, meshes, materials, textures, loaded models) requires a `MTLDevice` up front, so the device is threaded through nearly every construction API. See #354, #355, #356, #357, #358, #359.
@@ -8010,5 +8021,8 @@ Getting the device later (e.g. from the RenderView, as proposed in #354) means t
 - Which types can hold CPU-side data and create GPU resources on first render?
 - What happens when the same scene is shown in two views with different devices?
 - Is falling back to `MTLCreateSystemDefaultDevice()` acceptable when no device is given?
+
+- `2026-11-10T17:45:53Z`: Progress: #357 is done. SceneGraphRenderContext now carries the RenderView's device (@MSEnvironment(\.device)), so renderers can make GPU resources at draw time. Upstream blockers filed: SwiftMesh#188 (MetalMesh) and MetalSprocketsPBR#23 (PBRMaterial).
+- `2026-11-10T17:50:38Z`: Won't fix: MetalMesh, PBRMaterial and textures are GPU types and are meant to need a device. Nodes are not. See #354.
 
 ---
