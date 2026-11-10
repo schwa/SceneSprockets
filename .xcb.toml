@@ -1,13 +1,11 @@
 [defaults]
-destination = "mac"
 container = "SceneSprockets"
-skip_plugin_validation = true
 
 [defaults.build]
-scheme = "SceneSprocketsComposer"
+scheme = "SceneSprocketsDemo"
 
 [defaults.test]
 scheme = "SceneSprockets"
 
 [defaults.run]
-scheme = "SceneSprocketsComposer"
+scheme = "SceneSprocketsDemo"
