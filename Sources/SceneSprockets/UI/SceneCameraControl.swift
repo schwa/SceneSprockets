@@ -47,7 +47,7 @@ public struct SceneCameraControl: Sendable, Equatable {
         self.pitchRange = pitchRange
     }
 
-    var interactionMode: InteractiveCameraModifier.Mode {
+    var interactionMode: InteractiveCameraMode {
         switch mode {
         case .turntable: .turntable()
         case .arcball: .arcball()
