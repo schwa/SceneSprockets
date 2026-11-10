@@ -14,7 +14,7 @@ private let gradient = SceneGraph.Environment.SkyGradient(zenith: [0, 0, 1], hor
 @MainActor
 private func skyPixel(pitch: Float) throws -> SIMD4<UInt8> {
     let root = SceneGraph.Node()
-    _ = SceneGraph.Node(parent: root, trs: .init(rotation: simd_quatf(angle: pitch, axis: [1, 0, 0])), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(10)))))
+    root.addChild(SceneGraph.Node(trs: .init(rotation: simd_quatf(angle: pitch, axis: [1, 0, 0])), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(10))))))
     let sceneGraph = SceneGraph(root: root)
     sceneGraph.environment.background = .gradient(gradient)
     let renderer = try OffscreenRenderer(size: CGSize(width: 16, height: 16))

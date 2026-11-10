@@ -24,11 +24,11 @@ private func makeScene(groups: Int) -> (graph: SceneGraph, root: SceneGraph.Node
     let root = SceneGraph.Node()
     var nodes: [SceneGraph.Node] = []
     for group in 0..<groups {
-        let parent = SceneGraph.Node(parent: root, transform: simd_float4x4(translation: [Float(group), 0, 0]))
+        let parent = root.addChild(SceneGraph.Node(transform: simd_float4x4(translation: [Float(group), 0, 0])))
         nodes.append(parent)
         for index in 0..<9 {
             let content: SceneGraph.Node.Content = index.isMultiple(of: 3) ? .light(Light(type: .point)) : .empty
-            nodes.append(SceneGraph.Node(parent: parent, transform: simd_float4x4(translation: [0, Float(index), 0]), content: content))
+            nodes.append(parent.addChild(SceneGraph.Node(transform: simd_float4x4(translation: [0, Float(index), 0]), content: content)))
         }
     }
     return (SceneGraph(root: root), root, nodes)

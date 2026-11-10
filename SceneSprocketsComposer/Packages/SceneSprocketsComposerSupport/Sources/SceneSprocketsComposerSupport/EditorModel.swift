@@ -638,7 +638,7 @@ public final class EditorModel {
     // Adds under the root and selects it.
     func addShape(_ shape: SceneGraph.Shape, label: String) {
         let material = BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color(0.8), specular: .color(0.5), shininess: 32)
-        let node = SceneGraph.Node(parent: nil, label: label, shape: shape, material: material)
+        let node = SceneGraph.Node(label: label, shape: shape, material: material)
         insert(node, into: sceneGraph.root, at: sceneGraph.root.children.count, actionName: "Add \(label)")
     }
 

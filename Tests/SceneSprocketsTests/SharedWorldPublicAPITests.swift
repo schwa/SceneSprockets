@@ -13,7 +13,7 @@ private struct Velocity: Component {
 func appOwnedWorldHoldsTheGraphsNodes() throws {
     let world = World()
     let root = SceneGraph.Node(label: "Root")
-    let child = SceneGraph.Node(parent: root, transform: simd_float4x4(translation: [1, 0, 0]))
+    let child = root.addChild(SceneGraph.Node(transform: simd_float4x4(translation: [1, 0, 0])))
     let graph = SceneGraph(root: root, world: world)
     #expect(graph.world === world)
 

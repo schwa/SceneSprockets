@@ -30,8 +30,8 @@ private func writePNG(_ image: CGImage) throws -> URL {
 @MainActor
 private func centerPixel(_ material: any SceneSprockets.Material, renderer: any SceneGraphMaterialRenderer, channel: SceneGraphMaterialChannel? = nil) throws -> SIMD4<UInt8> {
     let root = SceneGraph.Node()
-    _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40)))))
-    _ = SceneGraph.Node(parent: root, content: .mesh(SceneGraph.Shape.plane(width: 2, height: 2).metalMesh(), material: material))
+    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
+    root.addChild(SceneGraph.Node(content: .mesh(SceneGraph.Shape.plane(width: 2, height: 2).metalMesh(), material: material)))
     let element = SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [renderer], materialChannel: channel)
     let texture = try OffscreenRenderer(size: CGSize(width: 16, height: 16)).render(element).texture
     var value = SIMD4<UInt8>.zero
@@ -78,7 +78,7 @@ func colorTexturesKeepTheirValues() throws {
 func loadedTexturesSurviveAnArchive() throws {
     let red = try MaterialTexture.load(solidImage(red: 1, green: 0, blue: 0))
     let root = SceneGraph.Node(label: "Root")
-    _ = SceneGraph.Node(parent: root, shape: .plane(), material: BlinnPhongSceneMaterial(ambient: .texture(red), diffuse: .color(0), specular: .color(0), shininess: 1))
+    root.addChild(SceneGraph.Node(shape: .plane(), material: BlinnPhongSceneMaterial(ambient: .texture(red), diffuse: .color(0), specular: .color(0), shininess: 1)))
     let archive = SceneArchive(materialTypes: [BlinnPhongSceneMaterial.self], meshCodec: GLTFMeshCodec())
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("MaterialTexture-\(UUID().uuidString).scenesprockets")
     defer { try? FileManager.default.removeItem(at: url) }

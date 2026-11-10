@@ -31,25 +31,25 @@ private func makeScene(boxCastsShadow: Bool = true, skinned: Bool = false, light
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
     let root = SceneGraph.Node()
-    let camera = SceneGraph.Node(parent: root, transform: pose(eye: [0, 6, 6], target: .zero), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(50)))))
+    let camera = root.addChild(SceneGraph.Node(transform: pose(eye: [0, 6, 6], target: .zero), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(50))))))
     switch light {
     case .spot:
         // Above and right of the box, aimed through it at the floor near x = -0.9.
-        _ = SceneGraph.Node(parent: root, transform: pose(eye: [1.5, 4, 0], target: [-0.9, 0, 0]), content: .light(.spot(color: [1, 1, 1], intensity: 20, innerConeAngle: 0.4, outerConeAngle: 0.6)))
+        root.addChild(SceneGraph.Node(transform: pose(eye: [1.5, 4, 0], target: [-0.9, 0, 0]), content: .light(.spot(color: [1, 1, 1], intensity: 20, innerConeAngle: 0.4, outerConeAngle: 0.6))))
     case .point:
-        _ = SceneGraph.Node(parent: root, transform: pose(eye: [1.5, 4, 0], target: [-0.9, 0, 0]), content: .light(Light(type: .point, color: [1, 1, 1], intensity: 20)))
+        root.addChild(SceneGraph.Node(transform: pose(eye: [1.5, 4, 0], target: [-0.9, 0, 0]), content: .light(Light(type: .point, color: [1, 1, 1], intensity: 20))))
     default:
-        _ = SceneGraph.Node(parent: root, transform: pose(eye: .zero, target: [-0.5, -1, 0]), content: .light(Light(type: .directional, color: [1, 1, 1], intensity: 1)))
+        root.addChild(SceneGraph.Node(transform: pose(eye: .zero, target: [-0.5, -1, 0]), content: .light(Light(type: .directional, color: [1, 1, 1], intensity: 1))))
     }
-    _ = SceneGraph.Node(parent: root, label: "Floor", trs: .init(translation: [0, -0.05, 0], scale: [6, 0.1, 6]), content: .mesh(box, material: material))
+    root.addChild(SceneGraph.Node(label: "Floor", trs: .init(translation: [0, -0.05, 0], scale: [6, 0.1, 6]), content: .mesh(box, material: material)))
     if skinned {
         // Placed only by its joint: the mesh node sits far away, the joint at the usual spot.
-        let joint = SceneGraph.Node(parent: root, label: "Joint", trs: .init(translation: [0, 1.5, 0]))
-        let node = SceneGraph.Node(parent: root, label: "Box", trs: .init(translation: [50, 0, 0]), content: .mesh(box, material: material, castsShadow: boxCastsShadow))
+        let joint = root.addChild(SceneGraph.Node(label: "Joint", trs: .init(translation: [0, 1.5, 0])))
+        let node = root.addChild(SceneGraph.Node(label: "Box", trs: .init(translation: [50, 0, 0]), content: .mesh(box, material: material, castsShadow: boxCastsShadow)))
         node.skin = SceneGraph.Skin(joints: [joint], inverseBindMatrices: [matrix_identity_float4x4])
         node.skinVertices = Array(repeating: SceneGraph.SkinVertex(joints: .zero, weights: [1, 0, 0, 0]), count: box.vertexCount)
     } else {
-        _ = SceneGraph.Node(parent: root, label: "Box", trs: .init(translation: [0, 1.5, 0]), content: .mesh(box, material: material, castsShadow: boxCastsShadow))
+        root.addChild(SceneGraph.Node(label: "Box", trs: .init(translation: [0, 1.5, 0]), content: .mesh(box, material: material, castsShadow: boxCastsShadow)))
     }
     let sceneGraph = SceneGraph(root: root)
 
@@ -121,7 +121,7 @@ func pointLightUsesSixViews() {
 @MainActor
 func droppedLightsAreCounted() throws {
     let (sceneGraph, _) = try makeScene(light: .point)
-    _ = SceneGraph.Node(parent: sceneGraph.root, transform: pose(eye: [-1.5, 4, 0], target: .zero), content: .light(Light(type: .point, color: [1, 1, 1], intensity: 20)))
+    sceneGraph.root.addChild(SceneGraph.Node(transform: pose(eye: [-1.5, 4, 0], target: .zero), content: .light(Light(type: .point, color: [1, 1, 1], intensity: 20))))
     let shadows = SceneGraphShadows()
     let context = try #require(makeRenderContext(sceneGraph: sceneGraph, camera: nil, cameraMatrix: nil, aspectRatio: 1))
     _ = try shadows.prepare(entries: sceneGraph.meshEntries(), context: context, bounds: sceneGraph.bounds)
@@ -174,7 +174,7 @@ func shadowsDimOnlyTheirOwnLight() throws {
     let sunOnly = try brightness(sceneGraph, at: pixel, shadows: shadows)
     #expect(sunOnly < 10)
     // From the right, low: lights the floor spot and its box shadow falls left of it.
-    let fill = SceneGraph.Node(parent: sceneGraph.root, transform: pose(eye: [6, 3, 0], target: [-1, 0, 0]), content: .light(Light(type: .directional, color: [1, 1, 1], intensity: 1)))
+    let fill = sceneGraph.root.addChild(SceneGraph.Node(transform: pose(eye: [6, 3, 0], target: [-1, 0, 0]), content: .light(Light(type: .directional, color: [1, 1, 1], intensity: 1))))
     let withFill = try brightness(sceneGraph, at: pixel, shadows: shadows)
     let fillWithoutShadows = try brightness(sceneGraph, at: pixel, shadows: nil)
     _ = fill
@@ -185,7 +185,7 @@ func shadowsDimOnlyTheirOwnLight() throws {
     // A light that lights only category 2 casts no shadow on the category-1 floor.
     let (masked, maskedPixel) = try makeScene()
     let sun = try #require(masked.lightNodes().first?.node)
-    let other = SceneGraph.Node(parent: masked.root, transform: pose(eye: .zero, target: [-0.5, -1, 0]), content: .light(Light(type: .directional, color: [1, 1, 1], intensity: 1)))
+    let other = masked.root.addChild(SceneGraph.Node(transform: pose(eye: .zero, target: [-0.5, -1, 0]), content: .light(Light(type: .directional, color: [1, 1, 1], intensity: 1))))
     other.lightCategoryBitMask = 0b10
     sun.removeFromParent()
     // The floor glows (ambient) and no light reaches it; the category-2 light's box shadow would land on the spot,
@@ -213,7 +213,7 @@ func pbrShadowsDimOnlyTheirOwnLight() throws {
     let renderers: [any SceneGraphMaterialRenderer] = [PBRMaterialRenderer(environmentIntensity: 0)]
     let shadows = SceneGraphShadows(intensity: 1)
     #expect(try brightness(sceneGraph, at: pixel, shadows: shadows, renderers: renderers) < 10)
-    _ = SceneGraph.Node(parent: sceneGraph.root, transform: pose(eye: [6, 3, 0], target: [-1, 0, 0]), content: .light(Light(type: .directional, color: [1, 1, 1], intensity: 1)))
+    sceneGraph.root.addChild(SceneGraph.Node(transform: pose(eye: [6, 3, 0], target: [-1, 0, 0]), content: .light(Light(type: .directional, color: [1, 1, 1], intensity: 1))))
     let withFill = try brightness(sceneGraph, at: pixel, shadows: shadows, renderers: renderers)
     let fillWithoutShadows = try brightness(sceneGraph, at: pixel, shadows: nil, renderers: renderers)
     #expect(withFill > 30)

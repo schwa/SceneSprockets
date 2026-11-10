@@ -14,9 +14,9 @@ private func front(of node: SceneGraph.Node) -> SIMD3<Float> {
 @Test
 func lookAtPointsFrontAtTarget() {
     let root = SceneGraph.Node()
-    let target = SceneGraph.Node(parent: root, trs: .init(translation: [5, 0, 0]))
-    let parent = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 0], rotation: simd_quatf(angle: 1, axis: [0, 1, 0]), scale: [2, 2, 2]))
-    let node = SceneGraph.Node(parent: parent, trs: .init(translation: [0, 0, 0]))
+    let target = root.addChild(SceneGraph.Node(trs: .init(translation: [5, 0, 0])))
+    let parent = root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 0], rotation: simd_quatf(angle: 1, axis: [0, 1, 0]), scale: [2, 2, 2])))
+    let node = parent.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 0])))
     node.constraints = [.lookAt(target: target)]
     SceneGraph(root: root).applyConstraints(pointOfView: matrix_identity_float4x4)
     #expect(simd_distance(front(of: node), [1, 0, 0]) < 1e-4)
@@ -29,8 +29,8 @@ func lookAtPointsFrontAtTarget() {
 @Test
 func lookAtWithCustomFront() {
     let root = SceneGraph.Node()
-    let target = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 5]))
-    let node = SceneGraph.Node(parent: root)
+    let target = root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 5])))
+    let node = root.addChild(SceneGraph.Node())
     node.constraints = [.lookAt(target: target, localFront: [1, 0, 0])]
     SceneGraph(root: root).applyConstraints(pointOfView: matrix_identity_float4x4)
     let xAxis = node.worldTransform.columns.0
@@ -40,7 +40,7 @@ func lookAtWithCustomFront() {
 @Test
 func billboardMatchesCameraOrientation() {
     let root = SceneGraph.Node()
-    let node = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, -5]))
+    let node = root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, -5])))
     node.constraints = [.billboard()]
     let camera = simd_float4x4(simd_quatf(angle: 0.5, axis: [0, 1, 0]))
     SceneGraph(root: root).applyConstraints(pointOfView: camera)
@@ -51,7 +51,7 @@ func billboardMatchesCameraOrientation() {
 @Test
 func yBillboardOnlyYaws() {
     let root = SceneGraph.Node()
-    let node = SceneGraph.Node(parent: root)
+    let node = root.addChild(SceneGraph.Node())
     node.constraints = [.billboard(freeAxes: .y)]
     var camera = matrix_identity_float4x4
     camera.columns.3 = [5, 10, 0, 1]
@@ -65,8 +65,8 @@ func yBillboardOnlyYaws() {
 @Test
 func distanceClampsAlongLine() {
     let root = SceneGraph.Node()
-    let target = SceneGraph.Node(parent: root, trs: .init(translation: [1, 0, 0]))
-    let node = SceneGraph.Node(parent: root, trs: .init(translation: [11, 0, 0]))
+    let target = root.addChild(SceneGraph.Node(trs: .init(translation: [1, 0, 0])))
+    let node = root.addChild(SceneGraph.Node(trs: .init(translation: [11, 0, 0])))
     node.constraints = [.distance(target: target, minimum: 1, maximum: 3)]
     let graph = SceneGraph(root: root)
     graph.applyConstraints(pointOfView: matrix_identity_float4x4)
@@ -80,8 +80,8 @@ func distanceClampsAlongLine() {
 @Test
 func replicatorCopiesTargetWithOffsets() {
     let root = SceneGraph.Node()
-    let target = SceneGraph.Node(parent: root, trs: .init(translation: [1, 2, 3], rotation: simd_quatf(angle: .pi / 2, axis: [0, 1, 0]), scale: [2, 2, 2]))
-    let follower = SceneGraph.Node(parent: root)
+    let target = root.addChild(SceneGraph.Node(trs: .init(translation: [1, 2, 3], rotation: simd_quatf(angle: .pi / 2, axis: [0, 1, 0]), scale: [2, 2, 2])))
+    let follower = root.addChild(SceneGraph.Node())
     follower.constraints = [.replicator(target: target, scale: false, positionOffset: [1, 0, 0])]
     SceneGraph(root: root).applyConstraints(pointOfView: matrix_identity_float4x4)
     // +X in the target's space is -Z in the world, scaled by 2.
@@ -94,10 +94,10 @@ func replicatorCopiesTargetWithOffsets() {
 func avoidOccluderMovesInFrontOfBlocker() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let root = SceneGraph.Node()
-    let target = SceneGraph.Node(parent: root)
-    let camera = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 10]))
+    let target = root.addChild(SceneGraph.Node())
+    let camera = root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 10])))
     // A 1-unit box centered at z = 5 blocks the line from the target to the camera.
-    _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 5]), content: .mesh(MetalMesh(mesh: .box(), device: device), material: try ShaderMaterial.normals()))
+    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 5]), content: .mesh(MetalMesh(mesh: .box(), device: device), material: try ShaderMaterial.normals())))
     camera.constraints = [.avoidOccluder(target: target, bias: 0)]
     SceneGraph(root: root).applyConstraints(pointOfView: matrix_identity_float4x4)
     let bounds = try #require(root.children[2].meshBounds)
@@ -107,7 +107,7 @@ func avoidOccluderMovesInFrontOfBlocker() throws {
 @Test
 func transformConstraintAndBillboardAxes() {
     let root = SceneGraph.Node()
-    let node = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 0]))
+    let node = root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 0])))
     node.constraints = [
         .transform { _, world in
             var result = world
@@ -120,7 +120,7 @@ func transformConstraintAndBillboardAxes() {
     #expect(node.trs.translation.y == 7)
 
     // Free about X only: the node tips its +Z up towards a camera above it.
-    let sprite = SceneGraph.Node(parent: root)
+    let sprite = root.addChild(SceneGraph.Node())
     sprite.constraints = [.billboard(freeAxes: .x)]
     graph.applyConstraints(pointOfView: simd_float4x4(translation: [0, 5, 0]))
     #expect(simd_distance(sprite.trs.rotation.act([0, 0, 1]), [0, 1, 0]) < 1e-4)
@@ -130,10 +130,10 @@ func transformConstraintAndBillboardAxes() {
 @Test
 func inverseKinematicsReachesTarget() {
     let root = SceneGraph.Node()
-    let shoulder = SceneGraph.Node(parent: root)
-    let elbow = SceneGraph.Node(parent: shoulder, trs: .init(translation: [1, 0, 0]))
-    let hand = SceneGraph.Node(parent: elbow, trs: .init(translation: [1, 0, 0]))
-    let target = SceneGraph.Node(parent: root, trs: .init(translation: [1, 1.2, 0]))
+    let shoulder = root.addChild(SceneGraph.Node())
+    let elbow = shoulder.addChild(SceneGraph.Node(trs: .init(translation: [1, 0, 0])))
+    let hand = elbow.addChild(SceneGraph.Node(trs: .init(translation: [1, 0, 0])))
+    let target = root.addChild(SceneGraph.Node(trs: .init(translation: [1, 1.2, 0])))
     hand.constraints = [.inverseKinematics(chainRoot: shoulder, target: target, iterations: 50)]
     let graph = SceneGraph(root: root)
     graph.applyConstraints(pointOfView: matrix_identity_float4x4)
@@ -153,8 +153,8 @@ func inverseKinematicsReachesTarget() {
 @Test
 func constraintInfluenceAndEnabled() {
     let root = SceneGraph.Node()
-    let target = SceneGraph.Node(parent: root, trs: .init(translation: [4, 0, 0]))
-    let node = SceneGraph.Node(parent: root)
+    let target = root.addChild(SceneGraph.Node(trs: .init(translation: [4, 0, 0])))
+    let node = root.addChild(SceneGraph.Node())
     var constraint = SceneGraph.Constraint.replicator(target: target, orientation: false, scale: false)
     constraint.influenceFactor = 0.25
     node.constraints = [constraint]
@@ -172,7 +172,7 @@ func constraintInfluenceAndEnabled() {
 @Test
 func accelerationConstraintLimitsSpeed() {
     let root = SceneGraph.Node()
-    let node = SceneGraph.Node(parent: root)
+    let node = root.addChild(SceneGraph.Node())
     node.constraints = [.acceleration(maximumLinearAcceleration: 2, maximumLinearVelocity: 1, damping: 0)]
     let graph = SceneGraph(root: root)
     graph.applyConstraints(pointOfView: matrix_identity_float4x4, deltaTime: 0.1)

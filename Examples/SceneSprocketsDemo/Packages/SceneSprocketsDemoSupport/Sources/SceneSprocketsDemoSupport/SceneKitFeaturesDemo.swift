@@ -51,14 +51,14 @@ final class SceneKitFeaturesDemo: DemoScene {
         let eye: SIMD3<Float> = [0, 5, 11]
         cameraNode = .camera(eye: eye, target: [0, 1, 0])
         root.addChild(cameraNode)
-        _ = SceneGraph.Node(parent: root, label: "Sun", transform: .camera(eye: [3, 8, 4], target: .zero), content: .light(Light(type: .directional, color: [1, 0.97, 0.9], intensity: 0.9)))
-        let redLight = SceneGraph.Node(parent: root, label: "Red Light (category 2 only)", transform: .translation(0, 3, 3), content: .light(Light(type: .point, color: [1, 0.15, 0.1], intensity: 25)))
+        root.addChild(SceneGraph.Node(label: "Sun", transform: .camera(eye: [3, 8, 4], target: .zero), content: .light(Light(type: .directional, color: [1, 0.97, 0.9], intensity: 0.9))))
+        let redLight = root.addChild(SceneGraph.Node(label: "Red Light (category 2 only)", transform: .translation(0, 3, 3), content: .light(Light(type: .point, color: [1, 0.15, 0.1], intensity: 25))))
         redLight.lightCategoryBitMask = Self.categoryTwo
 
-        _ = SceneGraph.Node(parent: root, label: "Floor", shape: .box(width: 14, height: 0.1, length: 10), material: BlinnPhongSceneMaterial.plastic([0.55, 0.55, 0.6], shininess: 8), trs: .init(translation: [0, -0.05, 0]))
+        root.addChild(SceneGraph.Node(label: "Floor", shape: .box(width: 14, height: 0.1, length: 10), material: BlinnPhongSceneMaterial.plastic([0.55, 0.55, 0.6], shininess: 8), trs: .init(translation: [0, -0.05, 0])))
 
         // Shapes, each spinning inside a holder that Shuffle moves.
-        let shapesGroup = SceneGraph.Node(parent: root, label: "Shapes")
+        let shapesGroup = root.addChild(SceneGraph.Node(label: "Shapes"))
         self.shapesGroup = shapesGroup
         let shapes: [(SceneGraph.Shape, SIMD3<Float>)] = [
             (.box(width: 1, height: 1, length: 1), [0.9, 0.3, 0.25]),
@@ -73,14 +73,14 @@ final class SceneKitFeaturesDemo: DemoScene {
         for (index, (shape, color)) in shapes.enumerated() {
             let position = SIMD3<Float>(Float(index) * 1.6 - 4, 0.75, 1.5)
             homePositions.append(position)
-            let holder = SceneGraph.Node(parent: shapesGroup, label: "Holder \(index)", trs: .init(translation: position))
+            let holder = shapesGroup.addChild(SceneGraph.Node(label: "Holder \(index)", trs: .init(translation: position)))
             // The capsule uses a custom shader (ShaderMaterial, #48); the rest use Blinn-Phong.
             let material: any SceneSprockets.Material = if case .capsule = shape, let normals = try? ShaderMaterial.normals() {
                 normals
             } else {
                 BlinnPhongSceneMaterial.plastic(color)
             }
-            let node = SceneGraph.Node(parent: holder, shape: shape, material: material)
+            let node = holder.addChild(SceneGraph.Node(shape: shape, material: material))
             // The right half is category 2: lit by the red light, and hideable.
             node.categoryBitMask = index >= shapes.count / 2 ? Self.categoryTwo : 1
             node.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([0.3, 1, 0.2]), duration: 4 + Float(index))), forKey: "spin")
@@ -92,47 +92,47 @@ final class SceneKitFeaturesDemo: DemoScene {
         self.torus = torus!
         self.homePositions = homePositions
 
-        text = SceneGraph.Node(parent: root, shape: .text("SceneGraph", fontName: "Helvetica-Bold", fontSize: 1, extrusionDepth: 0.25), material: BlinnPhongSceneMaterial.plastic([0.95, 0.95, 0.95]), trs: .init(translation: [0, 3.2, -2]))
+        text = root.addChild(SceneGraph.Node(shape: .text("SceneGraph", fontName: "Helvetica-Bold", fontSize: 1, extrusionDepth: 0.25), material: BlinnPhongSceneMaterial.plastic([0.95, 0.95, 0.95]), trs: .init(translation: [0, 3.2, -2])))
         // Text geometry starts at x = 0; center it inside a child so the billboard turns about its middle.
         if let bounds = text.meshBounds, case let .mesh(mesh, materials, _, _) = text.content {
             text.content = .empty
-            _ = SceneGraph.Node(parent: text, label: "Glyphs", trs: .init(translation: [-(bounds.min.x + bounds.max.x) / 2, 0, 0]), content: .mesh(mesh, materials: materials))
+            text.addChild(SceneGraph.Node(label: "Glyphs", trs: .init(translation: [-(bounds.min.x + bounds.max.x) / 2, 0, 0]), content: .mesh(mesh, materials: materials)))
         }
         text.constraints = [.billboard(freeAxes: .y)]
 
         // An orbiting ball; a spotlight, a cone and a follower cube react to it through constraints.
-        let pivot = SceneGraph.Node(parent: root, label: "Orbit Pivot", trs: .init(translation: [0, 1.6, -1]))
+        let pivot = root.addChild(SceneGraph.Node(label: "Orbit Pivot", trs: .init(translation: [0, 1.6, -1])))
         pivot.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 8)), forKey: "orbit")
-        ball = SceneGraph.Node(parent: pivot, label: "Ball", shape: .sphere(radius: 0.3), material: BlinnPhongSceneMaterial.plastic([1, 0.85, 0.2], shininess: 64), trs: .init(translation: [3, 0, 0]))
+        ball = pivot.addChild(SceneGraph.Node(label: "Ball", shape: .sphere(radius: 0.3), material: BlinnPhongSceneMaterial.plastic([1, 0.85, 0.2], shininess: 64), trs: .init(translation: [3, 0, 0])))
         ball.run(.repeatForever(.sequence([
             .move(by: [0, 1, 0], duration: 1).timingMode(.easeInEaseOut),
             .move(by: [0, -1, 0], duration: 1).timingMode(.easeInEaseOut)
         ])), forKey: "bob")
-        let spot = SceneGraph.Node(parent: root, label: "Spotlight (looks at ball)", trs: .init(translation: [-5, 5, 4]), content: .light(.spot(color: [0.6, 0.8, 1], intensity: 40, innerConeAngle: .pi / 16, outerConeAngle: .pi / 10)))
+        let spot = root.addChild(SceneGraph.Node(label: "Spotlight (looks at ball)", trs: .init(translation: [-5, 5, 4]), content: .light(.spot(color: [0.6, 0.8, 1], intensity: 40, innerConeAngle: .pi / 16, outerConeAngle: .pi / 10))))
         spot.constraints = [.lookAt(target: ball)]
-        let pointer = SceneGraph.Node(parent: root, label: "Pointer (looks at ball)", shape: .cone(bottomRadius: 0.3, height: 1), material: BlinnPhongSceneMaterial.plastic([0.3, 0.9, 0.9]), trs: .init(translation: [5, 0.6, -2]))
+        let pointer = root.addChild(SceneGraph.Node(label: "Pointer (looks at ball)", shape: .cone(bottomRadius: 0.3, height: 1), material: BlinnPhongSceneMaterial.plastic([0.3, 0.9, 0.9]), trs: .init(translation: [5, 0.6, -2])))
         // The cone's tip is +Y.
         pointer.constraints = [.lookAt(target: ball, localFront: [0, 1, 0])]
-        follower = SceneGraph.Node(parent: root, label: "Follower (stays 1-2 from ball)", shape: .box(width: 0.4, height: 0.4, length: 0.4), material: BlinnPhongSceneMaterial.plastic([0.9, 0.9, 0.3]), trs: .init(translation: [0, 0.2, -1]))
+        follower = root.addChild(SceneGraph.Node(label: "Follower (stays 1-2 from ball)", shape: .box(width: 0.4, height: 0.4, length: 0.4), material: BlinnPhongSceneMaterial.plastic([0.9, 0.9, 0.3]), trs: .init(translation: [0, 0.2, -1])))
         follower.constraints = [.distance(target: ball, minimum: 1, maximum: 2)]
 
         // Blinn-Phong extras (#83), at the back: an emissive sphere, a box with a generated bump normal map (lit from
         // above, so each bump's upper side is brighter when the map's +Y is up), and a sphere whose cull mode the
         // "Cull Mode" choice sets (Front shows its inside).
         let glow = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0.1), specular: .color(0.2), shininess: 32, emission: .color([0.2, 1, 0.6]))
-        _ = SceneGraph.Node(parent: root, label: "Emissive Sphere", shape: .sphere(radius: 0.5), material: glow, trs: .init(translation: [-2.2, 0.5, -3.8]))
+        root.addChild(SceneGraph.Node(label: "Emissive Sphere", shape: .sphere(radius: 0.5), material: glow, trs: .init(translation: [-2.2, 0.5, -3.8])))
         var bumpy = BlinnPhongSceneMaterial.plastic([0.85, 0.75, 0.6], shininess: 24)
         bumpy.normalMap = Self.bumpNormalMap()
-        bumpyBox = SceneGraph.Node(parent: root, label: "Normal-Mapped Box", shape: .box(width: 1.4, height: 1.4, length: 0.3), material: bumpy, trs: .init(translation: [0, 0.75, -3.8]))
-        cullSphere = SceneGraph.Node(parent: root, label: "Culled Sphere", shape: .sphere(radius: 0.5), material: BlinnPhongSceneMaterial.plastic([0.95, 0.55, 0.2]), trs: .init(translation: [2.2, 0.5, -3.8]))
+        bumpyBox = root.addChild(SceneGraph.Node(label: "Normal-Mapped Box", shape: .box(width: 1.4, height: 1.4, length: 0.3), material: bumpy, trs: .init(translation: [0, 0.75, -3.8])))
+        cullSphere = root.addChild(SceneGraph.Node(label: "Culled Sphere", shape: .sphere(radius: 0.5), material: BlinnPhongSceneMaterial.plastic([0.95, 0.55, 0.2]), trs: .init(translation: [2.2, 0.5, -3.8])))
 
         // Two overlapping translucent panes: transparent materials blend in renderingOrder, so the toggle swaps which
         // one looks in front.
         let paneMaterial = { (color: SIMD4<Float>) -> any SceneSprockets.Material in
             (try? ShaderMaterial.rim(color: color)).map { $0 as any SceneSprockets.Material } ?? BlinnPhongSceneMaterial.plastic(SIMD3(color.x, color.y, color.z))
         }
-        redPane = SceneGraph.Node(parent: root, label: "Red Pane", shape: .plane(width: 2, height: 1.5), material: paneMaterial([1, 0.1, 0.1, 0.6]), trs: .init(translation: [-5.4, 1.2, -1.5]))
-        bluePane = SceneGraph.Node(parent: root, label: "Blue Pane", shape: .plane(width: 2, height: 1.5), material: paneMaterial([0.1, 0.3, 1, 0.6]), trs: .init(translation: [-4.6, 1.6, -1.5]))
+        redPane = root.addChild(SceneGraph.Node(label: "Red Pane", shape: .plane(width: 2, height: 1.5), material: paneMaterial([1, 0.1, 0.1, 0.6]), trs: .init(translation: [-5.4, 1.2, -1.5])))
+        bluePane = root.addChild(SceneGraph.Node(label: "Blue Pane", shape: .plane(width: 2, height: 1.5), material: paneMaterial([0.1, 0.3, 1, 0.6]), trs: .init(translation: [-4.6, 1.6, -1.5])))
         for pane in [redPane, bluePane] {
             // Translucent panes would otherwise cast solid shadows.
             if case let .mesh(mesh, materials, _, receivesShadow) = pane.content {

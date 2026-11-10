@@ -17,8 +17,8 @@ func opacityIsInheritedByMeshEntries() throws {
     let quad = SceneGraph.Shape.plane(width: 1, height: 1).metalMesh()
     let material = BlinnPhongSceneMaterial(ambient: .color(1), diffuse: .color(0), specular: .color(0), shininess: 1)
     let root = SceneGraph.Node()
-    let parent = SceneGraph.Node(parent: root)
-    let child = SceneGraph.Node(parent: parent, content: .mesh(quad, material: material))
+    let parent = root.addChild(SceneGraph.Node())
+    let child = parent.addChild(SceneGraph.Node(content: .mesh(quad, material: material)))
     let graph = SceneGraph(root: root)
     #expect(graph.meshEntries().first?.opacity == 1)
     #expect(graph.meshEntries().first?.isTransparent == false)
@@ -55,12 +55,12 @@ func fadeActionsChangeOpacity() {
 private func pbrOverBlue(opacity: Float, renderer pbrRenderer: PBRMaterialRenderer? = nil, fader: SceneGraph.Node? = nil) throws -> (pixel: SIMD4<UInt8>, renderer: PBRMaterialRenderer, fader: SceneGraph.Node, graph: SceneGraph) {
     let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
     let root = SceneGraph.Node()
-    _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40)))))
+    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
     let red = try PBRSceneMaterial(baseColor: [1, 0, 0, 1])
     let fader = fader ?? SceneGraph.Node(trs: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: red))
     root.addChild(fader)
     fader.opacity = opacity
-    _ = SceneGraph.Node(parent: root, content: .mesh(quad, material: BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0, 0, 1]))))
+    root.addChild(SceneGraph.Node(content: .mesh(quad, material: BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0, 0, 1])))))
     let pbrRenderer = pbrRenderer ?? PBRMaterialRenderer()
     let graph = SceneGraph(root: root)
     let texture = try OffscreenRenderer(size: CGSize(width: 16, height: 16)).render(SceneGraphElement(sceneGraph: graph, aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: .zero), pbrRenderer])).texture
@@ -104,11 +104,11 @@ func nodeOpacityBlends(usesShaderMaterial: Bool) throws {
         return BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color(color))
     }
     let root = SceneGraph.Node()
-    _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40)))))
-    let fader = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 0.5]))
+    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
+    let fader = root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 0.5])))
     fader.opacity = 0.5
-    _ = SceneGraph.Node(parent: fader, content: .mesh(quad, material: try flat([1, 0, 0])))
-    _ = SceneGraph.Node(parent: root, content: .mesh(quad, material: try flat([0, 0, 1])))
+    fader.addChild(SceneGraph.Node(content: .mesh(quad, material: try flat([1, 0, 0]))))
+    root.addChild(SceneGraph.Node(content: .mesh(quad, material: try flat([0, 0, 1]))))
     let renderer = try OffscreenRenderer(size: CGSize(width: 16, height: 16))
     let renderers: [any SceneGraphMaterialRenderer] = [BlinnPhongMaterialRenderer(ambientLightColor: .zero), ShaderMaterialRenderer()]
     let texture = try renderer.render(SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: renderers)).texture

@@ -27,10 +27,10 @@ func projectPointMapsCenterAndRoundTrips() {
 func statisticsCountVisibleContent() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let root = SceneGraph.Node()
-    _ = SceneGraph.Node(parent: root, content: .mesh(MetalMesh(mesh: .box(), device: device), material: try ShaderMaterial.normals()))
-    let hidden = SceneGraph.Node(parent: root, content: .mesh(MetalMesh(mesh: .box(), device: device), material: try ShaderMaterial.normals()))
+    root.addChild(SceneGraph.Node(content: .mesh(MetalMesh(mesh: .box(), device: device), material: try ShaderMaterial.normals())))
+    let hidden = root.addChild(SceneGraph.Node(content: .mesh(MetalMesh(mesh: .box(), device: device), material: try ShaderMaterial.normals())))
     hidden.isVisible = false
-    _ = SceneGraph.Node(parent: root, content: .light(Light(type: .point)))
+    root.addChild(SceneGraph.Node(content: .light(Light(type: .point))))
     let statistics = SceneGraph(root: root).statistics
     #expect(statistics.nodeCount == 3)
     #expect(statistics.meshCount == 1)
@@ -45,10 +45,10 @@ func frustumQueriesFindVisibleNodes() throws {
     let mesh = MetalMesh(mesh: .box(), device: device)
     let material = try ShaderMaterial.normals()
     let root = SceneGraph.Node()
-    let inside = SceneGraph.Node(parent: root, content: .mesh(mesh, material: material))
-    let behind = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 20]), content: .mesh(mesh, material: material))
-    let group = SceneGraph.Node(parent: root, trs: .init(translation: [100, 0, 0]))
-    _ = SceneGraph.Node(parent: group, content: .mesh(mesh, material: material))
+    let inside = root.addChild(SceneGraph.Node(content: .mesh(mesh, material: material)))
+    let behind = root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 20]), content: .mesh(mesh, material: material)))
+    let group = root.addChild(SceneGraph.Node(trs: .init(translation: [100, 0, 0])))
+    group.addChild(SceneGraph.Node(content: .mesh(mesh, material: material)))
     let sceneGraph = SceneGraph(root: root)
     let nodes = sceneGraph.nodesInsideFrustum(cameraMatrix: camera, projectionMatrix: projection)
     #expect(nodes.count == 1 && nodes.first === inside)

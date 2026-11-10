@@ -10,14 +10,14 @@ import SceneSprocketsBlinnPhong
 
 let root = SceneGraph.Node(label: "Root")
 
-let camera = SceneGraph.Node(parent: root, label: "Camera", content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45)))))
+let camera = root.addChild(SceneGraph.Node(label: "Camera", content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
 camera.trs.translation = [0, 1, 6]
 
-let light = SceneGraph.Node(parent: root, label: "Light", content: .light(Light(type: .point, color: [1, 1, 1], intensity: 20, range: 100)))
+let light = root.addChild(SceneGraph.Node(label: "Light", content: .light(Light(type: .point, color: [1, 1, 1], intensity: 20, range: 100))))
 light.trs.translation = [2, 3, 2]
 
 let material = BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color([0.8, 0.5, 0.2]), specular: .color(0.3), shininess: 16)
-let crate = SceneGraph.Node(parent: root, label: "Crate", shape: .box(), material: material)
+let crate = root.addChild(SceneGraph.Node(label: "Crate", shape: .box(), material: material))
 
 let sceneGraph = SceneGraph(root: root)
 ```
@@ -36,7 +36,7 @@ It runs node actions and constraints every frame. If the scene has no camera nod
 
 ## Nodes
 
-- **Hierarchy.** `Node(parent:)` adds the node to its parent. You can also use `addChild`, `insertChild(_:at:)`, `removeFromParent()` and `removeAllChildren()`. You cannot set `parent` and `children` directly. If a new child makes a cycle, a precondition stops the app.
+- **Hierarchy.** `parent.addChild(node)` adds a node and returns it, so `let child = root.addChild(Node(...))` makes and attaches a node in one line. You can also use `insertChild(_:at:)`, `removeFromParent()` and `removeAllChildren()`. You cannot set `parent` and `children` directly. If a new child makes a cycle, a precondition stops the app.
 - **Transforms.** A node stores a matrix (`transform`) or translation, rotation and scale (`trs`). Edits through `trs` do not lose data. If you read `trs` from a matrix node, SceneSprockets decomposes the matrix. `worldTransform` gives the node's world-space matrix.
 - **Shapes.** `Node(shape:material:)` makes a mesh node from a ``SceneGraph/Shape``: box, sphere, plane, cylinder, cone, capsule, torus or extruded text, like SceneKit's `SCNBox` or `SCNText`. To change the parameters, set `node.shape`. SceneSprockets then rebuilds the mesh and keeps the materials.
 - **Materials.** `.mesh(mesh, material:)` uses one material for all submeshes. `.mesh(mesh, materials:)` sets one material for each submesh. Submeshes after the end of the array use the last material.

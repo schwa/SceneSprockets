@@ -8028,3 +8028,75 @@ Getting the device later (e.g. from the RenderView, as proposed in #354) means t
 - `2026-11-10T17:50:38Z`: Won't fix: MetalMesh, PBRMaterial and textures are GPU types and are meant to need a device. Nodes are not. See #354.
 
 ---
+
+## 361: Node(parent:) init attaches as a side effect, forcing `_ =` at call sites
+
++++
+status: closed
+priority: low
+kind: enhancement
+created: 2026-11-10T18:29:58Z
+updated: 2026-11-10T18:38:12Z
+closed: 2026-11-10T18:38:12Z
++++
+
+Creating a node with `parent:` adds it to the parent inside the initializer. When the caller does not need the node, Swift warns about the unused result, so call sites write `_ =`:
+
+```swift
+_ = SceneGraph.Node(parent: root, label: "Sphere", shape: .sphere(radius: 1), material: material)
+```
+
+There were 179 `_ = SceneGraph.Node(parent:` occurrences in Tests and Examples. Initializers cannot be marked `@discardableResult`, and an initializer with a side effect on another object is surprising.
+
+- `2026-11-10T18:38:12Z`: Fixed: Node initializers no longer take parent:; addChild returns the child.
+
+---
+
+## 362: SceneView.Options names are inconsistent (.allowsCameraControl vs .autoenablesDefaultLighting)
+
++++
+status: new
+priority: low
+kind: enhancement
+created: 2026-11-10T18:37:02Z
++++
+
+The two `SceneView.Options` follow different naming patterns:
+
+```swift
+SceneView(sceneGraph: sceneGraph, options: [.allowsCameraControl, .autoenablesDefaultLighting], renderers: [...])
+```
+
+- `.allowsCameraControl`: "allows" + noun phrase.
+- `.autoenablesDefaultLighting`: a run-together "autoenables" verb.
+
+Both are boolean switches that turn on a SceneView behavior, but they read as if they come from different APIs. `autoenables` is also an unusual word that is hard to guess or find with autocomplete.
+
+Both names are copied from SceneKit (`SCNView.allowsCameraControl`, `SCNView.autoenablesDefaultLighting`), which explains the mismatch but means the inconsistency comes along with them.
+
+---
+
+## 363: Compare SceneView's API with SwiftUI SceneView, Map and WebView
+
++++
+status: new
+priority: low
+kind: task
+created: 2026-11-10T18:37:12Z
++++
+
+SceneView takes most of its configuration as initializer arguments and an `Options` option set:
+
+```swift
+SceneView(sceneGraph: sceneGraph, options: [.allowsCameraControl, .autoenablesDefaultLighting], renderers: [BlinnPhongMaterialRenderer()], shadows: shadows)
+```
+
+Apple's SwiftUI views that show complex models use different patterns. Review them and record what SceneView could learn:
+
+- SceneKit's SwiftUI `SceneView`
+- MapKit's SwiftUI `Map` (camera position binding, content builder, `.mapStyle`, `.mapControls`, map-specific modifiers)
+- WebKit's SwiftUI `WebView` / `WebPage` (observable page model, view modifiers)
+
+Areas to look at: initializer shape, model ownership (observable model vs. value), bindings for camera and selection, result-builder content, environment-based configuration through view modifiers, and option sets vs. separate modifiers. Related: #362.
+
+---

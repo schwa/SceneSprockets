@@ -42,7 +42,7 @@ func privateStorageMeshesCanBeReadOnTheCPU() throws {
     // Bounds.
     let root = SceneGraph.Node()
     let material = BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color(0.5), specular: .color(0), shininess: 1)
-    let node = SceneGraph.Node(parent: root, content: .mesh(mesh, material: material))
+    let node = root.addChild(SceneGraph.Node(content: .mesh(mesh, material: material)))
     let sceneGraph = SceneGraph(root: root)
     let bounds = try #require(node.meshBounds)
     let expected = try #require(shared.positionBounds())

@@ -15,11 +15,11 @@ func hitTestFindsNearestBoxFirst() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
     let root = SceneGraph.Node()
-    let near = SceneGraph.Node(parent: root, label: "near", content: .mesh(box, material: material()))
+    let near = root.addChild(SceneGraph.Node(label: "near", content: .mesh(box, material: material())))
     near.trs.translation = [0, 0, -5]
-    let far = SceneGraph.Node(parent: root, label: "far", content: .mesh(box, material: material()))
+    let far = root.addChild(SceneGraph.Node(label: "far", content: .mesh(box, material: material())))
     far.trs.translation = [0, 0, -10]
-    let sideways = SceneGraph.Node(parent: root, label: "sideways", content: .mesh(box, material: material()))
+    let sideways = root.addChild(SceneGraph.Node(label: "sideways", content: .mesh(box, material: material())))
     sideways.trs.translation = [10, 0, -5]
     let sceneGraph = SceneGraph(root: root)
 
@@ -39,10 +39,10 @@ func hitTestIgnoresHiddenNodesAndHitsBehindOrigin() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
     let root = SceneGraph.Node()
-    let hidden = SceneGraph.Node(parent: root, content: .mesh(box, material: material()))
+    let hidden = root.addChild(SceneGraph.Node(content: .mesh(box, material: material())))
     hidden.trs.translation = [0, 0, -5]
     hidden.isVisible = false
-    let behind = SceneGraph.Node(parent: root, content: .mesh(box, material: material()))
+    let behind = root.addChild(SceneGraph.Node(content: .mesh(box, material: material())))
     behind.trs.translation = [0, 0, 5]
     let hits = SceneGraph(root: root).hitTest(Ray3D(origin: .zero, direction: [0, 0, -1]))
     #expect(hits.isEmpty)
@@ -89,8 +89,8 @@ private func twoBoxes() throws -> (SceneGraph, near: SceneGraph.Node, far: Scene
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
     let root = SceneGraph.Node()
-    let near = SceneGraph.Node(parent: root, label: "near", trs: .init(translation: [0, 0, -5]), content: .mesh(box, material: material()))
-    let far = SceneGraph.Node(parent: root, label: "far", trs: .init(translation: [0, 0, -10]), content: .mesh(box, material: material()))
+    let near = root.addChild(SceneGraph.Node(label: "near", trs: .init(translation: [0, 0, -5]), content: .mesh(box, material: material())))
+    let far = root.addChild(SceneGraph.Node(label: "far", trs: .init(translation: [0, 0, -10]), content: .mesh(box, material: material())))
     return (SceneGraph(root: root), near, far)
 }
 

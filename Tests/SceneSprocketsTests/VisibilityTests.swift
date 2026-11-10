@@ -15,10 +15,10 @@ func hiddenNodeHidesSubtree() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
     let root = SceneGraph.Node()
-    let group = SceneGraph.Node(parent: root, label: "group")
-    _ = SceneGraph.Node(parent: group, label: "child", content: .mesh(box, material: material))
-    _ = SceneGraph.Node(parent: group, label: "light", content: .light(Light(type: .point)))
-    _ = SceneGraph.Node(parent: root, label: "other", content: .mesh(box, material: material))
+    let group = root.addChild(SceneGraph.Node(label: "group"))
+    group.addChild(SceneGraph.Node(label: "child", content: .mesh(box, material: material)))
+    group.addChild(SceneGraph.Node(label: "light", content: .light(Light(type: .point))))
+    root.addChild(SceneGraph.Node(label: "other", content: .mesh(box, material: material)))
     let sceneGraph = SceneGraph(root: root)
     #expect(sceneGraph.meshEntries().count == 2)
 
@@ -36,9 +36,9 @@ func hiddenNodesAreExcludedFromBounds() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
     let root = SceneGraph.Node()
-    let far = SceneGraph.Node(parent: root, content: .mesh(box, material: material))
+    let far = root.addChild(SceneGraph.Node(content: .mesh(box, material: material)))
     far.trs.translation = [10, 0, 0]
-    _ = SceneGraph.Node(parent: root, content: .mesh(box, material: material))
+    root.addChild(SceneGraph.Node(content: .mesh(box, material: material)))
     let sceneGraph = SceneGraph(root: root)
     #expect(sceneGraph.bounds?.max.x == 10.5)
 

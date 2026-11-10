@@ -88,7 +88,7 @@ func timingModeEasesProgress() {
 @Test
 func instantActionsAndHiddenNodes() {
     let root = SceneGraph.Node()
-    let child = SceneGraph.Node(parent: root)
+    let child = root.addChild(SceneGraph.Node())
     let graph = SceneGraph(root: root)
     var calls = 0
     child.run(.sequence([.hide(), .wait(duration: 1), .unhide(), .run { _ in calls += 1 }, .removeFromParent()]))

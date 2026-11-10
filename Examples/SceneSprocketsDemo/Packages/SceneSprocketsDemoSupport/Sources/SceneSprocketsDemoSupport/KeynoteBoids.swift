@@ -38,7 +38,7 @@ final class KeynoteBoids {
             let hue = Float(index % 3)
             let color: SIMD3<Float> = hue == 0 ? [0.95, 0.55, 0.3] : hue == 1 ? [0.4, 0.75, 0.95] : [0.95, 0.85, 0.4]
             let position = SIMD3<Float>(.random(in: Self.lower.x...Self.upper.x, using: &generator), .random(in: Self.lower.y...Self.upper.y, using: &generator), .random(in: Self.lower.z...Self.upper.z, using: &generator))
-            let node = SceneGraph.Node(parent: parent, label: "Boid \(index)", trs: .init(translation: position), content: .mesh(mesh, material: BlinnPhongSceneMaterial.plastic(color, shininess: 24)))
+            let node = parent.addChild(SceneGraph.Node(label: "Boid \(index)", trs: .init(translation: position), content: .mesh(mesh, material: BlinnPhongSceneMaterial.plastic(color, shininess: 24))))
             let direction = simd_normalize(SIMD3<Float>(.random(in: -1...1, using: &generator), .random(in: -0.3...0.3, using: &generator), .random(in: -1...1, using: &generator)))
             sceneGraph.world[node.id]?.set(BoidVelocity(value: direction * 2))
             nodes.append(node)

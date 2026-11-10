@@ -1,0 +1,86 @@
+// Tutorial 6: camera and atmosphere.
+//
+// Everything from the earlier tutorials in one scene, plus:
+// - A camera node. SceneView uses the first camera in the scene instead of its default one.
+// - Distance fog, which fades far surfaces into the fog color.
+
+import GeometryLite3D
+import SceneSprockets
+import SceneSprocketsBlinnPhong
+import simd
+import SwiftUI
+
+struct Tutorial6Atmosphere: View {
+    @State private var sceneGraph = Self.makeSceneGraph()
+    @State private var shadows = SceneGraphShadows(intensity: 0.7, softness: 2)
+
+    var body: some View {
+        SceneView(sceneGraph: sceneGraph, options: [.allowsCameraControl], renderers: [BlinnPhongMaterialRenderer()], shadows: shadows)
+    }
+
+    private static func makeSceneGraph() -> SceneGraph {
+        let root = SceneGraph.Node(label: "Root")
+
+        // Lights and floor (tutorial 2).
+        let fill = root.addChild(SceneGraph.Node(label: "Fill", content: .light(Light(type: .point, intensity: 15, range: 50, castsShadow: false))))
+        fill.trs.translation = [-5, 4, 4]
+        let spot = root.addChild(SceneGraph.Node(label: "Spot", content: .light(Light(type: .spot, intensity: 80, range: 30, outerConeAngle: .pi / 4))))
+        spot.trs.translation = [3, 7, 3]
+        spot.look(at: .zero)
+        root.addShape(.floor(width: 30, length: 30), material([0.4, 0.42, 0.45], shininess: 4), at: [0, -1, 0])
+
+        // Planet and moon (tutorial 3).
+        let planet = root.addShape(.sphere(radius: 0.6), material([0.2, 0.45, 0.9], shininess: 64), at: [0, 0.4, 0])
+        let moonPivot = planet.addChild(SceneGraph.Node(label: "Moon Pivot"))
+        moonPivot.addShape(.sphere(radius: 0.15), material([0.8, 0.8, 0.75]), at: [1.1, 0, 0])
+        moonPivot.run(.repeatForever(.rotate(by: 2 * .pi, around: [0, 1, 0.2], duration: 6)))
+
+        // Hopping box, fading torus and wobbling teapot (tutorial 4).
+        let hopper = root.addShape(.box(width: 0.5, height: 0.5, length: 0.5), material([0.9, 0.25, 0.25]), at: [2, -0.75, -1])
+        let squash = SceneGraph.Action.scale(to: [1.3, 0.6, 1.3], duration: 0.25).timingMode(.easeOut)
+        let stretch = SceneGraph.Action.scale(to: [0.85, 1.25, 0.85], duration: 0.2)
+        let rise = SceneGraph.Action.move(by: [0, 1.2, 0], duration: 0.45).timingMode(.easeOut)
+        hopper.run(.repeatForever(.sequence([
+            squash, .group([stretch, rise, .rotate(by: .pi / 2, around: [0, 1, 0], duration: 0.9)]),
+            rise.reversed(), squash, .scale(to: [1, 1, 1], duration: 0.2), .wait(duration: 0.6),
+        ])))
+        let glass = root.addShape(.torus(ringRadius: 0.4, pipeRadius: 0.12), material([0.6, 0.9, 0.8], shininess: 128, opacity: 0.5), at: [-2, 0.2, 1.5])
+        glass.run(.repeatForever(.group([
+            .rotateBy(x: 2 * .pi, y: 0, z: .pi, duration: 8),
+            .sequence([.fadeOut(duration: 2), .fadeIn(duration: 2)]),
+        ])))
+        let teapot = root.addShape(.teapot(diameter: 0.8), material([0.75, 0.5, 0.85], shininess: 64), at: [0, -0.75, 2])
+        teapot.run(.repeatForever(.custom(duration: 3) { node, elapsed in
+            let phase = elapsed / 3 * 2 * .pi
+            node.trs.rotation = simd_quatf(angle: sin(phase) * 0.3, axis: [0, 0, 1]) * simd_quatf(angle: phase, axis: [0, 1, 0])
+        }))
+
+        // Bulb, pointer and title (tutorial 5).
+        let bulbPivot = root.addChild(SceneGraph.Node(label: "Bulb Pivot"))
+        let bulb = bulbPivot.addChild(SceneGraph.Node(label: "Bulb", content: .light(Light(type: .point, color: [1, 0.6, 0.2], intensity: 6, range: 6, castsShadow: false))))
+        bulb.trs.translation = [2.5, 1.2, 0]
+        bulb.addShape(.sphere(radius: 0.1), material([1, 0.6, 0.2], emission: [1, 0.6, 0.2]))
+        bulbPivot.run(.repeatForever(.rotate(by: -2 * .pi, around: [0, 1, 0], duration: 9)))
+        let pointer = root.addChild(SceneGraph.Node(label: "Pointer"))
+        pointer.trs.translation = [-2, -0.5, -1]
+        pointer.constraints = [.lookAt(target: bulb)]
+        let cone = pointer.addShape(.cone(bottomRadius: 0.25, height: 0.7), material([0.95, 0.8, 0.2]))
+        cone.trs.rotation = simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])
+        let title = root.addShape(.text("Hello, World", fontSize: 0.4, extrusionDepth: 0.08), material([0.95, 0.95, 0.95]), at: [0, 2, 0])
+        title.constraints = [.billboard(freeAxes: .y)]
+
+        // New: a camera node, placed and aimed like any other node.
+        let camera = root.addChild(SceneGraph.Node(label: "Camera", content: .camera(SceneView.defaultCamera)))
+        camera.trs.translation = [0, 2.5, 7]
+        camera.look(at: [0, 0.3, 0])
+
+        // New: fog from 8 to 20 units away from the camera.
+        let sceneGraph = SceneGraph(root: root)
+        sceneGraph.fog = SceneGraph.Fog(color: [0.12, 0.13, 0.16, 1], startDistance: 8, endDistance: 20)
+        return sceneGraph
+    }
+}
+
+#Preview {
+    Tutorial6Atmosphere()
+}

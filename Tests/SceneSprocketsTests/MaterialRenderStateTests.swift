@@ -14,12 +14,12 @@ import Testing
 private func render(near: any SceneSprockets.Material, far: (any SceneSprockets.Material)?, farDrawsLast: Bool = false, pixel: (x: Int, y: Int) = (8, 8)) throws -> SIMD4<UInt8> {
     let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
     let root = SceneGraph.Node()
-    _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40)))))
+    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
     if let far {
-        let farNode = SceneGraph.Node(parent: root, content: .mesh(quad, material: far))
+        let farNode = root.addChild(SceneGraph.Node(content: .mesh(quad, material: far)))
         farNode.renderingOrder = farDrawsLast ? 1 : -1
     }
-    _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: near))
+    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: near)))
     let renderers: [any SceneGraphMaterialRenderer] = [BlinnPhongMaterialRenderer(ambientLightColor: .zero), ShaderMaterialRenderer()]
     let texture = try OffscreenRenderer(size: CGSize(width: 16, height: 16)).render(SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: renderers)).texture
     var value = SIMD4<UInt8>.zero

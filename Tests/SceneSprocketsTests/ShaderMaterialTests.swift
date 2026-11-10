@@ -12,8 +12,8 @@ import Testing
 private func render(_ material: ShaderMaterial) throws -> SIMD4<UInt8> {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let root = SceneGraph.Node()
-    _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 4]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45)))))
-    _ = SceneGraph.Node(parent: root, content: .mesh(MetalMesh(mesh: .box(), device: device), material: material))
+    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 4]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
+    root.addChild(SceneGraph.Node(content: .mesh(MetalMesh(mesh: .box(), device: device), material: material)))
     let renderer = try OffscreenRenderer(size: CGSize(width: 32, height: 32))
     let texture = try renderer.render(SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [ShaderMaterialRenderer()])).texture
     var value = SIMD4<UInt8>.zero
@@ -37,10 +37,10 @@ func normalsMaterialShowsFrontFaceNormal() throws {
 func transparentDrawOrderFollowsRenderingOrder(blueLast: Bool) throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let root = SceneGraph.Node()
-    _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 4]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45)))))
+    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 4]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
     let quad = MetalMesh(mesh: .quad(extents: [2, 2]), device: device)
-    let red = SceneGraph.Node(parent: root, content: .mesh(quad, material: try ShaderMaterial.rim(color: [1, 0, 0, 0.5])))
-    let blue = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 0.1]), content: .mesh(quad, material: try ShaderMaterial.rim(color: [0, 0, 1, 0.5])))
+    let red = root.addChild(SceneGraph.Node(content: .mesh(quad, material: try ShaderMaterial.rim(color: [1, 0, 0, 0.5]))))
+    let blue = root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 0.1]), content: .mesh(quad, material: try ShaderMaterial.rim(color: [0, 0, 1, 0.5]))))
     red.renderingOrder = blueLast ? 1 : 2
     blue.renderingOrder = blueLast ? 2 : 1
     let renderer = try OffscreenRenderer(size: CGSize(width: 32, height: 32))
@@ -61,7 +61,7 @@ func transparentDrawOrderFollowsRenderingOrder(blueLast: Bool) throws {
 func transparentEntriesDrawBackToFront(nearFirstInScene: Bool) throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let root = SceneGraph.Node()
-    _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 4]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45)))))
+    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 4]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
     let quad = MetalMesh(mesh: .quad(extents: [2, 2]), device: device)
     let near = SceneGraph.Node(trs: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: try ShaderMaterial.rim(color: [1, 0, 0, 0.5])))
     let far = SceneGraph.Node(content: .mesh(quad, material: try ShaderMaterial.rim(color: [0, 0, 1, 0.5])))
@@ -81,11 +81,11 @@ func transparentEntriesDrawBackToFront(nearFirstInScene: Bool) throws {
 func opaqueDrawsBeforeTransparentInABatch() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let root = SceneGraph.Node()
-    let camera = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 4]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45)))))
+    let camera = root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 4]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
     _ = camera
     let quad = MetalMesh(mesh: .quad(extents: [2, 2]), device: device)
-    let glass = SceneGraph.Node(parent: root, content: .mesh(quad, material: try ShaderMaterial.rim(color: [1, 0, 0, 0.5])))
-    let solid = SceneGraph.Node(parent: root, content: .mesh(quad, material: try ShaderMaterial.normals()))
+    let glass = root.addChild(SceneGraph.Node(content: .mesh(quad, material: try ShaderMaterial.rim(color: [1, 0, 0, 0.5]))))
+    let solid = root.addChild(SceneGraph.Node(content: .mesh(quad, material: try ShaderMaterial.normals())))
     let sceneGraph = SceneGraph(root: root)
     let context = try #require(makeRenderContext(sceneGraph: sceneGraph, camera: nil, cameraMatrix: nil, aspectRatio: 1))
     let batches = renderBatches(sceneGraph.meshEntries(), context: context)

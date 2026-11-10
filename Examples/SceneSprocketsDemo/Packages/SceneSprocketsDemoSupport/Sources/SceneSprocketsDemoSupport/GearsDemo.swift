@@ -26,12 +26,12 @@ final class GearsDemo: DemoScene {
         let eye: SIMD3<Float> = [0.6, 1.2, 7]
         let target: SIMD3<Float> = [0.6, 0.2, 0]
         root.addChild(.camera(eye: eye, target: target))
-        _ = SceneGraph.Node(parent: root, label: "Key", transform: .camera(eye: [3, 4, 6], target: .zero), content: .light(Light(type: .directional, color: [1, 0.95, 0.88], intensity: 2.5)))
+        root.addChild(SceneGraph.Node(label: "Key", transform: .camera(eye: [3, 4, 6], target: .zero), content: .light(Light(type: .directional, color: [1, 0.95, 0.88], intensity: 2.5))))
         var rim = Light(type: .point, color: [0.5, 0.65, 1], intensity: 25)
         rim.range = 20
-        _ = SceneGraph.Node(parent: root, label: "Rim", trs: .init(translation: [-4, 2, -2]), content: .light(rim))
-        _ = SceneGraph.Node(parent: root, label: "Backplate", shape: .box(width: 12, height: 7, length: 0.1), material: BlinnPhongSceneMaterial.plastic([0.08, 0.08, 0.09], shininess: 8), trs: .init(translation: [0.6, 0.2, -0.4]))
-        train = SceneGraph.Node(parent: root, label: "Gear Train")
+        root.addChild(SceneGraph.Node(label: "Rim", trs: .init(translation: [-4, 2, -2]), content: .light(rim)))
+        root.addChild(SceneGraph.Node(label: "Backplate", shape: .box(width: 12, height: 7, length: 0.1), material: BlinnPhongSceneMaterial.plastic([0.08, 0.08, 0.09], shininess: 8), trs: .init(translation: [0.6, 0.2, -0.4])))
+        train = root.addChild(SceneGraph.Node(label: "Gear Train"))
         super.init(
             sceneGraph: SceneGraph(root: root),
             renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0.05, 0.05, 0.06]), PBRMaterialRenderer()],
@@ -88,9 +88,9 @@ final class GearsDemo: DemoScene {
                 center = GearTrain.center(of: spec, meshingWith: links[index - 1].spec, at: center, direction: direction)
             }
             let material: any SceneSprockets.Material = materials[index % materials.count] ?? BlinnPhongSceneMaterial.plastic([0.7, 0.6, 0.3])
-            let node = SceneGraph.Node(parent: train, label: "Gear \(teeth)", trs: .init(translation: [center.x, center.y, 0]), content: .mesh(MetalMesh(mesh: .gear(spec), device: demoDevice), material: material))
+            let node = train.addChild(SceneGraph.Node(label: "Gear \(teeth)", trs: .init(translation: [center.x, center.y, 0]), content: .mesh(MetalMesh(mesh: .gear(spec), device: demoDevice), material: material)))
             // An axle through each bore.
-            _ = SceneGraph.Node(parent: train, label: "Axle", shape: .cylinder(radius: 0.11, height: 0.6), material: BlinnPhongSceneMaterial.plastic([0.2, 0.2, 0.22], shininess: 48), trs: .init(translation: [center.x, center.y, -0.1], rotation: simd_quatf(angle: .pi / 2, axis: [1, 0, 0])))
+            train.addChild(SceneGraph.Node(label: "Axle", shape: .cylinder(radius: 0.11, height: 0.6), material: BlinnPhongSceneMaterial.plastic([0.2, 0.2, 0.22], shininess: 48), trs: .init(translation: [center.x, center.y, -0.1], rotation: simd_quatf(angle: .pi / 2, axis: [1, 0, 0]))))
             links.append(Link(node: node, spec: spec, parent: index > 0 ? index - 1 : nil, direction: direction))
         }
     }

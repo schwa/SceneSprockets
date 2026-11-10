@@ -5,8 +5,8 @@ import Testing
 @Test
 func transformChangeBumpsOnlyTransformRevision() {
     let root = SceneGraph.Node()
-    let child = SceneGraph.Node(parent: root)
-    let grandchild = SceneGraph.Node(parent: child)
+    let child = root.addChild(SceneGraph.Node())
+    let grandchild = child.addChild(SceneGraph.Node())
     let sceneGraph = SceneGraph(root: root)
     let before = sceneGraph.revision
 
@@ -19,7 +19,7 @@ func transformChangeBumpsOnlyTransformRevision() {
 @Test
 func hierarchyAndContentChangesBumpStructureRevision() {
     let root = SceneGraph.Node()
-    let child = SceneGraph.Node(parent: root)
+    let child = root.addChild(SceneGraph.Node())
     let sceneGraph = SceneGraph(root: root)
 
     var before = sceneGraph.revision
@@ -38,7 +38,7 @@ func hierarchyAndContentChangesBumpStructureRevision() {
 @Test
 func detachedNodeChangesDoNotAffectGraph() {
     let root = SceneGraph.Node()
-    let child = SceneGraph.Node(parent: root)
+    let child = root.addChild(SceneGraph.Node())
     let sceneGraph = SceneGraph(root: root)
     child.removeFromParent()
     let before = sceneGraph.revision

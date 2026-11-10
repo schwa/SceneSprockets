@@ -19,8 +19,8 @@ private func makeGraphEditedInPlace() -> (SceneGraph, SceneGraph.Node) {
     let material = BlinnPhongSceneMaterial(
         ambient: .color(0.1), diffuse: .color(0.5), specular: .color(0.3), shininess: 24
     )
-    let box = SceneGraph.Node(parent: root, shape: .box(), material: material)
-    let child = SceneGraph.Node(parent: box, label: "Child")
+    let box = root.addChild(SceneGraph.Node(shape: .box(), material: material))
+    let child = box.addChild(SceneGraph.Node(label: "Child"))
     box.label = "Box"
     box.trs = .init(translation: [1, 2, 3])
     box.pivot = simd_float4x4(translation: [0.5, 0, 0])

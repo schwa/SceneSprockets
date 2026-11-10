@@ -45,9 +45,9 @@ func orthographicCameraRendersWithoutPerspective() throws {
     let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
     let root = SceneGraph.Node()
     let projection = OrthographicProjection(halfHeight: 2, depthMode: .standard(zClip: 0.1 ... 200))
-    _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: projection)))
+    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: projection))))
     let material = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([1, 1, 1]))
-    _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, -100]), content: .mesh(quad, material: material))
+    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, -100]), content: .mesh(quad, material: material)))
     let renderer = try OffscreenRenderer(size: CGSize(width: 16, height: 16))
     let texture = try renderer.render(SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: .zero)])).texture
     func pixel(_ x: Int, _ y: Int) -> SIMD4<UInt8> {

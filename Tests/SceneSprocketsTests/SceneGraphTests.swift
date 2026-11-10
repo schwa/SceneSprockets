@@ -13,10 +13,10 @@ func testEmptySceneGraph() {
 @Test
 func testHierarchyTraversal() {
     let root = SceneGraph.Node(label: "root")
-    let child1 = SceneGraph.Node(parent: root, label: "child1")
-    _ = SceneGraph.Node(parent: root, label: "child2")
+    let child1 = root.addChild(SceneGraph.Node(label: "child1"))
+    root.addChild(SceneGraph.Node(label: "child2"))
 
-    _ = SceneGraph.Node(parent: child1, label: "grandchild")
+    child1.addChild(SceneGraph.Node(label: "grandchild"))
 
     let sceneGraph = SceneGraph(root: root)
     let nodes = sceneGraph.nodesWithWorldTransforms()
@@ -29,9 +29,9 @@ func traversalIsDepthFirstAndAccumulatesTransforms() {
         float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [x, y, z, 1]))
     }
     let root = SceneGraph.Node(label: "root", transform: translation(1, 0, 0))
-    let a = SceneGraph.Node(parent: root, label: "a", transform: translation(0, 2, 0))
-    _ = SceneGraph.Node(parent: a, label: "a1", transform: translation(0, 0, 3))
-    _ = SceneGraph.Node(parent: root, label: "b", transform: float4x4(diagonal: [2, 2, 2, 1]))
+    let a = root.addChild(SceneGraph.Node(label: "a", transform: translation(0, 2, 0)))
+    a.addChild(SceneGraph.Node(label: "a1", transform: translation(0, 0, 3)))
+    root.addChild(SceneGraph.Node(label: "b", transform: float4x4(diagonal: [2, 2, 2, 1])))
 
     let nodes = SceneGraph(root: root).nodesWithWorldTransforms()
     #expect(nodes.map(\.node.label) == ["root", "a", "a1", "b"])
@@ -43,12 +43,8 @@ func traversalIsDepthFirstAndAccumulatesTransforms() {
 @Test
 func testLightNodeQuery() {
     let root = SceneGraph.Node(label: "root")
-    _ = SceneGraph.Node(
-        parent: root,
-        label: "light",
-        content: .light(Light(type: .point))
-    )
-    _ = SceneGraph.Node(parent: root, label: "empty")
+    root.addChild(SceneGraph.Node(label: "light", content: .light(Light(type: .point))))
+    root.addChild(SceneGraph.Node(label: "empty"))
 
     let sceneGraph = SceneGraph(root: root)
     let lights = sceneGraph.lightNodes()

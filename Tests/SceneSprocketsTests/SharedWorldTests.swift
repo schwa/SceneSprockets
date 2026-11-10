@@ -32,7 +32,7 @@ func twoGraphsShareAWorldWithoutCrossTalk() throws {
 func freeingAGraphRemovesItsEntitiesFromAnAppWorld() {
     let world = World()
     let root = SceneGraph.Node()
-    let child = SceneGraph.Node(parent: root)
+    let child = root.addChild(SceneGraph.Node())
     var graph: SceneGraph? = SceneGraph(root: root, world: world)
     #expect(world[child.id] != nil)
     _ = graph

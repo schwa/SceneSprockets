@@ -99,7 +99,7 @@ func addAtmosphere(to root: SceneGraph.Node, tree: GrownTree, season: Season, se
     }
 
     for (index, (label, position, system)) in systems.enumerated() {
-        let node = SceneGraph.Node(parent: root, label: label)
+        let node = root.addChild(SceneGraph.Node(label: label))
         node.transform = simd_float4x4(translation: position)
         node.particleSystems = [SceneParticleSystem(system, seed: seed &+ UInt32(index))]
     }

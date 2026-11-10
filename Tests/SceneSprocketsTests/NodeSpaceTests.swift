@@ -9,7 +9,7 @@ private func isClose(_ a: SIMD3<Float>, _ b: SIMD3<Float>) -> Bool {
 
 private func makeHierarchy() -> (parent: SceneGraph.Node, child: SceneGraph.Node) {
     let parent = SceneGraph.Node(trs: .init(translation: [10, 0, 0], rotation: simd_quatf(angle: .pi / 2, axis: [0, 1, 0]), scale: [2, 2, 2]))
-    let child = SceneGraph.Node(parent: parent, trs: .init(translation: [1, 0, 0]))
+    let child = parent.addChild(SceneGraph.Node(trs: .init(translation: [1, 0, 0])))
     return (parent, child)
 }
 
@@ -31,7 +31,7 @@ func worldPositionRoundTrips() {
 @Test
 func worldTransformSetterKeepsMatrixNodes() {
     let parent = SceneGraph.Node(transform: .init(translation: [0, 3, 0]))
-    let child = SceneGraph.Node(parent: parent)
+    let child = parent.addChild(SceneGraph.Node())
     child.worldTransform = .init(translation: [1, 1, 1])
     #expect(isClose(child.transform.columns.3.xyz, [1, -2, 1]))
     guard case .matrix = child.localTransform else {

@@ -264,7 +264,7 @@ struct SceneEditBoundaryTests {
 
     // Only a camera, at the origin facing -Z (away from the viewer): its frustum outline surrounds the center.
     let cameraOnly = SceneGraph.empty()
-    let camera = SceneGraph.Node(parent: cameraOnly.root, label: "Camera", content: .camera(SceneView.defaultCamera))
+    let camera = cameraOnly.root.addChild(SceneGraph.Node(label: "Camera", content: .camera(SceneView.defaultCamera)))
     let shape = try #require(DebugShapes.shapes(sceneGraph: cameraOnly, viewport: viewport).first)
     let projected = try #require(viewport.project(shape.lines[1][1]))
     #expect(DebugShapes.hitTest(projected.xy, sceneGraph: cameraOnly, viewport: viewport) === camera)
@@ -301,7 +301,7 @@ struct SceneEditBoundaryTests {
     undoManager.groupsByEvent = false
     model.undoManager = undoManager
     let parent = try #require(model.selectedNode)
-    let child = SceneGraph.Node(parent: parent, label: "Child")
+    let child = parent.addChild(SceneGraph.Node(label: "Child"))
 
     undoManager.beginUndoGrouping()
     model.setLocked(true, parent)
@@ -340,7 +340,7 @@ struct SceneEditBoundaryTests {
     let model = EditorModel(sceneGraph: SceneGraph.empty())
     model.addShape(.box(), label: "Parent")
     let parent = try #require(model.selectedNode)
-    let child = SceneGraph.Node(parent: parent, label: "Child")
+    let child = parent.addChild(SceneGraph.Node(label: "Child"))
     let undoManager = UndoManager()
     undoManager.groupsByEvent = false
     model.undoManager = undoManager
@@ -552,7 +552,7 @@ struct SceneEditBoundaryTests {
     let model = EditorModel(sceneGraph: SceneGraph.empty())
     model.addShape(.box(), label: "Parent")
     let parent = try #require(model.selectedNode)
-    let child = SceneGraph.Node(parent: parent, label: "Child")
+    let child = parent.addChild(SceneGraph.Node(label: "Child"))
     let undoManager = UndoManager()
     undoManager.groupsByEvent = false
     model.undoManager = undoManager
@@ -1023,7 +1023,7 @@ struct SceneEditBoundaryTests {
 @Test func explodeImportedModel() {
     let model = EditorModel(sceneGraph: SceneGraph.empty())
     let modelRoot = SceneGraph.Node(label: "Imported")
-    let part = SceneGraph.Node(parent: modelRoot, label: "Part")
+    let part = modelRoot.addChild(SceneGraph.Node(label: "Part"))
     modelRoot.modelSource = SceneGraph.ModelSource(mainFile: "model.gltf", files: ["model.gltf": Data()])
     model.sceneGraph.root.addChild(modelRoot)
     let undoManager = UndoManager()

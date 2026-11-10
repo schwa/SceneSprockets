@@ -48,7 +48,7 @@ func pbrModelIsReusedUntilStructureChanges() throws {
     let box = MetalMesh(mesh: .box(), device: device)
     let material = try PBRSceneMaterial()
     let root = SceneGraph.Node()
-    let node = SceneGraph.Node(parent: root, content: .mesh(box, material: material))
+    let node = root.addChild(SceneGraph.Node(content: .mesh(box, material: material)))
     let sceneGraph = SceneGraph(root: root)
     let renderer = PBRMaterialRenderer()
 
@@ -119,11 +119,11 @@ func pbrRenderStateIsApplied() throws {
     let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
     func centerPixel(_ renderState: PBRRenderState) throws -> SIMD4<UInt8> {
         let root = SceneGraph.Node()
-        _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40)))))
+        root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
         let material = try PBRSceneMaterial(baseColor: [0, 0, 0, 1])
         material.pbrMaterial.uniforms.emissiveFactor = [1, 0, 0]
         material.renderState = renderState
-        _ = SceneGraph.Node(parent: root, content: .mesh(quad, material: material))
+        root.addChild(SceneGraph.Node(content: .mesh(quad, material: material)))
         let graph = SceneGraph(root: root)
         graph.environment.background = .color([0, 0, 0, 1])
         let element = SceneGraphElement(sceneGraph: graph, aspectRatio: 1, renderers: [PBRMaterialRenderer(environmentIntensity: 0)])

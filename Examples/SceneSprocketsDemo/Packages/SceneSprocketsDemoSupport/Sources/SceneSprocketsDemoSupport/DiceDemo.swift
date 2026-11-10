@@ -73,12 +73,12 @@ final class DiceDemo: DemoScene {
         let eye: SIMD3<Float> = [0, 6.5, 5.5]
         let target: SIMD3<Float> = [0, 0, 0.3]
         root.addChild(.camera(eye: eye, target: target))
-        _ = SceneGraph.Node(parent: root, label: "Sun", transform: .camera(eye: [2.5, 7, 3], target: .zero), content: .light(Light(type: .directional, color: [1, 0.96, 0.9], intensity: 2.5)))
+        root.addChild(SceneGraph.Node(label: "Sun", transform: .camera(eye: [2.5, 7, 3], target: .zero), content: .light(Light(type: .directional, color: [1, 0.96, 0.9], intensity: 2.5))))
         var fill = Light(type: .point, color: [0.6, 0.7, 1], intensity: 20)
         fill.range = 20
-        _ = SceneGraph.Node(parent: root, label: "Fill", trs: .init(translation: [-4, 4, 4]), content: .light(fill))
+        root.addChild(SceneGraph.Node(label: "Fill", trs: .init(translation: [-4, 4, 4]), content: .light(fill)))
         Self.buildTray(in: root)
-        diceHolder = SceneGraph.Node(parent: root, label: "Dice")
+        diceHolder = root.addChild(SceneGraph.Node(label: "Dice"))
         super.init(
             sceneGraph: SceneGraph(root: root),
             // Metal, glass and pearl dice show their environment, so it is brighter than for plastic.
@@ -179,7 +179,7 @@ final class DiceDemo: DemoScene {
         // the emitter's spread and speeds too.
         sparklingDie = dice.randomElement(using: &generator)
         sparkler = sparklingDie.map { die in
-            let node = SceneGraph.Node(parent: diceHolder, label: "Sparkles", trs: .init(translation: die.worldPosition))
+            let node = diceHolder.addChild(SceneGraph.Node(label: "Sparkles", trs: .init(translation: die.worldPosition)))
             node.particleSystems = [SceneParticleSystem(Self.sparkles, seed: .random(in: 0 ... .max, using: &generator))]
             return node
         }
@@ -232,9 +232,9 @@ final class DiceDemo: DemoScene {
             }
             return PBRSceneMaterial(material)
         }()
-        let tray = SceneGraph.Node(parent: root, label: "Tray")
+        let tray = root.addChild(SceneGraph.Node(label: "Tray"))
         let outerWidth = trayWidth + 2 * wallThickness
-        let floor = SceneGraph.Node(parent: tray, label: "Floor", shape: .box(width: outerWidth, height: 0.2, length: trayDepth + 2 * wallThickness), material: wood, trs: .init(translation: [0, -0.1, 0]))
+        let floor = tray.addChild(SceneGraph.Node(label: "Floor", shape: .box(width: outerWidth, height: 0.2, length: trayDepth + 2 * wallThickness), material: wood, trs: .init(translation: [0, -0.1, 0])))
         floor.physicsBody = .init(type: .static, shape: .boundingBox, friction: 0.6, restitution: 0.3)
         let walls: [(size: SIMD3<Float>, position: SIMD3<Float>)] = [
             ([outerWidth, wallHeight, wallThickness], [0, wallHeight / 2, -(trayDepth + wallThickness) / 2]),
@@ -243,15 +243,15 @@ final class DiceDemo: DemoScene {
             ([wallThickness, wallHeight, trayDepth], [(trayWidth + wallThickness) / 2, wallHeight / 2, 0])
         ]
         for wall in walls {
-            let node = SceneGraph.Node(parent: tray, label: "Wall", shape: .box(width: wall.size.x, height: wall.size.y, length: wall.size.z), material: wood, trs: .init(translation: wall.position))
+            let node = tray.addChild(SceneGraph.Node(label: "Wall", shape: .box(width: wall.size.x, height: wall.size.y, length: wall.size.z), material: wood, trs: .init(translation: wall.position)))
             node.physicsBody = .init(type: .static, shape: .boundingBox, friction: 0.4, restitution: 0.5)
         }
         // An invisible lid and invisible walls up to it, so a hard throw cannot leave the tray over the low walls.
-        let lid = SceneGraph.Node(parent: tray, label: "Lid", trs: .init(translation: [0, 3, 0]))
+        let lid = tray.addChild(SceneGraph.Node(label: "Lid", trs: .init(translation: [0, 3, 0])))
         lid.physicsBody = .init(type: .static, shape: .box(size: [outerWidth, 0.2, trayDepth]), friction: 0.2, restitution: 0.3)
         for wall in walls {
             let barrierHeight: Float = 3
-            let barrier = SceneGraph.Node(parent: tray, label: "Barrier", trs: .init(translation: [wall.position.x, barrierHeight / 2, wall.position.z]))
+            let barrier = tray.addChild(SceneGraph.Node(label: "Barrier", trs: .init(translation: [wall.position.x, barrierHeight / 2, wall.position.z])))
             barrier.physicsBody = .init(type: .static, shape: .box(size: [wall.size.x, barrierHeight, wall.size.z]), friction: 0.4, restitution: 0.5)
         }
     }

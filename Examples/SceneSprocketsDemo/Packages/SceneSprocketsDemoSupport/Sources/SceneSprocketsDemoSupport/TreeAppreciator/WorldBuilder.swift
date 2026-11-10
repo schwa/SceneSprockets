@@ -17,31 +17,31 @@ struct World {
 func makeWorld(tree: GrownTree, species: Species, season: Season, seed: UInt32, device: MTLDevice) -> World {
     let root = SceneGraph.Node(label: "Root")
 
-    let sun = SceneGraph.Node(parent: root, label: "Sun", content: .light(Light(type: .directional, color: season.sun, intensity: 2.4)))
+    let sun = root.addChild(SceneGraph.Node(label: "Sun", content: .light(Light(type: .directional, color: season.sun, intensity: 2.4))))
     sun.transform = LookAt(position: sunDirection * 30, target: .zero, up: [0, 1, 0]).cameraMatrix
-    let fill = SceneGraph.Node(parent: root, label: "Fill", content: .light(Light(type: .directional, color: [0.55, 0.65, 0.9], intensity: 0.35)))
+    let fill = root.addChild(SceneGraph.Node(label: "Fill", content: .light(Light(type: .directional, color: [0.55, 0.65, 0.9], intensity: 0.35))))
     fill.transform = LookAt(position: [-8, 4, 10], target: .zero, up: [0, 1, 0]).cameraMatrix
 
     if let sky = makeSky(season: season, device: device) {
-        _ = SceneGraph.Node(parent: root, label: "Sky", content: .mesh(sky.0, materials: sky.1, castsShadow: false, receivesShadow: false))
+        root.addChild(SceneGraph.Node(label: "Sky", content: .mesh(sky.0, materials: sky.1, castsShadow: false, receivesShadow: false)))
     }
     let sunDisc = MeshBuilder()
     sunDisc.material("sun") { glowing([1.4, 1.25, 1.0]) }
     sunDisc.icosahedron("sun", center: sunDirection * 140, scale: SIMD3(repeating: 5))
     if let (mesh, materials) = sunDisc.build(device: device, label: "Sun Disc") {
-        _ = SceneGraph.Node(parent: root, label: "Sun Disc", content: .mesh(mesh, materials: materials, castsShadow: false, receivesShadow: false))
+        root.addChild(SceneGraph.Node(label: "Sun Disc", content: .mesh(mesh, materials: materials, castsShadow: false, receivesShadow: false)))
     }
 
     if let (mesh, materials) = makeGround(season: season, seed: seed).build(device: device, label: "Ground") {
-        _ = SceneGraph.Node(parent: root, label: "Ground", content: .mesh(mesh, materials: materials, castsShadow: false, receivesShadow: true))
+        root.addChild(SceneGraph.Node(label: "Ground", content: .mesh(mesh, materials: materials, castsShadow: false, receivesShadow: true)))
     }
     if let (mesh, materials) = makeMeadow(season: season, seed: seed).build(device: device, label: "Meadow") {
-        _ = SceneGraph.Node(parent: root, label: "Meadow", content: .mesh(mesh, materials: materials, castsShadow: true, receivesShadow: true))
+        root.addChild(SceneGraph.Node(label: "Meadow", content: .mesh(mesh, materials: materials, castsShadow: true, receivesShadow: true)))
     }
 
-    let treeNode = SceneGraph.Node(parent: root, label: "Tree")
+    let treeNode = root.addChild(SceneGraph.Node(label: "Tree"))
     if let (mesh, materials) = makeTreeMesh(tree: tree, species: species, season: season).build(device: device, label: "Tree") {
-        _ = SceneGraph.Node(parent: treeNode, label: "Tree Mesh", content: .mesh(mesh, materials: materials, castsShadow: true, receivesShadow: true))
+        treeNode.addChild(SceneGraph.Node(label: "Tree Mesh", content: .mesh(mesh, materials: materials, castsShadow: true, receivesShadow: true)))
     }
     addAtmosphere(to: root, tree: tree, season: season, seed: seed)
     return World(sceneGraph: SceneGraph(root: root), treeNode: treeNode)

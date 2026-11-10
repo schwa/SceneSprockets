@@ -18,9 +18,9 @@ private func render(_ postProcessing: SceneGraph.PostProcessing?, color: SIMD3<F
     let forward = simd_normalize(-eye)
     let right = simd_normalize(simd_cross(forward, [0, 1, 0]))
     let up = simd_cross(right, forward)
-    _ = SceneGraph.Node(parent: root, transform: simd_float4x4(columns: (SIMD4(right, 0), SIMD4(up, 0), SIMD4(-forward, 0), SIMD4(eye, 1))), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(50)))))
-    _ = SceneGraph.Node(parent: root, label: "Floor", trs: .init(translation: [0, -0.05, 0], scale: [6, 0.1, 6]), content: .mesh(MetalMesh(mesh: .box(), device: device), material: material))
-    _ = SceneGraph.Node(parent: root, label: "Box", trs: .init(translation: [0, 0.5, 0]), content: .mesh(MetalMesh(mesh: .box(), device: device), material: material))
+    root.addChild(SceneGraph.Node(transform: simd_float4x4(columns: (SIMD4(right, 0), SIMD4(up, 0), SIMD4(-forward, 0), SIMD4(eye, 1))), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(50))))))
+    root.addChild(SceneGraph.Node(label: "Floor", trs: .init(translation: [0, -0.05, 0], scale: [6, 0.1, 6]), content: .mesh(MetalMesh(mesh: .box(), device: device), material: material)))
+    root.addChild(SceneGraph.Node(label: "Box", trs: .init(translation: [0, 0.5, 0]), content: .mesh(MetalMesh(mesh: .box(), device: device), material: material)))
     let sceneGraph = SceneGraph(root: root)
     sceneGraph.postProcessing = postProcessing
     let renderer = try OffscreenRenderer(size: CGSize(width: 64, height: 64), colorUsage: SceneGraphShadows.requiredColorUsage, depthUsage: SceneGraphShadows.requiredDepthUsage)

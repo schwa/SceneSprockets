@@ -11,12 +11,12 @@ private func isClose(_ lhs: simd_float4x4, _ rhs: simd_float4x4) -> Bool {
 @Test
 func pivotMovesTheRotationCenter() {
     let root = SceneGraph.Node()
-    let node = SceneGraph.Node(parent: root, trs: .init(translation: [5, 0, 0], rotation: simd_quatf(angle: .pi / 2, axis: [0, 0, 1])))
+    let node = root.addChild(SceneGraph.Node(trs: .init(translation: [5, 0, 0], rotation: simd_quatf(angle: .pi / 2, axis: [0, 0, 1]))))
     node.pivot = simd_float4x4(translation: [1, 0, 0])
-    let child = SceneGraph.Node(parent: node, trs: .init(translation: [1, 0, 0]))
+    let child = node.addChild(SceneGraph.Node(trs: .init(translation: [1, 0, 0])))
     // The child sits on the pivot point, so it lands on the node's position.
     #expect(simd_distance(child.worldTransform.columns.3, [5, 0, 0, 1]) < 1e-5)
-    let origin = SceneGraph.Node(parent: node)
+    let origin = node.addChild(SceneGraph.Node())
     // Content origin is 1 unit from the pivot, rotated 90 degrees: (5, -1).
     #expect(simd_distance(origin.worldTransform.columns.3, [5, -1, 0, 1]) < 1e-5)
     let sceneGraph = SceneGraph(root: root)
@@ -53,7 +53,7 @@ func matrixTransformDecomposesToTRS() {
 @Test
 func settingTRSUpdatesWorldTransforms() {
     let root = SceneGraph.Node()
-    let child = SceneGraph.Node(parent: root)
+    let child = root.addChild(SceneGraph.Node())
     child.trs.translation = [0, 0, 5]
 
     let world = SceneGraph(root: root).nodesWithWorldTransforms().last!.worldTransform

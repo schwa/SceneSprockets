@@ -15,8 +15,8 @@ final class ShadowsDemo: DemoScene {
         let root = SceneGraph.Node(label: "Root")
         let eye: SIMD3<Float> = [0, 6, 9]
         root.addChild(.camera(eye: eye, target: [0, 0.5, 0]))
-        light = SceneGraph.Node(parent: root, label: "Light")
-        floor = SceneGraph.Node(parent: root, label: "Floor", shape: .box(width: 12, height: 0.1, length: 12), material: BlinnPhongSceneMaterial.plastic([0.6, 0.6, 0.65], shininess: 8), trs: .init(translation: [0, -0.05, 0]))
+        light = root.addChild(SceneGraph.Node(label: "Light"))
+        floor = root.addChild(SceneGraph.Node(label: "Floor", shape: .box(width: 12, height: 0.1, length: 12), material: BlinnPhongSceneMaterial.plastic([0.6, 0.6, 0.65], shininess: 8), trs: .init(translation: [0, -0.05, 0])))
         let casters: [(SceneGraph.Shape, SIMD3<Float>, SIMD3<Float>)] = [
             (.box(), [-2.5, 0.5, 0], [0.9, 0.35, 0.3]),
             (.sphere(radius: 0.6), [0, 0.6, -1], [0.3, 0.6, 0.9]),
@@ -24,7 +24,7 @@ final class ShadowsDemo: DemoScene {
             (.cylinder(radius: 0.3, height: 2.5), [0.5, 1.25, 1.5], [0.4, 0.8, 0.5])
         ]
         for (shape, position, color) in casters {
-            let node = SceneGraph.Node(parent: root, shape: shape, material: BlinnPhongSceneMaterial.plastic(color), trs: .init(translation: position))
+            let node = root.addChild(SceneGraph.Node(shape: shape, material: BlinnPhongSceneMaterial.plastic(color), trs: .init(translation: position)))
             if case .torus = shape {
                 node.run(.repeatForever(.rotate(by: .pi * 2, around: [1, 0, 0], duration: 6)), forKey: "spin")
             }

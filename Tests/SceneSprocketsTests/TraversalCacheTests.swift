@@ -12,7 +12,7 @@ import Testing
 @Test
 func queriesDoNotChangeObservedState() {
     let sceneGraph = SceneGraph(root: SceneGraph.Node())
-    _ = SceneGraph.Node(parent: sceneGraph.root, content: .light(Light(type: .point)))
+    sceneGraph.root.addChild(SceneGraph.Node(content: .light(Light(type: .point))))
     nonisolated(unsafe) var changed = false
     withObservationTracking {
         _ = sceneGraph.statistics
@@ -32,9 +32,9 @@ func queriesShareOneCachedTraversalUntilSomethingChanges() throws {
     let box = MetalMesh(mesh: .box(), device: device)
     let material = BlinnPhongSceneMaterial(ambient: .color([1, 1, 1]), diffuse: .color([1, 1, 1]), specular: .color([1, 1, 1]), shininess: 1)
     let root = SceneGraph.Node()
-    let mesh = SceneGraph.Node(parent: root, content: .mesh(box, material: material))
-    _ = SceneGraph.Node(parent: root, content: .light(Light(type: .point)))
-    _ = SceneGraph.Node(parent: root, content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45)))))
+    let mesh = root.addChild(SceneGraph.Node(content: .mesh(box, material: material)))
+    root.addChild(SceneGraph.Node(content: .light(Light(type: .point))))
+    root.addChild(SceneGraph.Node(content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
     let sceneGraph = SceneGraph(root: root)
 
     // A frame's worth of queries: one traversal.

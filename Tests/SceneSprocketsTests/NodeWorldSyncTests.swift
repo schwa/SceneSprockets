@@ -19,7 +19,7 @@ private func setTransformInWorld(_ node: SceneGraph.Node, in graph: SceneGraph, 
 @Test
 func directTransformWriteChangesRevision() throws {
     let root = SceneGraph.Node()
-    let child = SceneGraph.Node(parent: root)
+    let child = root.addChild(SceneGraph.Node())
     let graph = SceneGraph(root: root)
     let before = graph.revision
     try setTransformInWorld(child, in: graph, translation: [1, 0, 0])
@@ -53,8 +53,8 @@ func directTransformWriteNotifiesNodeObservers() throws {
 @Test
 func readingOneNodeDoesNotObserveOtherNodes() throws {
     let root = SceneGraph.Node()
-    let first = SceneGraph.Node(parent: root)
-    let second = SceneGraph.Node(parent: root)
+    let first = root.addChild(SceneGraph.Node())
+    let second = root.addChild(SceneGraph.Node())
     let graph = SceneGraph(root: root)
     let changes = ChangeCount()
     withObservationTracking {

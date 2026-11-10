@@ -31,7 +31,7 @@ private struct AttachedNode {
 
     init() {
         let root = SceneGraph.Node()
-        node = SceneGraph.Node(parent: root)
+        node = root.addChild(SceneGraph.Node())
         graph = SceneGraph(root: root)
         entity = graph.world[node.id]!
     }
@@ -146,9 +146,9 @@ func skinAndMorphDataLiveInTheWorld() {
 @Test
 func actionStateLivesInTheWorldAndSurvivesMoves() {
     let root = SceneGraph.Node()
-    let first = SceneGraph.Node(parent: root)
-    let second = SceneGraph.Node(parent: root)
-    let node = SceneGraph.Node(parent: first)
+    let first = root.addChild(SceneGraph.Node())
+    let second = root.addChild(SceneGraph.Node())
+    let node = first.addChild(SceneGraph.Node())
     let graph = SceneGraph(root: root)
     node.run(.move(by: [10, 0, 0], duration: 1), forKey: "move")
     #expect(graph.world[node.id]?[NodeRunningActionsComponent.self]?.value.count == 1)

@@ -15,13 +15,13 @@ func defaultCameraIsUsedWithoutCameraNodes() throws {
 @Test
 func defaultLightIsAddedOnlyWithoutLights() throws {
     let root = SceneGraph.Node()
-    _ = SceneGraph.Node(parent: root, content: .camera(Camera(projection: PerspectiveProjection())))
+    root.addChild(SceneGraph.Node(content: .camera(Camera(projection: PerspectiveProjection()))))
     let sceneGraph = SceneGraph(root: root)
     let light = Light(type: .directional)
     let context = try #require(makeRenderContext(sceneGraph: sceneGraph, camera: nil, cameraMatrix: nil, aspectRatio: 1, defaultLight: light))
     #expect(context.lights.count == 1)
 
-    _ = SceneGraph.Node(parent: root, content: .light(Light(type: .point)))
+    root.addChild(SceneGraph.Node(content: .light(Light(type: .point))))
     let lit = try #require(makeRenderContext(sceneGraph: sceneGraph, camera: nil, cameraMatrix: nil, aspectRatio: 1, defaultLight: light))
     #expect(lit.lights.count == 1)
     #expect(lit.lights[0].light.type == .point)

@@ -164,13 +164,11 @@ extension SceneGraph {
         /// Creates a node with a matrix transform.
         ///
         /// - Parameters:
-        ///   - parent: The parent to add the node to, if any.
         ///   - children: The children to add to the node.
         ///   - label: A name for the node, for debugging and outlines.
         ///   - transform: The local transform, as a matrix.
         ///   - content: What the node shows.
         public init(
-            parent: Node? = nil,
             children: [Node] = [],
             label: String? = nil,
             transform: float4x4 = .identity,
@@ -182,7 +180,6 @@ extension SceneGraph {
             for child in children {
                 addChild(child)
             }
-            parent?.addChild(self)
         }
 
         /// For SceneArchive; see SceneGraph+Archive.swift.
@@ -194,19 +191,17 @@ extension SceneGraph {
         /// Creates a node with a translation, rotation and scale.
         ///
         /// - Parameters:
-        ///   - parent: The parent to add the node to, if any.
         ///   - children: The children to add to the node.
         ///   - label: A name for the node, for debugging and outlines.
         ///   - trs: The local translation, rotation and scale.
         ///   - content: What the node shows.
         public convenience init(
-            parent: Node? = nil,
             children: [Node] = [],
             label: String? = nil,
             trs: Transform3D,
             content: Content = .empty
         ) {
-            self.init(parent: parent, children: children, label: label, content: content)
+            self.init(children: children, label: label, content: content)
             self.localTransform = .trs(trs)
         }
 
@@ -232,8 +227,12 @@ extension SceneGraph {
         /// Adds a node at the end of the children, and removes it from its old parent first.
         ///
         /// A child that makes a cycle causes a precondition failure.
-        public func addChild(_ child: Node) {
+        ///
+        /// - Returns: `child`.
+        @discardableResult
+        public func addChild<Child: Node>(_ child: Child) -> Child {
             insertChild(child, at: children.count)
+            return child
         }
 
         /// Moves `child` from its current parent, if any.

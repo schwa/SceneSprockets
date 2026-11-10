@@ -140,8 +140,8 @@ extension SceneGraph {
 
 extension SceneGraph.Node {
     /// A mesh node for `shape`. Set `shape` later to rebuild its mesh, keeping the materials.
-    public convenience init(parent: SceneGraph.Node? = nil, label: String? = nil, shape: SceneGraph.Shape, material: any Material, trs: Transform3D = .identity) {
-        self.init(parent: parent, label: label ?? shape.label, trs: trs, content: .mesh(shape.metalMesh(), material: material))
+    public convenience init(label: String? = nil, shape: SceneGraph.Shape, material: any Material, trs: Transform3D = .identity) {
+        self.init(label: label ?? shape.label, trs: trs, content: .mesh(shape.metalMesh(), material: material))
         shapeStorage = shape
     }
 

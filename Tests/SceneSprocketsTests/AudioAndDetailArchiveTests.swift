@@ -24,7 +24,7 @@ struct AudioAndDetailArchiveTests {
     @Test
     func levelsOfDetailRoundTrip() throws {
         let root = SceneGraph.Node(label: "Root")
-        let node = SceneGraph.Node(parent: root, label: "Rock", shape: .sphere(radius: 1), material: material())
+        let node = root.addChild(SceneGraph.Node(label: "Rock", shape: .sphere(radius: 1), material: material()))
         let coarse = MetalMesh(mesh: .box(), device: device)
         node.levelsOfDetail = [SceneGraph.LevelOfDetail(mesh: coarse, distance: 10), SceneGraph.LevelOfDetail(mesh: nil, distance: 50)]
         let archive = SceneArchive(materialTypes: [BlinnPhongSceneMaterial.self], meshCodec: GLTFMeshCodec())
@@ -51,7 +51,7 @@ struct AudioAndDetailArchiveTests {
             buffer.floatChannelData?[0][index] = sin(Float(index) * 0.1) * 0.5
         }
         let root = SceneGraph.Node(label: "Root")
-        let speaker = SceneGraph.Node(parent: root, label: "Speaker")
+        let speaker = root.addChild(SceneGraph.Node(label: "Speaker"))
         speaker.audioPlayers = [AudioPlayer(buffer: buffer, loops: false, volume: 0.25)]
         let archive = SceneArchive()
         let url = temporaryURL()

@@ -23,7 +23,7 @@ func nodeOutsideGraphHasNoEntity() {
 @Test
 func graphGivesSubtreeEntitiesWithValues() throws {
     let root = SceneGraph.Node(label: "root")
-    let child = SceneGraph.Node(parent: root, transform: simd_float4x4(translation: [1, 0, 0]))
+    let child = root.addChild(SceneGraph.Node(transform: simd_float4x4(translation: [1, 0, 0])))
     let graph = SceneGraph(root: root)
     #expect(root.world === graph.world)
     #expect(child.world === graph.world)
@@ -46,9 +46,9 @@ func nodeWritesGoToWorldAndWorldWritesShowInNode() throws {
 @Test
 func cachedStorageSurvivesOtherEntitiesMoving() {
     let root = SceneGraph.Node()
-    let first = SceneGraph.Node(parent: root, transform: simd_float4x4(translation: [1, 0, 0]))
-    let second = SceneGraph.Node(parent: root, transform: simd_float4x4(translation: [2, 0, 0]))
-    let third = SceneGraph.Node(parent: root, transform: simd_float4x4(translation: [3, 0, 0]))
+    let first = root.addChild(SceneGraph.Node(transform: simd_float4x4(translation: [1, 0, 0])))
+    let second = root.addChild(SceneGraph.Node(transform: simd_float4x4(translation: [2, 0, 0])))
+    let third = root.addChild(SceneGraph.Node(transform: simd_float4x4(translation: [3, 0, 0])))
     _ = SceneGraph(root: root)
     // Removing `first` swap-removes its row, so `third` moves into it.
     first.removeFromParent()
@@ -63,12 +63,12 @@ func cachedStorageSurvivesOtherEntitiesMoving() {
 @Test
 func cachedRefsSurviveUnrelatedStructuralChanges() throws {
     let root = SceneGraph.Node()
-    let node = SceneGraph.Node(parent: root, transform: simd_float4x4(translation: [1, 0, 0]))
+    let node = root.addChild(SceneGraph.Node(transform: simd_float4x4(translation: [1, 0, 0])))
     let graph = SceneGraph(root: root)
     _ = node.transform
     let ref = try #require(node.localTransformStorage.ref)
     let epoch = node.localTransformStorage.refEpoch
-    let other = SceneGraph.Node(parent: root)
+    let other = root.addChild(SceneGraph.Node())
     other.removeFromParent()
     _ = node.transform
     #expect(node.localTransformStorage.refEpoch == epoch)
@@ -85,7 +85,7 @@ func cachedRefsSurviveUnrelatedStructuralChanges() throws {
 @Test
 func removedNodeKeepsValuesAndLosesEntity() {
     let root = SceneGraph.Node()
-    let child = SceneGraph.Node(parent: root, label: "child")
+    let child = root.addChild(SceneGraph.Node(label: "child"))
     let graph = SceneGraph(root: root)
     child.transform = simd_float4x4(translation: [1, 2, 3])
     child.removeFromParent()
@@ -100,9 +100,9 @@ func moveInsideGraphKeepsEntity() throws {
         var value: Int
     }
     let root = SceneGraph.Node()
-    let first = SceneGraph.Node(parent: root)
-    let second = SceneGraph.Node(parent: root)
-    let child = SceneGraph.Node(parent: first)
+    let first = root.addChild(SceneGraph.Node())
+    let second = root.addChild(SceneGraph.Node())
+    let child = first.addChild(SceneGraph.Node())
     let graph = SceneGraph(root: root)
     try #require(graph.world[child.id]).set(AppComponent(value: 42))
     second.addChild(child)
@@ -115,8 +115,8 @@ func moveInsideGraphKeepsEntity() throws {
 func siblingIndicesFollowChildOrder() {
     let root = SceneGraph.Node()
     let graph = SceneGraph(root: root)
-    let first = SceneGraph.Node(parent: root)
-    let second = SceneGraph.Node(parent: root)
+    let first = root.addChild(SceneGraph.Node())
+    let second = root.addChild(SceneGraph.Node())
     let inserted = SceneGraph.Node()
     root.insertChild(inserted, at: 0)
     #expect([inserted, first, second].map { siblingIndex($0, in: graph.world) } == [0, 1, 2])
@@ -127,7 +127,7 @@ func siblingIndicesFollowChildOrder() {
 @Test
 func movingSubtreeBetweenGraphsMovesEntities() {
     let loadedRoot = SceneGraph.Node()
-    let loadedChild = SceneGraph.Node(parent: loadedRoot, transform: simd_float4x4(translation: [1, 0, 0]))
+    let loadedChild = loadedRoot.addChild(SceneGraph.Node(transform: simd_float4x4(translation: [1, 0, 0])))
     let loaded = SceneGraph(root: loadedRoot)
     let scene = SceneGraph(root: SceneGraph.Node())
     scene.root.addChild(loadedRoot)
@@ -149,10 +149,10 @@ func replacingRootDetachesOldRoot() {
 @Test
 func directSetParentMovesNodeLast() throws {
     let root = SceneGraph.Node()
-    let first = SceneGraph.Node(parent: root)
-    let second = SceneGraph.Node(parent: root)
-    let existing = SceneGraph.Node(parent: second)
-    let moving = SceneGraph.Node(parent: first)
+    let first = root.addChild(SceneGraph.Node())
+    let second = root.addChild(SceneGraph.Node())
+    let existing = second.addChild(SceneGraph.Node())
+    let moving = first.addChild(SceneGraph.Node())
     let graph = SceneGraph(root: root)
     let before = graph.revision
     try #require(graph.world[moving.id]).setParent(graph.world[second.id])
@@ -167,7 +167,7 @@ func directSetParentMovesNodeLast() throws {
 @Test
 func directUnparentRemovesNodeFromTree() throws {
     let root = SceneGraph.Node()
-    let child = SceneGraph.Node(parent: root, label: "child")
+    let child = root.addChild(SceneGraph.Node(label: "child"))
     let graph = SceneGraph(root: root)
     try #require(graph.world[child.id]).setParent(nil)
     #expect(child.parent == nil)
@@ -179,9 +179,9 @@ func directUnparentRemovesNodeFromTree() throws {
 @Test
 func directSiblingIndexReordersChildren() throws {
     let root = SceneGraph.Node()
-    let first = SceneGraph.Node(parent: root)
-    let second = SceneGraph.Node(parent: root)
-    let third = SceneGraph.Node(parent: root)
+    let first = root.addChild(SceneGraph.Node())
+    let second = root.addChild(SceneGraph.Node())
+    let third = root.addChild(SceneGraph.Node())
     let graph = SceneGraph(root: root)
     try #require(graph.world[third.id]).set(SiblingIndexComponent(index: -1))
     #expect(root.children.map(\.id) == [third.id, first.id, second.id])
@@ -206,10 +206,10 @@ func childParentIsNilAfterParentIsFreed() {
 @Test
 func destroyedEntityRemovesNodeFromTree() throws {
     let root = SceneGraph.Node()
-    let first = SceneGraph.Node(parent: root)
-    let child = SceneGraph.Node(parent: root)
-    let grandchild = SceneGraph.Node(parent: child)
-    let last = SceneGraph.Node(parent: root)
+    let first = root.addChild(SceneGraph.Node())
+    let child = root.addChild(SceneGraph.Node())
+    let grandchild = child.addChild(SceneGraph.Node())
+    let last = root.addChild(SceneGraph.Node())
     let graph = SceneGraph(root: root)
     let before = graph.revision
     _ = try graph.world.destroy(try #require(graph.world[child.id]))
@@ -227,7 +227,7 @@ func destroyedEntityRemovesNodeFromTree() throws {
 func destroyedEntityLeavesNodeDetachedWithDefaults() throws {
     let root = SceneGraph.Node()
     let light = Light(type: .point)
-    let child = SceneGraph.Node(parent: root, transform: simd_float4x4(translation: [1, 0, 0]), content: .light(light))
+    let child = root.addChild(SceneGraph.Node(transform: simd_float4x4(translation: [1, 0, 0]), content: .light(light)))
     let graph = SceneGraph(root: root)
     _ = try graph.world.destroy(try #require(graph.world[child.id]))
     #expect(child.world == nil)

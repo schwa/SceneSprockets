@@ -105,7 +105,7 @@ private struct GLTFSceneGraphBuilder {
             }
             defer { path.remove(index) }
             let source = document.nodes[index]
-            let node = SceneGraph.Node(parent: parent, label: source.name)
+            let node = parent.addChild(SceneGraph.Node(label: source.name))
             if let matrix = source.matrix, matrix != matrix_identity_float4x4 {
                 node.transform = matrix
             } else {
@@ -125,7 +125,7 @@ private struct GLTFSceneGraphBuilder {
                 let instances = skin == nil ? try instanceTransforms(of: source) : nil
                 let meshNodes = instances.map { transforms in
                     transforms.enumerated().map { index, transform in
-                        SceneGraph.Node(parent: node, label: "\(source.name ?? "Instance") \(index)", transform: transform)
+                        node.addChild(SceneGraph.Node(label: "\(source.name ?? "Instance") \(index)", transform: transform))
                     }
                 } ?? [node]
                 for meshNode in meshNodes {
@@ -145,7 +145,7 @@ private struct GLTFSceneGraphBuilder {
                     node.content = content
                     return node
                 }
-                return SceneGraph.Node(parent: node, label: source.name, content: content)
+                return node.addChild(SceneGraph.Node(label: source.name, content: content))
             }
             if let cameraIndex = source.camera?.index {
                 if let camera = camera(cameraIndex) {

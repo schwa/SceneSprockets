@@ -44,11 +44,11 @@ func worldBoundsIncludeTransformsAndChildren() throws {
     let box = makeBox(device: device)
     let root = SceneGraph.Node()
     root.trs.translation = [0, 10, 0]
-    let group = SceneGraph.Node(parent: root)
+    let group = root.addChild(SceneGraph.Node())
     group.trs.scale = [2, 2, 2]
-    let left = SceneGraph.Node(parent: group, content: .mesh(box, material: material))
+    let left = group.addChild(SceneGraph.Node(content: .mesh(box, material: material)))
     left.trs.translation = [-1, 0, 0]
-    let right = SceneGraph.Node(parent: group, content: .mesh(box, material: material))
+    let right = group.addChild(SceneGraph.Node(content: .mesh(box, material: material)))
     right.trs.translation = [1, 0, 0]
     let sceneGraph = SceneGraph(root: root)
 

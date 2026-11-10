@@ -12,7 +12,7 @@ private func context(for sceneGraph: SceneGraph) throws -> SceneGraphRenderConte
 
 private func sceneWithCamera() -> SceneGraph {
     let root = SceneGraph.Node()
-    _ = SceneGraph.Node(parent: root, content: .camera(Camera(projection: PerspectiveProjection())))
+    root.addChild(SceneGraph.Node(content: .camera(Camera(projection: PerspectiveProjection()))))
     return SceneGraph(root: root)
 }
 

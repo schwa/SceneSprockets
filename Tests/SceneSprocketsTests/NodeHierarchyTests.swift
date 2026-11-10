@@ -14,9 +14,9 @@ func addChildKeepsParentAndChildrenInSync() {
 @Test
 func nodeUtilitiesFindReplaceAndClone() {
     let root = SceneGraph.Node(label: "root")
-    let a = SceneGraph.Node(parent: root, label: "a")
-    let b = SceneGraph.Node(parent: root, label: "b")
-    let deep = SceneGraph.Node(parent: a, label: "deep", trs: .init(translation: [1, 2, 3]))
+    let a = root.addChild(SceneGraph.Node(label: "a"))
+    let b = root.addChild(SceneGraph.Node(label: "b"))
+    let deep = a.addChild(SceneGraph.Node(label: "deep", trs: .init(translation: [1, 2, 3])))
     deep.categoryBitMask = 4
     deep.morphWeights = [0.5]
     #expect(root.childNode(withLabel: "deep") === deep)
@@ -41,10 +41,10 @@ func nodeUtilitiesFindReplaceAndClone() {
 @Test
 func traverseCanSkipAndStop() {
     let root = SceneGraph.Node(label: "root")
-    let a = SceneGraph.Node(parent: root, label: "a")
-    _ = SceneGraph.Node(parent: a, label: "a1")
-    _ = SceneGraph.Node(parent: root, label: "b")
-    _ = SceneGraph.Node(parent: root, label: "c")
+    let a = root.addChild(SceneGraph.Node(label: "a"))
+    a.addChild(SceneGraph.Node(label: "a1"))
+    root.addChild(SceneGraph.Node(label: "b"))
+    root.addChild(SceneGraph.Node(label: "c"))
     let sceneGraph = SceneGraph(root: root)
     var visited: [String] = []
     sceneGraph.traverse { node, _ in
@@ -61,7 +61,7 @@ func traverseCanSkipAndStop() {
 @Test
 func initWithParentAddsToParent() {
     let root = SceneGraph.Node(label: "root")
-    let child = SceneGraph.Node(parent: root, label: "child")
+    let child = root.addChild(SceneGraph.Node(label: "child"))
     #expect(child.parent === root)
     #expect(root.children.count == 1)
 }
@@ -77,7 +77,7 @@ func initWithChildrenSetsTheirParent() {
 func reparentingRemovesFromOldParent() {
     let first = SceneGraph.Node(label: "first")
     let second = SceneGraph.Node(label: "second")
-    let child = SceneGraph.Node(parent: first, label: "child")
+    let child = first.addChild(SceneGraph.Node(label: "child"))
     second.addChild(child)
     #expect(first.children.isEmpty)
     #expect(second.children.count == 1)
@@ -87,7 +87,7 @@ func reparentingRemovesFromOldParent() {
 @Test
 func removeFromParentClearsBothSides() {
     let root = SceneGraph.Node()
-    let child = SceneGraph.Node(parent: root)
+    let child = root.addChild(SceneGraph.Node())
     child.removeFromParent()
     #expect(child.parent == nil)
     #expect(root.children.isEmpty)
@@ -96,8 +96,8 @@ func removeFromParentClearsBothSides() {
 @Test
 func insertChildAtIndex() {
     let root = SceneGraph.Node()
-    _ = SceneGraph.Node(parent: root, label: "a")
-    _ = SceneGraph.Node(parent: root, label: "c")
+    root.addChild(SceneGraph.Node(label: "a"))
+    root.addChild(SceneGraph.Node(label: "c"))
     root.insertChild(SceneGraph.Node(label: "b"), at: 1)
     #expect(root.children.map(\.label) == ["a", "b", "c"])
 }
@@ -105,8 +105,8 @@ func insertChildAtIndex() {
 @Test
 func cycleDetection() {
     let root = SceneGraph.Node()
-    let child = SceneGraph.Node(parent: root)
-    let grandchild = SceneGraph.Node(parent: child)
+    let child = root.addChild(SceneGraph.Node())
+    let grandchild = child.addChild(SceneGraph.Node())
     #expect(root.isAncestor(of: grandchild))
     #expect(!grandchild.isAncestor(of: root))
     #expect(!root.canAddChild(root))

@@ -159,7 +159,7 @@ func propertyPathsAnimateLights() {
 @Test
 func animatingBumpsTransformRevisionOnly() {
     let root = SceneGraph.Node()
-    let node = SceneGraph.Node(parent: root)
+    let node = root.addChild(SceneGraph.Node())
     let sceneGraph = SceneGraph(root: root)
     let before = sceneGraph.revision
     let clip = Clip(name: "move", channels: [.init(target: node, path: .translation, sampler: .init(times: [0, 1], values: [0, 0, 0, 1, 0, 0], interpolation: .linear))])

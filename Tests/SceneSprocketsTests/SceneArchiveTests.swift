@@ -36,23 +36,23 @@ struct SceneArchiveTests {
     func makeScene() throws -> SceneGraph {
         let root = SceneGraph.Node(label: "Root")
         let textured = BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .texture(makeTexture(), tint: [1, 0.5, 0.25]), specular: .color(0.3), shininess: 24, opacity: 0.75, renderState: .init(blendMode: .add, fillMode: .lines))
-        let box = SceneGraph.Node(parent: root, shape: .box(width: 2, height: 1, length: 0.5), material: textured, trs: .init(translation: [1, 2, 3], rotation: simd_quatf(angle: 0.5, axis: [0, 1, 0]), scale: [1, 2, 1]))
+        let box = root.addChild(SceneGraph.Node(shape: .box(width: 2, height: 1, length: 0.5), material: textured, trs: .init(translation: [1, 2, 3], rotation: simd_quatf(angle: 0.5, axis: [0, 1, 0]), scale: [1, 2, 1])))
         box.categoryBitMask = 5
         box.lightCategoryBitMask = 3
         box.renderingOrder = 2
         box.opacity = 0.5
         let metal = try PBRSceneMaterial(baseColor: [0.9, 0.7, 0.2, 1], metallic: 1, roughness: 0.3)
-        let sphere = SceneGraph.Node(parent: box, shape: .sphere(radius: 0.4), material: metal)
+        let sphere = box.addChild(SceneGraph.Node(shape: .sphere(radius: 0.4), material: metal))
         sphere.transform = float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [4, 5, 6, 1]))
         sphere.pivot = float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0.1, 0.2, 0.3, 1]))
         sphere.isVisible = false
-        _ = SceneGraph.Node(parent: root, label: "Text", shape: .text("Hi", fontName: "Helvetica-Bold", fontSize: 0.5, extrusionDepth: 0.05), material: metal)
+        root.addChild(SceneGraph.Node(label: "Text", shape: .text("Hi", fontName: "Helvetica-Bold", fontSize: 0.5, extrusionDepth: 0.05), material: metal))
         var spot = Light.spot(color: [1, 0.9, 0.8], intensity: 30, range: 12, innerConeAngle: 0.3, outerConeAngle: 0.5)
         spot.range = 12
-        _ = SceneGraph.Node(parent: root, label: "Spot", trs: .init(translation: [0, 5, 0]), content: .light(spot))
-        _ = SceneGraph.Node(parent: root, label: "Sun", content: .light(Light(type: .directional)))
-        _ = SceneGraph.Node(parent: root, label: "Camera", content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40), depthMode: .reversed(zClip: 0.1 ... 50)), categoryBitMask: 7)))
-        _ = SceneGraph.Node(parent: root, label: "Ortho", content: .camera(Camera(projection: OrthographicProjection(halfHeight: 3))))
+        root.addChild(SceneGraph.Node(label: "Spot", trs: .init(translation: [0, 5, 0]), content: .light(spot)))
+        root.addChild(SceneGraph.Node(label: "Sun", content: .light(Light(type: .directional))))
+        root.addChild(SceneGraph.Node(label: "Camera", content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40), depthMode: .reversed(zClip: 0.1 ... 50)), categoryBitMask: 7))))
+        root.addChild(SceneGraph.Node(label: "Ortho", content: .camera(Camera(projection: OrthographicProjection(halfHeight: 3)))))
         let scene = SceneGraph(root: root)
         scene.environment = .init(background: .color([0.1, 0.2, 0.3, 1]), map: PBREnvironment.studio, intensity: 0.8, rotation: 1.2)
         scene.fog = .init(color: [0.5, 0.5, 0.6, 0.9], startDistance: 3, endDistance: 20, densityExponent: 2)
@@ -91,8 +91,8 @@ struct SceneArchiveTests {
     @Test
     func inactiveSubtreesStopAndAreSaved() throws {
         let root = SceneGraph.Node(label: "Root")
-        let parent = SceneGraph.Node(parent: root, label: "Parent", shape: .box(), material: BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color(0.8), specular: .color(0), shininess: 1))
-        let child = SceneGraph.Node(parent: parent, label: "Child")
+        let parent = root.addChild(SceneGraph.Node(label: "Parent", shape: .box(), material: BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color(0.8), specular: .color(0), shininess: 1)))
+        let child = parent.addChild(SceneGraph.Node(label: "Child"))
         child.run(.move(by: [1, 0, 0], duration: 1))
         let sceneGraph = SceneGraph(root: root)
 
@@ -207,9 +207,9 @@ struct SceneArchiveTests {
         let blinnPhong = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .texture(makeTexture()), specular: .color(0), shininess: 8)
         let pbr = PBRSceneMaterial(try PBRMaterial(uniforms: .defaults(baseColor: [0, 1, 0, 1]), placeholder: PBRMaterial.placeholderBinding(device: device), device: device))
         let root = SceneGraph.Node()
-        _ = SceneGraph.Node(parent: root, label: "Generated", content: .mesh(mesh, materials: [blinnPhong, pbr], castsShadow: false))
+        root.addChild(SceneGraph.Node(label: "Generated", content: .mesh(mesh, materials: [blinnPhong, pbr], castsShadow: false)))
         // Shares the mesh, so shares its file.
-        _ = SceneGraph.Node(parent: root, label: "Copy", content: .mesh(mesh, materials: [pbr]))
+        root.addChild(SceneGraph.Node(label: "Copy", content: .mesh(mesh, materials: [pbr])))
         var archive = archive
         archive.meshCodec = GLTFMeshCodec()
         let warnings = try archive.write(SceneGraph(root: root), to: url)
@@ -252,7 +252,7 @@ struct SceneArchiveTests {
         defer { try? FileManager.default.removeItem(at: url) }
         let root = SceneGraph.Node()
         let material = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color([1, 0, 0]), specular: .color(0), shininess: 1)
-        _ = SceneGraph.Node(parent: root, label: "Generated", content: .mesh(MetalMesh(mesh: .box(), device: device), material: material))
+        root.addChild(SceneGraph.Node(label: "Generated", content: .mesh(MetalMesh(mesh: .box(), device: device), material: material)))
         let warnings = try archive.write(SceneGraph(root: root), to: url)
         #expect(warnings.contains { $0.contains("Generated") && $0.contains("#158") })
     }
@@ -268,9 +268,9 @@ struct SceneArchiveTests {
         }
         let root = SceneGraph.Node()
         let material = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color([1, 0, 0]), specular: .color(0), shininess: 1)
-        let box = SceneGraph.Node(parent: root, label: "Box", shape: .box(), material: material)
-        let jointA = SceneGraph.Node(parent: root, label: "A")
-        let jointB = SceneGraph.Node(parent: jointA, label: "B")
+        let box = root.addChild(SceneGraph.Node(label: "Box", shape: .box(), material: material))
+        let jointA = root.addChild(SceneGraph.Node(label: "A"))
+        let jointB = jointA.addChild(SceneGraph.Node(label: "B"))
         box.morphTargets = [.init(name: "Squash", positionDeltas: [[0, -1, 0], [0, 1, 0]], normalDeltas: [[1, 0, 0]])]
         box.morphWeights = [0.25]
         box.skin = .init(joints: [jointA, jointB], inverseBindMatrices: [.init(diagonal: [1, 1, 1, 1]), .init(diagonal: [2, 2, 2, 1])])
@@ -331,9 +331,9 @@ struct SceneArchiveTests {
         var uniforms = PBRMaterialUniforms.defaults(baseColor: [1, 1, 1, 1], metallic: 0, roughness: 1)
         uniforms.baseColor.enabled = 1
         let pbr = PBRSceneMaterial(try PBRMaterial(uniforms: uniforms, textureBindings: bindings, device: device))
-        _ = SceneGraph.Node(parent: root, label: "PBR", shape: .box(), material: pbr)
+        root.addChild(SceneGraph.Node(label: "PBR", shape: .box(), material: pbr))
         let blinnPhong = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .texture(makeTexture(), sampler: nearestClampSampler()), specular: .color(0), shininess: 1)
-        _ = SceneGraph.Node(parent: root, label: "BlinnPhong", shape: .box(), material: blinnPhong)
+        root.addChild(SceneGraph.Node(label: "BlinnPhong", shape: .box(), material: blinnPhong))
 
         let warnings = try archive.write(SceneGraph(root: root), to: url)
         #expect(warnings.isEmpty, "\(warnings)")
@@ -366,7 +366,7 @@ struct SceneArchiveTests {
         defer { try? FileManager.default.removeItem(at: url) }
         let root = SceneGraph.Node()
         let material = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .texture(texture), specular: .color(0), shininess: 1)
-        _ = SceneGraph.Node(parent: root, shape: .box(), material: material)
+        root.addChild(SceneGraph.Node(shape: .box(), material: material))
         let warnings = try archive.write(SceneGraph(root: root), to: url)
         #expect(warnings.isEmpty, "\(warnings)")
         let (loaded, _) = try archive.read(from: url)
@@ -460,7 +460,7 @@ struct SceneArchiveTests {
         uniforms.normal.transform = simd_float3x3(columns: ([2, 0, 0], [0, 3, 0], [0.5, 0.25, 1]))
         material.pbrMaterial.uniforms = uniforms
         let root = SceneGraph.Node()
-        _ = SceneGraph.Node(parent: root, label: "Sphere", shape: .sphere(), material: material)
+        root.addChild(SceneGraph.Node(label: "Sphere", shape: .sphere(), material: material))
         return (SceneGraph(root: root), material.pbrMaterial.uniforms)
     }
 
@@ -503,7 +503,7 @@ struct SceneArchiveTests {
         material.parameters["bytes"] = .buffer(try #require(device.makeBuffer(bytes: [UInt8](arrayLiteral: 1, 2, 3, 4), length: 4, options: .storageModeShared)))
         material.renderState = MaterialRenderState(blendMode: .add)
         let root = SceneGraph.Node()
-        _ = SceneGraph.Node(parent: root, label: "Rim", shape: .sphere(), material: material)
+        root.addChild(SceneGraph.Node(label: "Rim", shape: .sphere(), material: material))
         let shaderArchive = SceneArchive(materialTypes: [ShaderMaterial.self])
         let warnings = try shaderArchive.write(SceneGraph(root: root), to: url)
         #expect(warnings.isEmpty, "\(warnings)")
@@ -537,7 +537,7 @@ struct SceneArchiveTests {
         let library = try device.makeLibrary(source: source, options: nil)
         let material = ShaderMaterial(vertexShader: try VertexShader(ShaderFunction(library: library, name: "custom_vertex", type: .vertex)), fragmentShader: try FragmentShader(ShaderFunction(library: library, name: "custom_fragment", type: .fragment)))
         let root = SceneGraph.Node()
-        _ = SceneGraph.Node(parent: root, label: "Custom", shape: .sphere(), material: material)
+        root.addChild(SceneGraph.Node(label: "Custom", shape: .sphere(), material: material))
         let unregistered = try SceneArchive(materialTypes: [ShaderMaterial.self]).write(SceneGraph(root: root), to: url)
         #expect(unregistered.contains { $0.contains("Custom") && $0.contains("shaderLibraries") })
         // Registered, it saves and reads back.
@@ -608,7 +608,7 @@ struct SceneArchiveTests {
         let url = temporaryURL()
         defer { try? FileManager.default.removeItem(at: url) }
         let root = SceneGraph.Node()
-        _ = SceneGraph.Node(parent: root, transform: .init(diagonal: [1, 2, 3, 1]), content: .light(Light(type: .directional)))
+        root.addChild(SceneGraph.Node(transform: .init(diagonal: [1, 2, 3, 1]), content: .light(Light(type: .directional))))
         try archive.write(try makeScene(), to: url)
         let json = try sceneJSON(url)
         #expect(json.contains(#""background" : "none""#) || json.contains(#""background" : {"#))
@@ -656,9 +656,9 @@ struct SceneArchiveTests {
         let url = temporaryURL()
         defer { try? FileManager.default.removeItem(at: url) }
         let root = SceneGraph.Node(label: "Root")
-        let group = SceneGraph.Node(parent: root, label: "Group")
-        let target = SceneGraph.Node(parent: group, label: "Target")
-        let follower = SceneGraph.Node(parent: root, label: "Follower")
+        let group = root.addChild(SceneGraph.Node(label: "Group"))
+        let target = group.addChild(SceneGraph.Node(label: "Target"))
+        let follower = root.addChild(SceneGraph.Node(label: "Follower"))
         follower.constraints = [
             .lookAt(target: target, worldUp: [0, 0, 1]),
             SceneGraph.Constraint(.distance(target: target, minimum: 1, maximum: .infinity), influenceFactor: 0.5, isEnabled: false),

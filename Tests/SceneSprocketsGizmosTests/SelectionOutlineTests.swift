@@ -21,11 +21,11 @@ struct SelectionOutlineTests {
     // Green outline around a 2x2 box at the origin, with a wide bar in front of its middle. Returns BGRA pixels.
     func render(xray: Bool) throws -> [UInt8] {
         let root = SceneGraph.Node()
-        let camera = SceneGraph.Node(parent: root, content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40), depthMode: .standard(zClip: 0.1 ... 100)))))
+        let camera = root.addChild(SceneGraph.Node(content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40), depthMode: .standard(zClip: 0.1 ... 100))))))
         camera.transform = viewport.cameraMatrix
         let material = BlinnPhongSceneMaterial(ambient: .color(1), diffuse: .color(0.2), specular: .color(0), shininess: 1)
-        let selected = SceneGraph.Node(parent: root, shape: .box(width: 2, height: 2, length: 1), material: material)
-        _ = SceneGraph.Node(parent: root, shape: .box(width: 6, height: 0.5, length: 0.5), material: material, trs: .init(translation: [0, 0, 3]))
+        let selected = root.addChild(SceneGraph.Node(shape: .box(width: 2, height: 2, length: 1), material: material))
+        root.addChild(SceneGraph.Node(shape: .box(width: 6, height: 0.5, length: 0.5), material: material, trs: .init(translation: [0, 0, 3])))
         let sceneGraph = SceneGraph(root: root)
         let outline = SelectionOutline(color: [0, 1, 0, 1], width: 6)
         outline.xray = xray

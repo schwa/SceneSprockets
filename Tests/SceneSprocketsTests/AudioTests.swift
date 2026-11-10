@@ -15,8 +15,8 @@ func audioPlayersFollowTheirNodes() throws {
     let audio = SceneAudio(mixer: SpatialAudioMixer(engine: engine))
 
     let root = SceneGraph.Node()
-    let parent = SceneGraph.Node(parent: root, trs: .init(translation: [1, 0, 0]))
-    let emitter = SceneGraph.Node(parent: parent, trs: .init(translation: [0, 2, 0]))
+    let parent = root.addChild(SceneGraph.Node(trs: .init(translation: [1, 0, 0])))
+    let emitter = parent.addChild(SceneGraph.Node(trs: .init(translation: [0, 2, 0])))
     let player = AudioPlayer(buffer: buffer)
     emitter.audioPlayers = [player]
     let sceneGraph = SceneGraph(root: root)

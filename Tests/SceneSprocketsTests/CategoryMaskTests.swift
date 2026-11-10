@@ -16,8 +16,8 @@ private func scene(cameraMask: UInt = .max) throws -> (SceneGraph, box: SceneGra
     let device = try #require(MTLCreateSystemDefaultDevice())
     let mesh = MetalMesh(mesh: .box(), device: device)
     let root = SceneGraph.Node()
-    _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 4]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45)), categoryBitMask: cameraMask)))
-    let box = SceneGraph.Node(parent: root, content: .mesh(mesh, material: material))
+    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 4]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45)), categoryBitMask: cameraMask))))
+    let box = root.addChild(SceneGraph.Node(content: .mesh(mesh, material: material)))
     return (SceneGraph(root: root), box)
 }
 
@@ -38,7 +38,7 @@ func cameraMaskHidesNodes() throws {
 @MainActor
 func blinnPhongDrawsMeshesNoLightReaches() throws {
     let (sceneGraph, _) = try scene()
-    let light = SceneGraph.Node(parent: sceneGraph.root, content: .light(Light(type: .directional, color: [1, 1, 1], intensity: 1)))
+    let light = sceneGraph.root.addChild(SceneGraph.Node(content: .light(Light(type: .directional, color: [1, 1, 1], intensity: 1))))
     light.lightCategoryBitMask = 0b10
     let renderer = try OffscreenRenderer(size: CGSize(width: 32, height: 32))
     let texture = try renderer.render(SceneGraphElement(sceneGraph: sceneGraph, aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [1, 1, 1])])).texture
@@ -63,11 +63,11 @@ func batchesFilterLightsAndSortByRenderingOrder() throws {
     let (sceneGraph, box) = try scene()
     let root = sceneGraph.root
     let device = try #require(MTLCreateSystemDefaultDevice())
-    let overlay = SceneGraph.Node(parent: root, content: .mesh(MetalMesh(mesh: .box(), device: device), material: material))
+    let overlay = root.addChild(SceneGraph.Node(content: .mesh(MetalMesh(mesh: .box(), device: device), material: material)))
     overlay.renderingOrder = -1
     overlay.categoryBitMask = 0b10
-    let everything = SceneGraph.Node(parent: root, content: .light(Light(type: .point)))
-    let onlyTwo = SceneGraph.Node(parent: root, content: .light(Light(type: .directional)))
+    let everything = root.addChild(SceneGraph.Node(content: .light(Light(type: .point))))
+    let onlyTwo = root.addChild(SceneGraph.Node(content: .light(Light(type: .directional))))
     onlyTwo.lightCategoryBitMask = 0b10
     _ = everything
 

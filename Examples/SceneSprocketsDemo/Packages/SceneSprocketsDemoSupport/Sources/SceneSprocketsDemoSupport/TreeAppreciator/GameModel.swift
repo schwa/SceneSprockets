@@ -195,11 +195,11 @@ final class GameModel {
     private func addRing(for difference: Difference, hint: Bool) {
         for world in [left, right].compactMap(\.self) {
             let jitter: SIMD3<Float> = hint ? SIMD3(Float.random(in: -1...1), Float.random(in: -1...1), Float.random(in: -1...1)) : .zero
-            let holder = SceneGraph.Node(parent: world.treeNode, label: hint ? "Hint" : "Ring", trs: Transform3D(translation: difference.anchor + jitter))
+            let holder = world.treeNode.addChild(SceneGraph.Node(label: hint ? "Hint" : "Ring", trs: Transform3D(translation: difference.anchor + jitter)))
             holder.constraints = [.billboard()]
             let radius: Float = hint ? 2.4 : 0.9
             let color: SIMD3<Float> = hint ? [1.2, 1.2, 1.2] : [1.6, 1.15, 0.45]
-            let ring = SceneGraph.Node(parent: holder, label: "Torus", shape: .torus(ringRadius: radius, pipeRadius: hint ? 0.04 : 0.07), material: glowing(color), trs: Transform3D(rotation: simd_quatf(angle: .pi / 2, axis: [1, 0, 0])))
+            let ring = holder.addChild(SceneGraph.Node(label: "Torus", shape: .torus(ringRadius: radius, pipeRadius: hint ? 0.04 : 0.07), material: glowing(color), trs: Transform3D(rotation: simd_quatf(angle: .pi / 2, axis: [1, 0, 0]))))
             ring.content = ring.content.withoutShadows
             holder.trs.scale = SIMD3(repeating: 0.01)
             if hint {
