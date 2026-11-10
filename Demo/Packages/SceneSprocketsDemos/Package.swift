@@ -23,11 +23,11 @@ let package = Package(
         .package(url: "https://github.com/schwa/MetalSupport", .upToNextMinor(from: "1.0.7")),
         .package(url: "https://github.com/schwa/MetalSprocketsPBR", .upToNextMinor(from: "0.0.3")),
         .package(url: "https://github.com/schwa/MetalSprocketsGLTF", .upToNextMinor(from: "0.0.3")),
-        .package(url: "https://github.com/schwa/Interaction3D", branch: "main"),
+        .package(url: "https://github.com/schwa/Interaction3D", .upToNextMinor(from: "0.2.0")),
         .package(url: "https://github.com/schwa/DemoKit", .upToNextMinor(from: "0.1.7")),
-        .package(url: "https://github.com/schwa/GoldenImage", .upToNextMinor(from: "0.1.6")),
+        .package(url: "https://github.com/schwa/GoldenImage", .upToNextMinor(from: "0.1.7")),
         .package(url: "https://github.com/schwa/MetalSprocketsParticles", .upToNextMinor(from: "0.0.2")),
-        .package(url: "https://github.com/schwa/SwiftECS", .upToNextMinor(from: "0.1.0")),
+        .package(url: "https://github.com/schwa/SwiftECS", .upToNextMinor(from: "0.1.1")),
     ],
     targets: [
         .target(

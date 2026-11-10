@@ -16,7 +16,7 @@ let package = Package(
         // Local checkout so editor and engine can change together. SwiftPM names it after its folder.
         .package(path: "../../.."),
         .package(url: "https://github.com/schwa/GeometryLite3D", .upToNextMinor(from: "0.2.7")),
-        .package(url: "https://github.com/schwa/Interaction3D", .upToNextMinor(from: "0.1.16")),
+        .package(url: "https://github.com/schwa/Interaction3D", .upToNextMinor(from: "0.2.0")),
         .package(url: "https://github.com/schwa/MetalSprockets", .upToNextMinor(from: "0.2.9")),
         .package(url: "https://github.com/schwa/MetalSprocketsAddOns", .upToNextMinor(from: "0.2.5")),
         .package(url: "https://github.com/schwa/MetalSprocketsPBR", .upToNextMinor(from: "0.0.3")),

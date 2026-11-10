@@ -1,5 +1,5 @@
 {
-  "originHash" : "8700d64e9045d66c27ef36995a69becd35189cb6b7a37215826692119fb4a0a3",
+  "originHash" : "ffc020aa002268bc1b57c112c88bb28cfbd95491b959b82ff001ce0dba1050c9",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -42,8 +42,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/Interaction3D",
       "state" : {
-        "branch" : "main",
-        "revision" : "df78cb4311f6f6273f67d6bb0b4dd58e01649d88"
+        "revision" : "df78cb4311f6f6273f67d6bb0b4dd58e01649d88",
+        "version" : "0.2.0"
       }
     },
     {
