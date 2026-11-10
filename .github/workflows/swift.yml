@@ -15,7 +15,7 @@ jobs:
         run: swiftlint --strict
 
   build-and-test:
-    runs-on: macos-26
+    runs-on: xcode-27
     steps:
       - uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
         with:
@@ -31,7 +31,7 @@ jobs:
         run: swift test -v -Xswiftc -warnings-as-errors --disable-sandbox
 
   build-and-test-scenesprocketscomposersupport:
-    runs-on: macos-26
+    runs-on: xcode-27
     steps:
       - uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
         with:

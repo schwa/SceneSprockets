@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-xcode:
-    runs-on: macos-26
+    runs-on: xcode-27
     strategy:
       matrix:
         destination:
@@ -33,7 +33,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO
 
   build-xcode-scenesprocketscomposer:
-    runs-on: macos-26
+    runs-on: xcode-27
     strategy:
       matrix:
         destination:
