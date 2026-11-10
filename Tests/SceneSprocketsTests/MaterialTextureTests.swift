@@ -39,7 +39,7 @@ private func centerPixel(_ material: any SceneSprockets.Material, renderer: any 
     return value
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func blinnPhongTextureLoadsFromFile() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
@@ -51,7 +51,7 @@ func blinnPhongTextureLoadsFromFile() throws {
     #expect(value.z > 240 && value.x < 10 && value.y < 10)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func pbrBaseColorTextureLoadsFromImage() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
@@ -65,7 +65,7 @@ func pbrBaseColorTextureLoadsFromImage() throws {
 }
 
 // A mid-grey sRGB image comes back as the same grey: no double encoding or decoding.
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func colorTexturesKeepTheirValues() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())

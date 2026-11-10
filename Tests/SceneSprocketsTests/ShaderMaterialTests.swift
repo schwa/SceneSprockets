@@ -21,7 +21,7 @@ private func render(_ material: ShaderMaterial) throws -> SIMD4<UInt8> {
     return value
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func normalsMaterialShowsFrontFaceNormal() throws {
     // The box's front face points at the camera (+Z): normal color (0.5, 0.5, 1).
@@ -32,7 +32,7 @@ func normalsMaterialShowsFrontFaceNormal() throws {
 }
 
 // Two half-transparent quads over black at the same spot; whichever draws last dominates the blend.
-@Test(arguments: [true, false])
+@Test(.enabled(if: deviceSupportsMetal4), arguments: [true, false])
 @MainActor
 func transparentDrawOrderFollowsRenderingOrder(blueLast: Bool) throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
@@ -56,7 +56,7 @@ func transparentDrawOrderFollowsRenderingOrder(blueLast: Bool) throws {
 }
 
 // #96: with equal rendering order, the nearer transparent quad draws last and dominates, whatever the scene order.
-@Test(arguments: [true, false])
+@Test(.enabled(if: deviceSupportsMetal4), arguments: [true, false])
 @MainActor
 func transparentEntriesDrawBackToFront(nearFirstInScene: Bool) throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
@@ -93,7 +93,7 @@ func opaqueDrawsBeforeTransparentInABatch() throws {
     _ = glass
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func rimMaterialUsesColorParameter() throws {
     let value = try render(.rim(color: [1, 0, 0, 1]))

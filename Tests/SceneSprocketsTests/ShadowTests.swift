@@ -70,7 +70,7 @@ private func brightness(_ sceneGraph: SceneGraph, at pixel: SIMD2<Int>, shadows:
     return Int(value.x) + Int(value.y) + Int(value.z)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func boxCastsShadowOnFloor() throws {
     let (sceneGraph, pixel) = try makeScene()
@@ -80,7 +80,7 @@ func boxCastsShadowOnFloor() throws {
     #expect(Double(shadowed) < Double(lit) * 0.6)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func skinnedCasterIsSkinnedOnGPU() throws {
     let (sceneGraph, pixel) = try makeScene(skinned: true)
@@ -94,7 +94,7 @@ func skinnedCasterIsSkinnedOnGPU() throws {
     #expect(frame.casters.contains { if case .skinned = $0.placement { true } else { false } })
 }
 
-@Test(arguments: [Light.LightType.spot, .point])
+@Test(.enabled(if: deviceSupportsMetal4), arguments: [Light.LightType.spot, .point])
 @MainActor
 func spotAndPointLightsCastShadows(light: Light.LightType) throws {
     let (sceneGraph, pixel) = try makeScene(light: light)
@@ -130,7 +130,7 @@ func droppedLightsAreCounted() throws {
 
 // #66: a floor that does not receive shadows stays lit under the box's shadow. With only Blinn-Phong meshes the
 // screen-space mask is not needed at all (#71).
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func nonReceiversAreNotDarkened() throws {
     let (sceneGraph, pixel) = try makeScene()
@@ -166,7 +166,7 @@ func screenSpaceMaskSkipsBlinnPhong() throws {
 
 // #71: a light's shadow dims only that light. The floor spot is in the sun's box shadow but lit by a second light
 // from the other side, which must still reach it; and a light whose category excludes the floor casts nothing on it.
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func shadowsDimOnlyTheirOwnLight() throws {
     let (sceneGraph, pixel) = try makeScene()
@@ -200,7 +200,7 @@ func shadowsDimOnlyTheirOwnLight() throws {
 }
 
 // #102: PBR samples each light's shadow in its shader, so the sun's shadow does not dim the fill light.
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func pbrShadowsDimOnlyTheirOwnLight() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
@@ -232,7 +232,7 @@ private func pixels(_ sceneGraph: SceneGraph, shadows: SceneGraphShadows?) throw
 }
 
 // #88: shadows tint towards `color`, and `softness` widens the penumbra.
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func shadowColorTintsShadowedPixels() throws {
     let (sceneGraph, pixel) = try makeScene()
@@ -244,7 +244,7 @@ func shadowColorTintsShadowedPixels() throws {
     #expect(tinted.x < 5)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func softnessWidensPenumbra() throws {
     let (sceneGraph, _) = try makeScene()
@@ -260,7 +260,7 @@ func softnessWidensPenumbra() throws {
     #expect(try penumbraCount(softness: 4) > penumbraCount(softness: 0) + 10)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func nonCastersCastNoShadow() throws {
     let (sceneGraph, pixel) = try makeScene(boxCastsShadow: false)

@@ -25,7 +25,7 @@ private func render(offset: SIMD3<Float>) throws -> [SIMD4<UInt8>] {
     return pixels
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func blinnPhongShadesTheSameFarFromOrigin() throws {
     let near = try render(offset: .zero)

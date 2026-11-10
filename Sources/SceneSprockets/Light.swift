@@ -35,6 +35,7 @@ public struct Light: Sendable, Equatable, Codable {
     ///   - range: The distance where a point or spot light stops having an effect.
     ///   - innerConeAngle: The half-angle of a spot light's full-intensity cone, in radians.
     ///   - outerConeAngle: The half-angle of a spot light's cone, in radians.
+    ///   - castsShadow: Whether the light casts shadows when the scene has shadows.
     public init(type: LightType, color: SIMD3<Float> = [1, 1, 1], intensity: Float = 1, range: Float = .infinity, innerConeAngle: Float = .pi / 8, outerConeAngle: Float = .pi / 6, castsShadow: Bool = true) {
         self.castsShadow = castsShadow
         self.type = type

@@ -75,7 +75,7 @@ private func makeUSDA() throws -> URL {
     return url
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 func objLoadsWithPerSubmeshMaterials() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let result = try ModelIOSceneGraph(url: try makeOBJ(), device: device)

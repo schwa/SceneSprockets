@@ -22,7 +22,7 @@ func levelOfDetailPicksMeshByDistance() throws {
     #expect(applyLevelsOfDetail(entries, cameraPosition: [0, 0, 60]).isEmpty)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func levelOfDetailAppliesWhenRendering() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())

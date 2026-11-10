@@ -9,7 +9,7 @@ import simd
 import SwiftMesh
 import Testing
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 func pbrModelIsBuiltFromSceneGraph() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
@@ -42,7 +42,7 @@ func pbrPrimitiveHonorsIndexTypeAndPrimitiveType() throws {
     #expect(primitive.primitiveType == .line)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 func pbrModelIsReusedUntilStructureChanges() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
@@ -91,7 +91,7 @@ func morphTargetsWithWrongVertexCountAreIgnored() throws {
     #expect(primitive.morphTargets == nil)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 func pbrModelIsBuiltForEachBufferLayout() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     for layout in [MetalMesh.BufferLayout.interleaved, .separateBuffers] {
@@ -113,7 +113,7 @@ func pbrLightDirectionFollowsNodeRotation() {
 }
 
 // #114: PBRSceneMaterial.renderState reaches the PBR renderer, and fading keeps it.
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func pbrRenderStateIsApplied() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())

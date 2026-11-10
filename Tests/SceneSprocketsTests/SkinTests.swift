@@ -22,7 +22,7 @@ func jointMatricesFollowJointWorldTransforms() {
     #expect(skin.jointMatrices()[0].columns.3 == SIMD4<Float>(1, 0, 0, 1))
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 func skinnedMeshBuildsPBRSkin() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
@@ -42,7 +42,7 @@ func skinnedMeshBuildsPBRSkin() throws {
     #expect(model.opaqueInstances.first?.skinIndex == 0)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 func skinVerticesWithWrongCountAreIgnored() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)

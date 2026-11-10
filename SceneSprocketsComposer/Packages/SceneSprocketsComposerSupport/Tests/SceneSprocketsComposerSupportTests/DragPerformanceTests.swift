@@ -43,7 +43,8 @@ import Testing
 // #215: what a gizmo drag costs on the main thread each frame, outside SwiftUI. Reports milliseconds per call so the
 // expensive parts stand out; the bound is generous and only catches regressions.
 @MainActor
-@Test func dragFrameCosts() throws {
+@Test(.disabled(if: ProcessInfo.processInfo.environment["CI"] != nil, "Timing is unreliable on CI runners"))
+func dragFrameCosts() throws {
     let model = EditorModel(sceneGraph: SceneGraph.empty())
     let tools = SceneTools(model: model)
     let ids = try tools.create(kind: "box", count: 500, label: nil, parent: nil, translation: nil, translations: (0..<500).map { [Double($0 % 25), 0, Double($0 / 25)] }, rotationDegrees: nil, scale: nil, color: nil).components(separatedBy: ", ")

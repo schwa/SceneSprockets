@@ -24,7 +24,7 @@ private func skyPixel(pitch: Float) throws -> SIMD4<UInt8> {
     return value
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func gradientSkyDrawsWithoutPBR() throws {
     let level = try skyPixel(pitch: 0)

@@ -21,7 +21,7 @@ private func render(_ mode: SceneGraphDebugMode?, mesh: MetalMesh) throws -> SIM
     return value
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func debugModesReplaceMaterials() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
@@ -45,7 +45,7 @@ func debugModesReplaceMaterials() throws {
 }
 
 // #195: each renderer shows its own version of a material channel; values are unlit.
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func materialChannelsShowMaterialValues() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())

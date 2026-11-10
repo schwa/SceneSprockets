@@ -45,7 +45,7 @@ struct ModelReferenceArchiveTests {
         return url
     }
 
-    @Test
+    @Test(.enabled(if: deviceSupportsMetal4))
     func loadedGLTFIsKeptByReference() throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -82,7 +82,7 @@ struct ModelReferenceArchiveTests {
     }
 
     // Without a model loader, the subtree is saved like any other (meshes through the mesh codec).
-    @Test
+    @Test(.enabled(if: deviceSupportsMetal4))
     func withoutALoaderTheSubtreeIsSaved() throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)

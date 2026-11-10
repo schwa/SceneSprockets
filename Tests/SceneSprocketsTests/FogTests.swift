@@ -17,7 +17,7 @@ func fogAmountFollowsStartEndAndExponent() {
 }
 
 // A near box and a far box on a black background; red fog that starts past the near box.
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func fogTintsFarGeometryOnly() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())

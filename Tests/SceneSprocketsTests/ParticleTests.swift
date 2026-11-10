@@ -46,7 +46,7 @@ private func makeScene() -> (SceneGraph, emitter: SceneGraph.Node) {
     return (SceneGraph(root: root), emitter)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func particlesDrawInFrontAndAreHiddenBehindMeshes() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
@@ -57,7 +57,7 @@ func particlesDrawInFrontAndAreHiddenBehindMeshes() throws {
     #expect(try centerPixel(sceneGraph, frames: 1).x < 5)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func particlesFollowTheNode() throws {
     let (sceneGraph, emitter) = makeScene()
@@ -66,7 +66,7 @@ func particlesFollowTheNode() throws {
 }
 
 // #145
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func softParticlesFadeIntoGeometry() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
@@ -119,7 +119,7 @@ func collidersFollowTheNodeTransform() {
     #expect(abs(distance - -1) < 1e-5)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func hiddenNodesStopEmitting() throws {
     let (sceneGraph, emitter) = makeScene()

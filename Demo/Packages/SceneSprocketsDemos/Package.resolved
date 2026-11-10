@@ -1,5 +1,5 @@
 {
-  "originHash" : "5c7d51f83b7cb3bb56b6fa59e0ea6216f4d264bf0c4c4ceb96ac20db17fc8edd",
+  "originHash" : "cd1b5daf96087dae2a8c50b6c8986b3ba0cb2642645a67df9903f972ea20542c",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -116,6 +116,15 @@
       "state" : {
         "revision" : "667d86e694e2f9d599c757152bbdf0d46cab63fe",
         "version" : "1.0.7"
+      }
+    },
+    {
+      "identity" : "scenesprocketsaddons",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/SceneSprocketsAddOns",
+      "state" : {
+        "branch" : "main",
+        "revision" : "a9733004c4bf20e59c27055282d1d84b93cfbe64"
       }
     },
     {

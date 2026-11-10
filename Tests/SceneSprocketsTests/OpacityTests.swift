@@ -71,7 +71,7 @@ private func pbrOverBlue(opacity: Float, renderer pbrRenderer: PBRMaterialRender
     return (value, pbrRenderer, fader, graph)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func pbrNodeOpacityBlends() throws {
     // Opaque, the lit red quad hides the blue one (its blue channel is only environment light). At half opacity,
@@ -82,7 +82,7 @@ func pbrNodeOpacityBlends() throws {
     #expect(Int(half.z) < Int(opaque.z) - 40)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func pbrOpacityChangeReusesTheModel() throws {
     let first = try pbrOverBlue(opacity: 0.5)
@@ -94,7 +94,7 @@ func pbrOpacityChangeReusesTheModel() throws {
 }
 
 // A half-opaque red quad (opacity from its parent node) in front of an opaque blue quad: both colors show.
-@Test(arguments: [false, true])
+@Test(.enabled(if: deviceSupportsMetal4), arguments: [false, true])
 @MainActor
 func nodeOpacityBlends(usesShaderMaterial: Bool) throws {
     let device = try #require(MTLCreateSystemDefaultDevice())

@@ -40,7 +40,7 @@ private func pixel(_ texture: MTLTexture, _ sceneGraph: SceneGraph, at point: SI
     return value
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func colorAdjustmentChangesSaturationExposureAndCorners() throws {
     let floorPoint: SIMD3<Float> = [1.5, 0, 1.5]
@@ -60,7 +60,7 @@ func colorAdjustmentChangesSaturationExposureAndCorners() throws {
     #expect(Int(corner.z) < Int(plainCorner.z) - 20)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func ambientOcclusionDarkensContactsOnly() throws {
     let (sceneGraph, plain) = try render(nil)

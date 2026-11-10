@@ -31,7 +31,7 @@ private func privateCopy(of mesh: MetalMesh, device: MTLDevice) throws -> MetalM
     return result
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func privateStorageMeshesCanBeReadOnTheCPU() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())

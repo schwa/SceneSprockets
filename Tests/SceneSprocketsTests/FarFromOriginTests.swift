@@ -51,7 +51,7 @@ enum MaterialKind: CaseIterable, Sendable {
 }
 
 // #257, #254.
-@Test(arguments: MaterialKind.allCases)
+@Test(.enabled(if: deviceSupportsMetal4), arguments: MaterialKind.allCases)
 @MainActor
 func shadowsAndFogMatchFarFromOrigin(kind: MaterialKind) throws {
     let near = try render(offset: .zero, kind: kind)

@@ -35,7 +35,7 @@ private func glow(_ color: SIMD3<Float>, _ state: MaterialRenderState = .init(),
 private func isHigh(_ value: UInt8) -> Bool { value > 200 }
 private func isLow(_ value: UInt8) -> Bool { value < 20 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func addBlendAddsColor() throws {
     let state = MaterialRenderState(blendMode: .add)
@@ -44,7 +44,7 @@ func addBlendAddsColor() throws {
     #expect(isHigh(value.z) && isHigh(value.x) && isLow(value.y))
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func multiplyBlendMultiplies() throws {
     // Yellow times magenta is red.
@@ -52,14 +52,14 @@ func multiplyBlendMultiplies() throws {
     #expect(isHigh(value.z) && isLow(value.y) && isLow(value.x))
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func replaceIgnoresOpacity() throws {
     let value = try render(near: glow([1, 0, 0], MaterialRenderState(blendMode: .replace), opacity: 0.5), far: glow([0, 0, 1]))
     #expect(isHigh(value.z) && isLow(value.x))
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func depthReadAndWriteCanBeTurnedOff() throws {
     // The far quad draws last; normally the near one hides it.
@@ -70,7 +70,7 @@ func depthReadAndWriteCanBeTurnedOff() throws {
     #expect(isHigh(try render(near: glow([1, 0, 0], MaterialRenderState(writesToDepthBuffer: false)), far: glow([0, 0, 1]), farDrawsLast: true).x))
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func colorWriteMaskKeepsOtherChannels() throws {
     // White writing only red over blue leaves magenta.
@@ -78,7 +78,7 @@ func colorWriteMaskKeepsOtherChannels() throws {
     #expect(isHigh(value.z) && isHigh(value.x) && isLow(value.y))
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func linesFillModeDrawsEdgesOnly() throws {
     // Near the top middle, away from the quad's edges and its diagonal.
@@ -87,7 +87,7 @@ func linesFillModeDrawsEdgesOnly() throws {
     #expect(isLow(try render(near: glow([1, 1, 1], MaterialRenderState(fillMode: .lines)), far: nil, pixel: pixel).z))
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func shaderMaterialUsesRenderState() throws {
     // Facing the camera, rim is the plain color.

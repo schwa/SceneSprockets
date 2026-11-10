@@ -16,7 +16,7 @@ let package = Package(
     dependencies: [
         // The repository root. SwiftPM names a local package after its folder, "SceneSprockets".
         .package(path: "../../.."),
-        .package(path: "../../../../SceneSprocketsAddOns"),
+        .package(url: "https://github.com/schwa/SceneSprocketsAddOns", branch: "main"),
         .package(url: "https://github.com/schwa/GeometryLite3D", .upToNextMinor(from: "0.2.7")),
         .package(url: "https://github.com/schwa/MetalSprockets", .upToNextMinor(from: "0.2.9")),
         .package(url: "https://github.com/schwa/SwiftMesh", .upToNextMinor(from: "0.0.11")),

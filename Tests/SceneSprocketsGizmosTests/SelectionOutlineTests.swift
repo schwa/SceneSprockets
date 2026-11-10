@@ -53,7 +53,7 @@ struct SelectionOutlineTests {
         return bgra[1] > 200 && bgra[2] < 80
     }
 
-    @Test(.enabled(if: MTLCreateSystemDefaultDevice() != nil))
+    @Test(.enabled(if: deviceSupportsMetal4))
     func objectsInFrontHideTheOutline() throws {
         let pixels = try render(xray: false)
         let visible = try pixel(pixels, leftOfEdgeAtY: 0.8)
@@ -62,7 +62,7 @@ struct SelectionOutlineTests {
         #expect(!isOutline(hidden), "\(hidden)")
     }
 
-    @Test(.enabled(if: MTLCreateSystemDefaultDevice() != nil))
+    @Test(.enabled(if: deviceSupportsMetal4))
     func xrayDrawsOverEverything() throws {
         let pixels = try render(xray: true)
         let behindBar = try pixel(pixels, leftOfEdgeAtY: 0)

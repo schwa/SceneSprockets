@@ -42,7 +42,7 @@ private var blinnPhong: BlinnPhongSceneMaterial {
     BlinnPhongSceneMaterial(ambient: .color([0.3, 0.1, 0.1]), diffuse: .color([0.9, 0.2, 0.2]), specular: .color([1, 1, 1]), shininess: 16)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func blinnPhongBoxIsDrawnAtCenter() throws {
     let (sceneGraph, _) = try makeScene { .mesh($0, material: blinnPhong) }
@@ -55,7 +55,7 @@ func blinnPhongBoxIsDrawnAtCenter() throws {
     #expect(isBackground(pixel(texture, x: 1, y: 1)))
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func culledBoxDrawsNothing() throws {
     let (sceneGraph, _) = try makeScene(meshMaterial: { .mesh($0, material: blinnPhong) }, xOffset: 50)
@@ -64,7 +64,7 @@ func culledBoxDrawsNothing() throws {
     #expect(isBackground(pixel(texture, x: 32, y: 32)))
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func blinnPhongSkinnedBoxFollowsJoint() throws {
     let (sceneGraph, box) = try makeScene(meshMaterial: { .mesh($0, material: blinnPhong) }, xOffset: 100)
@@ -77,7 +77,7 @@ func blinnPhongSkinnedBoxFollowsJoint() throws {
     #expect(!isBackground(pixel(texture, x: 32, y: 32)))
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func blinnPhongDirectionalLightFollowsNodeRotation() throws {
     func centerBrightness(lightRotation: simd_quatf) throws -> Int {
@@ -97,7 +97,7 @@ func blinnPhongDirectionalLightFollowsNodeRotation() throws {
     #expect(facing > away + 30)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func pbrBoxIsDrawnAtCenter() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
@@ -113,7 +113,7 @@ func pbrBoxIsDrawnAtCenter() throws {
     #expect(isBackground(pixel(texture, x: 1, y: 1)))
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func mixedRenderersShareOnePass() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())

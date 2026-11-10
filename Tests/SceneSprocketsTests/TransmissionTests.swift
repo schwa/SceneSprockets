@@ -60,7 +60,7 @@ private func glassOverLitQuad(lightReachesQuad: Bool) throws -> SIMD4<UInt8> {
     return value
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func lightMasksApplyBehindGlass() throws {
     let lit = try glassOverLitQuad(lightReachesQuad: true)
@@ -69,7 +69,7 @@ func lightMasksApplyBehindGlass() throws {
     #expect(Int(masked.z) < Int(lit.z) / 4)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func glassShowsBlinnPhongBehindIt() throws {
     let empty = try glass(behind: false)
@@ -78,7 +78,7 @@ func glassShowsBlinnPhongBehindIt() throws {
     #expect(Int(green.y) > Int(green.x) + 60)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func glassShowsTheSceneBehindIt() throws {
     let empty = try glass(behind: false)

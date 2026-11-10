@@ -21,7 +21,7 @@ private func scene(cameraMask: UInt = .max) throws -> (SceneGraph, box: SceneGra
     return (SceneGraph(root: root), box)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func cameraMaskHidesNodes() throws {
     let (sceneGraph, box) = try scene(cameraMask: 0b01)
@@ -34,7 +34,7 @@ func cameraMaskHidesNodes() throws {
 }
 
 // Regression for #99: a Blinn-Phong batch that no light reaches hit an assertion in Lighting.
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func blinnPhongDrawsMeshesNoLightReaches() throws {
     let (sceneGraph, _) = try scene()

@@ -75,7 +75,7 @@ func cachedOpaqueBatchesFollowChanges() throws {
     #expect(faded.single.count == 2)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func instancedBoxesAllRender() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())

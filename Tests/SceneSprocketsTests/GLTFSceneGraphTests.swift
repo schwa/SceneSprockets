@@ -72,7 +72,7 @@ private func makeSceneFile() throws -> URL {
     return url
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 func gltfSceneLoadsIntoSceneGraph() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let asset = try GLTFAsset(url: try makeSceneFile(), device: device)
@@ -123,7 +123,7 @@ func gltfSceneLoadsIntoSceneGraph() throws {
     #expect(joint.trs.translation == [-3, 0, 0])
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 func gltfSceneGraphBuildsPBRModel() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let asset = try GLTFAsset(url: try makeSceneFile(), device: device)
@@ -134,7 +134,7 @@ func gltfSceneGraphBuildsPBRModel() throws {
 }
 
 // #54: EXT_mesh_gpu_instancing copies become child nodes, KHR_node_visibility hides nodes.
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 func gltfInstancingAndVisibilityAreMapped() throws {
     var data = Data()
     [Float](arrayLiteral: 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 0, 0, -5, 0, 0).withUnsafeBytes { data.append(contentsOf: $0) }
@@ -170,7 +170,7 @@ func gltfInstancingAndVisibilityAreMapped() throws {
 }
 
 // #301: a channel whose pointer cannot be mapped (the aspect ratio follows the view) is named in the warning.
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 func gltfSkippedPointerIsNamedInTheWarning() throws {
     var data = Data()
     [Float](arrayLiteral: 0, 1, 1.5, 2).withUnsafeBytes { data.append(contentsOf: $0) }
@@ -204,7 +204,7 @@ func gltfSkippedPointerIsNamedInTheWarning() throws {
 }
 
 // #54: KHR_animation_pointer channels for visibility, lights and cameras become property channels.
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 func gltfPointerAnimationsAreMapped() throws {
     var data = Data()
     // Times, then visibility, light intensity and camera yfov keyframes.
@@ -325,7 +325,7 @@ private func pbrMaterial(of node: SceneGraph.Node?) throws -> PBRSceneMaterial {
 private struct MaterialMissing: Error {}
 
 // #54: KHR_animation_pointer material channels change the mesh's PBR material.
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 func gltfMaterialPointerAnimationsAreMapped() throws {
     let result = try materialPointerAnimationSceneGraph()
     let clip = try #require(result.animations.first)
@@ -339,7 +339,7 @@ func gltfMaterialPointerAnimationsAreMapped() throws {
 }
 
 // #122: the mixer blends material channels against the material's rest value.
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 func gltfMaterialChannelsBlendInMixer() throws {
     let result = try materialPointerAnimationSceneGraph()
     let clip = try #require(result.animations.first)
@@ -353,7 +353,7 @@ func gltfMaterialChannelsBlendInMixer() throws {
 }
 
 // #92: morph target names come from the mesh's extras.targetNames.
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 func gltfMorphTargetNamesAreRead() throws {
     var data = Data()
     [Float](arrayLiteral: 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1).withUnsafeBytes { data.append(contentsOf: $0) }
@@ -396,7 +396,7 @@ private func grayPNG() throws -> Data {
 }
 
 // #121: the scene's EXT_lights_image_based light becomes the scene environment; variant names are kept.
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 func gltfImageBasedLightAndVariantNamesAreMapped() throws {
     let face = try grayPNG().base64EncodedString()
     let images = Array(repeating: #"{"uri": "data:image/png;base64,\#(face)"}"#, count: 6).joined(separator: ", ")
@@ -427,7 +427,7 @@ func gltfImageBasedLightAndVariantNamesAreMapped() throws {
 }
 
 // #124: switching KHR_materials_variants on a loaded scene graph swaps the mesh's materials in place.
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 func gltfMaterialVariantsSwitchInPlace() throws {
     let buffer = [Float](arrayLiteral: -1, -1, 0, 1, -1, 0, 0, 1, 0).withUnsafeBytes { Data($0) }.base64EncodedString()
     let json = """
@@ -465,7 +465,7 @@ func gltfMaterialVariantsSwitchInPlace() throws {
 }
 
 // #197: ModelFile picks the loader by extension and returns one subtree named after the file.
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 func modelFileLoadsGLTFAndOBJ() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)

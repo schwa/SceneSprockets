@@ -135,7 +135,7 @@ struct SceneEditBoundaryTests {
 
 // #175
 @MainActor
-@Test func savingWritesPreviewImage() throws {
+@Test(.enabled(if: deviceSupportsMetal4)) func savingWritesPreviewImage() throws {
     let document = ComposerDocument()
     EditorModel(sceneGraph: document.sceneGraph).addShape(.box(), label: "Box")
     let wrapper = try document.snapshot(contentType: .sceneSprocketsDocument)
@@ -496,7 +496,7 @@ struct SceneEditBoundaryTests {
 
 // #157: an inserted glTF is one unit: its inside is locked, a click picks the model, and saving keeps the file.
 @MainActor
-@Test func insertedGLTFIsKeptByReference() throws {
+@Test(.enabled(if: deviceSupportsMetal4)) func insertedGLTFIsKeptByReference() throws {
     let positions: [Float] = [0, 0, 0, 1, 0, 0, 0, 1, 0]
     let indices: [UInt16] = [0, 1, 2, 0]
     let buffer = (positions.withUnsafeBytes { Data($0) } + indices.withUnsafeBytes { Data($0) }).base64EncodedString()
@@ -568,7 +568,7 @@ struct SceneEditBoundaryTests {
 
 // #204: AppKit takes the snapshot on a background queue when saving on quit.
 @MainActor
-@Test func snapshotWorksOffTheMainThread() async throws {
+@Test(.enabled(if: deviceSupportsMetal4)) func snapshotWorksOffTheMainThread() async throws {
     let document = ComposerDocument()
     let model = EditorModel(sceneGraph: document.sceneGraph)
     model.addShape(.box(), label: "Box")

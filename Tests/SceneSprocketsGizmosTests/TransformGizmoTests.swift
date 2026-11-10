@@ -127,7 +127,7 @@ struct TransformGizmoTests {
     }
 
     // The overlay pass draws over the scene even where scene geometry is nearer the camera (reversed depth there).
-    @Test(.enabled(if: MTLCreateSystemDefaultDevice() != nil))
+    @Test(.enabled(if: deviceSupportsMetal4))
     func drawsOverTheScene() throws {
         let device = try #require(MTLCreateSystemDefaultDevice())
         let root = SceneGraph.Node()
@@ -156,7 +156,7 @@ struct TransformGizmoTests {
     }
 
     // #262: the handles draw the same far from the world origin, with the camera and target moved together.
-    @Test(.enabled(if: MTLCreateSystemDefaultDevice() != nil), arguments: [TransformGizmo.Mode.translate, .rotate, .scale])
+    @Test(.enabled(if: deviceSupportsMetal4), arguments: [TransformGizmo.Mode.translate, .rotate, .scale])
     func drawsTheSameFarFromOrigin(mode: TransformGizmo.Mode) throws {
         func render(offset: SIMD3<Float>) throws -> [UInt8] {
             let viewport = SceneViewport(
@@ -263,7 +263,7 @@ struct TransformGizmoTests {
         #expect(TransformGizmo.ringRuns(facing, frame: frame).allSatisfy { $0.isFront })
     }
 
-    @Test(.enabled(if: MTLCreateSystemDefaultDevice() != nil))
+    @Test(.enabled(if: deviceSupportsMetal4))
     func drawsItsHandles() throws {
         let (gizmo, _) = makeGizmo()
         let overlay = try #require(try gizmo.overlay(viewport: viewport))

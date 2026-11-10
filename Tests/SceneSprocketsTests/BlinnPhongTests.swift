@@ -21,7 +21,7 @@ private func centerPixel(_ mesh: MetalMesh, _ material: BlinnPhongSceneMaterial,
     return value
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func diffuseAndAmbientTexturesAreSampled() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
@@ -59,7 +59,7 @@ private func flat(_ color: SIMD3<Float>, opacity: Float = 1) -> BlinnPhongSceneM
     BlinnPhongSceneMaterial(ambient: .color(color), diffuse: .color(0), specular: .color(0), shininess: 1, opacity: opacity)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func translucentBlinnPhongBlendsOverWhatIsBehind() throws {
     // Opaque red in front hides blue.
@@ -70,7 +70,7 @@ func translucentBlinnPhongBlendsOverWhatIsBehind() throws {
     #expect(blended.z > 100 && blended.x > 100)
 }
 
-@Test(arguments: [true, false])
+@Test(.enabled(if: deviceSupportsMetal4), arguments: [true, false])
 @MainActor
 func translucentBlinnPhongDrawsBackToFront(nearFirst: Bool) throws {
     // Both half-transparent: the nearer one draws last and dominates, whatever the scene order.
@@ -80,7 +80,7 @@ func translucentBlinnPhongDrawsBackToFront(nearFirst: Bool) throws {
     #expect(value.x > 40)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func diffuseTextureAlphaIsOpacity() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
@@ -94,7 +94,7 @@ func diffuseTextureAlphaIsOpacity() throws {
     #expect(value.x > 200 && value.z < 5)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func zeroNormalsFallBackToFaceNormals() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
@@ -144,7 +144,7 @@ private func solidTexture(_ bytes: [UInt8]) throws -> MTLTexture {
     return texture
 }
 
-@Test(arguments: [false, true])
+@Test(.enabled(if: deviceSupportsMetal4), arguments: [false, true])
 @MainActor
 func emissionAddsUnlitColor(usesTexture: Bool) throws {
     let emission: BlinnPhongSceneMaterial.Source = usesTexture ? .texture(try solidTexture([0, 255, 0, 255])) : .color([0, 1, 0])
@@ -152,7 +152,7 @@ func emissionAddsUnlitColor(usesTexture: Bool) throws {
     #expect(value.y > 250 && value.x < 5 && value.z < 5)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func normalMapBendsLighting() throws {
     let plain = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(1), specular: .color(0), shininess: 1)
@@ -166,7 +166,7 @@ func normalMapBendsLighting() throws {
     #expect(try litQuadPixel(mapped).x > 200)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func cullModeHidesBackFaces() throws {
     var material = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([1, 1, 1]))
@@ -180,7 +180,7 @@ func cullModeHidesBackFaces() throws {
 }
 
 // #246: per-vertex colors multiply the material's ambient and diffuse colors.
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func vertexColorsTintTheMaterial() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())

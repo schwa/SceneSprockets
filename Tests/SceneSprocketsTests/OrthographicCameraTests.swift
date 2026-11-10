@@ -11,7 +11,7 @@ import simd
 import Testing
 
 // #87
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 func gltfOrthographicCameraLoads() throws {
     let json = """
     {
@@ -39,7 +39,7 @@ func gltfOrthographicCameraLoads() throws {
 
 // A far-away quad keeps its size under an orthographic camera: 2 units tall in a 4-unit-tall view covers the middle
 // half of the image.
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func orthographicCameraRendersWithoutPerspective() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
