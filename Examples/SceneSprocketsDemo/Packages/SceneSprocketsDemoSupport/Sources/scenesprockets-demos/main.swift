@@ -1,7 +1,7 @@
 import AppKit
 import DemoKit
 import Foundation
-import SceneSprocketsDemos
+import SceneSprocketsDemoSupport
 import SwiftUI
 
 // scenesprockets-demos                         open the demo picker

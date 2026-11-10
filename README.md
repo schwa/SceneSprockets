@@ -4,7 +4,7 @@ A 3D scene graph for [MetalSprockets](https://github.com/schwa/MetalSprockets), 
 
 ![The Gears demo: four gears with soft shadows on a gradient background](Images/gears.png)
 
-*The Gears demo. The source is in `Demo/Packages/SceneSprocketsDemos`.*
+*The Gears demo. The source is in `Examples/SceneSprocketsDemo/Packages/SceneSprocketsDemoSupport`.*
 
 ## Features
 
@@ -75,12 +75,12 @@ The documentation has articles on [getting started](https://schwa.github.io/Scen
 
 ## Demos
 
-`Demo/Packages/SceneSprocketsDemos` has the demos: a keynote-style tour of the features, Gears, Dice, Shadows, a SceneKit feature comparison, and Tree Appreciator, a small game.
+`Examples/SceneSprocketsDemo/Packages/SceneSprocketsDemoSupport` has the demos: a keynote-style tour of the features, Gears, Dice, Shadows, a SceneKit feature comparison, and Tree Appreciator, a small game.
 
-To run the demos in Xcode, open `Demo/SceneSprocketsDemo.xcodeproj`. To run them from the command line, use these commands:
+To run the demos in Xcode, open `Examples/SceneSprocketsDemo/SceneSprocketsDemo.xcodeproj`. To run them from the command line, use these commands:
 
 ```sh
-cd Demo/Packages/SceneSprocketsDemos
+cd Examples/SceneSprocketsDemo/Packages/SceneSprocketsDemoSupport
 xcb run scenesprockets-demos                                   # opens the demo picker
 scenesprockets-demos --render gears gears.png --size 1280x800  # renders a demo to a PNG
 ```

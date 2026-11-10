@@ -1,0 +1,79 @@
+{
+  "default-configuration": "Release",
+  "configurations": [
+    { "name": "Debug", "file": { "anchor": "Configuration", "relative-path": "Project-Debug.xcconfig" } },
+    { "name": "Release", "file": { "anchor": "Configuration", "relative-path": "Project-Release.xcconfig" } },
+  ],
+  "localizations": {
+    "development": "en",
+    "supported": [
+      "Base",
+    ],
+  },
+  "packages": [
+    {
+      "kind": "local",
+      "path": "../..",
+    },
+  ],
+  "files": [
+    {
+      "kind": "folder",
+      "path": "Configuration",
+      "target-membership": [
+        "HelloWorld",
+      ],
+      "membership-exceptions": [
+        {
+          "target": "HelloWorld",
+          "exclusions": [
+            "HelloWorld-Debug.xcconfig",
+            "HelloWorld-Release.xcconfig",
+            "HelloWorld-Shared.xcconfig",
+            "Project-Debug.xcconfig",
+            "Project-Release.xcconfig",
+            "Project-Shared.xcconfig",
+          ],
+        },
+      ],
+    },
+    { "kind": "folder", "path": "HelloWorld", "target-membership": [ "HelloWorld" ] },
+    {
+      "kind": "group",
+      "name": "Products",
+      "children": [
+        { "path": "<PRODUCTS>/HelloWorld.app", "id": "451594472F64A8DC005F944D", "type": "wrapper.application", "index": false },
+      ],
+    },
+  ],
+  "targets": [
+    {
+      "name": "HelloWorld",
+      "id": "451594462F64A8DC005F944D",
+      "product": "Products/HelloWorld.app",
+      "product-type": "application",
+      "specialized-configurations": [
+        { "name": "Debug", "file": { "anchor": "Configuration", "relative-path": "HelloWorld-Debug.xcconfig" } },
+        { "name": "Release", "file": { "anchor": "Configuration", "relative-path": "HelloWorld-Release.xcconfig" } },
+      ],
+      "build-phases": [
+        "compile-sources",
+        "frameworks",
+        "resources",
+      ],
+      "package-product-members": [
+        {
+          "package": "..",
+          "product-name": "SceneSprockets",
+          "build-phase": { "build-phase": "frameworks" },
+        }, {
+          "package": "..",
+          "product-name": "SceneSprocketsBlinnPhong",
+          "build-phase": { "build-phase": "frameworks" },
+        },
+      ],
+    },
+  ],
+  "last-upgrade": "26.4",
+  "last-swift-update": "26.4",
+}

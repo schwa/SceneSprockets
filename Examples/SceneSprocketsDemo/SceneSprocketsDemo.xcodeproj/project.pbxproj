@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		457C0F3430816E8300878743 /* SceneSprocketsDemos in Frameworks */ = {isa = PBXBuildFile; productRef = 457C0F3330816E8300878743 /* SceneSprocketsDemos */; };
+		45B050A830A38AE500B8D3D0 /* SceneSprocketsDemoSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 45B050A730A38AE500B8D3D0 /* SceneSprocketsDemoSupport */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +26,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				SceneSprocketsDemos,
+				SceneSprocketsDemoSupport,
 			);
 			target = 45C80D302E84475800136D6D /* SceneSprocketsDemo */;
 		};
@@ -75,7 +76,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				457C0F3430816E8300878743 /* SceneSprocketsDemos in Frameworks */,
+				45B050A830A38AE500B8D3D0 /* SceneSprocketsDemoSupport in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -122,7 +123,7 @@
 			);
 			name = SceneSprocketsDemo;
 			packageProductDependencies = (
-				457C0F3330816E8300878743 /* SceneSprocketsDemos */,
+				45B050A730A38AE500B8D3D0 /* SceneSprocketsDemoSupport */,
 			);
 			productName = SceneSprocketsDemo;
 			productReference = 45C80D312E84475800136D6D /* SceneSprocketsDemo.app */;
@@ -153,7 +154,7 @@
 			mainGroup = 45C80D282E84475800136D6D;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				457C0F3230816E8300878743 /* XCLocalSwiftPackageReference "Packages/SceneSprocketsDemos" */,
+				45B050A630A38AE500B8D3D0 /* XCLocalSwiftPackageReference "Packages/SceneSprocketsDemoSupport" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 45C80D322E84475800136D6D /* Products */;
@@ -252,16 +253,17 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		457C0F3230816E8300878743 /* XCLocalSwiftPackageReference "Packages/SceneSprocketsDemos" */ = {
+		45B050A630A38AE500B8D3D0 /* XCLocalSwiftPackageReference "Packages/SceneSprocketsDemoSupport" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = Packages/SceneSprocketsDemos;
+			relativePath = Packages/SceneSprocketsDemoSupport;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		457C0F3330816E8300878743 /* SceneSprocketsDemos */ = {
+		45B050A730A38AE500B8D3D0 /* SceneSprocketsDemoSupport */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = SceneSprocketsDemos;
+			package = 45B050A630A38AE500B8D3D0 /* XCLocalSwiftPackageReference "Packages/SceneSprocketsDemoSupport" */;
+			productName = SceneSprocketsDemoSupport;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

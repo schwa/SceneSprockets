@@ -7816,3 +7816,137 @@ Related: #321.
 - `2026-11-08T04:05:14Z`: Done: SceneSprocketsAddOns.PointCloud now draws with MetalSprocketsAddOns' compute rasterizer. New PointCloudMaterial (points buffer of PointCloudPoint, size, size units, shape) and PointCloudRenderer (SceneGraphPrePassRenderer: one PointCloudRasterizePass per node before the scene pass, PointCloudResolvePipeline in the scene pass, reverse-Z). Removed the ShaderMaterial version and PointCloud.metal from SceneSprocketsShaders. Needs Apple GPU family 8+; otherwise not drawn. Tests: disc size/color, node transform, packed point data.
 
 ---
+
+## 354: SceneGraph.Node init requires a MTLDevice for every node
+
++++
+status: new
+priority: medium
+kind: enhancement
+created: 2026-11-10T17:29:35Z
++++
+
+Creating a node with a shape requires passing `device:` on every call:
+
+```swift
+let box = SceneGraph.Node(parent: root, shape: .box(), material: material, device: device)
+```
+
+Every node construction has to thread the device through, which is noisy and repetitive at call sites. Building a scene graph should not require passing the device to each node.
+
+- `2026-11-10T17:31:51Z`: ## Proposed fix (per schwa)
+Resolve the MTLDevice when the scene is placed in a RenderView (or other render context) instead of at construction time.
+
+Related device-threading issues filed for materials, textures, PBRMaterialRenderer, loaders and Composer.
+
+---
+
+## 355: PBR material construction requires a MTLDevice
+
++++
+status: new
+priority: medium
+kind: enhancement
+created: 2026-11-10T17:31:50Z
++++
+
+Creating PBR materials requires passing a device:
+
+- `PBRSceneMaterial(device:baseColor:metallic:roughness:)` and the `textures:` variant (`Sources/SceneSprocketsPBR/PBRSceneGraph.swift:58, 96`)
+- `PBRMaterial(..., device:)`, `PBRMaterial.placeholderBinding(device:)`, `PBRMaterial.Binding(texture:samplerDescriptor:device:)`
+- `PBRSceneMaterial.faded(_:device:)`
+
+Every material created in a scene has to carry a device through. Related: #354.
+
+## Proposed fix (per schwa)
+Resolve the MTLDevice when the scene is placed in a RenderView (or other render context) instead of at construction time.
+
+---
+
+## 356: Material texture loading requires a MTLDevice
+
++++
+status: new
+priority: medium
+kind: enhancement
+created: 2026-11-10T17:31:50Z
++++
+
+Loading textures for materials requires passing a device:
+
+- `MaterialTexture.load(contentsOf:device:)` and the cgImage / named-resource variants (`Sources/SceneSprockets/MaterialTexture.swift`)
+- `.texture(contentsOf:device:)` on Blinn-Phong material properties
+- `VideoTexture(player:width:height:device:)` (`Sources/SceneSprockets/VideoTexture.swift:30`)
+
+Related: #354.
+
+## Proposed fix (per schwa)
+Resolve the MTLDevice when the scene is placed in a RenderView (or other render context) instead of at construction time.
+
+---
+
+## 357: PBRMaterialRenderer requires a MTLDevice at init
+
++++
+status: new
+priority: medium
+kind: enhancement
+created: 2026-11-10T17:31:50Z
++++
+
+`PBRMaterialRenderer(device:)` (`Sources/SceneSprocketsPBR/PBRSceneGraph.swift:280`) requires a device, unlike `BlinnPhongMaterialRenderer()` and `ShaderMaterialRenderer()`. Renderer lists end up like:
+
+```swift
+renderers: [BlinnPhongMaterialRenderer(), PBRMaterialRenderer(device: device)]
+```
+
+Related: #354.
+
+## Proposed fix (per schwa)
+Resolve the MTLDevice when the scene is placed in a RenderView (or other render context) instead of at construction time.
+
+---
+
+## 358: Model loaders require a MTLDevice
+
++++
+status: new
+priority: medium
+kind: enhancement
+created: 2026-11-10T17:31:50Z
++++
+
+Loading models requires a device:
+
+- `ModelIOSceneGraph(url:device:)` / `(asset:device:)`
+- `GLTFAsset(url:device:)` followed by `.makeSceneGraph(device:)` — the device is passed twice
+- `SceneArchive` decoding (via `SceneArchiveContext`)
+
+Related: #354.
+
+## Proposed fix (per schwa)
+Resolve the MTLDevice when the scene is placed in a RenderView (or other render context) instead of at construction time.
+
+---
+
+## 359: Composer material editing threads MTLDevice through every edit
+
++++
+status: new
+priority: medium
+kind: enhancement
+created: 2026-11-10T17:31:51Z
++++
+
+In `SceneSprocketsComposerSupport`, material edits require a device on every call:
+
+- `MaterialEdit.applying(_:to:device:)`
+- `EditorModel.editedPBR(_:device:)`
+- `EditorModel.converted(color:to:device:)`
+
+Related: #354.
+
+## Proposed fix (per schwa)
+Resolve the MTLDevice when the scene is placed in a RenderView (or other render context) instead of at construction time.
+
+---

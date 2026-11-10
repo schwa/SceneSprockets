@@ -1,6 +1,6 @@
 # Credits
 
-SceneSprockets is MIT licensed (see `LICENSE`). The demo package bundles these third-party assets, which keep their own licenses. Full license and metadata files are next to each asset in `Demo/Packages/SceneSprocketsDemos/Sources/SceneSprocketsDemos/Resources/`.
+SceneSprockets is MIT licensed (see `LICENSE`). The demo package bundles these third-party assets, which keep their own licenses. Full license and metadata files are next to each asset in `Examples/SceneSprocketsDemo/Packages/SceneSprocketsDemoSupport/Sources/SceneSprocketsDemoSupport/Resources/`.
 
 ## Fox (`Fox.glb`)
 

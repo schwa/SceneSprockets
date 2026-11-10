@@ -3,19 +3,19 @@
 import PackageDescription
 
 let package = Package(
-    name: "SceneSprocketsDemos",
+    name: "SceneSprocketsDemoSupport",
     platforms: [
         .iOS(.v26),
         .macOS(.v26),
         .visionOS(.v26)
     ],
     products: [
-        .library(name: "SceneSprocketsDemos", targets: ["SceneSprocketsDemos"]),
+        .library(name: "SceneSprocketsDemoSupport", targets: ["SceneSprocketsDemoSupport"]),
         .executable(name: "scenesprockets-demos", targets: ["scenesprockets-demos"]),
     ],
     dependencies: [
         // The repository root. SwiftPM names a local package after its folder, "SceneSprockets".
-        .package(path: "../../.."),
+        .package(path: "../../../.."),
         .package(url: "https://github.com/schwa/SceneSprocketsAddOns", branch: "main"),
         .package(url: "https://github.com/schwa/GeometryLite3D", .upToNextMinor(from: "0.2.7")),
         .package(url: "https://github.com/schwa/MetalSprockets", .upToNextMinor(from: "0.2.9")),
@@ -31,7 +31,7 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "SceneSprocketsDemos",
+            name: "SceneSprocketsDemoSupport",
             dependencies: [
                 .product(name: "SceneSprockets", package: "SceneSprockets"),
                 .product(name: "SceneSprocketsPhysics", package: "SceneSprockets"),
@@ -59,14 +59,14 @@ let package = Package(
         .executableTarget(
             name: "scenesprockets-demos",
             dependencies: [
-                "SceneSprocketsDemos",
+                "SceneSprocketsDemoSupport",
                 .product(name: "DemoKit", package: "DemoKit"),
             ]
         ),
         .testTarget(
-            name: "SceneSprocketsDemosTests",
+            name: "SceneSprocketsDemoSupportTests",
             dependencies: [
-                "SceneSprocketsDemos",
+                "SceneSprocketsDemoSupport",
                 .product(name: "SceneSprockets", package: "SceneSprockets"),
                 .product(name: "SceneSprocketsBlinnPhong", package: "SceneSprockets"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),

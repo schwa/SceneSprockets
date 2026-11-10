@@ -1,0 +1,222 @@
+{
+  "originHash" : "0c8814092d62ce8c01efb78036ae702cb692862b7e583561fd8e2600a50e18c3",
+  "pins" : [
+    {
+      "identity" : "basisuniversalmetal",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/BasisUniversalMetal",
+      "state" : {
+        "revision" : "002f03eae0e1b0cbb0f3deb3fed1ab2b5290b5a4",
+        "version" : "0.0.3"
+      }
+    },
+    {
+      "identity" : "geometrylite2d",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/GeometryLite2D",
+      "state" : {
+        "revision" : "542e05566f76d4248f95a43d13c1ff771acb32fd",
+        "version" : "0.0.4"
+      }
+    },
+    {
+      "identity" : "geometrylite3d",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/GeometryLite3D",
+      "state" : {
+        "revision" : "aabafead21eb8691c0162578452f93fef939665e",
+        "version" : "0.2.7"
+      }
+    },
+    {
+      "identity" : "interaction3d",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/Interaction3D",
+      "state" : {
+        "revision" : "df78cb4311f6f6273f67d6bb0b4dd58e01649d88",
+        "version" : "0.2.0"
+      }
+    },
+    {
+      "identity" : "metalcompilerplugin",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/MetalCompilerPlugin",
+      "state" : {
+        "revision" : "4ad74195623b0bc11662eb3c6f0495e119521a0d",
+        "version" : "0.4.1"
+      }
+    },
+    {
+      "identity" : "metalsprockets",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/MetalSprockets",
+      "state" : {
+        "revision" : "4062c651c768055ebd2b914562bb5ad851f8a196",
+        "version" : "0.2.9"
+      }
+    },
+    {
+      "identity" : "metalsprocketsaddons",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/MetalSprocketsAddOns",
+      "state" : {
+        "revision" : "a475387dda0420e2c098a60303a8921f45d8df2f",
+        "version" : "0.2.5"
+      }
+    },
+    {
+      "identity" : "metalsprocketsgltf",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/MetalSprocketsGLTF",
+      "state" : {
+        "revision" : "5a3c9b62a0916a6f63dbde8c324351b476c2cbeb",
+        "version" : "0.0.3"
+      }
+    },
+    {
+      "identity" : "metalsprocketsparticles",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/MetalSprocketsParticles",
+      "state" : {
+        "revision" : "8b7dbb3c81e95b9f7fd458e7c51be46391832a99",
+        "version" : "0.0.2"
+      }
+    },
+    {
+      "identity" : "metalsprocketspbr",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/MetalSprocketsPBR",
+      "state" : {
+        "revision" : "693714e4108c58731949991241b4edf4f6567db1",
+        "version" : "0.0.3"
+      }
+    },
+    {
+      "identity" : "metalsupport",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/MetalSupport",
+      "state" : {
+        "revision" : "667d86e694e2f9d599c757152bbdf0d46cab63fe",
+        "version" : "1.0.7"
+      }
+    },
+    {
+      "identity" : "spacemouse",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/SpaceMouse",
+      "state" : {
+        "revision" : "b5182a7d024b4e8206b4ff21842867d4cabc5fe3",
+        "version" : "0.0.1"
+      }
+    },
+    {
+      "identity" : "swift-algorithms",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-algorithms",
+      "state" : {
+        "revision" : "87e50f483c54e6efd60e885f7f5aa946cee68023",
+        "version" : "1.2.1"
+      }
+    },
+    {
+      "identity" : "swift-argument-parser",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-argument-parser",
+      "state" : {
+        "revision" : "6a52f3251125d74daf04fcbd5e6f08a75d074382",
+        "version" : "1.8.2"
+      }
+    },
+    {
+      "identity" : "swift-async-algorithms",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-async-algorithms",
+      "state" : {
+        "revision" : "13713a4ffdee8abd929f92568ee9462a46ae26e0",
+        "version" : "1.1.7"
+      }
+    },
+    {
+      "identity" : "swift-collections",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-collections.git",
+      "state" : {
+        "revision" : "f96b909e1a9e469620bc5037c1e24e00153f376f",
+        "version" : "1.7.5"
+      }
+    },
+    {
+      "identity" : "swift-numerics",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-numerics.git",
+      "state" : {
+        "revision" : "0c0290ff6b24942dadb83a929ffaaa1481df04a2",
+        "version" : "1.1.1"
+      }
+    },
+    {
+      "identity" : "swift-syntax",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swiftlang/swift-syntax.git",
+      "state" : {
+        "revision" : "050f1a346fbbac0ca2cfb15a95274f7bd1cf0ccf",
+        "version" : "604.0.0"
+      }
+    },
+    {
+      "identity" : "swiftecs",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/SwiftECS",
+      "state" : {
+        "revision" : "9fee9e48ba84944ab4e42368ce7270ef0c37f367",
+        "version" : "0.1.1"
+      }
+    },
+    {
+      "identity" : "swiftformats",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/SwiftFormats",
+      "state" : {
+        "revision" : "073633367a7d69e206693377082ef36570345022",
+        "version" : "0.3.8"
+      }
+    },
+    {
+      "identity" : "swiftgltf",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/SwiftGLTF",
+      "state" : {
+        "revision" : "978ddbbecd1d842c1b35233d8ea9db4176c18127",
+        "version" : "1.0.6"
+      }
+    },
+    {
+      "identity" : "swiftjolt",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/SwiftJolt.git",
+      "state" : {
+        "revision" : "4cd5a89121e49f9803c926554e7751ac0e9fd0bf",
+        "version" : "0.0.1"
+      }
+    },
+    {
+      "identity" : "swiftmesh",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/SwiftMesh",
+      "state" : {
+        "revision" : "4270c075af06d438609f61548f7d6c632d15e4da",
+        "version" : "0.0.11"
+      }
+    },
+    {
+      "identity" : "swiftply",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/SwiftPLY",
+      "state" : {
+        "revision" : "46a78c2f61babad1b950bd354b83f072c21489b8",
+        "version" : "0.0.1"
+      }
+    }
+  ],
+  "version" : 3
+}

@@ -1,4 +1,4 @@
-@testable import SceneSprocketsDemos
+@testable import SceneSprocketsDemoSupport
 import simd
 import Testing
 
