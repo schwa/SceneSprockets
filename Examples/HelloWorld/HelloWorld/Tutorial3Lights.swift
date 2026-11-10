@@ -1,4 +1,4 @@
-// Tutorial 2: lights and shadows.
+// Tutorial 3: lights and shadows.
 //
 // Lights are nodes too, so you place and aim them with the node's transform.
 // A point light shines in all directions. A spot light shines in a cone along its -Z axis; `look(at:)` aims it.
@@ -9,7 +9,7 @@ import SceneSprockets
 import SceneSprocketsBlinnPhong
 import SwiftUI
 
-struct Tutorial2Lights: View {
+struct Tutorial3Lights: View {
     @State private var sceneGraph = Self.makeSceneGraph()
     @State private var shadows = SceneGraphShadows(intensity: 0.7, softness: 2)
 
@@ -41,5 +41,5 @@ struct Tutorial2Lights: View {
 }
 
 #Preview {
-    Tutorial2Lights()
+    Tutorial3Lights()
 }

@@ -47,6 +47,11 @@ struct Tutorial5Constraints: View {
         let title = root.addShape(.text("Hello, World", fontSize: 0.4, extrusionDepth: 0.08), material([0.95, 0.95, 0.95]), at: [0, 2, 0])
         title.constraints = [.billboard(freeAxes: .y)]
 
+        // A fixed camera (tutorial 2), so the orbiting bulb does not move the view.
+        let camera = root.addChild(SceneGraph.Node(label: "Camera", content: .camera(SceneView.defaultCamera)))
+        camera.trs.translation = [0, 3, 8]
+        camera.look(at: [0, 0.5, 0])
+
         return SceneGraph(root: root)
     }
 }

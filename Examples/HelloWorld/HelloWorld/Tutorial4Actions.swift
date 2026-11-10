@@ -54,6 +54,11 @@ struct Tutorial4Actions: View {
             node.trs.rotation = simd_quatf(angle: sin(phase) * 0.3, axis: [0, 0, 1]) * simd_quatf(angle: phase, axis: [0, 1, 0])
         }))
 
+        // A fixed camera (tutorial 2), so the moving nodes do not move the view.
+        let camera = root.addChild(SceneGraph.Node(label: "Camera", content: .camera(SceneView.defaultCamera)))
+        camera.trs.translation = [0, 3, 8]
+        camera.look(at: [0, 0, 0])
+
         return SceneGraph(root: root)
     }
 }
