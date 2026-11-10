@@ -50,7 +50,7 @@ struct ModelReferenceArchiveTests {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
-        let (model, _) = try ModelFile.load(writeTriangle(in: folder), device: device)
+        let (model, _) = try ModelFile.load(writeTriangle(in: folder))
         model.trs.translation = [5, 0, 0]
         let root = SceneGraph.Node()
         root.addChild(model)
@@ -65,7 +65,7 @@ struct ModelReferenceArchiveTests {
         // The subtree is not written as generated meshes.
         #expect(!FileManager.default.fileExists(atPath: url.appendingPathComponent("meshes").path))
 
-        let (loaded, warnings) = try archive.read(from: url, device: device)
+        let (loaded, warnings) = try archive.read(from: url)
         #expect(warnings.isEmpty)
         let loadedModel = try #require(loaded.root.children.first)
         #expect(loadedModel.label == "Triangle")
@@ -87,7 +87,7 @@ struct ModelReferenceArchiveTests {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
-        let (model, _) = try ModelFile.load(writeTriangle(in: folder), device: device)
+        let (model, _) = try ModelFile.load(writeTriangle(in: folder))
         let root = SceneGraph.Node()
         root.addChild(model)
         var archive = archive
@@ -96,6 +96,6 @@ struct ModelReferenceArchiveTests {
         defer { try? FileManager.default.removeItem(at: url) }
         try archive.write(SceneGraph(root: root), to: url)
         #expect(!FileManager.default.fileExists(atPath: url.appendingPathComponent("models").path))
-        #expect(try archive.read(from: url, device: device).sceneGraph.meshEntries().count == 1)
+        #expect(try archive.read(from: url).sceneGraph.meshEntries().count == 1)
     }
 }

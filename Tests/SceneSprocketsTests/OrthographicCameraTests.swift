@@ -25,7 +25,7 @@ func gltfOrthographicCameraLoads() throws {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
     try Data(json.utf8).write(to: url)
     let device = try #require(MTLCreateSystemDefaultDevice())
-    let result = try GLTFAsset(url: url, device: device).makeSceneGraph(device: device)
+    let result = try GLTFAsset(url: url, device: device).makeSceneGraph()
     #expect(result.warnings.isEmpty)
     let node = try #require(result.nodes[0])
     guard case let .camera(camera) = node.content else {
@@ -42,8 +42,7 @@ func gltfOrthographicCameraLoads() throws {
 @Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func orthographicCameraRendersWithoutPerspective() throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh(device: device)
+    let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
     let root = SceneGraph.Node()
     let projection = OrthographicProjection(halfHeight: 2, depthMode: .standard(zClip: 0.1 ... 200))
     _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: projection)))

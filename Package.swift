@@ -77,6 +77,7 @@ let package = Package(
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
                 .product(name: "MetalSprocketsSupport", package: "MetalSprockets"),
                 .product(name: "MetalSprocketsAddOns", package: "MetalSprocketsAddOns"),
+                .product(name: "MetalSupport", package: "MetalSupport"),
             ]
         ),
         .testTarget(

@@ -8,8 +8,7 @@ import Testing
 // #82
 @Test
 func subdivisionSplitsTrianglesAndSmooths() throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let box = SceneGraph.Shape.box().metalMesh(device: device)
+    let box = SceneGraph.Shape.box().metalMesh()
     let triangles = box.submeshes.reduce(0) { $0 + $1.indexCount / 3 }
 
     let flat = try #require(box.subdivided(levels: 1, smooth: false))
@@ -34,8 +33,7 @@ func subdivisionSplitsTrianglesAndSmooths() throws {
 
 @Test
 func nodeSubdivisionLevelRestoresOriginal() throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let node = SceneGraph.Node(shape: .box(), material: try ShaderMaterial.normals(), device: device)
+    let node = SceneGraph.Node(shape: .box(), material: try ShaderMaterial.normals())
     guard case let .mesh(original, _, _, _) = node.content else {
         Issue.record("Expected a mesh")
         return

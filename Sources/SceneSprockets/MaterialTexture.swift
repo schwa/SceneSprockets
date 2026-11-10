@@ -2,6 +2,7 @@ import CoreGraphics
 import Foundation
 import Metal
 import MetalKit
+import MetalSupport
 
 /// Makes material textures from images.
 ///
@@ -13,24 +14,22 @@ public enum MaterialTexture {
     ///
     /// - Parameters:
     ///   - url: The image file. Any format that Image I/O reads works.
-    ///   - device: The device for the texture.
     ///   - isColor: Whether the image holds colors (sRGB) or data (linear).
     /// - Returns: The texture.
     /// - Throws: An error if the file cannot be read or the texture cannot be made.
-    public static func load(contentsOf url: URL, device: MTLDevice, isColor: Bool = true) throws -> MTLTexture {
-        try colorCorrected(MTKTextureLoader(device: device).newTexture(URL: url, options: options(isColor: isColor)), isColor: isColor)
+    public static func load(contentsOf url: URL, isColor: Bool = true) throws -> MTLTexture {
+        try colorCorrected(textureLoader().newTexture(URL: url, options: options(isColor: isColor)), isColor: isColor)
     }
 
     /// Makes a texture from an image.
     ///
     /// - Parameters:
     ///   - image: The image.
-    ///   - device: The device for the texture.
     ///   - isColor: Whether the image holds colors (sRGB) or data (linear).
     /// - Returns: The texture.
     /// - Throws: An error if the texture cannot be made.
-    public static func load(_ image: CGImage, device: MTLDevice, isColor: Bool = true) throws -> MTLTexture {
-        try colorCorrected(MTKTextureLoader(device: device).newTexture(cgImage: image, options: options(isColor: isColor)), isColor: isColor)
+    public static func load(_ image: CGImage, isColor: Bool = true) throws -> MTLTexture {
+        try colorCorrected(textureLoader().newTexture(cgImage: image, options: options(isColor: isColor)), isColor: isColor)
     }
 
     /// Loads a texture from an image in an asset catalog.
@@ -38,12 +37,15 @@ public enum MaterialTexture {
     /// - Parameters:
     ///   - name: The image's name in the asset catalog.
     ///   - bundle: The bundle that holds the asset catalog, or `nil` for the main bundle.
-    ///   - device: The device for the texture.
     ///   - isColor: Whether the image holds colors (sRGB) or data (linear).
     /// - Returns: The texture.
     /// - Throws: An error if the image is not found or the texture cannot be made.
-    public static func load(named name: String, bundle: Bundle? = nil, device: MTLDevice, isColor: Bool = true) throws -> MTLTexture {
-        try colorCorrected(MTKTextureLoader(device: device).newTexture(name: name, scaleFactor: 1, bundle: bundle, options: options(isColor: isColor)), isColor: isColor)
+    public static func load(named name: String, bundle: Bundle? = nil, isColor: Bool = true) throws -> MTLTexture {
+        try colorCorrected(textureLoader().newTexture(name: name, scaleFactor: 1, bundle: bundle, options: options(isColor: isColor)), isColor: isColor)
+    }
+
+    private static func textureLoader() -> MTKTextureLoader {
+        MTKTextureLoader(device: _MTLCreateSystemDefaultDevice())
     }
 
     // MTKTextureLoader can ignore the sRGB option (for example for some CGImages), so color textures that come back

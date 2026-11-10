@@ -139,7 +139,7 @@ public final class ComposerDocument: ReferenceFileDocument, @unchecked Sendable 
 
     // For readers outside DocumentGroup, such as the Quick Look extension.
     public convenience init(contentsOf url: URL) throws {
-        let result = try SceneArchive.composer.read(from: url, device: systemDefaultDevice())
+        let result = try SceneArchive.composer.read(from: url)
         Self.log(result.warnings)
         self.init(sceneGraph: result.sceneGraph, editorState: EditorState.read(fromBundleAt: url))
     }
@@ -157,7 +157,7 @@ public final class ComposerDocument: ReferenceFileDocument, @unchecked Sendable 
                 try write(capture, to: url)
                 // Saving still works without a preview.
                 do {
-                    try DocumentPreview.write(sceneGraph, into: url, device: systemDefaultDevice())
+                    try DocumentPreview.write(sceneGraph, into: url)
                 } catch {
                     logger.warning("Could not write the preview: \(error, privacy: .public)")
                 }
@@ -169,8 +169,8 @@ public final class ComposerDocument: ReferenceFileDocument, @unchecked Sendable 
             try write(capture, to: url)
             // The preview comes from the bundle just written, a private copy of the captured scene.
             do {
-                let saved = try SceneArchive.composer.read(from: url, device: systemDefaultDevice())
-                try DocumentPreview.write(saved.sceneGraph, into: url, device: systemDefaultDevice())
+                let saved = try SceneArchive.composer.read(from: url)
+                try DocumentPreview.write(saved.sceneGraph, into: url)
             } catch {
                 logger.warning("Could not write the preview: \(error, privacy: .public)")
             }
@@ -204,11 +204,4 @@ public final class ComposerDocument: ReferenceFileDocument, @unchecked Sendable 
             logger.warning("\(warning, privacy: .public)")
         }
     }
-}
-
-func systemDefaultDevice() -> any MTLDevice {
-    guard let device = MTLCreateSystemDefaultDevice() else {
-        fatalError("Metal is not available")
-    }
-    return device
 }

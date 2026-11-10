@@ -1,6 +1,7 @@
 import Foundation
 import Metal
 import MetalSprocketsGLTF
+import MetalSupport
 import SceneSprockets
 import UniformTypeIdentifiers
 
@@ -66,17 +67,17 @@ public enum ModelFile {
     /// The file's scene under one node named after the file, detached from any scene graph. Animations are not kept.
     /// A glTF root keeps the file and the buffers and images it loads as its modelSource, so a scene archive can store
     /// the file instead of the subtree (#157).
-    public static func load(_ url: URL, device: MTLDevice) throws -> (node: SceneGraph.Node, warnings: [String]) {
+    public static func load(_ url: URL) throws -> (node: SceneGraph.Node, warnings: [String]) {
         let pathExtension = url.pathExtension.lowercased()
         let root: SceneGraph.Node
         let warnings: [String]
         if glTFExtensions.contains(pathExtension) {
-            let result = try GLTFAsset(url: url, device: device).makeSceneGraph(device: device)
+            let result = try GLTFAsset(url: url, device: _MTLCreateSystemDefaultDevice()).makeSceneGraph()
             root = result.sceneGraph.root
             warnings = result.warnings
             root.modelSource = try SceneGraph.ModelSource(url: url, relatedFiles: externalFiles(url))
         } else if modelIOExtensions.contains(pathExtension) {
-            let result = try ModelIOSceneGraph(url: url, device: device)
+            let result = try ModelIOSceneGraph(url: url)
             root = result.sceneGraph.root
             warnings = result.warnings
         } else {
@@ -92,7 +93,7 @@ public struct ModelFileLoader: ArchivableModelLoader {
     /// Creates a model file loader.
     public init() {}
 
-    public func load(_ url: URL, context: SceneArchiveContext) throws -> (node: SceneGraph.Node, warnings: [String]) {
-        try ModelFile.load(url, device: context.device)
+    public func load(_ url: URL, context _: SceneArchiveContext) throws -> (node: SceneGraph.Node, warnings: [String]) {
+        try ModelFile.load(url)
     }
 }

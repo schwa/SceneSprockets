@@ -12,8 +12,7 @@ import Testing
 // #84: a quad at z = 0.5 (`near`) in front of one at z = 0 (`far`), seen from z = 3. Returns BGRA at `pixel`.
 @MainActor
 private func render(near: any SceneSprockets.Material, far: (any SceneSprockets.Material)?, farDrawsLast: Bool = false, pixel: (x: Int, y: Int) = (8, 8)) throws -> SIMD4<UInt8> {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh(device: device)
+    let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
     let root = SceneGraph.Node()
     _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40)))))
     if let far {

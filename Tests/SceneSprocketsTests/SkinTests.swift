@@ -28,13 +28,13 @@ func skinnedMeshBuildsPBRSkin() throws {
     let box = MetalMesh(mesh: .box(), device: device)
     let root = SceneGraph.Node()
     let joint = SceneGraph.Node(parent: root, label: "joint", transform: translation(0, 5, 0))
-    let skinned = SceneGraph.Node(parent: root, content: .mesh(box, material: try PBRSceneMaterial(device: device)))
+    let skinned = SceneGraph.Node(parent: root, content: .mesh(box, material: try PBRSceneMaterial()))
     skinned.skin = SceneGraph.Skin(joints: [joint], inverseBindMatrices: [matrix_identity_float4x4])
     skinned.skinVertices = Array(repeating: SceneGraph.SkinVertex(joints: [0, 0, 0, 0], weights: [1, 0, 0, 0]), count: box.vertexCount)
 
     let entries = SceneGraph(root: root).meshEntries()
     let layout = PBRNodeLayout(entries: entries)
-    let model = try PBRSceneGraphModelBuilder(device: device).makeModel(entries: entries, layout: layout)
+    let model = try PBRSceneGraphModelBuilder().makeModel(entries: entries, layout: layout)
 
     #expect(model.skins.count == 1)
     let jointIndex = try #require(model.skins.first?.joints.first)
@@ -48,12 +48,12 @@ func skinVerticesWithWrongCountAreIgnored() throws {
     let box = MetalMesh(mesh: .box(), device: device)
     let root = SceneGraph.Node()
     let joint = SceneGraph.Node(parent: root)
-    let skinned = SceneGraph.Node(parent: root, content: .mesh(box, material: try PBRSceneMaterial(device: device)))
+    let skinned = SceneGraph.Node(parent: root, content: .mesh(box, material: try PBRSceneMaterial()))
     skinned.skin = SceneGraph.Skin(joints: [joint], inverseBindMatrices: [matrix_identity_float4x4])
     skinned.skinVertices = [SceneGraph.SkinVertex(joints: [0, 0, 0, 0], weights: [1, 0, 0, 0])]
 
     let entries = SceneGraph(root: root).meshEntries()
-    let model = try PBRSceneGraphModelBuilder(device: device).makeModel(entries: entries, layout: PBRNodeLayout(entries: entries))
+    let model = try PBRSceneGraphModelBuilder().makeModel(entries: entries, layout: PBRNodeLayout(entries: entries))
     #expect(model.skins.isEmpty)
     #expect(model.opaqueInstances.first?.skinIndex == nil)
 }

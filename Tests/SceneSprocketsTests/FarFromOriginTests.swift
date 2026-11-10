@@ -26,7 +26,7 @@ private func render(offset: SIMD3<Float>, kind: MaterialKind) throws -> [SIMD4<U
     let material: any SceneSprockets.Material = switch kind {
     case .shaderMaterial: try ShaderMaterial.rim(color: [0.8, 0.8, 0.8, 1])
     case .blinnPhong: BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color(0.7), specular: .color(0), shininess: 1)
-    case .pbr: try PBRSceneMaterial(device: device, baseColor: [0.8, 0.8, 0.8, 1], metallic: 0, roughness: 0.3)
+    case .pbr: try PBRSceneMaterial(baseColor: [0.8, 0.8, 0.8, 1], metallic: 0, roughness: 0.3)
     }
     let root = SceneGraph.Node()
     let world = SceneGraph.Node(parent: root, trs: .init(translation: offset))

@@ -39,7 +39,7 @@ func generatedDiceRoundTrip() throws {
     let warnings = try DemoSnapshot.save(demoID: "dice", to: url, frames: 1)
     #expect(!warnings.contains { $0.contains("not a shape") })
     let saved = DemoCatalog.demos.first { $0.id == "dice" }!.make().sceneGraph.meshEntries().count
-    let (loaded, readWarnings) = try DemoSnapshot.archive.read(from: url, device: MTLCreateSystemDefaultDevice()!)
+    let (loaded, readWarnings) = try DemoSnapshot.archive.read(from: url)
     #expect(readWarnings.isEmpty, "\(readWarnings)")
     #expect(loaded.meshEntries().count == saved)
 }

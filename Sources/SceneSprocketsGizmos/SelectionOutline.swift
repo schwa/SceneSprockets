@@ -2,6 +2,7 @@ import Metal
 import MetalSprockets
 import MetalSprocketsAddOns
 import MetalSprocketsSupport
+import MetalSupport
 import SceneSprockets
 import simd
 
@@ -81,9 +82,7 @@ public final class SelectionOutline {
         if let mask, let seeds, mask.width == width, mask.height == height {
             return (mask, seeds)
         }
-        guard let device = MTLCreateSystemDefaultDevice() else {
-            throw MetalSprocketsError.resourceCreationFailure("No Metal device for the selection outline")
-        }
+        let device = _MTLCreateSystemDefaultDevice()
         let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rg32Float, width: width, height: height, mipmapped: false)
         descriptor.usage = [.renderTarget, .shaderRead]
         descriptor.storageMode = .private

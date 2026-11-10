@@ -638,7 +638,7 @@ public final class EditorModel {
     // Adds under the root and selects it.
     func addShape(_ shape: SceneGraph.Shape, label: String) {
         let material = BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color(0.8), specular: .color(0.5), shininess: 32)
-        let node = SceneGraph.Node(parent: nil, label: label, shape: shape, material: material, device: systemDefaultDevice())
+        let node = SceneGraph.Node(parent: nil, label: label, shape: shape, material: material)
         insert(node, into: sceneGraph.root, at: sceneGraph.root.children.count, actionName: "Add \(label)")
     }
 
@@ -680,7 +680,7 @@ public final class EditorModel {
                 scopedURL.stopAccessingSecurityScopedResource()
             }
         }
-        let (node, warnings) = try ModelFile.load(url, device: systemDefaultDevice())
+        let (node, warnings) = try ModelFile.load(url)
         let parent = selectedNode.flatMap { canAddChildren(to: $0) ? $0 : nil } ?? sceneGraph.root
         insert(node, into: parent, at: parent.children.count, actionName: "Insert \(node.displayName)")
         frameSelection()

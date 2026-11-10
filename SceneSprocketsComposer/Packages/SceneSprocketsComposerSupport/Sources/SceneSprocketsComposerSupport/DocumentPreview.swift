@@ -20,10 +20,10 @@ public enum DocumentPreview {
 
     // From the first camera node, or a default editor camera framing the scene. Runs on any thread: saving on quit
     // calls it from a background queue (#204).
-    static func render(_ sceneGraph: SceneGraph, device: any MTLDevice) throws -> CGImage {
+    static func render(_ sceneGraph: SceneGraph) throws -> CGImage {
         let width = Int(size.width)
         let height = Int(size.height)
-        let renderer = try OffscreenRenderer(size: size, device: device)
+        let renderer = try OffscreenRenderer(size: size)
         var camera = EditorCamera()
         if let bounds = sceneGraph.bounds {
             camera.frame(bounds, fieldOfView: 60)
@@ -53,8 +53,8 @@ public enum DocumentPreview {
         return image
     }
 
-    static func write(_ sceneGraph: SceneGraph, into bundle: URL, device: any MTLDevice) throws {
-        let image = try render(sceneGraph, device: device)
+    static func write(_ sceneGraph: SceneGraph, into bundle: URL) throws {
+        let image = try render(sceneGraph)
         let url = bundle.appendingPathComponent(fileName)
         guard let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil) else {
             throw Failure.imageCreationFailed

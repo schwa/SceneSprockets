@@ -76,7 +76,7 @@ private func makeSceneFile() throws -> URL {
 func gltfSceneLoadsIntoSceneGraph() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let asset = try GLTFAsset(url: try makeSceneFile(), device: device)
-    let result = try asset.makeSceneGraph(device: device)
+    let result = try asset.makeSceneGraph()
 
     #expect(result.sceneGraph.root.label == "Scene")
     #expect(result.sceneGraph.root.children.map(\.label) == ["Mesh", "Joint", "Camera"])
@@ -127,8 +127,8 @@ func gltfSceneLoadsIntoSceneGraph() throws {
 func gltfSceneGraphBuildsPBRModel() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let asset = try GLTFAsset(url: try makeSceneFile(), device: device)
-    let sceneGraph = try asset.makeSceneGraph(device: device).sceneGraph
-    let model = try PBRSceneGraphModelBuilder(device: device).makeModel(entries: sceneGraph.meshEntries())
+    let sceneGraph = try asset.makeSceneGraph().sceneGraph
+    let model = try PBRSceneGraphModelBuilder().makeModel(entries: sceneGraph.meshEntries())
     #expect(model.opaqueInstances.count == 2)
     #expect(model.skins.count == 1)
 }
@@ -159,7 +159,7 @@ func gltfInstancingAndVisibilityAreMapped() throws {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
     try Data(json.utf8).write(to: url)
     let device = try #require(MTLCreateSystemDefaultDevice())
-    let result = try GLTFAsset(url: url, device: device).makeSceneGraph(device: device)
+    let result = try GLTFAsset(url: url, device: device).makeSceneGraph()
     let copies = try #require(result.nodes[0])
     #expect(copies.children.count == 2)
     #expect(copies.children.map(\.transform.columns.3.x) == [5, -5])
@@ -199,7 +199,7 @@ func gltfSkippedPointerIsNamedInTheWarning() throws {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
     try Data(json.utf8).write(to: url)
     let device = try #require(MTLCreateSystemDefaultDevice())
-    let result = try GLTFAsset(url: url, device: device).makeSceneGraph(device: device)
+    let result = try GLTFAsset(url: url, device: device).makeSceneGraph()
     #expect(result.warnings.contains { $0.contains("/cameras/0/perspective/aspectRatio") }, "\(result.warnings)")
 }
 
@@ -251,7 +251,7 @@ func gltfPointerAnimationsAreMapped() throws {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
     try Data(json.utf8).write(to: url)
     let device = try #require(MTLCreateSystemDefaultDevice())
-    let result = try GLTFAsset(url: url, device: device).makeSceneGraph(device: device)
+    let result = try GLTFAsset(url: url, device: device).makeSceneGraph()
     let clip = try #require(result.animations.first)
     #expect(clip.channels.count == 3)
     #expect(!result.warnings.contains { $0.contains("animation channels skipped") })
@@ -312,7 +312,7 @@ private func materialPointerAnimationSceneGraph() throws -> GLTFSceneGraph {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
     try Data(json.utf8).write(to: url)
     let device = try #require(MTLCreateSystemDefaultDevice())
-    return try GLTFAsset(url: url, device: device).makeSceneGraph(device: device)
+    return try GLTFAsset(url: url, device: device).makeSceneGraph()
 }
 
 private func pbrMaterial(of node: SceneGraph.Node?) throws -> PBRSceneMaterial {
@@ -374,7 +374,7 @@ func gltfMorphTargetNamesAreRead() throws {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
     try Data(json.utf8).write(to: url)
     let device = try #require(MTLCreateSystemDefaultDevice())
-    let result = try GLTFAsset(url: url, device: device).makeSceneGraph(device: device)
+    let result = try GLTFAsset(url: url, device: device).makeSceneGraph()
     let node = try #require(result.nodes[0])
     #expect(node.morphTargets.map(\.name) == ["Smile"])
     #expect(node.morphWeight(forTargetNamed: "Smile") == 0.25)
@@ -421,7 +421,7 @@ func gltfImageBasedLightAndVariantNamesAreMapped() throws {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
     try Data(json.utf8).write(to: url)
     let device = try #require(MTLCreateSystemDefaultDevice())
-    let result = try GLTFAsset(url: url, device: device).makeSceneGraph(device: device)
+    let result = try GLTFAsset(url: url, device: device).makeSceneGraph()
     #expect(result.sceneGraph.environment.map is PBREnvironment)
     #expect(result.variantNames == ["Red", "Blue"])
 }
@@ -452,7 +452,7 @@ func gltfMaterialVariantsSwitchInPlace() throws {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
     try Data(json.utf8).write(to: url)
     let device = try #require(MTLCreateSystemDefaultDevice())
-    let result = try GLTFAsset(url: url, device: device).makeSceneGraph(device: device)
+    let result = try GLTFAsset(url: url, device: device).makeSceneGraph()
     let node = try #require(result.nodes[0])
     #expect(try pbrMaterial(of: node).pbrMaterial.uniforms.baseColorFactor == [1, 1, 1, 1])
     try result.selectVariant(1)
@@ -467,25 +467,24 @@ func gltfMaterialVariantsSwitchInPlace() throws {
 // #197: ModelFile picks the loader by extension and returns one subtree named after the file.
 @Test(.enabled(if: deviceSupportsMetal4))
 func modelFileLoadsGLTFAndOBJ() throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: directory) }
 
     let gltfURL = directory.appendingPathComponent("Rig.gltf")
     try FileManager.default.copyItem(at: try makeSceneFile(), to: gltfURL)
-    let gltf = try ModelFile.load(gltfURL, device: device)
+    let gltf = try ModelFile.load(gltfURL)
     #expect(gltf.node.label == "Rig")
     #expect(gltf.node.parent == nil)
     #expect(gltf.node.children.map(\.label).contains("Mesh"))
 
     let objURL = directory.appendingPathComponent("Triangle.obj")
     try "v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n".write(to: objURL, atomically: true, encoding: .utf8)
-    let obj = try ModelFile.load(objURL, device: device)
+    let obj = try ModelFile.load(objURL)
     #expect(obj.node.label == "Triangle")
     #expect(!SceneGraph(root: obj.node).meshEntries().isEmpty)
 
-    #expect(throws: ModelFile.Failure.self) { try ModelFile.load(directory.appendingPathComponent("notes.txt"), device: device) }
+    #expect(throws: ModelFile.Failure.self) { try ModelFile.load(directory.appendingPathComponent("notes.txt")) }
 
     // #206: a .gltf with a sibling .bin needs its folder; data URIs and other formats do not.
     let external = directory.appendingPathComponent("External.gltf")

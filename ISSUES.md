@@ -7826,12 +7826,13 @@ Related: #321.
 ## 354: Node(shape:material:device:) requires a MTLDevice
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: effort:m, area:scenegraph
 created: 2026-11-10T17:29:35Z
-updated: 2026-11-10T17:50:38Z
+updated: 2026-11-10T18:20:55Z
+closed: 2026-11-10T18:20:55Z
 +++
 
 The `SceneGraph.Node(parent:label:shape:material:device:trs:)` convenience init needs a device because it builds the `MetalMesh` for the shape inside the node init:
@@ -7846,6 +7847,7 @@ The node also stores the device (`shapeStorage`) so that setting `shape` later c
 
 - `2026-11-10T17:36:20Z`: Part of #360 (architecture: scene construction is coupled to MTLDevice; see the constraint about creating GPU resources up front).
 - `2026-11-10T17:45:53Z`: Tried: lazy device for Node(shape:). Punting: Node.Content.mesh holds a MetalMesh, which needs a device to exist (SwiftMesh#188). Bounds, hit tests, flatten, subdivision and deformation all read it synchronously, so a lazy form means a new core content type, which is #360. Unblocker: decide the device-free mesh representation (SwiftMesh change, or a SceneSprockets CPU-mesh content case resolved per device at render).
+- `2026-11-10T18:20:56Z`: Fixed by using one global Metal device; device parameters removed from the API.
 
 ---
 

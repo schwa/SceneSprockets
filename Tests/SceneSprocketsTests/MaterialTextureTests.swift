@@ -28,10 +28,10 @@ private func writePNG(_ image: CGImage) throws -> URL {
 }
 
 @MainActor
-private func centerPixel(_ material: any SceneSprockets.Material, renderer: any SceneGraphMaterialRenderer, channel: SceneGraphMaterialChannel? = nil, device: MTLDevice) throws -> SIMD4<UInt8> {
+private func centerPixel(_ material: any SceneSprockets.Material, renderer: any SceneGraphMaterialRenderer, channel: SceneGraphMaterialChannel? = nil) throws -> SIMD4<UInt8> {
     let root = SceneGraph.Node()
     _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40)))))
-    _ = SceneGraph.Node(parent: root, content: .mesh(SceneGraph.Shape.plane(width: 2, height: 2).metalMesh(device: device), material: material))
+    _ = SceneGraph.Node(parent: root, content: .mesh(SceneGraph.Shape.plane(width: 2, height: 2).metalMesh(), material: material))
     let element = SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [renderer], materialChannel: channel)
     let texture = try OffscreenRenderer(size: CGSize(width: 16, height: 16)).render(element).texture
     var value = SIMD4<UInt8>.zero
@@ -42,11 +42,10 @@ private func centerPixel(_ material: any SceneSprockets.Material, renderer: any 
 @Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func blinnPhongTextureLoadsFromFile() throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
     let url = try writePNG(solidImage(red: 1, green: 0, blue: 0))
     defer { try? FileManager.default.removeItem(at: url) }
-    let material = BlinnPhongSceneMaterial(ambient: try .texture(contentsOf: url, device: device), diffuse: .color(0), specular: .color(0), shininess: 1)
-    let value = try centerPixel(material, renderer: BlinnPhongMaterialRenderer(ambientLightColor: [1, 1, 1]), device: device)
+    let material = BlinnPhongSceneMaterial(ambient: try .texture(contentsOf: url), diffuse: .color(0), specular: .color(0), shininess: 1)
+    let value = try centerPixel(material, renderer: BlinnPhongMaterialRenderer(ambientLightColor: [1, 1, 1]))
     // BGRA.
     #expect(value.z > 240 && value.x < 10 && value.y < 10)
 }
@@ -54,13 +53,12 @@ func blinnPhongTextureLoadsFromFile() throws {
 @Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func pbrBaseColorTextureLoadsFromImage() throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let green = try MaterialTexture.load(solidImage(red: 0, green: 1, blue: 0), device: device)
+    let green = try MaterialTexture.load(solidImage(red: 0, green: 1, blue: 0))
     #expect(green.pixelFormat.isSRGB, "format \(green.pixelFormat.rawValue)")
-    let material = try PBRSceneMaterial(device: device, textures: .init(baseColor: green))
+    let material = try PBRSceneMaterial(textures: .init(baseColor: green))
     #expect(material.pbrMaterial.uniforms.baseColor.enabled == 1)
     #expect(material.pbrMaterial.uniforms.normal.enabled == 0)
-    let value = try centerPixel(material, renderer: PBRMaterialRenderer(), channel: .baseColor, device: device)
+    let value = try centerPixel(material, renderer: PBRMaterialRenderer(), channel: .baseColor)
     #expect(value.y > 200 && value.x < 40 && value.z < 40)
 }
 
@@ -68,10 +66,9 @@ func pbrBaseColorTextureLoadsFromImage() throws {
 @Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func colorTexturesKeepTheirValues() throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let grey = try MaterialTexture.load(solidImage(red: 0.5, green: 0.5, blue: 0.5), device: device)
-    let material = try PBRSceneMaterial(device: device, textures: .init(baseColor: grey))
-    let value = try centerPixel(material, renderer: PBRMaterialRenderer(), channel: .baseColor, device: device)
+    let grey = try MaterialTexture.load(solidImage(red: 0.5, green: 0.5, blue: 0.5))
+    let material = try PBRSceneMaterial(textures: .init(baseColor: grey))
+    let value = try centerPixel(material, renderer: PBRMaterialRenderer(), channel: .baseColor)
     #expect(abs(Int(value.y) - 128) < 12, "\(value)")
 }
 
@@ -79,15 +76,14 @@ func colorTexturesKeepTheirValues() throws {
 @Test
 @MainActor
 func loadedTexturesSurviveAnArchive() throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let red = try MaterialTexture.load(solidImage(red: 1, green: 0, blue: 0), device: device)
+    let red = try MaterialTexture.load(solidImage(red: 1, green: 0, blue: 0))
     let root = SceneGraph.Node(label: "Root")
-    _ = SceneGraph.Node(parent: root, shape: .plane(), material: BlinnPhongSceneMaterial(ambient: .texture(red), diffuse: .color(0), specular: .color(0), shininess: 1), device: device)
+    _ = SceneGraph.Node(parent: root, shape: .plane(), material: BlinnPhongSceneMaterial(ambient: .texture(red), diffuse: .color(0), specular: .color(0), shininess: 1))
     let archive = SceneArchive(materialTypes: [BlinnPhongSceneMaterial.self], meshCodec: GLTFMeshCodec())
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("MaterialTexture-\(UUID().uuidString).scenesprockets")
     defer { try? FileManager.default.removeItem(at: url) }
     _ = try archive.write(SceneGraph(root: root), to: url)
-    let (read, _) = try archive.read(from: url, device: device)
+    let (read, _) = try archive.read(from: url)
     guard case let .mesh(_, materials, _, _) = try #require(read.root.children.first).content,
           let material = materials.first as? BlinnPhongSceneMaterial, case let .texture(texture, _, _) = material.ambient else {
         Issue.record("No textured material after reading")
@@ -99,8 +95,7 @@ func loadedTexturesSurviveAnArchive() throws {
 
 @Test
 func dataTexturesAreLinear() throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let texture = try MaterialTexture.load(solidImage(red: 0.5, green: 0.5, blue: 1), device: device, isColor: false)
+    let texture = try MaterialTexture.load(solidImage(red: 0.5, green: 0.5, blue: 1), isColor: false)
     #expect(!texture.pixelFormat.isSRGB)
     #expect(texture.mipmapLevelCount > 1)
 }

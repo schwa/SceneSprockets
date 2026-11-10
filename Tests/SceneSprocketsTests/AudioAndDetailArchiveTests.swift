@@ -24,7 +24,7 @@ struct AudioAndDetailArchiveTests {
     @Test
     func levelsOfDetailRoundTrip() throws {
         let root = SceneGraph.Node(label: "Root")
-        let node = SceneGraph.Node(parent: root, label: "Rock", shape: .sphere(radius: 1), material: material(), device: device)
+        let node = SceneGraph.Node(parent: root, label: "Rock", shape: .sphere(radius: 1), material: material())
         let coarse = MetalMesh(mesh: .box(), device: device)
         node.levelsOfDetail = [SceneGraph.LevelOfDetail(mesh: coarse, distance: 10), SceneGraph.LevelOfDetail(mesh: nil, distance: 50)]
         let archive = SceneArchive(materialTypes: [BlinnPhongSceneMaterial.self], meshCodec: GLTFMeshCodec())
@@ -33,7 +33,7 @@ struct AudioAndDetailArchiveTests {
         let warnings = try archive.write(SceneGraph(root: root), to: url)
         #expect(!warnings.contains { $0.contains("levels of detail") })
 
-        let (read, _) = try archive.read(from: url, device: device)
+        let (read, _) = try archive.read(from: url)
         let levels = try #require(read.root.children.first).levelsOfDetail
         try #require(levels.count == 2)
         #expect(levels[0].distance == 10)
@@ -59,7 +59,7 @@ struct AudioAndDetailArchiveTests {
         let warnings = try archive.write(SceneGraph(root: root), to: url)
         #expect(!warnings.contains { $0.contains("audio players") })
 
-        let (read, _) = try archive.read(from: url, device: device)
+        let (read, _) = try archive.read(from: url)
         let player = try #require(read.root.children.first?.audioPlayers.first)
         #expect(player.loops == false)
         #expect(player.volume == 0.25)

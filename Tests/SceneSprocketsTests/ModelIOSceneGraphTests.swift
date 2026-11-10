@@ -77,29 +77,26 @@ private func makeUSDA() throws -> URL {
 
 @Test(.enabled(if: deviceSupportsMetal4))
 func objLoadsWithPerSubmeshMaterials() throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let result = try ModelIOSceneGraph(url: try makeOBJ(), device: device)
+    let result = try ModelIOSceneGraph(url: try makeOBJ())
     let entries = result.sceneGraph.meshEntries()
     #expect(entries.count == 2)
     let colors = entries.compactMap { ($0.material as? PBRSceneMaterial)?.pbrMaterial.uniforms.baseColorFactor }
     #expect(Set(colors.map { [$0.x, $0.y, $0.z] }) == [[1, 0, 0], [0, 0, 1]])
     #expect(result.animation == nil)
 
-    let model = try PBRSceneGraphModelBuilder(device: device).makeModel(entries: entries)
+    let model = try PBRSceneGraphModelBuilder().makeModel(entries: entries)
     #expect(model.opaqueInstances.count == 2)
 }
 
 @Test
 func objLoadsAsBlinnPhong() throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let result = try ModelIOSceneGraph(url: try makeOBJ(), device: device, materials: .blinnPhong)
+    let result = try ModelIOSceneGraph(url: try makeOBJ(), materials: .blinnPhong)
     #expect(result.sceneGraph.meshEntries().allSatisfy { $0.material is BlinnPhongSceneMaterial })
 }
 
 @Test
 func usdHierarchyAndTransformsAreKept() throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let result = try ModelIOSceneGraph(url: try makeUSDA(), device: device)
+    let result = try ModelIOSceneGraph(url: try makeUSDA())
     let entries = result.sceneGraph.meshEntries()
     let entry = try #require(entries.first)
     #expect(entries.count == 1)
@@ -133,7 +130,7 @@ func pbrMaterialMapsAreImported() throws {
     }
     let asset = MDLAsset()
     asset.add(mesh)
-    let result = try ModelIOSceneGraph(asset: asset, device: device)
+    let result = try ModelIOSceneGraph(asset: asset)
     let pbr = try #require(result.sceneGraph.meshEntries().first?.material as? PBRSceneMaterial)
     let uniforms = pbr.pbrMaterial.uniforms
     #expect(uniforms.normal.enabled == 1)
@@ -167,8 +164,7 @@ func orthographicCameraLoads() throws {
     }
     """
     try Data(usda.utf8).write(to: url)
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let result = try ModelIOSceneGraph(url: url, device: device)
+    let result = try ModelIOSceneGraph(url: url)
     var cameras: [Camera] = []
     result.sceneGraph.visit { node, _ in
         if case let .camera(camera) = node.content {
@@ -228,8 +224,7 @@ private func skinnedLegUSDA(animation: String = "") -> String {
 func skinLoadsAndDeformsTheMesh() throws {
     let url = try temporaryDirectory().appendingPathComponent("skin.usda")
     try Data(skinnedLegUSDA().utf8).write(to: url)
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let result = try ModelIOSceneGraph(url: url, device: device)
+    let result = try ModelIOSceneGraph(url: url)
     let entry = try #require(result.sceneGraph.meshEntries().first)
     let skin = try #require(entry.node.skin)
     #expect(skin.joints.map(\.label) == ["Hip", "Knee"])
@@ -255,8 +250,7 @@ func jointAnimationBecomesChannels() throws {
     }
     """
     try Data(skinnedLegUSDA(animation: animation).utf8).write(to: url)
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let result = try ModelIOSceneGraph(url: url, device: device)
+    let result = try ModelIOSceneGraph(url: url)
     let clip = try #require(result.animation)
     let knee = try #require(result.sceneGraph.meshEntries().first?.node.skin?.joints.last)
     let translation = try #require(clip.channels.first { $0.target === knee && $0.path == .translation })

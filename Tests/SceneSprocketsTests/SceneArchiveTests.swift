@@ -36,17 +36,17 @@ struct SceneArchiveTests {
     func makeScene() throws -> SceneGraph {
         let root = SceneGraph.Node(label: "Root")
         let textured = BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .texture(makeTexture(), tint: [1, 0.5, 0.25]), specular: .color(0.3), shininess: 24, opacity: 0.75, renderState: .init(blendMode: .add, fillMode: .lines))
-        let box = SceneGraph.Node(parent: root, shape: .box(width: 2, height: 1, length: 0.5), material: textured, device: device, trs: .init(translation: [1, 2, 3], rotation: simd_quatf(angle: 0.5, axis: [0, 1, 0]), scale: [1, 2, 1]))
+        let box = SceneGraph.Node(parent: root, shape: .box(width: 2, height: 1, length: 0.5), material: textured, trs: .init(translation: [1, 2, 3], rotation: simd_quatf(angle: 0.5, axis: [0, 1, 0]), scale: [1, 2, 1]))
         box.categoryBitMask = 5
         box.lightCategoryBitMask = 3
         box.renderingOrder = 2
         box.opacity = 0.5
-        let metal = try PBRSceneMaterial(device: device, baseColor: [0.9, 0.7, 0.2, 1], metallic: 1, roughness: 0.3)
-        let sphere = SceneGraph.Node(parent: box, shape: .sphere(radius: 0.4), material: metal, device: device)
+        let metal = try PBRSceneMaterial(baseColor: [0.9, 0.7, 0.2, 1], metallic: 1, roughness: 0.3)
+        let sphere = SceneGraph.Node(parent: box, shape: .sphere(radius: 0.4), material: metal)
         sphere.transform = float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [4, 5, 6, 1]))
         sphere.pivot = float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0.1, 0.2, 0.3, 1]))
         sphere.isVisible = false
-        _ = SceneGraph.Node(parent: root, label: "Text", shape: .text("Hi", fontName: "Helvetica-Bold", fontSize: 0.5, extrusionDepth: 0.05), material: metal, device: device)
+        _ = SceneGraph.Node(parent: root, label: "Text", shape: .text("Hi", fontName: "Helvetica-Bold", fontSize: 0.5, extrusionDepth: 0.05), material: metal)
         var spot = Light.spot(color: [1, 0.9, 0.8], intensity: 30, range: 12, innerConeAngle: 0.3, outerConeAngle: 0.5)
         spot.range = 12
         _ = SceneGraph.Node(parent: root, label: "Spot", trs: .init(translation: [0, 5, 0]), content: .light(spot))
@@ -77,7 +77,7 @@ struct SceneArchiveTests {
         let url = temporaryURL()
         defer { try? FileManager.default.removeItem(at: url) }
         try capture.write(to: url)
-        let (loaded, _) = try archive.read(from: url, device: device)
+        let (loaded, _) = try archive.read(from: url)
         let loadedBox = try #require(loaded.root.children.first)
         #expect(loadedBox.label == "Before")
         guard case .mesh(_, let materials, _, _) = loadedBox.content, let material = materials.first as? BlinnPhongSceneMaterial, case .texture(let texture, _, _) = material.diffuse else {
@@ -91,7 +91,7 @@ struct SceneArchiveTests {
     @Test
     func inactiveSubtreesStopAndAreSaved() throws {
         let root = SceneGraph.Node(label: "Root")
-        let parent = SceneGraph.Node(parent: root, label: "Parent", shape: .box(), material: BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color(0.8), specular: .color(0), shininess: 1), device: device)
+        let parent = SceneGraph.Node(parent: root, label: "Parent", shape: .box(), material: BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color(0.8), specular: .color(0), shininess: 1))
         let child = SceneGraph.Node(parent: parent, label: "Child")
         child.run(.move(by: [1, 0, 0], duration: 1))
         let sceneGraph = SceneGraph(root: root)
@@ -107,7 +107,7 @@ struct SceneArchiveTests {
         let url = temporaryURL()
         defer { try? FileManager.default.removeItem(at: url) }
         try archive.write(sceneGraph, to: url)
-        let (loaded, _) = try archive.read(from: url, device: device)
+        let (loaded, _) = try archive.read(from: url)
         #expect(loaded.root.children.first?.isActive == false)
 
         parent.isActive = true
@@ -129,7 +129,7 @@ struct SceneArchiveTests {
         }
         let warnings = try archive.write(try makeScene(), to: first)
         #expect(warnings.isEmpty, "\(warnings)")
-        let (loaded, readWarnings) = try archive.read(from: first, device: device)
+        let (loaded, readWarnings) = try archive.read(from: first)
         #expect(readWarnings.isEmpty, "\(readWarnings)")
         // Saving what was loaded gives the same file: nothing was lost or changed.
         try archive.write(loaded, to: second)
@@ -159,7 +159,7 @@ struct SceneArchiveTests {
         let url = temporaryURL()
         defer { try? FileManager.default.removeItem(at: url) }
         try archive.write(try makeScene(), to: url)
-        let (loaded, _) = try archive.read(from: url, device: device)
+        let (loaded, _) = try archive.read(from: url)
         guard case let .mesh(_, materials, _, _) = loaded.root.children[0].content,
               let material = materials.first as? BlinnPhongSceneMaterial,
               case let .texture(texture, _, tint) = material.diffuse
@@ -225,7 +225,7 @@ struct SceneArchiveTests {
         #expect(FileManager.default.fileExists(atPath: url.appendingPathComponent("textures/0.png").path))
         #expect(try FileManager.default.contentsOfDirectory(atPath: url.appendingPathComponent("meshes").path) == ["0.glb"])
 
-        let (loaded, readWarnings) = try archive.read(from: url, device: device)
+        let (loaded, readWarnings) = try archive.read(from: url)
         #expect(readWarnings.isEmpty)
         guard case let .mesh(loadedMesh, materials, castsShadow, _) = try #require(loaded.root.children.first).content else {
             Issue.record("mesh not read")
@@ -268,7 +268,7 @@ struct SceneArchiveTests {
         }
         let root = SceneGraph.Node()
         let material = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color([1, 0, 0]), specular: .color(0), shininess: 1)
-        let box = SceneGraph.Node(parent: root, label: "Box", shape: .box(), material: material, device: device)
+        let box = SceneGraph.Node(parent: root, label: "Box", shape: .box(), material: material)
         let jointA = SceneGraph.Node(parent: root, label: "A")
         let jointB = SceneGraph.Node(parent: jointA, label: "B")
         box.morphTargets = [.init(name: "Squash", positionDeltas: [[0, -1, 0], [0, 1, 0]], normalDeltas: [[1, 0, 0]])]
@@ -282,7 +282,7 @@ struct SceneArchiveTests {
 
         let warnings = try archive.write(SceneGraph(root: root), to: first)
         #expect(warnings.isEmpty, "\(warnings)")
-        let (loaded, readWarnings) = try archive.read(from: first, device: device)
+        let (loaded, readWarnings) = try archive.read(from: first)
         #expect(readWarnings.isEmpty, "\(readWarnings)")
         try archive.write(loaded, to: second)
         #expect(try sceneJSON(first) == sceneJSON(second))
@@ -331,13 +331,13 @@ struct SceneArchiveTests {
         var uniforms = PBRMaterialUniforms.defaults(baseColor: [1, 1, 1, 1], metallic: 0, roughness: 1)
         uniforms.baseColor.enabled = 1
         let pbr = PBRSceneMaterial(try PBRMaterial(uniforms: uniforms, textureBindings: bindings, device: device))
-        _ = SceneGraph.Node(parent: root, label: "PBR", shape: .box(), material: pbr, device: device)
+        _ = SceneGraph.Node(parent: root, label: "PBR", shape: .box(), material: pbr)
         let blinnPhong = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .texture(makeTexture(), sampler: nearestClampSampler()), specular: .color(0), shininess: 1)
-        _ = SceneGraph.Node(parent: root, label: "BlinnPhong", shape: .box(), material: blinnPhong, device: device)
+        _ = SceneGraph.Node(parent: root, label: "BlinnPhong", shape: .box(), material: blinnPhong)
 
         let warnings = try archive.write(SceneGraph(root: root), to: url)
         #expect(warnings.isEmpty, "\(warnings)")
-        let (loaded, _) = try archive.read(from: url, device: device)
+        let (loaded, _) = try archive.read(from: url)
         guard case let .mesh(_, pbrMaterials, _, _) = loaded.root.children[0].content, let loadedPBR = pbrMaterials.first as? PBRSceneMaterial,
               case let .mesh(_, blinnPhongMaterials, _, _) = loaded.root.children[1].content, let loadedBlinnPhong = blinnPhongMaterials.first as? BlinnPhongSceneMaterial,
               case let .texture(_, blinnPhongSampler, _) = loadedBlinnPhong.diffuse
@@ -366,10 +366,10 @@ struct SceneArchiveTests {
         defer { try? FileManager.default.removeItem(at: url) }
         let root = SceneGraph.Node()
         let material = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .texture(texture), specular: .color(0), shininess: 1)
-        _ = SceneGraph.Node(parent: root, shape: .box(), material: material, device: device)
+        _ = SceneGraph.Node(parent: root, shape: .box(), material: material)
         let warnings = try archive.write(SceneGraph(root: root), to: url)
         #expect(warnings.isEmpty, "\(warnings)")
-        let (loaded, _) = try archive.read(from: url, device: device)
+        let (loaded, _) = try archive.read(from: url)
         guard case let .mesh(_, materials, _, _) = loaded.root.children[0].content, let blinnPhong = materials.first as? BlinnPhongSceneMaterial, case let .texture(result, _, _) = blinnPhong.diffuse else {
             throw CocoaError(.fileReadCorruptFile)
         }
@@ -448,7 +448,7 @@ struct SceneArchiveTests {
 
     // #163
     func pbrScene() throws -> (SceneGraph, PBRMaterialUniforms) {
-        let material = try PBRSceneMaterial(device: device, baseColor: [0.9, 0.7, 0.2, 0.5], metallic: 0.25, roughness: 0.75)
+        let material = try PBRSceneMaterial(baseColor: [0.9, 0.7, 0.2, 0.5], metallic: 0.25, roughness: 0.75)
         var uniforms = material.pbrMaterial.uniforms
         uniforms.emissiveFactor = [1, 0.5, 0]
         uniforms.ior = 1.7
@@ -460,12 +460,12 @@ struct SceneArchiveTests {
         uniforms.normal.transform = simd_float3x3(columns: ([2, 0, 0], [0, 3, 0], [0.5, 0.25, 1]))
         material.pbrMaterial.uniforms = uniforms
         let root = SceneGraph.Node()
-        _ = SceneGraph.Node(parent: root, label: "Sphere", shape: .sphere(), material: material, device: device)
+        _ = SceneGraph.Node(parent: root, label: "Sphere", shape: .sphere(), material: material)
         return (SceneGraph(root: root), material.pbrMaterial.uniforms)
     }
 
     func loadedUniforms(_ url: URL) throws -> PBRMaterialUniforms {
-        let (loaded, _) = try archive.read(from: url, device: device)
+        let (loaded, _) = try archive.read(from: url)
         guard case let .mesh(_, materials, _, _) = loaded.root.children.first?.content, let pbr = materials.first as? PBRSceneMaterial else {
             throw CocoaError(.fileReadCorruptFile)
         }
@@ -503,11 +503,11 @@ struct SceneArchiveTests {
         material.parameters["bytes"] = .buffer(try #require(device.makeBuffer(bytes: [UInt8](arrayLiteral: 1, 2, 3, 4), length: 4, options: .storageModeShared)))
         material.renderState = MaterialRenderState(blendMode: .add)
         let root = SceneGraph.Node()
-        _ = SceneGraph.Node(parent: root, label: "Rim", shape: .sphere(), material: material, device: device)
+        _ = SceneGraph.Node(parent: root, label: "Rim", shape: .sphere(), material: material)
         let shaderArchive = SceneArchive(materialTypes: [ShaderMaterial.self])
         let warnings = try shaderArchive.write(SceneGraph(root: root), to: url)
         #expect(warnings.isEmpty, "\(warnings)")
-        let (loaded, readWarnings) = try shaderArchive.read(from: url, device: device)
+        let (loaded, readWarnings) = try shaderArchive.read(from: url)
         #expect(readWarnings.isEmpty)
         guard case let .mesh(_, materials, _, _) = loaded.root.children.first?.content, let shader = materials.first as? ShaderMaterial else {
             Issue.record("expected a ShaderMaterial")
@@ -537,13 +537,13 @@ struct SceneArchiveTests {
         let library = try device.makeLibrary(source: source, options: nil)
         let material = ShaderMaterial(vertexShader: try VertexShader(ShaderFunction(library: library, name: "custom_vertex", type: .vertex)), fragmentShader: try FragmentShader(ShaderFunction(library: library, name: "custom_fragment", type: .fragment)))
         let root = SceneGraph.Node()
-        _ = SceneGraph.Node(parent: root, label: "Custom", shape: .sphere(), material: material, device: device)
+        _ = SceneGraph.Node(parent: root, label: "Custom", shape: .sphere(), material: material)
         let unregistered = try SceneArchive(materialTypes: [ShaderMaterial.self]).write(SceneGraph(root: root), to: url)
         #expect(unregistered.contains { $0.contains("Custom") && $0.contains("shaderLibraries") })
         // Registered, it saves and reads back.
         let registered = SceneArchive(materialTypes: [ShaderMaterial.self], shaderLibraries: ["custom": library])
         #expect(try registered.write(SceneGraph(root: root), to: url).isEmpty)
-        let (loaded, _) = try registered.read(from: url, device: device)
+        let (loaded, _) = try registered.read(from: url)
         guard case let .mesh(_, materials, _, _) = loaded.root.children.first?.content, let shader = materials.first as? ShaderMaterial else {
             Issue.record("expected a ShaderMaterial")
             return
@@ -564,7 +564,7 @@ struct SceneArchiveTests {
         pbr.pbrMaterial.textureTransforms = ["normalTexture": .init(slot: \.normal, offset: [0.25, 0.5], rotation: 0.3, scale: [2, 3])]
         let warnings = try archive.write(scene, to: url)
         #expect(!warnings.contains { $0.contains("texture transform") })
-        let (loaded, _) = try archive.read(from: url, device: device)
+        let (loaded, _) = try archive.read(from: url)
         guard case let .mesh(_, loadedMaterials, _, _) = loaded.root.children.first?.content, let loadedPBR = loadedMaterials.first as? PBRSceneMaterial else {
             Issue.record("expected a PBR mesh")
             return
@@ -623,7 +623,7 @@ struct SceneArchiveTests {
         #expect(lightJSON.contains(#""type" : "directional""#))
         #expect(lightJSON.contains(#""background" : "none""#))
         #expect(lightJSON.contains("[1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 3, 0, 0, 0, 0, 1]"))
-        let (loaded, _) = try archive.read(from: url2, device: device)
+        let (loaded, _) = try archive.read(from: url2)
         #expect(loaded.root.children.first?.transform == .init(diagonal: [1, 2, 3, 1]))
     }
 
@@ -670,7 +670,7 @@ struct SceneArchiveTests {
         ]
         let warnings = try archive.write(SceneGraph(root: root), to: url)
         #expect(warnings.contains { $0.contains("Follower") && $0.contains("transform constraints") })
-        let (loaded, readWarnings) = try archive.read(from: url, device: device)
+        let (loaded, readWarnings) = try archive.read(from: url)
         #expect(readWarnings.isEmpty)
         let loadedFollower = try #require(loaded.root.children.first { $0.label == "Follower" })
         let loadedTarget = try #require(loaded.root.children.first { $0.label == "Group" }?.children.first)

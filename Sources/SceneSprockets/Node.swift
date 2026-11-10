@@ -100,7 +100,7 @@ extension SceneGraph {
 
         @ObservationIgnored var boundsCache = BoundsCache()
         @ObservationIgnored var deformationCache: (revision: Revision, mesh: MetalMesh)?
-        @ObservationIgnored var shapeStorage: (shape: Shape, device: MTLDevice)?
+        @ObservationIgnored var shapeStorage: Shape?
         func applySubdivision() {
             guard case let .mesh(mesh, materials, castsShadow, receivesShadow) = content else {
                 return

@@ -14,8 +14,7 @@ import Testing
 
 @Test
 func opacityIsInheritedByMeshEntries() throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let quad = SceneGraph.Shape.plane(width: 1, height: 1).metalMesh(device: device)
+    let quad = SceneGraph.Shape.plane(width: 1, height: 1).metalMesh()
     let material = BlinnPhongSceneMaterial(ambient: .color(1), diffuse: .color(0), specular: .color(0), shininess: 1)
     let root = SceneGraph.Node()
     let parent = SceneGraph.Node(parent: root)
@@ -54,11 +53,10 @@ func fadeActionsChangeOpacity() {
 // (BGRA) and the renderer, so tests can check model reuse.
 @MainActor
 private func pbrOverBlue(opacity: Float, renderer pbrRenderer: PBRMaterialRenderer? = nil, fader: SceneGraph.Node? = nil) throws -> (pixel: SIMD4<UInt8>, renderer: PBRMaterialRenderer, fader: SceneGraph.Node, graph: SceneGraph) {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh(device: device)
+    let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
     let root = SceneGraph.Node()
     _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40)))))
-    let red = try PBRSceneMaterial(device: device, baseColor: [1, 0, 0, 1])
+    let red = try PBRSceneMaterial(baseColor: [1, 0, 0, 1])
     let fader = fader ?? SceneGraph.Node(trs: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: red))
     root.addChild(fader)
     fader.opacity = opacity
@@ -97,8 +95,7 @@ func pbrOpacityChangeReusesTheModel() throws {
 @Test(.enabled(if: deviceSupportsMetal4), arguments: [false, true])
 @MainActor
 func nodeOpacityBlends(usesShaderMaterial: Bool) throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh(device: device)
+    let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
     func flat(_ color: SIMD3<Float>) throws -> any SceneSprockets.Material {
         if usesShaderMaterial {
             // Facing the camera, rim is the plain color.

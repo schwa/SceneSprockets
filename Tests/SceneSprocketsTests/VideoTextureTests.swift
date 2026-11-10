@@ -8,7 +8,7 @@ import Testing
 @Test
 func videoFramesAreCopiedIntoTheTexture() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
-    let video = try VideoTexture(player: AVPlayer(), width: 8, height: 4, device: device)
+    let video = try VideoTexture(player: AVPlayer(), width: 8, height: 4)
     #expect(video.texture.pixelFormat == .bgra8Unorm_srgb)
 
     // A Metal-compatible BGRA frame, solid red.

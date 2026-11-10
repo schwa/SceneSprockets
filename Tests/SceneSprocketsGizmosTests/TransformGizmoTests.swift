@@ -129,12 +129,11 @@ struct TransformGizmoTests {
     // The overlay pass draws over the scene even where scene geometry is nearer the camera (reversed depth there).
     @Test(.enabled(if: deviceSupportsMetal4))
     func drawsOverTheScene() throws {
-        let device = try #require(MTLCreateSystemDefaultDevice())
         let root = SceneGraph.Node()
         root.addChild(SceneGraph.Node(content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40), depthMode: .standard(zClip: 0.1 ... 100))))))
         root.children[0].transform = viewport.cameraMatrix
         // A box in front of the gizmo's X handle.
-        let box = SceneGraph.Node(parent: root, shape: .box(width: 3, height: 1, length: 1), material: BlinnPhongSceneMaterial(ambient: .color(1), diffuse: .color(0.2), specular: .color(0), shininess: 1), device: device, trs: .init(translation: [0.8, 0, 2]))
+        let box = SceneGraph.Node(parent: root, shape: .box(width: 3, height: 1, length: 1), material: BlinnPhongSceneMaterial(ambient: .color(1), diffuse: .color(0.2), specular: .color(0), shininess: 1), trs: .init(translation: [0.8, 0, 2]))
         let (gizmo, _) = makeGizmo()
         let overlay = try #require(try gizmo.overlay(viewport: viewport))
         let renderer = try OffscreenRenderer(size: CGSize(width: 400, height: 400), clearDepth: 0)

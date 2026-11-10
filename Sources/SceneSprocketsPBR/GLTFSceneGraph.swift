@@ -2,6 +2,7 @@ import GeometryLite3D
 import Metal
 import MetalSprocketsGLTF
 import MetalSprocketsPBR
+import MetalSupport
 import SceneSprockets
 import simd
 import SwiftGLTF
@@ -48,8 +49,8 @@ public struct GLTFSceneGraph {
 }
 
 public extension GLTFAsset {
-    func makeSceneGraph(device: MTLDevice) throws -> GLTFSceneGraph {
-        try GLTFSceneGraphBuilder(asset: self, device: device).build()
+    func makeSceneGraph() throws -> GLTFSceneGraph {
+        try GLTFSceneGraphBuilder(asset: self).build()
     }
 }
 
@@ -63,13 +64,13 @@ private struct ConvertedMesh {
 
 private struct GLTFSceneGraphBuilder {
     let asset: GLTFAsset
-    let device: MTLDevice
+    let device = _MTLCreateSystemDefaultDevice()
     var document: Document { asset.container.document }
 
     func build() throws -> GLTFSceneGraph {
         var warnings: [String] = []
         let materials = materialsByPrimitive()
-        let defaultMaterial = try PBRSceneMaterial(device: device)
+        let defaultMaterial = try PBRSceneMaterial()
         var meshes: [Int: ConvertedMesh?] = [:]
         func mesh(_ index: Int) throws -> ConvertedMesh? {
             if let cached = meshes[index] {

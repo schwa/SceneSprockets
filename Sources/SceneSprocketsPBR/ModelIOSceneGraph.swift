@@ -2,6 +2,7 @@ import GeometryLite3D
 import Metal
 import MetalKit
 import MetalSprocketsPBR
+import MetalSupport
 import ModelIO
 import SceneSprockets
 import SceneSprocketsBlinnPhong
@@ -33,29 +34,27 @@ public struct ModelIOSceneGraph {
     ///
     /// - Parameters:
     ///   - url: The file to load.
-    ///   - device: The device for meshes and textures.
     ///   - materials: The kind of scene material to make.
     /// - Throws: An error if the file is empty or the conversion fails.
-    public init(url: URL, device: MTLDevice, materials: MaterialKind = .pbr) throws {
-        let allocator = MTKMeshBufferAllocator(device: device)
+    public init(url: URL, materials: MaterialKind = .pbr) throws {
+        let allocator = MTKMeshBufferAllocator(device: _MTLCreateSystemDefaultDevice())
         let asset = MDLAsset(url: url, vertexDescriptor: nil, bufferAllocator: allocator)
         // swiftlint:disable:next empty_count - MDLAsset has no isEmpty
         guard asset.count > 0 else {
             throw ModelIOSceneGraphError.emptyAsset(url)
         }
-        try self.init(asset: asset, device: device, materials: materials, label: url.deletingPathExtension().lastPathComponent)
+        try self.init(asset: asset, materials: materials, label: url.deletingPathExtension().lastPathComponent)
     }
 
     /// Converts an asset that is already loaded.
     ///
     /// - Parameters:
     ///   - asset: The asset to convert.
-    ///   - device: The device for meshes and textures.
     ///   - materials: The kind of scene material to make.
     ///   - label: The label of the root node.
     /// - Throws: An error if the conversion fails.
-    public init(asset: MDLAsset, device: MTLDevice, materials: MaterialKind = .pbr, label: String? = nil) throws {
-        var converter = try ModelIOConverter(device: device, materialKind: materials)
+    public init(asset: MDLAsset, materials: MaterialKind = .pbr, label: String? = nil) throws {
+        var converter = try ModelIOConverter(materialKind: materials)
         let root = SceneGraph.Node(label: label)
         for index in 0..<asset.count {
             try converter.visit(asset.object(at: index), parent: root)
@@ -86,8 +85,8 @@ private struct ModelIOConverter {
     // Skinned meshes, resolved after the walk because a mesh can come before its skeleton.
     var pendingSkins: [(node: SceneGraph.Node, bind: MDLAnimationBindComponent, skeleton: MDLSkeleton)] = []
 
-    init(device: MTLDevice, materialKind: ModelIOSceneGraph.MaterialKind) throws {
-        self.device = device
+    init(materialKind: ModelIOSceneGraph.MaterialKind) throws {
+        device = _MTLCreateSystemDefaultDevice()
         self.materialKind = materialKind
         textureLoader = MTKTextureLoader(device: device)
         let descriptor = MTLSamplerDescriptor()

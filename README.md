@@ -56,7 +56,7 @@ let root = SceneGraph.Node(label: "Root")
 let light = SceneGraph.Node(parent: root, content: .light(Light(type: .point, color: [1, 1, 1], intensity: 20, range: 100)))
 light.trs.translation = [2, 3, 2]
 let material = BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color([0.8, 0.5, 0.2]), specular: .color(0.3), shininess: 16)
-let box = SceneGraph.Node(parent: root, shape: .box(), material: material, device: MTLCreateSystemDefaultDevice()!)
+let box = SceneGraph.Node(parent: root, shape: .box(), material: material)
 
 // Spin the box forever.
 box.run(.repeatForever(.rotate(by: 2 * .pi, around: [0, 1, 0], duration: 4)))

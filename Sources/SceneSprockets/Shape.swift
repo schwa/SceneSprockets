@@ -1,6 +1,7 @@
 import CoreGraphics
 import GeometryLite3D
 import Metal
+import MetalSupport
 import simd
 import SwiftMesh
 import SwiftUI
@@ -102,7 +103,8 @@ extension SceneGraph {
         }
 
         /// Always has texture coordinates (renderers such as Blinn-Phong need them); text gets a planar XY mapping.
-        public func metalMesh(device: MTLDevice) -> MetalMesh {
+        public func metalMesh() -> MetalMesh {
+            let device = _MTLCreateSystemDefaultDevice()
             let metalMesh = MetalMesh(mesh: mesh(), device: device, label: label)
             guard !metalMesh.vertexDescriptor.attributes.contains(where: { $0.semantic == .texcoord(0) }) else {
                 return metalMesh
@@ -138,25 +140,24 @@ extension SceneGraph {
 
 extension SceneGraph.Node {
     /// A mesh node for `shape`. Set `shape` later to rebuild its mesh, keeping the materials.
-    public convenience init(parent: SceneGraph.Node? = nil, label: String? = nil, shape: SceneGraph.Shape, material: any Material, device: MTLDevice, trs: Transform3D = .identity) {
-        self.init(parent: parent, label: label ?? shape.label, trs: trs, content: .mesh(shape.metalMesh(device: device), material: material))
-        shapeStorage = (shape, device)
+    public convenience init(parent: SceneGraph.Node? = nil, label: String? = nil, shape: SceneGraph.Shape, material: any Material, trs: Transform3D = .identity) {
+        self.init(parent: parent, label: label ?? shape.label, trs: trs, content: .mesh(shape.metalMesh(), material: material))
+        shapeStorage = shape
     }
 
     /// The shape this node's mesh was built from; nil for other nodes. Setting it on a mesh node rebuilds the mesh.
     public var shape: SceneGraph.Shape? {
-        get { shapeStorage?.shape }
+        get { shapeStorage }
         set {
             guard let newValue else {
                 shapeStorage = nil
                 return
             }
-            guard case let .mesh(mesh, materials, castsShadow, receivesShadow) = content, newValue != shapeStorage?.shape else {
+            guard case let .mesh(_, materials, castsShadow, receivesShadow) = content, newValue != shapeStorage else {
                 return
             }
-            let device = shapeStorage?.device ?? mesh.vertexBuffer.device
-            shapeStorage = (newValue, device)
-            content = .mesh(newValue.metalMesh(device: device), materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
+            shapeStorage = newValue
+            content = .mesh(newValue.metalMesh(), materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
             if subdivisionLevel > 0 {
                 subdivisionBase = nil
                 applySubdivision()

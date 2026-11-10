@@ -111,7 +111,7 @@ public struct GLTFMeshCodec: ArchivableMeshCodec {
         if case .string("separateBuffers") = extras[Self.layoutKey] {
             layout = .separateBuffers
         }
-        return MetalMesh(device: try context.device, attributes: attributes, submeshes: submeshes, label: mesh.name, bufferLayout: layout)
+        return MetalMesh(device: _MTLCreateSystemDefaultDevice(), attributes: attributes, submeshes: submeshes, label: mesh.name, bufferLayout: layout)
     }
 
     static let orderKey = "sceneSprocketsAttributeOrder"

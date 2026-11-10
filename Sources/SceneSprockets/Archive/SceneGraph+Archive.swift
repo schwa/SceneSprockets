@@ -194,12 +194,11 @@ extension SceneGraph.Node: Codable {
             if materials.isEmpty {
                 context.warn("\(label ?? "node"): no materials could be read; mesh dropped")
             } else {
-                let device = try context.device
                 let castsShadow = try mesh.decode(Bool.self, forKey: .castsShadow)
                 let receivesShadow = try mesh.decode(Bool.self, forKey: .receivesShadow)
                 if let shape {
-                    content = .mesh(shape.metalMesh(device: device), materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
-                    shapeStorage = (shape, device)
+                    content = .mesh(shape.metalMesh(), materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
+                    shapeStorage = shape
                 } else if let path = try mesh.decodeIfPresent(String.self, forKey: .file) {
                     if let codec = context.meshCodec {
                         // Nodes that shared a mesh share it again.

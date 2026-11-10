@@ -68,7 +68,7 @@ func materialChannelsShowMaterialValues() throws {
     #expect(specular.x > 200 && specular.z < 20)
     #expect(try pixel(blinnPhong, .metallic, renderer: BlinnPhongMaterialRenderer()).z < 5)
 
-    let pbr = try PBRSceneMaterial(device: device, baseColor: [0, 1, 0, 1], metallic: 1, roughness: 0.5)
+    let pbr = try PBRSceneMaterial(baseColor: [0, 1, 0, 1], metallic: 1, roughness: 0.5)
     let metallic = try pixel(pbr, .metallic, renderer: PBRMaterialRenderer())
     #expect(metallic.x > 200 && metallic.y > 200 && metallic.z > 200)
     let base = try pixel(pbr, .baseColor, renderer: PBRMaterialRenderer())

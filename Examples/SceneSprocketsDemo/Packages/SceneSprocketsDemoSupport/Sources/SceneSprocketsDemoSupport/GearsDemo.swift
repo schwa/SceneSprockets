@@ -30,7 +30,7 @@ final class GearsDemo: DemoScene {
         var rim = Light(type: .point, color: [0.5, 0.65, 1], intensity: 25)
         rim.range = 20
         _ = SceneGraph.Node(parent: root, label: "Rim", trs: .init(translation: [-4, 2, -2]), content: .light(rim))
-        _ = SceneGraph.Node(parent: root, label: "Backplate", shape: .box(width: 12, height: 7, length: 0.1), material: BlinnPhongSceneMaterial.plastic([0.08, 0.08, 0.09], shininess: 8), device: demoDevice, trs: .init(translation: [0.6, 0.2, -0.4]))
+        _ = SceneGraph.Node(parent: root, label: "Backplate", shape: .box(width: 12, height: 7, length: 0.1), material: BlinnPhongSceneMaterial.plastic([0.08, 0.08, 0.09], shininess: 8), trs: .init(translation: [0.6, 0.2, -0.4]))
         train = SceneGraph.Node(parent: root, label: "Gear Train")
         super.init(
             sceneGraph: SceneGraph(root: root),
@@ -74,9 +74,9 @@ final class GearsDemo: DemoScene {
         train.removeAllChildren()
         links = []
         let materials = [
-            (try? PBRSceneMaterial(device: demoDevice, baseColor: [0.85, 0.65, 0.3, 1], metallic: 1, roughness: 0.3)),
-            (try? PBRSceneMaterial(device: demoDevice, baseColor: [0.75, 0.76, 0.78, 1], metallic: 1, roughness: 0.25)),
-            (try? PBRSceneMaterial(device: demoDevice, baseColor: [0.9, 0.5, 0.35, 1], metallic: 1, roughness: 0.35))
+            (try? PBRSceneMaterial(baseColor: [0.85, 0.65, 0.3, 1], metallic: 1, roughness: 0.3)),
+            (try? PBRSceneMaterial(baseColor: [0.75, 0.76, 0.78, 1], metallic: 1, roughness: 0.25)),
+            (try? PBRSceneMaterial(baseColor: [0.9, 0.5, 0.35, 1], metallic: 1, roughness: 0.35))
         ]
         let directions: [Float] = [0, -0.5, 0.45, -0.3]
         var center = SIMD2<Float>(-2.2, 0.4)
@@ -90,7 +90,7 @@ final class GearsDemo: DemoScene {
             let material: any SceneSprockets.Material = materials[index % materials.count] ?? BlinnPhongSceneMaterial.plastic([0.7, 0.6, 0.3])
             let node = SceneGraph.Node(parent: train, label: "Gear \(teeth)", trs: .init(translation: [center.x, center.y, 0]), content: .mesh(MetalMesh(mesh: .gear(spec), device: demoDevice), material: material))
             // An axle through each bore.
-            _ = SceneGraph.Node(parent: train, label: "Axle", shape: .cylinder(radius: 0.11, height: 0.6), material: BlinnPhongSceneMaterial.plastic([0.2, 0.2, 0.22], shininess: 48), device: demoDevice, trs: .init(translation: [center.x, center.y, -0.1], rotation: simd_quatf(angle: .pi / 2, axis: [1, 0, 0])))
+            _ = SceneGraph.Node(parent: train, label: "Axle", shape: .cylinder(radius: 0.11, height: 0.6), material: BlinnPhongSceneMaterial.plastic([0.2, 0.2, 0.22], shininess: 48), trs: .init(translation: [center.x, center.y, -0.1], rotation: simd_quatf(angle: .pi / 2, axis: [1, 0, 0])))
             links.append(Link(node: node, spec: spec, parent: index > 0 ? index - 1 : nil, direction: direction))
         }
     }

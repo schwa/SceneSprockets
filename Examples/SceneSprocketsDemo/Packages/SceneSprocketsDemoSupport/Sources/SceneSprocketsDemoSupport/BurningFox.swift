@@ -37,7 +37,7 @@ final class BurningFox {
         guard let url = Bundle.module.url(forResource: "Fox", withExtension: "glb", subdirectory: "Resources") else {
             throw CocoaError(.fileNoSuchFile)
         }
-        let asset = try GLTFAsset(url: url, device: demoDevice).makeSceneGraph(device: demoDevice)
+        let asset = try GLTFAsset(url: url, device: demoDevice).makeSceneGraph()
         // The fox is about 150 units long, in centimeters.
         fox = SceneGraph.Node(parent: node, label: "Fox", trs: .init(scale: SIMD3(repeating: 0.015 * scale)))
         for child in asset.sceneGraph.root.children {

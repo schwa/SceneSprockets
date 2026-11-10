@@ -203,9 +203,8 @@ func shadowsDimOnlyTheirOwnLight() throws {
 @Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func pbrShadowsDimOnlyTheirOwnLight() throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
     let (sceneGraph, pixel) = try makeScene()
-    let gray = try PBRSceneMaterial(device: device, baseColor: [0.5, 0.5, 0.5, 1], roughness: 1)
+    let gray = try PBRSceneMaterial(baseColor: [0.5, 0.5, 0.5, 1], roughness: 1)
     for (node, _) in sceneGraph.nodesWithWorldTransforms() {
         if case let .mesh(mesh, _, castsShadow, receivesShadow) = node.content {
             node.content = .mesh(mesh, materials: [gray], castsShadow: castsShadow, receivesShadow: receivesShadow)

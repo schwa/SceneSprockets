@@ -25,8 +25,7 @@ private var material: BlinnPhongSceneMaterial {
     (.extrudedPath("0 0 m 2 0 l 2 1 l 0 1 l h", extrusionDepth: 0.5), SIMD3<Float>(2, 1, 0.5))
 ])
 func shapeSizes(shape: SceneGraph.Shape, size: SIMD3<Float>) throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let node = SceneGraph.Node(shape: shape, material: material, device: device)
+    let node = SceneGraph.Node(shape: shape, material: material)
     let bounds = try #require(node.meshBounds)
     #expect(simd_distance(bounds.max - bounds.min, size) < 0.02)
 }
@@ -50,8 +49,7 @@ func newShapesFaceOutward(shape: SceneGraph.Shape, volume: Float) {
 // #336: the teapot is a built-in shape whose widest side is its diameter, with smooth normals.
 @Test
 func teapotShapeFitsItsDiameter() throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let node = SceneGraph.Node(shape: .teapot(diameter: 2), material: material, device: device)
+    let node = SceneGraph.Node(shape: .teapot(diameter: 2), material: material)
     let bounds = try #require(node.meshBounds)
     let size = bounds.max - bounds.min
     #expect(abs(max(size.x, size.y, size.z) - 2) < 0.02)
@@ -62,8 +60,7 @@ func teapotShapeFitsItsDiameter() throws {
 
 @Test
 func floorFacesUp() throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let normals = try #require(SceneGraph.Shape.floor().metalMesh(device: device).float3Values(.normal))
+    let normals = try #require(SceneGraph.Shape.floor().metalMesh().float3Values(.normal))
     #expect(normals.allSatisfy { simd_distance($0, [0, 1, 0]) < 1e-4 })
 }
 
@@ -77,8 +74,7 @@ func newShapesRoundTripThroughCodable() throws {
 
 @Test
 func textShapeIsExtruded() throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let node = SceneGraph.Node(shape: .text("Hi", fontSize: 2, extrusionDepth: 0.5), material: material, device: device)
+    let node = SceneGraph.Node(shape: .text("Hi", fontSize: 2, extrusionDepth: 0.5), material: material)
     let bounds = try #require(node.meshBounds)
     #expect(abs((bounds.max.z - bounds.min.z) - 0.5) < 1e-4)
     #expect(bounds.max.x > 1)
@@ -88,8 +84,7 @@ func textShapeIsExtruded() throws {
 // #101: glyphs with holes (e, a, p) had zero-length normals.
 @Test
 func textShapeHasUnitNormals() throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let mesh = SceneGraph.Shape.text("SceneGraph", fontName: "Helvetica-Bold").metalMesh(device: device)
+    let mesh = SceneGraph.Shape.text("SceneGraph", fontName: "Helvetica-Bold").metalMesh()
     let normals = try #require(mesh.float3Values(.normal))
     #expect(!normals.isEmpty)
     #expect(!normals.contains { abs(simd_length($0) - 1) > 1e-3 })
@@ -97,8 +92,7 @@ func textShapeHasUnitNormals() throws {
 
 @Test
 func settingShapeRebuildsMeshAndKeepsMaterial() throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let node = SceneGraph.Node(shape: .box(), material: material, device: device)
+    let node = SceneGraph.Node(shape: .box(), material: material)
     let revision = node.revision.structure
     node.shape = .box(width: 4)
     #expect(node.revision.structure != revision)

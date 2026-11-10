@@ -198,7 +198,7 @@ public final class KeynoteDemo: DemoScene {
         """,
         "Shapes": """
         • Built-in shapes: box, sphere, cylinder, teapot, cone, capsule, torus, plus 3D text and extruded paths.
-        • One line each: Node(shape:material:device:).
+        • One line each: Node(shape:material:).
         • The Utah teapot is a built-in shape now.
         """,
         "Materials": """
@@ -543,17 +543,17 @@ public final class KeynoteDemo: DemoScene {
             addCode("""
             let orbit = Node(parent: sun, label: "Planet Orbit")
             orbit.run(.repeatForever(.rotate(by: 2 * .pi, around: [0, 1, 0], duration: 8)))
-            let planet = Node(parent: orbit, shape: .sphere(radius: 0.4), material: blue, device: device)
+            let planet = Node(parent: orbit, shape: .sphere(radius: 0.4), material: blue)
             planet.trs.translation = [3.2, 0, 0]
             """, to: slide)
         case "Shapes":
             addTitle(title, y: 4, to: slide)
             shapesSlide(slide)
             addCode("""
-            Node(shape: .box(width: 1, height: 1, length: 1), material: red, device: device)
-            Node(shape: .torus(ringRadius: 0.5, pipeRadius: 0.18), material: pink, device: device)
-            Node(shape: .teapot(diameter: 2.2), material: porcelain, device: device)
-            Node(shape: .text("Hello", fontName: "Helvetica-Bold", fontSize: 1), material: white, device: device)
+            Node(shape: .box(width: 1, height: 1, length: 1), material: red)
+            Node(shape: .torus(ringRadius: 0.5, pipeRadius: 0.18), material: pink)
+            Node(shape: .teapot(diameter: 2.2), material: porcelain)
+            Node(shape: .text("Hello", fontName: "Helvetica-Bold", fontSize: 1), material: white)
             """, to: slide)
         case "Materials":
             addTitle(title, y: 4, to: slide)
@@ -561,7 +561,7 @@ public final class KeynoteDemo: DemoScene {
             addCode("""
             BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color([0.9, 0.35, 0.25]),
                                     specular: .color(0.5), shininess: 44)
-            try PBRSceneMaterial(device: device, baseColor: [0.95, 0.75, 0.3, 1],
+            try PBRSceneMaterial(baseColor: [0.95, 0.75, 0.3, 1],
                                  metallic: 1, roughness: 0.3)
             """, to: slide)
         case "Lights":
@@ -621,7 +621,7 @@ public final class KeynoteDemo: DemoScene {
         case "Glass":
             glassSlide(slide)
             addCode("""
-            let glass = try PBRSceneMaterial(device: device, roughness: 0)
+            let glass = try PBRSceneMaterial(roughness: 0)
             glass.pbrMaterial.uniforms.transmissionFactor = 1
             // Blinn-Phong and PBR objects behind it are refracted alike.
             """, to: slide)
@@ -759,8 +759,8 @@ public final class KeynoteDemo: DemoScene {
         case "glTF & Model I/O":
             importSlide(slide)
             addCode("""
-            let plant = try GLTFAsset(url: plantURL, device: device).makeSceneGraph(device: device)
-            let pedestal = try ModelIOSceneGraph(url: objURL, device: device)
+            let plant = try GLTFAsset(url: plantURL, device: device).makeSceneGraph()
+            let pedestal = try ModelIOSceneGraph(url: objURL)
             player = AnimationPlayer(clip: plant.animations[0]) // fireflies with point lights
             """, to: slide)
         case "Hit Testing":
@@ -802,7 +802,7 @@ public final class KeynoteDemo: DemoScene {
     private func addTitle(_ text: String, size: Float = 0.9, y: Float, color: SIMD3<Float> = [0.95, 0.95, 0.97], to parent: SceneGraph.Node) -> SceneGraph.Node {
         let holder = SceneGraph.Node(parent: parent, label: "Title \"\(text)\"", trs: .init(translation: [0, y, 0]))
         let material = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(color * 0.4), specular: .color(0.3), shininess: 32, emission: .color(color * 0.6))
-        let label = SceneGraph.Node(parent: holder, shape: .text(text, fontName: "Helvetica-Bold", fontSize: size, extrusionDepth: size * 0.15), material: material, device: demoDevice)
+        let label = SceneGraph.Node(parent: holder, shape: .text(text, fontName: "Helvetica-Bold", fontSize: size, extrusionDepth: size * 0.15), material: material)
         if let bounds = label.meshBounds {
             label.trs.translation.x = -(bounds.min.x + bounds.max.x) / 2
         }
@@ -818,14 +818,14 @@ public final class KeynoteDemo: DemoScene {
         let accent: SIMD3<Float> = [1, 0.62, 0.12]
         let tag = SceneGraph.Node(parent: slide, label: "Tag \"\(text)\"", trs: .init(translation: [0, titleY - 0.75, 0.1]))
         let pill = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(accent * 0.3), specular: .color(0.2), shininess: 16, emission: .color(accent * 0.7))
-        let label = SceneGraph.Node(parent: tag, shape: .text(text.uppercased(), fontName: "Helvetica-Bold", fontSize: 0.32, extrusionDepth: 0.04), material: BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0.08, 0.05, 0.02])), device: demoDevice)
+        let label = SceneGraph.Node(parent: tag, shape: .text(text.uppercased(), fontName: "Helvetica-Bold", fontSize: 0.32, extrusionDepth: 0.04), material: BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0.08, 0.05, 0.02])))
         let bounds = label.meshBounds
         let width = (bounds.map { $0.max.x - $0.min.x } ?? 1) + 0.4
         if let bounds {
             label.trs.translation = [-(bounds.min.x + bounds.max.x) / 2, -(bounds.min.y + bounds.max.y) / 2, 0.08]
         }
         // A capsule on its side, flattened into a pill.
-        _ = SceneGraph.Node(parent: tag, shape: .capsule(capRadius: 0.24, height: width), material: pill, device: demoDevice, trs: .init(rotation: simd_quatf(angle: .pi / 2, axis: [0, 0, 1]), scale: [1, 1, 0.25]))
+        _ = SceneGraph.Node(parent: tag, shape: .capsule(capRadius: 0.24, height: width), material: pill, trs: .init(rotation: simd_quatf(angle: .pi / 2, axis: [0, 0, 1]), scale: [1, 1, 0.25]))
     }
 
     // A spiral galaxy of colored points, turning slowly.
@@ -884,28 +884,28 @@ public final class KeynoteDemo: DemoScene {
         _ = SceneGraph.Node(parent: system, label: "Sunlight", content: .light(sunlight))
         // A dim fill from the camera side, so the planets' night sides are not pure black.
         addLight(to: slide, at: [0, 4, 10], color: [0.4, 0.5, 0.8], intensity: 6)
-        let sun = SceneGraph.Node(parent: system, label: "Sun", shape: .sphere(radius: 0.75), material: BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([1, 0.7, 0.25])), device: demoDevice)
+        let sun = SceneGraph.Node(parent: system, label: "Sun", shape: .sphere(radius: 0.75), material: BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([1, 0.7, 0.25])))
         func pbr(_ color: SIMD3<Float>, metallic: Float = 0, roughness: Float) -> any SceneSprockets.Material {
-            (try? PBRSceneMaterial(device: demoDevice, baseColor: SIMD4(color, 1), metallic: metallic, roughness: roughness)) ?? BlinnPhongSceneMaterial.plastic(color)
+            (try? PBRSceneMaterial(baseColor: SIMD4(color, 1), metallic: metallic, roughness: roughness)) ?? BlinnPhongSceneMaterial.plastic(color)
         }
         let pathMaterial = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0.25, 0.27, 0.35]), renderState: MaterialRenderState(fillMode: .lines))
         // (radius, size, period, color, roughness)
         let planets: [(Float, Float, Float, SIMD3<Float>, Float)] = [(1.6, 0.18, 5, [0.75, 0.45, 0.3], 0.9), (3.2, 0.4, 8, [0.3, 0.55, 1], 0.35), (4.3, 0.3, 13, [0.9, 0.78, 0.55], 0.6)]
         for (index, (radius, size, period, color, roughness)) in planets.enumerated() {
-            _ = SceneGraph.Node(parent: sun, label: "Orbit Path", shape: .torus(ringRadius: radius, pipeRadius: 0.004), material: pathMaterial, device: demoDevice)
+            _ = SceneGraph.Node(parent: sun, label: "Orbit Path", shape: .torus(ringRadius: radius, pipeRadius: 0.004), material: pathMaterial)
             // Parented to the sun, as the code panel shows; the sun does not turn, so only the orbit spins the planet.
             let orbit = SceneGraph.Node(parent: sun, label: "Planet Orbit", trs: .init(rotation: simd_quatf(angle: Float(index) * 2.1, axis: [0, 1, 0])))
             orbit.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: period)))
-            let planet = SceneGraph.Node(parent: orbit, label: "Planet", shape: .sphere(radius: size), material: pbr(color, roughness: roughness), device: demoDevice, trs: .init(translation: [radius, 0, 0]))
+            let planet = SceneGraph.Node(parent: orbit, label: "Planet", shape: .sphere(radius: size), material: pbr(color, roughness: roughness), trs: .init(translation: [radius, 0, 0]))
             planet.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 3)))
             switch index {
             case 1:
                 let moonOrbit = SceneGraph.Node(parent: planet, label: "Moon Orbit")
                 moonOrbit.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 2)))
-                _ = SceneGraph.Node(parent: moonOrbit, label: "Moon", shape: .sphere(radius: 0.1), material: pbr([0.8, 0.8, 0.82], roughness: 0.8), device: demoDevice, trs: .init(translation: [0.7, 0, 0]))
+                _ = SceneGraph.Node(parent: moonOrbit, label: "Moon", shape: .sphere(radius: 0.1), material: pbr([0.8, 0.8, 0.82], roughness: 0.8), trs: .init(translation: [0.7, 0, 0]))
             case 2:
                 // The ring is a child of the planet: it tilts and spins with it.
-                let ring = SceneGraph.Node(parent: planet, label: "Ring", shape: .torus(ringRadius: 0.58, pipeRadius: 0.06), material: pbr([0.85, 0.75, 0.6], metallic: 0.3, roughness: 0.4), device: demoDevice, trs: .init(rotation: simd_quatf(angle: 0.35, axis: [0, 0, 1])))
+                let ring = SceneGraph.Node(parent: planet, label: "Ring", shape: .torus(ringRadius: 0.58, pipeRadius: 0.06), material: pbr([0.85, 0.75, 0.6], metallic: 0.3, roughness: 0.4), trs: .init(rotation: simd_quatf(angle: 0.35, axis: [0, 0, 1])))
                 ring.trs.scale = [1, 0.15, 1]
             default:
                 break
@@ -926,7 +926,7 @@ public final class KeynoteDemo: DemoScene {
             (.torus(ringRadius: 0.5, pipeRadius: 0.18), [1, 0.5, 0.8])
         ]
         for (index, (shape, color)) in shapes.enumerated() {
-            let node = SceneGraph.Node(parent: slide, shape: shape, material: BlinnPhongSceneMaterial.plastic(color, shininess: 48), device: demoDevice, trs: .init(translation: [Float(index) * 1.6 - 4.8, 1.2, 0]))
+            let node = SceneGraph.Node(parent: slide, shape: shape, material: BlinnPhongSceneMaterial.plastic(color, shininess: 48), trs: .init(translation: [Float(index) * 1.6 - 4.8, 1.2, 0]))
             node.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([0.3, 1, 0.2]), duration: 5 + Float(index))))
         }
     }
@@ -946,10 +946,10 @@ public final class KeynoteDemo: DemoScene {
             let x = Float(column) * 1.6 - 4
             let smoothness = Float(column) / 5
             var materials: [any SceneSprockets.Material] = [BlinnPhongSceneMaterial.plastic(paints[column], shininess: 4 + smoothness * 120)]
-            if let metal = try? PBRSceneMaterial(device: demoDevice, baseColor: SIMD4(metals[column], 1), metallic: 1, roughness: 0.75 - smoothness * 0.7) {
+            if let metal = try? PBRSceneMaterial(baseColor: SIMD4(metals[column], 1), metallic: 1, roughness: 0.75 - smoothness * 0.7) {
                 materials.append(metal)
             }
-            if let plastic = try? PBRSceneMaterial(device: demoDevice, baseColor: SIMD4(plastics[column], 1), metallic: 0, roughness: 0.8 - smoothness * 0.7) {
+            if let plastic = try? PBRSceneMaterial(baseColor: SIMD4(plastics[column], 1), metallic: 0, roughness: 0.8 - smoothness * 0.7) {
                 // The glossiest plastics get a clear coat, like car paint.
                 if column >= 4 {
                     plastic.pbrMaterial.uniforms.clearcoatFactor = 1
@@ -958,23 +958,23 @@ public final class KeynoteDemo: DemoScene {
                 materials.append(plastic)
             }
             for (row, material) in materials.enumerated() {
-                let node = SceneGraph.Node(parent: slide, shape: shapes[(column + row * 2) % shapes.count], material: material, device: demoDevice, trs: .init(translation: [x, 2.7 - Float(row) * 1.3, 0]))
+                let node = SceneGraph.Node(parent: slide, shape: shapes[(column + row * 2) % shapes.count], material: material, trs: .init(translation: [x, 2.7 - Float(row) * 1.3, 0]))
                 node.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([0.3, 1, 0.2]), duration: 8 + Float(column + row))))
             }
         }
     }
 
     private func lightsSlide(_ slide: SceneGraph.Node) {
-        _ = SceneGraph.Node(parent: slide, shape: .box(width: 10, height: 0.1, length: 6), material: BlinnPhongSceneMaterial.plastic([0.8, 0.8, 0.85], shininess: 16), device: demoDevice, trs: .init(translation: [0, -0.05, 0]))
+        _ = SceneGraph.Node(parent: slide, shape: .box(width: 10, height: 0.1, length: 6), material: BlinnPhongSceneMaterial.plastic([0.8, 0.8, 0.85], shininess: 16), trs: .init(translation: [0, -0.05, 0]))
         for index in 0..<5 {
-            _ = SceneGraph.Node(parent: slide, shape: .sphere(radius: 0.45), material: BlinnPhongSceneMaterial.plastic([0.9, 0.9, 0.9], shininess: 64), device: demoDevice, trs: .init(translation: [Float(index) * 1.8 - 3.6, 0.45, 0]))
+            _ = SceneGraph.Node(parent: slide, shape: .sphere(radius: 0.45), material: BlinnPhongSceneMaterial.plastic([0.9, 0.9, 0.9], shininess: 64), trs: .init(translation: [Float(index) * 1.8 - 3.6, 0.45, 0]))
         }
         let colors: [SIMD3<Float>] = [[1, 0.2, 0.2], [0.2, 1, 0.3], [0.3, 0.4, 1]]
         for (index, color) in colors.enumerated() {
             let pivot = SceneGraph.Node(parent: slide, label: "Light Orbit", trs: .init(rotation: simd_quatf(angle: Float(index) * 2 * .pi / 3, axis: [0, 1, 0])))
             pivot.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 6)))
             addLight(to: pivot, at: [3, 1.5, 0], color: color, intensity: 25)
-            _ = SceneGraph.Node(parent: pivot, shape: .sphere(radius: 0.1), material: BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color(color)), device: demoDevice, trs: .init(translation: [3, 1.5, 0]))
+            _ = SceneGraph.Node(parent: pivot, shape: .sphere(radius: 0.1), material: BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color(color)), trs: .init(translation: [3, 1.5, 0]))
         }
     }
 
@@ -983,7 +983,7 @@ public final class KeynoteDemo: DemoScene {
         // The same hop with each timing mode, started one after another.
         let modes: [SceneGraph.Action.TimingMode] = [.linear, .easeIn, .easeOut, .easeInEaseOut]
         for (index, mode) in modes.enumerated() {
-            let cube = SceneGraph.Node(parent: slide, shape: .box(width: 0.8, height: 0.8, length: 0.8), material: BlinnPhongSceneMaterial.plastic([0.4, 0.7, 1], shininess: 32), device: demoDevice, trs: .init(translation: [Float(index) * 2 - 3, 0.4, 0]))
+            let cube = SceneGraph.Node(parent: slide, shape: .box(width: 0.8, height: 0.8, length: 0.8), material: BlinnPhongSceneMaterial.plastic([0.4, 0.7, 1], shininess: 32), trs: .init(translation: [Float(index) * 2 - 3, 0.4, 0]))
             var up = SceneGraph.Action.move(by: [0, 2, 0], duration: 0.6)
             up.timingMode = mode
             var down = SceneGraph.Action.move(by: [0, -2, 0], duration: 0.6)
@@ -996,10 +996,10 @@ public final class KeynoteDemo: DemoScene {
         addLight(to: slide, at: [0, 6, 6], intensity: 70)
         let pivot = SceneGraph.Node(parent: slide, label: "Ball Orbit", trs: .init(translation: [0, 1.5, 0]))
         pivot.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 6)))
-        let ball = SceneGraph.Node(parent: pivot, shape: .sphere(radius: 0.35), material: BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([1, 0.85, 0.2])), device: demoDevice, trs: .init(translation: [3, 0, 0]))
+        let ball = SceneGraph.Node(parent: pivot, shape: .sphere(radius: 0.35), material: BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([1, 0.85, 0.2])), trs: .init(translation: [3, 0, 0]))
         // Cones that always point their tips (+Y) at the ball.
         for index in 0..<5 {
-            let cone = SceneGraph.Node(parent: slide, shape: .cone(bottomRadius: 0.3, height: 0.9), material: BlinnPhongSceneMaterial.plastic([0.5, 0.9, 0.9], shininess: 32), device: demoDevice, trs: .init(translation: [Float(index) * 2 - 4, 0, 2]))
+            let cone = SceneGraph.Node(parent: slide, shape: .cone(bottomRadius: 0.3, height: 0.9), material: BlinnPhongSceneMaterial.plastic([0.5, 0.9, 0.9], shininess: 32), trs: .init(translation: [Float(index) * 2 - 4, 0, 2]))
             cone.constraints = [.lookAt(target: ball, localFront: [0, 1, 0])]
         }
     }
@@ -1010,8 +1010,8 @@ public final class KeynoteDemo: DemoScene {
         for index in 0..<6 {
             let material: any SceneSprockets.Material = index.isMultiple(of: 2)
                 ? BlinnPhongSceneMaterial.plastic([0.95, 0.4, 0.6], shininess: 48)
-                : (try? PBRSceneMaterial(device: demoDevice, baseColor: [0.4, 0.6, 1, 1], metallic: 0, roughness: 0.3)) ?? BlinnPhongSceneMaterial.plastic([0.4, 0.6, 1])
-            let sphere = SceneGraph.Node(parent: slide, shape: .sphere(radius: 0.6), material: material, device: demoDevice, trs: .init(translation: [Float(index) * 1.6 - 4, 1.2, 0]))
+                : (try? PBRSceneMaterial(baseColor: [0.4, 0.6, 1, 1], metallic: 0, roughness: 0.3)) ?? BlinnPhongSceneMaterial.plastic([0.4, 0.6, 1])
+            let sphere = SceneGraph.Node(parent: slide, shape: .sphere(radius: 0.6), material: material, trs: .init(translation: [Float(index) * 1.6 - 4, 1.2, 0]))
             // Eased, with a pause while invisible: linear fades that turn around at once look abrupt (#340).
             let fadeOut = SceneGraph.Action.fadeOut(duration: 1.2).timingMode(.easeInEaseOut)
             let fadeIn = SceneGraph.Action.fadeIn(duration: 1.2).timingMode(.easeInEaseOut)
@@ -1027,7 +1027,7 @@ public final class KeynoteDemo: DemoScene {
         let stripes: [SIMD3<Float>] = [[0.9, 0.15, 0.15], [0.95, 0.85, 0.2], [0.2, 0.8, 0.3], [0.2, 0.75, 0.95], [0.3, 0.3, 0.95], [0.85, 0.3, 0.85], [0.95, 0.95, 0.95], [0.25, 0.25, 0.28]]
         let wall = SceneGraph.Node(parent: slide, label: "Stripes", trs: .init(translation: [0, 1.6, -0.6]))
         for (index, color) in stripes.enumerated() {
-            _ = SceneGraph.Node(parent: wall, shape: .plane(width: 1.35, height: 2.8), material: glow(color), device: demoDevice, trs: .init(translation: [Float(index) * 1.35 - 4.725, 0, 0]))
+            _ = SceneGraph.Node(parent: wall, shape: .plane(width: 1.35, height: 2.8), material: glow(color), trs: .init(translation: [Float(index) * 1.35 - 4.725, 0, 0]))
         }
         // Slowly sliding back and forth, so each disc crosses several stripes.
         wall.run(.repeatForever(.sequence([
@@ -1039,7 +1039,7 @@ public final class KeynoteDemo: DemoScene {
             let x = Float(index) * 1.6 - 4
             // Alpha blends only when the material is see-through.
             let material = glow([1, 0.55, 0.15], opacity: mode == .alpha ? 0.5 : 1, blendMode: mode)
-            _ = SceneGraph.Node(parent: slide, label: "Blend \(name)", shape: .cylinder(radius: 0.6, height: 0.02), material: material, device: demoDevice, trs: .init(translation: [x, 1.6, 0], rotation: simd_quatf(angle: .pi / 2, axis: [1, 0, 0])))
+            _ = SceneGraph.Node(parent: slide, label: "Blend \(name)", shape: .cylinder(radius: 0.6, height: 0.02), material: material, trs: .init(translation: [x, 1.6, 0], rotation: simd_quatf(angle: .pi / 2, axis: [1, 0, 0])))
             let label = addTitle(".\(name)", size: 0.3, y: 0, color: [0.85, 0.85, 0.9], to: slide)
             label.trs.translation.x = x
         }
@@ -1052,7 +1052,7 @@ public final class KeynoteDemo: DemoScene {
         let light = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0.55, 0.57, 0.62]))
         let dark = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0.12, 0.13, 0.16]))
         // One mesh for every tile, so Blinn-Phong draws them as two instanced batches.
-        let tile = SceneGraph.Shape.box(width: 0.6, height: 0.6, length: 0.05).metalMesh(device: demoDevice)
+        let tile = SceneGraph.Shape.box(width: 0.6, height: 0.6, length: 0.05).metalMesh()
         for row in 0..<6 {
             for column in 0..<14 {
                 let material = (row + column).isMultiple(of: 2) ? light : dark
@@ -1064,8 +1064,8 @@ public final class KeynoteDemo: DemoScene {
             let x = Float(index) * 1.6 - 3.2
             let material: any SceneSprockets.Material = index.isMultiple(of: 2)
                 ? BlinnPhongSceneMaterial.plastic(color, shininess: 32)
-                : (try? PBRSceneMaterial(device: demoDevice, baseColor: SIMD4(color, 1), metallic: 0, roughness: 0.4)) ?? BlinnPhongSceneMaterial.plastic(color)
-            let bar = SceneGraph.Node(parent: slide, shape: .box(width: 0.5, height: 3, length: 0.5), material: material, device: demoDevice, trs: .init(translation: [x, 1.6, -2.5]))
+                : (try? PBRSceneMaterial(baseColor: SIMD4(color, 1), metallic: 0, roughness: 0.4)) ?? BlinnPhongSceneMaterial.plastic(color)
+            let bar = SceneGraph.Node(parent: slide, shape: .box(width: 0.5, height: 3, length: 0.5), material: material, trs: .init(translation: [x, 1.6, -2.5]))
             bar.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 6 + Float(index))))
         }
         let shapes: [(SceneGraph.Shape, Float, Float)] = [
@@ -1074,12 +1074,12 @@ public final class KeynoteDemo: DemoScene {
             (.torus(ringRadius: 0.75, pipeRadius: 0.3), 2.6, 0.05)
         ]
         for (shape, x, roughness) in shapes {
-            guard let glass = try? PBRSceneMaterial(device: demoDevice, baseColor: [1, 1, 1, 1], metallic: 0, roughness: roughness) else {
+            guard let glass = try? PBRSceneMaterial(baseColor: [1, 1, 1, 1], metallic: 0, roughness: roughness) else {
                 continue
             }
             glass.pbrMaterial.uniforms.transmissionFactor = 1
             glass.pbrMaterial.uniforms.thicknessFactor = 0.6
-            let node = SceneGraph.Node(parent: slide, shape: shape, material: glass, device: demoDevice, trs: .init(translation: [x, 1.6, 1]))
+            let node = SceneGraph.Node(parent: slide, shape: shape, material: glass, trs: .init(translation: [x, 1.6, 1]))
             node.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([0.3, 1, 0]), duration: 10)))
         }
     }
@@ -1089,11 +1089,11 @@ public final class KeynoteDemo: DemoScene {
         let stage = SceneGraph.Node(parent: slide, label: "Stage", trs: .init(translation: [0, 0.8, -2.5], rotation: simd_quatf(angle: 0.35, axis: [1, 0, 0])))
         let slide = stage
         _ = SceneGraph.Node(parent: slide, label: "Sun", transform: .camera(eye: [3, 6, 4], target: .zero), content: .light(Light(type: .directional, color: [1, 0.95, 0.9], intensity: 1.5)))
-        _ = SceneGraph.Node(parent: slide, label: "Floor", shape: .box(width: 12, height: 0.1, length: 6), material: BlinnPhongSceneMaterial.plastic([0.7, 0.7, 0.75], shininess: 8), device: demoDevice, trs: .init(translation: [0, -0.05, 0]))
-        let torus = SceneGraph.Node(parent: slide, shape: .torus(ringRadius: 0.8, pipeRadius: 0.25), material: BlinnPhongSceneMaterial.plastic([0.95, 0.75, 0.3], shininess: 48), device: demoDevice, trs: .init(translation: [0, 1.8, 0]))
+        _ = SceneGraph.Node(parent: slide, label: "Floor", shape: .box(width: 12, height: 0.1, length: 6), material: BlinnPhongSceneMaterial.plastic([0.7, 0.7, 0.75], shininess: 8), trs: .init(translation: [0, -0.05, 0]))
+        let torus = SceneGraph.Node(parent: slide, shape: .torus(ringRadius: 0.8, pipeRadius: 0.25), material: BlinnPhongSceneMaterial.plastic([0.95, 0.75, 0.3], shininess: 48), trs: .init(translation: [0, 1.8, 0]))
         torus.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([1, 0.5, 0]), duration: 6)))
-        _ = SceneGraph.Node(parent: slide, shape: .box(width: 1, height: 1, length: 1), material: BlinnPhongSceneMaterial.plastic([0.9, 0.35, 0.3]), device: demoDevice, trs: .init(translation: [-3, 0.5, 0]))
-        _ = SceneGraph.Node(parent: slide, shape: .cylinder(radius: 0.35, height: 2), material: BlinnPhongSceneMaterial.plastic([0.4, 0.8, 0.5]), device: demoDevice, trs: .init(translation: [3, 1, 0]))
+        _ = SceneGraph.Node(parent: slide, shape: .box(width: 1, height: 1, length: 1), material: BlinnPhongSceneMaterial.plastic([0.9, 0.35, 0.3]), trs: .init(translation: [-3, 0.5, 0]))
+        _ = SceneGraph.Node(parent: slide, shape: .cylinder(radius: 0.35, height: 2), material: BlinnPhongSceneMaterial.plastic([0.4, 0.8, 0.5]), trs: .init(translation: [3, 1, 0]))
     }
 
     // Hides the flat titles and puts one extruded letter in place of each character, with a random kick and spin.
@@ -1112,7 +1112,7 @@ public final class KeynoteDemo: DemoScene {
             for (offset, character) in spec.text.enumerated() where character != " " {
                 let prefix = String(spec.text.prefix(offset))
                 let holder = SceneGraph.Node(parent: slide, label: "Letter \(character)")
-                let letter = SceneGraph.Node(parent: holder, shape: .text(String(character), fontName: "Helvetica-Bold", fontSize: spec.size, extrusionDepth: spec.size * 0.15), material: material, device: demoDevice)
+                let letter = SceneGraph.Node(parent: holder, shape: .text(String(character), fontName: "Helvetica-Bold", fontSize: spec.size, extrusionDepth: spec.size * 0.15), material: material)
                 guard let bounds = letter.meshBounds else {
                     continue
                 }
@@ -1176,13 +1176,13 @@ public final class KeynoteDemo: DemoScene {
         let ring = SceneGraph.Node(parent: finale, label: "Candy Ring", trs: .init(translation: [0, 1.5, 0], rotation: simd_quatf(angle: 0.35, axis: [1, 0, 0])))
         ring.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 8)))
         for index in 0..<6 {
-            guard let candy = try? PBRSceneMaterial(device: demoDevice, baseColor: SIMD4(colors[index % 3], 1), metallic: 0.8, roughness: 0.2) else {
+            guard let candy = try? PBRSceneMaterial(baseColor: SIMD4(colors[index % 3], 1), metallic: 0.8, roughness: 0.2) else {
                 continue
             }
             candy.pbrMaterial.uniforms.clearcoatFactor = 1
             candy.pbrMaterial.uniforms.clearcoatRoughnessFactor = 0.03
             let angle = Float(index) * 2 * .pi / 6
-            _ = SceneGraph.Node(parent: ring, shape: .sphere(radius: 0.45), material: candy, device: demoDevice, trs: .init(translation: [cos(angle) * 4.6, 0, sin(angle) * 2]))
+            _ = SceneGraph.Node(parent: ring, shape: .sphere(radius: 0.45), material: candy, trs: .init(translation: [cos(angle) * 4.6, 0, sin(angle) * 2]))
         }
         // Big glass shapes and polished metal spinning on either side.
         let props: [(SceneGraph.Shape, SIMD3<Float>, Bool)] = [
@@ -1192,14 +1192,14 @@ public final class KeynoteDemo: DemoScene {
             (.capsule(capRadius: 0.35, height: 1.2), [5.4, -0.4, -1], false)
         ]
         for (index, (shape, position, isGlass)) in props.enumerated() {
-            guard let material = try? PBRSceneMaterial(device: demoDevice, baseColor: isGlass ? [1, 1, 1, 1] : [1, 0.8, 0.4, 1], metallic: isGlass ? 0 : 1, roughness: isGlass ? 0 : 0.15) else {
+            guard let material = try? PBRSceneMaterial(baseColor: isGlass ? [1, 1, 1, 1] : [1, 0.8, 0.4, 1], metallic: isGlass ? 0 : 1, roughness: isGlass ? 0 : 0.15) else {
                 continue
             }
             if isGlass {
                 material.pbrMaterial.uniforms.transmissionFactor = 1
                 material.pbrMaterial.uniforms.thicknessFactor = 0.6
             }
-            let node = SceneGraph.Node(parent: finale, shape: shape, material: material, device: demoDevice, trs: .init(translation: position))
+            let node = SceneGraph.Node(parent: finale, shape: shape, material: material, trs: .init(translation: position))
             node.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([0.4, 1, 0.3]), duration: 3 + Float(index))))
         }
         let emitters: [(SIMD3<Float>, ParticleSystem)] = [
@@ -1241,18 +1241,18 @@ public final class KeynoteDemo: DemoScene {
         // Two rows of pillars running away from the camera, fading into the fog.
         for row in 0..<8 {
             for side in [-1, 1] as [Float] {
-                let pillar = SceneGraph.Node(parent: slide, shape: .cylinder(radius: 0.3, height: 3), material: BlinnPhongSceneMaterial.plastic([0.85, 0.8, 0.7], shininess: 16), device: demoDevice, trs: .init(translation: [side * 2.5, 1.5, -Float(row) * 4]))
+                let pillar = SceneGraph.Node(parent: slide, shape: .cylinder(radius: 0.3, height: 3), material: BlinnPhongSceneMaterial.plastic([0.85, 0.8, 0.7], shininess: 16), trs: .init(translation: [side * 2.5, 1.5, -Float(row) * 4]))
                 pillar.label = "Pillar"
             }
         }
-        _ = SceneGraph.Node(parent: slide, label: "Ground", shape: .box(width: 8, height: 0.1, length: 36), material: BlinnPhongSceneMaterial.plastic([0.4, 0.4, 0.45], shininess: 4), device: demoDevice, trs: .init(translation: [0, -0.05, -14]))
+        _ = SceneGraph.Node(parent: slide, label: "Ground", shape: .box(width: 8, height: 0.1, length: 36), material: BlinnPhongSceneMaterial.plastic([0.4, 0.4, 0.45], shininess: 4), trs: .init(translation: [0, -0.05, -14]))
     }
 
     private func implicitAnimationSlide(_ slide: SceneGraph.Node) {
         addLight(to: slide, at: [0, 6, 6], intensity: 70)
         let colors: [SIMD3<Float>] = [[1, 0.4, 0.3], [1, 0.8, 0.3], [0.4, 0.9, 0.4], [0.3, 0.8, 1], [0.6, 0.5, 1], [1, 0.5, 0.8]]
         shuffleCubes = colors.enumerated().map { index, color in
-            SceneGraph.Node(parent: slide, shape: .box(width: 0.8, height: 0.8, length: 0.8), material: BlinnPhongSceneMaterial.plastic(color, shininess: 32), device: demoDevice, trs: .init(translation: [Float(index) * 1.4 - 3.5, 1.2, 0]))
+            SceneGraph.Node(parent: slide, shape: .box(width: 0.8, height: 0.8, length: 0.8), material: BlinnPhongSceneMaterial.plastic(color, shininess: 32), trs: .init(translation: [Float(index) * 1.4 - 3.5, 1.2, 0]))
         }
     }
 
@@ -1268,9 +1268,9 @@ public final class KeynoteDemo: DemoScene {
 
     private func animationBlendingSlide(_ slide: SceneGraph.Node) {
         addLight(to: slide, at: [3, 6, 6], intensity: 70)
-        _ = SceneGraph.Node(parent: slide, label: "Floor", shape: .box(width: 8, height: 0.1, length: 4), material: BlinnPhongSceneMaterial.plastic([0.6, 0.6, 0.65], shininess: 8), device: demoDevice, trs: .init(translation: [0, -0.05, 0]))
-        let body = SceneGraph.Node(parent: slide, label: "Body", shape: .box(width: 1, height: 1, length: 1), material: BlinnPhongSceneMaterial.plastic([0.9, 0.5, 0.2]), device: demoDevice, trs: .init(translation: [0, 0.5, 0]))
-        let head = SceneGraph.Node(parent: body, label: "Head", shape: .sphere(radius: 0.35), material: BlinnPhongSceneMaterial.plastic([0.95, 0.85, 0.7]), device: demoDevice, trs: .init(translation: [0, 0.9, 0]))
+        _ = SceneGraph.Node(parent: slide, label: "Floor", shape: .box(width: 8, height: 0.1, length: 4), material: BlinnPhongSceneMaterial.plastic([0.6, 0.6, 0.65], shininess: 8), trs: .init(translation: [0, -0.05, 0]))
+        let body = SceneGraph.Node(parent: slide, label: "Body", shape: .box(width: 1, height: 1, length: 1), material: BlinnPhongSceneMaterial.plastic([0.9, 0.5, 0.2]), trs: .init(translation: [0, 0.5, 0]))
+        let head = SceneGraph.Node(parent: body, label: "Head", shape: .sphere(radius: 0.35), material: BlinnPhongSceneMaterial.plastic([0.95, 0.85, 0.7]), trs: .init(translation: [0, 0.9, 0]))
         func vector(_ values: [SIMD3<Float>]) -> [Float] { values.flatMap { [$0.x, $0.y, $0.z] } }
         func quaternions(_ angles: [Float], axis: SIMD3<Float>) -> [Float] {
             angles.flatMap { angle -> [Float] in
@@ -1296,7 +1296,7 @@ public final class KeynoteDemo: DemoScene {
         let holder = SceneGraph.Node(parent: slide, label: "Imported", trs: .init(translation: [0, 0.3, -1], scale: [1.4, 1.4, 1.4]))
         do {
             if let url = Bundle.module.url(forResource: "DiffuseTransmissionPlant", withExtension: "glb", subdirectory: "Resources") {
-                let plant = try GLTFAsset(url: url, device: demoDevice).makeSceneGraph(device: demoDevice)
+                let plant = try GLTFAsset(url: url, device: demoDevice).makeSceneGraph()
                 let plantHolder = SceneGraph.Node(parent: holder, label: "Plant", trs: .init(scale: [3, 3, 3]))
                 for child in plant.sceneGraph.root.children {
                     plantHolder.addChild(child)
@@ -1306,7 +1306,7 @@ public final class KeynoteDemo: DemoScene {
                 // The fireflies are tiny with very dim lights; give them a glow, a light and a trail so they read on stage.
                 for firefly in descendants(of: plantHolder).filter({ ["firefly1", "firefly2"].contains($0.label) }) {
                     let glow = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0.8, 1, 0.45]))
-                    _ = SceneGraph.Node(parent: firefly, label: "Glow", shape: .sphere(radius: 0.025), material: glow, device: demoDevice)
+                    _ = SceneGraph.Node(parent: firefly, label: "Glow", shape: .sphere(radius: 0.025), material: glow)
                     var light = Light(type: .point, color: [0.8, 1, 0.5], intensity: 6)
                     light.range = 3
                     _ = SceneGraph.Node(parent: firefly, label: "Glow Light", content: .light(light))
@@ -1329,7 +1329,7 @@ public final class KeynoteDemo: DemoScene {
                 importedPlayer = plant.animations.first.map { SceneGraph.AnimationPlayer(clip: $0) }
             }
             if let url = Bundle.module.url(forResource: "Pedestal", withExtension: "obj", subdirectory: "Resources") {
-                let pedestal = try ModelIOSceneGraph(url: url, device: demoDevice)
+                let pedestal = try ModelIOSceneGraph(url: url)
                 pedestal.sceneGraph.root.label = "Pedestal"
                 holder.addChild(pedestal.sceneGraph.root)
             }
@@ -1360,7 +1360,7 @@ public final class KeynoteDemo: DemoScene {
             (.torus(ringRadius: 0.5, pipeRadius: 0.18), [1, 0.5, 0.8])
         ]
         for (index, (shape, color)) in shapes.enumerated() {
-            let node = SceneGraph.Node(parent: slide, shape: shape, material: BlinnPhongSceneMaterial.plastic(color, shininess: 48), device: demoDevice, trs: .init(translation: [Float(index) * 2.2 - 3.3, 1.2, 0]))
+            let node = SceneGraph.Node(parent: slide, shape: shape, material: BlinnPhongSceneMaterial.plastic(color, shininess: 48), trs: .init(translation: [Float(index) * 2.2 - 3.3, 1.2, 0]))
             hitTargets.insert(ObjectIdentifier(node))
         }
         addTitle("Click a shape", size: 0.35, y: 2.8, color: [0.6, 0.65, 0.75], to: slide)
@@ -1427,7 +1427,7 @@ public final class KeynoteDemo: DemoScene {
         ].compactMap { $0 }
         let shapes: [SceneGraph.Shape] = [.torus(ringRadius: 0.7, pipeRadius: 0.28), .sphere(radius: 0.9), .capsule(capRadius: 0.5, height: 1.8)]
         for (index, (shape, material)) in zip(shapes, materials).enumerated() {
-            let node = SceneGraph.Node(parent: slide, shape: shape, material: material, device: demoDevice, trs: .init(translation: [Float(index) * 3 - 3, 1.4, 0]))
+            let node = SceneGraph.Node(parent: slide, shape: shape, material: material, trs: .init(translation: [Float(index) * 3 - 3, 1.4, 0]))
             node.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([0.4, 1, 0.2]), duration: 7 + Float(index))))
         }
     }
@@ -1461,7 +1461,7 @@ public final class KeynoteDemo: DemoScene {
     // The animated glTF Fox with particles born on its skinned surface: flames, then sparks, in turn.
     private func meshEmittersSlide(_ slide: SceneGraph.Node) {
         addLight(to: slide, at: [-3, 5, 4], color: [0.5, 0.6, 1], intensity: 12)
-        _ = SceneGraph.Node(parent: slide, label: "Floor", shape: .box(width: 10, height: 0.1, length: 4), material: BlinnPhongSceneMaterial.plastic([0.12, 0.12, 0.14], shininess: 8), device: demoDevice, trs: .init(translation: [0, -0.05, 0]))
+        _ = SceneGraph.Node(parent: slide, label: "Floor", shape: .box(width: 10, height: 0.1, length: 4), material: BlinnPhongSceneMaterial.plastic([0.12, 0.12, 0.14], shininess: 8), trs: .init(translation: [0, -0.05, 0]))
         guard let fox = try? BurningFox(scale: 2) else {
             return
         }
@@ -1475,7 +1475,7 @@ public final class KeynoteDemo: DemoScene {
     // bring their own colliders (the ground plane, the logs), which follow the node they are on.
     private func particlesSlide(_ slide: SceneGraph.Node) {
         addLight(to: slide, at: [-4, 6, 6], color: [0.45, 0.55, 0.9], intensity: 25)
-        _ = SceneGraph.Node(parent: slide, label: "Ground", shape: .box(width: 12, height: 0.1, length: 6), material: BlinnPhongSceneMaterial.plastic([0.16, 0.15, 0.15], shininess: 6), device: demoDevice, trs: .init(translation: [0, -0.05, -1]))
+        _ = SceneGraph.Node(parent: slide, label: "Ground", shape: .box(width: 12, height: 0.1, length: 6), material: BlinnPhongSceneMaterial.plastic([0.16, 0.15, 0.15], shininess: 6), trs: .init(translation: [0, -0.05, -1]))
 
         let campfire = SceneGraph.Node(parent: slide, label: "Campfire", trs: .init(translation: [-2.6, 0, 0.8]))
         campfire.particleSystems = [SceneParticleSystem(.campfire, seed: 1)]
@@ -1483,7 +1483,7 @@ public final class KeynoteDemo: DemoScene {
         let bark = BlinnPhongSceneMaterial.plastic([0.3, 0.18, 0.1], shininess: 4)
         for (start, end) in [(SIMD3<Float>(-0.5, 0.08, -0.2), SIMD3<Float>(0.5, 0.08, 0.2)), ([-0.4, 0.08, 0.35], [0.4, 0.08, -0.35])] {
             let axis = end - start
-            _ = SceneGraph.Node(parent: campfire, label: "Log", shape: .capsule(capRadius: 0.08, height: simd_length(axis) + 0.16), material: bark, device: demoDevice, trs: .init(translation: (start + end) / 2, rotation: simd_quatf(from: [0, 1, 0], to: simd_normalize(axis))))
+            _ = SceneGraph.Node(parent: campfire, label: "Log", shape: .capsule(capRadius: 0.08, height: simd_length(axis) + 0.16), material: bark, trs: .init(translation: (start + end) / 2, rotation: simd_quatf(from: [0, 1, 0], to: simd_normalize(axis))))
         }
         var firelight = Light(type: .point, color: [1, 0.55, 0.2], intensity: 6)
         firelight.range = 6
@@ -1538,7 +1538,7 @@ public final class KeynoteDemo: DemoScene {
         let squashDeltas = positions.map { SIMD3<Float>($0.x * 0.5, -$0.y * 0.5, $0.z * 0.5) }
         let bumps = SceneGraph.MorphTarget(positionDeltas: bumpDeltas, normalDeltas: DeformationMeshes.normalDeltas(positions: positions, normals: normals, deltas: bumpDeltas, indices: indices))
         let squash = SceneGraph.MorphTarget(positionDeltas: squashDeltas, normalDeltas: DeformationMeshes.normalDeltas(positions: positions, normals: normals, deltas: squashDeltas, indices: indices))
-        let blobMaterial: any SceneSprockets.Material = (try? PBRSceneMaterial(device: demoDevice, baseColor: [0.3, 0.8, 0.5, 1], metallic: 0.1, roughness: 0.3)) ?? BlinnPhongSceneMaterial.plastic([0.3, 0.8, 0.5])
+        let blobMaterial: any SceneSprockets.Material = (try? PBRSceneMaterial(baseColor: [0.3, 0.8, 0.5, 1], metallic: 0.1, roughness: 0.3)) ?? BlinnPhongSceneMaterial.plastic([0.3, 0.8, 0.5])
         let blob = SceneGraph.Node(parent: slide, label: "Blob", trs: .init(translation: [-2.5, 1.5, 0]), content: .mesh(mesh, material: blobMaterial))
         blob.morphTargets = [bumps, squash]
         blob.morphWeights = [0, 0]
@@ -1563,7 +1563,7 @@ public final class KeynoteDemo: DemoScene {
         // Skinned vertices end up in world space, so the tube node's own transform does not matter.
         let skeletonInverse = skeleton.worldTransform.inverse
         let inverseBind = joints.map { (skeletonInverse * $0.worldTransform).inverse }
-        let tubeMaterial: any SceneSprockets.Material = (try? PBRSceneMaterial(device: demoDevice, baseColor: [0.9, 0.6, 0.2, 1], metallic: 0, roughness: 0.4)) ?? BlinnPhongSceneMaterial.plastic([0.9, 0.6, 0.2])
+        let tubeMaterial: any SceneSprockets.Material = (try? PBRSceneMaterial(baseColor: [0.9, 0.6, 0.2, 1], metallic: 0, roughness: 0.4)) ?? BlinnPhongSceneMaterial.plastic([0.9, 0.6, 0.2])
         let skinned = SceneGraph.Node(parent: slide, label: "Tube", content: .mesh(tube, material: tubeMaterial))
         skinned.skin = SceneGraph.Skin(joints: joints, inverseBindMatrices: inverseBind)
         skinned.skinVertices = skinVertices
@@ -1595,13 +1595,13 @@ public final class KeynoteDemo: DemoScene {
 
     private func postProcessingSlide(_ slide: SceneGraph.Node) {
         addLight(to: slide, at: [3, 6, 6], intensity: 80)
-        _ = SceneGraph.Node(parent: slide, label: "Floor", shape: .box(width: 12, height: 0.1, length: 6), material: BlinnPhongSceneMaterial.plastic([0.8, 0.8, 0.82], shininess: 8), device: demoDevice, trs: .init(translation: [0, -0.05, 0]))
+        _ = SceneGraph.Node(parent: slide, label: "Floor", shape: .box(width: 12, height: 0.1, length: 6), material: BlinnPhongSceneMaterial.plastic([0.8, 0.8, 0.82], shininess: 8), trs: .init(translation: [0, -0.05, 0]))
         let colors: [SIMD3<Float>] = [[1, 0.35, 0.3], [1, 0.8, 0.3], [0.4, 0.85, 0.45], [0.3, 0.6, 1], [0.75, 0.45, 1]]
         for (index, color) in colors.enumerated() {
             let height = 0.6 + Float(index % 3) * 0.5
-            _ = SceneGraph.Node(parent: slide, shape: .box(width: 0.9, height: height, length: 0.9), material: BlinnPhongSceneMaterial.plastic(color, shininess: 32), device: demoDevice, trs: .init(translation: [Float(index) * 1.4 - 2.8, height / 2, 0]))
+            _ = SceneGraph.Node(parent: slide, shape: .box(width: 0.9, height: height, length: 0.9), material: BlinnPhongSceneMaterial.plastic(color, shininess: 32), trs: .init(translation: [Float(index) * 1.4 - 2.8, height / 2, 0]))
         }
-        let torus = SceneGraph.Node(parent: slide, shape: .torus(ringRadius: 0.5, pipeRadius: 0.18), material: BlinnPhongSceneMaterial.plastic([0.95, 0.95, 0.95], shininess: 64), device: demoDevice, trs: .init(translation: [0, 2.3, 0]))
+        let torus = SceneGraph.Node(parent: slide, shape: .torus(ringRadius: 0.5, pipeRadius: 0.18), material: BlinnPhongSceneMaterial.plastic([0.95, 0.95, 0.95], shininess: 64), trs: .init(translation: [0, 2.3, 0]))
         torus.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([1, 0.5, 0]), duration: 6)))
         gradeLabels = Self.grades.map { grade in
             let label = SceneGraph.Node(parent: slide, label: "Grade \(grade.name)")
@@ -1618,9 +1618,9 @@ public final class KeynoteDemo: DemoScene {
     // A selected box with its outline and the transform gizmo, which cycles through its modes.
     private func gizmosSlide(_ slide: SceneGraph.Node) {
         addLight(to: slide, at: [2, 6, 5], intensity: 60)
-        _ = SceneGraph.Node(parent: slide, shape: .sphere(radius: 0.6), material: BlinnPhongSceneMaterial.plastic([0.4, 0.75, 0.45], shininess: 32), device: demoDevice, trs: .init(translation: [-3.2, 0.9, 0]))
-        _ = SceneGraph.Node(parent: slide, shape: .cone(topRadius: 0, bottomRadius: 0.6, height: 1.3), material: BlinnPhongSceneMaterial.plastic([0.4, 0.55, 0.95], shininess: 32), device: demoDevice, trs: .init(translation: [3.2, 0.9, 0]))
-        gizmoTarget = SceneGraph.Node(parent: slide, label: "Box", shape: .box(width: 1.2, height: 1.2, length: 1.2), material: BlinnPhongSceneMaterial.plastic([0.95, 0.55, 0.3], shininess: 32), device: demoDevice, trs: .init(translation: [0, 0.9, 0], rotation: simd_quatf(angle: 0.5, axis: [0, 1, 0])))
+        _ = SceneGraph.Node(parent: slide, shape: .sphere(radius: 0.6), material: BlinnPhongSceneMaterial.plastic([0.4, 0.75, 0.45], shininess: 32), trs: .init(translation: [-3.2, 0.9, 0]))
+        _ = SceneGraph.Node(parent: slide, shape: .cone(topRadius: 0, bottomRadius: 0.6, height: 1.3), material: BlinnPhongSceneMaterial.plastic([0.4, 0.55, 0.95], shininess: 32), trs: .init(translation: [3.2, 0.9, 0]))
+        gizmoTarget = SceneGraph.Node(parent: slide, label: "Box", shape: .box(width: 1.2, height: 1.2, length: 1.2), material: BlinnPhongSceneMaterial.plastic([0.95, 0.55, 0.3], shininess: 32), trs: .init(translation: [0, 0.9, 0], rotation: simd_quatf(angle: 0.5, axis: [0, 1, 0])))
     }
 
     private func debugViewsSlide(_ slide: SceneGraph.Node) {
@@ -1631,7 +1631,7 @@ public final class KeynoteDemo: DemoScene {
             (.box(width: 1.1, height: 1.1, length: 1.1), [0.4, 0.55, 0.95])
         ]
         for (index, (shape, color)) in shapes.enumerated() {
-            let node = SceneGraph.Node(parent: slide, shape: shape, material: BlinnPhongSceneMaterial.plastic(color, shininess: 32), device: demoDevice, trs: .init(translation: [Float(index) * 2.4 - 3.6, 1.1, 0]))
+            let node = SceneGraph.Node(parent: slide, shape: shape, material: BlinnPhongSceneMaterial.plastic(color, shininess: 32), trs: .init(translation: [Float(index) * 2.4 - 3.6, 1.1, 0]))
             node.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([0.3, 1, 0.2]), duration: 7)))
         }
         if let die = DiceDemo.makeDie(.d20, style: .classicIvory) {
@@ -1707,14 +1707,14 @@ public final class KeynoteDemo: DemoScene {
         let frame = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0.35, 0.38, 0.45]))
         let window = SceneGraph.Node(parent: slide, label: "Window", trs: .init(translation: [0, 1.4, -0.5]))
         for (size, position) in [([6.1, 0.05], [0, 1.7]), ([6.1, 0.05], [0, -1.7]), ([0.05, 3.4], [-3.05, 0]), ([0.05, 3.4], [3.05, 0])] as [(SIMD2<Float>, SIMD2<Float>)] {
-            _ = SceneGraph.Node(parent: window, shape: .box(width: size.x, height: size.y, length: 0.05), material: frame, device: demoDevice, trs: .init(translation: [position.x, position.y, 0]))
+            _ = SceneGraph.Node(parent: window, shape: .box(width: size.x, height: size.y, length: 0.05), material: frame, trs: .init(translation: [position.x, position.y, 0]))
         }
         let turntable = SceneGraph.Node(parent: slide, label: "Turntable", trs: .init(translation: [0, 1.2, 0]))
         turntable.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 8)))
         let shapes: [(SceneGraph.Shape, SIMD3<Float>)] = [(.box(width: 0.7, height: 0.7, length: 0.7), [1, 0.4, 0.3]), (.sphere(radius: 0.4), [0.3, 0.8, 1]), (.cone(bottomRadius: 0.4, height: 0.8), [0.5, 0.9, 0.4])]
         for (index, (shape, color)) in shapes.enumerated() {
             let angle = Float(index) * 2 * .pi / 3
-            _ = SceneGraph.Node(parent: turntable, shape: shape, material: BlinnPhongSceneMaterial.plastic(color, shininess: 48), device: demoDevice, trs: .init(translation: [cos(angle) * 1.4, 0, sin(angle) * 1.4]))
+            _ = SceneGraph.Node(parent: turntable, shape: shape, material: BlinnPhongSceneMaterial.plastic(color, shininess: 48), trs: .init(translation: [cos(angle) * 1.4, 0, sin(angle) * 1.4]))
         }
     }
 }

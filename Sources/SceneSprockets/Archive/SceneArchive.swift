@@ -2,6 +2,7 @@ import CoreGraphics
 import Foundation
 import ImageIO
 import Metal
+import MetalSupport
 import SwiftMesh
 import UniformTypeIdentifiers
 
@@ -73,7 +74,7 @@ public struct SceneArchive {
     ///     texture from the GPU only once.
     /// - Throws: An error if encoding fails or a texture cannot be read.
     public func capture(_ sceneGraph: SceneGraph, textureCache: TextureCache? = nil) throws -> Capture {
-        let context = SceneArchiveContext(directory: nil, device: nil, archive: self)
+        let context = SceneArchiveContext(directory: nil, archive: self)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.nonConformingFloatEncodingStrategy = .convertToString(positiveInfinity: "inf", negativeInfinity: "-inf", nan: "nan")
@@ -150,11 +151,10 @@ public struct SceneArchive {
     ///
     /// - Parameters:
     ///   - url: The package to read.
-    ///   - device: The device for meshes and textures.
     /// - Returns: The scene graph, and messages about parts of the package that the archive could not load.
     /// - Throws: A ``SceneArchiveError``, or an error if a file cannot be read or decoded.
-    public func read(from url: URL, device: MTLDevice) throws -> (sceneGraph: SceneGraph, warnings: [String]) {
-        let context = SceneArchiveContext(directory: url, device: device, archive: self)
+    public func read(from url: URL) throws -> (sceneGraph: SceneGraph, warnings: [String]) {
+        let context = SceneArchiveContext(directory: url, archive: self)
         let decoder = JSONDecoder()
         decoder.nonConformingFloatDecodingStrategy = .convertFromString(positiveInfinity: "inf", negativeInfinity: "-inf", nan: "nan")
         decoder.userInfo[.sceneArchive] = context
@@ -232,8 +232,8 @@ public protocol ArchivableEnvironmentMap: EnvironmentMap {
 public enum SceneArchiveError: Error, CustomStringConvertible {
     /// The coder has no ``SceneArchiveContext``. Encode and decode scene graphs through ``SceneArchive``.
     case missingContext
-    /// Reading needs a device, and there is none.
-    case missingDevice
+    /// Reading needs the package directory, and there is none.
+    case missingDirectory
     /// The archive cannot save the texture. The value gives the reason.
     case unsupportedTexture(String)
     /// The texture file cannot be read. The value is the file name.
@@ -246,7 +246,7 @@ public enum SceneArchiveError: Error, CustomStringConvertible {
     public var description: String {
         switch self {
         case .missingContext: "Coding a scene graph needs a SceneArchive"
-        case .missingDevice: "Reading a scene archive needs a device"
+        case .missingDirectory: "Reading a scene archive needs its directory"
         case .unsupportedTexture(let reason): "Unsupported texture: \(reason)"
         case .unreadableTexture(let name): "Could not read texture \(name)"
         case .unsupportedMesh(let reason): "Cannot save or read the mesh: \(reason)"
@@ -300,7 +300,6 @@ public final class SceneArchiveContext: @unchecked Sendable {
     // Where to read from; nil while capturing, which only encodes.
     let directory: URL?
     let archive: SceneArchive
-    private let readDevice: MTLDevice?
     /// Messages about parts of the scene that the archive skipped or changed.
     public private(set) var warnings: [String] = []
     private var writtenTextures: [ObjectIdentifier: TextureReference] = [:]
@@ -391,25 +390,15 @@ public final class SceneArchiveContext: @unchecked Sendable {
     var pendingConstraints: [(node: SceneGraph.Node, constraints: [ArchivedConstraint])] = []
     var pendingSkins: [(node: SceneGraph.Node, skin: ArchivedSkin)] = []
 
-    init(directory: URL?, device: MTLDevice?, archive: SceneArchive) {
+    init(directory: URL?, archive: SceneArchive) {
         self.directory = directory
-        self.readDevice = device
         self.archive = archive
     }
 
-    /// The device for meshes and textures that the archive reads.
-    ///
-    /// - Throws: ``SceneArchiveError/missingDevice`` if the context is not reading.
-    public var device: MTLDevice {
-        get throws {
-            try readDevice.orThrow(SceneArchiveError.missingDevice)
-        }
-    }
-
-    // Reading has both a directory and a device; capturing has neither.
+    // Reading has a directory; capturing has none.
     private var readDirectory: URL {
         get throws {
-            try directory.orThrow(SceneArchiveError.missingDevice)
+            try directory.orThrow(SceneArchiveError.missingDirectory)
         }
     }
 
@@ -618,7 +607,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
         if let texture = readTextures[reference.file] {
             return texture
         }
-        let device = try device
+        let device = _MTLCreateSystemDefaultDevice()
         let url = try readDirectory.appendingPathComponent(reference.file)
         let pixelFormat = MTLPixelFormat(rawValue: reference.pixelFormat) ?? .rgba8Unorm
         guard let layout = TextureLayout(pixelFormat) else {
@@ -724,7 +713,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
         descriptor.mipmapLevelCount = max(levels, 1)
         descriptor.usage = .shaderRead
         descriptor.storageMode = .shared
-        let device = try device
+        let device = _MTLCreateSystemDefaultDevice()
         guard let texture = device.makeTexture(descriptor: descriptor) else {
             throw SceneArchiveError.unreadableTexture(reference.file)
         }

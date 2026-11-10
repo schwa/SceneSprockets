@@ -10,8 +10,7 @@ import Testing
 // #253: a quad lit by a point light, everything shifted by `offset`. Returns BGRA pixels.
 @MainActor
 private func render(offset: SIMD3<Float>) throws -> [SIMD4<UInt8>] {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh(device: device)
+    let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
     let material = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0.6), specular: .color(1), shininess: 64)
     let root = SceneGraph.Node()
     _ = SceneGraph.Node(parent: root, trs: .init(translation: offset + [0, 0, 1.5]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(60)))))

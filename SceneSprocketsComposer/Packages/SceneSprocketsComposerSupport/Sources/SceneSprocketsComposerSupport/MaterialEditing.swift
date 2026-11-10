@@ -1,5 +1,6 @@
 import Metal
 import MetalSprocketsPBR
+import MetalSupport
 import SceneSprockets
 import SceneSprocketsBlinnPhong
 import SceneSprocketsPBR
@@ -31,7 +32,7 @@ enum MaterialPreset: String, CaseIterable, Identifiable {
     var id: Self { self }
 
     // Keeps the current color where it makes sense.
-    func material(color: SIMD3<Float>, device: MTLDevice) throws -> PBRSceneMaterial {
+    func material(color: SIMD3<Float>) throws -> PBRSceneMaterial {
         var uniforms = PBRMaterialUniforms.defaults(baseColor: SIMD4(color, 1))
         switch self {
         case .plastic:
@@ -49,7 +50,7 @@ enum MaterialPreset: String, CaseIterable, Identifiable {
             uniforms.roughnessFactor = 0.05
             uniforms.transmissionFactor = 1
         }
-        return PBRSceneMaterial(try PBRMaterial(uniforms: uniforms, placeholder: PBRMaterial.placeholderBinding(device: device), device: device))
+        return PBRSceneMaterial(try PBRMaterial(uniforms: uniforms, placeholder: PBRMaterial.placeholderBinding(device: _MTLCreateSystemDefaultDevice()), device: _MTLCreateSystemDefaultDevice()))
     }
 }
 
@@ -91,16 +92,16 @@ extension EditorModel {
     }
 
     // The same color as the other kind. Textures are not carried over.
-    static func converted(_ material: any SceneSprockets.Material, to kind: MaterialKind, device: MTLDevice) throws -> any SceneSprockets.Material {
-        try converted(color: baseColor(of: material), to: kind, device: device)
+    static func converted(_ material: any SceneSprockets.Material, to kind: MaterialKind) throws -> any SceneSprockets.Material {
+        try converted(color: baseColor(of: material), to: kind)
     }
 
-    static func converted(color: SIMD3<Float>, to kind: MaterialKind, device: MTLDevice) throws -> any SceneSprockets.Material {
+    static func converted(color: SIMD3<Float>, to kind: MaterialKind) throws -> any SceneSprockets.Material {
         switch kind {
         case .blinnPhong:
             return BlinnPhongSceneMaterial(ambient: .color(color * 0.1), diffuse: .color(color), specular: .color(0.5), shininess: 32)
         case .pbr:
-            return try PBRSceneMaterial(device: device, baseColor: SIMD4(color, 1), metallic: 0, roughness: 0.5)
+            return try PBRSceneMaterial(baseColor: SIMD4(color, 1), metallic: 0, roughness: 0.5)
         }
     }
 
@@ -110,9 +111,8 @@ extension EditorModel {
     func editMaterials(of node: SceneGraph.Node, at index: Int? = nil, actionName: String, _ edits: [MaterialEdit]) throws {
         let materials = materials(of: node)
         let indices = index.map { materials.indices.contains($0) ? [$0] : [] } ?? Array(materials.indices)
-        let device = systemDefaultDevice()
         let edited = try indices.compactMap { index in
-            try MaterialEdit.applying(edits, to: materials[index], device: device).map { (index, $0) }
+            try MaterialEdit.applying(edits, to: materials[index]).map { (index, $0) }
         }
         transaction(actionName) {
             for (index, material) in edited {
@@ -122,11 +122,11 @@ extension EditorModel {
     }
 
     // A copy with changed uniforms that keeps the textures and render state, so the original stays untouched.
-    static func editedPBR(_ material: PBRSceneMaterial, device: MTLDevice, doubleSided: Bool? = nil, _ change: (inout PBRMaterialUniforms) -> Void = { _ in }) throws -> PBRSceneMaterial {
+    static func editedPBR(_ material: PBRSceneMaterial, doubleSided: Bool? = nil, _ change: (inout PBRMaterialUniforms) -> Void = { _ in }) throws -> PBRSceneMaterial {
         let original = material.pbrMaterial
         var uniforms = original.uniforms
         change(&uniforms)
-        let copy = try PBRMaterial(name: original.name, uniforms: uniforms, doubleSided: doubleSided ?? original.doubleSided, textureBindings: original.textureBindings, device: device)
+        let copy = try PBRMaterial(name: original.name, uniforms: uniforms, doubleSided: doubleSided ?? original.doubleSided, textureBindings: original.textureBindings, device: _MTLCreateSystemDefaultDevice())
         copy.textureTransforms = original.textureTransforms
         copy.renderState = original.renderState
         return PBRSceneMaterial(copy)

@@ -13,13 +13,13 @@ private struct AppTag: Component {
 }
 
 // Values set after the graph exists, so they live only in the World.
-private func makeGraphEditedInPlace(device: MTLDevice) -> (SceneGraph, SceneGraph.Node) {
+private func makeGraphEditedInPlace() -> (SceneGraph, SceneGraph.Node) {
     let root = SceneGraph.Node(label: "Root")
     let graph = SceneGraph(root: root)
     let material = BlinnPhongSceneMaterial(
         ambient: .color(0.1), diffuse: .color(0.5), specular: .color(0.3), shininess: 24
     )
-    let box = SceneGraph.Node(parent: root, shape: .box(), material: material, device: device)
+    let box = SceneGraph.Node(parent: root, shape: .box(), material: material)
     let child = SceneGraph.Node(parent: box, label: "Child")
     box.label = "Box"
     box.trs = .init(translation: [1, 2, 3])
@@ -55,8 +55,7 @@ private func expectEditedValues(_ box: SceneGraph.Node) {
 
 @Test
 func archiveRoundTripsValuesStoredInTheWorld() throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let (graph, _) = makeGraphEditedInPlace(device: device)
+    let (graph, _) = makeGraphEditedInPlace()
     let archive = SceneArchive(materialTypes: [BlinnPhongSceneMaterial.self])
     let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         .appendingPathExtension(SceneArchive.pathExtension)
@@ -64,7 +63,7 @@ func archiveRoundTripsValuesStoredInTheWorld() throws {
     let warnings = try archive.write(graph, to: url)
     #expect(warnings.isEmpty, "\(warnings)")
 
-    let (loaded, _) = try archive.read(from: url, device: device)
+    let (loaded, _) = try archive.read(from: url)
     let box = try #require(loaded.root.children.first)
     expectEditedValues(box)
     // The loaded nodes are in the loaded graph's World. App components are not part of the archive.
@@ -73,9 +72,8 @@ func archiveRoundTripsValuesStoredInTheWorld() throws {
 }
 
 @Test
-func cloneCopiesValuesStoredInTheWorld() throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let (graph, box) = makeGraphEditedInPlace(device: device)
+func cloneCopiesValuesStoredInTheWorld() {
+    let (graph, box) = makeGraphEditedInPlace()
     let copy = box.clone()
     #expect(copy.world == nil)
     #expect(copy.id != box.id)

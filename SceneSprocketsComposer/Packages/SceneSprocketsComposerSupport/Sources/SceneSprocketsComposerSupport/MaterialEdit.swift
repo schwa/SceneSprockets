@@ -54,7 +54,7 @@ enum MaterialEdit {
 
     // The edited material, or nil when no edit applied. The original is never changed; textures and render state
     // are kept by PBR edits.
-    static func applying(_ edits: [Self], to material: any SceneSprockets.Material, device: MTLDevice) throws -> (any SceneSprockets.Material)? {
+    static func applying(_ edits: [Self], to material: any SceneSprockets.Material) throws -> (any SceneSprockets.Material)? {
         var draft = Draft(material)
         var changed = false
         for edit in edits {
@@ -63,9 +63,9 @@ enum MaterialEdit {
                 guard case let .kind(kind) = edit else {
                     continue
                 }
-                draft = Draft(try EditorModel.converted(color: draft.baseColor, to: kind, device: device))
+                draft = Draft(try EditorModel.converted(color: draft.baseColor, to: kind))
             case let (.preset(preset), _):
-                draft = Draft(try preset.material(color: draft.baseColor, device: device))
+                draft = Draft(try preset.material(color: draft.baseColor))
             case let (.baseColor(color), .blinnPhong(material)):
                 guard case .color = material.diffuse else {
                     continue
@@ -92,15 +92,15 @@ enum MaterialEdit {
             }
             changed = true
         }
-        return changed ? try Self.material(of: draft, device: device) : nil
+        return changed ? try Self.material(of: draft) : nil
     }
 
-    private static func material(of draft: Draft, device: MTLDevice) throws -> (any SceneSprockets.Material)? {
+    private static func material(of draft: Draft) throws -> (any SceneSprockets.Material)? {
         switch draft {
         case let .blinnPhong(material):
             return material
         case let .pbr(base, uniforms, doubleSided):
-            return try EditorModel.editedPBR(base, device: device, doubleSided: doubleSided) { $0 = uniforms }
+            return try EditorModel.editedPBR(base, doubleSided: doubleSided) { $0 = uniforms }
         case .other:
             return nil
         }

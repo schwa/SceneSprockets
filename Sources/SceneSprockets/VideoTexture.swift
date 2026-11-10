@@ -1,6 +1,7 @@
 import AVFoundation
 import CoreVideo
 import Metal
+import MetalSupport
 import QuartzCore
 
 /// A texture that shows an `AVPlayer`'s video, for any material slot that takes a texture, like SceneKit's
@@ -25,10 +26,10 @@ public final class VideoTexture {
     ///   - player: The player. Its current item gets a video output.
     ///   - width: The texture width, usually the video's width in pixels.
     ///   - height: The texture height, usually the video's height in pixels.
-    ///   - device: The device for the texture.
     /// - Throws: An error if the texture, texture cache or command queue cannot be made.
-    public init(player: AVPlayer, width: Int, height: Int, device: MTLDevice) throws {
+    public init(player: AVPlayer, width: Int, height: Int) throws {
         self.player = player
+        let device = _MTLCreateSystemDefaultDevice()
         let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm_srgb, width: width, height: height, mipmapped: false)
         descriptor.usage = [.shaderRead]
         descriptor.storageMode = .private
@@ -54,10 +55,9 @@ public final class VideoTexture {
     ///
     /// - Parameters:
     ///   - url: The video file.
-    ///   - device: The device for the texture.
     /// - Returns: The video texture. Its player is paused; call `player.play()` to start.
     /// - Throws: An error if the file has no video track or the texture cannot be made.
-    public static func load(contentsOf url: URL, device: MTLDevice) async throws -> VideoTexture {
+    public static func load(contentsOf url: URL) async throws -> VideoTexture {
         let asset = AVURLAsset(url: url)
         guard let track = try await asset.loadTracks(withMediaType: .video).first else {
             throw CocoaError(.fileReadCorruptFile)
@@ -65,7 +65,7 @@ public final class VideoTexture {
         let (naturalSize, transform) = try await track.load(.naturalSize, .preferredTransform)
         let size = naturalSize.applying(transform)
         let player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
-        return try VideoTexture(player: player, width: Int(abs(size.width).rounded()), height: Int(abs(size.height).rounded()), device: device)
+        return try VideoTexture(player: player, width: Int(abs(size.width).rounded()), height: Int(abs(size.height).rounded()))
     }
 
     /// Copies the player's frame for `hostTime` into ``texture``, if there is a new one.

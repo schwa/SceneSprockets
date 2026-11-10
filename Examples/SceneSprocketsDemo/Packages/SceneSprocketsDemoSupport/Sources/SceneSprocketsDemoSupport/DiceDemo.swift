@@ -234,7 +234,7 @@ final class DiceDemo: DemoScene {
         }()
         let tray = SceneGraph.Node(parent: root, label: "Tray")
         let outerWidth = trayWidth + 2 * wallThickness
-        let floor = SceneGraph.Node(parent: tray, label: "Floor", shape: .box(width: outerWidth, height: 0.2, length: trayDepth + 2 * wallThickness), material: wood, device: demoDevice, trs: .init(translation: [0, -0.1, 0]))
+        let floor = SceneGraph.Node(parent: tray, label: "Floor", shape: .box(width: outerWidth, height: 0.2, length: trayDepth + 2 * wallThickness), material: wood, trs: .init(translation: [0, -0.1, 0]))
         floor.physicsBody = .init(type: .static, shape: .boundingBox, friction: 0.6, restitution: 0.3)
         let walls: [(size: SIMD3<Float>, position: SIMD3<Float>)] = [
             ([outerWidth, wallHeight, wallThickness], [0, wallHeight / 2, -(trayDepth + wallThickness) / 2]),
@@ -243,7 +243,7 @@ final class DiceDemo: DemoScene {
             ([wallThickness, wallHeight, trayDepth], [(trayWidth + wallThickness) / 2, wallHeight / 2, 0])
         ]
         for wall in walls {
-            let node = SceneGraph.Node(parent: tray, label: "Wall", shape: .box(width: wall.size.x, height: wall.size.y, length: wall.size.z), material: wood, device: demoDevice, trs: .init(translation: wall.position))
+            let node = SceneGraph.Node(parent: tray, label: "Wall", shape: .box(width: wall.size.x, height: wall.size.y, length: wall.size.z), material: wood, trs: .init(translation: wall.position))
             node.physicsBody = .init(type: .static, shape: .boundingBox, friction: 0.4, restitution: 0.5)
         }
         // An invisible lid and invisible walls up to it, so a hard throw cannot leave the tray over the low walls.
@@ -270,7 +270,7 @@ final class DiceDemo: DemoScene {
         }
         let metals: [(SIMD4<Float>, Float)] = [([0.85, 0.65, 0.3, 1], 0.3), ([0.75, 0.76, 0.78, 1], 0.22), ([0.9, 0.5, 0.35, 1], 0.35), ([0.35, 0.36, 0.4, 1], 0.45)]
         let metal = metals[index % metals.count]
-        guard let mesh = gearMeshes[spec], let material = try? PBRSceneMaterial(device: demoDevice, baseColor: metal.0, metallic: 1, roughness: metal.1) else {
+        guard let mesh = gearMeshes[spec], let material = try? PBRSceneMaterial(baseColor: metal.0, metallic: 1, roughness: metal.1) else {
             return nil
         }
         let gear = SceneGraph.Node(label: "Gear \(teeth)", content: .mesh(mesh, material: material))

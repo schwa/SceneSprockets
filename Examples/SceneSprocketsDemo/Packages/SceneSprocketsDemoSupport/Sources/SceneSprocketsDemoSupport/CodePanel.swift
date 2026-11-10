@@ -21,7 +21,7 @@ enum CodePanel {
         let material = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .texture(texture, tint: .zero), specular: .color(0), shininess: 1, usesDiffuseTextureAlpha: true, emission: .texture(texture))
         let width = Float(image.width) / Float(renderer.scale) / pointsPerUnit
         let height = Float(image.height) / Float(renderer.scale) / pointsPerUnit
-        return SceneGraph.Node(label: "Code", shape: .plane(width: width, height: height), material: material, device: device)
+        return SceneGraph.Node(label: "Code", shape: .plane(width: width, height: height), material: material)
     }
 
     // Redraws the image as 8-bit sRGB RGBA (ImageRenderer may hand back other formats) and uploads it with mipmaps.

@@ -128,9 +128,8 @@ func boundingBoxHitsReportEntryFace() throws {
 
 @Test
 func hitsReportBarycentricsAndTextureCoordinates() throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
     // A 2x2 quad in XY: texture coordinates follow x and y.
-    let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh(device: device)
+    let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
     let node = SceneGraph.Node(content: .mesh(quad, material: material()))
     let hit = try #require(SceneGraph(root: node).hitTest(Ray3D(origin: [0.5, 0.5, 5], direction: [0, 0, -1])).first)
     #expect(abs(hit.barycentric.sum() - 1) < 1e-5)

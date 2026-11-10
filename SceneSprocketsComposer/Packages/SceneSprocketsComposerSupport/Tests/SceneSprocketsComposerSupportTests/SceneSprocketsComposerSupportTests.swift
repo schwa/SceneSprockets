@@ -417,18 +417,18 @@ struct SceneEditBoundaryTests {
     let blinnPhong = BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color([0.2, 0.4, 0.6]), specular: .color(0.5), shininess: 32)
 
     // Kind: converts keeping the color; no change when already that kind.
-    let pbr = try #require(try MaterialEdit.applying([.kind(.pbr)], to: blinnPhong, device: device) as? PBRSceneMaterial)
+    let pbr = try #require(try MaterialEdit.applying([.kind(.pbr)], to: blinnPhong) as? PBRSceneMaterial)
     #expect(EditorModel.baseColor(of: pbr) == [0.2, 0.4, 0.6])
-    #expect(try MaterialEdit.applying([.kind(.blinnPhong)], to: blinnPhong, device: device) == nil)
+    #expect(try MaterialEdit.applying([.kind(.blinnPhong)], to: blinnPhong) == nil)
 
     // Edits that do not fit the material are skipped.
-    #expect(try MaterialEdit.applying([.uniforms { $0.roughnessFactor = 1 }, .doubleSided(true)], to: blinnPhong, device: device) == nil)
+    #expect(try MaterialEdit.applying([.uniforms { $0.roughnessFactor = 1 }, .doubleSided(true)], to: blinnPhong) == nil)
     var textured = blinnPhong
     textured.diffuse = .texture(try #require(device.makeTexture(descriptor: .texture2DDescriptor(pixelFormat: .rgba8Unorm, width: 1, height: 1, mipmapped: false))))
-    #expect(try MaterialEdit.applying([.baseColor([1, 0, 0])], to: textured, device: device) == nil)
+    #expect(try MaterialEdit.applying([.baseColor([1, 0, 0])], to: textured) == nil)
 
     // Several PBR edits make one copy that keeps the textures and leaves the original alone.
-    let edited = try #require(try MaterialEdit.applying([.uniforms { $0.roughnessFactor = 0.9 }, .doubleSided(true), .baseColor([1, 0, 0])], to: pbr, device: device) as? PBRSceneMaterial)
+    let edited = try #require(try MaterialEdit.applying([.uniforms { $0.roughnessFactor = 0.9 }, .doubleSided(true), .baseColor([1, 0, 0])], to: pbr) as? PBRSceneMaterial)
     #expect(edited.pbrMaterial.uniforms.roughnessFactor == 0.9)
     #expect(edited.pbrMaterial.doubleSided)
     #expect(edited.pbrMaterial.uniforms.baseColorFactor == [1, 0, 0, 1])
@@ -436,10 +436,10 @@ struct SceneEditBoundaryTests {
     #expect(zip(edited.pbrMaterial.textureBindings, pbr.pbrMaterial.textureBindings).allSatisfy { $0.texture === $1.texture })
 
     // Presets use the color set before them; glass stays clear white.
-    let metal = try #require(try MaterialEdit.applying([.baseColor([1, 0, 0]), .preset(.metal)], to: blinnPhong, device: device) as? PBRSceneMaterial)
+    let metal = try #require(try MaterialEdit.applying([.baseColor([1, 0, 0]), .preset(.metal)], to: blinnPhong) as? PBRSceneMaterial)
     #expect(metal.pbrMaterial.uniforms.metallicFactor == 1)
     #expect(metal.pbrMaterial.uniforms.baseColorFactor == [1, 0, 0, 1])
-    let glass = try #require(try MaterialEdit.applying([.baseColor([1, 0, 0]), .preset(.glass)], to: blinnPhong, device: device) as? PBRSceneMaterial)
+    let glass = try #require(try MaterialEdit.applying([.baseColor([1, 0, 0]), .preset(.glass)], to: blinnPhong) as? PBRSceneMaterial)
     #expect(glass.pbrMaterial.uniforms.transmissionFactor == 1)
     #expect(glass.pbrMaterial.uniforms.baseColorFactor == [1, 1, 1, 1])
 }
@@ -801,25 +801,24 @@ struct SceneEditBoundaryTests {
 // #208: every parameter in the list edits through editedPBR, keeps textures, and leaves the original alone.
 @MainActor
 @Test func everyPBRParameterIsEditable() throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let original = try PBRSceneMaterial(device: device)
+    let original = try PBRSceneMaterial()
     for parameter in PBRParameters.scalars {
         let before = original.pbrMaterial.uniforms[keyPath: parameter.keyPath]
         let value = parameter.range.lowerBound + (parameter.range.upperBound - parameter.range.lowerBound) * 0.37
-        let edited = try EditorModel.editedPBR(original, device: device) { $0[keyPath: parameter.keyPath] = value }
+        let edited = try EditorModel.editedPBR(original) { $0[keyPath: parameter.keyPath] = value }
         #expect(edited.pbrMaterial.uniforms[keyPath: parameter.keyPath] == value, "\(parameter.name)")
         #expect(original.pbrMaterial.uniforms[keyPath: parameter.keyPath] == before, "\(parameter.name)")
         #expect(parameter.range.lowerBound < parameter.range.upperBound)
     }
     for parameter in PBRParameters.colors {
-        let edited = try EditorModel.editedPBR(original, device: device) { $0[keyPath: parameter.keyPath] = [0.1, 0.2, 0.3] }
+        let edited = try EditorModel.editedPBR(original) { $0[keyPath: parameter.keyPath] = [0.1, 0.2, 0.3] }
         #expect(edited.pbrMaterial.uniforms[keyPath: parameter.keyPath] == [0.1, 0.2, 0.3], "\(parameter.name)")
     }
     for parameter in PBRParameters.toggles {
-        let edited = try EditorModel.editedPBR(original, device: device) { $0[keyPath: parameter.keyPath] = 1 }
+        let edited = try EditorModel.editedPBR(original) { $0[keyPath: parameter.keyPath] = 1 }
         #expect(edited.pbrMaterial.uniforms[keyPath: parameter.keyPath] == 1, "\(parameter.name)")
     }
-    let doubleSided = try EditorModel.editedPBR(original, device: device, doubleSided: !original.pbrMaterial.doubleSided)
+    let doubleSided = try EditorModel.editedPBR(original, doubleSided: !original.pbrMaterial.doubleSided)
     #expect(doubleSided.pbrMaterial.doubleSided != original.pbrMaterial.doubleSided)
     // Names are unique within the list, which the inspector's ForEach needs.
     let names = PBRParameters.scalars.map(\.name) + PBRParameters.colors.map(\.name) + PBRParameters.toggles.map(\.name)

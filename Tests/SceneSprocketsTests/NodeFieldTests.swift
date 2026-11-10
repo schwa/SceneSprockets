@@ -180,10 +180,9 @@ func constraintsAndAccelerationStatesLiveInTheWorld() {
 
 @Test
 func subdivisionLivesInTheWorld() throws {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let triangles = SceneGraph.Shape.box().metalMesh(device: device).submeshes.reduce(0) { $0 + $1.indexCount / 3 }
+    let triangles = SceneGraph.Shape.box().metalMesh().submeshes.reduce(0) { $0 + $1.indexCount / 3 }
     let root = SceneGraph.Node()
-    let node = SceneGraph.Node(shape: .box(), material: try ShaderMaterial.normals(), device: device)
+    let node = SceneGraph.Node(shape: .box(), material: try ShaderMaterial.normals())
     root.addChild(node)
     let graph = SceneGraph(root: root)
     let entity = try #require(graph.world[node.id])

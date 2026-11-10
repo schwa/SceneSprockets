@@ -28,7 +28,7 @@ func diffuseAndAmbientTexturesAreSampled() throws {
     let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba8Unorm, width: 1, height: 1, mipmapped: false)
     let red = try #require(device.makeTexture(descriptor: descriptor))
     red.replace(region: MTLRegionMake2D(0, 0, 1, 1), mipmapLevel: 0, withBytes: [UInt8(255), 0, 0, 255], bytesPerRow: 4)
-    let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh(device: device)
+    let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
     // Ambient only: the texture, tinted to half.
     let value = try centerPixel(quad, BlinnPhongSceneMaterial(ambient: .texture(red, tint: [0.5, 0.5, 0.5]), diffuse: .color(0), specular: .color(0), shininess: 1))
     // BGRA, sRGB: linear 0.5 encodes to about 188.
@@ -39,8 +39,7 @@ func diffuseAndAmbientTexturesAreSampled() throws {
 // #36: two flat-colored quads, `near` in front. Returns the center pixel (BGRA).
 @MainActor
 private func quads(near: BlinnPhongSceneMaterial, far: BlinnPhongSceneMaterial, nearFirst: Bool = true) throws -> SIMD4<UInt8> {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh(device: device)
+    let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
     let root = SceneGraph.Node()
     _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40)))))
     let nearNode = SceneGraph.Node(trs: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: near))
@@ -123,8 +122,7 @@ func zeroNormalsFallBackToFaceNormals() throws {
 // #83: center pixel (BGRA) of a 2x2 quad at the origin, lit by a directional light shining down -Z, seen from +Z.
 @MainActor
 private func litQuadPixel(_ material: BlinnPhongSceneMaterial, quadRotation: simd_quatf = .identity) throws -> SIMD4<UInt8> {
-    let device = try #require(MTLCreateSystemDefaultDevice())
-    let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh(device: device)
+    let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
     let root = SceneGraph.Node()
     _ = SceneGraph.Node(parent: root, trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40)))))
     _ = SceneGraph.Node(parent: root, content: .light(Light(type: .directional, color: [1, 1, 1], intensity: 1)))

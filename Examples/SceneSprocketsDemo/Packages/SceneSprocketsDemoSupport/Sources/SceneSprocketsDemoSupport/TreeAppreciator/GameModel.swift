@@ -199,7 +199,7 @@ final class GameModel {
             holder.constraints = [.billboard()]
             let radius: Float = hint ? 2.4 : 0.9
             let color: SIMD3<Float> = hint ? [1.2, 1.2, 1.2] : [1.6, 1.15, 0.45]
-            let ring = SceneGraph.Node(parent: holder, label: "Torus", shape: .torus(ringRadius: radius, pipeRadius: hint ? 0.04 : 0.07), material: glowing(color), device: device, trs: Transform3D(rotation: simd_quatf(angle: .pi / 2, axis: [1, 0, 0])))
+            let ring = SceneGraph.Node(parent: holder, label: "Torus", shape: .torus(ringRadius: radius, pipeRadius: hint ? 0.04 : 0.07), material: glowing(color), trs: Transform3D(rotation: simd_quatf(angle: .pi / 2, axis: [1, 0, 0])))
             ring.content = ring.content.withoutShadows
             holder.trs.scale = SIMD3(repeating: 0.01)
             if hint {

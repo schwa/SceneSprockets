@@ -2,6 +2,7 @@ import Foundation
 import Metal
 import MetalSprocketsPBR
 import MetalSprocketsPBRShaders
+import MetalSupport
 import SceneSprockets
 
 // Saved by SceneArchive. The uniforms are stored field by field (see PBRUniformsArchive); archives from before that
@@ -40,7 +41,7 @@ extension PBRSceneMaterial: ArchivableMaterial {
 
     public init(from decoder: Decoder) throws {
         let context = try decoder.sceneArchive
-        let device = try context.device
+        let device = _MTLCreateSystemDefaultDevice()
         let container = try decoder.container(keyedBy: ArchiveKeys.self)
         let uniforms: PBRMaterialUniforms
         if container.contains(.parameters) {
@@ -186,6 +187,6 @@ extension PBREnvironment: ArchivableEnvironmentMap {
         }
         let data = try context.data(for: reference)
         let rgba = data.withUnsafeBytes { Array($0.bindMemory(to: Float16.self)) }
-        return try PBREnvironment(source: .equirectangularPixels(width: reference.width, height: reference.height, rgba: rgba), device: try context.device)
+        return try PBREnvironment(source: .equirectangularPixels(width: reference.width, height: reference.height, rgba: rgba), device: _MTLCreateSystemDefaultDevice())
     }
 }
