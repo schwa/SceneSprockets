@@ -8100,3 +8100,65 @@ Apple's SwiftUI views that show complex models use different patterns. Review th
 Areas to look at: initializer shape, model ownership (observable model vs. value), bindings for camera and selection, result-builder content, environment-based configuration through view modifiers, and option sets vs. separate modifiers. Related: #362.
 
 ---
+
+## 364: Investigate a result-builder API for building node trees
+
++++
+status: new
+priority: low
+kind: task
+created: 2026-11-10T18:39:06Z
++++
+
+Building a hierarchy today means making each node and attaching it to its parent one at a time:
+
+```swift
+let root = SceneGraph.Node(label: "Root")
+let planet = root.addChild(SceneGraph.Node(shape: .sphere(radius: 1), material: blue))
+let moonPivot = planet.addChild(SceneGraph.Node(label: "Moon Pivot"))
+moonPivot.addChild(SceneGraph.Node(shape: .sphere(radius: 0.3), material: grey))
+```
+
+The tree shape is only implied by which variable each `addChild` is called on. Investigate a result-builder style where the code nests like the tree:
+
+```swift
+let root = Node(label: "Root") {
+    Node(shape: .sphere(radius: 1), material: blue) {
+        Node(label: "Moon Pivot") {
+            Node(shape: .sphere(radius: 0.3), material: grey)
+        }
+    }
+    Node(shape: .floor(), material: grey)
+}
+```
+
+Questions to answer:
+- How to get a reference to a node inside the builder (for actions, constraints such as `lookAt(target:)`, or later changes).
+- `if`, `for` and optional support in the builder.
+- How transforms, actions and constraints attach (initializer arguments vs. modifier-style methods).
+- How it fits with the existing `children:` initializer parameter.
+
+Related: #361, #363.
+
+---
+
+## 365: SceneView debug options cannot be turned on from environment variables
+
++++
+status: new
+priority: low
+kind: enhancement
+created: 2026-11-10T18:40:38Z
++++
+
+The debug-oriented `SceneView.Options` can only be set in code:
+
+- `.showsStatistics`
+- `.showsFrameTiming`
+- `.disablesFramebufferOnly`
+
+To turn one on for a run (for example in a demo, a test app, or a GPU capture) you have to edit and rebuild the call site.
+
+MetalSprockets already lets some RenderView debug settings come from environment variables through `SystemEnvironment` (for example `MS_RENDERVIEW_LOG_FRAME`, `MS_LOGGING`, `MS_VERBOSE`, `MS_FATALERROR_ON_THROW`), with view modifiers overriding the default. SceneView options have no equivalent.
+
+---
