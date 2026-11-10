@@ -21,15 +21,15 @@
       "kind": "folder",
       "path": "Configuration",
       "target-membership": [
-        "HelloWorld",
+        "SceneSprocketTutorials",
       ],
       "membership-exceptions": [
         {
-          "target": "HelloWorld",
+          "target": "SceneSprocketTutorials",
           "exclusions": [
-            "HelloWorld-Debug.xcconfig",
-            "HelloWorld-Release.xcconfig",
-            "HelloWorld-Shared.xcconfig",
+            "SceneSprocketTutorials-Debug.xcconfig",
+            "SceneSprocketTutorials-Release.xcconfig",
+            "SceneSprocketTutorials-Shared.xcconfig",
             "Project-Debug.xcconfig",
             "Project-Release.xcconfig",
             "Project-Shared.xcconfig",
@@ -37,24 +37,24 @@
         },
       ],
     },
-    { "kind": "folder", "path": "HelloWorld", "target-membership": [ "HelloWorld" ] },
+    { "kind": "folder", "path": "SceneSprocketTutorials", "target-membership": [ "SceneSprocketTutorials" ] },
     {
       "kind": "group",
       "name": "Products",
       "children": [
-        { "path": "<PRODUCTS>/HelloWorld.app", "id": "451594472F64A8DC005F944D", "type": "wrapper.application", "index": false },
+        { "path": "<PRODUCTS>/SceneSprocketTutorials.app", "id": "451594472F64A8DC005F944D", "type": "wrapper.application", "index": false },
       ],
     },
   ],
   "targets": [
     {
-      "name": "HelloWorld",
+      "name": "SceneSprocketTutorials",
       "id": "451594462F64A8DC005F944D",
-      "product": "Products/HelloWorld.app",
+      "product": "Products/SceneSprocketTutorials.app",
       "product-type": "application",
       "specialized-configurations": [
-        { "name": "Debug", "file": { "anchor": "Configuration", "relative-path": "HelloWorld-Debug.xcconfig" } },
-        { "name": "Release", "file": { "anchor": "Configuration", "relative-path": "HelloWorld-Release.xcconfig" } },
+        { "name": "Debug", "file": { "anchor": "Configuration", "relative-path": "SceneSprocketTutorials-Debug.xcconfig" } },
+        { "name": "Release", "file": { "anchor": "Configuration", "relative-path": "SceneSprocketTutorials-Release.xcconfig" } },
       ],
       "build-phases": [
         "compile-sources",

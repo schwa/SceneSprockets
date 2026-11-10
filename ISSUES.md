@@ -8162,3 +8162,25 @@ To turn one on for a run (for example in a demo, a test app, or a GPU capture) y
 MetalSprockets already lets some RenderView debug settings come from environment variables through `SystemEnvironment` (for example `MS_RENDERVIEW_LOG_FRAME`, `MS_LOGGING`, `MS_VERBOSE`, `MS_FATALERROR_ON_THROW`), with view modifiers overriding the default. SceneView options have no equivalent.
 
 ---
+
+## 366: Concentric banding artifacts on ground plane in SceneSprocketTutorials example
+
++++
+status: new
+priority: medium
+kind: bug
+created: 2026-11-10T20:24:01Z
++++
+
+The ground plane in Examples/SceneSprocketTutorials shows visible banding: wide concentric arc-shaped bands around the point light, plus fine stripe/moiré lines across the whole plane, most visible in the lower (near-camera) area.
+
+Steps to reproduce:
+1. Build and run Examples/SceneSprocketTutorials.
+2. Look at the lit ground plane under the sphere light.
+
+Expected: smooth lighting gradient across the plane.
+Actual: stepped concentric bands and fine striping across the plane.
+
+Screenshot: ~/Library/Application Support/CleanShot/media/media_I9GDftQ8kv/Screenshot 2026-11-10 at 12.23.31@2x.png
+
+---
