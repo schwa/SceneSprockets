@@ -1,0 +1,35 @@
+@Tutorials(name: "SceneSprockets Tutorials") {
+    @Intro(title: "Build 3D scenes with SceneSprockets") {
+        Learn the basics of SceneSprockets. Draw a sphere, build a node hierarchy, add lights and shadows, animate nodes with actions, and control nodes with constraints.
+
+        The finished code for each tutorial is in the SceneSprocketTutorials example app in the `Examples` folder.
+
+        @Image(source: "tutorial-05-constraints.png", alt: "A lit floor with a glowing bulb, a cone that points at the bulb, and 3D text.")
+    }
+
+    @Chapter(name: "Scene graph basics") {
+        Put shapes on screen and arrange them in a tree of nodes.
+
+        @Image(source: "tutorial-02-hierarchy.png", alt: "A blue planet with a moon.")
+
+        @TutorialReference(tutorial: "doc:01-Sphere")
+        @TutorialReference(tutorial: "doc:02-Hierarchy")
+    }
+
+    @Chapter(name: "Lighting") {
+        Add lights to a scene and make them cast shadows.
+
+        @Image(source: "tutorial-03-lights.png", alt: "A sphere, a box and a teapot on a floor, lit by a spot light.")
+
+        @TutorialReference(tutorial: "doc:03-Lights")
+    }
+
+    @Chapter(name: "Motion") {
+        Animate nodes with actions, and control them with constraints.
+
+        @Image(source: "tutorial-04-actions.png", alt: "A box, a torus and a teapot that move on a floor.")
+
+        @TutorialReference(tutorial: "doc:04-Actions")
+        @TutorialReference(tutorial: "doc:05-Constraints")
+    }
+}

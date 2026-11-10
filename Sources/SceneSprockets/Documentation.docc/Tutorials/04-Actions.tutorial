@@ -1,0 +1,41 @@
+@Tutorial(time: 15) {
+    @Intro(title: "Animate nodes with actions") {
+        Actions animate nodes over time, like `SKAction` and `SCNAction`. You can combine them in sequences and groups, ease them, and run your own code each frame.
+
+        @Image(source: "tutorial-04-actions.png", alt: "A box, a torus and a teapot that move on a floor.")
+    }
+
+    @Section(title: "Combine actions") {
+        @ContentAndMedia {
+            Start from a lit floor, then add three nodes that each use different kinds of actions.
+
+            @Image(source: "tutorial-04-actions.png", alt: "A box, a torus and a teapot that move on a floor.")
+        }
+
+        @Steps {
+            @Step {
+                Start with the lights and floor from the last tutorial, and a fixed camera. The camera keeps the view still while the nodes move.
+
+                @Code(name: "Tutorial4Actions.swift", file: "tutorial-04-01.swift")
+            }
+
+            @Step {
+                Make a box that hops. `sequence` runs actions one after another. `group` runs them at the same time. `timingMode` eases an action in or out, and `reversed()` plays an action backward.
+
+                @Code(name: "Tutorial4Actions.swift", file: "tutorial-04-02.swift")
+            }
+
+            @Step {
+                Add a glass torus that tumbles. `fadeOut` and `fadeIn` change the node's opacity.
+
+                @Code(name: "Tutorial4Actions.swift", file: "tutorial-04-03.swift")
+            }
+
+            @Step {
+                Add a teapot that wobbles. A `custom` action calls your code every frame with the elapsed time.
+
+                @Code(name: "Tutorial4Actions.swift", file: "tutorial-04-04.swift")
+            }
+        }
+    }
+}

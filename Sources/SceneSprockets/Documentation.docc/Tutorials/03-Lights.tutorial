@@ -1,0 +1,35 @@
+@Tutorial(time: 10) {
+    @Intro(title: "Add lights and shadows") {
+        Lights are nodes, so you place and aim them with the node's transform. Lights can cast shadows.
+
+        @Image(source: "tutorial-03-lights.png", alt: "A sphere, a box and a teapot on a floor, with shadows.")
+    }
+
+    @Section(title: "Light a scene") {
+        @ContentAndMedia {
+            Put some shapes on a floor, then light them with a point light and a spot light.
+
+            @Image(source: "tutorial-03-lights.png", alt: "A sphere, a box and a teapot on a floor, with shadows.")
+        }
+
+        @Steps {
+            @Step {
+                Add a floor and three shapes. Give `SceneView` a `SceneGraphShadows` value to turn on shadows. This scene does not use `.autoenablesDefaultLighting`, so it is dark until you add lights.
+
+                @Code(name: "Tutorial3Lights.swift", file: "tutorial-03-01.swift")
+            }
+
+            @Step {
+                Add a point light. A point light shines in all directions. This one is a soft fill light, so it sets `castsShadow` to `false`.
+
+                @Code(name: "Tutorial3Lights.swift", file: "tutorial-03-02.swift")
+            }
+
+            @Step {
+                Add a spot light above the scene. A spot light shines in a cone along its -Z axis, so `look(at:)` aims it. Lights cast shadows by default.
+
+                @Code(name: "Tutorial3Lights.swift", file: "tutorial-03-03.swift")
+            }
+        }
+    }
+}

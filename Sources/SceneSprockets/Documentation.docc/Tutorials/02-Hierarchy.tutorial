@@ -1,0 +1,41 @@
+@Tutorial(time: 10) {
+    @Intro(title: "Build a hierarchy and add a camera") {
+        A child node's transform is relative to its parent. Move, turn or scale a parent, and its children follow. A camera is a node too.
+
+        @Image(source: "tutorial-02-hierarchy.png", alt: "A blue planet with a small moon.")
+    }
+
+    @Section(title: "Orbit a moon around a planet") {
+        @ContentAndMedia {
+            Make a planet that spins, and a moon that orbits it. Then add a camera to fix the point of view.
+
+            @Image(source: "tutorial-02-hierarchy.png", alt: "A blue planet with a small moon.")
+        }
+
+        @Steps {
+            @Step {
+                Add two helpers. `addShape(_:_:at:)` adds a child node with a shape at a position. `material(_:)` makes a Blinn-Phong material from one color.
+
+                @Code(name: "Helpers.swift", file: "tutorial-02-helpers.swift")
+            }
+
+            @Step {
+                Add a planet. `run(_:)` starts an action on a node, and `repeatForever` makes it loop. The planet turns once every 20 seconds.
+
+                @Code(name: "Tutorial2Hierarchy.swift", file: "tutorial-02-01.swift")
+            }
+
+            @Step {
+                Add a pivot node as a child of the planet, and put the moon 1.8 units out from the pivot. When the pivot turns, the moon orbits the planet.
+
+                @Code(name: "Tutorial2Hierarchy.swift", file: "tutorial-02-02.swift")
+            }
+
+            @Step {
+                Without a camera, `SceneView` frames the bounds of the scene, so the view moves as the moon moves. Add a camera node, and aim it with `look(at:)`. `SceneView` uses the first camera node in the scene.
+
+                @Code(name: "Tutorial2Hierarchy.swift", file: "tutorial-02-03.swift")
+            }
+        }
+    }
+}

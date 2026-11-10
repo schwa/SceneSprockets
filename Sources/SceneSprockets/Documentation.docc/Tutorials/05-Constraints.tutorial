@@ -1,0 +1,41 @@
+@Tutorial(time: 10) {
+    @Intro(title: "Control nodes with constraints") {
+        Constraints change a node's transform every frame, after actions run. Use them to aim a node at another node, or to turn a node to face the camera.
+
+        @Image(source: "tutorial-05-constraints.png", alt: "A glowing bulb, a cone that points at it, and 3D text above a floor.")
+    }
+
+    @Section(title: "Aim and face nodes") {
+        @ContentAndMedia {
+            Make a glowing bulb that orbits the scene, a cone that points at it, and a title that faces the camera.
+
+            @Image(source: "tutorial-05-constraints.png", alt: "A glowing bulb, a cone that points at it, and 3D text above a floor.")
+        }
+
+        @Steps {
+            @Step {
+                Start with the lights, floor and camera from the last tutorial.
+
+                @Code(name: "Tutorial5Constraints.swift", file: "tutorial-05-01.swift")
+            }
+
+            @Step {
+                Add a bulb. The bulb node is a warm point light, and its child is a sphere with an emissive material, so it glows. A pivot moves the bulb in a circle.
+
+                @Code(name: "Tutorial5Constraints.swift", file: "tutorial-05-02.swift")
+            }
+
+            @Step {
+                Add a pointer with a `lookAt(target:)` constraint. The constraint turns the pointer so its -Z axis points at the bulb. The cone shape points along +Y, so turn it onto -Z.
+
+                @Code(name: "Tutorial5Constraints.swift", file: "tutorial-05-03.swift")
+            }
+
+            @Step {
+                Add 3D text with a `billboard(freeAxes:)` constraint. The text turns around its Y axis to face the camera.
+
+                @Code(name: "Tutorial5Constraints.swift", file: "tutorial-05-04.swift")
+            }
+        }
+    }
+}
