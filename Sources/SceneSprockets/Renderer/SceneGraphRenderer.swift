@@ -28,6 +28,8 @@ public struct SceneGraphRenderContext {
     public internal(set) var lightShadowSlices: [Range<Int>] = []
     /// When set, renderers output this material value instead of lighting (#195).
     public internal(set) var materialChannel: SceneGraphMaterialChannel?
+    /// The device that draws the frame: the render view's device inside ``SceneGraphElement``.
+    public var device: MTLDevice = _MTLCreateSystemDefaultDevice()
 }
 
 /// A renderer for one material family.
@@ -89,6 +91,9 @@ public struct SceneGraphElement: Element {
     @MSEnvironment(\.renderPassDescriptor)
     private var renderPassDescriptor
 
+    @MSEnvironment(\.device)
+    private var device
+
     /// Creates an element that draws a scene graph.
     ///
     /// - Parameters:
@@ -126,6 +131,9 @@ public struct SceneGraphElement: Element {
         get throws {
             guard var context = makeRenderContext(sceneGraph: sceneGraph, camera: camera, cameraMatrix: cameraMatrix, aspectRatio: aspectRatio, defaultCamera: defaultCamera, cameraOverride: cameraOverride, defaultLight: defaultLight) else {
                 return EmptyElement().eraseToAnyElement()
+            }
+            if let device {
+                context.device = device
             }
             let cameraPosition = context.cameraMatrix.columns.3.xyz
             context.materialChannel = debugMode == nil ? materialChannel : nil

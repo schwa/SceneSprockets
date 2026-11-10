@@ -7906,12 +7906,13 @@ Resolve the MTLDevice when the scene is placed in a RenderView (or other render 
 ## 357: PBRMaterialRenderer requires a MTLDevice at init
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: effort:s, area:renderer
 created: 2026-11-10T17:31:50Z
-updated: 2026-11-10T17:36:57Z
+updated: 2026-11-10T17:45:14Z
+closed: 2026-11-10T17:45:14Z
 +++
 
 `PBRMaterialRenderer(device:)` (`Sources/SceneSprocketsPBR/PBRSceneGraph.swift:280`) requires a device, unlike `BlinnPhongMaterialRenderer()` and `ShaderMaterialRenderer()`. Renderer lists end up like:

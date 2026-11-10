@@ -211,7 +211,7 @@ func pbrShadowsDimOnlyTheirOwnLight() throws {
             node.content = .mesh(mesh, materials: [gray], castsShadow: castsShadow, receivesShadow: receivesShadow)
         }
     }
-    let renderers: [any SceneGraphMaterialRenderer] = [PBRMaterialRenderer(device: device, environmentIntensity: 0)]
+    let renderers: [any SceneGraphMaterialRenderer] = [PBRMaterialRenderer(environmentIntensity: 0)]
     let shadows = SceneGraphShadows(intensity: 1)
     #expect(try brightness(sceneGraph, at: pixel, shadows: shadows, renderers: renderers) < 10)
     _ = SceneGraph.Node(parent: sceneGraph.root, transform: pose(eye: [6, 3, 0], target: [-1, 0, 0]), content: .light(Light(type: .directional, color: [1, 1, 1], intensity: 1)))

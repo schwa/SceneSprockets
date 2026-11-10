@@ -7,7 +7,7 @@ Draw a scene graph with one or more material renderers, and add shadows, fog and
 ``SceneView`` is the simplest way to show a scene. For more control, put a ``SceneGraphElement`` in a MetalSprockets `RenderView`. Give it one renderer for each material family that the scene uses:
 
 ```swift
-@State private var pbrRenderer = PBRMaterialRenderer(device: MTLCreateSystemDefaultDevice()!)
+@State private var pbrRenderer = PBRMaterialRenderer()
 
 RenderView { _, size in
     SceneGraphElement(

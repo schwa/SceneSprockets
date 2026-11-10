@@ -104,7 +104,7 @@ func pbrBoxIsDrawnAtCenter() throws {
     let material = try PBRSceneMaterial(device: device, baseColor: [0.1, 0.8, 0.1, 1], metallic: 0, roughness: 0.5)
     let (sceneGraph, _) = try makeScene { .mesh($0, material: material) }
     let renderer = try OffscreenRenderer(size: size)
-    let element = SceneGraphElement(sceneGraph: sceneGraph, aspectRatio: 1, renderers: [PBRMaterialRenderer(device: device)])
+    let element = SceneGraphElement(sceneGraph: sceneGraph, aspectRatio: 1, renderers: [PBRMaterialRenderer()])
     let texture = try renderer.render(element).texture
 
     let center = pixel(texture, x: 32, y: 32)
@@ -124,7 +124,7 @@ func mixedRenderersShareOnePass() throws {
     _ = SceneGraph.Node(parent: root, transform: translation(0, 2, 4), content: .light(Light(type: .point, color: [1, 1, 1], intensity: 5)))
     _ = SceneGraph.Node(parent: root, transform: translation(-1.2, 0, 0), content: .mesh(box, material: blinnPhong))
     _ = SceneGraph.Node(parent: root, transform: translation(1.2, 0, 0), content: .mesh(box, material: pbr))
-    let element = SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(), PBRMaterialRenderer(device: device)])
+    let element = SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(), PBRMaterialRenderer()])
 
     let texture = try OffscreenRenderer(size: size).render(element).texture
     let left = pixel(texture, x: 20, y: 32)

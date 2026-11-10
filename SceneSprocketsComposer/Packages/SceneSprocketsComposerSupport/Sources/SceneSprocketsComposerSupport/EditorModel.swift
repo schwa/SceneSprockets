@@ -238,9 +238,9 @@ public final class EditorModel {
         }
     }
 
-    public init(sceneGraph: SceneGraph, device: (any MTLDevice)? = nil) {
+    public init(sceneGraph: SceneGraph) {
         self.sceneGraph = sceneGraph
-        renderers = [BlinnPhongMaterialRenderer(), PBRMaterialRenderer(device: device ?? systemDefaultDevice())]
+        renderers = [BlinnPhongMaterialRenderer(), PBRMaterialRenderer()]
         frameAll()
         // Scales with the camera like the scene (#171), sized from the scene so it suits small and large scenes.
         baseGizmoWorldSize = sceneGraph.bounds.map { max(simd_distance($0.min, $0.max) * 0.15, 0.01) } ?? 1

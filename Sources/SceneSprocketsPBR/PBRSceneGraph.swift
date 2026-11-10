@@ -252,8 +252,6 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
         lhs === rhs
     }
 
-    /// The device for the renderer's buffers and textures.
-    public var device: MTLDevice
     /// The image-based lighting that the renderer uses when the scene graph's environment has no map.
     public var environment: PBREnvironment
     /// The strength of ``environment``.
@@ -263,6 +261,8 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
     // One model per entry set (SceneGraphElement may split entries into batches), for the current structure.
     private var cachedModels: [EntrySetKey: (model: PBRModel, keys: [PBRModel.Primitive.Key?])] = [:]
     private var cachedRevision: Int?
+    // The caches hold GPU resources for this device; a frame on another device clears them.
+    private var cachedDevice: MTLDevice?
     // Faded copies from the last frame, reused while a node's opacity holds still.
     private var fadedMaterials: [FadeKey: PBRMaterial] = [:]
     // Reused while the view size holds still.
@@ -273,12 +273,10 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
     /// Creates a PBR renderer.
     ///
     /// - Parameters:
-    ///   - device: The device for the renderer's buffers and textures.
     ///   - environment: The lighting to use when the scene graph's environment has no map.
     ///   - environmentIntensity: The strength of `environment`.
     ///   - exposure: The exposure, as a multiplier of the light before tone mapping.
-    public init(device: MTLDevice, environment: PBREnvironment = .studio, environmentIntensity: Float = 1, exposure: Float = 1) {
-        self.device = device
+    public init(environment: PBREnvironment = .studio, environmentIntensity: Float = 1, exposure: Float = 1) {
         self.environment = environment
         self.environmentIntensity = environmentIntensity
         self.exposure = exposure
@@ -292,7 +290,8 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
     // transform and weight changes go through the pose.
     // Node opacity changes only rebuild when an entry starts or stops fading (it changes pass); otherwise
     // `materialOverrides(for:keys:)` applies the current opacity.
-    func modelAndKeys(for entries: [SceneGraph.MeshEntry], layout: PBRNodeLayout, structureRevision: Int) throws -> (model: PBRModel, keys: [PBRModel.Primitive.Key?]) {
+    func modelAndKeys(for entries: [SceneGraph.MeshEntry], layout: PBRNodeLayout, structureRevision: Int, device: MTLDevice) throws -> (model: PBRModel, keys: [PBRModel.Primitive.Key?]) {
+        useDevice(device)
         if cachedRevision != structureRevision {
             cachedModels.removeAll()
             cachedRevision = structureRevision
@@ -306,11 +305,21 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
         return built
     }
 
-    func model(for entries: [SceneGraph.MeshEntry], structureRevision: Int) throws -> PBRModel {
-        try modelAndKeys(for: entries, layout: PBRNodeLayout(entries: entries), structureRevision: structureRevision).model
+    private func useDevice(_ device: MTLDevice) {
+        guard cachedDevice !== device else {
+            return
+        }
+        cachedModels.removeAll()
+        fadedMaterials.removeAll()
+        transmissionTarget = nil
+        cachedDevice = device
     }
 
-    func materialOverrides(for entries: [SceneGraph.MeshEntry], keys: [PBRModel.Primitive.Key?]) throws -> PBRModel.MaterialOverrides {
+    func model(for entries: [SceneGraph.MeshEntry], structureRevision: Int, device: MTLDevice = _MTLCreateSystemDefaultDevice()) throws -> PBRModel {
+        try modelAndKeys(for: entries, layout: PBRNodeLayout(entries: entries), structureRevision: structureRevision, device: device).model
+    }
+
+    func materialOverrides(for entries: [SceneGraph.MeshEntry], keys: [PBRModel.Primitive.Key?], device: MTLDevice) throws -> PBRModel.MaterialOverrides {
         var overrides: PBRModel.MaterialOverrides = [:]
         var materials: [FadeKey: PBRMaterial] = [:]
         for (entry, key) in zip(entries, keys) {
@@ -338,7 +347,7 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
 
     func makeRenderer(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, transmissionTarget: PBRTransmissionTarget?) throws -> PBRRenderer {
         let layout = PBRNodeLayout(entries: entries)
-        let (model, keys) = try modelAndKeys(for: entries, layout: layout, structureRevision: context.revision.structure)
+        let (model, keys) = try modelAndKeys(for: entries, layout: layout, structureRevision: context.revision.structure, device: context.device)
         // Camera-relative (#254): poses and lights are shifted by the camera position and the view keeps only its
         // rotation, so the PBR shaders work on small values far from the world origin.
         let cameraPosition = context.cameraMatrix.columns.3.xyz
@@ -351,7 +360,7 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
             pose: layout.pose(cameraPosition: cameraPosition),
             transmissionTarget: transmissionTarget
         )
-        renderer.materialOverrides = try materialOverrides(for: entries, keys: keys)
+        renderer.materialOverrides = try materialOverrides(for: entries, keys: keys, device: context.device)
         if let channel = context.materialChannel {
             renderer.debugView = Self.debugView(for: channel)
         }
@@ -380,10 +389,11 @@ extension PBRMaterialRenderer: SceneGraphPrePassRenderer {
             return nil
         }
         let target: PBRTransmissionTarget
+        useDevice(context.device)
         if let transmissionTarget, transmissionTarget.width == viewSize.width, transmissionTarget.height == viewSize.height {
             target = transmissionTarget
         } else {
-            target = try PBRTransmissionTarget(device: device, width: viewSize.width, height: viewSize.height)
+            target = try PBRTransmissionTarget(device: context.device, width: viewSize.width, height: viewSize.height)
             transmissionTarget = target
         }
         frameTransmissionTarget = target

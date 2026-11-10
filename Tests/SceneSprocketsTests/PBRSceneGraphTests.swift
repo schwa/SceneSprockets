@@ -50,7 +50,7 @@ func pbrModelIsReusedUntilStructureChanges() throws {
     let root = SceneGraph.Node()
     let node = SceneGraph.Node(parent: root, content: .mesh(box, material: material))
     let sceneGraph = SceneGraph(root: root)
-    let renderer = PBRMaterialRenderer(device: device)
+    let renderer = PBRMaterialRenderer()
 
     let first = try renderer.model(for: sceneGraph.meshEntries(), structureRevision: sceneGraph.revision.structure)
     node.trs.translation = [1, 0, 0]
@@ -127,7 +127,7 @@ func pbrRenderStateIsApplied() throws {
         _ = SceneGraph.Node(parent: root, content: .mesh(quad, material: material))
         let graph = SceneGraph(root: root)
         graph.environment.background = .color([0, 0, 0, 1])
-        let element = SceneGraphElement(sceneGraph: graph, aspectRatio: 1, renderers: [PBRMaterialRenderer(device: device, environmentIntensity: 0)])
+        let element = SceneGraphElement(sceneGraph: graph, aspectRatio: 1, renderers: [PBRMaterialRenderer(environmentIntensity: 0)])
         let texture = try OffscreenRenderer(size: CGSize(width: 16, height: 16)).render(element).texture
         var value = SIMD4<UInt8>.zero
         texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(8, 8, 1, 1), mipmapLevel: 0)

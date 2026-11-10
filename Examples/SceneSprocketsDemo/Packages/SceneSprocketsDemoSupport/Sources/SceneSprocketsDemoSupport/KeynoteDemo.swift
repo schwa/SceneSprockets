@@ -99,7 +99,7 @@ public final class KeynoteDemo: DemoScene {
         root.addChild(cameraNode)
         super.init(
             sceneGraph: SceneGraph(root: root),
-            renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0.05, 0.05, 0.07]), PBRMaterialRenderer(device: demoDevice), ShaderMaterialRenderer(), PointCloudRenderer()],
+            renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0.05, 0.05, 0.07]), PBRMaterialRenderer(), ShaderMaterialRenderer(), PointCloudRenderer()],
             cameraMatrix: .camera(eye: Self.eye(for: 0), target: Self.target(for: 0)),
             parameters: [.choice("Slide", Self.titles), .toggle("Auto-advance", default: false), .slider("Seconds per Slide", 2...15, default: 6)]
         )

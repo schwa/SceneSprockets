@@ -32,7 +32,7 @@ public enum DocumentPreview {
             sceneGraph: sceneGraph,
             cameraMatrix: sceneGraph.cameraNodes().first?.worldTransform ?? camera.matrix,
             aspectRatio: Float(width) / Float(height),
-            renderers: [BlinnPhongMaterialRenderer(), PBRMaterialRenderer(device: device)],
+            renderers: [BlinnPhongMaterialRenderer(), PBRMaterialRenderer()],
             // Without a camera node the element draws nothing unless it has a default camera.
             // Like SceneView.defaultCamera, which is main-actor isolated.
             defaultCamera: Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(60), depthMode: .standard(zClip: 0.01 ... 1_000))),

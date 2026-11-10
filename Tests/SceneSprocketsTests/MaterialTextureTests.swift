@@ -60,7 +60,7 @@ func pbrBaseColorTextureLoadsFromImage() throws {
     let material = try PBRSceneMaterial(device: device, textures: .init(baseColor: green))
     #expect(material.pbrMaterial.uniforms.baseColor.enabled == 1)
     #expect(material.pbrMaterial.uniforms.normal.enabled == 0)
-    let value = try centerPixel(material, renderer: PBRMaterialRenderer(device: device), channel: .baseColor, device: device)
+    let value = try centerPixel(material, renderer: PBRMaterialRenderer(), channel: .baseColor, device: device)
     #expect(value.y > 200 && value.x < 40 && value.z < 40)
 }
 
@@ -71,7 +71,7 @@ func colorTexturesKeepTheirValues() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let grey = try MaterialTexture.load(solidImage(red: 0.5, green: 0.5, blue: 0.5), device: device)
     let material = try PBRSceneMaterial(device: device, textures: .init(baseColor: grey))
-    let value = try centerPixel(material, renderer: PBRMaterialRenderer(device: device), channel: .baseColor, device: device)
+    let value = try centerPixel(material, renderer: PBRMaterialRenderer(), channel: .baseColor, device: device)
     #expect(abs(Int(value.y) - 128) < 12, "\(value)")
 }
 

@@ -82,7 +82,7 @@ final class DiceDemo: DemoScene {
         super.init(
             sceneGraph: SceneGraph(root: root),
             // Metal, glass and pearl dice show their environment, so it is brighter than for plastic.
-            renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0.08, 0.07, 0.06]), PBRMaterialRenderer(device: demoDevice, environmentIntensity: 1)],
+            renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0.08, 0.07, 0.06]), PBRMaterialRenderer(environmentIntensity: 1)],
             cameraMatrix: .camera(eye: eye, target: target),
             parameters: [
                 .choice("Dice Set", Self.sets.map(\.name), default: 1),

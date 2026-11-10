@@ -63,7 +63,7 @@ private func pbrOverBlue(opacity: Float, renderer pbrRenderer: PBRMaterialRender
     root.addChild(fader)
     fader.opacity = opacity
     _ = SceneGraph.Node(parent: root, content: .mesh(quad, material: BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0, 0, 1]))))
-    let pbrRenderer = pbrRenderer ?? PBRMaterialRenderer(device: device)
+    let pbrRenderer = pbrRenderer ?? PBRMaterialRenderer()
     let graph = SceneGraph(root: root)
     let texture = try OffscreenRenderer(size: CGSize(width: 16, height: 16)).render(SceneGraphElement(sceneGraph: graph, aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: .zero), pbrRenderer])).texture
     var value = SIMD4<UInt8>.zero

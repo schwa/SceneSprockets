@@ -29,7 +29,7 @@ private func glass(behind: Bool, blinnPhong: Bool = false) throws -> SIMD4<UInt8
         _ = SceneGraph.Node(parent: root, content: .mesh(quad, material: green))
     }
     let graph = SceneGraph(root: root)
-    let element = SceneGraphElement(sceneGraph: graph, aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: .zero), PBRMaterialRenderer(device: device)])
+    let element = SceneGraphElement(sceneGraph: graph, aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: .zero), PBRMaterialRenderer()])
     let texture = try OffscreenRenderer(size: CGSize(width: 16, height: 16)).render(element).texture
     var value = SIMD4<UInt8>.zero
     texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(8, 8, 1, 1), mipmapLevel: 0)
@@ -52,7 +52,7 @@ private func glassOverLitQuad(lightReachesQuad: Bool) throws -> SIMD4<UInt8> {
     let light = SceneGraph.Node(parent: root, content: .light(Light(type: .directional, color: [1, 0, 0], intensity: 10)))
     // Never the glass (mask 1), whose smooth surface would reflect the light straight at the camera.
     light.lightCategoryBitMask = lightReachesQuad ? 2 : 4
-    let renderer = PBRMaterialRenderer(device: device, environmentIntensity: 0)
+    let renderer = PBRMaterialRenderer(environmentIntensity: 0)
     let element = SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [renderer])
     let texture = try OffscreenRenderer(size: CGSize(width: 16, height: 16)).render(element).texture
     var value = SIMD4<UInt8>.zero

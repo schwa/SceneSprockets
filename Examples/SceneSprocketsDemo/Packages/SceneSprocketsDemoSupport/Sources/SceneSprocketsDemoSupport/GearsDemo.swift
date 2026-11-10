@@ -34,7 +34,7 @@ final class GearsDemo: DemoScene {
         train = SceneGraph.Node(parent: root, label: "Gear Train")
         super.init(
             sceneGraph: SceneGraph(root: root),
-            renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0.05, 0.05, 0.06]), PBRMaterialRenderer(device: demoDevice)],
+            renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0.05, 0.05, 0.06]), PBRMaterialRenderer()],
             cameraMatrix: .camera(eye: eye, target: target),
             parameters: [
                 .slider("Driver Teeth", 8...48, default: 24),
