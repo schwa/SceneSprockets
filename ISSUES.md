@@ -8180,12 +8180,13 @@ MetalSprockets already lets some RenderView debug settings come from environment
 ## 366: Concentric banding artifacts on ground plane in SceneSprocketTutorials example
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: effort:m, area:renderer
 created: 2026-11-10T20:24:01Z
-updated: 2026-11-11T15:58:24Z
+updated: 2026-11-11T16:04:30Z
+closed: 2026-11-11T16:04:30Z
 +++
 
 The ground plane in Examples/SceneSprocketTutorials shows visible banding: wide concentric arc-shaped bands around the point light, plus fine stripe/moiré lines across the whole plane, most visible in the lower (near-camera) area.
@@ -8198,6 +8199,8 @@ Expected: smooth lighting gradient across the plane.
 Actual: stepped concentric bands and fine striping across the plane.
 
 Screenshot: ~/Library/Application Support/CleanShot/media/media_I9GDftQ8kv/Screenshot 2026-11-10 at 12.23.31@2x.png
+
+- `2026-11-11T16:04:30Z`: Shadow acne: with softness > 1 the PCF kernel compares the receiver depth against texels up to softness away, which the fixed slope bias did not cover, so the floor shadowed itself. Slope bias now scales with softness.
 
 ---
 

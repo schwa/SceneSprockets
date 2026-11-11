@@ -40,7 +40,7 @@ public final class SceneGraphShadows {
     public var resolution: Int
     /// The constant depth bias when the shadow map is drawn.
     public var depthBias: Float
-    /// The depth bias that increases with the slope of the surface.
+    /// The depth bias that increases with the slope of the surface, per texel of `softness`.
     public var slopeScale: Float
     /// World-space push of directional-light casters away from the light, in shadow map texels. The hardware
     /// constant bias is tiny with depth32Float, so this is what stops acne on lit faces (#60).
@@ -170,7 +170,9 @@ public final class SceneGraphShadows {
             return nil
         }
         shadowMap.depthBias = depthBias
-        shadowMap.slopeScale = slopeScale
+        // The PCF kernel compares one receiver depth against texels up to `softness` away, so a sloped receiver needs a
+        // slope bias that grows with it, or it shadows itself (#366).
+        shadowMap.slopeScale = slopeScale * Float(max(softness, 1))
         shadowMap.lightViewProjectionMatrices = views
         self.shadowMap = shadowMap
         let casterViews = views.map(casterViewProjection)

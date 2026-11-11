@@ -284,3 +284,29 @@ func directionalCasterDepthOffsetIsWorldSpace() throws {
     #expect(abs(biasedDepth - moved.z / moved.w) < 1e-6)
     #expect(biasedDepth < (view * point).z) // Reversed depth: further is smaller.
 }
+
+// #366: a lit floor that casts shadows must not shadow itself (acne) when the PCF kernel is wider than one texel.
+@Test(.enabled(if: deviceSupportsMetal4), arguments: [Light.LightType.spot, .point, .directional], [1, 2, 4])
+@MainActor
+func wideSoftShadowsDoNotSelfShadowFloor(light: Light.LightType, softness: Int) throws {
+    let root = SceneGraph.Node()
+    root.addChild(SceneGraph.Node(transform: pose(eye: [3, 7, 3], target: .zero), content: .light(Light(type: light, intensity: light == .directional ? 1 : 80, range: 30, outerConeAngle: .pi / 4))))
+    root.addChild(SceneGraph.Node(shape: .floor(width: 8, length: 8), material: material, trs: .init(translation: [0, -1, 0])))
+    root.addChild(SceneGraph.Node(transform: pose(eye: [0, 3, 8], target: [0, 0.5, 0]), content: .camera(SceneView.defaultCamera)))
+    let sceneGraph = SceneGraph(root: root)
+
+    let side = 256
+    func render(_ shadows: SceneGraphShadows?) throws -> [SIMD4<UInt8>] {
+        let renderer = try OffscreenRenderer(size: CGSize(width: side, height: side), colorUsage: SceneGraphShadows.requiredColorUsage, depthUsage: SceneGraphShadows.requiredDepthUsage)
+        let texture = try renderer.render(SceneGraphElement(sceneGraph: sceneGraph, aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer()], shadows: shadows)).texture
+        var pixels = [SIMD4<UInt8>](repeating: .zero, count: side * side)
+        texture.getBytes(&pixels, bytesPerRow: side * 4, from: MTLRegionMake2D(0, 0, side, side), mipmapLevel: 0)
+        return pixels
+    }
+    let lit = try render(nil)
+    let shadowed = try render(SceneGraphShadows(intensity: 0.7, softness: softness))
+    let floorPixels = lit.indices.filter { lit[$0].x > 0 || lit[$0].y > 0 || lit[$0].z > 0 }
+    let darkened = floorPixels.filter { Int(lit[$0].x) - Int(shadowed[$0].x) > 4 }
+    #expect(floorPixels.count > 1_000)
+    #expect(darkened.count < floorPixels.count / 200, "\(darkened.count) of \(floorPixels.count) floor pixels self-shadowed")
+}
