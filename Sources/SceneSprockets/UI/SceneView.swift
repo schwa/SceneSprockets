@@ -1,6 +1,7 @@
 import GeometryLite3D
 import Interaction3D
 import MetalSprockets
+import MetalSprocketsSupport
 import MetalSprocketsUI
 import simd
 import SwiftUI
@@ -38,13 +39,32 @@ public struct SceneView: View {
         public static let allowsCameraControl = Self(rawValue: 1 << 0)
         /// Adds a white directional light at the camera when the scene has no lights.
         public static let autoenablesDefaultLighting = Self(rawValue: 1 << 1)
-        /// Overlays scene statistics (meshes, triangles, lights), like SCNView.showsStatistics.
+        /// Overlays scene statistics (meshes, triangles, lights), like SCNView.showsStatistics. Also on when the
+        /// `SS_SHOWS_STATISTICS` environment variable is set.
         public static let showsStatistics = Self(rawValue: 1 << 2)
-        /// Overlays MetalSprocketsUI's frame timing readout.
+        /// Overlays MetalSprocketsUI's frame timing readout. Also on when `SS_SHOWS_FRAME_TIMING` is set.
         public static let showsFrameTiming = Self(rawValue: 1 << 4)
         /// Keeps the drawable readable (framebufferOnly false) even without post passes, for example to inspect it in a
-        /// GPU capture. Costs some bandwidth.
+        /// GPU capture. Costs some bandwidth. Also on when `SS_DISABLES_FRAMEBUFFER_ONLY` is set.
         public static let disablesFramebufferOnly = Self(rawValue: 1 << 3)
+
+        // Debug options turned on by environment variables, for a run without editing the call site (#365):
+        // SS_SHOWS_STATISTICS, SS_SHOWS_FRAME_TIMING, SS_DISABLES_FRAMEBUFFER_ONLY. They add to the options in code.
+        static func debugOptions(from environment: SystemEnvironment) -> Self {
+            let variables: [(String, Self)] = [
+                ("SS_SHOWS_STATISTICS", .showsStatistics),
+                ("SS_SHOWS_FRAME_TIMING", .showsFrameTiming),
+                ("SS_DISABLES_FRAMEBUFFER_ONLY", .disablesFramebufferOnly)
+            ]
+            var options: Self = []
+            for (name, option) in variables {
+                let value = environment[name]?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                if let value, ["1", "true", "yes", "y", "on"].contains(value) {
+                    options.insert(option)
+                }
+            }
+            return options
+        }
     }
 
     private let sceneGraph: SceneGraph
@@ -146,7 +166,7 @@ public struct SceneView: View {
         self.cameraTarget = cameraTarget
         self.sceneGraph = sceneGraph
         self.pointOfView = pointOfView
-        self.options = options
+        self.options = options.union(.debugOptions(from: .current))
         self.renderers = renderers
         self.delegate = delegate
         self.isPlaying = isPlaying

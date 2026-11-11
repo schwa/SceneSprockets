@@ -8159,12 +8159,13 @@ Related: #361, #363.
 ## 365: SceneView debug options cannot be turned on from environment variables
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: effort:s, area:ui
 created: 2026-11-10T18:40:38Z
-updated: 2026-11-11T15:58:23Z
+updated: 2026-11-11T16:13:36Z
+closed: 2026-11-11T16:13:36Z
 +++
 
 The debug-oriented `SceneView.Options` can only be set in code:
@@ -8176,6 +8177,8 @@ The debug-oriented `SceneView.Options` can only be set in code:
 To turn one on for a run (for example in a demo, a test app, or a GPU capture) you have to edit and rebuild the call site.
 
 MetalSprockets already lets some RenderView debug settings come from environment variables through `SystemEnvironment` (for example `MS_RENDERVIEW_LOG_FRAME`, `MS_LOGGING`, `MS_VERBOSE`, `MS_FATALERROR_ON_THROW`), with view modifiers overriding the default. SceneView options have no equivalent.
+
+- `2026-11-11T16:13:37Z`: SS_SHOWS_STATISTICS, SS_SHOWS_FRAME_TIMING and SS_DISABLES_FRAMEBUFFER_ONLY (read through MetalSprockets' SystemEnvironment) add the matching SceneView.Options to whatever the call site passes.
 
 ---
 
