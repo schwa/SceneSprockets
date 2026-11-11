@@ -64,7 +64,7 @@ func eulerAnglesRoundTrip() {
     // ZYX: yaw about Z, then pitch about Y, then roll about X.
     let rotation = simd_quatf(angle: 0.3, axis: [0, 0, 1]) * simd_quatf(angle: 0.2, axis: [0, 1, 0]) * simd_quatf(angle: 0.1, axis: [1, 0, 0])
     node.eulerAngles = Euler(rotation)
-    #expect(abs(simd_dot(node.trs.rotation.vector, rotation.vector)) > 0.9999)
+    #expect(abs(simd_dot(node.trs.rotation.quaternion.vector, rotation.vector)) > 0.9999)
     #expect(abs(node.eulerAngles.roll - 0.1) < 1e-4)
     #expect(abs(node.eulerAngles.pitch - 0.2) < 1e-4)
     #expect(abs(node.eulerAngles.yaw - 0.3) < 1e-4)

@@ -163,7 +163,7 @@ extension SceneGraph.Node {
             return
         }
         let parentWorld = parent?.worldTransform ?? matrix_identity_float4x4
-        let world = Transform3D(decomposing: parentWorld * transform)
+        let world = Transform3D(nearestTo: parentWorld * transform)
         var desired = world
         switch constraint.kind {
         case let .lookAt(target, worldUp, localFront):
@@ -171,21 +171,21 @@ extension SceneGraph.Node {
             guard let rotation = lookRotation(from: world.translation, to: targetPosition, worldUp: worldUp, localFront: localFront) else {
                 return
             }
-            desired.rotation = rotation
+            desired.rotation = Rotation3D(rotation)
         case let .billboard(freeAxes):
             let toCamera = pointOfView.columns.3.xyz - world.translation
             let axes: [SIMD3<Float>] = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
             let free = [SceneGraph.BillboardAxes.x, .y, .z].indices.filter { freeAxes.contains([SceneGraph.BillboardAxes.x, .y, .z][$0]) }
             switch free.count {
             case 3:
-                desired.rotation = Transform3D(decomposing: pointOfView).rotation
+                desired.rotation = Transform3D(nearestTo: pointOfView).rotation
             case 2:
                 // Face the camera position, keeping an up vector so there is no roll.
                 let up = free.contains(1) ? axes[1] : axes[free[0]]
                 guard let rotation = lookRotation(from: world.translation, to: pointOfView.columns.3.xyz, worldUp: up, localFront: [0, 0, 1]) else {
                     return
                 }
-                desired.rotation = rotation
+                desired.rotation = Rotation3D(rotation)
             case 1:
                 // Turn about the free axis so the node's reference direction (+Z, or +Y for Z) faces the camera's
                 // position projected onto the plane across that axis.
@@ -196,17 +196,17 @@ extension SceneGraph.Node {
                     return
                 }
                 let direction = simd_normalize(projected)
-                desired.rotation = simd_quatf(angle: atan2(simd_dot(simd_cross(reference, direction), axis), simd_dot(reference, direction)), axis: axis)
+                desired.rotation = Rotation3D(simd_quatf(angle: atan2(simd_dot(simd_cross(reference, direction), axis), simd_dot(reference, direction)), axis: axis))
             default:
                 return
             }
         case let .replicator(target, position, orientation, scale, positionOffset, orientationOffset, scaleOffset):
-            let targetWorld = Transform3D(decomposing: target.worldTransform)
+            let targetWorld = Transform3D(nearestTo: target.worldTransform)
             if position {
                 desired.translation = (target.worldTransform * SIMD4(positionOffset, 1)).xyz
             }
             if orientation {
-                desired.rotation = simd_normalize(targetWorld.rotation * orientationOffset)
+                desired.rotation = Rotation3D(simd_normalize(targetWorld.rotation.quaternion * orientationOffset))
             }
             if scale {
                 desired.scale = targetWorld.scale * scaleOffset
@@ -244,10 +244,10 @@ extension SceneGraph.Node {
         }
         if influence < 1 {
             desired.translation = simd_mix(world.translation, desired.translation, SIMD3(repeating: influence))
-            desired.rotation = simd_slerp(world.rotation, desired.rotation, influence)
+            desired.rotation = Rotation3D(simd_slerp(world.rotation.quaternion, desired.rotation.quaternion, influence))
             desired.scale = simd_mix(world.scale, desired.scale, SIMD3(repeating: influence))
         }
-        trs = Transform3D(decomposing: parentWorld.inverse * desired.matrix)
+        trs = Transform3D(nearestTo: parentWorld.inverse * desired.matrix)
     }
 
     // Moves the node's smoothed position towards `goal`, keeping velocity per constraint between frames.
@@ -301,9 +301,9 @@ extension SceneGraph.Node {
                     turn = simd_quatf(angle: maximumAngle, axis: turn.axis)
                 }
                 // Apply the world-space turn in the joint's parent space.
-                let parentRotation = Transform3D(decomposing: joint.parent?.worldTransform ?? matrix_identity_float4x4).rotation
+                let parentRotation = Transform3D(nearestTo: joint.parent?.worldTransform ?? matrix_identity_float4x4).rotation.quaternion
                 let localTurn = parentRotation.inverse * turn * parentRotation
-                joint.trs.rotation = simd_normalize(localTurn * joint.trs.rotation)
+                joint.trs.rotation = Rotation3D(simd_normalize(localTurn * joint.trs.rotation.quaternion))
             }
             if simd_distance(worldTransform.columns.3.xyz, target) < 1e-4 {
                 return

@@ -85,7 +85,7 @@ func blinnPhongDirectionalLightFollowsNodeRotation() throws {
         let root = SceneGraph.Node()
         root.addChild(SceneGraph.Node(transform: translation(0, 0, 4), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
         let light = root.addChild(SceneGraph.Node(content: .light(Light(type: .directional, intensity: 1))))
-        light.trs.rotation = lightRotation
+        light.trs.rotation = Rotation3D(lightRotation)
         root.addChild(SceneGraph.Node(content: .mesh(MetalMesh(mesh: .box(), device: device), material: blinnPhong)))
         let texture = try OffscreenRenderer(size: size).render(BlinnPhongSceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1)).texture
         let center = pixel(texture, x: 32, y: 32)

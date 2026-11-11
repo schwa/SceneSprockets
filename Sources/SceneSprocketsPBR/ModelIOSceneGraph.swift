@@ -303,9 +303,9 @@ private struct ModelIOConverter {
         guard times.count > 1 else {
             return
         }
-        let samples = times.map { Transform3D(decomposing: transform.localTransform?(atTime: TimeInterval($0)) ?? transform.matrix) }
+        let samples = times.map { Transform3D(nearestTo: transform.localTransform?(atTime: TimeInterval($0)) ?? transform.matrix) }
         let translations = samples.flatMap { [$0.translation.x, $0.translation.y, $0.translation.z] }
-        let rotations = samples.flatMap { [$0.rotation.vector.x, $0.rotation.vector.y, $0.rotation.vector.z, $0.rotation.vector.w] }
+        let rotations = samples.flatMap { [$0.rotation.quaternion.vector.x, $0.rotation.quaternion.vector.y, $0.rotation.quaternion.vector.z, $0.rotation.quaternion.vector.w] }
         let scales = samples.flatMap { [$0.scale.x, $0.scale.y, $0.scale.z] }
         channels += [
             .init(target: node, path: .translation, sampler: .init(times: times, values: translations, interpolation: .linear)),

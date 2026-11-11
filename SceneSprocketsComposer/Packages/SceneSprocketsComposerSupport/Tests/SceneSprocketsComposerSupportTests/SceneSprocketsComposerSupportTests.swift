@@ -382,7 +382,7 @@ struct SceneEditBoundaryTests {
     let ballNode = try tools.node(id: ball)
     #expect(ballNode.parent === (try tools.node(id: group)))
     #expect(ballNode.localTransform.trs.translation == [1, 2, 3])
-    #expect(abs(SceneTools.eulerDegrees(ballNode.localTransform.trs.rotation).y - 30) < 0.01)
+    #expect(abs(SceneTools.eulerDegrees(ballNode.localTransform.trs.rotation.quaternion).y - 30) < 0.01)
     #expect(EditorModel.baseColor(of: try #require(model.materials(of: ballNode).first)) == [1, 0, 0])
 
     let scene = try tools.query()

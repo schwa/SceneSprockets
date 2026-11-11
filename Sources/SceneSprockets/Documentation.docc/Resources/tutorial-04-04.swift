@@ -40,7 +40,7 @@ struct Tutorial4Actions: View {
         let teapot = root.addShape(.teapot(diameter: 1.6), material([0.75, 0.5, 0.85], shininess: 64), at: [0, -0.5, 1.5])
         teapot.run(.repeatForever(.custom(duration: 3) { node, elapsed in
             let phase = elapsed / 3 * 2 * .pi
-            node.trs.rotation = simd_quatf(angle: sin(phase) * 0.3, axis: [0, 0, 1]) * simd_quatf(angle: phase, axis: [0, 1, 0])
+            node.trs.rotation = Rotation3D(simd_quatf(angle: sin(phase) * 0.3, axis: [0, 0, 1]) * simd_quatf(angle: phase, axis: [0, 1, 0]))
         }))
 
         let camera = root.addChild(SceneGraph.Node(label: "Camera", content: .camera(SceneView.defaultCamera)))

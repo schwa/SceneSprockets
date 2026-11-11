@@ -86,7 +86,7 @@ func replicatorCopiesTargetWithOffsets() {
     SceneGraph(root: root).applyConstraints(pointOfView: matrix_identity_float4x4)
     // +X in the target's space is -Z in the world, scaled by 2.
     #expect(simd_distance(follower.trs.translation, [1, 2, 1]) < 1e-4)
-    #expect(abs(follower.trs.rotation.angle - .pi / 2) < 1e-4)
+    #expect(abs(follower.trs.rotation.quaternion.angle - .pi / 2) < 1e-4)
     #expect(simd_distance(follower.trs.scale, .one) < 1e-4)
 }
 
@@ -123,7 +123,7 @@ func transformConstraintAndBillboardAxes() {
     let sprite = root.addChild(SceneGraph.Node())
     sprite.constraints = [.billboard(freeAxes: .x)]
     graph.applyConstraints(pointOfView: simd_float4x4(translation: [0, 5, 0]))
-    #expect(simd_distance(sprite.trs.rotation.act([0, 0, 1]), [0, 1, 0]) < 1e-4)
+    #expect(simd_distance(sprite.trs.rotation.quaternion.act([0, 0, 1]), [0, 1, 0]) < 1e-4)
 }
 
 // #57: a two-bone arm (lengths 1 and 1) along +X reaches a target it can reach.

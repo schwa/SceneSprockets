@@ -1,3 +1,4 @@
+import GeometryLite3D
 @testable import SceneSprockets
 import simd
 import Testing
@@ -29,12 +30,12 @@ func transactionAnimatesMorphWeightsAndRotation() {
     let target = simd_quatf(angle: .pi / 2, axis: [0, 1, 0])
     SceneGraph.Transaction.animate(duration: 1, timingMode: .linear) {
         node.morphWeights = [1, 0]
-        node.trs.rotation = target
+        node.trs.rotation = Rotation3D(target)
     }
     graph.advanceActions(by: 0.5)
     #expect(node.morphWeights == [0.5, 0.5])
     graph.advanceActions(by: 0.5)
-    #expect(abs(simd_dot(node.trs.rotation.vector, target.vector)) > 0.9999)
+    #expect(abs(simd_dot(node.trs.rotation.quaternion.vector, target.vector)) > 0.9999)
 }
 
 @Test

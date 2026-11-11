@@ -208,7 +208,7 @@ extension Transform3D {
     // Pitch, yaw, roll in degrees, converted as CameraPose does.
     var rotationDegrees: SIMD3<Float> {
         get { CameraPose(matrix: simd_float4x4(rotation)).rotationDegrees }
-        set { rotation = simd_quatf(CameraPose(position: .zero, rotationDegrees: newValue).matrix) }
+        set { rotation = Rotation3D(simd_quatf(CameraPose(position: .zero, rotationDegrees: newValue).matrix)) }
     }
 }
 

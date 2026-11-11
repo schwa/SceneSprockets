@@ -60,7 +60,7 @@ func groupRunsInParallelAndFinishesWithLongest() {
 func repeatAndRotate() {
     let node = SceneGraph.Node()
     run(.repeat(.rotate(by: .pi / 2, around: [0, 1, 0], duration: 1), count: 2), on: node, steps: [1, 1, 1])
-    let rotated = node.trs.rotation.act([1, 0, 0])
+    let rotated = node.trs.rotation.quaternion.act([1, 0, 0])
     #expect(near(rotated, [-1, 0, 0]))
 }
 
@@ -122,7 +122,7 @@ func reversedUndoesRelativeActions() {
     run(.sequence([action, action.reversed()]), on: node, steps: [1, 1, 1, 1])
     #expect(near(node.trs.translation, .zero))
     #expect(near(node.trs.scale, .one))
-    #expect(abs(node.trs.rotation.angle) < 1e-4)
+    #expect(abs(node.trs.rotation.quaternion.angle) < 1e-4)
     #expect(node.isVisible)
 }
 
@@ -171,11 +171,11 @@ func actionForKeyReturnsRunningAction() {
 func eulerRotationsAndCustomTiming() {
     let node = SceneGraph.Node()
     run(.rotateTo(x: 0, y: .pi / 2, z: 0, duration: 1), on: node, steps: [1])
-    #expect(near(node.trs.rotation.act([0, 0, 1]), [1, 0, 0]))
+    #expect(near(node.trs.rotation.quaternion.act([0, 0, 1]), [1, 0, 0]))
 
     let spun = SceneGraph.Node()
     run(.rotateBy(x: .pi / 2, y: 0, z: 0, duration: 1), on: spun, steps: [1])
-    #expect(near(spun.trs.rotation.act([0, 1, 0]), [0, 0, 1]))
+    #expect(near(spun.trs.rotation.quaternion.act([0, 1, 0]), [0, 0, 1]))
 
     let stepped = SceneGraph.Node()
     run(.move(by: [1, 0, 0], duration: 1).timingMode(.custom { $0 < 0.5 ? 0 : 1 }), on: stepped, steps: [0.4])

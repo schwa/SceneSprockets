@@ -8585,11 +8585,13 @@ Related: #368 (material API consistency).
 ## 378: SceneSprockets does not build against GeometryLite3D's new Transform3D
 
 +++
-status: new
+status: closed
 priority: medium
 kind: task
 labels: area:scenegraph, effort:m, upstream
 created: 2026-11-11T19:19:47Z
+updated: 2026-11-11T22:49:22Z
+closed: 2026-11-11T22:49:22Z
 +++
 
 GeometryLite3D main (local, not yet pushed or tagged; SceneSprockets pins upToNextMinor from 0.2.7) changed `Transform3D`:
@@ -8607,5 +8609,7 @@ The build stopped at that target. There are about 88 `.rotation` uses in 38 file
 The new `Transform3D` also overlaps with `SceneGraph.LocalTransform` (matrix or TRS), which is the subject of #372.
 
 Upstream review issues: GeometryLite3D #49–#55.
+
+- `2026-11-11T22:49:22Z`: Ported to GeometryLite3D 0.3.0 (and SwiftMesh 0.1.0, MetalSprockets 0.2.10, PBR 0.1.1, GLTF 0.0.4, Interaction3D 0.2.1, Particles 0.0.3, AddOns 0.2.6). Demo package still blocked on SceneSprocketsAddOns #1.
 
 ---

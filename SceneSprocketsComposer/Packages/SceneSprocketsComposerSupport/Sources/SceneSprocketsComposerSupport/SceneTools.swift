@@ -335,7 +335,7 @@ final class SceneTools {
             isActive: node.isActive,
             isLocked: model.isLocked(node),
             translation: Self.array(trs.translation),
-            rotationDegrees: Self.array(Self.eulerDegrees(trs.rotation)),
+            rotationDegrees: Self.array(Self.eulerDegrees(trs.rotation.quaternion)),
             scale: Self.array(trs.scale),
             color: color,
             worldBoundsMin: bounds.map { Self.array($0.min) },
@@ -374,7 +374,7 @@ final class SceneTools {
                 trs.translation = try Self.vector(translation, name: "translation")
             }
             if let rotationDegrees {
-                trs.rotation = Self.rotation(eulerDegrees: try Self.vector(rotationDegrees, name: "rotationDegrees"))
+                trs.rotation = Rotation3D(Self.rotation(eulerDegrees: try Self.vector(rotationDegrees, name: "rotationDegrees")))
             }
             if let scale {
                 trs.scale = try Self.vector(scale, name: "scale")

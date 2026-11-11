@@ -32,7 +32,7 @@ struct Tutorial5Constraints: View {
         pointer.trs.translation = [0, -0.2, 0]
         pointer.constraints = [.lookAt(target: bulb)]
         let cone = pointer.addShape(.cone(bottomRadius: 0.4, height: 1.2), material([0.95, 0.8, 0.2]))
-        cone.trs.rotation = simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])
+        cone.trs.rotation = Rotation3D(simd_quatf(angle: -.pi / 2, axis: [1, 0, 0]))
 
         let title = root.addShape(.text("Hello, World", fontSize: 0.4, extrusionDepth: 0.08), material([0.95, 0.95, 0.95]), at: [0, 2, 0])
         title.constraints = [.billboard(freeAxes: .y)]

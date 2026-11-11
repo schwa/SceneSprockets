@@ -24,7 +24,7 @@ extension SceneGraph {
                 case .translation where value.count == 3:
                     node.trs.translation = SIMD3(value[0], value[1], value[2])
                 case .rotation where value.count == 4:
-                    node.trs.rotation = simd_quatf(vector: SIMD4(value[0], value[1], value[2], value[3]))
+                    node.trs.rotation = Rotation3D(simd_quatf(vector: SIMD4(value[0], value[1], value[2], value[3])))
                 case .scale where value.count == 3:
                     node.trs.scale = SIMD3(value[0], value[1], value[2])
                 case .weights:

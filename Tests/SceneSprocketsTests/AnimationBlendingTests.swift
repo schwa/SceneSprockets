@@ -48,7 +48,7 @@ func rotationsBlendAlongShortestArc() {
     let mixer = SceneGraph.AnimationMixer(clips: [hold(start), hold(end)])
     mixer.apply([.init(clip: 0, time: 0, weight: 1), .init(clip: 1, time: 0, weight: 1)])
     let expected = simd_quatf(angle: .pi / 4, axis: [0, 1, 0])
-    #expect(abs(abs(simd_dot(node.trs.rotation.vector, expected.vector)) - 1) < 0.0001)
+    #expect(abs(abs(simd_dot(node.trs.rotation.quaternion.vector, expected.vector)) - 1) < 0.0001)
 }
 
 @Test

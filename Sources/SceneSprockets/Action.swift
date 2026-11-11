@@ -1,3 +1,4 @@
+import GeometryLite3D
 import simd
 
 extension SceneGraph {
@@ -131,7 +132,7 @@ extension SceneGraph {
         public static func rotate(by angle: Float, around axis: SIMD3<Float>, duration: Float) -> Self {
             let axis = simd_normalize(axis)
             return interval(duration, reversed: { .rotate(by: -angle, around: axis, duration: duration) }) { node, from, to in
-                node.trs.rotation = simd_normalize(simd_quatf(angle: angle * (to - from), axis: axis) * node.trs.rotation)
+                node.trs.rotation = Rotation3D(simd_normalize(simd_quatf(angle: angle * (to - from), axis: axis) * node.trs.rotation.quaternion))
             }
         }
 
@@ -140,7 +141,7 @@ extension SceneGraph {
         public static func rotateBy(x: Float, y: Float, z: Float, duration: Float) -> Self {
             interval(duration, reversed: { .rotateBy(x: -x, y: -y, z: -z, duration: duration) }) { node, from, to in
                 let step = to - from
-                node.trs.rotation = simd_normalize(eulerRotation(x: x * step, y: y * step, z: z * step) * node.trs.rotation)
+                node.trs.rotation = Rotation3D(simd_normalize(eulerRotation(x: x * step, y: y * step, z: z * step) * node.trs.rotation.quaternion))
             }
         }
 
@@ -156,8 +157,8 @@ extension SceneGraph {
         ///   - duration: The duration, in seconds.
         public static func rotate(to target: simd_quatf, duration: Float) -> Self {
             let start = Box<simd_quatf>()
-            return interval(duration, start: { start.value = $0.trs.rotation }) { node, _, to in
-                node.trs.rotation = simd_slerp(start.value ?? target, target, to)
+            return interval(duration, start: { start.value = $0.trs.rotation.quaternion }) { node, _, to in
+                node.trs.rotation = Rotation3D(simd_slerp(start.value ?? target, target, to))
             }
         }
 

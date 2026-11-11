@@ -97,14 +97,14 @@ public final class SceneGraphPhysicsWorld {
         }
         sync()
         for entry in entries.values where entry.description.type == .kinematic {
-            let pose = Transform3D(decomposing: entry.node.worldTransform)
-            world.moveKinematic(entry.body, to: pose.translation, rotation: pose.rotation, deltaTime: deltaTime)
+            let pose = Transform3D(nearestTo: entry.node.worldTransform)
+            world.moveKinematic(entry.body, to: pose.translation, rotation: pose.rotation.quaternion, deltaTime: deltaTime)
         }
         world.update(deltaTime: deltaTime, collisionSteps: collisionSteps)
         for entry in entries.values where entry.description.type == .dynamic {
-            var pose = Transform3D(decomposing: entry.node.worldTransform)
+            var pose = Transform3D(nearestTo: entry.node.worldTransform)
             pose.translation = world.position(of: entry.body)
-            pose.rotation = world.rotation(of: entry.body)
+            pose.rotation = Rotation3D(world.rotation(of: entry.body))
             entry.node.worldTransform = pose.matrix
         }
     }
@@ -139,7 +139,7 @@ public final class SceneGraphPhysicsWorld {
     }
 
     private func makeBody(for node: SceneGraph.Node, description: SceneGraph.PhysicsBody) -> BodyID? {
-        let pose = Transform3D(decomposing: node.worldTransform)
+        let pose = Transform3D(nearestTo: node.worldTransform)
         guard let shape = joltShape(description.shape, node: node, scale: simd_abs(pose.scale)) else {
             return nil
         }
@@ -148,7 +148,7 @@ public final class SceneGraphPhysicsWorld {
         case .dynamic: .dynamic
         case .kinematic: .kinematic
         }
-        let body = world.addBody(shape, position: pose.translation, rotation: pose.rotation, motionType: motionType, restitution: description.restitution, friction: description.friction)
+        let body = world.addBody(shape, position: pose.translation, rotation: pose.rotation.quaternion, motionType: motionType, restitution: description.restitution, friction: description.friction)
         if description.type == .dynamic, let mass = description.mass {
             world.setMass(of: body, to: mass)
         }

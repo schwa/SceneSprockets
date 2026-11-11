@@ -35,7 +35,7 @@ func trsIsStoredLosslessly() {
     #expect(isClose(node.transform, simd_float4x4(translation: [1, 2, 3]) * simd_float4x4(rotation) * simd_float4x4(diagonal: [2, 2, 2, 1])))
 
     node.trs.scale = [3, 3, 3]
-    #expect(node.trs.rotation == rotation)
+    #expect(node.trs.rotation.quaternion == rotation)
     #expect(node.trs.translation == [1, 2, 3])
 }
 

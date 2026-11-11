@@ -120,7 +120,7 @@ struct TransformGizmoTests {
     @Test
     func localSpaceFollowsTheNode() throws {
         let (gizmo, node) = makeGizmo()
-        node.trs.rotation = simd_quatf(angle: .pi / 2, axis: [0, 0, 1])
+        node.trs.rotation = Rotation3D(simd_quatf(angle: .pi / 2, axis: [0, 0, 1]))
         gizmo.space = .local
         let frame = try #require(gizmo.frame(viewport: viewport))
         #expect(simd_distance(frame.axis(.x), [0, 1, 0]) < 1e-4)

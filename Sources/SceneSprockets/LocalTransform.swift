@@ -25,16 +25,16 @@ extension SceneGraph {
             case .trs(let trs):
                 trs
             case .matrix(let matrix):
-                Transform3D(decomposing: matrix)
+                Transform3D(nearestTo: matrix)
             }
         }
     }
 }
 
 extension Transform3D {
-    /// Unlike init?(matrix:), keeps the nearest TRS for matrices with skew, perspective or negative scale, and falls
-    /// back to identity if the matrix does not decompose.
-    public init(decomposing matrix: simd_float4x4) {
+    // Unlike GeometryLite3D's init?(decomposing:), keeps the nearest TRS for matrices with skew, perspective or negative
+    // scale, and falls back to identity if the matrix does not decompose.
+    package init(nearestTo matrix: simd_float4x4) {
         guard let components = matrix.decompose else {
             self = .identity
             return

@@ -192,7 +192,7 @@ extension SceneGraph {
             case .translation:
                 return [trs.translation.x, trs.translation.y, trs.translation.z]
             case .rotation:
-                return [trs.rotation.vector.x, trs.rotation.vector.y, trs.rotation.vector.z, trs.rotation.vector.w]
+                return [trs.rotation.quaternion.vector.x, trs.rotation.quaternion.vector.y, trs.rotation.quaternion.vector.z, trs.rotation.quaternion.vector.w]
             case .scale:
                 return [trs.scale.x, trs.scale.y, trs.scale.z]
             case .weights:

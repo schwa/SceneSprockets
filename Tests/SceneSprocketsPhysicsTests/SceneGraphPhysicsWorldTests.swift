@@ -173,7 +173,7 @@ func decomposingScaledRotationsKeepsScale() {
     for _ in 0..<10_000 {
         let rotation = simd_normalize(simd_quatf(vector: SIMD4<Float>.random(in: -1...1, using: &generator)))
         let pose = Transform3D(translation: [1, 2, 3], rotation: rotation, scale: [0.0625, 0.0625, 0.0625])
-        let back = Transform3D(decomposing: pose.matrix)
+        let back = Transform3D(nearestTo: pose.matrix)
         let error = simd_distance(back.scale, pose.scale)
         if error > worst.error {
             worst = (error, rotation, back.scale)
@@ -189,11 +189,11 @@ func decomposedRotationIsUnitLength() {
     let bits: [UInt32] = [0x3f86c96c, 0x3fb5b075, 0x3f1774cd, 0x3f6f0dd7, 0x3ddbc806, 0x3eae95cb, 0x3c7312b4, 0x3d80000b, 0x3d80000c, 0x3d800009]
     let values = bits.map(Float.init(bitPattern:))
     let pose = Transform3D(translation: [values[0], values[1], values[2]], rotation: simd_quatf(vector: [values[3], values[4], values[5], values[6]]), scale: [values[7], values[8], values[9]])
-    let once = Transform3D(decomposing: pose.matrix)
-    #expect(abs(simd_length(once.rotation.vector) - 1) < 1e-5, "rotation length \(simd_length(once.rotation.vector))")
+    let once = Transform3D(nearestTo: pose.matrix)
+    #expect(abs(simd_length(once.rotation.quaternion.vector) - 1) < 1e-5, "rotation length \(simd_length(once.rotation.quaternion.vector))")
     // The same rotation, as q or -q (GeometryLite3D #42).
-    #expect(abs(abs(simd_dot(once.rotation.vector, pose.rotation.vector)) - 1) < 1e-4, "rotation \(pose.rotation.vector) came back \(once.rotation.vector)")
-    let twice = Transform3D(decomposing: once.matrix)
+    #expect(abs(abs(simd_dot(once.rotation.quaternion.vector, pose.rotation.quaternion.vector)) - 1) < 1e-4, "rotation \(pose.rotation.quaternion.vector) came back \(once.rotation.quaternion.vector)")
+    let twice = Transform3D(nearestTo: once.matrix)
     #expect(simd_distance(twice.scale, pose.scale) < 1e-5, "scale \(pose.scale) came back \(twice.scale)")
 }
 

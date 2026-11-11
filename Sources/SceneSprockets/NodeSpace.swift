@@ -21,7 +21,7 @@ extension SceneGraph.Node {
             let local = parentWorld.inverse * newValue * pivot
             switch localTransform {
             case .trs:
-                trs = Transform3D(decomposing: local)
+                trs = Transform3D(nearestTo: local)
             case .matrix:
                 transform = local
             }
@@ -40,18 +40,18 @@ extension SceneGraph.Node {
 
     /// The orientation of the node in world space. Setting it turns the node.
     public var worldOrientation: simd_quatf {
-        get { Transform3D(decomposing: worldTransform).rotation }
+        get { Transform3D(nearestTo: worldTransform).rotation.quaternion }
         set {
-            var world = Transform3D(decomposing: worldTransform)
-            world.rotation = newValue
+            var world = Transform3D(nearestTo: worldTransform)
+            world.rotation = Rotation3D(newValue)
             worldTransform = world.matrix
         }
     }
 
     /// The local rotation as Euler angles (ZYX order: yaw about Z, pitch about Y, roll about X, in radians).
     public var eulerAngles: Euler {
-        get { Euler(trs.rotation) }
-        set { trs.rotation = simd_quatf(newValue) }
+        get { trs.rotation.euler }
+        set { trs.rotation = .euler(newValue) }
     }
 
     /// Converts from `node`'s space (nil for world space) to this node's space.
