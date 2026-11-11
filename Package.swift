@@ -107,6 +107,7 @@ let package = Package(
                 "SceneSprocketsShaders",
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
+                .product(name: "MetalSupport", package: "MetalSupport"),
                 .product(name: "SwiftMesh", package: "SwiftMesh"),
             ]
         ),

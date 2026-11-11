@@ -12,7 +12,7 @@ extension ShaderMaterial: ArchivableMaterial {
     public static let archiveTypeName = "shader"
 
     enum ArchiveKeys: String, CodingKey {
-        case library, vertexFunction, fragmentFunction, parameters, isTransparent, renderState
+        case library, vertexFunction, fragmentFunction, parameters, isTransparent, renderState, samplesShadows
     }
 
     enum ParameterKeys: String, CodingKey {
@@ -46,6 +46,9 @@ extension ShaderMaterial: ArchivableMaterial {
         try container.encode(fragment.name, forKey: .fragmentFunction)
         try container.encode(alphaBlends, forKey: .isTransparent)
         try container.encode(renderState, forKey: .renderState)
+        if samplesShadows {
+            try container.encode(samplesShadows, forKey: .samplesShadows)
+        }
         var list = container.nestedUnkeyedContainer(forKey: .parameters)
         for (name, value) in parameters.sorted(by: { $0.key < $1.key }) {
             var item = list.nestedContainer(keyedBy: ParameterKeys.self)
@@ -115,7 +118,7 @@ extension ShaderMaterial: ArchivableMaterial {
                 context.warn("ShaderMaterial parameter \"\(name)\": no value; skipped")
             }
         }
-        self.init(vertexShader: vertex, fragmentShader: fragment, parameters: parameters, isTransparent: try container.decode(Bool.self, forKey: .isTransparent), renderState: try container.decode(MaterialRenderState.self, forKey: .renderState))
+        self.init(vertexShader: vertex, fragmentShader: fragment, parameters: parameters, isTransparent: try container.decode(Bool.self, forKey: .isTransparent), renderState: try container.decode(MaterialRenderState.self, forKey: .renderState), samplesShadows: try container.decodeIfPresent(Bool.self, forKey: .samplesShadows) ?? false)
     }
 
     private static func libraryName(for library: any MTLLibrary, context: SceneArchiveContext) -> String? {

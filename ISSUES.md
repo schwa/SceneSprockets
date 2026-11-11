@@ -6656,12 +6656,13 @@ SceneGraphShadows has 8 shadow map slices: a directional or spot light takes one
 ## 300: ShaderMaterial meshes get every light's shadow, not only the lights that light them
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:renderer, effort:m
 created: 2026-11-07T15:41:12Z
-updated: 2026-11-07T15:41:13Z
+updated: 2026-11-11T16:10:52Z
+closed: 2026-11-11T16:10:52Z
 +++
 
 Blinn-Phong and PBR sample each light's shadow while shading (#102), so a light darkens only what it lights. ShaderMaterial meshes are darkened afterwards by a screen-space pass that applies all lights' shadows together, so a shadow from one light also darkens areas that other lights light. Listed under Limitations in the README.
@@ -6669,6 +6670,7 @@ Blinn-Phong and PBR sample each light's shadow while shading (#102), so a light 
 - `2026-11-07T16:01:17Z`: Autonomous run: scoped, not changed. ShaderMaterial gets no lights and no shadow data (ShaderMaterial.h has only ShaderMaterialTransforms), so its lighting is whatever the user's shader does, and the renderer cannot know which lights affect a pixel. Per-light shadows therefore need new API: pass the lights and the shadow map (slices, matrices, comparison sampler) to shader materials, add a sampling helper to ShaderMaterial.h, and let a ShaderMaterial opt into in-shader shadows (as SamplesShadowsInShader does for Blinn-Phong and PBR), keeping the screen-space mask for materials that do not. Punting: that is an API design decision. Question: should ShaderMaterial get lights and shadow sampling (opt-in), or is the screen-space approximation the intended behavior for custom shaders?
 - `2026-11-07T16:59:55Z`: Question 1 (decision): Should ShaderMaterial get opt-in lights and in-shader shadow sampling (like Blinn-Phong and PBR), or is the screen-space shadow mask the intended behavior for custom shaders?
 - `2026-11-07T23:24:45Z`: Answer 1: we need to be consistent
+- `2026-11-11T16:10:53Z`: Per answer 'we need to be consistent': ShaderMaterial gets opt-in samplesShadows. The renderer then binds lighting, lights, shadowMap and shadowSampler; ShaderMaterial.h adds ShaderMaterialLight/ShaderMaterialLighting and shaderMaterialShadow/shaderMaterialIncomingLight helpers; ShaderMaterial.lit(color:) is a sample. Opted-in materials skip the screen-space mask.
 
 ---
 

@@ -8,14 +8,23 @@ import SceneSprocketsShaders
 import simd
 import SwiftMesh
 
-/// Materials whose renderer samples the shadow map per light while shading (Blinn-Phong). The screen-space mask skips
-/// their pixels.
-public protocol SamplesShadowsInShader {}
+/// Materials whose renderer samples the shadow map per light while shading (Blinn-Phong, PBR, and shader materials that
+/// opt in). The screen-space mask skips their pixels.
+public protocol SamplesShadowsInShader {
+    /// Whether this material samples shadows in its shader. Defaults to true.
+    var samplesShadowsInShader: Bool { get }
+}
+
+public extension SamplesShadowsInShader {
+    var samplesShadowsInShader: Bool {
+        true
+    }
+}
 
 /// Shadow-mapped shadows from directional, spot and point lights, for every renderer: casters are drawn into a shadow
-/// map from each light. Blinn-Phong and PBR sample it per light while shading, so a light only darkens what it lights;
-/// other materials (ShaderMaterial) are darkened in screen space after the scene pass, by every light's shadow at
-/// once. Keep one instance across frames (it holds the shadow map and caster buffers) and pass it to
+/// map from each light. Blinn-Phong, PBR and shader materials with `samplesShadows` sample it per light while shading,
+/// so a light only darkens what it lights; other materials are darkened in screen space after the scene pass, by every
+/// light's shadow at once. Keep one instance across frames (it holds the shadow map and caster buffers) and pass it to
 /// SceneGraphElement or SceneView.
 /// 
 /// The shadow map has 8 slices: a directional or spot light uses one, a point light six; a light that does not fit
@@ -147,7 +156,7 @@ public final class SceneGraphShadows {
             return Caster(positions: positions, submesh: submesh, placement: .skinned(influences: influences, jointMatrices: skin.jointMatrices().map { $0.cameraRelative(to: cameraPosition) }))
         }
         // Materials that sample shadows themselves are kept out of the screen-space mask, like non-receivers.
-        let skipsMask = { (entry: SceneGraph.MeshEntry) in !entry.receivesShadow || entry.material is any SamplesShadowsInShader }
+        let skipsMask = { (entry: SceneGraph.MeshEntry) in !entry.receivesShadow || (entry.material as? any SamplesShadowsInShader)?.samplesShadowsInShader == true }
         let masksEverything = entries.allSatisfy(skipsMask)
         for entry in entries {
             if entry.castsShadow, let caster = caster(for: entry) {

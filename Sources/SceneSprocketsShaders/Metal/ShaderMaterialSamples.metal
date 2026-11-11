@@ -39,4 +39,27 @@ namespace ShaderMaterialSamples {
         return float4(color.rgb * (0.25 + 0.75 * facing), color.a * transforms.opacity);
     }
 
+    // Lambert diffuse `color` from the scene's lights, each dimmed only by its own shadow. Needs `samplesShadows`.
+    [[fragment]] float4 fragment_lit(
+        VertexOut in [[stage_in]],
+        constant float4 &color [[buffer(0)]],
+        constant ShaderMaterialTransforms &transforms [[buffer(10)]],
+        constant ShaderMaterialLighting &lighting [[buffer(11)]],
+        constant ShaderMaterialLight *lights [[buffer(12)]],
+        depth2d_array<float, access::sample> shadowMap [[texture(0)]],
+        sampler shadowSampler [[sampler(0)]]
+    ) {
+        float3 normal = normalize(in.worldNormal);
+        float3 diffuse = 0;
+        for (int index = 0; index < lighting.lightCount; index++) {
+            float3 toLight;
+            float3 incoming = shaderMaterialIncomingLight(lights[index], in.cameraRelativePosition, toLight);
+            float lambertian = max(dot(toLight, normal), 0.0);
+            if (lambertian > 0) {
+                diffuse += color.rgb * lambertian * incoming * shaderMaterialShadow(lighting, lights[index], in.cameraRelativePosition, shadowMap, shadowSampler);
+            }
+        }
+        return float4(diffuse, color.a * transforms.opacity);
+    }
+
 }

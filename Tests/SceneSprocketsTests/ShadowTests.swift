@@ -221,6 +221,30 @@ func pbrShadowsDimOnlyTheirOwnLight() throws {
     #expect((PBRSceneMaterial.self as Any) is any SamplesShadowsInShader.Type)
 }
 
+// #300: a ShaderMaterial with `samplesShadows` shades each light with its own shadow, so the sun's shadow does not dim
+// the fill light (the screen-space mask darkened it by every light's shadow).
+@Test(.enabled(if: deviceSupportsMetal4))
+@MainActor
+func shaderMaterialShadowsDimOnlyTheirOwnLight() throws {
+    let (sceneGraph, pixel) = try makeScene()
+    let gray = try ShaderMaterial.lit(color: [0.5, 0.5, 0.5, 1])
+    for (node, _) in sceneGraph.nodesWithWorldTransforms() {
+        if case let .mesh(mesh, _, castsShadow, receivesShadow) = node.content {
+            node.content = .mesh(mesh, materials: [gray], castsShadow: castsShadow, receivesShadow: receivesShadow)
+        }
+    }
+    let renderers: [any SceneGraphMaterialRenderer] = [ShaderMaterialRenderer()]
+    let shadows = SceneGraphShadows(intensity: 1)
+    let sunWithoutShadows = try brightness(sceneGraph, at: pixel, shadows: nil, renderers: renderers)
+    #expect(sunWithoutShadows > 30)
+    #expect(try brightness(sceneGraph, at: pixel, shadows: shadows, renderers: renderers) < 10)
+    sceneGraph.root.addChild(SceneGraph.Node(transform: pose(eye: [6, 3, 0], target: [-1, 0, 0]), content: .light(Light(type: .directional, color: [1, 1, 1], intensity: 1))))
+    let withFill = try brightness(sceneGraph, at: pixel, shadows: shadows, renderers: renderers)
+    let fillWithoutShadows = try brightness(sceneGraph, at: pixel, shadows: nil, renderers: renderers) - sunWithoutShadows
+    #expect(withFill > 30)
+    #expect(Double(withFill) > Double(fillWithoutShadows) * 0.3)
+}
+
 @MainActor
 private func pixels(_ sceneGraph: SceneGraph, shadows: SceneGraphShadows?) throws -> [SIMD4<UInt8>] {
     let renderer = try OffscreenRenderer(size: size, colorUsage: SceneGraphShadows.requiredColorUsage, depthUsage: SceneGraphShadows.requiredDepthUsage)
