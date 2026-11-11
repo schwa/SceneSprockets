@@ -8247,6 +8247,8 @@ Expected: the tutorials build their scenes with library API only, with no local 
 Related: #364, #106.
 
 - `2026-11-11T15:55:13Z`: Related: #364 (result-builder API for node trees) covers the tree-shape part of the same problem.
+- `2026-11-11T16:04:44Z`: Question 1 (design): Proposed API — approve or amend? (1) Node gains 'position: SIMD3<Float>' (get/set via trs.translation) and every Node init gets an optional 'position:' parameter. (2) Static factories on SceneGraph.Node: .light(_ light:, label:, position:, lookAt:), .camera(_ camera: = .perspective(), label:, position:, lookAt:). (3) Light gains .point(...), .directional(...) factories and .spot gets castsShadow. (4) Camera gains .perspective(fieldOfView: Angle = 60°, zClip:) and .orthographic(...); SceneView.defaultCamera becomes Camera.default (old name deprecated). (5) Node.addChild stays; no addShape helper — use addChild(Node(shape:material:position:)). Tutorials and GettingStarted then drop Helpers.addShape.
+- `2026-11-11T16:04:44Z`: Auto-fixer run: punted. Every fix here adds or renames public API (factories, a position property, moving SceneView.defaultCamera), which is a design decision. Unblocker: answer 367-Q1 (approve or amend the proposed API).
 
 ---
 
@@ -8277,6 +8279,9 @@ What is wrong:
 Expected: a plain colored material of any family is one short, non-throwing expression, and the families agree on naming and color types.
 
 Related: #355, #356, #360.
+
+- `2026-11-11T16:04:54Z`: Question 1 (design): Proposed API — approve or amend? (1) BlinnPhongSceneMaterial gets a convenience init(color: SIMD3<Float>, shininess: Float = 32, opacity: Float = 1, emission: SIMD3<Float> = .zero) with ambient = color*0.3, specular 0.5. (2) PBRSceneMaterial(baseColor:metallic:roughness:) stops throwing: GPU buffers are created lazily by PBRMaterialRenderer. Same for ShaderMaterial.normals()/rim(). (3) Colors: keep SIMD3 for RGB everywhere and add a separate opacity: Float to PBR (instead of SIMD4 baseColor)? (4) Rename for consistency: ShaderMaterial -> ShaderSceneMaterial, or drop 'Scene' from all three (BlinnPhongMaterial, PBRMaterial clashes with MetalSprocketsPBR)? (5) Rename the Material protocol to SceneMaterial to remove the SceneSprockets.Material ambiguity. (6) normalMap becomes a Source-like texture reference.
+- `2026-11-11T16:04:55Z`: Auto-fixer run: punted. Fixes rename public types, change throwing initializers and color types — design decisions. Unblocker: answer 368-Q1.
 
 ---
 
