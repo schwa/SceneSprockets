@@ -6054,13 +6054,13 @@ My suggestions: 1 yes, but only after #271/#273 are decided; 2 strong; 3 yes; 4 
 ## 270: Node property access is slower for nodes in a graph
 
 +++
-status: open
+status: blocked
 priority: low
 kind: enhancement
 labels: area:scenegraph, effort:m, subtask
 depends: 265
 created: 2026-11-05T18:22:50Z
-updated: 2026-11-05T19:26:38Z
+updated: 2026-11-11T16:15:02Z
 +++
 
 Part of #250. After #265, nodes under a SceneGraph's root read transform and content through the World. Release build, 100k nodes, best of 5 (noisy machine): attached transform read ~64 ns vs ~34 ns before; attached write ~220 ns vs ~180 ns; detached read ~38 ns vs ~28 ns. Each attached read registers observation on both the Node and the World and takes a column lock. Traversal measured 75-153 ns per node vs ~102 ns before; the noise is too high to say more.
@@ -6080,6 +6080,7 @@ Leaving open for the steady-state cost. Further gains likely need SwiftECS chang
 - `2026-11-07T16:17:46Z`: Autonomous run: not changed. Per the 2026-11-05 answer ('keep open, measure later') and two autoresearch sessions since: traversal ~142 ns/node (pre-ECS ~100), read ~38 (~30), write ~192 (~180). The remaining cost is mostly ComponentRef retain/release; the next real gain needs a non-retaining read path in SwiftECS, which is outside this repo. Tuning SceneSprockets further against the benchmark would be overfitting. Unblocker: decide whether to add that SwiftECS read path, or accept the current cost and close.
 - `2026-11-07T16:59:56Z`: Question 2 (decision): Add a non-retaining read path to SwiftECS to close the remaining gap, or accept the current cost (traversal ~142 vs ~100 ns/node) and close?
 - `2026-11-07T23:23:50Z`: Answer 2: file issues on swiftecs
+- `2026-11-11T16:15:02Z`: Per answer 2 ('file issues on swiftecs'): filed SwiftECS #52 (ComponentRef retain/release on every read). Blocking this issue on it; the SceneSprockets side needs no change until SwiftECS has a cheaper read path.
 
 ---
 
@@ -8067,8 +8068,9 @@ status: open
 priority: low
 kind: enhancement
 labels: effort:s, area:ui
+depends: 369
 created: 2026-11-10T18:37:02Z
-updated: 2026-11-11T15:58:22Z
+updated: 2026-11-11T16:14:41Z
 +++
 
 The two `SceneView.Options` follow different naming patterns:
@@ -8085,6 +8087,7 @@ Both are boolean switches that turn on a SceneView behavior, but they read as if
 Both names are copied from SceneKit (`SCNView.allowsCameraControl`, `SCNView.autoenablesDefaultLighting`), which explains the mismatch but means the inconsistency comes along with them.
 
 - `2026-11-11T15:58:23Z`: Related: #369 (SceneView configuration).
+- `2026-11-11T16:14:42Z`: Auto-fixer run: punted. Renaming the options is a naming decision, and 369-Q1 proposes replacing Options with view modifiers, which would remove these names entirely. Unblocker: answer 369-Q1; if Options stays, pick names (e.g. .allowsCameraControl + .usesDefaultLighting).
 
 ---
 
@@ -8362,6 +8365,10 @@ Expected: every public symbol is public on purpose, and one naming convention ap
 
 Related: #295, #106, #362.
 
+- `2026-11-11T16:14:32Z`: Auto-fixer run: punted. Findings: (1) correction — the Node...Component structs are intentionally public: WorkingWithTheWorld.md documents them for ECS queries over SceneGraph.world (#269). Not accidental. (2) The free functions renderBatches, materialDraw and meshEntriesInFrustum are used by BlinnPhong/PBR/ShaderMaterial in other targets and are plausibly API for third-party SceneGraphMaterialRenderer authors; culledMeshEntries, sortedFrontToBack, groupedByVertexDescriptor, distanceSquared and cameraRelative have no users outside this package. (3) Every naming item (prefixes, nesting, GLTFSceneGraph/ModelIOSceneGraph, Light.LightType, rotateBy/rotateTo, angle types, Shape axis names, tuple returns, hitTest overloads, isVisible/isShown/isActive) is a rename of public API. Unblocker: answer 370-Q1 and 370-Q2.
+- `2026-11-11T16:14:32Z`: Question 1 (decision): Renderer helpers: are renderBatches, materialDraw and meshEntriesInFrustum supported API for third-party material renderers (keep public, document), and should culledMeshEntries, sortedFrontToBack, groupedByVertexDescriptor, distanceSquared and cameraRelative become 'package' (still usable by sibling targets, hidden from clients)?
+- `2026-11-11T16:14:33Z`: Question 2 (design): Naming convention to apply across modules: (a) nest everything under SceneGraph (SceneGraph.Light, SceneGraph.Camera, SceneGraph.Shadows, SceneGraph.Audio, SceneGraph.ParticleSystem, SceneGraph.PhysicsWorld), or (b) top-level types with one prefix 'Scene' (SceneLight, SceneCamera, SceneShadows ...), or (c) top-level, no prefix except where it clashes? Plus: rename GLTFSceneGraph/ModelIOSceneGraph to ...Import (or merge per #371), Light.LightType -> Light.Kind, rotateBy(x:y:z:) -> rotate(byEuler:), and angles as Angle in public API?
+
 ---
 
 ## 371: Model loading has three entry points with different result shapes
@@ -8393,5 +8400,8 @@ What is wrong:
 Expected: one obvious way to load a model file, with one result shape whatever the format.
 
 Related: #358, #31.
+
+- `2026-11-11T16:15:14Z`: Question 1 (design): Proposed: one entry point, 'ModelFile.load(_ url:) throws -> ModelFile.Result' where Result is a struct { node: SceneGraph.Node (root named after the file, detached), animations: [SceneGraph.AnimationClip], warnings: [String] } for every format (glTF variants exposed as an optional 'variants' field). GLTFSceneGraph and ModelIOSceneGraph become internal (or renamed GLTFImport/ModelIOImport and kept for format-specific options), and ModelIOSceneGraph's single 'animation' becomes 'animations'. Callers that want a whole SceneGraph wrap the node. Approve or amend?
+- `2026-11-11T16:15:15Z`: Auto-fixer run: punted. Unifying the loaders changes or removes public types (GLTFSceneGraph, ModelIOSceneGraph, ModelFile.load's tuple); users: Composer EditorModel, KeynoteDemo, BurningFox. Unblocker: answer 371-Q1. Related naming question: 370-Q2.
 
 ---
