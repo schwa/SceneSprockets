@@ -7237,6 +7237,10 @@ Actual: the glass objects look wrong during both transitions.
 2. Glass missing mid-fade: the PBR transmission backdrop is built by makeOpaqueContent (SceneGraphRenderer.swift:286), which keeps only !isTransparent entries. Once the slide fades, the wall and bars become transparent, so the backdrop is empty and the faded glass refracts black; only its highlights remain.
 Punting: both fixes change renderer behavior for every fade, so they need a decision. Question: for node-opacity fades, should a mesh fade as one surface (depth prepass for faded entries, so only the nearest face blends), or should faded entries just cull back faces (cheap, but double-sided planes seen from behind vanish while fading)? And should the transmission backdrop include transparent and faded entries of other renderers?
 
+- `2026-11-11T15:58:52Z`: Question 1 (decision): Node-opacity fades of closed meshes blend twice (back + front faces). Fix with a depth prepass for faded entries (correct, costs a pass) or cull back faces while fading (cheap; double-sided planes seen from behind vanish mid-fade)?
+- `2026-11-11T15:58:52Z`: Question 2 (decision): Should the PBR transmission backdrop (makeOpaqueContent) include transparent/faded entries of other renderers, so faded glass still refracts the faded scene behind it?
+- `2026-11-11T15:58:53Z`: Auto-fixer run: root cause already known (see 2026-11-08 comment). Punting again: both fixes change renderer behavior for every fade. Unblocker: answer 327-Q1 and 327-Q2.
+
 ---
 
 ## 328: Keynote slides show transform gizmos when objects are tapped
@@ -8055,10 +8059,12 @@ There were 179 `_ = SceneGraph.Node(parent:` occurrences in Tests and Examples. 
 ## 362: SceneView.Options names are inconsistent (.allowsCameraControl vs .autoenablesDefaultLighting)
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
+labels: effort:s, area:ui
 created: 2026-11-10T18:37:02Z
+updated: 2026-11-11T15:58:22Z
 +++
 
 The two `SceneView.Options` follow different naming patterns:
@@ -8074,15 +8080,19 @@ Both are boolean switches that turn on a SceneView behavior, but they read as if
 
 Both names are copied from SceneKit (`SCNView.allowsCameraControl`, `SCNView.autoenablesDefaultLighting`), which explains the mismatch but means the inconsistency comes along with them.
 
+- `2026-11-11T15:58:23Z`: Related: #369 (SceneView configuration).
+
 ---
 
 ## 363: Compare SceneView's API with SwiftUI SceneView, Map and WebView
 
 +++
-status: new
+status: open
 priority: low
 kind: task
+labels: effort:s, area:ui, research
 created: 2026-11-10T18:37:12Z
+updated: 2026-11-11T15:58:23Z
 +++
 
 SceneView takes most of its configuration as initializer arguments and an `Options` option set:
@@ -8104,10 +8114,12 @@ Areas to look at: initializer shape, model ownership (observable model vs. value
 ## 364: Investigate a result-builder API for building node trees
 
 +++
-status: new
+status: open
 priority: low
 kind: task
+labels: effort:m, area:scenegraph, research
 created: 2026-11-10T18:39:06Z
+updated: 2026-11-11T15:58:23Z
 +++
 
 Building a hierarchy today means making each node and attaching it to its parent one at a time:
@@ -8145,10 +8157,12 @@ Related: #361, #363.
 ## 365: SceneView debug options cannot be turned on from environment variables
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
+labels: effort:s, area:ui
 created: 2026-11-10T18:40:38Z
+updated: 2026-11-11T15:58:23Z
 +++
 
 The debug-oriented `SceneView.Options` can only be set in code:
@@ -8166,10 +8180,12 @@ MetalSprockets already lets some RenderView debug settings come from environment
 ## 366: Concentric banding artifacts on ground plane in SceneSprocketTutorials example
 
 +++
-status: new
+status: open
 priority: medium
 kind: bug
+labels: effort:m, area:renderer
 created: 2026-11-10T20:24:01Z
+updated: 2026-11-11T15:58:24Z
 +++
 
 The ground plane in Examples/SceneSprocketTutorials shows visible banding: wide concentric arc-shaped bands around the point light, plus fine stripe/moiré lines across the whole plane, most visible in the lower (near-camera) area.
@@ -8182,5 +8198,183 @@ Expected: smooth lighting gradient across the plane.
 Actual: stepped concentric bands and fine striping across the plane.
 
 Screenshot: ~/Library/Application Support/CleanShot/media/media_I9GDftQ8kv/Screenshot 2026-11-10 at 12.23.31@2x.png
+
+---
+
+## 367: Building a light, camera or shape node takes too many words
+
++++
+status: open
+priority: medium
+kind: enhancement
+labels: effort:m, area:scenegraph
+created: 2026-11-11T15:54:40Z
+updated: 2026-11-11T15:55:12Z
++++
+
+Making a common node needs deeply nested initializers and a second statement to place it. The tutorials, the demo app and Composer each wrote their own helpers to hide this.
+
+```swift
+let fill = root.addChild(SceneGraph.Node(label: "Fill", content: .light(Light(type: .point, intensity: 15, range: 50, castsShadow: false))))
+fill.trs.translation = [-5, 4, 4]
+
+let camera = root.addChild(SceneGraph.Node(label: "Camera", content: .camera(SceneView.defaultCamera)))
+camera.trs.translation = [0, 2, 6]
+camera.look(at: .zero)
+```
+
+What is wrong:
+
+- A light or camera node needs `SceneGraph.Node(content: .light(Light(type: ...)))`: three nested initializers.
+- A node cannot be created at a position in one expression without building a `Transform3D` or matrix. `.trs.translation = ` on the line after creation appears 98 times in the repository.
+- `Camera(projection: PerspectiveProjection(verticalAngleOfView: ...))` appears 50 times. There is no shorter way to say "a perspective camera".
+- The tutorials use `SceneView.defaultCamera` as a general-purpose camera. It is a view constant, used during scene construction (15 uses).
+- `Light.spot(...)` exists, but there is no `.point` or `.directional`, and `.spot` has no `castsShadow` parameter.
+- `Node(shape:material:trs:)` accepts only `trs`. The base initializer has both `transform:` and `trs:`.
+- A node has `trs`, `transform` and `localTransform`, but no direct `position`.
+
+Helpers written to work around this:
+
+- `Examples/SceneSprocketTutorials/SceneSprocketTutorials/Helpers.swift`: `addShape(_:_:at:)`
+- `Examples/SceneSprocketsDemo/.../Demo.swift`: `Node.camera(_:fieldOfView:eye:target:)`, `Node.pointLight(_:at:color:intensity:)`
+- `SceneSprocketsComposer/.../EditorModel.swift`: `addShape(_:label:)`
+
+Expected: the tutorials build their scenes with library API only, with no local helper file.
+
+Related: #364, #106.
+
+- `2026-11-11T15:55:13Z`: Related: #364 (result-builder API for node trees) covers the tree-shape part of the same problem.
+
+---
+
+## 368: Materials are verbose to create and inconsistent between families
+
++++
+status: open
+priority: medium
+kind: enhancement
+labels: effort:l, area:renderer
+created: 2026-11-11T15:54:41Z
+updated: 2026-11-11T15:55:11Z
++++
+
+The three material families (Blinn-Phong, PBR, ShaderMaterial) have different construction rules, and the simple case is long in each.
+
+What is wrong:
+
+- `BlinnPhongSceneMaterial(ambient:diffuse:specular:shininess:)` has four required arguments with no defaults (85 uses). A plain colored material cannot be made from a color alone. The tutorials (`material(_:shininess:opacity:emission:)`) and the demo (`BlinnPhongSceneMaterial.plastic`) both wrap it.
+- `PBRSceneMaterial(baseColor:metallic:roughness:)` throws, for a material with no textures. The throw comes from GPU buffer creation at init. There are 30 `try PBRSceneMaterial(` call sites.
+- `ShaderMaterial.normals()` and `ShaderMaterial.rim(color:)` throw too.
+- Colors are `SIMD3<Float>` in Blinn-Phong and `Light`, but `SIMD4<Float>` in PBR and `Fog`.
+- Names differ: `BlinnPhongSceneMaterial`, `PBRSceneMaterial`, but `ShaderMaterial`.
+- The `Material` protocol must be written `SceneSprockets.Material` to avoid an ambiguity (55 times), including in the tutorial helper.
+- `BlinnPhongSceneMaterial.normalMap` is a raw `MTLTexture?`. The other channels use `Source`.
+- `BlinnPhongSceneMaterial` is declared in `BlinnPhongMaterialRenderer.swift`.
+
+Expected: a plain colored material of any family is one short, non-throwing expression, and the families agree on naming and color types.
+
+Related: #355, #356, #360.
+
+---
+
+## 369: SceneView initializer has 21 parameters and configuration is split three ways
+
++++
+status: open
+priority: medium
+kind: enhancement
+labels: effort:l, area:ui
+created: 2026-11-11T15:54:42Z
+updated: 2026-11-11T15:55:12Z
++++
+
+`SceneView.init` takes 21 parameters. Configuration is split between initializer arguments, the `Options` option set, and one environment modifier (`sceneCameraControl`), with no clear rule for which goes where.
+
+What is wrong:
+
+- Five camera parameters: `pointOfView`, `cameraMatrix`, `cameraTarget`, `defaultCamera`, `camera`. How they interact is explained only in a long doc comment.
+- Two tap callbacks: `onTap` and `onTapAt`.
+- `closuresID` exists only so SceneView can compare itself when it holds closures. It is an implementation concern in the public initializer.
+- `renderers:` is required at every call site (76 uses), usually as `[BlinnPhongMaterialRenderer()]`. A mesh whose material type has no renderer is skipped with no warning.
+- Shadows need a `SceneGraphShadows` class instance held in `@State` (41 uses), even when the caller only wants default shadows.
+- `debugMode`, `materialChannel`, `decorations`, `overlay` and `manipulator` are editor features in the same initializer as the beginner path.
+- `SceneViewDelegate` methods are all named `sceneView(...)` but take no view, and differ only by argument label.
+- Parameter order follows history, not importance. A comment in the initializer explains that `decorations` sits after `onTap` so a trailing closure still means `onTap`.
+
+Expected: the simple case stays short, and advanced configuration has one consistent mechanism.
+
+Related: #362, #363, #365, #248.
+
+- `2026-11-11T15:55:12Z`: Related: #362 (option names), #363 (comparison with Apple's SwiftUI views), #365 (debug options from environment variables). Each covers one part of this issue.
+
+---
+
+## 370: Public API surface is wider than intended and naming is uneven
+
++++
+status: open
+priority: medium
+kind: task
+labels: effort:l, area:scenegraph, release
+created: 2026-11-11T15:54:42Z
+updated: 2026-11-11T15:55:11Z
++++
+
+Before the first release tag (#295), the public surface needs an audit. Several symbols look public by accident, and naming conventions differ between areas.
+
+Probably public by accident:
+
+- About 25 `Node...Component` structs in `NodeComponents.swift` (`NodeLabelComponent`, `NodeOpacityComponent`, ...), plus `SiblingIndexComponent`, `NodeReferenceComponent`, `SceneGraphMembershipComponent`.
+- Global free functions with generic names: `distanceSquared(from:toOriginOf:)`, `cameraRelative(_:to:)`, `culledMeshEntries`, `meshEntriesInFrustum`, `sortedFrontToBack`, `renderBatches`, `materialDraw`, `groupedByVertexDescriptor`.
+- A public extension on `simd_float4x4` in `ShaderMaterialTransforms.swift`.
+
+Uneven naming:
+
+- Namespacing: `SceneGraph.Node`, `SceneGraph.Action`, `SceneGraph.Fog`, `SceneGraph.Shape` are nested, but `Light`, `Camera`, `AudioPlayer` are top-level with no prefix.
+- Three prefixes for top-level types: `SceneGraph...` (`SceneGraphShadows`, `SceneGraphPhysicsWorld`, `SceneGraphElement`), `Scene...` (`SceneAudio`, `SceneParticleSystem`, `SceneView`), and none.
+- `GLTFSceneGraph` and `ModelIOSceneGraph` are load results that contain a scene graph. They are not scene graphs.
+- `Light.LightType` repeats the outer name.
+- Actions: `rotate(by:around:duration:)` and `rotate(to:duration:)`, next to `rotateBy(x:y:z:duration:)` and `rotateTo(x:y:z:duration:)`. `fadeIn` / `fadeOut` next to `fadeOpacity(to:)`.
+- Angles: raw `Float` radians in `Light` (`innerConeAngle`, `outerConeAngle`) and actions, but an angle type in `PerspectiveProjection(verticalAngleOfView: .degrees(45))`.
+- `SceneGraph.Shape`: `.box(width:height:length:)` uses `length` for depth, `.plane(width:height:)` and `.floor(width:length:)` name the same two axes differently.
+- Queries return large unnamed tuples: `meshNodes(withMaterial:)` returns six fields, and `lightNodes`, `cameraNodes`, `shadowCasters` each return a different tuple.
+- Two `hitTest(_ ray:)` overloads, one with `categoryBitMask:` and one with `options:` (which also contains `categoryBitMask`).
+- `Node.isVisible`, `Node.isShown` and `Node.isActive` are three similar visibility-like flags.
+
+Expected: every public symbol is public on purpose, and one naming convention applies across modules.
+
+Related: #295, #106, #362.
+
+---
+
+## 371: Model loading has three entry points with different result shapes
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: effort:m, area:assets
+created: 2026-11-11T15:54:43Z
+updated: 2026-11-11T15:55:12Z
++++
+
+There are three public ways to load a model file, and each returns something different.
+
+- `ModelFile.load(_:)` returns a tuple `(node: SceneGraph.Node, warnings: [String])`.
+- `ModelIOSceneGraph(url:materials:)` is a struct with `sceneGraph`, one optional `animation`, and `warnings`.
+- `GLTFSceneGraph` is a struct with `sceneGraph`, an `animations` array, `nodes`, `variantNames`, and `warnings`.
+- `ModelFileLoader` is a fourth type, for archives.
+
+What is wrong:
+
+- A caller must know the file format to choose the entry point, or use `ModelFile.load` and lose the animations.
+- One returns a node, two return a whole `SceneGraph`. Adding a loaded model to an existing scene needs different code for each.
+- `animation` (optional, single) and `animations` (array) describe the same thing.
+- Warnings are plain strings in all three, but in different containers.
+- The type names say "SceneGraph", but the types are load results.
+
+Expected: one obvious way to load a model file, with one result shape whatever the format.
+
+Related: #358, #31.
 
 ---
