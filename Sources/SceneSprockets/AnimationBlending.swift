@@ -187,7 +187,7 @@ extension SceneGraph {
         }
 
         private static func value(of node: Node, path: AnimationClip.Path) -> [Float] {
-            let trs = node.trs
+            let trs = node.transform
             switch path {
             case .translation:
                 return [trs.translation.x, trs.translation.y, trs.translation.z]

@@ -1,3 +1,4 @@
+import GeometryLite3D
 @testable import SceneSprockets
 import simd
 import Testing
@@ -28,10 +29,10 @@ func traversalIsDepthFirstAndAccumulatesTransforms() {
     func translation(_ x: Float, _ y: Float, _ z: Float) -> float4x4 {
         float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [x, y, z, 1]))
     }
-    let root = SceneGraph.Node(label: "root", transform: translation(1, 0, 0))
-    let a = root.addChild(SceneGraph.Node(label: "a", transform: translation(0, 2, 0)))
-    a.addChild(SceneGraph.Node(label: "a1", transform: translation(0, 0, 3)))
-    root.addChild(SceneGraph.Node(label: "b", transform: float4x4(diagonal: [2, 2, 2, 1])))
+    let root = SceneGraph.Node(label: "root", transform: Transform3D(storing: translation(1, 0, 0)))
+    let a = root.addChild(SceneGraph.Node(label: "a", transform: Transform3D(storing: translation(0, 2, 0))))
+    a.addChild(SceneGraph.Node(label: "a1", transform: Transform3D(storing: translation(0, 0, 3))))
+    root.addChild(SceneGraph.Node(label: "b", transform: Transform3D(storing: float4x4(diagonal: [2, 2, 2, 1]))))
 
     let nodes = SceneGraph(root: root).nodesWithWorldTransforms()
     #expect(nodes.map(\.node.label) == ["root", "a", "a1", "b"])

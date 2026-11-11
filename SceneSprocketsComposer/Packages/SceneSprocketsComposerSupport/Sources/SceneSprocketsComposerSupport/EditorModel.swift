@@ -195,22 +195,22 @@ public final class EditorModel {
     var previewFramesPerSecond: Int {
         renderSettings.maximumFramesPerSecond ?? display.maximumFramesPerSecond
     }
-    @ObservationIgnored private var transformBeforeDrag: SceneGraph.LocalTransform?
+    @ObservationIgnored private var transformBeforeDrag: Transform3D?
     // The other selected nodes the gizmo carries along (#205), with their world and local transforms at drag start.
-    @ObservationIgnored private var draggedCompanions: [(node: SceneGraph.Node, world: simd_float4x4, local: SceneGraph.LocalTransform)] = []
+    @ObservationIgnored private var draggedCompanions: [(node: SceneGraph.Node, world: simd_float4x4, local: Transform3D)] = []
     @ObservationIgnored private var primaryWorldBeforeDrag = matrix_identity_float4x4
 
     // The gizmo moves the primary node; the other selected, unlocked nodes follow with the same world-space change,
     // so several nodes move, rotate and scale together around the primary one. Nodes under another dragged node are
     // skipped, because they follow their parent anyway.
     func beginGizmoDrag(_ node: SceneGraph.Node) {
-        transformBeforeDrag = node.localTransform
+        transformBeforeDrag = node.transform
         primaryWorldBeforeDrag = node.worldTransform
         let others = selectedNodes.filter { $0 !== node && $0.parent != nil && !isLocked($0) }
         let dragged = others + [node]
         draggedCompanions = others
             .filter { other in !dragged.contains { $0 !== other && $0.isAncestor(of: other) } }
-            .map { ($0, $0.worldTransform, $0.localTransform) }
+            .map { ($0, $0.worldTransform, $0.transform) }
     }
 
     func continueGizmoDrag(_ node: SceneGraph.Node) {
@@ -231,9 +231,9 @@ public final class EditorModel {
         let companions = draggedCompanions
         draggedCompanions = []
         transaction("Transform") {
-            setTransform(node.localTransform, of: node, undoTo: before)
+            setTransform(node.transform, of: node, undoTo: before)
             for companion in companions {
-                setTransform(companion.node.localTransform, of: companion.node, undoTo: companion.local)
+                setTransform(companion.node.transform, of: companion.node, undoTo: companion.local)
             }
         }
     }
@@ -296,13 +296,13 @@ public final class EditorModel {
     }
 
     // Observes transforms, so callers refresh while the gizmo drags.
-    func localTRS(of node: SceneGraph.Node) -> Transform3D {
+    func localTransform(of node: SceneGraph.Node) -> Transform3D {
         observe(.transform)
-        return node.localTransform.trs
+        return node.transform
     }
 
-    func setTransform(_ transform: SceneGraph.LocalTransform, of node: SceneGraph.Node, undoTo previous: SceneGraph.LocalTransform) {
-        perform("Transform", affecting: .transform, { _ in node.localTransform = transform }, revert: { _ in node.localTransform = previous })
+    func setTransform(_ transform: Transform3D, of node: SceneGraph.Node, undoTo previous: Transform3D) {
+        perform("Transform", affecting: .transform, { _ in node.transform = transform }, revert: { _ in node.transform = previous })
     }
 
     // The root cannot be deleted.
@@ -472,13 +472,13 @@ public final class EditorModel {
     @discardableResult
     func reparentKeepingWorldTransform(_ node: SceneGraph.Node, to newParent: SceneGraph.Node, at index: Int? = nil) -> Bool {
         let world = node.worldTransform
-        let previous = node.localTransform
+        let previous = node.transform
         guard reparent(node, to: newParent, at: index) else {
             return false
         }
         node.worldTransform = world
-        let moved = node.localTransform
-        node.localTransform = previous
+        let moved = node.transform
+        node.transform = previous
         setTransform(moved, of: node, undoTo: previous)
         return true
     }
@@ -558,7 +558,7 @@ public final class EditorModel {
         if let bounds {
             var transform = matrix_identity_float4x4
             transform.columns.3 = SIMD4((bounds.min + bounds.max) / 2, 1)
-            group.localTransform = .matrix(parent.worldTransform.inverse * transform)
+            group.transform = Transform3D(storing: parent.worldTransform.inverse * transform)
         }
         transaction("Group") {
             insert(group, into: parent, at: index, actionName: "Group")
@@ -651,13 +651,13 @@ public final class EditorModel {
             transform.columns.3 = [0, 3, 0, 1]
         }
         let range: Float = type == .point ? 10 : .infinity
-        let node = SceneGraph.Node(label: label, transform: transform, content: .light(Light(type: type, range: range)))
+        let node = SceneGraph.Node(label: label, transform: Transform3D(storing: transform), content: .light(Light(type: type, range: range)))
         insert(node, into: sceneGraph.root, at: sceneGraph.root.children.count, actionName: "Add \(label)")
     }
 
     // Placed at the editor camera, so it sees what the user sees.
     func addCamera() {
-        let node = SceneGraph.Node(label: "Camera", transform: camera.matrix, content: .camera(renderSettings.camera))
+        let node = SceneGraph.Node(label: "Camera", transform: Transform3D(storing: camera.matrix), content: .camera(renderSettings.camera))
         insert(node, into: sceneGraph.root, at: sceneGraph.root.children.count, actionName: "Add Camera")
     }
 

@@ -6,7 +6,7 @@ extension SceneGraph.Node {
     @discardableResult
     func addShape(_ shape: SceneGraph.Shape, _ material: any SceneSprockets.Material, at position: SIMD3<Float> = .zero) -> SceneGraph.Node {
         let node = self.addChild(SceneGraph.Node(shape: shape, material: material))
-        node.trs.translation = position
+        node.transform.translation = position
         return node
     }
 }

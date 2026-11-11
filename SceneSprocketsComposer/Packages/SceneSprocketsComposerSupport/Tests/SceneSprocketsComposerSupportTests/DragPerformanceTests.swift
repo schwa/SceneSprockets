@@ -25,7 +25,7 @@ import Testing
         changed = true
     }
     model.beginGizmoDrag(node)
-    node.localTransform = .trs(.init(translation: [1, 0, 0]))
+    node.transform = .init(translation: [1, 0, 0])
     model.continueGizmoDrag(node)
     model.endGizmoDrag(node)
     #expect(!changed)
@@ -71,7 +71,7 @@ func dragFrameCosts() throws {
     let costs: [(String, Double)] = [
         ("continueGizmoDrag", milliseconds {
             step += 0.01
-            nodes[0].localTransform = .trs(.init(translation: [step, 0, 0]))
+            nodes[0].transform = .init(translation: [step, 0, 0])
             model.continueGizmoDrag(nodes[0])
         }),
         ("editorState", milliseconds { _ = model.editorState }),

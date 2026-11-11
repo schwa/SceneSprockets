@@ -15,7 +15,7 @@ struct Tutorial3Lights: View {
         let root = SceneGraph.Node(label: "Root")
 
         let fill = root.addChild(SceneGraph.Node(label: "Fill", content: .light(Light(type: .point, intensity: 15, range: 50, castsShadow: false))))
-        fill.trs.translation = [-5, 4, 4]
+        fill.transform.translation = [-5, 4, 4]
 
         root.addShape(.floor(width: 8, length: 8), material([0.4, 0.42, 0.45], shininess: 4), at: [0, -1, 0])
         root.addShape(.sphere(radius: 1), material([0.2, 0.45, 0.9], shininess: 64), at: [0, 0.5, 0])

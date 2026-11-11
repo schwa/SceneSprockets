@@ -15,10 +15,10 @@ import Testing
 private func glass(behind: Bool, blinnPhong: Bool = false) throws -> SIMD4<UInt8> {
     let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
     let root = SceneGraph.Node()
-    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
+    root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
     let glass = try PBRSceneMaterial(baseColor: [1, 1, 1, 1], roughness: 0)
     glass.pbrMaterial.uniforms.transmissionFactor = 1
-    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: glass)))
+    root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: glass)))
     if behind, blinnPhong {
         let green = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0, 1, 0]))
         root.addChild(SceneGraph.Node(content: .mesh(quad, material: green)))
@@ -41,10 +41,10 @@ private func glass(behind: Bool, blinnPhong: Bool = false) throws -> SIMD4<UInt8
 private func glassOverLitQuad(lightReachesQuad: Bool) throws -> SIMD4<UInt8> {
     let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
     let root = SceneGraph.Node()
-    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
+    root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
     let glass = try PBRSceneMaterial(baseColor: [1, 1, 1, 1], roughness: 0)
     glass.pbrMaterial.uniforms.transmissionFactor = 1
-    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: glass)))
+    root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: glass)))
     let quadNode = root.addChild(SceneGraph.Node(content: .mesh(quad, material: try PBRSceneMaterial(baseColor: [1, 1, 1, 1], roughness: 1))))
     quadNode.categoryBitMask = 2
     let light = root.addChild(SceneGraph.Node(content: .light(Light(type: .directional, color: [1, 0, 0], intensity: 10))))

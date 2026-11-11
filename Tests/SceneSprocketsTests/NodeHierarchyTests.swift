@@ -16,7 +16,7 @@ func nodeUtilitiesFindReplaceAndClone() {
     let root = SceneGraph.Node(label: "root")
     let a = root.addChild(SceneGraph.Node(label: "a"))
     let b = root.addChild(SceneGraph.Node(label: "b"))
-    let deep = a.addChild(SceneGraph.Node(label: "deep", trs: .init(translation: [1, 2, 3])))
+    let deep = a.addChild(SceneGraph.Node(label: "deep", transform: .init(translation: [1, 2, 3])))
     deep.categoryBitMask = 4
     deep.morphWeights = [0.5]
     #expect(root.childNode(withLabel: "deep") === deep)
@@ -32,7 +32,7 @@ func nodeUtilitiesFindReplaceAndClone() {
     #expect(copy !== a && copy.parent == nil)
     let copiedDeep = copy.childNode(withLabel: "deep")
     #expect(copiedDeep !== deep)
-    #expect(copiedDeep?.trs.translation == [1, 2, 3])
+    #expect(copiedDeep?.transform.translation == [1, 2, 3])
     #expect(copiedDeep?.categoryBitMask == 4)
     #expect(copiedDeep?.morphWeights == [0.5])
     #expect(deep.parent === a)

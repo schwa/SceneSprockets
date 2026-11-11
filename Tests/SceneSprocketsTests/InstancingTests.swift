@@ -23,7 +23,7 @@ func identicalMeshAndMaterialShareABatch() throws {
     let sphere = MetalMesh(mesh: .sphere(), device: device)
     let root = SceneGraph.Node()
     for index in 0..<15 {
-        root.addChild(SceneGraph.Node(transform: translation(Float(index), 0, 0), content: .mesh(box, material: material(0.8))))
+        root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(Float(index), 0, 0)), content: .mesh(box, material: material(0.8))))
     }
     root.addChild(SceneGraph.Node(content: .mesh(box, material: material(0.3))))
     root.addChild(SceneGraph.Node(content: .mesh(sphere, material: material(0.8))))
@@ -45,7 +45,7 @@ func cachedOpaqueBatchesFollowChanges() throws {
     let box = MetalMesh(mesh: .box(), device: device)
     let root = SceneGraph.Node()
     let nodes = (0..<4).map { index in
-        root.addChild(SceneGraph.Node(transform: translation(Float(index), 0, 0), content: .mesh(box, material: material(0.8))))
+        root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(Float(index), 0, 0)), content: .mesh(box, material: material(0.8))))
     }
     let graph = SceneGraph(root: root)
     let renderer = BlinnPhongMaterialRenderer()
@@ -59,7 +59,7 @@ func cachedOpaqueBatchesFollowChanges() throws {
 
     #expect(try groups().instanced.map(\.modelMatrices.count) == [4])
 
-    nodes[2].transform = translation(10, 0, 0)
+    nodes[2].transform = Transform3D(storing: translation(10, 0, 0))
     let moved = try groups()
     #expect(moved.instanced.map(\.modelMatrices.count) == [4])
     #expect(moved.instanced[0].modelMatrices.contains { $0.columns.3 == SIMD4<Float>(10, 0, 0, 1) })
@@ -81,10 +81,10 @@ func instancedBoxesAllRender() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
     let root = SceneGraph.Node()
-    root.addChild(SceneGraph.Node(transform: translation(0, 0, 8), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
-    root.addChild(SceneGraph.Node(transform: translation(0, 0, 4), content: .light(Light(type: .point, intensity: 5))))
+    root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(0, 0, 8)), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
+    root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(0, 0, 4)), content: .light(Light(type: .point, intensity: 5))))
     for x: Float in [-2, 0, 2] {
-        root.addChild(SceneGraph.Node(transform: translation(x, 0, 0), content: .mesh(box, material: material(0.9))))
+        root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(x, 0, 0)), content: .mesh(box, material: material(0.9))))
     }
     let texture = try OffscreenRenderer(size: CGSize(width: 64, height: 64)).render(BlinnPhongSceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1)).texture
 

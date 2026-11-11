@@ -317,7 +317,7 @@ final class SceneTools {
     }
 
     private func info(for node: SceneGraph.Node, model: EditorModel) -> NodeInfo {
-        let trs = model.localTRS(of: node)
+        let trs = model.localTransform(of: node)
         var light: String?
         if case let .light(value) = node.content {
             light = "\(value.type.rawValue), intensity \(value.intensity)"
@@ -368,18 +368,18 @@ final class SceneTools {
 
     private func apply(to node: SceneGraph.Node, model: EditorModel, translation: [Double]?, rotationDegrees: [Double]?, scale: [Double]?, material change: MaterialChange) throws {
         if translation != nil || rotationDegrees != nil || scale != nil {
-            let previous = node.localTransform
-            var trs = previous.trs
+            let previous = node.transform
+            var transform = previous
             if let translation {
-                trs.translation = try Self.vector(translation, name: "translation")
+                transform.translation = try Self.vector(translation, name: "translation")
             }
             if let rotationDegrees {
-                trs.rotation = Rotation3D(Self.rotation(eulerDegrees: try Self.vector(rotationDegrees, name: "rotationDegrees")))
+                transform.rotation = Rotation3D(Self.rotation(eulerDegrees: try Self.vector(rotationDegrees, name: "rotationDegrees")))
             }
             if let scale {
-                trs.scale = try Self.vector(scale, name: "scale")
+                transform.scale = try Self.vector(scale, name: "scale")
             }
-            model.setTransform(.trs(trs), of: node, undoTo: previous)
+            model.setTransform(transform, of: node, undoTo: previous)
         }
         guard !change.isEmpty else {
             return

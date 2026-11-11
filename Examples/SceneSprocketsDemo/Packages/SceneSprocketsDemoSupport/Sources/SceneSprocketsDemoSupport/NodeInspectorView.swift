@@ -10,7 +10,7 @@ struct NodeInspectorView: View {
 
     var body: some View {
         GeneralSectionView(node: node)
-        TransformSectionView(transform: node.transform)
+        TransformSectionView(transform: node.transform.matrix)
         switch node.content {
         case .empty:
             EmptyView()

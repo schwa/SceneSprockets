@@ -19,20 +19,20 @@ func overrideLayersBlendByNormalizedWeight() {
     let right = moveClip(node, from: [2, 4, 0], to: [2, 4, 0])
     let mixer = SceneGraph.AnimationMixer(clips: [left, right])
     mixer.apply([.init(clip: 0, time: 0, weight: 3), .init(clip: 1, time: 0, weight: 1)])
-    #expect(isClose(node.trs.translation, [-1, 1, 0]))
+    #expect(isClose(node.transform.translation, [-1, 1, 0]))
 }
 
 @Test
 func nodesMissingFromALayerBlendTowardRest() {
     let animated = SceneGraph.Node()
     let other = SceneGraph.Node()
-    other.trs.translation = [0, 0, 8]
+    other.transform.translation = [0, 0, 8]
     let clipA = moveClip(animated, from: [4, 0, 0], to: [4, 0, 0])
     let clipB = moveClip(other, from: [0, 0, 0], to: [0, 0, 0])
     let mixer = SceneGraph.AnimationMixer(clips: [clipA, clipB])
     mixer.apply([.init(clip: 0, time: 0, weight: 0.5), .init(clip: 1, time: 0, weight: 0.5)])
-    #expect(isClose(animated.trs.translation, [2, 0, 0]))
-    #expect(isClose(other.trs.translation, [0, 0, 4]))
+    #expect(isClose(animated.transform.translation, [2, 0, 0]))
+    #expect(isClose(other.transform.translation, [0, 0, 4]))
 }
 
 @Test
@@ -48,7 +48,7 @@ func rotationsBlendAlongShortestArc() {
     let mixer = SceneGraph.AnimationMixer(clips: [hold(start), hold(end)])
     mixer.apply([.init(clip: 0, time: 0, weight: 1), .init(clip: 1, time: 0, weight: 1)])
     let expected = simd_quatf(angle: .pi / 4, axis: [0, 1, 0])
-    #expect(abs(abs(simd_dot(node.trs.rotation.quaternion.vector, expected.vector)) - 1) < 0.0001)
+    #expect(abs(abs(simd_dot(node.transform.rotation.quaternion.vector, expected.vector)) - 1) < 0.0001)
 }
 
 @Test
@@ -58,16 +58,16 @@ func additiveLayerAddsOffsetFromRest() {
     let bob = moveClip(node, from: [0, 0, 0], to: [0, 2, 0])
     let mixer = SceneGraph.AnimationMixer(clips: [base, bob])
     mixer.apply([.init(clip: 0, time: 0), .init(clip: 1, time: 1, weight: 0.5, mode: .additive)])
-    #expect(isClose(node.trs.translation, [1, 1, 0]))
+    #expect(isClose(node.transform.translation, [1, 1, 0]))
 }
 
 @Test
 func rootMotionKeepsHorizontalTranslationAtRest() {
     let root = SceneGraph.Node()
-    root.trs.translation = [0, 0, 0]
+    root.transform.translation = [0, 0, 0]
     let mixer = SceneGraph.AnimationMixer(clips: [moveClip(root, from: [0, 0, 0], to: [4, 1, 6], duration: 2)])
     mixer.apply([.init(clip: 0, time: 1)], rootMotionNode: root)
-    #expect(isClose(root.trs.translation, [0, 0.5, 0]))
+    #expect(isClose(root.transform.translation, [0, 0.5, 0]))
     #expect(isClose(mixer.rootTranslation(layers: [.init(clip: 0, time: 1)], node: root), [2, 0.5, 3]))
 }
 

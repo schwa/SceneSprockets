@@ -1,3 +1,4 @@
+import GeometryLite3D
 import Observation
 @testable import SceneSprockets
 import simd
@@ -13,7 +14,7 @@ private final class ChangeCount: @unchecked Sendable {
 
 private func setTransformInWorld(_ node: SceneGraph.Node, in graph: SceneGraph, translation: SIMD3<Float>) throws {
     let entity = try #require(graph.world[node.id])
-    entity.set(NodeTransformComponent(value: .matrix(simd_float4x4(translation: translation))))
+    entity.set(NodeTransformComponent(value: Transform3D(storing: simd_float4x4(translation: translation))))
 }
 
 @Test
@@ -63,7 +64,7 @@ func readingOneNodeDoesNotObserveOtherNodes() throws {
     } onChange: {
         changes.value += 1
     }
-    second.transform = simd_float4x4(translation: [1, 0, 0])
+    second.transform = Transform3D(storing: simd_float4x4(translation: [1, 0, 0]))
     try setTransformInWorld(second, in: graph, translation: [2, 0, 0])
     #expect(changes.value == 0)
 }
@@ -78,6 +79,6 @@ func nodeWriteStillNotifiesObservers() {
     } onChange: {
         changes.value += 1
     }
-    root.transform = simd_float4x4(translation: [1, 0, 0])
+    root.transform = Transform3D(storing: simd_float4x4(translation: [1, 0, 0]))
     #expect(changes.value == 1)
 }

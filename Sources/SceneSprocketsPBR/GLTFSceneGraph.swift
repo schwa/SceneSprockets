@@ -107,9 +107,9 @@ private struct GLTFSceneGraphBuilder {
             let source = document.nodes[index]
             let node = parent.addChild(SceneGraph.Node(label: source.name))
             if let matrix = source.matrix, matrix != matrix_identity_float4x4 {
-                node.transform = matrix
+                node.transform = Transform3D(storing: matrix)
             } else {
-                node.trs = Transform3D(
+                node.transform = Transform3D(
                     translation: source.translation ?? .zero,
                     rotation: source.rotation.map { simd_quatf(vector: $0) } ?? .identity,
                     scale: source.scale ?? .one
@@ -125,7 +125,7 @@ private struct GLTFSceneGraphBuilder {
                 let instances = skin == nil ? try instanceTransforms(of: source) : nil
                 let meshNodes = instances.map { transforms in
                     transforms.enumerated().map { index, transform in
-                        node.addChild(SceneGraph.Node(label: "\(source.name ?? "Instance") \(index)", transform: transform))
+                        node.addChild(SceneGraph.Node(label: "\(source.name ?? "Instance") \(index)", transform: Transform3D(storing: transform)))
                     }
                 } ?? [node]
                 for meshNode in meshNodes {

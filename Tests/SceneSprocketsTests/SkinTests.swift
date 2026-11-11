@@ -1,3 +1,4 @@
+import GeometryLite3D
 import Metal
 import MetalSprocketsPBR
 @testable import SceneSprockets
@@ -12,13 +13,13 @@ private func translation(_ x: Float, _ y: Float, _ z: Float) -> simd_float4x4 {
 
 @Test
 func jointMatricesFollowJointWorldTransforms() {
-    let root = SceneGraph.Node(transform: translation(0, 1, 0))
-    let joint = root.addChild(SceneGraph.Node(transform: translation(2, 0, 0)))
+    let root = SceneGraph.Node(transform: Transform3D(storing: translation(0, 1, 0)))
+    let joint = root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(2, 0, 0))))
     // Bind pose: joint at (2, 1, 0).
     let skin = SceneGraph.Skin(joints: [joint], inverseBindMatrices: [translation(-2, -1, 0)])
     #expect(skin.jointMatrices() == [matrix_identity_float4x4])
 
-    joint.trs.translation = [3, 0, 0]
+    joint.transform.translation = [3, 0, 0]
     #expect(skin.jointMatrices()[0].columns.3 == SIMD4<Float>(1, 0, 0, 1))
 }
 
@@ -27,7 +28,7 @@ func skinnedMeshBuildsPBRSkin() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
     let root = SceneGraph.Node()
-    let joint = root.addChild(SceneGraph.Node(label: "joint", transform: translation(0, 5, 0)))
+    let joint = root.addChild(SceneGraph.Node(label: "joint", transform: Transform3D(storing: translation(0, 5, 0))))
     let skinned = root.addChild(SceneGraph.Node(content: .mesh(box, material: try PBRSceneMaterial())))
     skinned.skin = SceneGraph.Skin(joints: [joint], inverseBindMatrices: [matrix_identity_float4x4])
     skinned.skinVertices = Array(repeating: SceneGraph.SkinVertex(joints: [0, 0, 0, 0], weights: [1, 0, 0, 0]), count: box.vertexCount)

@@ -60,11 +60,11 @@ extension SceneGraph.Transaction {
         private var transforms: [(node: SceneGraph.Node, from: Transform3D)] = []
         private var morphWeights: [(node: SceneGraph.Node, from: [Float])] = []
 
-        func recordTransform(of node: SceneGraph.Node, oldValue: SceneGraph.LocalTransform) {
+        func recordTransform(of node: SceneGraph.Node, oldValue: Transform3D) {
             guard !transforms.contains(where: { $0.node === node }) else {
                 return
             }
-            transforms.append((node, oldValue.trs))
+            transforms.append((node, oldValue))
         }
 
         func recordMorphWeights(of node: SceneGraph.Node, oldValue: [Float]) {
@@ -89,11 +89,11 @@ extension SceneGraph.Transaction {
                 }
             }
             for (node, from) in transforms {
-                let to = node.trs
-                node.trs = from
+                let to = node.transform
+                node.transform = from
                 let action = SceneGraph.Action.custom(duration: duration) { node, elapsed in
                     let t = timingMode.apply(min(elapsed / duration, 1))
-                    node.trs = from.interpolated(to: to, amount: t)
+                    node.transform = from.interpolated(to: to, amount: t)
                 }
                 node.run(action, forKey: "implicit.transform", completion: finished)
             }

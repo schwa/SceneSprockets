@@ -1,3 +1,4 @@
+import GeometryLite3D
 import SceneSprockets
 import simd
 import SwiftECS
@@ -13,7 +14,7 @@ private struct Velocity: Component {
 func appOwnedWorldHoldsTheGraphsNodes() throws {
     let world = World()
     let root = SceneGraph.Node(label: "Root")
-    let child = root.addChild(SceneGraph.Node(transform: simd_float4x4(translation: [1, 0, 0])))
+    let child = root.addChild(SceneGraph.Node(transform: Transform3D(storing: simd_float4x4(translation: [1, 0, 0]))))
     let graph = SceneGraph(root: root, world: world)
     #expect(graph.world === world)
 
@@ -26,8 +27,8 @@ func appOwnedWorldHoldsTheGraphsNodes() throws {
 
     // An ECS app attaches its own components and edits node components directly.
     entity.set(Velocity(value: [0, 1, 0]))
-    entity.set(NodeTransformComponent(value: .matrix(simd_float4x4(translation: [2, 0, 0]))))
-    #expect(child.transform.columns.3.x == 2)
+    entity.set(NodeTransformComponent(value: Transform3D(storing: simd_float4x4(translation: [2, 0, 0]))))
+    #expect(child.transform.matrix.columns.3.x == 2)
     #expect(entity[Velocity.self]?.value == [0, 1, 0])
 }
 

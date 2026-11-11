@@ -33,7 +33,7 @@ struct Tutorial2Hierarchy: View {
 
         // The camera, placed and aimed like any other node.
         let camera = root.addChild(SceneGraph.Node(label: "Camera", content: .camera(SceneView.defaultCamera)))
-        camera.trs.translation = [0, 2, 6]
+        camera.transform.translation = [0, 2, 6]
         camera.look(at: .zero)
 
         return SceneGraph(root: root)

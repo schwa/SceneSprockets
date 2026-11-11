@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Breaking:** `Node.transform` is now a GeometryLite3D `Transform3D` and the only stored local transform (#372). `trs`, `localTransform`, `eulerAngles` and `SceneGraph.LocalTransform` are removed. Use `transform.translation`, `transform.rotation` (`.quaternion`, `.euler`), `transform.scale` and `transform.matrix`. Initializers take `transform: Transform3D`; wrap a matrix with `Transform3D(storing:)`. Archives are unchanged.
+- **Breaking:** requires GeometryLite3D 0.3: `Transform3D.rotation` is a `Rotation3D` (#378).
 - Shadows with `softness` above 1 no longer make a floor shadow itself in bands and stripes (#366).
 - `ShaderMaterial` can shade each light with its own shadow: set `samplesShadows`, and use `shaderMaterialShadow` from `ShaderMaterial.h`. `ShaderMaterial.lit(color:)` is a sample (#300).
 - Blinn-Phong, shader-material and debug-view meshes are morphed and skinned on the GPU, in a compute pass before the scene pass, instead of on the CPU every frame (#298).

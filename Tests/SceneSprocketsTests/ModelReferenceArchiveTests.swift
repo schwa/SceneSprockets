@@ -51,7 +51,7 @@ struct ModelReferenceArchiveTests {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
         let (model, _) = try ModelFile.load(writeTriangle(in: folder))
-        model.trs.translation = [5, 0, 0]
+        model.transform.translation = [5, 0, 0]
         let root = SceneGraph.Node()
         root.addChild(model)
         let meshCount = SceneGraph(root: root).meshEntries().count
@@ -69,7 +69,7 @@ struct ModelReferenceArchiveTests {
         #expect(warnings.isEmpty)
         let loadedModel = try #require(loaded.root.children.first)
         #expect(loadedModel.label == "Triangle")
-        #expect(loadedModel.trs.translation == [5, 0, 0])
+        #expect(loadedModel.transform.translation == [5, 0, 0])
         #expect(loaded.meshEntries().count == meshCount)
         #expect(loadedModel.modelSource == model.modelSource)
 

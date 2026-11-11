@@ -26,8 +26,8 @@ func fogTintsFarGeometryOnly() throws {
     let root = SceneGraph.Node()
     root.addChild(SceneGraph.Node(content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(60), depthMode: .standard(zClip: 0.1 ... 200))))))
     root.addChild(SceneGraph.Node(content: .light(Light(type: .directional, color: [0.2, 0.2, 0.2], intensity: 1))))
-    root.addChild(SceneGraph.Node(trs: .init(translation: [-1.5, 0, -4]), content: .mesh(box, material: material)))
-    root.addChild(SceneGraph.Node(trs: .init(translation: [12, 0, -40], scale: [8, 8, 8]), content: .mesh(box, material: material)))
+    root.addChild(SceneGraph.Node(transform: .init(translation: [-1.5, 0, -4]), content: .mesh(box, material: material)))
+    root.addChild(SceneGraph.Node(transform: .init(translation: [12, 0, -40], scale: [8, 8, 8]), content: .mesh(box, material: material)))
     let sceneGraph = SceneGraph(root: root)
     sceneGraph.fog = SceneGraph.Fog(color: [1, 0, 0, 1], startDistance: 10, endDistance: 30)
 

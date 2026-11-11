@@ -195,25 +195,25 @@ final class GameModel {
     private func addRing(for difference: Difference, hint: Bool) {
         for world in [left, right].compactMap(\.self) {
             let jitter: SIMD3<Float> = hint ? SIMD3(Float.random(in: -1...1), Float.random(in: -1...1), Float.random(in: -1...1)) : .zero
-            let holder = world.treeNode.addChild(SceneGraph.Node(label: hint ? "Hint" : "Ring", trs: Transform3D(translation: difference.anchor + jitter)))
+            let holder = world.treeNode.addChild(SceneGraph.Node(label: hint ? "Hint" : "Ring", transform: Transform3D(translation: difference.anchor + jitter)))
             holder.constraints = [.billboard()]
             let radius: Float = hint ? 2.4 : 0.9
             let color: SIMD3<Float> = hint ? [1.2, 1.2, 1.2] : [1.6, 1.15, 0.45]
-            let ring = holder.addChild(SceneGraph.Node(label: "Torus", shape: .torus(ringRadius: radius, pipeRadius: hint ? 0.04 : 0.07), material: glowing(color), trs: Transform3D(rotation: simd_quatf(angle: .pi / 2, axis: [1, 0, 0]))))
+            let ring = holder.addChild(SceneGraph.Node(label: "Torus", shape: .torus(ringRadius: radius, pipeRadius: hint ? 0.04 : 0.07), material: glowing(color), transform: Transform3D(rotation: simd_quatf(angle: .pi / 2, axis: [1, 0, 0]))))
             ring.content = ring.content.withoutShadows
-            holder.trs.scale = SIMD3(repeating: 0.01)
+            holder.transform.scale = SIMD3(repeating: 0.01)
             if hint {
                 holder.run(.sequence([
                     .custom(duration: 3.5) { node, elapsed in
                         let t = elapsed / 3.5
-                        node.trs.scale = SIMD3(repeating: sin(t * .pi) * (1 + 0.08 * sin(elapsed * 6)))
+                        node.transform.scale = SIMD3(repeating: sin(t * .pi) * (1 + 0.08 * sin(elapsed * 6)))
                     },
                     .removeFromParent()
                 ]))
             } else {
                 holder.run(.custom(duration: 0.6) { node, elapsed in
                     let t = elapsed / 0.6
-                    node.trs.scale = SIMD3(repeating: t + sin(t * .pi) * 0.5)
+                    node.transform.scale = SIMD3(repeating: t + sin(t * .pi) * 0.5)
                 })
             }
         }
@@ -240,7 +240,7 @@ final class SwayDriver: SceneViewDelegate {
         let rotation = simd_quatf(angle: 0.012 * sin(t * 1.1) + 0.005 * sin(t * 2.3), axis: [0, 0, 1])
             * simd_quatf(angle: 0.008 * cos(t * 0.8), axis: [1, 0, 0])
         for tree in trees {
-            tree.trs.rotation = Rotation3D(rotation)
+            tree.transform.rotation = Rotation3D(rotation)
         }
     }
 }

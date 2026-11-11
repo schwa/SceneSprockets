@@ -9,7 +9,7 @@ import Testing
 // #38
 
 private func makeFloor(in root: SceneGraph.Node) -> SceneGraph.Node {
-    let floor = root.addChild(SceneGraph.Node(label: "Floor", trs: .init(translation: [0, -0.5, 0])))
+    let floor = root.addChild(SceneGraph.Node(label: "Floor", transform: .init(translation: [0, -0.5, 0])))
     floor.physicsBody = .init(type: .static, shape: .box(size: [20, 1, 20]))
     return floor
 }
@@ -24,7 +24,7 @@ private func run(_ physics: SceneGraphPhysicsWorld, seconds: Float) {
 func dynamicBoxFallsAndRestsOnStaticFloor() throws {
     let root = SceneGraph.Node()
     _ = makeFloor(in: root)
-    let box = root.addChild(SceneGraph.Node(trs: .init(translation: [0, 5, 0])))
+    let box = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 5, 0])))
     box.physicsBody = .init(type: .dynamic, shape: .box(size: [1, 1, 1]))
     let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
     physics.step(deltaTime: 1 / 60)
@@ -38,20 +38,20 @@ func dynamicBoxFallsAndRestsOnStaticFloor() throws {
 func dynamicNodeUnderScaledParentKeepsItsScale() throws {
     let root = SceneGraph.Node()
     _ = makeFloor(in: root)
-    let parent = root.addChild(SceneGraph.Node(trs: .init(scale: [2, 2, 2])))
-    let box = parent.addChild(SceneGraph.Node(trs: .init(translation: [0, 3, 0])))
+    let parent = root.addChild(SceneGraph.Node(transform: .init(scale: [2, 2, 2])))
+    let box = parent.addChild(SceneGraph.Node(transform: .init(translation: [0, 3, 0])))
     // 1 local unit is 2 world units, so the box rests with its center 1 above the floor.
     box.physicsBody = .init(type: .dynamic, shape: .box(size: [1, 1, 1]))
     let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
     run(physics, seconds: 4)
     #expect(abs(box.worldPosition.y - 1) < 0.05)
-    #expect(simd_distance(box.trs.scale, [1, 1, 1]) < 1e-3)
+    #expect(simd_distance(box.transform.scale, [1, 1, 1]) < 1e-3)
 }
 
 @Test
 func stepOnlyChangesTransformRevision() throws {
     let root = SceneGraph.Node()
-    let box = root.addChild(SceneGraph.Node(trs: .init(translation: [0, 5, 0])))
+    let box = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 5, 0])))
     box.physicsBody = .init(type: .dynamic, shape: .sphere(radius: 0.5))
     let graph = SceneGraph(root: root)
     let physics = try SceneGraphPhysicsWorld(sceneGraph: graph)
@@ -65,7 +65,7 @@ func stepOnlyChangesTransformRevision() throws {
 @Test
 func bodiesFollowTheGraph() throws {
     let root = SceneGraph.Node()
-    let ball = root.addChild(SceneGraph.Node(trs: .init(translation: [0, 5, 0])))
+    let ball = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 5, 0])))
     ball.physicsBody = .init(type: .dynamic, shape: .sphere(radius: 0.5))
     let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
     physics.sync()
@@ -98,13 +98,13 @@ func velocityLaunchesANode() throws {
 @Test
 func kinematicBodyFollowsItsNodeAndPushes() throws {
     let root = SceneGraph.Node()
-    let pusher = root.addChild(SceneGraph.Node(trs: .init(translation: [-3, 0, 0])))
+    let pusher = root.addChild(SceneGraph.Node(transform: .init(translation: [-3, 0, 0])))
     pusher.physicsBody = .init(type: .kinematic, shape: .box(size: [1, 1, 1]))
     let box = root.addChild(SceneGraph.Node())
     box.physicsBody = .init(type: .dynamic, shape: .box(size: [1, 1, 1]))
     let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root), gravity: .zero)
     for _ in 0..<120 {
-        pusher.trs.translation.x += 4.0 / 60
+        pusher.transform.translation.x += 4.0 / 60
         physics.step(deltaTime: 1 / 60)
     }
     let pusherBody = try #require(physics.body(of: pusher))
@@ -117,11 +117,11 @@ func boundingBoxAndMeshShapesComeFromTheMesh() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let root = SceneGraph.Node()
     // A floor made from a plane mesh's triangles.
-    let floor = root.addChild(SceneGraph.Node(trs: .init(rotation: simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])), content: .mesh(MetalMesh(mesh: .quad(extents: [20, 20]), device: device), material: Unlit())))
+    let floor = root.addChild(SceneGraph.Node(transform: .init(rotation: simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])), content: .mesh(MetalMesh(mesh: .quad(extents: [20, 20]), device: device), material: Unlit())))
     floor.physicsBody = .init(type: .static, shape: .mesh)
     // A box whose mesh sits 1 above its origin.
     let mesh = MetalMesh(mesh: Mesh.box(extents: [1, 1, 1]).translated(by: [0, 1, 0]), device: device)
-    let box = root.addChild(SceneGraph.Node(trs: .init(translation: [0, 4, 0]), content: .mesh(mesh, material: Unlit())))
+    let box = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 4, 0]), content: .mesh(mesh, material: Unlit())))
     box.physicsBody = .init(type: .dynamic, shape: .boundingBox)
     let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
     run(physics, seconds: 4)
@@ -136,9 +136,9 @@ private struct Unlit: SceneSprockets.Material {}
 func sliderConstraintStopsAtWallAndSlides() throws {
     let root = SceneGraph.Node()
     // A wall whose near face is the plane x = 2.
-    let wall = root.addChild(SceneGraph.Node(label: "Wall", trs: .init(translation: [2.5, 0, 0])))
+    let wall = root.addChild(SceneGraph.Node(label: "Wall", transform: .init(translation: [2.5, 0, 0])))
     wall.physicsBody = .init(type: .static, shape: .box(size: [1, 10, 10]))
-    let ignored = root.addChild(SceneGraph.Node(label: "Other Category", trs: .init(translation: [-2.5, 0, 0])))
+    let ignored = root.addChild(SceneGraph.Node(label: "Other Category", transform: .init(translation: [-2.5, 0, 0])))
     ignored.physicsBody = .init(type: .static, shape: .box(size: [1, 10, 10]))
     ignored.categoryBitMask = 0b10
     let mover = root.addChild(SceneGraph.Node())
@@ -149,20 +149,20 @@ func sliderConstraintStopsAtWallAndSlides() throws {
     sceneGraph.applyConstraints(pointOfView: matrix_identity_float4x4)
 
     // Straight into the wall: stops with its sphere touching the face.
-    mover.trs.translation = [5, 0, 0]
+    mover.transform.translation = [5, 0, 0]
     sceneGraph.applyConstraints(pointOfView: matrix_identity_float4x4)
-    #expect(abs(mover.trs.translation.x - 1.5) < 0.05)
+    #expect(abs(mover.transform.translation.x - 1.5) < 0.05)
 
     // Diagonally into the wall: blocked in x, free in z.
-    mover.trs.translation = [4, 0, 3]
+    mover.transform.translation = [4, 0, 3]
     sceneGraph.applyConstraints(pointOfView: matrix_identity_float4x4)
-    #expect(abs(mover.trs.translation.x - 1.5) < 0.05)
-    #expect(abs(mover.trs.translation.z - 3) < 0.05)
+    #expect(abs(mover.transform.translation.x - 1.5) < 0.05)
+    #expect(abs(mover.transform.translation.z - 3) < 0.05)
 
     // Bodies outside the category do not block.
-    mover.trs.translation = [-5, 0, 3]
+    mover.transform.translation = [-5, 0, 3]
     sceneGraph.applyConstraints(pointOfView: matrix_identity_float4x4)
-    #expect(abs(mover.trs.translation.x + 5) < 0.05)
+    #expect(abs(mover.transform.translation.x + 5) < 0.05)
 }
 
 // A scaled, tumbling body must keep its scale: each step writes the body's pose back into the node's transform.
@@ -201,11 +201,11 @@ func decomposedRotationIsUnitLength() {
 func tumblingScaledBodyKeepsItsScale() throws {
     let root = SceneGraph.Node()
     _ = makeFloor(in: root)
-    let die = root.addChild(SceneGraph.Node(trs: .init(translation: [0, 2, 0], rotation: simd_quatf(angle: 0.7, axis: simd_normalize([1, 2, 3])), scale: [0.0625, 0.0625, 0.0625])))
+    let die = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 2, 0], rotation: simd_quatf(angle: 0.7, axis: simd_normalize([1, 2, 3])), scale: [0.0625, 0.0625, 0.0625])))
     die.physicsBody = .init(type: .dynamic, shape: .box(size: [8, 8, 8]))
     let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
     physics.setAngularVelocity([12, -9, 15], of: die)
     run(physics, seconds: 3)
-    let scale = die.trs.scale
+    let scale = die.transform.scale
     #expect(simd_distance(scale, [0.0625, 0.0625, 0.0625]) < 1e-4, "scale drifted to \(scale)")
 }

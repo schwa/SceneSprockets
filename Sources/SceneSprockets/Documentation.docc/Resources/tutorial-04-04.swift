@@ -16,9 +16,9 @@ struct Tutorial4Actions: View {
         let root = SceneGraph.Node(label: "Root")
 
         let fill = root.addChild(SceneGraph.Node(label: "Fill", content: .light(Light(type: .point, intensity: 15, range: 50, castsShadow: false))))
-        fill.trs.translation = [-5, 4, 4]
+        fill.transform.translation = [-5, 4, 4]
         let spot = root.addChild(SceneGraph.Node(label: "Spot", content: .light(Light(type: .spot, intensity: 80, range: 30, outerConeAngle: .pi / 4))))
-        spot.trs.translation = [3, 7, 3]
+        spot.transform.translation = [3, 7, 3]
         spot.look(at: .zero)
         root.addShape(.floor(width: 8, length: 8), material([0.4, 0.42, 0.45], shininess: 4), at: [0, -1, 0])
 
@@ -40,11 +40,11 @@ struct Tutorial4Actions: View {
         let teapot = root.addShape(.teapot(diameter: 1.6), material([0.75, 0.5, 0.85], shininess: 64), at: [0, -0.5, 1.5])
         teapot.run(.repeatForever(.custom(duration: 3) { node, elapsed in
             let phase = elapsed / 3 * 2 * .pi
-            node.trs.rotation = Rotation3D(simd_quatf(angle: sin(phase) * 0.3, axis: [0, 0, 1]) * simd_quatf(angle: phase, axis: [0, 1, 0]))
+            node.transform.rotation = Rotation3D(simd_quatf(angle: sin(phase) * 0.3, axis: [0, 0, 1]) * simd_quatf(angle: phase, axis: [0, 1, 0]))
         }))
 
         let camera = root.addChild(SceneGraph.Node(label: "Camera", content: .camera(SceneView.defaultCamera)))
-        camera.trs.translation = [0, 3, 8]
+        camera.transform.translation = [0, 3, 8]
         camera.look(at: [0, 0, 0])
 
         return SceneGraph(root: root)

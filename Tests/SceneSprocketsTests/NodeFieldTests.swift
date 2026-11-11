@@ -1,4 +1,5 @@
 import AVFAudio
+import GeometryLite3D
 import Metal
 import MetalSprocketsParticles
 @testable import SceneSprockets
@@ -95,7 +96,7 @@ func nodeSettersBumpTheSameRevisionAsBefore() {
 func directPivotWriteChangesComposedTransform() {
     let attached = AttachedNode()
     let (graph, node, entity) = (attached.graph, attached.node, attached.entity)
-    node.transform = simd_float4x4(translation: [5, 0, 0])
+    node.transform = Transform3D(storing: simd_float4x4(translation: [5, 0, 0]))
     let pivot = NodePivotComponent(value: simd_float4x4(translation: [1, 0, 0]))
     #expect(revisionChange(graph) { entity.set(pivot) } == .transform)
     #expect(node.composedTransform.columns.3.xyz == [4, 0, 0])
@@ -160,7 +161,7 @@ func actionStateLivesInTheWorldAndSurvivesMoves() {
     graph.world[node.id]?.set(NodeActionSpeedComponent(value: 1))
     #expect(node.actionSpeed == 1)
     graph.advanceActions(by: 0.5)
-    #expect(abs(node.transform.columns.3.x - 5) < 1e-4)
+    #expect(abs(node.transform.matrix.columns.3.x - 5) < 1e-4)
 }
 
 // #281

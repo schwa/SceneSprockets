@@ -39,7 +39,7 @@ final class BurningFox {
         }
         let asset = try GLTFAsset(url: url, device: demoDevice).makeSceneGraph()
         // The fox is about 150 units long, in centimeters.
-        fox = node.addChild(SceneGraph.Node(label: "Fox", trs: .init(scale: SIMD3(repeating: 0.015 * scale))))
+        fox = node.addChild(SceneGraph.Node(label: "Fox", transform: .init(scale: SIMD3(repeating: 0.015 * scale))))
         for child in asset.sceneGraph.root.children {
             fox.addChild(child)
         }
@@ -53,7 +53,7 @@ final class BurningFox {
         node.particleSystems = [particles]
         var light = Light(type: .point, color: [1, 0.5, 0.15], intensity: 0)
         light.range = 4 * scale
-        fireLight = node.addChild(SceneGraph.Node(label: "Fire Light", trs: .init(translation: [0, 1.6 * scale, 0]), content: .light(light)))
+        fireLight = node.addChild(SceneGraph.Node(label: "Fire Light", transform: .init(translation: [0, 1.6 * scale, 0]), content: .light(light)))
         fireLight.isVisible = false
     }
 

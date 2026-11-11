@@ -15,10 +15,10 @@ struct Tutorial3Lights: View {
         let root = SceneGraph.Node(label: "Root")
 
         let fill = root.addChild(SceneGraph.Node(label: "Fill", content: .light(Light(type: .point, intensity: 15, range: 50, castsShadow: false))))
-        fill.trs.translation = [-5, 4, 4]
+        fill.transform.translation = [-5, 4, 4]
 
         let spot = root.addChild(SceneGraph.Node(label: "Spot", content: .light(Light(type: .spot, intensity: 80, range: 30, outerConeAngle: .pi / 4))))
-        spot.trs.translation = [3, 7, 3]
+        spot.transform.translation = [3, 7, 3]
         spot.look(at: .zero)
 
         root.addShape(.floor(width: 8, length: 8), material([0.4, 0.42, 0.45], shininess: 4), at: [0, -1, 0])

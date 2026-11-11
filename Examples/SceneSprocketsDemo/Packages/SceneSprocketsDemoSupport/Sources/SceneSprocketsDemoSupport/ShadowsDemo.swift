@@ -1,3 +1,4 @@
+import GeometryLite3D
 import SceneSprockets
 import SceneSprocketsBlinnPhong
 import simd
@@ -16,7 +17,7 @@ final class ShadowsDemo: DemoScene {
         let eye: SIMD3<Float> = [0, 6, 9]
         root.addChild(.camera(eye: eye, target: [0, 0.5, 0]))
         light = root.addChild(SceneGraph.Node(label: "Light"))
-        floor = root.addChild(SceneGraph.Node(label: "Floor", shape: .box(width: 12, height: 0.1, length: 12), material: BlinnPhongSceneMaterial.plastic([0.6, 0.6, 0.65], shininess: 8), trs: .init(translation: [0, -0.05, 0])))
+        floor = root.addChild(SceneGraph.Node(label: "Floor", shape: .box(width: 12, height: 0.1, length: 12), material: BlinnPhongSceneMaterial.plastic([0.6, 0.6, 0.65], shininess: 8), transform: .init(translation: [0, -0.05, 0])))
         let casters: [(SceneGraph.Shape, SIMD3<Float>, SIMD3<Float>)] = [
             (.box(), [-2.5, 0.5, 0], [0.9, 0.35, 0.3]),
             (.sphere(radius: 0.6), [0, 0.6, -1], [0.3, 0.6, 0.9]),
@@ -24,7 +25,7 @@ final class ShadowsDemo: DemoScene {
             (.cylinder(radius: 0.3, height: 2.5), [0.5, 1.25, 1.5], [0.4, 0.8, 0.5])
         ]
         for (shape, position, color) in casters {
-            let node = root.addChild(SceneGraph.Node(shape: shape, material: BlinnPhongSceneMaterial.plastic(color), trs: .init(translation: position)))
+            let node = root.addChild(SceneGraph.Node(shape: shape, material: BlinnPhongSceneMaterial.plastic(color), transform: .init(translation: position)))
             if case .torus = shape {
                 node.run(.repeatForever(.rotate(by: .pi * 2, around: [1, 0, 0], duration: 6)), forKey: "spin")
             }
@@ -49,7 +50,7 @@ final class ShadowsDemo: DemoScene {
     override func update(time _: Float, deltaTime _: Float) {
         let angle = self[value: "Light Angle"]
         let position = SIMD3<Float>(cos(angle) * 3, 4, sin(angle) * 3)
-        light.transform = .camera(eye: position, target: .zero)
+        light.transform = Transform3D(storing: .camera(eye: position, target: .zero))
         let content: Light = switch Int(self[value: "Light"]) {
         case 1: .spot(color: [1, 1, 1], intensity: 40, innerConeAngle: .pi / 8, outerConeAngle: .pi / 5)
         case 2: Light(type: .point, color: [1, 1, 1], intensity: 40)

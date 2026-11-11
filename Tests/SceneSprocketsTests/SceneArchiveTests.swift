@@ -36,20 +36,20 @@ struct SceneArchiveTests {
     func makeScene() throws -> SceneGraph {
         let root = SceneGraph.Node(label: "Root")
         let textured = BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .texture(makeTexture(), tint: [1, 0.5, 0.25]), specular: .color(0.3), shininess: 24, opacity: 0.75, renderState: .init(blendMode: .add, fillMode: .lines))
-        let box = root.addChild(SceneGraph.Node(shape: .box(width: 2, height: 1, length: 0.5), material: textured, trs: .init(translation: [1, 2, 3], rotation: simd_quatf(angle: 0.5, axis: [0, 1, 0]), scale: [1, 2, 1])))
+        let box = root.addChild(SceneGraph.Node(shape: .box(width: 2, height: 1, length: 0.5), material: textured, transform: .init(translation: [1, 2, 3], rotation: simd_quatf(angle: 0.5, axis: [0, 1, 0]), scale: [1, 2, 1])))
         box.categoryBitMask = 5
         box.lightCategoryBitMask = 3
         box.renderingOrder = 2
         box.opacity = 0.5
         let metal = try PBRSceneMaterial(baseColor: [0.9, 0.7, 0.2, 1], metallic: 1, roughness: 0.3)
         let sphere = box.addChild(SceneGraph.Node(shape: .sphere(radius: 0.4), material: metal))
-        sphere.transform = float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [4, 5, 6, 1]))
+        sphere.transform = Transform3D(storing: float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [4, 5, 6, 1])))
         sphere.pivot = float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0.1, 0.2, 0.3, 1]))
         sphere.isVisible = false
         root.addChild(SceneGraph.Node(label: "Text", shape: .text("Hi", fontName: "Helvetica-Bold", fontSize: 0.5, extrusionDepth: 0.05), material: metal))
         var spot = Light.spot(color: [1, 0.9, 0.8], intensity: 30, range: 12, innerConeAngle: 0.3, outerConeAngle: 0.5)
         spot.range = 12
-        root.addChild(SceneGraph.Node(label: "Spot", trs: .init(translation: [0, 5, 0]), content: .light(spot)))
+        root.addChild(SceneGraph.Node(label: "Spot", transform: .init(translation: [0, 5, 0]), content: .light(spot)))
         root.addChild(SceneGraph.Node(label: "Sun", content: .light(Light(type: .directional))))
         root.addChild(SceneGraph.Node(label: "Camera", content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40), depthMode: .reversed(zClip: 0.1 ... 50)), categoryBitMask: 7))))
         root.addChild(SceneGraph.Node(label: "Ortho", content: .camera(Camera(projection: OrthographicProjection(halfHeight: 3)))))
@@ -98,7 +98,7 @@ struct SceneArchiveTests {
 
         parent.isActive = false
         sceneGraph.advanceActions(by: 0.5)
-        #expect(child.localTransform.trs.translation == .zero)
+        #expect(child.transform.translation == .zero)
         #expect(sceneGraph.bounds == nil)
         #expect(sceneGraph.meshEntries().isEmpty)
         // Still reachable for editors.
@@ -112,11 +112,11 @@ struct SceneArchiveTests {
 
         parent.isActive = true
         sceneGraph.advanceActions(by: 0.5)
-        #expect(child.localTransform.trs.translation.x > 0.4)
+        #expect(child.transform.translation.x > 0.4)
         // Hidden but active nodes keep animating.
         parent.isVisible = false
         sceneGraph.advanceActions(by: 0.25)
-        #expect(child.localTransform.trs.translation.x > 0.7)
+        #expect(child.transform.translation.x > 0.7)
     }
 
     @Test
@@ -608,7 +608,7 @@ struct SceneArchiveTests {
         let url = temporaryURL()
         defer { try? FileManager.default.removeItem(at: url) }
         let root = SceneGraph.Node()
-        root.addChild(SceneGraph.Node(transform: .init(diagonal: [1, 2, 3, 1]), content: .light(Light(type: .directional))))
+        root.addChild(SceneGraph.Node(transform: Transform3D(storing: .init(diagonal: [1, 2, 3, 1])), content: .light(Light(type: .directional))))
         try archive.write(try makeScene(), to: url)
         let json = try sceneJSON(url)
         #expect(json.contains(#""background" : "none""#) || json.contains(#""background" : {"#))
@@ -624,7 +624,7 @@ struct SceneArchiveTests {
         #expect(lightJSON.contains(#""background" : "none""#))
         #expect(lightJSON.contains("[1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 3, 0, 0, 0, 0, 1]"))
         let (loaded, _) = try archive.read(from: url2)
-        #expect(loaded.root.children.first?.transform == .init(diagonal: [1, 2, 3, 1]))
+        #expect(loaded.root.children.first?.transform == Transform3D(storing: .init(diagonal: [1, 2, 3, 1])))
     }
 
     // #159: archives written before it used synthesized enum objects.

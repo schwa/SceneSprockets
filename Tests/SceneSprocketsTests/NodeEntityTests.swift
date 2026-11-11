@@ -1,3 +1,4 @@
+import GeometryLite3D
 @testable import SceneSprockets
 import simd
 import SwiftECS
@@ -6,7 +7,7 @@ import Testing
 // #265: nodes under a SceneGraph's root store transform, content and hierarchy in the graph's World.
 
 private func translation(_ node: SceneGraph.Node) -> SIMD3<Float> {
-    node.transform.columns.3.xyz
+    node.transform.matrix.columns.3.xyz
 }
 
 private func siblingIndex(_ node: SceneGraph.Node, in world: World) -> Int? {
@@ -15,7 +16,7 @@ private func siblingIndex(_ node: SceneGraph.Node, in world: World) -> Int? {
 
 @Test
 func nodeOutsideGraphHasNoEntity() {
-    let node = SceneGraph.Node(transform: simd_float4x4(translation: [1, 2, 3]))
+    let node = SceneGraph.Node(transform: Transform3D(storing: simd_float4x4(translation: [1, 2, 3])))
     #expect(node.world == nil)
     #expect(translation(node) == [1, 2, 3])
 }
@@ -23,7 +24,7 @@ func nodeOutsideGraphHasNoEntity() {
 @Test
 func graphGivesSubtreeEntitiesWithValues() throws {
     let root = SceneGraph.Node(label: "root")
-    let child = root.addChild(SceneGraph.Node(transform: simd_float4x4(translation: [1, 0, 0])))
+    let child = root.addChild(SceneGraph.Node(transform: Transform3D(storing: simd_float4x4(translation: [1, 0, 0]))))
     let graph = SceneGraph(root: root)
     #expect(root.world === graph.world)
     #expect(child.world === graph.world)
@@ -36,25 +37,25 @@ func graphGivesSubtreeEntitiesWithValues() throws {
 func nodeWritesGoToWorldAndWorldWritesShowInNode() throws {
     let root = SceneGraph.Node()
     let graph = SceneGraph(root: root)
-    root.transform = simd_float4x4(translation: [4, 5, 6])
+    root.transform = Transform3D(storing: simd_float4x4(translation: [4, 5, 6]))
     let entity = try #require(graph.world[root.id])
     #expect(entity[NodeTransformComponent.self]?.value.matrix.columns.3.xyz == [4, 5, 6])
-    entity.set(NodeTransformComponent(value: .matrix(simd_float4x4(translation: [7, 8, 9]))))
+    entity.set(NodeTransformComponent(value: Transform3D(storing: simd_float4x4(translation: [7, 8, 9]))))
     #expect(translation(root) == [7, 8, 9])
 }
 
 @Test
 func cachedStorageSurvivesOtherEntitiesMoving() {
     let root = SceneGraph.Node()
-    let first = root.addChild(SceneGraph.Node(transform: simd_float4x4(translation: [1, 0, 0])))
-    let second = root.addChild(SceneGraph.Node(transform: simd_float4x4(translation: [2, 0, 0])))
-    let third = root.addChild(SceneGraph.Node(transform: simd_float4x4(translation: [3, 0, 0])))
+    let first = root.addChild(SceneGraph.Node(transform: Transform3D(storing: simd_float4x4(translation: [1, 0, 0]))))
+    let second = root.addChild(SceneGraph.Node(transform: Transform3D(storing: simd_float4x4(translation: [2, 0, 0]))))
+    let third = root.addChild(SceneGraph.Node(transform: Transform3D(storing: simd_float4x4(translation: [3, 0, 0]))))
     _ = SceneGraph(root: root)
     // Removing `first` swap-removes its row, so `third` moves into it.
     first.removeFromParent()
     #expect(translation(second) == [2, 0, 0])
     #expect(translation(third) == [3, 0, 0])
-    third.transform = simd_float4x4(translation: [30, 0, 0])
+    third.transform = Transform3D(storing: simd_float4x4(translation: [30, 0, 0]))
     #expect(translation(second) == [2, 0, 0])
     #expect(translation(third) == [30, 0, 0])
 }
@@ -63,22 +64,22 @@ func cachedStorageSurvivesOtherEntitiesMoving() {
 @Test
 func cachedRefsSurviveUnrelatedStructuralChanges() throws {
     let root = SceneGraph.Node()
-    let node = root.addChild(SceneGraph.Node(transform: simd_float4x4(translation: [1, 0, 0])))
+    let node = root.addChild(SceneGraph.Node(transform: Transform3D(storing: simd_float4x4(translation: [1, 0, 0]))))
     let graph = SceneGraph(root: root)
     _ = node.transform
-    let ref = try #require(node.localTransformStorage.ref)
-    let epoch = node.localTransformStorage.refEpoch
+    let ref = try #require(node.transformStorage.ref)
+    let epoch = node.transformStorage.refEpoch
     let other = root.addChild(SceneGraph.Node())
     other.removeFromParent()
     _ = node.transform
-    #expect(node.localTransformStorage.refEpoch == epoch)
-    #expect(node.localTransformStorage.ref?.entityID == ref.entityID)
+    #expect(node.transformStorage.refEpoch == epoch)
+    #expect(node.transformStorage.ref?.entityID == ref.entityID)
 
     // Adding an app component moves the entity; the node must follow it.
     struct Extra: Component {}
     try #require(graph.world[node.id]).set(Extra())
-    node.transform = simd_float4x4(translation: [2, 0, 0])
-    #expect(node.localTransformStorage.refEpoch != epoch)
+    node.transform = Transform3D(storing: simd_float4x4(translation: [2, 0, 0]))
+    #expect(node.transformStorage.refEpoch != epoch)
     #expect(graph.world[node.id]?[NodeTransformComponent.self]?.value.matrix.columns.3.x == 2)
 }
 
@@ -87,7 +88,7 @@ func removedNodeKeepsValuesAndLosesEntity() {
     let root = SceneGraph.Node()
     let child = root.addChild(SceneGraph.Node(label: "child"))
     let graph = SceneGraph(root: root)
-    child.transform = simd_float4x4(translation: [1, 2, 3])
+    child.transform = Transform3D(storing: simd_float4x4(translation: [1, 2, 3]))
     child.removeFromParent()
     #expect(child.world == nil)
     #expect(graph.world[child.id] == nil)
@@ -127,7 +128,7 @@ func siblingIndicesFollowChildOrder() {
 @Test
 func movingSubtreeBetweenGraphsMovesEntities() {
     let loadedRoot = SceneGraph.Node()
-    let loadedChild = loadedRoot.addChild(SceneGraph.Node(transform: simd_float4x4(translation: [1, 0, 0])))
+    let loadedChild = loadedRoot.addChild(SceneGraph.Node(transform: Transform3D(storing: simd_float4x4(translation: [1, 0, 0]))))
     let loaded = SceneGraph(root: loadedRoot)
     let scene = SceneGraph(root: SceneGraph.Node())
     scene.root.addChild(loadedRoot)
@@ -138,7 +139,7 @@ func movingSubtreeBetweenGraphsMovesEntities() {
 
 @Test
 func replacingRootDetachesOldRoot() {
-    let oldRoot = SceneGraph.Node(transform: simd_float4x4(translation: [1, 0, 0]))
+    let oldRoot = SceneGraph.Node(transform: Transform3D(storing: simd_float4x4(translation: [1, 0, 0])))
     let graph = SceneGraph(root: oldRoot)
     graph.root = SceneGraph.Node()
     #expect(oldRoot.world == nil)
@@ -227,7 +228,7 @@ func destroyedEntityRemovesNodeFromTree() throws {
 func destroyedEntityLeavesNodeDetachedWithDefaults() throws {
     let root = SceneGraph.Node()
     let light = Light(type: .point)
-    let child = root.addChild(SceneGraph.Node(transform: simd_float4x4(translation: [1, 0, 0]), content: .light(light)))
+    let child = root.addChild(SceneGraph.Node(transform: Transform3D(storing: simd_float4x4(translation: [1, 0, 0])), content: .light(light)))
     let graph = SceneGraph(root: root)
     _ = try graph.world.destroy(try #require(graph.world[child.id]))
     #expect(child.world == nil)

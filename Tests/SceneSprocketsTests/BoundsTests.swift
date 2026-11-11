@@ -43,20 +43,20 @@ func worldBoundsIncludeTransformsAndChildren() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = makeBox(device: device)
     let root = SceneGraph.Node()
-    root.trs.translation = [0, 10, 0]
+    root.transform.translation = [0, 10, 0]
     let group = root.addChild(SceneGraph.Node())
-    group.trs.scale = [2, 2, 2]
+    group.transform.scale = [2, 2, 2]
     let left = group.addChild(SceneGraph.Node(content: .mesh(box, material: material)))
-    left.trs.translation = [-1, 0, 0]
+    left.transform.translation = [-1, 0, 0]
     let right = group.addChild(SceneGraph.Node(content: .mesh(box, material: material)))
-    right.trs.translation = [1, 0, 0]
+    right.transform.translation = [1, 0, 0]
     let sceneGraph = SceneGraph(root: root)
 
     // Group spans x -1.5...1.5 locally, scaled by 2, then moved up 10.
     #expect(approximatelyEqual(sceneGraph.bounds, BoundingBox3D(min: [-3, 9, -1], max: [3, 11, 1])))
     #expect(approximatelyEqual(sceneGraph.worldBounds(of: right), BoundingBox3D(min: [1, 9, -1], max: [3, 11, 1])))
 
-    right.trs.translation = [5, 0, 0]
+    right.transform.translation = [5, 0, 0]
     #expect(approximatelyEqual(sceneGraph.bounds, BoundingBox3D(min: [-3, 9, -1], max: [11, 11, 1])))
 
     right.removeFromParent()

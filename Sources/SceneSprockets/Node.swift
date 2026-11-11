@@ -51,7 +51,7 @@ extension SceneGraph {
         // Set while the node is in a graph; see Node+Entity.swift.
         @ObservationIgnored @exclusivity(unchecked) var entityBinding: EntityBinding?
         // Backing for the properties in Node+Fields.swift.
-        @ObservationIgnored @exclusivity(unchecked) var localTransformStorage = NodeFieldStorage<NodeTransformComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var transformStorage = NodeFieldStorage<NodeTransformComponent>()
         @ObservationIgnored @exclusivity(unchecked) var contentStorage = NodeFieldStorage<NodeContentComponent>()
         @ObservationIgnored @exclusivity(unchecked) var labelStorage = NodeFieldStorage<NodeLabelComponent>()
         @ObservationIgnored @exclusivity(unchecked) var isVisibleStorage = NodeFieldStorage<NodeIsVisibleComponent>()
@@ -134,7 +134,7 @@ extension SceneGraph {
 
         /// The local transform with the pivot applied; what world transforms and bounds are built from.
         public var composedTransform: float4x4 {
-            composedTransform(transform: transform, pivot: pivot)
+            composedTransform(transform: transform.matrix, pivot: pivot)
         }
 
         @inline(__always)
@@ -151,33 +151,21 @@ extension SceneGraph {
             return transform * inverse
         }
 
-        /// Setting this stores a matrix. Does not include `pivot`.
-        public var transform: float4x4 {
-            get { localTransform.matrix }
-            set { localTransform = .matrix(newValue) }
-        }
-
-        /// Setting this stores TRS. Reading a matrix transform decomposes it.
-        public var trs: Transform3D {
-            get { localTransform.trs }
-            set { localTransform = .trs(newValue) }
-        }
-
-        /// Creates a node with a matrix transform.
+        /// Creates a node.
         ///
         /// - Parameters:
         ///   - children: The children to add to the node.
         ///   - label: A name for the node, for debugging and outlines.
-        ///   - transform: The local transform, as a matrix.
+        ///   - transform: The local transform. Use `Transform3D(storing:)` for a matrix.
         ///   - content: What the node shows.
         public init(
             children: [Node] = [],
             label: String? = nil,
-            transform: float4x4 = .identity,
+            transform: Transform3D = .identity,
             content: Content = .empty
         ) {
             self.labelStorage.local = label
-            self.localTransformStorage.local = .matrix(transform)
+            self.transformStorage.local = transform
             self.contentStorage.local = content
             for child in children {
                 addChild(child)
@@ -188,23 +176,6 @@ extension SceneGraph {
         public required convenience init(from decoder: Decoder) throws {
             self.init()
             try decodeArchive(from: decoder)
-        }
-
-        /// Creates a node with a translation, rotation and scale.
-        ///
-        /// - Parameters:
-        ///   - children: The children to add to the node.
-        ///   - label: A name for the node, for debugging and outlines.
-        ///   - trs: The local translation, rotation and scale.
-        ///   - content: What the node shows.
-        public convenience init(
-            children: [Node] = [],
-            label: String? = nil,
-            trs: Transform3D,
-            content: Content = .empty
-        ) {
-            self.init(children: children, label: label, content: content)
-            self.localTransform = .trs(trs)
         }
 
         // MARK: - Hierarchy
@@ -335,7 +306,7 @@ extension SceneGraph {
         /// shared, not copied; running actions are not copied. The copy has no parent.
         public func clone() -> Node {
             let copy = Node(label: label, content: content)
-            copy.localTransform = localTransform
+            copy.transform = transform
             copy.pivot = pivot
             copy.morphTargets = morphTargets
             copy.morphWeights = morphWeights

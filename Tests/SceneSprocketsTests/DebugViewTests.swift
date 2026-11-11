@@ -11,8 +11,8 @@ import Testing
 // #132: debug views replace every mesh's material.
 private func render(_ mode: SceneGraphDebugMode?, mesh: MetalMesh) throws -> SIMD4<UInt8> {
     let root = SceneGraph.Node()
-    root.addChild(SceneGraph.Node(transform: simd_float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 4, 1])), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
-    root.addChild(SceneGraph.Node(transform: simd_float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [1, 1, 3, 1])), content: .light(Light(type: .point, intensity: 5))))
+    root.addChild(SceneGraph.Node(transform: Transform3D(storing: simd_float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 4, 1]))), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
+    root.addChild(SceneGraph.Node(transform: Transform3D(storing: simd_float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [1, 1, 3, 1]))), content: .light(Light(type: .point, intensity: 5))))
     root.addChild(SceneGraph.Node(content: .mesh(mesh, material: BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color([0.9, 0.2, 0.2]), specular: .color(0), shininess: 1))))
     let element = SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer()], debugMode: mode)
     let texture = try OffscreenRenderer(size: CGSize(width: 64, height: 64)).render(element).texture
@@ -52,7 +52,7 @@ func materialChannelsShowMaterialValues() throws {
     let box = MetalMesh(mesh: .box(), device: device)
     func pixel(_ material: any SceneSprockets.Material, _ channel: SceneGraphMaterialChannel, renderer: any SceneGraphMaterialRenderer) throws -> SIMD4<UInt8> {
         let root = SceneGraph.Node()
-        root.addChild(SceneGraph.Node(transform: simd_float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 4, 1])), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
+        root.addChild(SceneGraph.Node(transform: Transform3D(storing: simd_float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 4, 1]))), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
         root.addChild(SceneGraph.Node(content: .mesh(box, material: material)))
         let element = SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [renderer], materialChannel: channel)
         let texture = try OffscreenRenderer(size: CGSize(width: 64, height: 64)).render(element).texture

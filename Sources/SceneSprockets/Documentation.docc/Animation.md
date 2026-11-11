@@ -21,7 +21,7 @@ Actions can move, rotate and scale a node (by and to), fade, hide, unhide or rem
 
 ```swift
 SceneGraph.Transaction.animate(duration: 0.5) {
-    node.trs.translation = [0, 2, 0]
+    node.transform.translation = [0, 2, 0]
 }
 ```
 

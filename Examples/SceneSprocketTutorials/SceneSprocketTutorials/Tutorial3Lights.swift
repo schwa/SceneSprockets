@@ -22,11 +22,11 @@ struct Tutorial3Lights: View {
 
         // A soft fill light that does not cast shadows.
         let fill = root.addChild(SceneGraph.Node(label: "Fill", content: .light(Light(type: .point, intensity: 15, range: 50, castsShadow: false))))
-        fill.trs.translation = [-5, 4, 4]
+        fill.transform.translation = [-5, 4, 4]
 
         // A spot light above the scene, aimed at the origin.
         let spot = root.addChild(SceneGraph.Node(label: "Spot", content: .light(Light(type: .spot, intensity: 80, range: 30, outerConeAngle: .pi / 4))))
-        spot.trs.translation = [3, 7, 3]
+        spot.transform.translation = [3, 7, 3]
         spot.look(at: .zero)
 
         // A floor to catch the shadows.

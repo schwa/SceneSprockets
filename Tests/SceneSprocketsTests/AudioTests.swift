@@ -15,8 +15,8 @@ func audioPlayersFollowTheirNodes() throws {
     let audio = SceneAudio(mixer: SpatialAudioMixer(engine: engine))
 
     let root = SceneGraph.Node()
-    let parent = root.addChild(SceneGraph.Node(trs: .init(translation: [1, 0, 0])))
-    let emitter = parent.addChild(SceneGraph.Node(trs: .init(translation: [0, 2, 0])))
+    let parent = root.addChild(SceneGraph.Node(transform: .init(translation: [1, 0, 0])))
+    let emitter = parent.addChild(SceneGraph.Node(transform: .init(translation: [0, 2, 0])))
     let player = AudioPlayer(buffer: buffer)
     emitter.audioPlayers = [player]
     let sceneGraph = SceneGraph(root: root)
@@ -25,7 +25,7 @@ func audioPlayersFollowTheirNodes() throws {
     #expect(player.position == [1, 2, 0])
     #expect(player.isPlaying)
 
-    parent.trs.translation = [-3, 0, 0]
+    parent.transform.translation = [-3, 0, 0]
     emitter.isVisible = false
     try audio.update(sceneGraph: sceneGraph, listener: simd_float4x4(diagonal: [1, 1, 1, 1]))
     #expect(!player.isPlaying)

@@ -12,7 +12,7 @@ import Testing
 @MainActor
 private func centerPixel(_ mesh: MetalMesh, _ material: BlinnPhongSceneMaterial, ambientLight: SIMD3<Float> = [1, 1, 1]) throws -> SIMD4<UInt8> {
     let root = SceneGraph.Node()
-    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
+    root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
     root.addChild(SceneGraph.Node(content: .mesh(mesh, material: material)))
     let renderer = try OffscreenRenderer(size: CGSize(width: 16, height: 16))
     let texture = try renderer.render(SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: ambientLight)])).texture
@@ -41,8 +41,8 @@ func diffuseAndAmbientTexturesAreSampled() throws {
 private func quads(near: BlinnPhongSceneMaterial, far: BlinnPhongSceneMaterial, nearFirst: Bool = true) throws -> SIMD4<UInt8> {
     let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
     let root = SceneGraph.Node()
-    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
-    let nearNode = SceneGraph.Node(trs: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: near))
+    root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
+    let nearNode = SceneGraph.Node(transform: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: near))
     let farNode = SceneGraph.Node(content: .mesh(quad, material: far))
     for node in nearFirst ? [nearNode, farNode] : [farNode, nearNode] {
         root.addChild(node)
@@ -108,7 +108,7 @@ func zeroNormalsFallBackToFaceNormals() throws {
         submeshes: [.init(indices: [0, 1, 2, 2, 1, 3])]
     )
     let root = SceneGraph.Node()
-    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
+    root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
     // A light behind the camera, shining at the quad: lit only if the fallback normal faces the camera.
     root.addChild(SceneGraph.Node(content: .light(Light(type: .directional, color: [1, 1, 1], intensity: 1))))
     root.addChild(SceneGraph.Node(content: .mesh(mesh, material: BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(1), specular: .color(0), shininess: 1))))
@@ -124,9 +124,9 @@ func zeroNormalsFallBackToFaceNormals() throws {
 private func litQuadPixel(_ material: BlinnPhongSceneMaterial, quadRotation: simd_quatf = .identity) throws -> SIMD4<UInt8> {
     let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
     let root = SceneGraph.Node()
-    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
+    root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
     root.addChild(SceneGraph.Node(content: .light(Light(type: .directional, color: [1, 1, 1], intensity: 1))))
-    root.addChild(SceneGraph.Node(trs: .init(rotation: quadRotation), content: .mesh(quad, material: material)))
+    root.addChild(SceneGraph.Node(transform: .init(rotation: quadRotation), content: .mesh(quad, material: material)))
     let renderer = try OffscreenRenderer(size: CGSize(width: 16, height: 16))
     let texture = try renderer.render(SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: .zero)])).texture
     var value = SIMD4<UInt8>.zero

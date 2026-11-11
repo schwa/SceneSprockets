@@ -1,3 +1,4 @@
+import GeometryLite3D
 import MetalSprocketsParticles
 import SceneSprockets
 import simd
@@ -100,7 +101,7 @@ func addAtmosphere(to root: SceneGraph.Node, tree: GrownTree, season: Season, se
 
     for (index, (label, position, system)) in systems.enumerated() {
         let node = root.addChild(SceneGraph.Node(label: label))
-        node.transform = simd_float4x4(translation: position)
+        node.transform = Transform3D(storing: simd_float4x4(translation: position))
         node.particleSystems = [SceneParticleSystem(system, seed: seed &+ UInt32(index))]
     }
 }

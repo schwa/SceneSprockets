@@ -40,7 +40,7 @@ private func centerPixel(_ sceneGraph: SceneGraph, frames: Int, deltaTime: Float
 @MainActor
 private func makeScene() -> (SceneGraph, emitter: SceneGraph.Node) {
     let root = SceneGraph.Node()
-    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 5]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(30))))))
+    root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 5]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(30))))))
     let emitter = root.addChild(SceneGraph.Node())
     emitter.particleSystems = [SceneParticleSystem(glowSystem(), seed: 3)]
     return (SceneGraph(root: root), emitter)
@@ -53,7 +53,7 @@ func particlesDrawInFrontAndAreHiddenBehindMeshes() throws {
     let (sceneGraph, _) = makeScene()
     #expect(try centerPixel(sceneGraph, frames: 5).x > 200)
     // A black-faced box in front hides them (reversed depth test).
-    sceneGraph.root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 2]), content: .mesh(MetalMesh(mesh: .box(), device: device), material: try ShaderMaterial.rim(color: [0, 0, 0, 1]))))
+    sceneGraph.root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 2]), content: .mesh(MetalMesh(mesh: .box(), device: device), material: try ShaderMaterial.rim(color: [0, 0, 0, 1]))))
     #expect(try centerPixel(sceneGraph, frames: 1).x < 5)
 }
 
@@ -77,11 +77,11 @@ func softParticlesFadeIntoGeometry() throws {
         system.layers[0].modules[RateModule.self]?.birthRate = 60
         system.layers[0].modules[ColorOverLifeModule.self] = ColorOverLifeModule(color: .constant([0.2, 0.2, 0.2, 1]))
         let root = SceneGraph.Node()
-        root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 5]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(30))))))
+        root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 5]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(30))))))
         let emitter = root.addChild(SceneGraph.Node())
         emitter.particleSystems = [SceneParticleSystem(system, seed: 3)]
         // A black wall just behind the particles.
-        root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, -0.6]), content: .mesh(MetalMesh(mesh: .box(), device: device), material: try ShaderMaterial.rim(color: [0, 0, 0, 1]))))
+        root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, -0.6]), content: .mesh(MetalMesh(mesh: .box(), device: device), material: try ShaderMaterial.rim(color: [0, 0, 0, 1]))))
         let sceneGraph = SceneGraph(root: root)
         let renderer = try OffscreenRenderer(size: CGSize(width: 32, height: 32), colorUsage: SceneGraphShadows.requiredColorUsage, depthUsage: SceneGraphShadows.requiredDepthUsage)
         var value = SIMD4<UInt8>.zero

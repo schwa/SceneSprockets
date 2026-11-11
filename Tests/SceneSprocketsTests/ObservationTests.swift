@@ -1,3 +1,4 @@
+import GeometryLite3D
 import Observation
 @testable import SceneSprockets
 import simd
@@ -21,8 +22,8 @@ private func changes(_ read: () -> Void, after change: () -> Void) -> Bool {
 func nodePropertiesAreObservable() {
     let node = SceneGraph.Node(label: "A")
     #expect(changes({ _ = node.label }, after: { node.label = "B" }))
-    #expect(changes({ _ = node.transform }, after: { node.transform = .init(diagonal: [2, 2, 2, 1]) }))
-    #expect(changes({ _ = node.trs }, after: { node.trs.translation = [1, 0, 0] }))
+    #expect(changes({ _ = node.transform }, after: { node.transform = Transform3D(storing: .init(diagonal: [2, 2, 2, 1])) }))
+    #expect(changes({ _ = node.transform }, after: { node.transform.translation = [1, 0, 0] }))
     #expect(changes({ _ = node.content }, after: { node.content = .light(Light(type: .point)) }))
     #expect(changes({ _ = node.isVisible }, after: { node.isVisible = false }))
     #expect(changes({ _ = node.children }, after: { node.addChild(SceneGraph.Node()) }))

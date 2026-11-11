@@ -16,7 +16,7 @@ private func scene(cameraMask: UInt = .max) throws -> (SceneGraph, box: SceneGra
     let device = try #require(MTLCreateSystemDefaultDevice())
     let mesh = MetalMesh(mesh: .box(), device: device)
     let root = SceneGraph.Node()
-    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 4]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45)), categoryBitMask: cameraMask))))
+    root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 4]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45)), categoryBitMask: cameraMask))))
     let box = root.addChild(SceneGraph.Node(content: .mesh(mesh, material: material)))
     return (SceneGraph(root: root), box)
 }

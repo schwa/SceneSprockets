@@ -163,7 +163,7 @@ extension SceneGraph.Node {
             return
         }
         let parentWorld = parent?.worldTransform ?? matrix_identity_float4x4
-        let world = Transform3D(nearestTo: parentWorld * transform)
+        let world = Transform3D(nearestTo: parentWorld * transform.matrix)
         var desired = world
         switch constraint.kind {
         case let .lookAt(target, worldUp, localFront):
@@ -247,7 +247,7 @@ extension SceneGraph.Node {
             desired.rotation = Rotation3D(simd_slerp(world.rotation.quaternion, desired.rotation.quaternion, influence))
             desired.scale = simd_mix(world.scale, desired.scale, SIMD3(repeating: influence))
         }
-        trs = Transform3D(nearestTo: parentWorld.inverse * desired.matrix)
+        transform = Transform3D(nearestTo: parentWorld.inverse * desired.matrix)
     }
 
     // Moves the node's smoothed position towards `goal`, keeping velocity per constraint between frames.
@@ -303,7 +303,7 @@ extension SceneGraph.Node {
                 // Apply the world-space turn in the joint's parent space.
                 let parentRotation = Transform3D(nearestTo: joint.parent?.worldTransform ?? matrix_identity_float4x4).rotation.quaternion
                 let localTurn = parentRotation.inverse * turn * parentRotation
-                joint.trs.rotation = Rotation3D(simd_normalize(localTurn * joint.trs.rotation.quaternion))
+                joint.transform.rotation = Rotation3D(simd_normalize(localTurn * joint.transform.rotation.quaternion))
             }
             if simd_distance(worldTransform.columns.3.xyz, target) < 1e-4 {
                 return

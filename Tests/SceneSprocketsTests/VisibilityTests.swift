@@ -37,7 +37,7 @@ func hiddenNodesAreExcludedFromBounds() throws {
     let box = MetalMesh(mesh: .box(), device: device)
     let root = SceneGraph.Node()
     let far = root.addChild(SceneGraph.Node(content: .mesh(box, material: material)))
-    far.trs.translation = [10, 0, 0]
+    far.transform.translation = [10, 0, 0]
     root.addChild(SceneGraph.Node(content: .mesh(box, material: material)))
     let sceneGraph = SceneGraph(root: root)
     #expect(sceneGraph.bounds?.max.x == 10.5)

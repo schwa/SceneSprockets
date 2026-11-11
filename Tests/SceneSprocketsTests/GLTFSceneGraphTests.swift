@@ -82,7 +82,7 @@ func gltfSceneLoadsIntoSceneGraph() throws {
     #expect(result.sceneGraph.root.children.map(\.label) == ["Mesh", "Joint", "Camera"])
 
     let meshNode = try #require(result.nodes[0])
-    #expect(meshNode.trs.translation == [10, 0, 0])
+    #expect(meshNode.transform.translation == [10, 0, 0])
     guard case let .mesh(mesh, materials, _, _) = meshNode.content else {
         Issue.record("Expected mesh content")
         return
@@ -120,7 +120,7 @@ func gltfSceneLoadsIntoSceneGraph() throws {
     let clip = try #require(result.animations.first)
     #expect(clip.name == "Slide")
     clip.apply(at: 1)
-    #expect(joint.trs.translation == [-3, 0, 0])
+    #expect(joint.transform.translation == [-3, 0, 0])
 }
 
 @Test(.enabled(if: deviceSupportsMetal4))
@@ -162,7 +162,7 @@ func gltfInstancingAndVisibilityAreMapped() throws {
     let result = try GLTFAsset(url: url, device: device).makeSceneGraph()
     let copies = try #require(result.nodes[0])
     #expect(copies.children.count == 2)
-    #expect(copies.children.map(\.transform.columns.3.x) == [5, -5])
+    #expect(copies.children.map(\.transform.matrix.columns.3.x) == [5, -5])
     let hidden = try #require(result.nodes[1])
     #expect(!hidden.isVisible)
     // Only the two copies are drawn.

@@ -21,13 +21,13 @@ extension SceneGraph.Node {
                 }
                 parts.append((mesh, materials, transform, castsShadow, receivesShadow))
             }
-            return node.children.allSatisfy { collect($0, transform: transform * $0.transform) }
+            return node.children.allSatisfy { collect($0, transform: transform * $0.transform.matrix) }
         }
         guard collect(self, transform: matrix_identity_float4x4) else {
             return nil
         }
         let flat = SceneGraph.Node(label: label)
-        flat.localTransform = localTransform
+        flat.transform = self.transform
         guard let first = parts.first else {
             return flat
         }

@@ -8,9 +8,9 @@ private func translation(_ x: Float, _ y: Float, _ z: Float) -> simd_float4x4 {
 }
 
 private func makeScene() -> (SceneGraph, SceneGraph.Node, SceneGraph.Node) {
-    let root = SceneGraph.Node(transform: translation(0, 1, 0))
-    let first = root.addChild(SceneGraph.Node(transform: translation(0, 0, 5), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
-    let second = root.addChild(SceneGraph.Node(transform: translation(3, 0, 0), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(90))))))
+    let root = SceneGraph.Node(transform: Transform3D(storing: translation(0, 1, 0)))
+    let first = root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(0, 0, 5)), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
+    let second = root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(3, 0, 0)), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(90))))))
     return (SceneGraph(root: root), first, second)
 }
 

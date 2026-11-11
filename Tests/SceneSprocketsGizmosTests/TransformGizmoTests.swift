@@ -111,16 +111,16 @@ struct TransformGizmoTests {
         gizmo.beginDrag(at: screen([frame.length * 0.5, 0, 0]), viewport: viewport)
         gizmo.drag(to: screen([frame.length, 0, 0]), viewport: viewport)
         gizmo.endDrag()
-        #expect(abs(node.trs.scale.x - 2) < 0.01 && node.trs.scale.y == 1)
+        #expect(abs(node.transform.scale.x - 2) < 0.01 && node.transform.scale.y == 1)
         gizmo.beginDrag(at: screen(.zero) + [5, 0], viewport: viewport)
         gizmo.drag(to: screen(.zero) + [10, 0], viewport: viewport)
-        #expect(simd_distance(node.trs.scale, [4, 2, 2]) < 0.05)
+        #expect(simd_distance(node.transform.scale, [4, 2, 2]) < 0.05)
     }
 
     @Test
     func localSpaceFollowsTheNode() throws {
         let (gizmo, node) = makeGizmo()
-        node.trs.rotation = Rotation3D(simd_quatf(angle: .pi / 2, axis: [0, 0, 1]))
+        node.transform.rotation = Rotation3D(simd_quatf(angle: .pi / 2, axis: [0, 0, 1]))
         gizmo.space = .local
         let frame = try #require(gizmo.frame(viewport: viewport))
         #expect(simd_distance(frame.axis(.x), [0, 1, 0]) < 1e-4)
@@ -131,9 +131,9 @@ struct TransformGizmoTests {
     func drawsOverTheScene() throws {
         let root = SceneGraph.Node()
         root.addChild(SceneGraph.Node(content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40), depthMode: .standard(zClip: 0.1 ... 100))))))
-        root.children[0].transform = viewport.cameraMatrix
+        root.children[0].transform = Transform3D(storing: viewport.cameraMatrix)
         // A box in front of the gizmo's X handle.
-        let box = root.addChild(SceneGraph.Node(shape: .box(width: 3, height: 1, length: 1), material: BlinnPhongSceneMaterial(ambient: .color(1), diffuse: .color(0.2), specular: .color(0), shininess: 1), trs: .init(translation: [0.8, 0, 2])))
+        let box = root.addChild(SceneGraph.Node(shape: .box(width: 3, height: 1, length: 1), material: BlinnPhongSceneMaterial(ambient: .color(1), diffuse: .color(0.2), specular: .color(0), shininess: 1), transform: .init(translation: [0.8, 0, 2])))
         let (gizmo, _) = makeGizmo()
         let overlay = try #require(try gizmo.overlay(viewport: viewport))
         let renderer = try OffscreenRenderer(size: CGSize(width: 400, height: 400), clearDepth: 0)
@@ -196,7 +196,7 @@ struct TransformGizmoTests {
         gizmo.twoFingerGesture(scale: 2, rotation: .pi / 2, viewport: viewport)
         gizmo.endTwoFingerGesture()
         #expect(events == ["begin", "end"])
-        #expect(simd_distance(node.trs.scale, [2, 2, 2]) < 0.0001)
+        #expect(simd_distance(node.transform.scale, [2, 2, 2]) < 0.0001)
         // A clockwise quarter turn on screen, seen from +Z: +X turns to -Y.
         #expect(simd_distance(node.worldOrientation.act([1, 0, 0]), [0, -1, 0]) < 0.01)
     }

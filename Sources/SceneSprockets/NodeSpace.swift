@@ -2,10 +2,10 @@ import GeometryLite3D
 import simd
 
 // World-space accessors and space conversion, like SCNNode's worldTransform, worldPosition, worldOrientation,
-// eulerAngles, convertPosition/convertVector/convertTransform and look(at:up:localFront:).
+// convertPosition/convertVector/convertTransform and look(at:up:localFront:).
 extension SceneGraph.Node {
-    /// Includes `pivot`. Setting it keeps the local transform's kind: a TRS node stays TRS (decomposed, so lossy for
-    /// skew), a matrix node stays a matrix.
+    /// Includes `pivot`. Setting it keeps the storage kind of ``transform``: components storage stays components
+    /// (decomposed, so lossy for skew), matrix storage stays a matrix.
     public var worldTransform: float4x4 {
         get {
             var result = composedTransform
@@ -19,11 +19,11 @@ extension SceneGraph.Node {
         set {
             let parentWorld = parent?.worldTransform ?? .identity
             let local = parentWorld.inverse * newValue * pivot
-            switch localTransform {
-            case .trs:
-                trs = Transform3D(nearestTo: local)
+            switch transform.storage {
+            case .components:
+                transform = Transform3D(nearestTo: local)
             case .matrix:
-                transform = local
+                transform = Transform3D(storing: local)
             }
         }
     }
@@ -46,12 +46,6 @@ extension SceneGraph.Node {
             world.rotation = Rotation3D(newValue)
             worldTransform = world.matrix
         }
-    }
-
-    /// The local rotation as Euler angles (ZYX order: yaw about Z, pitch about Y, roll about X, in radians).
-    public var eulerAngles: Euler {
-        get { trs.rotation.euler }
-        set { trs.rotation = .euler(newValue) }
     }
 
     /// Converts from `node`'s space (nil for world space) to this node's space.

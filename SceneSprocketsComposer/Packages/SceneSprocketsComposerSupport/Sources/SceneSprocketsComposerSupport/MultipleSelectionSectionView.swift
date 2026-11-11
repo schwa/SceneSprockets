@@ -64,12 +64,12 @@ extension EditorModel {
         guard node.parent != nil, let bounds = sceneGraph.worldBounds(of: node), abs(bounds.min.y) > 1e-6 else {
             return false
         }
-        let previous = node.localTransform
+        let previous = node.transform
         var world = node.worldTransform
         world.columns.3.y -= bounds.min.y
         node.worldTransform = world
-        let dropped = node.localTransform
-        node.localTransform = previous
+        let dropped = node.transform
+        node.transform = previous
         setTransform(dropped, of: node, undoTo: previous)
         return true
     }

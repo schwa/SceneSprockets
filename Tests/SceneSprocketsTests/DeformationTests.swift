@@ -24,9 +24,9 @@ func gpuDeformationMatchesCPU(layout: MetalMesh.BufferLayout) throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device, bufferLayout: layout)
     let root = SceneGraph.Node()
-    root.addChild(SceneGraph.Node(transform: translation(0, 0, 10), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(60))))))
-    let joint = root.addChild(SceneGraph.Node(trs: Transform3D(translation: [0, 0.5, 0], rotation: simd_quatf(angle: 0.4, axis: [0, 0, 1]))))
-    let node = root.addChild(SceneGraph.Node(transform: translation(100, 0, 0), content: .mesh(box, material: material)))
+    root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(0, 0, 10)), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(60))))))
+    let joint = root.addChild(SceneGraph.Node(transform: Transform3D(translation: [0, 0.5, 0], rotation: simd_quatf(angle: 0.4, axis: [0, 0, 1]))))
+    let node = root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(100, 0, 0)), content: .mesh(box, material: material)))
     node.morphTargets = [
         SceneGraph.MorphTarget(positionDeltas: (0..<box.vertexCount).map { [0, Float($0 % 3) * 0.1, 0] }, normalDeltas: Array(repeating: [0.2, 0, 0], count: box.vertexCount)),
         SceneGraph.MorphTarget(positionDeltas: Array(repeating: [0.3, 0, 0], count: box.vertexCount))
@@ -86,8 +86,8 @@ func skinnedMeshFollowsJointsAndIgnoresNodeTransform() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
     let root = SceneGraph.Node()
-    let joint = root.addChild(SceneGraph.Node(transform: translation(0, 5, 0)))
-    let skinned = root.addChild(SceneGraph.Node(transform: translation(100, 0, 0), content: .mesh(box, material: material)))
+    let joint = root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(0, 5, 0))))
+    let skinned = root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(100, 0, 0)), content: .mesh(box, material: material)))
     skinned.skin = SceneGraph.Skin(joints: [joint], inverseBindMatrices: [matrix_identity_float4x4])
     skinned.skinVertices = Array(repeating: SceneGraph.SkinVertex(joints: [0, 0, 0, 0], weights: [1, 0, 0, 0]), count: box.vertexCount)
     let sceneGraph = SceneGraph(root: root)
@@ -99,7 +99,7 @@ func skinnedMeshFollowsJointsAndIgnoresNodeTransform() throws {
     // Moving the joint re-deforms; an unchanged graph reuses the cached mesh.
     let cachedBuffer = deformed.mesh.vertexBuffer
     #expect(sceneGraph.meshEntries()[0].deformed(revision: sceneGraph.revision)?.mesh.vertexBuffer === cachedBuffer)
-    joint.trs.translation = [0, 7, 0]
+    joint.transform.translation = [0, 7, 0]
     deformed = try #require(sceneGraph.meshEntries()[0].deformed(revision: sceneGraph.revision))
     #expect(deformed.mesh.positionBounds()?.min.y == 6.5)
 }

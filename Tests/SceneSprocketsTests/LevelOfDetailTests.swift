@@ -27,7 +27,7 @@ func levelOfDetailPicksMeshByDistance() throws {
 func levelOfDetailAppliesWhenRendering() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let root = SceneGraph.Node()
-    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 20]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(10))))))
+    root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 20]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(10))))))
     let node = root.addChild(SceneGraph.Node(content: .mesh(MetalMesh(mesh: .box(), device: device), material: try ShaderMaterial.normals())))
     func centerPixel() throws -> SIMD4<UInt8> {
         let renderer = try OffscreenRenderer(size: CGSize(width: 16, height: 16))

@@ -1,3 +1,4 @@
+import GeometryLite3D
 import SceneSprocketsAudio
 import simd
 import SwiftECS
@@ -40,19 +41,19 @@ public struct SceneGraphMembershipComponent: Component {
     public let rootID: EntityID
 }
 
-/// The component that stores ``SceneGraph/Node/transform`` and ``SceneGraph/Node/trs`` for a node in ``SceneGraph/world``.
+/// The component that stores ``SceneGraph/Node/transform`` for a node in ``SceneGraph/world``.
 ///
 /// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
 public struct NodeTransformComponent: NodeField {
-    /// The node's local transform, as a matrix or as translation, rotation and scale.
-    public var value: SceneGraph.LocalTransform
+    /// The node's local transform.
+    public var value: Transform3D
 
     /// Creates the component with a value.
-    public init(value: SceneGraph.LocalTransform) {
+    public init(value: Transform3D) {
         self.value = value
     }
 
-    static var defaultValue: SceneGraph.LocalTransform { .matrix(.identity) }
+    static var defaultValue: Transform3D { .identity }
     static var revision: NodeFieldRevision { .transform }
 
     // Only Transaction.animate uses the old value.
@@ -60,7 +61,7 @@ public struct NodeTransformComponent: NodeField {
         SceneGraph.Transaction.currentIfAny != nil
     }
 
-    static func didChange(_ node: SceneGraph.Node, from oldValue: SceneGraph.LocalTransform) {
+    static func didChange(_ node: SceneGraph.Node, from oldValue: Transform3D) {
         SceneGraph.Transaction.currentIfAny?.recordTransform(of: node, oldValue: oldValue)
         node.bump(revision)
     }

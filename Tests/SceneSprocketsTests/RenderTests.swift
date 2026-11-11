@@ -32,9 +32,9 @@ private func makeScene(meshMaterial: (MetalMesh) throws -> SceneGraph.Node.Conte
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
     let root = SceneGraph.Node()
-    root.addChild(SceneGraph.Node(transform: translation(0, 0, 4), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
-    root.addChild(SceneGraph.Node(transform: translation(2, 2, 3), content: .light(Light(type: .point, color: [1, 1, 1], intensity: 5))))
-    root.addChild(SceneGraph.Node(transform: translation(xOffset, 0, 0), content: try meshMaterial(box)))
+    root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(0, 0, 4)), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
+    root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(2, 2, 3)), content: .light(Light(type: .point, color: [1, 1, 1], intensity: 5))))
+    root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(xOffset, 0, 0)), content: try meshMaterial(box)))
     return (SceneGraph(root: root), box)
 }
 
@@ -83,9 +83,9 @@ func blinnPhongDirectionalLightFollowsNodeRotation() throws {
     func centerBrightness(lightRotation: simd_quatf) throws -> Int {
         let device = try #require(MTLCreateSystemDefaultDevice())
         let root = SceneGraph.Node()
-        root.addChild(SceneGraph.Node(transform: translation(0, 0, 4), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
+        root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(0, 0, 4)), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
         let light = root.addChild(SceneGraph.Node(content: .light(Light(type: .directional, intensity: 1))))
-        light.trs.rotation = Rotation3D(lightRotation)
+        light.transform.rotation = Rotation3D(lightRotation)
         root.addChild(SceneGraph.Node(content: .mesh(MetalMesh(mesh: .box(), device: device), material: blinnPhong)))
         let texture = try OffscreenRenderer(size: size).render(BlinnPhongSceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1)).texture
         let center = pixel(texture, x: 32, y: 32)
@@ -119,10 +119,10 @@ func mixedRenderersShareOnePass() throws {
     let box = MetalMesh(mesh: .box(), device: device)
     let pbr = try PBRSceneMaterial(baseColor: [0.1, 0.8, 0.1, 1], metallic: 0, roughness: 0.5)
     let root = SceneGraph.Node()
-    root.addChild(SceneGraph.Node(transform: translation(0, 0, 6), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
-    root.addChild(SceneGraph.Node(transform: translation(0, 2, 4), content: .light(Light(type: .point, color: [1, 1, 1], intensity: 5))))
-    root.addChild(SceneGraph.Node(transform: translation(-1.2, 0, 0), content: .mesh(box, material: blinnPhong)))
-    root.addChild(SceneGraph.Node(transform: translation(1.2, 0, 0), content: .mesh(box, material: pbr)))
+    root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(0, 0, 6)), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
+    root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(0, 2, 4)), content: .light(Light(type: .point, color: [1, 1, 1], intensity: 5))))
+    root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(-1.2, 0, 0)), content: .mesh(box, material: blinnPhong)))
+    root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(1.2, 0, 0)), content: .mesh(box, material: pbr)))
     let element = SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(), PBRMaterialRenderer()])
 
     let texture = try OffscreenRenderer(size: size).render(element).texture

@@ -35,7 +35,7 @@ struct SceneEditBoundaryTests {
     }
 
     nonisolated static let edits: [Edit] = [
-        Edit(actionName: "Transform") { model, node in model.setTransform(.matrix(.init(diagonal: [2, 2, 2, 1])), of: node, undoTo: node.localTransform) },
+        Edit(actionName: "Transform") { model, node in model.setTransform(Transform3D(storing: .init(diagonal: [2, 2, 2, 1])), of: node, undoTo: node.transform) },
         Edit(actionName: "Hide") { model, node in model.setVisible(false, node) },
         Edit(actionName: "Deactivate") { model, node in model.setActive(false, node) },
         Edit(actionName: "Rename") { model, node in model.setLabel("Renamed", of: node) },
@@ -112,7 +112,7 @@ struct SceneEditBoundaryTests {
         track("label", .label)
         track("transform", .transform)
         track("tree", [.visibility, .label, .structure])
-        model.setTransform(.trs(.init(translation: [1, 0, 0])), of: box, undoTo: box.localTransform)
+        model.setTransform(.init(translation: [1, 0, 0]), of: box, undoTo: box.transform)
         #expect(notified == ["transform"])
         notified = []
         track("transform", .transform)
@@ -381,8 +381,8 @@ struct SceneEditBoundaryTests {
     #expect([group, ball, lamp] == ["n1", "n2", "n3"])
     let ballNode = try tools.node(id: ball)
     #expect(ballNode.parent === (try tools.node(id: group)))
-    #expect(ballNode.localTransform.trs.translation == [1, 2, 3])
-    #expect(abs(SceneTools.eulerDegrees(ballNode.localTransform.trs.rotation.quaternion).y - 30) < 0.01)
+    #expect(ballNode.transform.translation == [1, 2, 3])
+    #expect(abs(SceneTools.eulerDegrees(ballNode.transform.rotation.quaternion).y - 30) < 0.01)
     #expect(EditorModel.baseColor(of: try #require(model.materials(of: ballNode).first)) == [1, 0, 0])
 
     let scene = try tools.query()
@@ -393,7 +393,7 @@ struct SceneEditBoundaryTests {
 
     // Several nodes at once; reparenting to the root.
     _ = try tools.update(ids: [group, ball], label: nil, parent: nil, translation: nil, translations: nil, rotationDegrees: nil, scale: [2, 2, 2], color: nil, metallic: nil, roughness: nil, isVisible: false, isActive: nil)
-    #expect(ballNode.localTransform.trs.scale == [2, 2, 2] && !ballNode.isVisible)
+    #expect(ballNode.transform.scale == [2, 2, 2] && !ballNode.isVisible)
     _ = try tools.update(ids: [ball], label: nil, parent: "root", translation: nil, translations: nil, rotationDegrees: nil, scale: nil, color: nil, metallic: nil, roughness: nil, isVisible: nil, isActive: nil)
     #expect(ballNode.parent === model.sceneGraph.root)
     _ = try tools.select(ids: [ball])
@@ -533,7 +533,7 @@ struct SceneEditBoundaryTests {
     #expect(model.selectedNode?.parent === model.sceneGraph.root)
     model.delete(try #require(model.selectedNode))
     model.delete(box)
-    root.trs.translation = [2, 0, 0]
+    root.transform.translation = [2, 0, 0]
 
     let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("scenesprocketsd")
     defer { try? FileManager.default.removeItem(at: url) }
@@ -542,7 +542,7 @@ struct SceneEditBoundaryTests {
     let loaded = try ComposerDocument(contentsOf: url)
     let loadedRoot = try #require(loaded.sceneGraph.root.children.first)
     #expect(loadedRoot.modelSource != nil)
-    #expect(loadedRoot.trs.translation == [2, 0, 0])
+    #expect(loadedRoot.transform.translation == [2, 0, 0])
     #expect(loaded.sceneGraph.meshEntries().count == 1)
 }
 
@@ -600,7 +600,7 @@ struct SceneEditBoundaryTests {
     // Distribute along x with one call.
     let positions = (0..<8).map { [Double($0) * 2, 0, 0] }
     _ = try tools.update(ids: ids, label: nil, parent: nil, translation: nil, translations: positions, rotationDegrees: nil, scale: nil, color: nil, metallic: nil, roughness: nil, isVisible: nil, isActive: nil)
-    #expect(model.sceneGraph.root.children.map(\.localTransform.trs.translation.x) == [0, 2, 4, 6, 8, 10, 12, 14])
+    #expect(model.sceneGraph.root.children.map(\.transform.translation.x) == [0, 2, 4, 6, 8, 10, 12, 14])
 
     // translations alone sets the count.
     let row = try tools.create(kind: "box", count: nil, label: nil, parent: nil, translation: nil, translations: [[0, 3, 0], [1, 3, 0]], rotationDegrees: nil, scale: nil, color: nil)
@@ -633,8 +633,8 @@ struct SceneEditBoundaryTests {
     // The assistant sees and sets the whole selection; aligning is one update.
     _ = try tools.select(ids: [ids[0], ids[1], ids[2]])
     #expect(try tools.query().contains(#""selection":["n1","n2","n3"]"#))
-    _ = try tools.update(ids: ids, label: nil, parent: nil, translation: nil, translations: nodes.map { [Double($0.localTransform.trs.translation.x), 0, 0] }, rotationDegrees: nil, scale: nil, color: nil, metallic: nil, roughness: nil, isVisible: nil, isActive: nil)
-    #expect(nodes.allSatisfy { $0.localTransform.trs.translation.y == 0 })
+    _ = try tools.update(ids: ids, label: nil, parent: nil, translation: nil, translations: nodes.map { [Double($0.transform.translation.x), 0, 0] }, rotationDegrees: nil, scale: nil, color: nil, metallic: nil, roughness: nil, isVisible: nil, isActive: nil)
+    #expect(nodes.allSatisfy { $0.transform.translation.y == 0 })
 
     // Delete removes every selected node.
     model.select([nodes[0].id, nodes[1].id])
@@ -771,7 +771,7 @@ struct SceneEditBoundaryTests {
     #expect(!undoManager.canUndo)
     undoManager.redo()
     #expect(model.sceneGraph.root.children.count == 3)
-    #expect(model.sceneGraph.root.children.first?.localTransform.trs.translation == [1, 0, 0])
+    #expect(model.sceneGraph.root.children.first?.transform.translation == [1, 0, 0])
     undoManager.undo()
     #expect(model.sceneGraph.root.children.isEmpty)
 
@@ -862,15 +862,15 @@ struct SceneEditBoundaryTests {
     // Gizmo drag on the primary: the other selected node follows; the unselected one does not.
     undoManager.beginUndoGrouping()
     model.beginGizmoDrag(nodes[0])
-    nodes[0].localTransform = .trs(.init(translation: [0, 1, 0]))
+    nodes[0].transform = .init(translation: [0, 1, 0])
     model.continueGizmoDrag(nodes[0])
     model.endGizmoDrag(nodes[0])
     undoManager.endUndoGrouping()
-    #expect(nodes[1].localTransform.trs.translation == [2, 1, 0])
-    #expect(nodes[2].localTransform.trs.translation == [4, 0, 0])
+    #expect(nodes[1].transform.translation == [2, 1, 0])
+    #expect(nodes[2].transform.translation == [4, 0, 0])
     undoManager.undo()
-    #expect(nodes[0].localTransform.trs.translation == .zero)
-    #expect(nodes[1].localTransform.trs.translation == [2, 0, 0])
+    #expect(nodes[0].transform.translation == .zero)
+    #expect(nodes[1].transform.translation == [2, 0, 0])
 
     // Shared inspector edits apply to every selected node as one step.
     undoManager.beginUndoGrouping()
@@ -956,18 +956,18 @@ struct SceneEditBoundaryTests {
         let bounds = try #require(model.sceneGraph.worldBounds(of: node))
         #expect(abs(bounds.min.y) < 1e-4, "\(node.label ?? "")")
     }
-    #expect(nodes[0].localTransform.trs.translation.x == 0 && nodes[1].localTransform.trs.translation.x == 2)
-    #expect(nodes[2].localTransform.trs.translation == [5, 4, 0])
+    #expect(nodes[0].transform.translation.x == 0 && nodes[1].transform.translation.x == 2)
+    #expect(nodes[2].transform.translation == [5, 4, 0])
     undoManager.undo()
-    #expect(nodes[0].localTransform.trs.translation == [0, 3, 0])
-    #expect(nodes[3].localTransform.trs.translation == [0, 1, 0])
+    #expect(nodes[0].transform.translation == [0, 3, 0])
+    #expect(nodes[3].transform.translation == [0, 1, 0])
 
     // Selecting the parent and its child drops the parent only; the child moves with it.
     model.select([nodes[2].id, nodes[3].id])
     undoManager.beginUndoGrouping()
     model.dropSelectionToFloor()
     undoManager.endUndoGrouping()
-    #expect(nodes[3].localTransform.trs.translation == [0, 1, 0])
+    #expect(nodes[3].transform.translation == [0, 1, 0])
     #expect(abs(try #require(model.sceneGraph.worldBounds(of: nodes[2])).min.y) < 1e-4)
     undoManager.beginUndoGrouping()
     #expect(try tools.dropToFloor(ids: [ids[0]]).hasPrefix("Dropped"))
@@ -1069,7 +1069,7 @@ struct SceneEditBoundaryTests {
     let group = try #require(model.selectedNode)
     #expect(group.label == "Group" && group.parent === model.sceneGraph.root)
     #expect(group.children.map(\.id) == [nodes[0].id, nodes[1].id])
-    #expect(group.localTransform.trs.translation == [2, 0, 0])
+    #expect(group.transform.translation == [2, 0, 0])
     #expect(model.sceneGraph.root.children.map(\.id) == [group.id, nodes[2].id])
     for index in 0..<2 {
         #expect(simd_distance(nodes[index].worldTransform.columns.3, worlds[index].columns.3) < 1e-5)
@@ -1193,7 +1193,7 @@ struct SceneEditBoundaryTests {
         #expect(node.parent === model.sceneGraph.root)
         if type != .point {
             // Aimed down.
-            #expect(node.localTransform.matrix.columns.2.y > 0)
+            #expect(node.transform.matrix.columns.2.y > 0)
         }
     }
     #expect(model.sceneGraph.root.children.count == 3)
@@ -1213,7 +1213,7 @@ struct SceneEditBoundaryTests {
         Issue.record("not a camera")
         return
     }
-    #expect(node.localTransform.matrix == model.camera.matrix)
+    #expect(node.transform.matrix == model.camera.matrix)
     undoManager.undo()
     #expect(model.sceneGraph.root.children.isEmpty)
 }
@@ -1228,19 +1228,19 @@ struct SceneEditBoundaryTests {
     model.undoManager = undoManager
     let node = try #require(model.selectedNode)
     undoManager.beginUndoGrouping()
-    model.selectedTRS.translation.x = 2
-    model.selectedTRS.rotationDegrees[double: 1] = 30
+    model.selectedTransform.translation.x = 2
+    model.selectedTransform.rotationDegrees[double: 1] = 30
     model.selectedLabel = ""
     model.selectedIsVisible = false
     model[environment: "Environment Rotation"].rotationDegrees = 90
     undoManager.endUndoGrouping()
-    #expect(node.localTransform.trs.translation.x == 2)
-    #expect(abs(model.selectedTRS.rotationDegrees.y - 30) < 0.01)
+    #expect(node.transform.translation.x == 2)
+    #expect(abs(model.selectedTransform.rotationDegrees.y - 30) < 0.01)
     #expect(node.label == nil)
     #expect(!model.isVisible(node))
     #expect(abs(model.environment.rotation - .pi / 2) < 0.0001)
     undoManager.undo()
-    #expect(node.localTransform.trs.translation.x == 0)
+    #expect(node.transform.translation.x == 0)
     #expect(node.label == "Box")
     #expect(model.isVisible(node))
     #expect(model.environment.rotation == 0)
@@ -1271,7 +1271,7 @@ struct SceneEditBoundaryTests {
     let single = try #require(model.selectionWorldBounds)
     let width = single.max.x - single.min.x
     #expect(width > 0)
-    b.localTransform = .trs(Transform3D(translation: [3, 0, 0]))
+    b.transform = Transform3D(translation: [3, 0, 0])
     model.select([a.id, b.id], primary: a.id)
     let combined = try #require(model.selectionWorldBounds)
     #expect(abs((combined.max.x - combined.min.x) - (width + 3)) < 0.0001)

@@ -437,8 +437,8 @@ extension SceneGraph.Node {
                 return nil
             }
         }
-        access(keyPath: TraversalKeyPaths.localTransform)
-        let local = cachedValue(\.localTransformStorage, epoch: epoch) ?? readField(\.localTransformStorage)
+        access(keyPath: TraversalKeyPaths.transform)
+        let local = cachedValue(\.transformStorage, epoch: epoch) ?? readField(\.transformStorage)
         access(keyPath: TraversalKeyPaths.pivot)
         let pivot = cachedValue(\.pivotStorage, epoch: epoch) ?? readField(\.pivotStorage)
         return composedTransform(transform: local.matrix, pivot: pivot)
@@ -448,7 +448,7 @@ extension SceneGraph.Node {
     private enum TraversalKeyPaths {
         static let isVisible = \SceneGraph.Node.isVisible
         static let isActive = \SceneGraph.Node.isActive
-        static let localTransform = \SceneGraph.Node.localTransform
+        static let transform = \SceneGraph.Node.transform
         static let pivot = \SceneGraph.Node.pivot
     }
 

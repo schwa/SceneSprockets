@@ -8,8 +8,8 @@ private func isClose(_ a: SIMD3<Float>, _ b: SIMD3<Float>) -> Bool {
 }
 
 private func makeHierarchy() -> (parent: SceneGraph.Node, child: SceneGraph.Node) {
-    let parent = SceneGraph.Node(trs: .init(translation: [10, 0, 0], rotation: simd_quatf(angle: .pi / 2, axis: [0, 1, 0]), scale: [2, 2, 2]))
-    let child = parent.addChild(SceneGraph.Node(trs: .init(translation: [1, 0, 0])))
+    let parent = SceneGraph.Node(transform: .init(translation: [10, 0, 0], rotation: simd_quatf(angle: .pi / 2, axis: [0, 1, 0]), scale: [2, 2, 2]))
+    let child = parent.addChild(SceneGraph.Node(transform: .init(translation: [1, 0, 0])))
     return (parent, child)
 }
 
@@ -21,7 +21,7 @@ func worldPositionRoundTrips() {
         #expect(isClose(child.worldPosition, [10, 0, -2]))
         child.worldPosition = [0, 5, 0]
         #expect(isClose(child.worldPosition, [0, 5, 0]))
-        guard case .trs = child.localTransform else {
+        guard case .components = child.transform.storage else {
             Issue.record("TRS node became a matrix node")
             return
         }
@@ -30,11 +30,11 @@ func worldPositionRoundTrips() {
 
 @Test
 func worldTransformSetterKeepsMatrixNodes() {
-    let parent = SceneGraph.Node(transform: .init(translation: [0, 3, 0]))
-    let child = parent.addChild(SceneGraph.Node())
+    let parent = SceneGraph.Node(transform: Transform3D(storing: .init(translation: [0, 3, 0])))
+    let child = parent.addChild(SceneGraph.Node(transform: Transform3D(storing: .identity)))
     child.worldTransform = .init(translation: [1, 1, 1])
-    #expect(isClose(child.transform.columns.3.xyz, [1, -2, 1]))
-    guard case .matrix = child.localTransform else {
+    #expect(isClose(child.transform.matrix.columns.3.xyz, [1, -2, 1]))
+    guard case .matrix = child.transform.storage else {
         Issue.record("matrix node became a TRS node")
         return
     }
@@ -63,11 +63,11 @@ func eulerAnglesRoundTrip() {
     let node = SceneGraph.Node()
     // ZYX: yaw about Z, then pitch about Y, then roll about X.
     let rotation = simd_quatf(angle: 0.3, axis: [0, 0, 1]) * simd_quatf(angle: 0.2, axis: [0, 1, 0]) * simd_quatf(angle: 0.1, axis: [1, 0, 0])
-    node.eulerAngles = Euler(rotation)
-    #expect(abs(simd_dot(node.trs.rotation.quaternion.vector, rotation.vector)) > 0.9999)
-    #expect(abs(node.eulerAngles.roll - 0.1) < 1e-4)
-    #expect(abs(node.eulerAngles.pitch - 0.2) < 1e-4)
-    #expect(abs(node.eulerAngles.yaw - 0.3) < 1e-4)
+    node.transform.rotation = .euler(Euler(rotation))
+    #expect(abs(simd_dot(node.transform.rotation.quaternion.vector, rotation.vector)) > 0.9999)
+    #expect(abs(node.transform.rotation.euler.roll - 0.1) < 1e-4)
+    #expect(abs(node.transform.rotation.euler.pitch - 0.2) < 1e-4)
+    #expect(abs(node.transform.rotation.euler.yaw - 0.3) < 1e-4)
 }
 
 @Test

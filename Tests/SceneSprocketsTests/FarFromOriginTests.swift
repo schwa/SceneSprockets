@@ -29,11 +29,11 @@ private func render(offset: SIMD3<Float>, kind: MaterialKind) throws -> [SIMD4<U
     case .pbr: try PBRSceneMaterial(baseColor: [0.8, 0.8, 0.8, 1], metallic: 0, roughness: 0.3)
     }
     let root = SceneGraph.Node()
-    let world = root.addChild(SceneGraph.Node(trs: .init(translation: offset)))
-    world.addChild(SceneGraph.Node(transform: pose(eye: [0, 3, 3], target: .zero), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(60))))))
-    world.addChild(SceneGraph.Node(transform: pose(eye: .zero, target: [-0.5, -1, -0.2]), content: .light(Light(type: .directional))))
-    world.addChild(SceneGraph.Node(trs: .init(translation: [0, -0.05, 0], scale: [4, 0.1, 4]), content: .mesh(box, material: material)))
-    world.addChild(SceneGraph.Node(trs: .init(translation: [0, 0.75, 0], scale: [0.5, 0.5, 0.5]), content: .mesh(box, material: material)))
+    let world = root.addChild(SceneGraph.Node(transform: .init(translation: offset)))
+    world.addChild(SceneGraph.Node(transform: Transform3D(storing: pose(eye: [0, 3, 3], target: .zero)), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(60))))))
+    world.addChild(SceneGraph.Node(transform: Transform3D(storing: pose(eye: .zero, target: [-0.5, -1, -0.2])), content: .light(Light(type: .directional))))
+    world.addChild(SceneGraph.Node(transform: .init(translation: [0, -0.05, 0], scale: [4, 0.1, 4]), content: .mesh(box, material: material)))
+    world.addChild(SceneGraph.Node(transform: .init(translation: [0, 0.75, 0], scale: [0.5, 0.5, 0.5]), content: .mesh(box, material: material)))
     let sceneGraph = SceneGraph(root: root)
     sceneGraph.fog = SceneGraph.Fog(color: [0.3, 0.4, 0.9, 1], startDistance: 2, endDistance: 7)
     let size = 64
@@ -71,13 +71,13 @@ func cullingKeepsMeshesNearTheEdgeFarFromOrigin() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let offset = SIMD3<Float>(1_048_576, 0, 1_048_576)
     let root = SceneGraph.Node()
-    let camera = root.addChild(SceneGraph.Node(trs: .init(translation: offset), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(90))))))
+    let camera = root.addChild(SceneGraph.Node(transform: .init(translation: offset), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(90))))))
     // 90° frustum: at distance d the right edge is x = d. Each 2 cm box sits 1 cm inside the edge, at distances out
     // to 50 m.
     let mesh = MetalMesh(mesh: .box(extents: [0.02, 0.02, 0.02]), device: device)
     let material = BlinnPhongSceneMaterial(ambient: .color(1), diffuse: .color(0), specular: .color(0), shininess: 1)
     for distance in stride(from: Float(1), through: 50, by: 1) {
-        root.addChild(SceneGraph.Node(trs: .init(translation: offset + [distance - 0.02, 0, -distance]), content: .mesh(mesh, material: material)))
+        root.addChild(SceneGraph.Node(transform: .init(translation: offset + [distance - 0.02, 0, -distance]), content: .mesh(mesh, material: material)))
     }
     let sceneGraph = SceneGraph(root: root)
     let context = try #require(makeRenderContext(sceneGraph: sceneGraph, camera: camera, cameraMatrix: nil, aspectRatio: 1))

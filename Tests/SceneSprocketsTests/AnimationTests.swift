@@ -12,12 +12,12 @@ func linearTranslationIsInterpolated() {
     #expect(clip.duration == 2)
 
     clip.apply(at: 0.5)
-    #expect(simd_distance(node.trs.translation, [2.5, 0, 0]) < 0.0001)
+    #expect(simd_distance(node.transform.translation, [2.5, 0, 0]) < 0.0001)
 
     clip.apply(at: 5)
-    #expect(node.trs.translation == [10, 0, 0])
+    #expect(node.transform.translation == [10, 0, 0])
     clip.apply(at: -1)
-    #expect(node.trs.translation == [0, 0, 0])
+    #expect(node.transform.translation == [0, 0, 0])
 }
 
 @Test
@@ -26,7 +26,7 @@ func stepInterpolationHoldsPreviousKey() {
     let sampler = Clip.Sampler(times: [0, 1, 2], values: [1, 1, 1, 2, 2, 2, 3, 3, 3], interpolation: .step)
     let clip = Clip(name: "scale", channels: [.init(target: node, path: .scale, sampler: sampler)])
     clip.apply(at: 1.9)
-    #expect(node.trs.scale == [2, 2, 2])
+    #expect(node.transform.scale == [2, 2, 2])
 }
 
 @Test
@@ -38,7 +38,7 @@ func rotationUsesSlerp() {
     let clip = Clip(name: "turn", channels: [.init(target: node, path: .rotation, sampler: .init(times: [0, 1], values: values, interpolation: .linear))])
     clip.apply(at: 0.5)
     let expected = simd_quatf(angle: .pi / 4, axis: [0, 1, 0])
-    #expect(simd_distance(node.trs.rotation.quaternion.vector, expected.vector) < 0.0001)
+    #expect(simd_distance(node.transform.rotation.quaternion.vector, expected.vector) < 0.0001)
 }
 
 @Test
@@ -52,9 +52,9 @@ func cubicSplineMatchesHermite() {
     let clip = Clip(name: "curve", channels: [.init(target: node, path: .translation, sampler: .init(times: [0, 1], values: values, interpolation: .cubicSpline))])
     clip.apply(at: 0.5)
     // Hermite at t=0.5 with p0=0, m0=3, p1=1, m1=3: 0.5*0 + 0.125*3 + 0.5*1 - 0.125*3 = 0.5
-    #expect(abs(node.trs.translation.x - 0.5) < 0.0001)
+    #expect(abs(node.transform.translation.x - 0.5) < 0.0001)
     clip.apply(at: 1)
-    #expect(abs(node.trs.translation.x - 1) < 0.0001)
+    #expect(abs(node.transform.translation.x - 1) < 0.0001)
 }
 
 @Test
@@ -70,7 +70,7 @@ func loopingWrapsTime() {
     let node = SceneGraph.Node()
     let clip = Clip(name: "move", channels: [.init(target: node, path: .translation, sampler: .init(times: [0, 2], values: [0, 0, 0, 10, 0, 0], interpolation: .linear))])
     clip.apply(at: 5, looping: true)
-    #expect(simd_distance(node.trs.translation, [5, 0, 0]) < 0.0001)
+    #expect(simd_distance(node.transform.translation, [5, 0, 0]) < 0.0001)
 }
 
 @Test
@@ -79,9 +79,9 @@ func playerAdvancesAndStopsAtEnd() {
     let clip = Clip(name: "move", channels: [.init(target: node, path: .translation, sampler: .init(times: [0, 2], values: [0, 0, 0, 10, 0, 0], interpolation: .linear))])
     let player = SceneGraph.AnimationPlayer(clip: clip, isLooping: false)
     player.advance(by: 1)
-    #expect(simd_distance(node.trs.translation, [5, 0, 0]) < 0.0001)
+    #expect(simd_distance(node.transform.translation, [5, 0, 0]) < 0.0001)
     player.advance(by: 5)
-    #expect(node.trs.translation == [10, 0, 0])
+    #expect(node.transform.translation == [10, 0, 0])
     #expect(!player.isPlaying)
 }
 
@@ -98,14 +98,14 @@ func playerRepeatsAndAutoreverses() {
     player.autoreverses = true
     player.advance(by: 1.5)
     // Half way back in the first cycle.
-    #expect(simd_distance(node.trs.translation, [5, 0, 0]) < 1e-4)
+    #expect(simd_distance(node.transform.translation, [5, 0, 0]) < 1e-4)
     player.advance(by: 1)
     // Half way out in the second cycle.
-    #expect(simd_distance(node.trs.translation, [5, 0, 0]) < 1e-4)
+    #expect(simd_distance(node.transform.translation, [5, 0, 0]) < 1e-4)
     #expect(player.isPlaying)
     player.advance(by: 10)
     #expect(!player.isPlaying)
-    #expect(node.trs.translation == [0, 0, 0])
+    #expect(node.transform.translation == [0, 0, 0])
 }
 
 @Test
@@ -114,7 +114,7 @@ func playerTimingModeEasesEachPass() {
     let player = SceneGraph.AnimationPlayer(clip: slide(node), isLooping: true)
     player.timingMode = .easeIn
     player.advance(by: 0.5)
-    #expect(simd_distance(node.trs.translation, [2.5, 0, 0]) < 1e-4)
+    #expect(simd_distance(node.transform.translation, [2.5, 0, 0]) < 1e-4)
 }
 
 @Test

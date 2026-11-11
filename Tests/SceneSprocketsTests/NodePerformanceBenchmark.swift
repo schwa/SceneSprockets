@@ -1,4 +1,5 @@
 import Foundation
+import GeometryLite3D
 @testable import SceneSprockets
 import simd
 import Testing
@@ -24,11 +25,11 @@ private func makeScene(groups: Int) -> (graph: SceneGraph, root: SceneGraph.Node
     let root = SceneGraph.Node()
     var nodes: [SceneGraph.Node] = []
     for group in 0..<groups {
-        let parent = root.addChild(SceneGraph.Node(transform: simd_float4x4(translation: [Float(group), 0, 0])))
+        let parent = root.addChild(SceneGraph.Node(transform: Transform3D(storing: simd_float4x4(translation: [Float(group), 0, 0]))))
         nodes.append(parent)
         for index in 0..<9 {
             let content: SceneGraph.Node.Content = index.isMultiple(of: 3) ? .light(Light(type: .point)) : .empty
-            nodes.append(parent.addChild(SceneGraph.Node(transform: simd_float4x4(translation: [0, Float(index), 0]), content: content)))
+            nodes.append(parent.addChild(SceneGraph.Node(transform: Transform3D(storing: simd_float4x4(translation: [0, Float(index), 0])), content: content)))
         }
     }
     return (SceneGraph(root: root), root, nodes)
@@ -45,17 +46,17 @@ func nodePerformanceBenchmark() {
         graph.visit { _, transform in sink += transform.columns.3.x }
     }
     measure("flatten_ns", count: count) {
-        nodes[nodes.count / 2].transform.columns.3.z += 1
+        nodes[nodes.count / 2].transform.translation.z += 1
         lights += graph.lightNodes().count
     }
     measure("read_ns", count: count) {
         for node in nodes {
-            sink += node.transform.columns.3.y
+            sink += node.transform.matrix.columns.3.y
         }
     }
     measure("write_ns", count: count) {
         for node in nodes {
-            node.transform.columns.3.z += 1
+            node.transform.translation.z += 1
         }
     }
     measure("create_attach_ns", count: 20_000, repeats: 3) {

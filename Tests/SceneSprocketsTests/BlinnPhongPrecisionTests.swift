@@ -13,9 +13,9 @@ private func render(offset: SIMD3<Float>) throws -> [SIMD4<UInt8>] {
     let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
     let material = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0.6), specular: .color(1), shininess: 64)
     let root = SceneGraph.Node()
-    root.addChild(SceneGraph.Node(trs: .init(translation: offset + [0, 0, 1.5]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(60))))))
-    root.addChild(SceneGraph.Node(trs: .init(translation: offset + [0.25, 0.25, 0.5]), content: .light(Light(type: .point, intensity: 2))))
-    root.addChild(SceneGraph.Node(trs: .init(translation: offset), content: .mesh(quad, material: material)))
+    root.addChild(SceneGraph.Node(transform: .init(translation: offset + [0, 0, 1.5]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(60))))))
+    root.addChild(SceneGraph.Node(transform: .init(translation: offset + [0.25, 0.25, 0.5]), content: .light(Light(type: .point, intensity: 2))))
+    root.addChild(SceneGraph.Node(transform: .init(translation: offset), content: .mesh(quad, material: material)))
     let size = 32
     let renderer = try OffscreenRenderer(size: CGSize(width: size, height: size))
     let texture = try renderer.render(SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: .zero)])).texture

@@ -16,11 +16,11 @@ func hitTestFindsNearestBoxFirst() throws {
     let box = MetalMesh(mesh: .box(), device: device)
     let root = SceneGraph.Node()
     let near = root.addChild(SceneGraph.Node(label: "near", content: .mesh(box, material: material())))
-    near.trs.translation = [0, 0, -5]
+    near.transform.translation = [0, 0, -5]
     let far = root.addChild(SceneGraph.Node(label: "far", content: .mesh(box, material: material())))
-    far.trs.translation = [0, 0, -10]
+    far.transform.translation = [0, 0, -10]
     let sideways = root.addChild(SceneGraph.Node(label: "sideways", content: .mesh(box, material: material())))
-    sideways.trs.translation = [10, 0, -5]
+    sideways.transform.translation = [10, 0, -5]
     let sceneGraph = SceneGraph(root: root)
 
     let hits = sceneGraph.hitTest(Ray3D(origin: .zero, direction: [0, 0, -1]))
@@ -40,10 +40,10 @@ func hitTestIgnoresHiddenNodesAndHitsBehindOrigin() throws {
     let box = MetalMesh(mesh: .box(), device: device)
     let root = SceneGraph.Node()
     let hidden = root.addChild(SceneGraph.Node(content: .mesh(box, material: material())))
-    hidden.trs.translation = [0, 0, -5]
+    hidden.transform.translation = [0, 0, -5]
     hidden.isVisible = false
     let behind = root.addChild(SceneGraph.Node(content: .mesh(box, material: material())))
-    behind.trs.translation = [0, 0, 5]
+    behind.transform.translation = [0, 0, 5]
     let hits = SceneGraph(root: root).hitTest(Ray3D(origin: .zero, direction: [0, 0, -1]))
     #expect(hits.isEmpty)
 }
@@ -53,7 +53,7 @@ func hitTestFollowsScaledTransforms() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
     let node = SceneGraph.Node(content: .mesh(box, material: material()))
-    node.trs = Transform3D(translation: [3, 0, 0], scale: [10, 1, 1])
+    node.transform = Transform3D(translation: [3, 0, 0], scale: [10, 1, 1])
     let bounds = try #require(node.meshBounds)
     // Misses the unscaled box at x = 3 + 2 * maxX, hits the scaled one.
     let hits = SceneGraph(root: node).hitTest(Ray3D(origin: [3 + 2 * bounds.max.x, 0, 10], direction: [0, 0, -1]))
@@ -89,8 +89,8 @@ private func twoBoxes() throws -> (SceneGraph, near: SceneGraph.Node, far: Scene
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
     let root = SceneGraph.Node()
-    let near = root.addChild(SceneGraph.Node(label: "near", trs: .init(translation: [0, 0, -5]), content: .mesh(box, material: material())))
-    let far = root.addChild(SceneGraph.Node(label: "far", trs: .init(translation: [0, 0, -10]), content: .mesh(box, material: material())))
+    let near = root.addChild(SceneGraph.Node(label: "near", transform: .init(translation: [0, 0, -5]), content: .mesh(box, material: material())))
+    let far = root.addChild(SceneGraph.Node(label: "far", transform: .init(translation: [0, 0, -10]), content: .mesh(box, material: material())))
     return (SceneGraph(root: root), near, far)
 }
 

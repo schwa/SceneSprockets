@@ -370,7 +370,7 @@ public final class TransformGizmo: SceneViewManipulator {
         guard let target, let frame = frame(viewport: viewport), let handle = handle(at: point, viewport: viewport) else {
             return
         }
-        drag = DragState(handle: handle, frame: frame, startPoint: point, startWorldPosition: target.worldPosition, startWorldOrientation: target.worldOrientation, startScale: target.trs.scale, startHit: hit(handle, frame: frame, point: point, viewport: viewport))
+        drag = DragState(handle: handle, frame: frame, startPoint: point, startWorldPosition: target.worldPosition, startWorldOrientation: target.worldOrientation, startScale: target.transform.scale, startHit: hit(handle, frame: frame, point: point, viewport: viewport))
         activeHandle = handle
         onBegin?(target)
     }
@@ -431,7 +431,7 @@ public final class TransformGizmo: SceneViewManipulator {
                 let factor = Self.snap(simd_distance(point, center) / simd_distance(drag.startPoint, center), step: snapping.scale)
                 scale = drag.startScale * factor
             }
-            target.trs.scale = scale
+            target.transform.scale = scale
         }
         onChange?(target)
     }
@@ -452,7 +452,7 @@ public final class TransformGizmo: SceneViewManipulator {
         guard let target, let frame = frame(viewport: viewport) else {
             return
         }
-        twoFingerStart = (target.trs.scale, target.worldOrientation, frame.cameraForward)
+        twoFingerStart = (target.transform.scale, target.worldOrientation, frame.cameraForward)
         onBegin?(target)
     }
 
@@ -462,7 +462,7 @@ public final class TransformGizmo: SceneViewManipulator {
         guard let target, let start = twoFingerStart else {
             return
         }
-        target.trs.scale = start.scale * Self.snap(max(scale, 0.001), step: snapping.scale)
+        target.transform.scale = start.scale * Self.snap(max(scale, 0.001), step: snapping.scale)
         let angle = Self.snap(rotation, step: snapping.rotation)
         target.worldOrientation = simd_normalize(simd_quatf(angle: angle, axis: start.cameraForward) * start.orientation)
         onChange?(target)

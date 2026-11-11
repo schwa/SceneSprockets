@@ -34,10 +34,10 @@ struct NodeInspectorView: View {
                             .foregroundStyle(.secondary)
                     }
                     LabeledContent("Translation") {
-                        vectorFields($model.selectedTRS.translation)
+                        vectorFields($model.selectedTransform.translation)
                     }
                     LabeledContent("Rotation") {
-                        let rotation = $model.selectedTRS.rotationDegrees
+                        let rotation = $model.selectedTransform.rotationDegrees
                         HStack {
                             ScrubbableValueField("Pitch", value: rotation[double: 0], suffix: "\u{00B0}", range: -180 ... 180, sensitivity: 0.2)
                             ScrubbableValueField("Yaw", value: rotation[double: 1], suffix: "\u{00B0}", range: -180 ... 180, sensitivity: 0.2)
@@ -45,7 +45,7 @@ struct NodeInspectorView: View {
                         }
                     }
                     LabeledContent("Scale") {
-                        vectorFields($model.selectedTRS.scale)
+                        vectorFields($model.selectedTransform.scale)
                     }
                 }
                 .disabled(isLocked)

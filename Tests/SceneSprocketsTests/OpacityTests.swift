@@ -55,9 +55,9 @@ func fadeActionsChangeOpacity() {
 private func pbrOverBlue(opacity: Float, renderer pbrRenderer: PBRMaterialRenderer? = nil, fader: SceneGraph.Node? = nil) throws -> (pixel: SIMD4<UInt8>, renderer: PBRMaterialRenderer, fader: SceneGraph.Node, graph: SceneGraph) {
     let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
     let root = SceneGraph.Node()
-    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
+    root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
     let red = try PBRSceneMaterial(baseColor: [1, 0, 0, 1])
-    let fader = fader ?? SceneGraph.Node(trs: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: red))
+    let fader = fader ?? SceneGraph.Node(transform: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: red))
     root.addChild(fader)
     fader.opacity = opacity
     root.addChild(SceneGraph.Node(content: .mesh(quad, material: BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0, 0, 1])))))
@@ -104,8 +104,8 @@ func nodeOpacityBlends(usesShaderMaterial: Bool) throws {
         return BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color(color))
     }
     let root = SceneGraph.Node()
-    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
-    let fader = root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 0.5])))
+    root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
+    let fader = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 0.5])))
     fader.opacity = 0.5
     fader.addChild(SceneGraph.Node(content: .mesh(quad, material: try flat([1, 0, 0]))))
     root.addChild(SceneGraph.Node(content: .mesh(quad, material: try flat([0, 0, 1]))))

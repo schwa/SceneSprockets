@@ -18,9 +18,9 @@ func makeWorld(tree: GrownTree, species: Species, season: Season, seed: UInt32, 
     let root = SceneGraph.Node(label: "Root")
 
     let sun = root.addChild(SceneGraph.Node(label: "Sun", content: .light(Light(type: .directional, color: season.sun, intensity: 2.4))))
-    sun.transform = LookAt(position: sunDirection * 30, target: .zero, up: [0, 1, 0]).cameraMatrix
+    sun.transform = Transform3D(storing: LookAt(position: sunDirection * 30, target: .zero, up: [0, 1, 0]).cameraMatrix)
     let fill = root.addChild(SceneGraph.Node(label: "Fill", content: .light(Light(type: .directional, color: [0.55, 0.65, 0.9], intensity: 0.35))))
-    fill.transform = LookAt(position: [-8, 4, 10], target: .zero, up: [0, 1, 0]).cameraMatrix
+    fill.transform = Transform3D(storing: LookAt(position: [-8, 4, 10], target: .zero, up: [0, 1, 0]).cameraMatrix)
 
     if let sky = makeSky(season: season, device: device) {
         root.addChild(SceneGraph.Node(label: "Sky", content: .mesh(sky.0, materials: sky.1, castsShadow: false, receivesShadow: false)))

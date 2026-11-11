@@ -49,7 +49,7 @@ func queriesShareOneCachedTraversalUntilSomethingChanges() throws {
     #expect(sceneGraph.traversalCount == 1)
 
     // A transform change refreshes world transforms.
-    mesh.trs.translation = [3, 0, 0]
+    mesh.transform.translation = [3, 0, 0]
     #expect(sceneGraph.meshEntries()[0].worldTransform.columns.3 == SIMD4<Float>(3, 0, 0, 1))
     #expect(sceneGraph.traversalCount == 2)
 

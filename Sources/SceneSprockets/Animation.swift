@@ -22,11 +22,11 @@ extension SceneGraph {
             func set(_ value: [Float], on node: Node) {
                 switch self {
                 case .translation where value.count == 3:
-                    node.trs.translation = SIMD3(value[0], value[1], value[2])
+                    node.transform.translation = SIMD3(value[0], value[1], value[2])
                 case .rotation where value.count == 4:
-                    node.trs.rotation = Rotation3D(simd_quatf(vector: SIMD4(value[0], value[1], value[2], value[3])))
+                    node.transform.rotation = Rotation3D(simd_quatf(vector: SIMD4(value[0], value[1], value[2], value[3])))
                 case .scale where value.count == 3:
-                    node.trs.scale = SIMD3(value[0], value[1], value[2])
+                    node.transform.scale = SIMD3(value[0], value[1], value[2])
                 case .weights:
                     node.morphWeights = value
                 case .property(let property):

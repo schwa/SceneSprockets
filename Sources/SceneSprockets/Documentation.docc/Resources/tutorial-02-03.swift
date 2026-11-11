@@ -21,7 +21,7 @@ struct Tutorial2Hierarchy: View {
         moonPivot.run(.repeatForever(.rotate(by: 2 * .pi, around: [0, 1, 0.2], duration: 6)))
 
         let camera = root.addChild(SceneGraph.Node(label: "Camera", content: .camera(SceneView.defaultCamera)))
-        camera.trs.translation = [0, 2, 6]
+        camera.transform.translation = [0, 2, 6]
         camera.look(at: .zero)
 
         return SceneGraph(root: root)

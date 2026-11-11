@@ -8415,11 +8415,13 @@ Related: #358, #31.
 ## 372: Node's local transform is exposed through four overlapping properties
 
 +++
-status: new
+status: closed
 priority: medium
 kind: enhancement
 labels: area:scenegraph, effort:m
 created: 2026-11-11T16:33:13Z
+updated: 2026-11-12T00:09:14Z
+closed: 2026-11-12T00:09:14Z
 +++
 
 A node's local transform can be read and written four ways, each with its own type:
@@ -8443,6 +8445,7 @@ Expected: one transform type on Node that is the single source of truth, from wh
 Related: #367 (node construction verbosity, the proposed `position` property), #370 (public API naming).
 
 - `2026-11-11T22:48:47Z`: The `trs` name itself is part of the problem. With GeometryLite3D 0.3, `Transform3D` can store a matrix or components, so `Node.trs: Transform3D` and `Node.transform: float4x4` now describe the same value and only differ in type; `trs` mirrors `transform`. `trs` is also an abbreviation, and the enum case `LocalTransform.trs` repeats it. Expected: no property named `trs`; one transform property on Node.
+- `2026-11-12T00:09:15Z`: Node.transform: Transform3D is the single stored local transform. trs, localTransform, eulerAngles, the float4x4 transform property and SceneGraph.LocalTransform are removed; parts are read and written through transform (translation, rotation .quaternion/.euler, scale, matrix). Archive format unchanged.
 
 ---
 

@@ -1,3 +1,4 @@
+import GeometryLite3D
 @testable import SceneSprockets
 import simd
 import Testing
@@ -10,7 +11,7 @@ func transformChangeBumpsOnlyTransformRevision() {
     let sceneGraph = SceneGraph(root: root)
     let before = sceneGraph.revision
 
-    grandchild.trs.translation = [1, 0, 0]
+    grandchild.transform.translation = [1, 0, 0]
 
     #expect(sceneGraph.revision.transform != before.transform)
     #expect(sceneGraph.revision.structure == before.structure)
@@ -43,7 +44,7 @@ func detachedNodeChangesDoNotAffectGraph() {
     child.removeFromParent()
     let before = sceneGraph.revision
 
-    child.transform = matrix_identity_float4x4
+    child.transform = Transform3D(storing: matrix_identity_float4x4)
     child.content = .empty
 
     #expect(sceneGraph.revision == before)

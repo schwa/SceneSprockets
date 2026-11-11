@@ -35,8 +35,8 @@ func cullingDropsEntriesOutsideFrustum() throws {
     let box = MetalMesh(mesh: .box(), device: device)
     let material = BlinnPhongSceneMaterial(ambient: .color([1, 1, 1]), diffuse: .color([1, 1, 1]), specular: .color([1, 1, 1]), shininess: 1)
     let root = SceneGraph.Node()
-    root.addChild(SceneGraph.Node(label: "front", transform: .translation(0, 0, -5), content: .mesh(box, material: material)))
-    root.addChild(SceneGraph.Node(label: "behind", transform: .translation(0, 0, 5), content: .mesh(box, material: material)))
+    root.addChild(SceneGraph.Node(label: "front", transform: Transform3D(translation: [0, 0, -5]), content: .mesh(box, material: material)))
+    root.addChild(SceneGraph.Node(label: "behind", transform: Transform3D(translation: [0, 0, 5]), content: .mesh(box, material: material)))
 
     let visible = culledMeshEntries(SceneGraph(root: root).meshEntries(), viewProjection: viewProjection())
     #expect(visible.map(\.node.label) == ["front"])
@@ -49,7 +49,7 @@ func entriesAreSortedFrontToBack() throws {
     let material = BlinnPhongSceneMaterial(ambient: .color([1, 1, 1]), diffuse: .color([1, 1, 1]), specular: .color([1, 1, 1]), shininess: 1)
     let root = SceneGraph.Node()
     for (label, z) in [("far", -20), ("near", -2), ("middle", -8)] {
-        root.addChild(SceneGraph.Node(label: label, transform: .translation(0, 0, Float(z)), content: .mesh(box, material: material)))
+        root.addChild(SceneGraph.Node(label: label, transform: Transform3D(translation: [0, 0, Float(z)]), content: .mesh(box, material: material)))
     }
     let sorted = sortedFrontToBack(SceneGraph(root: root).meshEntries(), cameraPosition: .zero)
     #expect(sorted.map(\.node.label) == ["near", "middle", "far"])

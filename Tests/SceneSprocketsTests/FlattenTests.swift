@@ -14,9 +14,9 @@ private struct Tag: SceneSprockets.Material {
 func flattenedCloneMergesMeshes() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
-    let root = SceneGraph.Node(label: "Group", trs: .init(translation: [10, 0, 0]))
-    root.addChild(SceneGraph.Node(trs: .init(translation: [-2, 0, 0]), content: .mesh(box, material: Tag(name: "a"))))
-    let right = root.addChild(SceneGraph.Node(trs: .init(translation: [2, 0, 0], scale: [1, 3, 1])))
+    let root = SceneGraph.Node(label: "Group", transform: .init(translation: [10, 0, 0]))
+    root.addChild(SceneGraph.Node(transform: .init(translation: [-2, 0, 0]), content: .mesh(box, material: Tag(name: "a"))))
+    let right = root.addChild(SceneGraph.Node(transform: .init(translation: [2, 0, 0], scale: [1, 3, 1])))
     right.addChild(SceneGraph.Node(content: .mesh(box, material: Tag(name: "b"))))
     root.addChild(SceneGraph.Node(content: .light(Light(type: .point))))
 

@@ -49,14 +49,14 @@ extension EditorModel {
         }
     }
 
-    var selectedTRS: Transform3D {
-        get { selectedNode.map(localTRS(of:)) ?? Transform3D() }
+    var selectedTransform: Transform3D {
+        get { selectedNode.map(localTransform(of:)) ?? Transform3D() }
         set {
             guard let node = selectedNode else {
                 return
             }
-            let previous = node.localTransform
-            setTransform(.trs(newValue), of: node, undoTo: previous)
+            let previous = node.transform
+            setTransform(newValue, of: node, undoTo: previous)
         }
     }
 

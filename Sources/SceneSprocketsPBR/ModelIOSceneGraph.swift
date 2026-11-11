@@ -106,7 +106,7 @@ private struct ModelIOConverter {
     mutating func visit(_ object: MDLObject, parent: SceneGraph.Node) throws {
         let node = parent.addChild(SceneGraph.Node(label: object.name.isEmpty ? nil : object.name))
         if let transform = object.transform {
-            node.transform = transform.matrix
+            node.transform = Transform3D(storing: transform.matrix)
             sampleAnimation(transform, node: node)
         }
         switch object {
@@ -164,7 +164,7 @@ private struct ModelIOConverter {
             let jointParent = nodesByPath[parentPath] ?? parent
             let joint = jointParent.addChild(SceneGraph.Node(label: components.last.map(String.init)))
             if rest.indices.contains(index) {
-                joint.transform = rest[index]
+                joint.transform = Transform3D(storing: rest[index])
             }
             nodesByPath[path] = joint
             joints.append(joint)

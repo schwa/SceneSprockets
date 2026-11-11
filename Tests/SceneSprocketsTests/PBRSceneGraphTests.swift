@@ -17,7 +17,7 @@ func pbrModelIsBuiltFromSceneGraph() throws {
 
     let root = SceneGraph.Node()
     let translation = simd_float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [2, 3, 4, 1]))
-    root.addChild(SceneGraph.Node(transform: translation, content: .mesh(box, material: material)))
+    root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation), content: .mesh(box, material: material)))
     root.addChild(SceneGraph.Node(content: .mesh(box, material: material)))
 
     let model = try PBRSceneGraphModelBuilder().makeModel(entries: SceneGraph(root: root).meshEntries())
@@ -53,7 +53,7 @@ func pbrModelIsReusedUntilStructureChanges() throws {
     let renderer = PBRMaterialRenderer()
 
     let first = try renderer.model(for: sceneGraph.meshEntries(), structureRevision: sceneGraph.revision.structure)
-    node.trs.translation = [1, 0, 0]
+    node.transform.translation = [1, 0, 0]
     let second = try renderer.model(for: sceneGraph.meshEntries(), structureRevision: sceneGraph.revision.structure)
     #expect(first === second)
 
@@ -119,7 +119,7 @@ func pbrRenderStateIsApplied() throws {
     let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
     func centerPixel(_ renderState: PBRRenderState) throws -> SIMD4<UInt8> {
         let root = SceneGraph.Node()
-        root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
+        root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
         let material = try PBRSceneMaterial(baseColor: [0, 0, 0, 1])
         material.pbrMaterial.uniforms.emissiveFactor = [1, 0, 0]
         material.renderState = renderState

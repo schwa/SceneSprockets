@@ -11,9 +11,9 @@ private func isClose(_ lhs: simd_float4x4, _ rhs: simd_float4x4) -> Bool {
 @Test
 func pivotMovesTheRotationCenter() {
     let root = SceneGraph.Node()
-    let node = root.addChild(SceneGraph.Node(trs: .init(translation: [5, 0, 0], rotation: simd_quatf(angle: .pi / 2, axis: [0, 0, 1]))))
+    let node = root.addChild(SceneGraph.Node(transform: .init(translation: [5, 0, 0], rotation: simd_quatf(angle: .pi / 2, axis: [0, 0, 1]))))
     node.pivot = simd_float4x4(translation: [1, 0, 0])
-    let child = node.addChild(SceneGraph.Node(trs: .init(translation: [1, 0, 0])))
+    let child = node.addChild(SceneGraph.Node(transform: .init(translation: [1, 0, 0])))
     // The child sits on the pivot point, so it lands on the node's position.
     #expect(simd_distance(child.worldTransform.columns.3, [5, 0, 0, 1]) < 1e-5)
     let origin = node.addChild(SceneGraph.Node())
@@ -22,39 +22,39 @@ func pivotMovesTheRotationCenter() {
     let sceneGraph = SceneGraph(root: root)
     #expect(sceneGraph.nodesWithWorldTransforms().contains { $0.node === origin && simd_distance($0.worldTransform.columns.3, [5, -1, 0, 1]) < 1e-5 })
     // The stored transform does not include the pivot.
-    #expect(node.trs.translation == [5, 0, 0])
+    #expect(node.transform.translation == [5, 0, 0])
 }
 
 @Test
 func trsIsStoredLosslessly() {
     let rotation = simd_quatf(angle: .pi / 3, axis: simd_normalize([1, 1, 0]))
     let trs = Transform3D(translation: [1, 2, 3], rotation: rotation, scale: [2, 2, 2])
-    let node = SceneGraph.Node(trs: trs)
+    let node = SceneGraph.Node(transform: trs)
 
-    #expect(node.trs == trs)
-    #expect(isClose(node.transform, simd_float4x4(translation: [1, 2, 3]) * simd_float4x4(rotation) * simd_float4x4(diagonal: [2, 2, 2, 1])))
+    #expect(node.transform == trs)
+    #expect(isClose(node.transform.matrix, simd_float4x4(translation: [1, 2, 3]) * simd_float4x4(rotation) * simd_float4x4(diagonal: [2, 2, 2, 1])))
 
-    node.trs.scale = [3, 3, 3]
-    #expect(node.trs.rotation.quaternion == rotation)
-    #expect(node.trs.translation == [1, 2, 3])
+    node.transform.scale = [3, 3, 3]
+    #expect(node.transform.rotation.quaternion == rotation)
+    #expect(node.transform.translation == [1, 2, 3])
 }
 
 @Test
 func matrixTransformDecomposesToTRS() {
     let rotation = simd_quatf(angle: .pi / 4, axis: [0, 1, 0])
     let matrix = simd_float4x4(translation: [4, 5, 6]) * simd_float4x4(rotation) * simd_float4x4(diagonal: [1, 2, 3, 1])
-    let node = SceneGraph.Node(transform: matrix)
+    let node = SceneGraph.Node(transform: Transform3D(storing: matrix))
 
-    #expect(isClose(node.trs.matrix, matrix))
-    #expect(simd_distance(node.trs.translation, [4, 5, 6]) < 0.0001)
-    #expect(simd_distance(node.trs.scale, [1, 2, 3]) < 0.0001)
+    #expect(isClose(node.transform.matrix, matrix))
+    #expect(simd_distance(node.transform.translation, [4, 5, 6]) < 0.0001)
+    #expect(simd_distance(node.transform.scale, [1, 2, 3]) < 0.0001)
 }
 
 @Test
 func settingTRSUpdatesWorldTransforms() {
     let root = SceneGraph.Node()
     let child = root.addChild(SceneGraph.Node())
-    child.trs.translation = [0, 0, 5]
+    child.transform.translation = [0, 0, 5]
 
     let world = SceneGraph(root: root).nodesWithWorldTransforms().last!.worldTransform
     #expect(world.columns.3 == SIMD4<Float>(0, 0, 5, 1))

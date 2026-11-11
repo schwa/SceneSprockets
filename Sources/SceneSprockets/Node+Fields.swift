@@ -1,3 +1,4 @@
+import GeometryLite3D
 import SceneSprocketsAudio
 import simd
 import SwiftECS
@@ -9,7 +10,7 @@ import SwiftMesh
 // Made once: a key path literal passed to access(keyPath:) or withMutation(keyPath:) is instantiated through the
 // runtime on every call (#283).
 private enum FieldKeyPaths {
-    static let localTransform = \SceneGraph.Node.localTransform
+    static let transform = \SceneGraph.Node.transform
     static let content = \SceneGraph.Node.content
     static let label = \SceneGraph.Node.label
     static let isVisible = \SceneGraph.Node.isVisible
@@ -44,7 +45,7 @@ extension SceneGraph.Node {
     ] + worldFields.map(\.componentType)
 
     static let worldFields: [NodeFieldSlot] = [
-        NodeFieldSlot(\.localTransform, \.localTransformStorage),
+        NodeFieldSlot(\.transform, \.transformStorage),
         NodeFieldSlot(\.content, \.contentStorage),
         NodeFieldSlot(\.label, \.labelStorage),
         NodeFieldSlot(\.isVisible, \.isVisibleStorage),
@@ -70,12 +71,14 @@ extension SceneGraph.Node {
         NodeFieldSlot(\.subdivisionBase, \.subdivisionBaseStorage)
     ]
 
-    /// The node's transform relative to its parent, as a matrix or as translation, rotation and scale.
+    /// The node's transform relative to its parent. Does not include ``pivot``.
     ///
-    /// Use ``transform`` or ``trs`` to read or write one form.
-    public var localTransform: SceneGraph.LocalTransform {
-        get { getField(FieldKeyPaths.localTransform, \.localTransformStorage) }
-        set { setField(FieldKeyPaths.localTransform, \.localTransformStorage, newValue) }
+    /// Read and write its parts through it: `transform.translation`, `transform.rotation` (`.quaternion` or `.euler`),
+    /// `transform.scale` and `transform.matrix`. It stores a matrix or translation, rotation and scale; editing a part
+    /// keeps that storage kind.
+    public var transform: Transform3D {
+        get { getField(FieldKeyPaths.transform, \.transformStorage) }
+        set { setField(FieldKeyPaths.transform, \.transformStorage, newValue) }
     }
 
     /// What the node shows: nothing, a mesh, a light or a camera.

@@ -22,7 +22,7 @@ private func makeGraphEditedInPlace() -> (SceneGraph, SceneGraph.Node) {
     let box = root.addChild(SceneGraph.Node(shape: .box(), material: material))
     let child = box.addChild(SceneGraph.Node(label: "Child"))
     box.label = "Box"
-    box.trs = .init(translation: [1, 2, 3])
+    box.transform = .init(translation: [1, 2, 3])
     box.pivot = simd_float4x4(translation: [0.5, 0, 0])
     box.opacity = 0.25
     box.categoryBitMask = 6
@@ -39,7 +39,7 @@ private func makeGraphEditedInPlace() -> (SceneGraph, SceneGraph.Node) {
 
 private func expectEditedValues(_ box: SceneGraph.Node) {
     #expect(box.label == "Box")
-    #expect(simd_distance(box.trs.translation, [1, 2, 3]) < 1e-5)
+    #expect(simd_distance(box.transform.translation, [1, 2, 3]) < 1e-5)
     #expect(box.pivot == simd_float4x4(translation: [0.5, 0, 0]))
     #expect(box.opacity == 0.25)
     #expect(box.categoryBitMask == 6)

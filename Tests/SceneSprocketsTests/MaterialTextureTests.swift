@@ -30,7 +30,7 @@ private func writePNG(_ image: CGImage) throws -> URL {
 @MainActor
 private func centerPixel(_ material: any SceneSprockets.Material, renderer: any SceneGraphMaterialRenderer, channel: SceneGraphMaterialChannel? = nil) throws -> SIMD4<UInt8> {
     let root = SceneGraph.Node()
-    root.addChild(SceneGraph.Node(trs: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
+    root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
     root.addChild(SceneGraph.Node(content: .mesh(SceneGraph.Shape.plane(width: 2, height: 2).metalMesh(), material: material)))
     let element = SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [renderer], materialChannel: channel)
     let texture = try OffscreenRenderer(size: CGSize(width: 16, height: 16)).render(element).texture

@@ -112,7 +112,7 @@ extension SceneGraph {
         ///   - duration: The duration, in seconds.
         public static func move(by delta: SIMD3<Float>, duration: Float) -> Self {
             interval(duration, reversed: { .move(by: -delta, duration: duration) }) { node, from, to in
-                node.trs.translation += delta * (to - from)
+                node.transform.translation += delta * (to - from)
             }
         }
 
@@ -123,8 +123,8 @@ extension SceneGraph {
         ///   - duration: The duration, in seconds.
         public static func move(to target: SIMD3<Float>, duration: Float) -> Self {
             let start = Box<SIMD3<Float>>()
-            return interval(duration, start: { start.value = $0.trs.translation }) { node, _, to in
-                node.trs.translation = simd_mix(start.value ?? target, target, SIMD3(repeating: to))
+            return interval(duration, start: { start.value = $0.transform.translation }) { node, _, to in
+                node.transform.translation = simd_mix(start.value ?? target, target, SIMD3(repeating: to))
             }
         }
 
@@ -132,7 +132,7 @@ extension SceneGraph {
         public static func rotate(by angle: Float, around axis: SIMD3<Float>, duration: Float) -> Self {
             let axis = simd_normalize(axis)
             return interval(duration, reversed: { .rotate(by: -angle, around: axis, duration: duration) }) { node, from, to in
-                node.trs.rotation = Rotation3D(simd_normalize(simd_quatf(angle: angle * (to - from), axis: axis) * node.trs.rotation.quaternion))
+                node.transform.rotation = Rotation3D(simd_normalize(simd_quatf(angle: angle * (to - from), axis: axis) * node.transform.rotation.quaternion))
             }
         }
 
@@ -141,7 +141,7 @@ extension SceneGraph {
         public static func rotateBy(x: Float, y: Float, z: Float, duration: Float) -> Self {
             interval(duration, reversed: { .rotateBy(x: -x, y: -y, z: -z, duration: duration) }) { node, from, to in
                 let step = to - from
-                node.trs.rotation = Rotation3D(simd_normalize(eulerRotation(x: x * step, y: y * step, z: z * step) * node.trs.rotation.quaternion))
+                node.transform.rotation = Rotation3D(simd_normalize(eulerRotation(x: x * step, y: y * step, z: z * step) * node.transform.rotation.quaternion))
             }
         }
 
@@ -157,8 +157,8 @@ extension SceneGraph {
         ///   - duration: The duration, in seconds.
         public static func rotate(to target: simd_quatf, duration: Float) -> Self {
             let start = Box<simd_quatf>()
-            return interval(duration, start: { start.value = $0.trs.rotation.quaternion }) { node, _, to in
-                node.trs.rotation = Rotation3D(simd_slerp(start.value ?? target, target, to))
+            return interval(duration, start: { start.value = $0.transform.rotation.quaternion }) { node, _, to in
+                node.transform.rotation = Rotation3D(simd_slerp(start.value ?? target, target, to))
             }
         }
 
@@ -170,7 +170,7 @@ extension SceneGraph {
         public static func scale(by factor: Float, duration: Float) -> Self {
             interval(duration, reversed: { .scale(by: 1 / factor, duration: duration) }) { node, from, to in
                 // Multiplicative, so the total over the duration is exactly `factor`.
-                node.trs.scale *= pow(factor, to - from)
+                node.transform.scale *= pow(factor, to - from)
             }
         }
 
@@ -203,8 +203,8 @@ extension SceneGraph {
         /// Changes the node's scale to a value. The action cannot be reversed.
         public static func scale(to target: SIMD3<Float>, duration: Float) -> Self {
             let start = Box<SIMD3<Float>>()
-            return interval(duration, start: { start.value = $0.trs.scale }) { node, _, to in
-                node.trs.scale = simd_mix(start.value ?? target, target, SIMD3(repeating: to))
+            return interval(duration, start: { start.value = $0.transform.scale }) { node, _, to in
+                node.transform.scale = simd_mix(start.value ?? target, target, SIMD3(repeating: to))
             }
         }
 

@@ -61,7 +61,7 @@ extension SceneGraph.Node: Codable {
         let context = try encoder.sceneArchive
         var container = encoder.container(keyedBy: ArchiveKeys.self)
         try container.encodeIfPresent(label, forKey: .label)
-        try container.encode(localTransform, forKey: .transform)
+        try container.encode(ArchivedTransform(transform), forKey: .transform)
         if pivot != .identity {
             try container.encode(pivot.archiveValues, forKey: .pivot)
         }
@@ -146,7 +146,7 @@ extension SceneGraph.Node: Codable {
         let context = try decoder.sceneArchive
         let container = try decoder.container(keyedBy: ArchiveKeys.self)
         label = try container.decodeIfPresent(String.self, forKey: .label)
-        localTransform = try container.decode(SceneGraph.LocalTransform.self, forKey: .transform)
+        transform = try container.decode(ArchivedTransform.self, forKey: .transform).transform
         if let values = try container.decodeIfPresent([Float].self, forKey: .pivot) {
             pivot = try float4x4(archiveValues: values)
         }
@@ -339,27 +339,35 @@ extension SceneGraph.Node: Codable {
     }
 }
 
-extension SceneGraph.LocalTransform: Codable {
+// A node's transform in an archive: {"trs": translation, rotation, scale} or {"matrix": 16 floats}. The format predates
+// Transform3D's matrix storage, so old and new archives read the same way.
+struct ArchivedTransform: Codable {
+    var transform: Transform3D
+
+    init(_ transform: Transform3D) {
+        self.transform = transform
+    }
+
     enum ArchiveKeys: String, CodingKey {
         case trs, matrix
     }
 
-    public func encode(to encoder: Encoder) throws {
+    func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: ArchiveKeys.self)
-        switch self {
-        case let .trs(trs):
-            try container.encode(trs, forKey: .trs)
+        switch transform.storage {
+        case .components:
+            try container.encode(transform, forKey: .trs)
         case let .matrix(matrix):
             try container.encode(matrix.archiveValues, forKey: .matrix)
         }
     }
 
-    public init(from decoder: Decoder) throws {
+    init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: ArchiveKeys.self)
         if let trs = try container.decodeIfPresent(Transform3D.self, forKey: .trs) {
-            self = .trs(trs)
+            transform = trs
         } else {
-            self = .matrix(try float4x4(archiveValues: container.decode([Float].self, forKey: .matrix)))
+            transform = Transform3D(storing: try float4x4(archiveValues: container.decode([Float].self, forKey: .matrix)))
         }
     }
 }
