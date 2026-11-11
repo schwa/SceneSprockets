@@ -4053,6 +4053,7 @@ To investigate:
 - `2026-11-04T21:00:28Z`: Checked: GridShader in MetalSprocketsAddOns 0.2.x has no distance-fade option, so the likely fix is a change in that package (new fade parameters, tag, bump here), not in SceneSprockets. Punting: the bug is perceptual and needs a visual judgement in the running Composer (Studio vs an outdoor HDR, with and without a fade), which I cannot make from tests. Unblocker: OK to add a distance fade to GridShader in MetalSprocketsAddOns and use it in the Composer grid? And, if possible, check once with an outdoor HDR whether it still looks wrong.
 - `2026-11-07T16:54:09Z`: Autonomous run: still waiting on the 2026-11-04 question (OK to add a distance fade to GridShader in MetalSprocketsAddOns?). Not changed.
 - `2026-11-07T16:59:57Z`: Question 1 (decision): OK to add a distance fade to GridShader in MetalSprocketsAddOns and use it for the Composer grid?
+- `2026-11-11T16:30:23Z`: Answer 1: yes
 
 ---
 
@@ -5333,12 +5334,13 @@ Fix direction: don't unwrap model-derived optionals with Binding($x). Give the s
 ## 242: Composer: pink garbage frames in complex scenes while the inspector is visible and the camera moves
 
 +++
-status: blocked
+status: closed
 priority: high
 kind: bug
 labels: area:renderer, area:composer, effort:m, external
 created: 2026-10-25T14:33:10Z
-updated: 2026-11-08T03:38:39Z
+updated: 2026-11-11T16:30:01Z
+closed: 2026-11-11T16:30:01Z
 +++
 
 Video: '/Users/schwa/Shared/Desktop Stuff/Pink Bug.mov' (stays there until fixed). Scene: 114 meshes, 792,746 triangles, imported BMW glTF, PBR, no lights.
@@ -5368,6 +5370,7 @@ To finish: push MetalSprocketsPBR, update the MetalSprocketsPBR pin in the 4 Pac
 - `2026-11-07T15:49:55Z`: Autonomous run: re-checked. The resolved MetalSprocketsPBR checkout has QueueBarrier(after: [.fragment, .blit], before: .fragment) at the start of the PBR Transmission Scene pass (PBRTransmissionPass.swift:147), so the fix is in the build. Punting: the bug is timing-dependent and only reproduces by hand (Debug build, Composer inspector visible, orbiting the BMW glTF scene); no automated test can show it. Unblocker: run that repro once; if no pink frames appear, close.
 - `2026-11-07T16:59:58Z`: Question 1 (verify): Debug build, Composer inspector visible, orbit the BMW glTF scene: are the pink frames gone with MetalSprocketsPBR 0.0.3?
 - `2026-11-08T03:38:39Z`: Verified (per schwa): the pink frames still happen with MetalSprocketsPBR 0.0.3. Nothing more to do in SceneSprockets; schwa is filing a report with Apple. Blocked on Apple.
+- `2026-11-11T16:30:02Z`: Closed per schwa: the remaining pink frames are an Apple issue, reported to Apple. Nothing left to do in SceneSprockets.
 
 ---
 
@@ -8406,5 +8409,203 @@ Related: #358, #31.
 
 - `2026-11-11T16:15:14Z`: Question 1 (design): Proposed: one entry point, 'ModelFile.load(_ url:) throws -> ModelFile.Result' where Result is a struct { node: SceneGraph.Node (root named after the file, detached), animations: [SceneGraph.AnimationClip], warnings: [String] } for every format (glTF variants exposed as an optional 'variants' field). GLTFSceneGraph and ModelIOSceneGraph become internal (or renamed GLTFImport/ModelIOImport and kept for format-specific options), and ModelIOSceneGraph's single 'animation' becomes 'animations'. Callers that want a whole SceneGraph wrap the node. Approve or amend?
 - `2026-11-11T16:15:15Z`: Auto-fixer run: punted. Unifying the loaders changes or removes public types (GLTFSceneGraph, ModelIOSceneGraph, ModelFile.load's tuple); users: Composer EditorModel, KeynoteDemo, BurningFox. Unblocker: answer 371-Q1. Related naming question: 370-Q2.
+
+---
+
+## 372: Node's local transform is exposed through four overlapping properties
+
++++
+status: new
+priority: medium
+kind: enhancement
+labels: area:scenegraph, effort:m
+created: 2026-11-11T16:33:13Z
++++
+
+A node's local transform can be read and written four ways, each with its own type:
+
+- `localTransform: SceneGraph.LocalTransform`, an enum of `.matrix(simd_float4x4)` or `.trs(Transform3D)`
+- `transform: float4x4`
+- `trs: Transform3D` (GeometryLite3D)
+- `eulerAngles: Euler`, which reads and writes only the rotation
+
+The world-space side adds `worldTransform`, `worldPosition` and `worldOrientation`. There is no local `position`, so the most common edit is `node.trs.translation = ...` (98 times in the repository).
+
+What is wrong:
+
+- Four properties describe one value. A reader must know that they alias each other, and which one keeps data: setting `transform` on a TRS node turns it into a matrix node, and reading `trs` from a matrix node decomposes the matrix.
+- `LocalTransform` is the real storage type, but it is the least used. Most call sites go through `trs` or `transform`.
+- There is no single value that can be passed around, stored or animated while still offering the matrix, TRS, Euler and position views of it.
+- Across the MetalSprockets packages, transform-like types are separate and unrelated: `SceneGraph.LocalTransform` (SceneSprockets), `Transform3D` (GeometryLite3D), `Transforms` and `ViewTransforms` (MetalSprocketsAddOns), `ShaderMaterialTransforms` (SceneSprocketsShaders), and a private `Transform` in MetalSprocketsGLTF animation.
+
+Expected: one transform type on Node that is the single source of truth, from which the matrix, translation/rotation/scale, Euler angles and position can all be read and written.
+
+Related: #367 (node construction verbosity, the proposed `position` property), #370 (public API naming).
+
+- `2026-11-11T22:48:47Z`: The `trs` name itself is part of the problem. With GeometryLite3D 0.3, `Transform3D` can store a matrix or components, so `Node.trs: Transform3D` and `Node.transform: float4x4` now describe the same value and only differ in type; `trs` mirrors `transform`. `trs` is also an abbreviation, and the enum case `LocalTransform.trs` repeats it. Expected: no property named `trs`; one transform property on Node.
+
+---
+
+## 373: Node.shape can disagree with the mesh in Node.content
+
++++
+status: new
+priority: medium
+kind: bug
+labels: area:scenegraph, effort:s
+created: 2026-11-11T16:35:41Z
++++
+
+`SceneGraph.Node.shape` is stored separately (`shapeStorage`) from the mesh in `content`. Setting `shape` rebuilds `content`, but setting `content` does not touch `shapeStorage`.
+
+Repro (from reading the code, not run):
+1. `let node = SceneGraph.Node(shape: .sphere(radius: 1), material: material)`
+2. `node.content = .mesh(otherMesh, material: material)` (or `.light(...)`, `.empty`)
+3. Read `node.shape`.
+
+Expected: `nil` (the node no longer shows a shape), or a shape that matches the mesh.
+Actual: `.sphere(radius: 1)`. The node reports a shape that it does not draw. Archives and inspectors that read `shape` then describe the wrong geometry.
+
+Code: `Sources/SceneSprockets/Shape.swift` (`shape` getter/setter), `Node+Fields.swift` (`content` setter).
+
+Related: #372 (other overlapping Node properties).
+
+---
+
+## 374: ShaderMaterial.isTransparent does not read back what was set
+
++++
+status: new
+priority: low
+kind: bug
+labels: area:renderer, effort:s
+created: 2026-11-11T16:35:41Z
++++
+
+`ShaderMaterial.isTransparent` is a settable property, but its getter is `alphaBlends || renderState.blendsWithBackground`, and the setter writes only `alphaBlends`.
+
+Repro:
+1. `var material = ShaderMaterial(..., renderState: MaterialRenderState(blendMode: .add))`
+2. `material.isTransparent = false`
+3. Read `material.isTransparent`.
+
+Expected: `false`, or the property is read-only.
+Actual: `true`. The value is derived from two sources and only one is settable through this property.
+
+Blinn-Phong's `isTransparent` is read-only and derived (`opacity < 1 || usesDiffuseTextureAlpha || renderState.blendsWithBackground`), so the two material families behave differently.
+
+Code: `Sources/SceneSprocketsShaderMaterial/ShaderMaterial.swift`.
+
+---
+
+## 375: PBRSceneMaterial is a value type that shares mutable state between copies
+
++++
+status: new
+priority: medium
+kind: bug
+labels: area:renderer, effort:m
+created: 2026-11-11T16:35:42Z
++++
+
+`PBRSceneMaterial` is a struct, but it wraps a `PBRMaterial` class and `renderState` writes through to it (`nonmutating set { pbrMaterial.renderState = newValue }`).
+
+Repro:
+1. `let a = try PBRSceneMaterial(baseColor: [1, 0, 0, 1])`
+2. `var b = a`
+3. `b.renderState.blendMode = .add`
+4. Read `a.renderState.blendMode`.
+
+Expected: `.alpha`. Changing a copy of a value type does not change the original.
+Actual: `.add`. Every copy that wraps the same `PBRMaterial` changes. The doc comment on `renderState` says so.
+
+Also, the material's alpha and blending are described in two places: `pbrMaterial.uniforms.alphaMode` (opaque, mask, blend) and `renderState.blendMode`. `isTransparent` reads `pbrMaterial.isBlended`, not `renderState`.
+
+Code: `Sources/SceneSprocketsPBR/PBRSceneGraph.swift`.
+
+Related: #368 (material API consistency).
+
+---
+
+## 376: Hit-test category mask is passed several different ways
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:scenegraph, effort:s
+created: 2026-11-11T16:35:42Z
++++
+
+The node category filter for hit testing reaches the hit test through several paths:
+
+- `SceneGraph.hitTest(_ ray:, categoryBitMask:)` takes it as a parameter.
+- `SceneGraph.hitTest(_ ray:, options:)` and `hitTest(segmentFrom:to:options:)` take it inside `HitTestOptions.categoryBitMask`.
+- `SceneView(hitTestCategoryBitMask:)` takes another mask, and SceneView combines it with the active camera's `Camera.categoryBitMask` before calling `hitTest`.
+
+What is wrong:
+
+- Two `hitTest(_ ray:...)` overloads express the same filter differently. A caller with options and a mask must choose which one wins.
+- In SceneView the effective filter is `camera.categoryBitMask & hitTestCategoryBitMask`, which a caller can only learn from the code or the doc comment.
+
+Expected: one way to give a hit test its category filter.
+
+Related: #370 (public API naming), #369 (SceneView configuration).
+
+---
+
+## 377: Back-face culling is configured differently for each material family
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:renderer, effort:m
+created: 2026-11-11T16:35:43Z
++++
+
+Whether a material draws back faces is set in a different place for each family:
+
+- Blinn-Phong: `BlinnPhongSceneMaterial.cullMode: MTLCullMode`, a field next to (not inside) `renderState`.
+- PBR: `pbrMaterial.doubleSided` on the wrapped MetalSprocketsPBR material.
+- ShaderMaterial: no setting; it draws with no culling.
+- `MaterialRenderState`, the shared per-material draw state, has blend mode, depth read/write, color write mask and fill mode, but no culling.
+
+What is wrong:
+
+- The same visual property needs different code for each material type, and one type cannot express it at all.
+- Code that works across materials (inspectors, archives, the transparent back-faces-first pass from #120) must know each family's field.
+
+Expected: one culling setting that every material family honors, in the same place.
+
+Related: #368 (material API consistency).
+
+---
+
+## 378: SceneSprockets does not build against GeometryLite3D's new Transform3D
+
++++
+status: new
+priority: medium
+kind: task
+labels: area:scenegraph, effort:m, upstream
+created: 2026-11-11T19:19:47Z
++++
+
+GeometryLite3D main (local, not yet pushed or tagged; SceneSprockets pins upToNextMinor from 0.2.7) changed `Transform3D`:
+
+- `rotation` is now `Rotation3D` (`.euler(Euler)` or `.quaternion(simd_quatf)`), not `simd_quatf`.
+- Storage is `.matrix(float4x4)` or `.components(translation:rotation:scale:)`.
+
+Building SceneSprockets against it (throwaway copy with a local path dependency) fails in the SceneSprockets target:
+
+- `NodeSpace.swift`: `worldOrientation` and `eulerAngles` read and assign `simd_quatf` through `trs.rotation` / `Transform3D.rotation`.
+- `Constraint.swift` (lines 174, 188, 199, 209, 247, 305, 306): assigns `simd_quatf` to `rotation`, multiplies `Rotation3D * simd_quatf`, calls `.inverse` on `Rotation3D`.
+
+The build stopped at that target. There are about 88 `.rotation` uses in 38 files across Sources, Tests, Examples and SceneSprocketsComposer, so later targets (Gizmos, Physics, PBR glue, tests, demos, tutorials such as `node.trs.rotation = simd_quatf(...)`) are likely to break as well. MetalSprocketsGLTF, MetalSprocketsPBR, MetalSprocketsAddOns, Interaction3D and SwiftMesh compiled against it.
+
+The new `Transform3D` also overlaps with `SceneGraph.LocalTransform` (matrix or TRS), which is the subject of #372.
+
+Upstream review issues: GeometryLite3D #49–#55.
 
 ---
