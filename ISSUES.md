@@ -6563,17 +6563,19 @@ There is no Periphery config, and the public API has not been checked for unused
 ## 295: No release tag or release notes
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: release, effort:s
 created: 2026-11-06T18:01:42Z
-updated: 2026-11-06T18:03:14Z
+updated: 2026-11-11T16:14:11Z
+closed: 2026-11-11T16:14:11Z
 +++
 
 SceneSprockets has no version tag and no release notes, so SwiftPM users cannot depend on a version, and there is no summary of what the first release contains.
 
 - `2026-11-06T18:12:40Z`: Release notes added in CHANGELOG.md under 'Unreleased' (products, features, link to README limitations). Left open: the version number and the git tag are for the user to choose and create; when tagging, rename 'Unreleased' to the version. Also noticed Documentation/Features.md is stale: save/load (SceneArchive), debug views and gizmos (SceneSprocketsGizmos) are marked not done, and the entity-component system is struck through although nodes now live in a SwiftECS World. The notes follow the code, not that table.
+- `2026-11-11T16:14:11Z`: Tags 0.0.1-0.0.3 now exist (created by the user). CHANGELOG.md: the first-release notes are under 0.0.1, with sections for 0.0.2 and 0.0.3 from the commit log, and Unreleased lists the changes since 0.0.3. No tags were created or pushed by the agent.
 
 ---
 

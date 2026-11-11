@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- Shadows with `softness` above 1 no longer make a floor shadow itself in bands and stripes (#366).
+- `ShaderMaterial` can shade each light with its own shadow: set `samplesShadows`, and use `shaderMaterialShadow` from `ShaderMaterial.h`. `ShaderMaterial.lit(color:)` is a sample (#300).
+- `SceneView` debug options can be turned on with the `SS_SHOWS_STATISTICS`, `SS_SHOWS_FRAME_TIMING` and `SS_DISABLES_FRAMEBUFFER_ONLY` environment variables (#365).
+
+## 0.0.3
+
+- SwiftLint no longer checks the DocC catalogs.
+
+## 0.0.2
+
+- DocC tutorials, with the `SceneSprocketTutorials` example app.
+- One shared Metal device: the API no longer takes `MTLDevice` parameters (#354, #357).
+- `addChild(_:)` returns the child. `Node(parent:)` is removed (#361).
+- The demo app moved to `Examples/SceneSprocketsDemo`.
+
+## 0.0.1
+
 The first release of SceneSprockets: a format-neutral 3D scene graph for [MetalSprockets](https://github.com/schwa/MetalSprockets), with an API modeled on SceneKit.
 
 SceneSprockets needs Swift 6.2 or later, and iOS, macOS or visionOS 26 or later.
