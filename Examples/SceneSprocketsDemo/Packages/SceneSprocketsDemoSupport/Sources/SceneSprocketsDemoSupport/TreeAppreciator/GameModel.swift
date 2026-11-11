@@ -240,7 +240,7 @@ final class SwayDriver: SceneViewDelegate {
         let rotation = simd_quatf(angle: 0.012 * sin(t * 1.1) + 0.005 * sin(t * 2.3), axis: [0, 0, 1])
             * simd_quatf(angle: 0.008 * cos(t * 0.8), axis: [1, 0, 0])
         for tree in trees {
-            tree.trs.rotation = rotation
+            tree.trs.rotation = Rotation3D(rotation)
         }
     }
 }

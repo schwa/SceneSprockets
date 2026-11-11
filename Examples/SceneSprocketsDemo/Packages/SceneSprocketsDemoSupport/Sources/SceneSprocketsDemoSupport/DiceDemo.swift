@@ -1,4 +1,5 @@
 import Foundation
+import GeometryLite3D
 import Metal
 import MetalKit
 import MetalSprocketsParticles
@@ -111,7 +112,7 @@ final class DiceDemo: DemoScene {
         }
         if isLinedUp {
             for (index, die) in dice.enumerated() {
-                die.trs.rotation = simd_quatf(angle: deltaTime * 0.6, axis: simd_normalize([0.3, 1, Float(index % 3) * 0.2])) * die.trs.rotation
+                die.trs.rotation = Rotation3D(simd_quatf(angle: deltaTime * 0.6, axis: simd_normalize([0.3, 1, Float(index % 3) * 0.2])) * die.trs.rotation.quaternion)
             }
             return
         }

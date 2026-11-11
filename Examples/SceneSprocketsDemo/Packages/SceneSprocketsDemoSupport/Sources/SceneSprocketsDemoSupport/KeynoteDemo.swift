@@ -359,7 +359,7 @@ public final class KeynoteDemo: DemoScene {
             blendController = controller
         case "PBR Extensions":
             for piece in pbrExtensionPieces {
-                piece.node.trs.rotation = simd_normalize(simd_quatf(angle: deltaTime * piece.speed, axis: piece.axis) * piece.node.trs.rotation)
+                piece.node.trs.rotation = Rotation3D(simd_normalize(simd_quatf(angle: deltaTime * piece.speed, axis: piece.axis) * piece.node.trs.rotation.quaternion))
             }
         case "Deformation":
             let weights = [(sin(time * 1.3) + 1) / 2, max(0, sin(time * 0.7))]
@@ -369,7 +369,7 @@ public final class KeynoteDemo: DemoScene {
             // The same total bend as before (1.4 radians at the tip), shared by every bending joint.
             let rotation = simd_quatf(angle: sin(time * 1.5) * 1.4 / Float(Self.tubeJointCount - 1), axis: [0, 0, 1])
             for joint in bendingJoints {
-                joint.trs.rotation = rotation
+                joint.trs.rotation = Rotation3D(rotation)
             }
         case "Level of Detail":
             // Out of phase, 11 to 27 units from the camera, so each crosses both switch distances.
@@ -1140,7 +1140,7 @@ public final class KeynoteDemo: DemoScene {
             tumblingLetters[index].velocity.y -= 9.81 * deltaTime
             let letter = tumblingLetters[index]
             letter.node.trs.translation += letter.velocity * deltaTime
-            letter.node.trs.rotation = simd_quatf(angle: letter.spinRate * deltaTime, axis: letter.spinAxis) * letter.node.trs.rotation
+            letter.node.trs.rotation = Rotation3D(simd_quatf(angle: letter.spinRate * deltaTime, axis: letter.spinAxis) * letter.node.trs.rotation.quaternion)
         }
         // Out of frame: no need to keep them.
         let fallen = tumblingLetters.filter { $0.node.trs.translation.y < -10 }
@@ -1261,7 +1261,7 @@ public final class KeynoteDemo: DemoScene {
         SceneGraph.Transaction.animate(duration: 0.8, timingMode: .easeInEaseOut) {
             for cube in shuffleCubes {
                 cube.trs.translation = [Float.random(in: -4...4), Float.random(in: 0.4...3), Float.random(in: -1...1)]
-                cube.trs.rotation = simd_quatf(angle: Float.random(in: 0...(2 * .pi)), axis: simd_normalize(SIMD3<Float>.random(in: -1...1) + [0, 0.01, 0]))
+                cube.trs.rotation = Rotation3D(simd_quatf(angle: Float.random(in: 0...(2 * .pi)), axis: simd_normalize(SIMD3<Float>.random(in: -1...1) + [0, 0.01, 0])))
             }
         }
     }

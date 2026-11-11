@@ -1,4 +1,5 @@
 import Foundation
+import GeometryLite3D
 import SceneSprockets
 import SceneSprocketsBlinnPhong
 import SceneSprocketsPBR
@@ -64,7 +65,7 @@ final class GearsDemo: DemoScene {
                 GearTrain.angle(of: link.spec, meshingWith: links[parent].spec, firstAngle: angles[parent], direction: link.direction)
             } ?? angle
             angles.append(value)
-            link.node.trs.rotation = simd_quatf(angle: value, axis: [0, 0, 1])
+            link.node.trs.rotation = Rotation3D(simd_quatf(angle: value, axis: [0, 0, 1]))
         }
     }
 
