@@ -89,6 +89,9 @@ public struct SceneGraphElement: Element {
     @MSEnvironment(\.renderPassDescriptor)
     private var renderPassDescriptor
 
+    @MSEnvironment(\.submissionIndex)
+    private var submissionIndex
+
     /// Creates an element that draws a scene graph.
     ///
     /// - Parameters:
@@ -156,6 +159,12 @@ public struct SceneGraphElement: Element {
                 context.lightShadowSlices = shadowFrame.lightSlices
             }
             var prePasses: [AnyElement] = []
+            // Morphs and skins on the GPU for renderers that draw plain vertex buffers (#298). The renderers below pick
+            // up the results from the nodes.
+            let deformationJobs = GPUDeformation.prepare(entries: entries, revision: context.revision, submissionIndex: submissionIndex)
+            if !deformationJobs.isEmpty {
+                prePasses.append(DeformationPass(jobs: deformationJobs).eraseToAnyElement())
+            }
             if let color = renderPassDescriptor?.colorAttachments[0].texture {
                 for (renderer, rendererEntries) in zip(renderers, partitionMeshEntries(entries, renderers: renderers)) {
                     guard let prePassRenderer = renderer as? any SceneGraphPrePassRenderer, !rendererEntries.isEmpty else {

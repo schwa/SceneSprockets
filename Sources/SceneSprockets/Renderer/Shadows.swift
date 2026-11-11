@@ -315,7 +315,7 @@ public final class SceneGraphShadows {
     }
 }
 
-private struct Packed3 {
+struct Packed3 {
     var x, y, z: Float
 
     init(_ value: SIMD3<Float>) {

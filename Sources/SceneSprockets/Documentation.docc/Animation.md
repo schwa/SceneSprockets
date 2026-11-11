@@ -46,4 +46,4 @@ There are look-at, billboard, distance, replicator, avoid-occluder, inverse kine
 - **Morph targets.** `node.morphTargets` holds deltas for each vertex, and `node.morphWeights` holds the weights. They are on the node because a mesh cannot hold them.
 - **Skins.** `node.skin` (a ``SceneGraph/Skin`` with joint nodes and inverse bind matrices) and `node.skinVertices` hold skinning data. Joints are ordinary nodes, so you animate them like other nodes.
 
-The PBR renderer deforms meshes on the GPU. Blinn-Phong and shader materials deform them on the CPU every frame, which is slower for large meshes.
+All renderers deform meshes on the GPU. For Blinn-Phong and shader materials, ``SceneGraphElement`` runs a compute pass before the scene pass. Hit tests, and shadow casters with active morph targets, still use CPU-deformed geometry.

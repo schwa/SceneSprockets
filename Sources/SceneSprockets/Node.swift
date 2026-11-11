@@ -100,6 +100,8 @@ extension SceneGraph {
 
         @ObservationIgnored var boundsCache = BoundsCache()
         @ObservationIgnored var deformationCache: (revision: Revision, mesh: MetalMesh)?
+        // See GPUDeformation.swift.
+        @ObservationIgnored var gpuDeformation: GPUDeformationState?
         @ObservationIgnored var shapeStorage: Shape?
         func applySubdivision() {
             guard case let .mesh(mesh, materials, castsShadow, receivesShadow) = content else {

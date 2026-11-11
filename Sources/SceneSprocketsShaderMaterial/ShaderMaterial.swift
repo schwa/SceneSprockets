@@ -21,7 +21,7 @@ import SwiftMesh
 /// `shadowMap`, `shadowSampler`; see `ShaderMaterialLighting` in `ShaderMaterial.h`), and the fragment function shades
 /// each light with its own shadow, as Blinn-Phong and PBR do. Without it, shadows darken the mesh in screen space after
 /// the scene pass, every light's shadow at once.
-public struct ShaderMaterial: SceneSprockets.Material, SamplesShadowsInShader {
+public struct ShaderMaterial: SceneSprockets.Material, SamplesShadowsInShader, DrawsDeformedVertices {
     /// A value to bind to a shader argument.
     public enum Value {
         /// A `float`.
@@ -140,12 +140,12 @@ public struct ShaderMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
     // swiftlint:disable:next unneeded_throws_rethrows
     public func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement {
         let cameraPosition = context.cameraMatrix.columns.3.xyz
-        // Skinned and morphed meshes are deformed on the CPU, as for Blinn-Phong.
+        // Skinned and morphed meshes are deformed by SceneGraphElement's GPU pre-pass (#298).
         let items: [ShaderMaterialItem] = entries.compactMap { entry in
             guard let material = entry.material as? ShaderMaterial else {
                 return nil
             }
-            let deformed = entry.deformed(revision: context.revision)
+            let deformed = entry.renderDeformed(revision: context.revision)
             return ShaderMaterialItem(mesh: deformed?.mesh ?? entry.mesh, submeshIndex: entry.submeshIndex, modelMatrix: deformed?.modelMatrix ?? entry.worldTransform, material: material, opacity: entry.opacity, isTransparent: entry.isTransparent, receivesShadow: entry.receivesShadow)
         }
         let lights = shaderMaterialLights(context.lights, shadowSlices: context.shadow == nil ? [] : context.lightShadowSlices, cameraPosition: cameraPosition)

@@ -6623,11 +6623,13 @@ All tests pass. Tests run in parallel, so the log does not show which test trigg
 ## 298: Blinn-Phong and ShaderMaterial deform morph targets and skins on the CPU every frame
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:renderer, effort:l
 created: 2026-11-07T15:41:12Z
+updated: 2026-11-11T16:21:16Z
+closed: 2026-11-11T16:21:16Z
 +++
 
 The PBR renderer deforms morph targets and skins on the GPU. Blinn-Phong and ShaderMaterial meshes are deformed on the CPU each frame (SceneGraph.MeshEntry.deformed(revision:)), which is slow for large meshes. Listed under Limitations in the README.
@@ -6635,6 +6637,7 @@ The PBR renderer deforms morph targets and skins on the GPU. Blinn-Phong and Sha
 - `2026-11-07T16:22:50Z`: Autonomous run: scoped, not changed. Design that fits the renderer: a compute pre-pass in SceneGraphElement that, for each morphed or skinned mesh entry drawn by a CPU-deforming renderer, writes deformed positions and normals into an output vertex buffer with the mesh's layout (one per frame in flight, like the shadow map slots), from the rest buffers, GPU morph-delta buffers (cached per node) and the skin influence buffer the shadow pass already builds (Shadows.swift caster .skinned) plus joint matrices. A QueueBarrier(after: .dispatch, before: .vertex) orders it before the scene pass. Blinn-Phong, ShaderMaterial and the debug view then draw the GPU-deformed mesh; hit testing keeps the CPU path. Punting: it is a renderer-wide change with frames-in-flight synchronization (the class of bug behind #59 and #242, which only shows live), and it adds per-frame GPU memory (deformed vertex buffers x frames in flight). Unblocker: approve this design (or prefer skinning in the Blinn-Phong vertex shader instead, which avoids extra buffers but leaves ShaderMaterial on the CPU).
 - `2026-11-07T16:59:56Z`: Question 1 (decision): Approve the GPU compute pre-pass design for deforming Blinn-Phong and ShaderMaterial meshes (one output buffer per frame in flight), or prefer skinning in the Blinn-Phong vertex shader (cheaper, but ShaderMaterial stays on the CPU)?
 - `2026-11-07T23:24:12Z`: Answer 1: approved pre-pass
+- `2026-11-11T16:21:17Z`: Implemented the approved compute pre-pass: SceneGraphElement deforms morphed/skinned meshes of Blinn-Phong, ShaderMaterial and debug-view materials into per-node vertex buffer copies (3 slots, one per frame in flight), with a producer barrier before vertex/dispatch work. Hit tests and shadow casters with active morph targets still use the CPU path (skinned casters were already GPU). Not verified live in the app; test gpuDeformationMatchesCPU checks GPU output equals the CPU path.
 
 ---
 

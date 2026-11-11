@@ -12,7 +12,7 @@ import SwiftMesh
 ///
 /// Each term is a color, or a texture tinted by a color. The renderer's ambient light lights the ambient term. If a
 /// mesh has vertex colors, the first color set multiplies the ambient, diffuse and opacity terms.
-public struct BlinnPhongSceneMaterial: SceneSprockets.Material, SamplesShadowsInShader {
+public struct BlinnPhongSceneMaterial: SceneSprockets.Material, SamplesShadowsInShader, DrawsDeformedVertices {
     /// Where a term of the material gets its color.
     public enum Source {
         /// A color in linear RGB.
@@ -140,7 +140,7 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer, Equatable 
         let frame = BlinnPhongFrame(viewProjection: context.projectionMatrix * context.viewMatrix.rotationOnlyView, cameraPosition: .zero, ambientLightColor: ambientLightColor, lightCount: Int32(lights.count), materialChannel: context.materialChannel?.rawValue ?? 0)
         // An empty array cannot be bound; the shader reads none of it when lightCount is 0.
         let lightValues = lights.isEmpty ? [BlinnPhongLight()] : lights
-        // The shader has no morph or skin inputs, so those meshes are deformed on the CPU. They skip culling because
+        // The shader has no morph or skin inputs, so SceneGraphElement deforms those meshes in a GPU pre-pass (#298). They skip culling because
         // their node bounds do not cover the deformation.
         // SceneGraphElement batches opaque and transparent entries apart, transparent ones sorted farthest first.
         let isTransparent = entries.first?.isTransparent ?? false
@@ -156,7 +156,7 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer, Equatable 
             guard let material = entry.material as? BlinnPhongSceneMaterial else {
                 continue
             }
-            if let result = entry.deformed(revision: context.revision) {
+            if let result = entry.renderDeformed(revision: context.revision) {
                 // Deformed meshes skip culling; their node bounds do not cover the deformation.
                 if isTransparent {
                     items.append((entry, result.mesh, result.modelMatrix, material))

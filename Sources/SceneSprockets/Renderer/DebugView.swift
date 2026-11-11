@@ -62,7 +62,7 @@ public enum SceneGraphMaterialChannel: Int32, CaseIterable, Sendable, Codable {
 }
 
 // Stands in for each mesh's material while a debug view is on.
-struct SceneGraphDebugMaterial: Material {
+struct SceneGraphDebugMaterial: Material, DrawsDeformedVertices {
     var mode: SceneGraphDebugMode
 }
 
@@ -78,8 +78,8 @@ struct SceneGraphDebugRenderer: SceneGraphMaterialRenderer {
         let cameraPosition = context.cameraMatrix.columns.3.xyz
         return ForEach(Array(entries.enumerated()), id: \.offset) { _, entry in
             let mode = (entry.material as? SceneGraphDebugMaterial)?.mode ?? .shaded
-            // Skinned and morphed meshes are deformed on the CPU, as for Blinn-Phong.
-            let deformed = entry.deformed(revision: context.revision)
+            // Skinned and morphed meshes are deformed by SceneGraphElement's GPU pre-pass (#298).
+            let deformed = entry.renderDeformed(revision: context.revision)
             let mesh = deformed?.mesh ?? entry.mesh
             let modelMatrix = deformed?.modelMatrix ?? entry.worldTransform
             let transforms = ShaderMaterialTransforms(modelMatrix: modelMatrix, viewMatrix: context.viewMatrix, projectionMatrix: context.projectionMatrix, cameraPosition: cameraPosition, opacity: 1)

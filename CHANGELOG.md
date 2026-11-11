@@ -4,6 +4,7 @@
 
 - Shadows with `softness` above 1 no longer make a floor shadow itself in bands and stripes (#366).
 - `ShaderMaterial` can shade each light with its own shadow: set `samplesShadows`, and use `shaderMaterialShadow` from `ShaderMaterial.h`. `ShaderMaterial.lit(color:)` is a sample (#300).
+- Blinn-Phong, shader-material and debug-view meshes are morphed and skinned on the GPU, in a compute pass before the scene pass, instead of on the CPU every frame (#298).
 - `SceneView` debug options can be turned on with the `SS_SHOWS_STATISTICS`, `SS_SHOWS_FRAME_TIMING` and `SS_DISABLES_FRAMEBUFFER_ONLY` environment variables (#365).
 
 ## 0.0.3
