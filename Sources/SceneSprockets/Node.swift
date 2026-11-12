@@ -100,9 +100,8 @@ extension SceneGraph {
         }
 
         @ObservationIgnored var boundsCache = BoundsCache()
-        @ObservationIgnored var deformationCache: (revision: Revision, mesh: MetalMesh)?
-        // See GPUDeformation.swift.
-        @ObservationIgnored var gpuDeformation: GPUDeformationState?
+        // Made on the owning thread when the node is snapshotted; afterwards only rendering uses it (#389).
+        @ObservationIgnored lazy var renderCache = NodeRenderCache()
         // The shape, the mesh it built and that mesh subdivided; `shape` reports it only while `content` still shows one of
         // them (#373).
         @ObservationIgnored var shapeStorage: (shape: Shape, mesh: MetalMesh, subdivided: MetalMesh?)?

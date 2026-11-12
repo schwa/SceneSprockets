@@ -165,6 +165,11 @@ public class SceneGraph {
             var levelsOfDetail: [LevelOfDetail]
             // The node's materials, for level-of-detail meshes.
             var nodeMaterials: [any SceneMaterial]
+            var skin: SkinPose?
+            var skinVertices: [SkinVertex]
+            var morphTargets: [MorphTarget]
+            var morphWeights: [Float]
+            var renderCache: NodeRenderCache
 
             init(node: Node, worldTransform: float4x4, mesh: MetalMesh, submeshIndex: Int, material: any SceneMaterial, castsShadow: Bool, receivesShadow: Bool, opacity: Float) {
                 self.nodeID = node.id
@@ -177,6 +182,11 @@ public class SceneGraph {
                 } else {
                     self.nodeMaterials = [material]
                 }
+                self.skinVertices = node.skinVertices
+                self.morphTargets = node.morphTargets
+                self.morphWeights = node.morphWeights
+                self.skin = node.validSkin(vertexCount: mesh.vertexCount).map(SkinPose.init)
+                self.renderCache = node.renderCache
                 self.node = node
                 self.worldTransform = worldTransform
                 self.mesh = mesh
@@ -202,6 +212,11 @@ public class SceneGraph {
                 meshBounds = other.meshBounds
                 levelsOfDetail = other.levelsOfDetail
                 nodeMaterials = other.nodeMaterials
+                skin = other.skin
+                skinVertices = other.skinVertices
+                morphTargets = other.morphTargets
+                morphWeights = other.morphWeights
+                renderCache = other.renderCache
             }
 
             func copy() -> Storage {
@@ -283,6 +298,21 @@ public class SceneGraph {
         public var levelsOfDetail: [LevelOfDetail] { storage.levelsOfDetail }
         /// The node's materials, one per submesh, copied when the entry was made.
         public var nodeMaterials: [any SceneMaterial] { storage.nodeMaterials }
+        /// The node's skin with its joints' world transforms, when it is valid for the mesh; copied when the entry was made.
+        public var skin: SkinPose? { storage.skin }
+        /// The node's skin vertices, copied when the entry was made.
+        public var skinVertices: [SkinVertex] { storage.skinVertices }
+        /// The node's morph targets, copied when the entry was made.
+        public var morphTargets: [MorphTarget] { storage.morphTargets }
+        /// The node's morph weights, copied when the entry was made.
+        public var morphWeights: [Float] { storage.morphWeights }
+        // Deformation caches that only rendering reads and writes.
+        var renderCache: NodeRenderCache { storage.renderCache }
+
+        /// Whether a morph target that fits the mesh has a non-zero weight.
+        public var hasMorphs: Bool {
+            morphTargets.contains { $0.isValid(vertexCount: mesh.vertexCount) } && morphWeights.contains { $0 != 0 }
+        }
 
         /// Blends: the material is transparent, or it applies node opacity and that is below 1.
         public var isTransparent: Bool {

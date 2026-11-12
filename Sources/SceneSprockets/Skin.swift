@@ -22,6 +22,27 @@ extension SceneGraph {
         }
     }
 
+    /// A skin with its joints' world transforms, copied for rendering (#389).
+    public struct SkinPose {
+        /// The skin it was copied from, to tell skins apart.
+        public var skinID: ObjectIdentifier
+        public var jointIDs: [Node.ID]
+        public var jointWorldTransforms: [simd_float4x4]
+        public var inverseBindMatrices: [simd_float4x4]
+
+        init(_ skin: Skin) {
+            skinID = ObjectIdentifier(skin)
+            jointIDs = skin.joints.map(\.id)
+            jointWorldTransforms = skin.joints.map(\.worldTransform)
+            inverseBindMatrices = skin.inverseBindMatrices
+        }
+
+        /// One matrix per joint: the joint's world transform times its inverse bind matrix.
+        public func jointMatrices() -> [simd_float4x4] {
+            zip(jointWorldTransforms, inverseBindMatrices).map { $0 * $1 }
+        }
+    }
+
     /// Up to four joint influences for one vertex.
     public struct SkinVertex: Sendable, Equatable {
         /// The indices of the joints in ``Skin/joints``.

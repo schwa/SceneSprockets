@@ -8938,15 +8938,19 @@ SceneGraphElement and its shared steps (culling, level of detail, batching, shad
 ## 389: Material renderers read live nodes through MeshEntry.node
 
 +++
-status: new
+status: closed
 priority: high
 kind: task
 labels: area:renderer, effort:m, subtask
 depends: 388
 created: 2026-11-12T21:25:34Z
+updated: 2026-11-12T21:36:06Z
+closed: 2026-11-12T21:36:06Z
 +++
 
 Blinn-Phong, PBR, ShaderMaterial, debug views and GPU deformation read entry.node while building elements. Done when: they read only snapshot values. Part of #386.
+
+- `2026-11-12T21:36:06Z`: MeshEntry now copies skin pose (SkinPose: joint IDs, joint world transforms, inverse binds), skin vertices, morph targets and weights, plus a per-node NodeRenderCache that only rendering uses. Blinn-Phong batching, PBR layout/pose/primitives, GPU and CPU deformation and shadow-caster skinning read entries only. Breaking: PBRNodeLayout.jointNodes/skins became jointIDs/jointWorldTransforms/skins: [SkinPose]; Node.deformationCache/gpuDeformation moved to Node.renderCache. Test: a snapshot's skin pose and morph weights survive later edits.
 
 ---
 

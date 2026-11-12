@@ -13,7 +13,7 @@ package protocol DrawsDeformedVertices {}
 extension SceneGraph.MeshEntry {
     /// The GPU-deformed mesh that this frame's deformation pass writes, or the CPU-deformed mesh when there is none.
     package func renderDeformed(revision: SceneGraph.Revision) -> Deformed? {
-        if let state = node.gpuDeformation, let current = state.current, current.revision == revision, state.key.matches(mesh) {
+        if let state = renderCache.gpuDeformation, let current = state.current, current.revision == revision, state.key.matches(mesh) {
             return Deformed(mesh: current.mesh, modelMatrix: current.modelMatrix)
         }
         return deformed(revision: revision)
@@ -32,13 +32,13 @@ final class GPUDeformationState {
         var morphTargets: [SceneGraph.MorphTarget]
         var skinVertices: [SceneGraph.SkinVertex]
 
-        init(mesh: MetalMesh, node: SceneGraph.Node) {
+        init(mesh: MetalMesh, entry: SceneGraph.MeshEntry) {
             let sorted = mesh.vertexBuffers.sorted { $0.key < $1.key }
             buffers = sorted.map { ObjectIdentifier($0.value) }
             offsets = sorted.map { mesh.vertexBufferOffsets[$0.key] ?? 0 }
             vertexCount = mesh.vertexCount
-            morphTargets = node.morphTargets
-            skinVertices = node.skinVertices
+            morphTargets = entry.morphTargets
+            skinVertices = entry.skinVertices
         }
 
         func matches(_ mesh: MetalMesh) -> Bool {
@@ -47,8 +47,8 @@ final class GPUDeformationState {
         }
 
         // Arrays compare by storage identity first, so an unchanged node is cheap to check.
-        func matches(_ mesh: MetalMesh, node: SceneGraph.Node) -> Bool {
-            matches(mesh) && morphTargets == node.morphTargets && skinVertices == node.skinVertices
+        func matches(_ mesh: MetalMesh, entry: SceneGraph.MeshEntry) -> Bool {
+            matches(mesh) && morphTargets == entry.morphTargets && skinVertices == entry.skinVertices
         }
     }
 
@@ -61,7 +61,7 @@ final class GPUDeformationState {
     var current: (revision: SceneGraph.Revision, mesh: MetalMesh, modelMatrix: simd_float4x4)?
 
     // Nil when the mesh has no float3 positions or a buffer cannot be made; the CPU path is used then.
-    init?(mesh: MetalMesh, node: SceneGraph.Node) {
+    init?(mesh: MetalMesh, entry: SceneGraph.MeshEntry) {
         func attribute(_ semantic: VertexDescriptor.Attribute.Semantic) -> (buffer: Int, offset: Int, stride: Int)? {
             guard let attribute = mesh.vertexDescriptor.attributes.first(where: { $0.semantic == semantic }), attribute.format == .float3, mesh.vertexBuffers[attribute.bufferIndex] != nil else {
                 return nil
@@ -87,7 +87,7 @@ final class GPUDeformationState {
             slots.append(copies)
         }
         let vertexCount = mesh.vertexCount
-        let morphTargets = node.morphTargets.filter { $0.isValid(vertexCount: vertexCount) }
+        let morphTargets = entry.morphTargets.filter { $0.isValid(vertexCount: vertexCount) }
         func deltas(_ path: KeyPath<SceneGraph.MorphTarget, [SIMD3<Float>]>) -> MTLBuffer? {
             guard !morphTargets.isEmpty else {
                 return nil
@@ -100,9 +100,9 @@ final class GPUDeformationState {
             }
             return device.makeBuffer(bytes: packed, length: packed.count * MemoryLayout<Packed3>.stride, options: .storageModeShared)
         }
-        let skinned = node.skinVertices.count == vertexCount
-        let influences = skinned ? node.skinVertices.flatMap { [SIMD4<Float>($0.joints), $0.weights] } : []
-        self.key = Key(mesh: mesh, node: node)
+        let skinned = entry.skinVertices.count == vertexCount
+        let influences = skinned ? entry.skinVertices.flatMap { [SIMD4<Float>($0.joints), $0.weights] } : []
+        self.key = Key(mesh: mesh, entry: entry)
         self.slots = slots
         self.layout = (
             position.buffer,
@@ -143,24 +143,24 @@ enum GPUDeformation {
     // publishes the result on each node for `renderDeformed(revision:)`. Returns the jobs for DeformationPass.
     static func prepare(entries: [SceneGraph.MeshEntry], revision: SceneGraph.Revision, submissionIndex: UInt64) -> [GPUDeformationJob] {
         var jobs: [GPUDeformationJob] = []
-        var done = Set<ObjectIdentifier>()
+        var done = Set<SceneGraph.Node.ID>()
         let slot = Int(submissionIndex % UInt64(GPUDeformationState.slotCount))
         for entry in entries where entry.material is any DrawsDeformedVertices {
-            let node = entry.node
-            guard done.insert(ObjectIdentifier(node)).inserted else {
+            let cache = entry.renderCache
+            guard done.insert(entry.nodeID).inserted else {
                 continue
             }
             let mesh = entry.mesh
-            let skin = node.validSkin(vertexCount: mesh.vertexCount)
-            let weights = node.morphWeights
-            let hasMorphs = node.morphTargets.contains { $0.isValid(vertexCount: mesh.vertexCount) } && weights.contains { $0 != 0 }
+            let skin = entry.skin
+            let weights = entry.morphWeights
+            let hasMorphs = entry.hasMorphs
             guard skin != nil || hasMorphs else {
                 continue
             }
-            if node.gpuDeformation.map({ !$0.key.matches(mesh, node: node) }) ?? true {
-                node.gpuDeformation = GPUDeformationState(mesh: mesh, node: node)
+            if cache.gpuDeformation.map({ !$0.key.matches(mesh, entry: entry) }) ?? true {
+                cache.gpuDeformation = GPUDeformationState(mesh: mesh, entry: entry)
             }
-            guard let state = node.gpuDeformation, let restPositions = mesh.vertexBuffers[state.layout.positionBuffer], let outputPositions = state.slots[slot][state.layout.positionBuffer] else {
+            guard let state = cache.gpuDeformation, let restPositions = mesh.vertexBuffers[state.layout.positionBuffer], let outputPositions = state.slots[slot][state.layout.positionBuffer] else {
                 continue
             }
             let normalBuffer = state.layout.normalBuffer ?? state.layout.positionBuffer
@@ -170,7 +170,7 @@ enum GPUDeformation {
             var uniforms = state.layout.uniforms
             uniforms.hasSkin = skin == nil ? 0 : 1
             // Same weights as the CPU path: the valid targets, in order.
-            let validWeights = zip(node.morphTargets, weights + Array(repeating: 0, count: max(0, node.morphTargets.count - weights.count))).filter { $0.0.isValid(vertexCount: mesh.vertexCount) }.map(\.1)
+            let validWeights = zip(entry.morphTargets, weights + Array(repeating: 0, count: max(0, entry.morphTargets.count - weights.count))).filter { $0.0.isValid(vertexCount: mesh.vertexCount) }.map(\.1)
             jobs.append(GPUDeformationJob(
                 uniforms: uniforms,
                 restPositions: restPositions,

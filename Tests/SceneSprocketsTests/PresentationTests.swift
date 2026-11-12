@@ -74,6 +74,29 @@ func presentationKeepsItsValuesWhenTheGraphChanges() throws {
     #expect(entry.categoryBitMask == 0b10)
 }
 
+// #389: deformation inputs are copied, so a joint moving after the snapshot does not change it.
+@Test
+@MainActor
+func presentationCopiesSkinPoses() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let box = MetalMesh(mesh: .box(), device: device)
+    let root = SceneGraph.Node()
+    let joint = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 5, 0])))
+    let skinned = root.addChild(SceneGraph.Node(content: .mesh(box, material: ShaderMaterialStub())))
+    skinned.skin = SceneGraph.Skin(joints: [joint], inverseBindMatrices: [matrix_identity_float4x4])
+    skinned.skinVertices = Array(repeating: SceneGraph.SkinVertex(joints: [0, 0, 0, 0], weights: [1, 0, 0, 0]), count: box.vertexCount)
+    skinned.morphWeights = [0.5]
+    let graph = SceneGraph(root: root)
+    let entry = try #require(graph.presentation().meshes.first)
+    joint.transform = .init(translation: [9, 9, 9])
+    skinned.morphWeights = [1]
+    let skin = try #require(entry.skin)
+    #expect(skin.jointIDs == [joint.id])
+    #expect(skin.jointWorldTransforms.first?.columns.3 == [0, 5, 0, 1])
+    #expect(entry.morphWeights == [0.5])
+    #expect(entry.skinVertices.count == box.vertexCount)
+}
+
 // #388: SceneGraphElement draws the snapshot, not the live graph.
 @Test(.enabled(if: deviceSupportsMetal4))
 @MainActor

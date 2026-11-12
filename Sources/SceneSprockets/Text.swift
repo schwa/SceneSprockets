@@ -42,19 +42,6 @@ public struct SceneText: Hashable, Codable, Sendable {
     }
 }
 
-extension SceneGraph {
-    // Visible nodes with text that a camera with `categoryBitMask` sees, with their world transforms.
-    func visibleTexts(categoryBitMask: UInt = .max) -> [(text: SceneText, worldTransform: simd_float4x4)] {
-        var result: [(text: SceneText, worldTransform: simd_float4x4)] = []
-        visit { node, worldTransform in
-            if let text = node.text, !text.string.isEmpty, node.categoryBitMask & categoryBitMask != 0 {
-                result.append((text, worldTransform))
-            }
-        }
-        return result
-    }
-}
-
 #if arch(arm64)
 // Built glyph meshes, shared by every node and frame that shows the same text.
 final class SceneTextMeshCache: @unchecked Sendable {

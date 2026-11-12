@@ -245,11 +245,10 @@ public struct BlinnPhongMaterialRenderer: MaterialRenderer, Equatable {
         hasher.combine(context.revision.structure)
         hasher.combine(entries.count)
         for entry in entries {
-            let node = entry.node
-            guard node.skin == nil, node.morphTargets.isEmpty, node.levelsOfDetail.isEmpty else {
+            guard entry.skin == nil, entry.morphTargets.isEmpty, entry.levelsOfDetail.isEmpty else {
                 return nil
             }
-            hasher.combine(ObjectIdentifier(node))
+            hasher.combine(entry.nodeID)
             hasher.combine(entry.submeshIndex)
             hasher.combine(entry.opacity)
             hasher.combine(entry.worldTransform.isMirroring)

@@ -132,38 +132,41 @@ public final class PBRSceneMaterial: SceneMaterial, SamplesShadowsInShader {
 public struct PBRNodeLayout {
     /// The mesh entries, in node index order.
     public var entries: [SceneGraph.MeshEntry]
-    /// The joint nodes of the skins, after the entries in node index order.
-    public private(set) var jointNodes: [SceneGraph.Node] = []
+    /// The joint node IDs of the skins, after the entries in node index order.
+    public private(set) var jointIDs: [SceneGraph.Node.ID] = []
+    /// The joints' world transforms, parallel to ``jointIDs``.
+    public private(set) var jointWorldTransforms: [simd_float4x4] = []
     /// The skins that the entries use, each one time.
-    public private(set) var skins: [SceneGraph.Skin] = []
-    private var jointIndices: [ObjectIdentifier: Int] = [:]
+    public private(set) var skins: [SceneGraph.SkinPose] = []
+    private var jointIndices: [SceneGraph.Node.ID: Int] = [:]
     private var skinIndices: [ObjectIdentifier: Int] = [:]
 
     /// Creates the layout for mesh entries and the joints of their skins.
     public init(entries: [SceneGraph.MeshEntry]) {
         self.entries = entries
         for entry in entries {
-            guard let skin = validSkin(of: entry), skinIndices[ObjectIdentifier(skin)] == nil else {
+            guard let skin = entry.skin, skinIndices[skin.skinID] == nil else {
                 continue
             }
-            skinIndices[ObjectIdentifier(skin)] = skins.count
+            skinIndices[skin.skinID] = skins.count
             skins.append(skin)
-            for joint in skin.joints where jointIndices[ObjectIdentifier(joint)] == nil {
-                jointIndices[ObjectIdentifier(joint)] = entries.count + jointNodes.count
-                jointNodes.append(joint)
+            for (joint, worldTransform) in zip(skin.jointIDs, skin.jointWorldTransforms) where jointIndices[joint] == nil {
+                jointIndices[joint] = entries.count + jointIDs.count
+                jointIDs.append(joint)
+                jointWorldTransforms.append(worldTransform)
             }
         }
     }
 
     func skinIndex(of entry: SceneGraph.MeshEntry) -> Int? {
-        validSkin(of: entry).flatMap { skinIndices[ObjectIdentifier($0)] }
+        entry.skin.flatMap { skinIndices[$0.skinID] }
     }
 
     var pbrSkins: [PBRModel.Skin] {
         skins.map { skin in
-            let joints = skin.joints.map { joint in
-                guard let index = jointIndices[ObjectIdentifier(joint)] else {
-                    fatalError("Skin joint '\(joint.label ?? "")' has no joint index")
+            let joints = skin.jointIDs.map { joint in
+                guard let index = jointIndices[joint] else {
+                    fatalError("Skin joint \(joint) has no joint index")
                 }
                 return index
             }
@@ -174,21 +177,10 @@ public struct PBRNodeLayout {
     /// `cameraPosition` is subtracted from every matrix (in Double), for camera-relative rendering (#254).
     public func pose(cameraPosition: SIMD3<Float> = .zero) -> PBRPose {
         PBRPose(
-            worldMatrices: (entries.map(\.worldTransform) + jointNodes.map(\.worldTransform)).map { $0.cameraRelative(to: cameraPosition) },
-            morphWeights: entries.map(\.node.morphWeights) + jointNodes.map { _ in [] }
+            worldMatrices: (entries.map(\.worldTransform) + jointWorldTransforms).map { $0.cameraRelative(to: cameraPosition) },
+            morphWeights: entries.map(\.morphWeights) + jointIDs.map { _ in [] }
         )
     }
-}
-
-// A skin is used only if its arrays line up with the mesh and each other.
-func validSkin(of entry: SceneGraph.MeshEntry) -> SceneGraph.Skin? {
-    guard let skin = entry.node.skin,
-          skin.joints.count == skin.inverseBindMatrices.count,
-          entry.node.skinVertices.count == entry.mesh.vertexCount
-    else {
-        return nil
-    }
-    return skin
 }
 
 /// A builder that converts scene graph mesh entries into a MetalSprocketsPBR `PBRModel`.
@@ -449,7 +441,7 @@ private struct PBRShadowedElement: Element {
 }
 
 private struct EntrySetKey: Hashable {
-    var nodes: [ObjectIdentifier]
+    var nodes: [SceneGraph.Node.ID]
     var submeshes: [Int]
     // Levels of detail swap meshes without a structure change.
     var meshes: [ObjectIdentifier]
@@ -457,7 +449,7 @@ private struct EntrySetKey: Hashable {
     var fading: [Bool]
 
     init(_ entries: [SceneGraph.MeshEntry]) {
-        nodes = entries.map { ObjectIdentifier($0.node) }
+        nodes = entries.map(\.nodeID)
         submeshes = entries.map(\.submeshIndex)
         meshes = entries.map { ObjectIdentifier($0.mesh.vertexBuffer) }
         fading = entries.map { $0.opacity < 1 }
@@ -524,12 +516,12 @@ func pbrPrimitiveInput(entry: SceneGraph.MeshEntry, attributes: [MetalMesh.Verte
     let submesh = mesh.submeshes[entry.submeshIndex]
     var attributes = attributes
     if skinned {
-        let skinVertices = entry.node.skinVertices
+        let skinVertices = entry.skinVertices
         attributes.append(.init(semantic: .jointIndices(0), format: .ushort4, values: skinVertices.map(\.joints)))
         attributes.append(.init(semantic: .jointWeights(0), format: .float4, values: skinVertices.map(\.weights)))
     }
     // Invalid targets are dropped as a whole, so target indices stay aligned with weights only when all are valid.
-    let targets = entry.node.morphTargets
+    let targets = entry.morphTargets
     var morphTargets: MetalMesh.MorphTargets?
     if !targets.isEmpty, targets.allSatisfy({ $0.isValid(vertexCount: mesh.vertexCount) }) {
         morphTargets = MetalMesh.MorphTargets(targets: targets.map { target in

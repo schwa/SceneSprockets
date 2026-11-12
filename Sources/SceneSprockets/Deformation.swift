@@ -16,21 +16,28 @@ extension SceneGraph.MeshEntry {
 
     /// Nil when the node has no active morph targets and no valid skin. Cached on the node until `revision` changes.
     public func deformed(revision: SceneGraph.Revision) -> Deformed? {
-        let skin = node.validSkin(vertexCount: mesh.vertexCount)
-        let hasMorphs = node.morphTargets.contains { $0.isValid(vertexCount: mesh.vertexCount) } && node.morphWeights.contains { $0 != 0 }
+        let skin = self.skin
+        let hasMorphs = self.hasMorphs
         guard skin != nil || hasMorphs else {
             return nil
         }
         let modelMatrix = skin == nil ? worldTransform : matrix_identity_float4x4
-        if let cache = node.deformationCache, cache.revision == revision {
+        if let cache = renderCache.deformation, cache.revision == revision {
             return Deformed(mesh: cache.mesh, modelMatrix: modelMatrix)
         }
-        guard let deformedMesh = mesh.deformed(morphTargets: hasMorphs ? node.morphTargets : [], weights: node.morphWeights, jointMatrices: skin?.jointMatrices(), skinVertices: node.skinVertices) else {
+        guard let deformedMesh = mesh.deformed(morphTargets: hasMorphs ? morphTargets : [], weights: morphWeights, jointMatrices: skin?.jointMatrices(), skinVertices: skinVertices) else {
             return nil
         }
-        node.deformationCache = (revision, deformedMesh)
+        renderCache.deformation = (revision, deformedMesh)
         return Deformed(mesh: deformedMesh, modelMatrix: modelMatrix)
     }
+}
+
+// Deformation results that only rendering reads and writes, one per node.
+final class NodeRenderCache {
+    var deformation: (revision: SceneGraph.Revision, mesh: MetalMesh)?
+    // See GPUDeformation.swift.
+    var gpuDeformation: GPUDeformationState?
 }
 
 extension SceneGraph.Node {

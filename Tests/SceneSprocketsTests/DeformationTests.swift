@@ -39,8 +39,8 @@ func gpuDeformationMatchesCPU(layout: MetalMesh.BufferLayout) throws {
     let renderer = try OffscreenRenderer(size: CGSize(width: 32, height: 32))
     _ = try renderer.render(SceneGraphElement(sceneGraph: sceneGraph, aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer()]))
     // The renderer used the GPU result, not the CPU path.
-    #expect(node.deformationCache == nil)
-    let gpu = try #require(node.gpuDeformation?.current)
+    #expect(node.renderCache.deformation == nil)
+    let gpu = try #require(node.renderCache.gpuDeformation?.current)
     #expect(gpu.revision == sceneGraph.revision)
     #expect(gpu.modelMatrix == matrix_identity_float4x4)
 

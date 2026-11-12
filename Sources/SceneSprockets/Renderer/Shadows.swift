@@ -148,9 +148,9 @@ public final class Shadows {
             guard let skin else {
                 return Caster(positions: positions, submesh: submesh, placement: .model((deformed?.modelMatrix ?? entry.worldTransform).cameraRelative(to: cameraPosition)))
             }
-            let influenceKey = InfluenceKey(node: ObjectIdentifier(entry.node), revision: entry.node.revision.structure)
+            let influenceKey = InfluenceKey(node: entry.nodeID, revision: context.revision.structure)
             usedInfluences.insert(influenceKey)
-            guard let influences = influenceBuffer(for: entry.node, key: influenceKey, device: mesh.vertexBuffer.device) else {
+            guard let influences = influenceBuffer(for: entry, key: influenceKey, device: mesh.vertexBuffer.device) else {
                 return nil
             }
             return Caster(positions: positions, submesh: submesh, placement: .skinned(influences: influences, jointMatrices: skin.jointMatrices().map { $0.cameraRelative(to: cameraPosition) }))
@@ -278,13 +278,8 @@ public final class Shadows {
         return (views, dropped, slices)
     }
 
-    private func gpuSkin(of entry: SceneGraph.MeshEntry) -> SceneGraph.Skin? {
-        let node = entry.node
-        guard let skin = node.skin, skin.joints.count == skin.inverseBindMatrices.count, node.skinVertices.count == entry.mesh.vertexCount else {
-            return nil
-        }
-        let hasMorphs = node.morphTargets.contains { $0.isValid(vertexCount: entry.mesh.vertexCount) } && node.morphWeights.contains { $0 != 0 }
-        return hasMorphs ? nil : skin
+    private func gpuSkin(of entry: SceneGraph.MeshEntry) -> SceneGraph.SkinPose? {
+        entry.hasMorphs ? nil : entry.skin
     }
 
     private func positionBuffer(for mesh: MetalMesh, key: PositionKey) -> MTLBuffer? {
@@ -301,11 +296,11 @@ public final class Shadows {
     }
 
     // Joints (as floats) and weights per vertex, laid out as two float4s.
-    private func influenceBuffer(for node: SceneGraph.Node, key: InfluenceKey, device: MTLDevice) -> MTLBuffer? {
+    private func influenceBuffer(for entry: SceneGraph.MeshEntry, key: InfluenceKey, device: MTLDevice) -> MTLBuffer? {
         if let buffer = influenceBuffers[key] {
             return buffer
         }
-        let influences = node.skinVertices.flatMap { [SIMD4<Float>($0.joints), $0.weights] }
+        let influences = entry.skinVertices.flatMap { [SIMD4<Float>($0.joints), $0.weights] }
         guard let buffer = device.makeBuffer(bytes: influences, length: influences.count * MemoryLayout<SIMD4<Float>>.stride, options: .storageModeShared) else {
             return nil
         }
@@ -340,7 +335,7 @@ private struct PositionKey: Hashable {
 }
 
 private struct InfluenceKey: Hashable {
-    var node: ObjectIdentifier
+    var node: SceneGraph.Node.ID
     var revision: Int
 }
 
