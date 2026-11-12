@@ -1687,17 +1687,19 @@ SceneKit has SCNTube, SCNPyramid, SCNFloor (infinite, with optional reflections)
 ## 82: GPU tessellation and adaptive subdivision
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: effort:l, area:renderer, deferred
 created: 2026-10-15T02:28:07Z
-updated: 2026-10-15T21:19:11Z
+updated: 2026-11-12T04:31:40Z
+closed: 2026-11-12T04:31:40Z
 +++
 
 SceneKit has subdivisionLevel, wantsAdaptiveSubdivision, the SCNGeometryTessellator and edge creases. There is no equivalent here. See docs/SceneKitComparison.md.
 
 - `2026-10-15T03:24:47Z`: Done: CPU Loop subdivision (MetalMesh.subdivided(levels:smooth:), Node.subdivisionLevel), welding seams so they stay closed. Left: GPU tessellation (SCNGeometryTessellator), adaptive subdivision, edge creases.
+- `2026-11-12T04:31:40Z`: Closed in deferred-issue cleanup: leftover SceneKit parity (GPU tessellation, adaptive subdivision, edge creases) with no use case; CPU subdivision is done.
 
 ---
 
