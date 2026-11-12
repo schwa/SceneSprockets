@@ -8871,8 +8871,10 @@ The visionOS build of SceneSprocketsDemo also fails: CodeSign of SceneSprocketsD
 status: new
 priority: high
 kind: bug
-labels: area:renderer, effort:xl
+labels: area:renderer, effort:xl, has-subtasks
+depends: 387, 388, 389, 390, 391
 created: 2026-11-12T21:24:45Z
+updated: 2026-11-12T21:25:35Z
 +++
 
 The visionOS immersive render loop (MetalSprockets ImmersiveRuntime) builds frames off the main thread. SceneImmersiveElement traverses the scene graph there while the app edits it on the main thread. Node data lives in a SwiftECS World, which has no synchronization, so this is a data race.
@@ -8891,5 +8893,81 @@ Renderers read live nodes throughout frame building (MeshEntry.node, level of de
 ## Proposed fix (per schwa)
 
 A presentation snapshot, like SceneKit's presentation tree: once per frame, on the thread that owns the scene graph, copy what rendering needs (mesh entries with their values, lights, cameras, particles, text, environment, revisions) into an immutable snapshot. Renderers read only the snapshot, so the render thread takes no locks and never touches live nodes. Reuse unchanged parts across frames using revision.structure and revision.transform. A per-graph lock was considered and rejected: it adds a lock to every field access on both threads and blocks one thread on the other.
+
+- `2026-11-12T21:25:35Z`: Split into subtasks, in order: #387, #388, #389, #390, #391.
+
+---
+
+## 387: No immutable per-frame snapshot of what rendering reads from a scene graph
+
++++
+status: new
+priority: high
+kind: task
+labels: area:renderer, effort:m, subtask
+created: 2026-11-12T21:25:34Z
++++
+
+There is no SceneGraph.Presentation: an immutable copy, built once per frame on the owning thread, of mesh entries with their values, lights, cameras, environment, fog and post-processing, particles, text and revisions, reusing unchanged parts by revision.structure and revision.transform. Done when: tests show a snapshot matches the live graph and unchanged parts are reused. Part of #386.
+
+---
+
+## 388: SceneGraphElement walks the live scene graph while building a frame
+
++++
+status: new
+priority: high
+kind: task
+labels: area:renderer, effort:m, subtask
+depends: 387
+created: 2026-11-12T21:25:34Z
++++
+
+SceneGraphElement and its shared steps (culling, level of detail, batching, shadows) read live nodes. Done when: it takes a snapshot, SceneView builds one per frame on the main thread, and the shared steps read only the snapshot. Part of #386.
+
+---
+
+## 389: Material renderers read live nodes through MeshEntry.node
+
++++
+status: new
+priority: high
+kind: task
+labels: area:renderer, effort:m, subtask
+depends: 388
+created: 2026-11-12T21:25:34Z
++++
+
+Blinn-Phong, PBR, ShaderMaterial, debug views and GPU deformation read entry.node while building elements. Done when: they read only snapshot values. Part of #386.
+
+---
+
+## 390: Particles and node text are read from live nodes during rendering
+
++++
+status: new
+priority: high
+kind: task
+labels: area:renderer, effort:s, subtask
+depends: 388
+created: 2026-11-12T21:25:35Z
++++
+
+Particle simulation input (world transforms, visibility) and SceneText are gathered from live nodes at render time. Done when: both come from the snapshot. Part of #386.
+
+---
+
+## 391: Immersive rendering cannot use a snapshot published by the main thread
+
++++
+status: new
+priority: high
+kind: task
+labels: area:renderer, effort:m, subtask
+depends: 389, 390
+created: 2026-11-12T21:25:35Z
++++
+
+SceneImmersiveElement advances and reads the live graph on the render thread. Done when: the main thread advances actions, particles and constraints and publishes snapshots, the immersive element renders the latest one, and a test edits the graph on one thread while another renders from snapshots. Part of #386.
 
 ---
