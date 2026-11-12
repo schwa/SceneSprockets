@@ -7000,18 +7000,20 @@ Add these, and similar content, to the SceneSprocketsAddOns target (#314): lands
 - `2026-11-07T17:19:23Z`: Starting points in MetalSprocketsExamples: the Voxel example (compute-raymarched voxel volumes) and its MagicaVoxel .vox loader, MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/VoxelDemo/.
 - `2026-11-08T03:35:04Z`: Split (per schwa) into #351 (heightmap terrain) and #352 (voxel worlds). This issue now tracks both.
 - `2026-11-08T03:36:47Z`: Closed (per schwa). Remaining work tracked in #351 (heightmap terrain); voxels are #352 (deferred).
+- `2026-11-12T04:33:29Z`: Moved to SceneSprocketsAddOns #2 (closed there too).
 
 ---
 
 ## 316: No signed distance field (SDF) blobs
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:addons, effort:l, deferred
 created: 2026-11-07T17:17:05Z
-updated: 2026-11-08T03:35:02Z
+updated: 2026-11-12T04:33:30Z
+closed: 2026-11-12T04:33:30Z
 +++
 
 SceneSprockets cannot show signed distance field shapes, such as metaballs or blobs that merge smoothly when they move close together. There is no way to describe a shape as a distance function (spheres, capsules and boxes combined with smooth union, subtraction or intersection) and draw it in a scene with the other nodes, lit and depth-tested like meshes.
@@ -7024,6 +7026,9 @@ Related: SceneSprocketsAddOns target (#314).
 
 ## Proposed fix (per schwa)
 Render SDFs the normal way (raymarching on the GPU) and tie them into the existing material shaders (Blinn-Phong, PBR), so SDF shapes are lit, shadowed and depth-tested like meshes.
+
+- `2026-11-12T04:33:30Z`: Moved to SceneSprocketsAddOns #3.
+- `2026-11-12T04:33:30Z`: Moved to SceneSprocketsAddOns #3.
 
 ---
 
@@ -7049,13 +7054,14 @@ Show "Thank You" on its own for about 0.5 seconds, then go wild: particles, movi
 ## 318: No ocean or water surface, or procedural sky
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:addons, effort:l, deferred
 depends: 314
 created: 2026-11-07T17:19:21Z
-updated: 2026-11-08T03:35:02Z
+updated: 2026-11-12T04:33:31Z
+closed: 2026-11-12T04:33:31Z
 +++
 
 SceneSprockets has no ocean or water surface node, and no procedural sky. Documentation/Features.md lists 'Water and ocean surfaces' and 'Skybox / procedural sky' (the sky gradient exists, but no physical sky) as missing.
@@ -7063,6 +7069,8 @@ SceneSprockets has no ocean or water surface node, and no procedural sky. Docume
 Starting point: the Open Sea example in MetalSprocketsExamples (Gerstner-wave ocean with an analytic sky), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/OpenSeaDemo/. Candidate for SceneSprocketsAddOns (#314).
 
 - `2026-11-08T02:46:09Z`: Autonomous run: scoped, not changed. Two parts with design choices: (1) Ocean: the Open Sea example is a Gerstner-wave vertex shader with its own sun and analytic sky reflection (375 lines of Metal). As a ShaderMaterial in SceneSprocketsAddOns it would not see the scene's lights or shadows (ShaderMaterial gets none), only a sun direction parameter, and needs the app to pass time each frame; the alternative is CPU Gerstner displacement of a mesh drawn with PBR (lit, but CPU cost per frame). Same lit-vs-self-contained question as #322 and #300. (2) Procedural sky: needs a new Environment.Background case in the core (it is Codable and archived), plus a sun direction that could also drive a directional light. Question: for the ocean, unlit ShaderMaterial with its own sun, or CPU-displaced PBR mesh? For the sky, OK to add a Background case such as .physicalSky(sunDirection:turbidity:) to the core?
+- `2026-11-12T04:33:30Z`: Moved to SceneSprocketsAddOns #4.
+- `2026-11-12T04:33:31Z`: Moved to SceneSprocketsAddOns #4.
 
 ---
 
@@ -7085,6 +7093,7 @@ Starting points in MetalSprocketsExamples: Grass (mesh-shader procedural grass),
 
 - `2026-11-08T02:46:17Z`: Autonomous run: scoped, not changed. 'Cheap, many blades, with wind' needs per-frame GPU vertex animation (the Grass example uses a mesh shader). In SceneSprockets that is either a ShaderMaterial in SceneSprocketsAddOns (no scene lights or shadows, own sun parameter) or wind support in the Blinn-Phong/PBR vertex shaders (lit, but touches every renderer). Static scattered blades on the CPU would be lit but have no wind and cost a lot of vertices. Punting: same lit-vs-self-contained decision as #318, #322 and #300. Question: which approach, and should it wait for terrain (#315) to scatter on?
 - `2026-11-12T04:32:26Z`: Closed in deferred-issue cleanup: wishful, with no concrete use case in SceneSprockets.
+- `2026-11-12T04:33:31Z`: Moved to SceneSprocketsAddOns #5 (closed there too).
 
 ---
 
@@ -7107,6 +7116,7 @@ Starting points: the Tree Generator example in MetalSprocketsExamples (space-col
 
 - `2026-11-08T02:37:56Z`: Added ProceduralTree to SceneSprocketsAddOns: Parameters (with random(seed:)), deterministic growth from a seed, public branches and leaves for custom geometry, and makeNode(device:) for a flat-shaded Blinn-Phong mesh. The algorithm is the demo's (TreeAppreciator) without its game-only parts (differences, fruit, blossoms, birds); the demo still uses its own copy because its growth is interleaved with those differences. 5 tests in SceneSprocketsAddOnsTests (determinism, shape, branch limit, bare tree, node submeshes).
 - `2026-11-08T03:30:21Z`: Removed ProceduralTree from SceneSprocketsAddOns (per schwa: the tree can die). Not doing a reusable tree generator; the demo's Tree Appreciator keeps its own code. Closed as won't do.
+- `2026-11-12T04:33:32Z`: Moved to SceneSprocketsAddOns #6 (closed there too).
 
 ---
 
@@ -7128,19 +7138,21 @@ SceneSprockets has no node for point clouds (for example scanned data or PLY poi
 Starting point: the Point Cloud example in MetalSprocketsExamples, MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/PointCloudDemo/. Candidate for SceneSprocketsAddOns (#314).
 
 - `2026-11-08T02:42:24Z`: Added PointCloud to SceneSprocketsAddOns: points with position and color, a pointSize in screen points, makeMaterial() (a ShaderMaterial with new PointCloud.metal shaders in SceneSprocketsShaders: round points via point_coord, node opacity applied) and makeNode(device:) (a .point-primitive mesh that casts no shadow). Tests: an 8-point dot renders round, centered and red (52 pixels, square would be 64); empty clouds make empty nodes; translucent colors make a transparent material. Note: the first version put pointSize at [[buffer(0)]], which collides with the mesh's vertex buffer and drew nothing; ShaderMaterial parameters in vertex functions must use slots above the vertex buffers.
+- `2026-11-12T04:33:32Z`: Moved to SceneSprocketsAddOns #7 (closed there too).
 
 ---
 
 ## 322: No dissolve effect for nodes
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:addons, effort:m, deferred
 depends: 314
 created: 2026-11-07T17:19:22Z
-updated: 2026-11-08T03:35:02Z
+updated: 2026-11-12T04:33:32Z
+closed: 2026-11-12T04:33:32Z
 +++
 
 SceneSprockets has no way to dissolve a node in or out (for example for teleport, spawn or destroy effects); only opacity fades exist.
@@ -7148,6 +7160,8 @@ SceneSprockets has no way to dissolve a node in or out (for example for teleport
 Starting point: the Mesh Dissolve example in MetalSprocketsExamples (triplanar-grid dissolve effects), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/MeshDissolveDemo/. Candidate for SceneSprocketsAddOns (#314).
 
 - `2026-11-08T02:42:41Z`: Autonomous run: scoped, not changed. The MetalSprocketsExamples dissolve discards fragments by a 3D noise field and draws an edge glow, in its own shader. In SceneSprockets that can be done two ways: (a) a ShaderMaterial in SceneSprocketsAddOns that replaces the node's material while it dissolves (self-contained, but unlit: ShaderMaterial gets no lights, so a Blinn-Phong or PBR node changes look when the dissolve starts); or (b) a node-level dissolve amount (like opacity) that Blinn-Phong, PBR (MetalSprocketsPBR) and ShaderMaterial shaders all honor (looks right, but touches every material renderer and the PBR package). Punting: this is a design choice. Question: (a) add-on material, or (b) node-level dissolve in every renderer?
+- `2026-11-12T04:33:32Z`: Moved to SceneSprocketsAddOns #8.
+- `2026-11-12T04:33:33Z`: Moved to SceneSprocketsAddOns #8.
 
 ---
 
@@ -7170,6 +7184,7 @@ Starting point: the cloud demo in MetalSprocketsExamples (sun-lit volumetric clo
 
 - `2026-11-08T02:46:26Z`: Autonomous run: scoped, not changed. Volumetric clouds are a raymarched full-screen pass that needs the scene depth (to stop at geometry), a sun direction and a sky to sit in. That means a new pass in SceneGraphRenderer's post-pass chain (like FogPass) or an Environment.Background option, not a self-contained add-on node; the CloudDemo source also relies on progressive accumulation over frames, which does not fit a moving camera. Punting: depends on the procedural sky decision in #318 and on where sky effects live. Question: should clouds be part of the sky/background (#318) or a post pass like fog?
 - `2026-11-12T04:31:39Z`: Closed in deferred-issue cleanup: wishful: volumetric clouds, with no concrete use case in SceneSprockets.
+- `2026-11-12T04:33:33Z`: Moved to SceneSprocketsAddOns #9 (closed there too).
 
 ---
 
@@ -7191,6 +7206,7 @@ SceneSprockets has no fluid simulation, such as a water volume that splashes and
 Starting point: the FLIP Fluid example in MetalSprocketsExamples (3D PIC/FLIP simulation), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/MetalFLIPDemo/. A later candidate for SceneSprocketsAddOns (#314): heavier than the others.
 
 - `2026-11-12T04:31:39Z`: Closed in deferred-issue cleanup: wishful: FLIP fluid simulation, xl effort, with no concrete use case in SceneSprockets.
+- `2026-11-12T04:33:33Z`: Moved to SceneSprocketsAddOns #10 (closed there too).
 
 ---
 
@@ -7779,6 +7795,7 @@ Observations (not profiled): the distance function is evaluated at every grid co
 Part of #316.
 
 - `2026-11-08T03:34:47Z`: Obsolete: the CPU-meshed SignedDistanceShape was removed; #316 will raymarch on the GPU instead.
+- `2026-11-12T04:33:34Z`: Moved to SceneSprocketsAddOns #11 (closed there too).
 
 ---
 
@@ -7799,23 +7816,28 @@ makeMesh(device:cellSize:) emits three new vertices for every triangle; neighbor
 Part of #316.
 
 - `2026-11-08T03:34:47Z`: Obsolete: the CPU-meshed SignedDistanceShape was removed; #316 will raymarch on the GPU instead.
+- `2026-11-12T04:33:34Z`: Moved to SceneSprocketsAddOns #12 (closed there too).
 
 ---
 
 ## 351: No heightmap terrain in SceneSprocketsAddOns
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:addons, effort:l, subtask, deferred
 created: 2026-11-08T03:35:03Z
-updated: 2026-11-10T17:37:52Z
+updated: 2026-11-12T04:33:35Z
+closed: 2026-11-12T04:33:35Z
 +++
 
 SceneSprockets cannot build a landscape from a heightmap: there is no terrain mesh made from height data (an image or a height array) with level of detail for large areas. Documentation/Features.md lists 'Terrain / heightmaps' as not done.
 
 Part of #315.
+
+- `2026-11-12T04:33:34Z`: Moved to SceneSprocketsAddOns #13.
+- `2026-11-12T04:33:35Z`: Moved to SceneSprocketsAddOns #13.
 
 ---
 
@@ -7836,6 +7858,7 @@ SceneSprockets cannot show voxel worlds (a 'Minecraft lite'): there are no chunk
 Part of #315.
 
 - `2026-11-12T04:31:40Z`: Closed in deferred-issue cleanup: wishful: voxel worlds, with no concrete use case in SceneSprockets.
+- `2026-11-12T04:33:35Z`: Moved to SceneSprocketsAddOns #14 (closed there too).
 
 ---
 
@@ -7859,6 +7882,7 @@ Use the point cloud in MetalSprocketsAddOns, not the one SceneSprockets rolled i
 Related: #321.
 
 - `2026-11-08T04:05:14Z`: Done: SceneSprocketsAddOns.PointCloud now draws with MetalSprocketsAddOns' compute rasterizer. New PointCloudMaterial (points buffer of PointCloudPoint, size, size units, shape) and PointCloudRenderer (SceneGraphPrePassRenderer: one PointCloudRasterizePass per node before the scene pass, PointCloudResolvePipeline in the scene pass, reverse-Z). Removed the ShaderMaterial version and PointCloud.metal from SceneSprocketsShaders. Needs Apple GPU family 8+; otherwise not drawn. Tests: disc size/color, node transform, packed point data.
+- `2026-11-12T04:33:36Z`: Moved to SceneSprocketsAddOns #15 (closed there too).
 
 ---
 
