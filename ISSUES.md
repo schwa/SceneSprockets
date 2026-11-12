@@ -7818,17 +7818,20 @@ Part of #315.
 ## 352: No voxel worlds in SceneSprocketsAddOns
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:addons, effort:l, subtask, deferred
 created: 2026-11-08T03:35:03Z
-updated: 2026-11-08T03:36:30Z
+updated: 2026-11-12T04:31:40Z
+closed: 2026-11-12T04:31:40Z
 +++
 
 SceneSprockets cannot show voxel worlds (a 'Minecraft lite'): there are no chunked block grids with meshing, editing and texturing. Starting point: the Voxel example in MetalSprocketsExamples (compute-raymarched voxel volumes) and its MagicaVoxel .vox loader, MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/VoxelDemo/.
 
 Part of #315.
+
+- `2026-11-12T04:31:40Z`: Closed in deferred-issue cleanup: wishful: voxel worlds, with no concrete use case in SceneSprockets.
 
 ---
 
