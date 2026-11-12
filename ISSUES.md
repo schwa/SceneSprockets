@@ -8309,6 +8309,7 @@ Related: #355, #356, #360.
 - `2026-11-11T16:04:55Z`: Auto-fixer run: punted. Fixes rename public types, change throwing initializers and color types — design decisions. Unblocker: answer 368-Q1.
 - `2026-11-12T02:14:58Z`: Answer 1: works for me
 - `2026-11-12T02:57:21Z`: Question 2 (design): normalMap: BlinnPhongSceneMaterial.normalMap is a raw MTLTexture? while other channels are Source (.color / .texture(texture, sampler, tint)). Make it a Source? (a .color normal is meaningless), or add a small TextureSource {texture, sampler} used by normalMap (and by Source.texture), or leave it as MTLTexture? and close #368?
+- `2026-11-12T02:57:21Z`: Done in this commit: SceneMaterial rename, BlinnPhongSceneMaterial(color:...), non-throwing PBRSceneMaterial/ShaderMaterial samples with RGB + opacity, tutorial helper removed. Names kept per 370-Q2 (c) because BlinnPhongMaterial/PBRMaterial exist elsewhere. Remaining: normalMap shape (368-Q2).
 
 ---
 
