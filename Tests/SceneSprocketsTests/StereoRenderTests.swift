@@ -2,6 +2,7 @@ import CoreGraphics
 import GeometryLite3D
 import Metal
 import MetalSprockets
+import MetalSprocketsParticles
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
 @testable import SceneSprocketsPBR
@@ -119,6 +120,41 @@ func debugViewStereoMatchesMono() throws {
 func skyGradientStereoMatchesMono() throws {
     let gradient = SceneGraph.Environment.SkyGradient(zenith: [0, 0, 1], horizon: [0, 1, 0], ground: [1, 0, 0])
     try expectStereoMatchesMono(plainMaterial, renderers: [BlinnPhongMaterialRenderer()], background: .gradient(gradient))
+}
+
+// Billboards face the center camera in stereo, not each eye, so slices are not compared with mono renders. Each eye
+// must see the cloud, shifted by parallax.
+@Test(.enabled(if: deviceSupportsMetal4))
+@MainActor
+func particlesDrawInBothEyes() throws {
+    let system = ParticleSystem("Glow") {
+        EmitterDescription("Glow") {
+            ShapeModule(shape: .sphere(radius: 0.1))
+            RateModule(birthRate: 2_000)
+            LifetimeModule(range: 5...5)
+            VelocityModule(velocity: .zero)
+            GravityModule(acceleration: .zero)
+            SizeOverLifeModule(curve: .constant(0.3))
+            ColorOverLifeModule(color: .constant([1, 1, 1, 1]))
+            SpriteModule(blendMode: .additive)
+        }
+    }
+    let root = SceneGraph.Node()
+    let emitter = root.addChild(SceneGraph.Node())
+    emitter.particleSystems = [SceneParticleSystem(system, seed: 3)]
+    let sceneGraph = SceneGraph(root: root)
+    sceneGraph.environment.background = .color([0, 0, 0, 1])
+    sceneGraph.advanceParticles(by: 0.1)
+    let (_, stereo) = try stereoAndMonoRenders(sceneGraph, renderers: [BlinnPhongMaterialRenderer()], eyes: eyePair(at: [0, 0, 3], separation: 1))
+    // The mean x of bright pixels: the left eye sees the cloud right of center, the right eye left of it.
+    func meanBrightX(_ pixels: [SIMD4<UInt8>]) -> Float? {
+        let xs = pixels.indices.filter { pixels[$0].x > 100 }.map { Float($0 % size) }
+        return xs.isEmpty ? nil : xs.reduce(0, +) / Float(xs.count)
+    }
+    let left = try #require(meanBrightX(stereo[0]), "left eye sees no particles")
+    let right = try #require(meanBrightX(stereo[1]), "right eye sees no particles")
+    #expect(left > Float(size) / 2 + 1, "\(left)")
+    #expect(right < Float(size) / 2 - 1, "\(right)")
 }
 
 @Test(.enabled(if: deviceSupportsMetal4))

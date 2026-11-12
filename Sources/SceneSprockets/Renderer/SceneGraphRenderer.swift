@@ -1,6 +1,7 @@
 import GeometryLite3D
 import Metal
 import MetalSprockets
+import MetalSprocketsParticles
 #if os(visionOS)
 import MetalSprocketsUI
 #endif
@@ -258,7 +259,14 @@ public struct SceneGraphElement: Element {
             var particleElements: [AnyElement] = []
             for system in visibleParticleSystems {
                 // Sprite draws inherit the scene pass's depth state, which writes depth; blended sprites must not.
-                particleElements.append(try system.runtime().render(projection: context.projectionMatrix, view: context.viewMatrix, sceneDepth: softParticleDepth?.copy).depthCompare(function: .greater, writes: false).eraseToAnyElement())
+                let runtime = try system.runtime()
+                let rendered: AnyElement = if let stereoViews = context.stereoViews {
+                    // Simulation already sorts for context.viewMatrix, the center camera (#379).
+                    try runtime.render(views: ParticleStereoViews(viewMatrices: stereoViews.viewMatrices, projectionMatrices: stereoViews.projectionMatrices, viewports: stereoViews.viewports), sceneDepth: softParticleDepth?.copy).eraseToAnyElement()
+                } else {
+                    try runtime.render(projection: context.projectionMatrix, view: context.viewMatrix, sceneDepth: softParticleDepth?.copy).eraseToAnyElement()
+                }
+                particleElements.append(rendered.depthCompare(function: .greater, writes: false).eraseToAnyElement())
             }
             if softParticleDepth == nil {
                 elements += particleElements
