@@ -6946,9 +6946,9 @@ There is no equivalent here: an app cannot pick a mode, turn inertia on or off, 
 status: open
 priority: medium
 kind: feature
-labels: area:ui, effort:m
+labels: area:ui, effort:s
 created: 2026-11-07T17:16:02Z
-updated: 2026-11-12T04:34:48Z
+updated: 2026-11-12T04:35:54Z
 +++
 
 SceneView offers no keyboard or game controller navigation. There is no built-in way to fly or walk the camera with WASD (and arrow keys or mouse look), or with a game controller's sticks and triggers (GameController framework). Apps and demos that want first-person or fly-through navigation must handle key events and GCController input themselves and drive the cameraMatrix binding.
