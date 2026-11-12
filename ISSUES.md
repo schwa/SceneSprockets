@@ -2161,18 +2161,20 @@ Needs public API that is internal today: SamplesShadowsInShader, SceneGraphShado
 ## 106: Make API more SceneKit-like
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: effort:xl, area:scenegraph, deferred
 created: 2026-10-15T13:24:33Z
-updated: 2026-10-15T21:19:41Z
+updated: 2026-11-12T04:31:37Z
+closed: 2026-11-12T04:31:37Z
 +++
 
 Move the public API closer to SceneKit's model so it is simple and easy to use. Goal: a newcomer who knows SceneKit can build and render a scene with little boilerplate. This is an ongoing direction, not a single change.
 
 - `2026-10-15T19:23:06Z`: Ongoing direction; split concrete changes into their own issues.
 - `2026-11-07T17:56:37Z`: Related: #312 (SceneKit-style configurable camera control).
+- `2026-11-12T04:31:37Z`: Closed in deferred-issue cleanup: an ongoing direction, not an actionable issue. Concrete SceneKit-parity changes have their own issues.
 
 ---
 
