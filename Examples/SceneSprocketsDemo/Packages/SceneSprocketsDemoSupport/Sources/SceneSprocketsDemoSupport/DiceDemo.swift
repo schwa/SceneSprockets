@@ -201,7 +201,7 @@ final class DiceDemo: DemoScene {
         let wood: any SceneMaterial = {
             let loader = MTKTextureLoader(device: demoDevice)
             func texture(_ name: String, sRGB: Bool) -> MTLTexture? {
-                Bundle.module.url(forResource: name, withExtension: "jpg", subdirectory: "Resources/Dice").flatMap {
+                Bundle.module.url(forResource: name, withExtension: "jpg", subdirectory: "DemoAssets/Dice").flatMap {
                     try? loader.newTexture(URL: $0, options: [.SRGB: sRGB, .generateMipmaps: true, .origin: MTKTextureLoader.Origin.flippedVertically])
                 }
             }

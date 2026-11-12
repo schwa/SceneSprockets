@@ -54,7 +54,8 @@ let package = Package(
                 .product(name: "SwiftMesh", package: "SwiftMesh"),
                 .product(name: "SwiftECS", package: "SwiftECS"),
             ],
-            resources: [.copy("Resources")]
+            // Not "Resources": on iOS and visionOS, codesign rejects a resource bundle with a top-level Resources folder.
+            resources: [.copy("DemoAssets")]
         ),
         .executableTarget(
             name: "scenesprockets-demos",

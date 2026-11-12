@@ -1287,7 +1287,7 @@ public final class KeynoteDemo: DemoScene {
         // The plant is about 0.6 units tall and the pedestal 1 wide (its top at y = 0); the holder scales both up.
         let holder = slide.addChild(SceneGraph.Node(label: "Imported", transform: .init(translation: [0, 0.3, -1], scale: [1.4, 1.4, 1.4])))
         do {
-            if let url = Bundle.module.url(forResource: "DiffuseTransmissionPlant", withExtension: "glb", subdirectory: "Resources") {
+            if let url = Bundle.module.url(forResource: "DiffuseTransmissionPlant", withExtension: "glb", subdirectory: "DemoAssets") {
                 let plant = try ModelFile.load(url)
                 let plantHolder = holder.addChild(SceneGraph.Node(label: "Plant", transform: .init(scale: [3, 3, 3])))
                 for child in plant.node.children {
@@ -1320,7 +1320,7 @@ public final class KeynoteDemo: DemoScene {
                 }
                 importedPlayer = plant.animations.first.map { SceneGraph.AnimationPlayer(clip: $0) }
             }
-            if let url = Bundle.module.url(forResource: "Pedestal", withExtension: "obj", subdirectory: "Resources") {
+            if let url = Bundle.module.url(forResource: "Pedestal", withExtension: "obj", subdirectory: "DemoAssets") {
                 let pedestal = try ModelFile.load(url)
                 pedestal.node.label = "Pedestal"
                 holder.addChild(pedestal.node)

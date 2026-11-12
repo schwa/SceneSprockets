@@ -34,7 +34,7 @@ final class BurningFox {
     init(scale: Float = 1) throws {
         self.scale = scale
         node = SceneGraph.Node(label: "Burning Fox")
-        guard let url = Bundle.module.url(forResource: "Fox", withExtension: "glb", subdirectory: "Resources") else {
+        guard let url = Bundle.module.url(forResource: "Fox", withExtension: "glb", subdirectory: "DemoAssets") else {
             throw CocoaError(.fileNoSuchFile)
         }
         let asset = try ModelFile.load(url)
