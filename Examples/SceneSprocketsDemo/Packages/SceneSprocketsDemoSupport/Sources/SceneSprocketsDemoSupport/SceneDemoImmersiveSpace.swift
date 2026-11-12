@@ -7,12 +7,13 @@ import SceneSprockets
 import simd
 import SwiftUI
 
-// What the immersive space shows: the scene a demo window sent it (#385). The render loop reads it off the main actor.
+// What the immersive space shows: the scene a demo window sent it (#385). The render loop reads it off the main actor,
+// so it gets snapshots from a ScenePresenter that updates the scene on the main actor (#391).
 final class ImmersiveSceneBox: @unchecked Sendable {
     static let shared = ImmersiveSceneBox()
 
     struct Shown {
-        var sceneGraph: SceneGraph
+        var presenter: ScenePresenter
         var renderers: [any MaterialRenderer]
     }
 
@@ -70,7 +71,8 @@ struct SceneDemoImmersiveSpace: Scene {
 
     // Runs on the immersive render loop, off the main actor.
     nonisolated static func element(_ shown: ImmersiveSceneBox.Shown, context: ImmersiveContext) -> some Element {
-        let bounds = shown.sceneGraph.bounds ?? BoundingBox3D(min: [-1, -1, -1], max: [1, 1, 1])
+        let presentation = shown.presenter.peekPresentation()
+        let bounds = presentation.bounds ?? BoundingBox3D(min: [-1, -1, -1], max: [1, 1, 1])
         let center = (bounds.min + bounds.max) / 2
         let radius = max(simd_length(bounds.max - bounds.min) / 2, 1e-4)
         let scale = 0.5 / radius
@@ -86,7 +88,7 @@ struct SceneDemoImmersiveSpace: Scene {
         var centering = matrix_identity_float4x4
         centering.columns.3 = SIMD4(-center, 1)
         return SceneImmersiveElement(
-            shown.sceneGraph,
+            presenter: shown.presenter,
             renderers: shown.renderers,
             context: context,
             sceneTransform: placement * scaling * centering,
@@ -95,8 +97,8 @@ struct SceneDemoImmersiveSpace: Scene {
     }
 }
 
-/// Opens and closes the immersive space showing `scene`. While it is open, the window's view should pause, so the
-/// scene is not advanced twice per frame.
+/// Opens and closes the immersive space showing `scene`. While it is open, the window's view should pause: the
+/// presenter advances the scene instead.
 struct ImmersiveSceneToggle: View {
     let scene: DemoScene
     @Binding var isImmersive: Bool
@@ -110,13 +112,20 @@ struct ImmersiveSceneToggle: View {
             Task {
                 if isImmersive {
                     await dismissImmersiveSpace()
+                    ImmersiveSceneBox.shared.current?.presenter.stop()
                     ImmersiveSceneBox.shared.show(nil)
                     isImmersive = false
                 } else {
-                    ImmersiveSceneBox.shared.show(.init(sceneGraph: scene.sceneGraph, renderers: scene.renderers))
+                    let presenter = ScenePresenter(sceneGraph: scene.sceneGraph)
+                    presenter.update = { [scene] time, deltaTime in
+                        scene.update(time: time, deltaTime: deltaTime)
+                    }
+                    presenter.start()
+                    ImmersiveSceneBox.shared.show(.init(presenter: presenter, renderers: scene.renderers))
                     if case .opened = await openImmersiveSpace(id: SceneDemoImmersiveSpace.id) {
                         isImmersive = true
                     } else {
+                        presenter.stop()
                         ImmersiveSceneBox.shared.show(nil)
                     }
                 }

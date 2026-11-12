@@ -8862,19 +8862,21 @@ The visionOS build of SceneSprocketsDemo also fails: CodeSign of SceneSprocketsD
 
 - `2026-11-12T21:24:48Z`: The immersive space and toggle are written (uncommitted) but crash when the window edits the scene while immersive; blocked on #386.
 - `2026-11-12T21:25:34Z`: Immersive space and toolbar toggle committed. Known: crashes when the window edits the scene while immersive (data race, #386). Leave open until #386 lands.
+- `2026-11-12T21:46:10Z`: #386 is fixed: the demo's immersive space now renders ScenePresenter snapshots. Needs a device check: open immersive, then use the window (keynote slides) while immersive.
 
 ---
 
 ## 386: Scene graph cannot be rendered from a thread other than the one that edits it
 
 +++
-status: new
+status: closed
 priority: high
 kind: bug
 labels: area:renderer, effort:xl, has-subtasks
 depends: 387, 388, 389, 390, 391
 created: 2026-11-12T21:24:45Z
-updated: 2026-11-12T21:25:35Z
+updated: 2026-11-12T21:46:10Z
+closed: 2026-11-12T21:46:10Z
 +++
 
 The visionOS immersive render loop (MetalSprockets ImmersiveRuntime) builds frames off the main thread. SceneImmersiveElement traverses the scene graph there while the app edits it on the main thread. Node data lives in a SwiftECS World, which has no synchronization, so this is a data race.
@@ -8895,6 +8897,7 @@ Renderers read live nodes throughout frame building (MeshEntry.node, level of de
 A presentation snapshot, like SceneKit's presentation tree: once per frame, on the thread that owns the scene graph, copy what rendering needs (mesh entries with their values, lights, cameras, particles, text, environment, revisions) into an immutable snapshot. Renderers read only the snapshot, so the render thread takes no locks and never touches live nodes. Reuse unchanged parts across frames using revision.structure and revision.transform. A per-graph lock was considered and rejected: it adds a lock to every field access on both threads and blocks one thread on the other.
 
 - `2026-11-12T21:25:35Z`: Split into subtasks, in order: #387, #388, #389, #390, #391.
+- `2026-11-12T21:46:10Z`: Fixed by #387-#391: renderers draw an immutable SceneGraph.Presentation; ScenePresenter publishes snapshots from the main actor for off-main renderers. Known limits: materials and meshes are shared references, so mutating a material's properties while another thread renders is still racy; apps poking SceneParticleSystem.runtime() directly must do so on the rendering thread.
 
 ---
 
@@ -8976,14 +8979,18 @@ Particle simulation input (world transforms, visibility) and SceneText are gathe
 ## 391: Immersive rendering cannot use a snapshot published by the main thread
 
 +++
-status: new
+status: closed
 priority: high
 kind: task
 labels: area:renderer, effort:m, subtask
 depends: 389, 390
 created: 2026-11-12T21:25:35Z
+updated: 2026-11-12T21:46:09Z
+closed: 2026-11-12T21:46:09Z
 +++
 
 SceneImmersiveElement advances and reads the live graph on the render thread. Done when: the main thread advances actions, particles and constraints and publishes snapshots, the immersive element renders the latest one, and a test edits the graph on one thread while another renders from snapshots. Part of #386.
+
+- `2026-11-12T21:46:10Z`: Added ScenePresenter (main actor): steps update hook, actions, particles, constraints (with the viewer transform reported by the render side) and publishes presentation(); takePresentation() hands particle steps out once, peekPresentation() reads without taking. SceneImmersiveElement now takes a presenter and never touches the live graph; the demo uses one. Test: main actor edits and steps the graph while another thread renders snapshots. Under TSan: no scene graph races (control run rendering the live graph reproduces 'Index out of range' and ~20 scene graph races). Remaining TSan report is in MetalSprockets SubmissionCompletion (init vs Metal completion callback).
 
 ---
