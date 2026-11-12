@@ -154,6 +154,54 @@ struct SceneArchiveTests {
         #expect(loaded.postProcessing?.ambientOcclusion?.sampleCount == 8)
     }
 
+    // #368: the normal map is a Source; archives that saved a bare texture reference still load.
+    @Test
+    func normalMapSourceRoundTripsAndReadsOldArchives() throws {
+        let url = temporaryURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let material = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(1), specular: .color(0), shininess: 1, normalMap: .texture(makeTexture(), tint: [0.5, 0.5, 1]))
+        let root = SceneGraph.Node()
+        root.addChild(SceneGraph.Node(label: "Bumpy", shape: .box(), material: material))
+        try archive.write(SceneGraph(root: root), to: url)
+        func loadedNormalMap() throws -> BlinnPhongSceneMaterial.Source? {
+            let (loaded, _) = try archive.read(from: url)
+            guard case let .mesh(_, materials, _, _) = loaded.root.children[0].content else {
+                return nil
+            }
+            return (materials.first as? BlinnPhongSceneMaterial)?.normalMap
+        }
+        guard case let .texture(_, _, tint)? = try loadedNormalMap() else {
+            Issue.record("normal map lost")
+            return
+        }
+        #expect(tint == [0.5, 0.5, 1])
+
+        // Rewrite the normal map as the old bare texture reference.
+        let jsonURL = url.appendingPathComponent("scene.json")
+        var json = try String(contentsOf: jsonURL, encoding: .utf8)
+        let object = try #require(try JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any])
+        func rewrite(_ value: Any) -> Any {
+            if var dictionary = value as? [String: Any] {
+                if let normalMap = dictionary["normalMap"] as? [String: Any], let texture = normalMap["texture"] {
+                    dictionary["normalMap"] = texture
+                }
+                return dictionary.mapValues(rewrite)
+            }
+            if let array = value as? [Any] {
+                return array.map(rewrite)
+            }
+            return value
+        }
+        json = try #require(String(data: JSONSerialization.data(withJSONObject: rewrite(object)), encoding: .utf8))
+        #expect(!json.contains("\"tint\":[0.5"))
+        try json.write(to: jsonURL, atomically: true, encoding: .utf8)
+        guard case let .texture(_, _, oldTint)? = try loadedNormalMap() else {
+            Issue.record("old normal map not read")
+            return
+        }
+        #expect(oldTint == .one)
+    }
+
     @Test
     func texturesRoundTripExactly() throws {
         let url = temporaryURL()

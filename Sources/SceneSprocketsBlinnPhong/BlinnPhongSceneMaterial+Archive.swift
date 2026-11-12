@@ -19,15 +19,18 @@ extension BlinnPhongSceneMaterial: ArchivableMaterial {
         try container.encode(opacity, forKey: .opacity)
         try container.encode(usesDiffuseTextureAlpha, forKey: .usesDiffuseTextureAlpha)
         try container.encode(emission, forKey: .emission)
-        if let normalMap {
-            try container.encode(try encoder.sceneArchive.encode(texture: normalMap), forKey: .normalMap)
-        }
+        try container.encodeIfPresent(normalMap, forKey: .normalMap)
         try container.encode(renderState, forKey: .renderState)
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: ArchiveKeys.self)
-        let normalMap = try container.decodeIfPresent(SceneArchiveContext.TextureReference.self, forKey: .normalMap).map { try decoder.sceneArchive.texture(for: $0) }
+        // Before #368 the normal map was a bare texture reference.
+        let normalMap: Source? = if let reference = try? container.decodeIfPresent(SceneArchiveContext.TextureReference.self, forKey: .normalMap) {
+            .texture(try decoder.sceneArchive.texture(for: reference))
+        } else {
+            try container.decodeIfPresent(Source.self, forKey: .normalMap)
+        }
         self.init(
             ambient: try container.decode(Source.self, forKey: .ambient),
             diffuse: try container.decode(Source.self, forKey: .diffuse),

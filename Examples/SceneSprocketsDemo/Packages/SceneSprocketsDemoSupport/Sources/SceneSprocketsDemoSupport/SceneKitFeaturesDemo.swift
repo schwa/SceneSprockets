@@ -122,7 +122,7 @@ final class SceneKitFeaturesDemo: DemoScene {
         let glow = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0.1), specular: .color(0.2), shininess: 32, emission: .color([0.2, 1, 0.6]))
         root.addChild(SceneGraph.Node(label: "Emissive Sphere", shape: .sphere(radius: 0.5), material: glow, transform: .init(translation: [-2.2, 0.5, -3.8])))
         var bumpy = BlinnPhongSceneMaterial.plastic([0.85, 0.75, 0.6], shininess: 24)
-        bumpy.normalMap = Self.bumpNormalMap()
+        bumpy.normalMap = Self.bumpNormalMap().map { .texture($0) }
         bumpyBox = root.addChild(SceneGraph.Node(label: "Normal-Mapped Box", shape: .box(width: 1.4, height: 1.4, length: 0.3), material: bumpy, transform: .init(translation: [0, 0.75, -3.8])))
         cullSphere = root.addChild(SceneGraph.Node(label: "Culled Sphere", shape: .sphere(radius: 0.5), material: BlinnPhongSceneMaterial.plastic([0.95, 0.55, 0.2]), transform: .init(translation: [2.2, 0.5, -3.8])))
 

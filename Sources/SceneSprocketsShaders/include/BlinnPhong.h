@@ -69,5 +69,8 @@ struct BlinnPhongMaterialUniforms {
     int hasEmissionTexture;
     // Tangent-space normal map (+Y up, OpenGL/glTF convention); the tangent frame comes from screen derivatives.
     int hasNormalMap;
+    // The constant normal, or the tint that multiplies the decoded normal texture when hasNormalTexture is set.
+    simd_float3 normal;
+    int hasNormalTexture;
 };
 typedef struct BlinnPhongMaterialUniforms BlinnPhongMaterialUniforms;

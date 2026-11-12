@@ -146,7 +146,10 @@ namespace BlinnPhong {
             }
         }
         if (material.hasNormalMap) {
-            float3 mapped = normalTexture.sample(textureSampler, in.textureCoordinate).xyz * 2.0 - 1.0;
+            float3 mapped = material.normal;
+            if (material.hasNormalTexture) {
+                mapped *= normalTexture.sample(textureSampler, in.textureCoordinate).xyz * 2.0 - 1.0;
+            }
             normal = perturbedNormal(normal, in.worldPosition, in.textureCoordinate, mapped);
         }
         float3 emission = material.emission;

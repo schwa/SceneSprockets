@@ -59,8 +59,10 @@ public struct BlinnPhongSceneMaterial: SceneMaterial, SamplesShadowsInShader, Dr
     public var emission: Source
     /// A tangent-space normal map, with +Y up as in glTF, sampled at the first texture coordinates.
     ///
-    /// Meshes do not need tangents.
-    public var normalMap: MTLTexture?
+    /// A `.texture` source is decoded from 0...1 to -1...1 and then multiplied by its tint, so a tint of `[s, s, 1]`
+    /// scales the bumps by `s`. A `.color` source is one tangent-space normal for the whole surface. Meshes do not need
+    /// tangents.
+    public var normalMap: Source?
     /// The depth, color mask, blend, fill and cull settings for the draw. Counter-clockwise triangles are front faces.
     public var renderState: MaterialRenderState
 
@@ -76,7 +78,7 @@ public struct BlinnPhongSceneMaterial: SceneMaterial, SamplesShadowsInShader, Dr
     ///   - emission: The color that the material adds without lighting.
     ///   - normalMap: A tangent-space normal map.
     ///   - renderState: The depth, color mask, blend, fill and cull settings for the draw.
-    public init(ambient: Source, diffuse: Source, specular: Source, shininess: Float, opacity: Float = 1, usesDiffuseTextureAlpha: Bool = false, emission: Source = .color(0), normalMap: MTLTexture? = nil, renderState: MaterialRenderState = .init()) {
+    public init(ambient: Source, diffuse: Source, specular: Source, shininess: Float, opacity: Float = 1, usesDiffuseTextureAlpha: Bool = false, emission: Source = .color(0), normalMap: Source? = nil, renderState: MaterialRenderState = .init()) {
         self.ambient = ambient
         self.diffuse = diffuse
         self.specular = specular
@@ -423,6 +425,7 @@ extension BlinnPhongSceneMaterial {
         let diffuse = split(self.diffuse)
         let specular = split(self.specular)
         let emission = split(self.emission)
+        let normal = normalMap.map(split)
         let uniforms = BlinnPhongMaterialUniforms(
             ambient: ambient.color,
             diffuse: diffuse.color,
@@ -436,11 +439,13 @@ extension BlinnPhongSceneMaterial {
             usesDiffuseAlpha: usesDiffuseTextureAlpha ? 1 : 0,
             emission: emission.color,
             hasEmissionTexture: emission.texture == nil ? 0 : 1,
-            hasNormalMap: normalMap == nil ? 0 : 1
+            hasNormalMap: normal == nil ? 0 : 1,
+            normal: normal?.color ?? [0, 0, 1],
+            hasNormalTexture: normal?.texture == nil ? 0 : 1
         )
         let samplerDescriptor = diffuse.sampler ?? ambient.sampler ?? specular.sampler ?? emission.sampler
         let sampler = samplerDescriptor.flatMap { try? BlinnPhongShaders.samplerState(for: $0) } ?? defaultSampler
-        return Resolved(uniforms: uniforms, ambientTexture: ambient.texture ?? placeholder, diffuseTexture: diffuse.texture ?? placeholder, specularTexture: specular.texture ?? placeholder, emissionTexture: emission.texture ?? placeholder, normalTexture: normalMap ?? placeholder, sampler: sampler)
+        return Resolved(uniforms: uniforms, ambientTexture: ambient.texture ?? placeholder, diffuseTexture: diffuse.texture ?? placeholder, specularTexture: specular.texture ?? placeholder, emissionTexture: emission.texture ?? placeholder, normalTexture: normal?.texture ?? placeholder, sampler: sampler)
     }
 }
 
@@ -579,7 +584,7 @@ private struct MaterialKey: Hashable {
     var shininess: Float
     var opacity: Float
     var usesDiffuseTextureAlpha: Bool
-    var normalMap: ObjectIdentifier?
+    var normalMap: SourceKey?
     var renderState: MaterialRenderState
 
     init(_ material: BlinnPhongSceneMaterial) {
@@ -590,7 +595,7 @@ private struct MaterialKey: Hashable {
         shininess = material.shininess
         opacity = material.opacity
         usesDiffuseTextureAlpha = material.usesDiffuseTextureAlpha
-        normalMap = material.normalMap.map { ObjectIdentifier($0) }
+        normalMap = material.normalMap.map(SourceKey.init)
         renderState = material.renderState
     }
 

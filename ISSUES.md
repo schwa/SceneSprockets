@@ -8283,12 +8283,13 @@ Related: #364, #106, #372 (closed: `Node.transform: Transform3D` is now the sing
 ## 368: Materials are verbose to create and inconsistent between families
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: effort:l, area:renderer
 created: 2026-11-11T15:54:41Z
-updated: 2026-11-11T15:55:11Z
+updated: 2026-11-12T04:20:05Z
+closed: 2026-11-12T04:20:05Z
 +++
 
 The three material families (Blinn-Phong, PBR, ShaderMaterial) have different construction rules, and the simple case is long in each.
@@ -8314,6 +8315,7 @@ Related: #355, #356, #360.
 - `2026-11-12T02:57:21Z`: Question 2 (design): normalMap: BlinnPhongSceneMaterial.normalMap is a raw MTLTexture? while other channels are Source (.color / .texture(texture, sampler, tint)). Make it a Source? (a .color normal is meaningless), or add a small TextureSource {texture, sampler} used by normalMap (and by Source.texture), or leave it as MTLTexture? and close #368?
 - `2026-11-12T02:57:21Z`: Done in this commit: SceneMaterial rename, BlinnPhongSceneMaterial(color:...), non-throwing PBRSceneMaterial/ShaderMaterial samples with RGB + opacity, tutorial helper removed. Names kept per 370-Q2 (c) because BlinnPhongMaterial/PBRMaterial exist elsewhere. Remaining: normalMap shape (368-Q2).
 - `2026-11-12T04:12:54Z`: Answer 2: yeah a source
+- `2026-11-12T04:20:06Z`: Per 368-Q2: normalMap is a Source. Texture tint scales the decoded normal; .color is a constant tangent-space normal. Old archives (bare texture reference) still load.
 
 ---
 

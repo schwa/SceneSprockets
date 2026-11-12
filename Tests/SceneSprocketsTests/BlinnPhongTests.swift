@@ -158,10 +158,18 @@ func normalMapBendsLighting() throws {
     #expect(try litQuadPixel(plain).x > 200)
     // Tangent-space +X: the normal lies in the quad's plane, at right angles to the light.
     var mapped = plain
-    mapped.normalMap = try solidTexture([255, 128, 128, 255])
+    mapped.normalMap = .texture(try solidTexture([255, 128, 128, 255]))
     #expect(try litQuadPixel(mapped).x < 20)
     // Straight up (+Z) matches the mesh normal.
-    mapped.normalMap = try solidTexture([128, 128, 255, 255])
+    mapped.normalMap = .texture(try solidTexture([128, 128, 255, 255]))
+    #expect(try litQuadPixel(mapped).x > 200)
+    // A tint of [0, 0, 1] flattens the +X map back to the mesh normal.
+    mapped.normalMap = .texture(try solidTexture([255, 128, 128, 255]), tint: [0, 0, 1])
+    #expect(try litQuadPixel(mapped).x > 200)
+    // A color is one normal for the whole surface.
+    mapped.normalMap = .color([1, 0, 0])
+    #expect(try litQuadPixel(mapped).x < 20)
+    mapped.normalMap = .color([0, 0, 1])
     #expect(try litQuadPixel(mapped).x > 200)
 }
 
