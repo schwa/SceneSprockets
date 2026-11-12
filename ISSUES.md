@@ -1203,9 +1203,9 @@ Want:
 status: open
 priority: medium
 kind: bug
-labels: area:renderer, effort:m, deferred
+labels: area:renderer, effort:m
 created: 2026-10-14T01:11:25Z
-updated: 2026-11-12T02:09:39Z
+updated: 2026-11-12T04:34:48Z
 +++
 
 In the Imported Assets demo, shadowed pixels sometimes flash unshadowed for a frame. It is mostly the fox's self-shadowed side. It happens with the camera still and the animation paused (speed 0). The flashes are random and rare. They are clearly less frequent with the inspector sidebar closed, so they likely depend on frame timing.
@@ -2420,9 +2420,9 @@ Expected: curved shapes shade smoothly; box and plane stay flat.
 status: open
 priority: medium
 kind: feature
-labels: deferred, effort:m, area:text
+labels: effort:m, area:text
 created: 2026-10-15T21:21:02Z
-updated: 2026-10-20T02:26:42Z
+updated: 2026-11-12T04:34:49Z
 +++
 
 SceneGraph can only show text as extruded 3D meshes (Shape.text, SwiftMesh extrusion). There is no flat, resolution-independent 2D text for labels, HUDs or slide copy.
@@ -2627,9 +2627,9 @@ Some code panels in KeynoteDemo.swift differ from the code that builds the slide
 status: open
 priority: low
 kind: task
-labels: area:demo, deferred, effort:s
+labels: area:demo, effort:s
 created: 2026-10-16T00:06:57Z
-updated: 2026-10-20T02:26:42Z
+updated: 2026-11-12T04:34:48Z
 +++
 
 Keynote code panels use Node, Action, AnimationController and AnimationPlayer. The real names are SceneGraph.Node and so on, and there are no typealiases. Decide: keep short names for readability, use full names, or add public typealiases.
@@ -2780,9 +2780,9 @@ On the keynote's Performance slide (1,600 animated crates, 3 batches) this group
 status: open
 priority: medium
 kind: feature
-labels: effort:l, area:scenegraph, deferred
+labels: effort:l, area:scenegraph
 created: 2026-10-17T12:50:07Z
-updated: 2026-10-20T02:27:43Z
+updated: 2026-11-12T04:34:48Z
 +++
 
 The only way to draw many copies of a mesh is one Node per copy. Renderers then discover the repeats each frame (implicit instancing): flatten the tree into one MeshEntry per node, cull each entry, and group entries back into instance batches. Even with the cached batching from #134, the per-node cost remains: node traversal and world transforms, one MeshEntry and one frustum test per copy, and gathering one model matrix per copy every frame.
@@ -6943,9 +6943,9 @@ There is no equivalent here: an app cannot pick a mode, turn inertia on or off, 
 status: open
 priority: medium
 kind: feature
-labels: area:ui, effort:m, deferred
+labels: area:ui, effort:m
 created: 2026-11-07T17:16:02Z
-updated: 2026-11-10T17:37:51Z
+updated: 2026-11-12T04:34:48Z
 +++
 
 SceneView offers no keyboard or game controller navigation. There is no built-in way to fly or walk the camera with WASD (and arrow keys or mouse look), or with a game controller's sticks and triggers (GameController framework). Apps and demos that want first-person or fly-through navigation must handle key events and GCController input themselves and drive the cameraMatrix binding.
@@ -7262,9 +7262,9 @@ Actual: the look changes abruptly partway through. Unverified guesses: shadows s
 status: open
 priority: medium
 kind: bug
-labels: area:demo, effort:s, deferred
+labels: area:demo, effort:s
 created: 2026-11-07T17:55:57Z
-updated: 2026-11-12T02:09:42Z
+updated: 2026-11-12T04:34:48Z
 +++
 
 The Glass slide in the keynote demo does odd things while it fades in and while it fades out. Cause not investigated.
