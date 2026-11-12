@@ -262,7 +262,7 @@ public struct SceneGraphElement: Element {
                 let runtime = try system.runtime()
                 let rendered: AnyElement = if let stereoViews = context.stereoViews {
                     // Simulation already sorts for context.viewMatrix, the center camera (#379).
-                    try runtime.render(views: ParticleStereoViews(viewMatrices: stereoViews.viewMatrices, projectionMatrices: stereoViews.projectionMatrices, viewports: stereoViews.viewports), sceneDepth: softParticleDepth?.copy).eraseToAnyElement()
+                    try runtime.render(views: stereoViews, sceneDepth: softParticleDepth?.copy).eraseToAnyElement()
                 } else {
                     try runtime.render(projection: context.projectionMatrix, view: context.viewMatrix, sceneDepth: softParticleDepth?.copy).eraseToAnyElement()
                 }

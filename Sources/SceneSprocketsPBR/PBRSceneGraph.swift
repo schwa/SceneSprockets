@@ -353,7 +353,7 @@ public final class PBRMaterialRenderer: MaterialRenderer, Equatable {
             transmissionTarget: transmissionTarget
         )
         renderer.materialOverrides = try materialOverrides(for: entries, keys: keys)
-        renderer.stereo = context.stereoViews.map { Self.pbrStereoViews($0, origin: cameraPosition) }
+        renderer.stereo = context.stereoViews.map { Self.relativeStereoViews($0, origin: cameraPosition) }
         if let channel = context.materialChannel {
             renderer.debugView = Self.debugView(for: channel)
         }
@@ -361,13 +361,13 @@ public final class PBRMaterialRenderer: MaterialRenderer, Equatable {
     }
 
     // The views relative to the render origin, matching the camera-relative poses and lights.
-    static func pbrStereoViews(_ views: StereoViews, origin: SIMD3<Float>) -> PBRStereoViews {
+    static func relativeStereoViews(_ views: StereoViews, origin: SIMD3<Float>) -> StereoViews {
         let relative = views.viewMatrices.map { view in
             var translated = view
             translated.columns.3 = view * SIMD4(origin, 1)
             return translated
         }
-        return PBRStereoViews(viewMatrices: relative, projectionMatrices: views.projectionMatrices, viewports: views.viewports)
+        return StereoViews(viewMatrices: relative, projectionMatrices: views.projectionMatrices, viewports: views.viewports)
     }
 
     static func debugView(for channel: MaterialChannel) -> PBRDebugView {
@@ -500,7 +500,7 @@ extension PBRMaterialRenderer: BackgroundRenderer {
             return nil
         }
         var background = PBREnvironmentBackground(lighting: lighting(context: context), viewMatrix: context.viewMatrix, projectionMatrix: context.projectionMatrix, blur: blur)
-        background.stereo = context.stereoViews.map { PBRStereoViews(viewMatrices: $0.viewMatrices, projectionMatrices: $0.projectionMatrices, viewports: $0.viewports) }
+        background.stereo = context.stereoViews
         return background
             .vertexAmplification(count: context.viewCount)
             .eraseToAnyElement()

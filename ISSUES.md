@@ -8824,11 +8824,13 @@ Frustum culling and back-to-front transparency sorting are computed from a singl
 ## 384: Own StereoViews duplicates other packages' stereo view types
 
 +++
-status: new
+status: closed
 priority: medium
 kind: enhancement
 labels: effort:s
 created: 2026-11-12T20:42:21Z
+updated: 2026-11-12T21:04:00Z
+closed: 2026-11-12T21:04:00Z
 +++
 
 StereoViews is this package's own copy of per-view stereo matrices, viewports and vertex amplification setup. MetalSprocketsAddOns, MetalSprocketsPBR, MetalSprocketsParticles and SceneSprockets each have one, and callers convert between them at every boundary. See MetalSprockets #MetalSprockets#558.
@@ -8838,5 +8840,6 @@ StereoViews is this package's own copy of per-view stereo matrices, viewports an
 Once MetalSprockets ships a shared StereoViews (#MetalSprockets#558) in a tagged release, adopt it in place of StereoViews and bump the MetalSprockets dependency.
 
 - `2026-11-12T20:42:25Z`: Also: SceneSprockets.StereoViews collides with MetalSprocketsAddOns.StereoViews (0.2.7), so files importing both get 'StereoViews is ambiguous'. Resolving this needs the MetalSprockets, AddOns (#MetalSprocketsAddOns#126), PBR (#MetalSprocketsPBR#25) and Particles (#MetalSprocketsParticles#245) releases, then removing the PBRStereoViews/ParticleStereoViews conversions in PBRSceneGraph and SceneGraphRenderer.
+- `2026-11-12T21:04:00Z`: Adopted the shared MetalSprockets StereoViews (0.2.11); removed SceneSprockets.StereoViews and the PBR/Particles conversions. AddOns, PBR and Particles are pinned to main until they are tagged.
 
 ---

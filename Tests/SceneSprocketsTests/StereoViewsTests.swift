@@ -1,5 +1,6 @@
 import GeometryLite3D
 import Metal
+import MetalSprockets
 @testable import SceneSprockets
 import simd
 import Testing

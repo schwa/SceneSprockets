@@ -53,33 +53,28 @@ public struct SceneImmersiveElement: Element {
 
     /// The eyes, with view matrices in the scene's space.
     var stereoViews: StereoViews {
-        let views = 0 ..< context.viewCount
-        return StereoViews(
-            viewMatrices: views.map { context.viewMatrix(eye: $0) * sceneTransform },
-            projectionMatrices: views.map { context.projectionMatrix(eye: $0) },
-            viewports: context.viewports
-        )
+        var views = context.stereoViews
+        views.viewMatrices = views.viewMatrices.map { $0 * sceneTransform }
+        return views
     }
 
     public var body: some Element {
-        get {
-            let stereoViews = stereoViews
-            let (_, deltaTime) = clock.advance(to: Float(context.time), isPaused: !isPlaying)
-            sceneGraph.advanceActions(by: deltaTime)
-            sceneGraph.advanceParticles(by: deltaTime)
-            sceneGraph.applyConstraints(pointOfView: stereoViews.centerCameraMatrix, deltaTime: deltaTime)
-            var element = SceneGraphElement(
-                sceneGraph: sceneGraph,
-                aspectRatio: 1,
-                renderers: renderers,
-                defaultCamera: Camera(projection: PerspectiveProjection()),
-                cameraOverride: Camera(projection: PerspectiveProjection()),
-                defaultLight: defaultLight,
-                stereoViews: stereoViews
-            )
-            element.immersiveContext = context
-            return element
-        }
+        let stereoViews = stereoViews
+        let (_, deltaTime) = clock.advance(to: Float(context.time), isPaused: !isPlaying)
+        sceneGraph.advanceActions(by: deltaTime)
+        sceneGraph.advanceParticles(by: deltaTime)
+        sceneGraph.applyConstraints(pointOfView: stereoViews.centerCameraMatrix, deltaTime: deltaTime)
+        var element = SceneGraphElement(
+            sceneGraph: sceneGraph,
+            aspectRatio: 1,
+            renderers: renderers,
+            defaultCamera: Camera(projection: PerspectiveProjection()),
+            cameraOverride: Camera(projection: PerspectiveProjection()),
+            defaultLight: defaultLight,
+            stereoViews: stereoViews
+        )
+        element.immersiveContext = context
+        return element
     }
 }
 #endif
