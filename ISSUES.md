@@ -7150,13 +7150,14 @@ Starting point: the Mesh Dissolve example in MetalSprocketsExamples (triplanar-g
 ## 323: No volumetric clouds
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:addons, effort:l, deferred
 depends: 314
 created: 2026-11-07T17:19:22Z
-updated: 2026-11-08T03:35:03Z
+updated: 2026-11-12T04:31:39Z
+closed: 2026-11-12T04:31:39Z
 +++
 
 SceneSprockets cannot show volumetric clouds in a scene's sky. Documentation/Features.md lists 'Volumetric lighting and fog' as missing.
@@ -7164,6 +7165,7 @@ SceneSprockets cannot show volumetric clouds in a scene's sky. Documentation/Fea
 Starting point: the cloud demo in MetalSprocketsExamples (sun-lit volumetric cloud with progressive accumulation), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/CloudDemo/CloudDemoView.swift. It is not in the examples README and still has temporary #242 bisect code. Candidate for SceneSprocketsAddOns (#314).
 
 - `2026-11-08T02:46:26Z`: Autonomous run: scoped, not changed. Volumetric clouds are a raymarched full-screen pass that needs the scene depth (to stop at geometry), a sun direction and a sky to sit in. That means a new pass in SceneGraphRenderer's post-pass chain (like FogPass) or an Environment.Background option, not a self-contained add-on node; the CloudDemo source also relies on progressive accumulation over frames, which does not fit a moving camera. Punting: depends on the procedural sky decision in #318 and on where sky effects live. Question: should clouds be part of the sky/background (#318) or a post pass like fog?
+- `2026-11-12T04:31:39Z`: Closed in deferred-issue cleanup: wishful: volumetric clouds, with no concrete use case in SceneSprockets.
 
 ---
 
