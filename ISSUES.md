@@ -8235,22 +8235,21 @@ Making a common node needs deeply nested initializers and a second statement to 
 
 ```swift
 let fill = root.addChild(SceneGraph.Node(label: "Fill", content: .light(Light(type: .point, intensity: 15, range: 50, castsShadow: false))))
-fill.trs.translation = [-5, 4, 4]
+fill.transform.translation = [-5, 4, 4]
 
 let camera = root.addChild(SceneGraph.Node(label: "Camera", content: .camera(SceneView.defaultCamera)))
-camera.trs.translation = [0, 2, 6]
+camera.transform.translation = [0, 2, 6]
 camera.look(at: .zero)
 ```
 
 What is wrong:
 
 - A light or camera node needs `SceneGraph.Node(content: .light(Light(type: ...)))`: three nested initializers.
-- A node cannot be created at a position in one expression without building a `Transform3D` or matrix. `.trs.translation = ` on the line after creation appears 98 times in the repository.
+- Placing a node in one expression needs `transform: .init(translation: p)`. Most code instead sets `.transform.translation = ` on the line after creation (96 times in the repository).
+- Aiming a node (camera, spot or directional light) has no `Transform3D` form. Code builds a look-at matrix and wraps it: `Transform3D(storing: .camera(eye:target:))` or a local `pose(eye:target:)` helper (about 24 sites), or places the node and then calls `look(at:)`.
 - `Camera(projection: PerspectiveProjection(verticalAngleOfView: ...))` appears 50 times. There is no shorter way to say "a perspective camera".
 - The tutorials use `SceneView.defaultCamera` as a general-purpose camera. It is a view constant, used during scene construction (15 uses).
 - `Light.spot(...)` exists, but there is no `.point` or `.directional`, and `.spot` has no `castsShadow` parameter.
-- `Node(shape:material:trs:)` accepts only `trs`. The base initializer has both `transform:` and `trs:`.
-- A node has `trs`, `transform` and `localTransform`, but no direct `position`.
 
 Helpers written to work around this:
 
@@ -8260,11 +8259,12 @@ Helpers written to work around this:
 
 Expected: the tutorials build their scenes with library API only, with no local helper file.
 
-Related: #364, #106.
+Related: #364, #106, #372 (closed: `Node.transform: Transform3D` is now the single local transform, so a separate stored `position` would be an alias of `transform.translation`).
 
 - `2026-11-11T15:55:13Z`: Related: #364 (result-builder API for node trees) covers the tree-shape part of the same problem.
 - `2026-11-11T16:04:44Z`: Question 1 (design): Proposed API — approve or amend? (1) Node gains 'position: SIMD3<Float>' (get/set via trs.translation) and every Node init gets an optional 'position:' parameter. (2) Static factories on SceneGraph.Node: .light(_ light:, label:, position:, lookAt:), .camera(_ camera: = .perspective(), label:, position:, lookAt:). (3) Light gains .point(...), .directional(...) factories and .spot gets castsShadow. (4) Camera gains .perspective(fieldOfView: Angle = 60°, zClip:) and .orthographic(...); SceneView.defaultCamera becomes Camera.default (old name deprecated). (5) Node.addChild stays; no addShape helper — use addChild(Node(shape:material:position:)). Tutorials and GettingStarted then drop Helpers.addShape.
 - `2026-11-11T16:04:44Z`: Auto-fixer run: punted. Every fix here adds or renames public API (factories, a position property, moving SceneView.defaultCamera), which is a design decision. Unblocker: answer 367-Q1 (approve or amend the proposed API).
+- `2026-11-12T00:10:25Z`: Answer 1: Superseded by 367-Q2: #372 made Node.transform: Transform3D the only local transform, so the proposed position property would be an alias.
 
 ---
 
