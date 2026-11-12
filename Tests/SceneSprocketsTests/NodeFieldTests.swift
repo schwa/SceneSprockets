@@ -213,7 +213,8 @@ func particleSystemsAndAudioPlayersLiveInTheWorld() throws {
     let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1))
     let player = AudioPlayer(buffer: try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 16)))
 
-    #expect(revisionChange(graph) { node.particleSystems = [system] } == .none)
+    // Structure since #387: the presentation snapshot lists particle systems.
+    #expect(revisionChange(graph) { node.particleSystems = [system] } == .structure)
     #expect(entity[NodeParticleSystemsComponent.self]?.value.first === system)
     #expect(revisionChange(graph) { node.audioPlayers = [player] } == .none)
     #expect(entity[NodeAudioPlayersComponent.self]?.value.first === player)

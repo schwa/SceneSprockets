@@ -157,8 +157,19 @@ public class SceneGraph {
             var castsShadow: Bool
             var receivesShadow: Bool
             var opacity: Float
+            // Copied from the node when the entry is made, so rendering need not read the live node (#387).
+            var nodeID: Node.ID
+            var categoryBitMask: UInt
+            var renderingOrder: Int
+            var meshBounds: BoundingBox3D?
+            var levelsOfDetail: [LevelOfDetail]
 
             init(node: Node, worldTransform: float4x4, mesh: MetalMesh, submeshIndex: Int, material: any SceneMaterial, castsShadow: Bool, receivesShadow: Bool, opacity: Float) {
+                self.nodeID = node.id
+                self.categoryBitMask = node.categoryBitMask
+                self.renderingOrder = node.renderingOrder
+                self.meshBounds = node.meshBounds
+                self.levelsOfDetail = node.levelsOfDetail
                 self.node = node
                 self.worldTransform = worldTransform
                 self.mesh = mesh
@@ -169,8 +180,24 @@ public class SceneGraph {
                 self.opacity = opacity
             }
 
+            private init(copying other: Storage) {
+                node = other.node
+                worldTransform = other.worldTransform
+                mesh = other.mesh
+                submeshIndex = other.submeshIndex
+                material = other.material
+                castsShadow = other.castsShadow
+                receivesShadow = other.receivesShadow
+                opacity = other.opacity
+                nodeID = other.nodeID
+                categoryBitMask = other.categoryBitMask
+                renderingOrder = other.renderingOrder
+                meshBounds = other.meshBounds
+                levelsOfDetail = other.levelsOfDetail
+            }
+
             func copy() -> Storage {
-                Storage(node: node, worldTransform: worldTransform, mesh: mesh, submeshIndex: submeshIndex, material: material, castsShadow: castsShadow, receivesShadow: receivesShadow, opacity: opacity)
+                Storage(copying: self)
             }
         }
 
@@ -236,6 +263,17 @@ public class SceneGraph {
             set { uniqueStorage().opacity = newValue }
         }
 
+        /// The node's ID, copied when the entry was made.
+        public var nodeID: Node.ID { storage.nodeID }
+        /// The node's categoryBitMask, copied when the entry was made.
+        public var categoryBitMask: UInt { storage.categoryBitMask }
+        /// The node's renderingOrder, copied when the entry was made.
+        public var renderingOrder: Int { storage.renderingOrder }
+        /// The node's mesh bounds in its own space, copied when the entry was made.
+        public var meshBounds: BoundingBox3D? { storage.meshBounds }
+        /// The node's levels of detail, copied when the entry was made.
+        public var levelsOfDetail: [LevelOfDetail] { storage.levelsOfDetail }
+
         /// Blends: the material is transparent, or it applies node opacity and that is below 1.
         public var isTransparent: Bool {
             material.isTransparent || (material.appliesNodeOpacity && opacity < 1)
@@ -249,6 +287,7 @@ public class SceneGraph {
     }
 
     @ObservationIgnored private var flattenedCache: (revision: Revision, flattened: Flattened)?
+    @ObservationIgnored var presentationCache: PresentationParts?
     // Number of full traversals done for queries; for tests. Not observed: queries run during SwiftUI view updates,
     // and writing an observed property then crashes SwiftUI (#212).
     @ObservationIgnored private(set) var traversalCount = 0

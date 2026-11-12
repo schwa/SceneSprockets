@@ -257,7 +257,8 @@ public struct NodeParticleSystemsComponent: NodeField {
     }
 
     static var defaultValue: [SceneParticleSystem] { [] }
-    static var revision: NodeFieldRevision { .none }
+    // Structure: the presentation snapshot lists the systems (#387).
+    static var revision: NodeFieldRevision { .structure }
 }
 
 /// The component that stores ``SceneGraph/Node/text`` for a node in ``SceneGraph/world``.
@@ -273,7 +274,8 @@ public struct NodeTextComponent: NodeField {
     }
 
     static var defaultValue: SceneText? { nil }
-    static var revision: NodeFieldRevision { .none }
+    // Structure: the presentation snapshot holds the text (#387).
+    static var revision: NodeFieldRevision { .structure }
 }
 
 /// The component that stores ``SceneGraph/Node/audioPlayers`` for a node in ``SceneGraph/world``.

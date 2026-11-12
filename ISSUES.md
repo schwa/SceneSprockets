@@ -8901,14 +8901,18 @@ A presentation snapshot, like SceneKit's presentation tree: once per frame, on t
 ## 387: No immutable per-frame snapshot of what rendering reads from a scene graph
 
 +++
-status: new
+status: closed
 priority: high
 kind: task
 labels: area:renderer, effort:m, subtask
 created: 2026-11-12T21:25:34Z
+updated: 2026-11-12T21:27:40Z
+closed: 2026-11-12T21:27:40Z
 +++
 
 There is no SceneGraph.Presentation: an immutable copy, built once per frame on the owning thread, of mesh entries with their values, lights, cameras, environment, fog and post-processing, particles, text and revisions, reusing unchanged parts by revision.structure and revision.transform. Done when: tests show a snapshot matches the live graph and unchanged parts are reused. Part of #386.
+
+- `2026-11-12T21:27:40Z`: Added SceneGraph.Presentation and presentation(): mesh entries (now carrying nodeID, categoryBitMask, renderingOrder, meshBounds, levelsOfDetail), lights with lightCategoryBitMask, cameras, texts, particle systems, environment, fog, post-processing and bounds; revision-dependent parts cached by revision. Node text and particle-system lists now bump revision.structure. Not yet used by rendering (#388).
 
 ---
 
