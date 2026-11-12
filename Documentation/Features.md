@@ -52,7 +52,7 @@ The Source column shows where the feature comes from: SceneKit, RealityKit, thre
 | ✅ | Per-node light masks | | SceneKit | |
 | ✅ | Default lighting | | SceneKit | |
 | ⬜ | Ambient light node, temperature, IES, area lights | #86 | SceneKit, RealityKit | |
-| ⬜ | Camera controllers: first person, fly, follow | | three.js | Interaction3D supports this. |
+| ⬜ | Camera controllers: first person, fly, follow | #313 | three.js | `CameraControl.Mode.fly` (Interaction3D FPV); no follow or walk mode yet. |
 | 🧩 | Multiple viewports, render to texture | | SceneKit, three.js | MetalSprockets render passes and offscreen targets |
 | ⬜ | Stereo / immersive rendering | | RealityKit | Already supported in MetalSprockets |
 
@@ -268,7 +268,7 @@ The Source column shows where the feature comes from: SceneKit, RealityKit, thre
 | Done | Feature | Issues | Source | Notes |
 |---|---|---|---|---|
 | ⬜ | Navigation meshes and pathfinding | | GameplayKit, Godot, Unity | |
-| ⬜ | Game controller and keyboard input mapping | | Godot, Unity | |
+| ⬜ | Game controller and keyboard input mapping | #313 | Godot, Unity | WASD and game controller drive `CameraControl.Mode.fly`; no general input mapping. |
 | ⬜ | Haptics | | Brainstorm | |
 | ⬜ | Networked scene replication, SharePlay | | RealityKit | |
 

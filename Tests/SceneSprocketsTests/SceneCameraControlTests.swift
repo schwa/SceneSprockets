@@ -52,3 +52,14 @@ func speedsScaleTheDefaultTransforms() {
     #expect(fast.zoom(10) == base.zoom(10) * 3)
     #expect(fast.pan([10, 5]) == base.pan([10, 5]) * 4)
 }
+
+// #313: fly mode maps the configuration onto Interaction3D's FPV settings.
+@Test
+func flyModeUsesSpeedsAndFreeFlight() {
+    let control = CameraControl(mode: .fly, rotationSpeed: 2, flySpeed: 3)
+    let settings = control.flySettings
+    #expect(settings.speed == 3)
+    #expect(settings.isFreeFlightEnabled)
+    #expect(settings.keyboardTurnSpeed == .pi)
+    #expect(settings.walk == nil)
+}

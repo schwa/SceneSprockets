@@ -6943,12 +6943,13 @@ There is no equivalent here: an app cannot pick a mode, turn inertia on or off, 
 ## 313: No keyboard (WASD) or game controller camera navigation
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: area:ui, effort:s
 created: 2026-11-07T17:16:02Z
-updated: 2026-11-12T04:35:54Z
+updated: 2026-11-12T19:33:49Z
+closed: 2026-11-12T19:33:49Z
 +++
 
 SceneView offers no keyboard or game controller navigation. There is no built-in way to fly or walk the camera with WASD (and arrow keys or mouse look), or with a game controller's sticks and triggers (GameController framework). Apps and demos that want first-person or fly-through navigation must handle key events and GCController input themselves and drive the cameraMatrix binding.
@@ -6959,6 +6960,7 @@ Related: Documentation/Features.md lists 'Camera controllers: first person, fly,
 - `2026-11-08T01:33:09Z`: Unblocked: Interaction3D fixed the FPV gaps that made us drop our own FlyNavigation (Interaction3D #39 start from bound camera pose and follow external changes, #40 cross-platform and opt-in toolbar, #41 WASD gated on view focus, #42 Q/E altitude, arrow-key look, Shift fast-move). Fixes are on Interaction3D main after 0.1.16 and are not yet in a tagged release. SceneSprockets still pins upToNextMinor 0.1.16.
 - `2026-11-08T02:26:12Z`: Autonomous run: blocked on a release. Interaction3D main (cc8f4e5c) is pushed with the FPV fixes (#39-#42), but the newest tag is still 0.1.16. SceneSprockets pins upToNextMinor(from: 0.1.16) in Package.swift and the Demo and Composer packages; pinning a branch or revision in a library manifest is not acceptable, and I may not create or push tags. Unblocker: tag Interaction3D 0.1.17 (and push it); then this can use FPVMovementModifier behind SceneCameraControl.
 - `2026-11-12T04:35:51Z`: Unblocked: Interaction3D 0.2.1 (already the pinned version) has WASD (WASDController), game controller (GameControllerMovementController), FPV fly (FPVNavigator, .fpvMovement(_:)) with speed/fast/mouse/turn settings and free flight, plus flight-sim and RTS modes. What is missing is in SceneSprockets: CameraControl.InteractionMode has only turntable and arcball, so SceneView offers no way to use these. Also covers the fly-mode part of #348.
+- `2026-11-12T19:33:50Z`: Added CameraControl.Mode.fly (Interaction3D fpvMovement: WASD/arrows/Q-E/Shift, drag look, game controller) with flySpeed; rotationSpeed scales turn rates.
 
 ---
 

@@ -638,7 +638,9 @@ private struct CameraControlModifier: ViewModifier {
     var configuration: CameraControl
 
     func body(content: Content) -> some View {
-        if isEnabled {
+        if isEnabled, configuration.mode == .fly {
+            content.fpvMovement(cameraMatrix: $cameraMatrix, settings: configuration.flySettings)
+        } else if isEnabled {
             // Changes from the interaction are kept inside the configuration's limits (#312).
             let clamped = Binding(
                 get: { cameraMatrix },

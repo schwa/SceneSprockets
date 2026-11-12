@@ -13,6 +13,10 @@ public struct CameraControl: Sendable, Equatable {
         case turntable
         /// Free rotation, as if turning a ball under the cursor. The camera can roll.
         case arcball
+        /// First-person flight: WASD or a game controller's left stick moves, Q and E move down and up, the arrow
+        /// keys, a drag or the right stick look around, and Shift moves faster. The target, distance and pitch limits
+        /// do not apply.
+        case fly
     }
 
     /// How a drag rotates the camera.
@@ -28,6 +32,8 @@ public struct CameraControl: Sendable, Equatable {
     /// The lowest and highest angle, in radians, of the camera above the target's horizontal plane, or `nil` for no
     /// limit. For example, `0...(.pi / 2)` keeps the camera above the ground.
     public var pitchRange: ClosedRange<Float>?
+    /// How fast ``Mode/fly`` moves, in scene units per second.
+    public var flySpeed: Float
 
     /// Creates a camera control configuration.
     ///
@@ -38,20 +44,33 @@ public struct CameraControl: Sendable, Equatable {
     ///   - panSpeed: Multiplies the pan speed.
     ///   - distanceRange: The camera's distance limits from the target.
     ///   - pitchRange: The camera's angle limits above the target's horizontal plane, in radians.
-    public init(mode: Mode = .turntable, rotationSpeed: Float = 1, zoomSpeed: Float = 1, panSpeed: Float = 1, distanceRange: ClosedRange<Float>? = nil, pitchRange: ClosedRange<Float>? = nil) {
+    ///   - flySpeed: How fast ``Mode/fly`` moves, in scene units per second.
+    public init(mode: Mode = .turntable, rotationSpeed: Float = 1, zoomSpeed: Float = 1, panSpeed: Float = 1, distanceRange: ClosedRange<Float>? = nil, pitchRange: ClosedRange<Float>? = nil, flySpeed: Float = 10) {
         self.mode = mode
         self.rotationSpeed = rotationSpeed
         self.zoomSpeed = zoomSpeed
         self.panSpeed = panSpeed
         self.distanceRange = distanceRange
         self.pitchRange = pitchRange
+        self.flySpeed = flySpeed
     }
 
     var interactionMode: InteractiveCameraMode {
         switch mode {
-        case .turntable: .turntable()
+        case .turntable, .fly: .turntable()
         case .arcball: .arcball()
         }
+    }
+
+    var flySettings: FPVMovementSettings {
+        let defaults = FPVMovementSettings()
+        return FPVMovementSettings(
+            speed: flySpeed,
+            mouseSensitivity: defaults.mouseSensitivity * rotationSpeed,
+            controllerTurnSpeed: defaults.controllerTurnSpeed * rotationSpeed,
+            keyboardTurnSpeed: defaults.keyboardTurnSpeed * rotationSpeed,
+            isFreeFlightEnabled: true
+        )
     }
 
     var transforms: InteractionAxisTransforms {
