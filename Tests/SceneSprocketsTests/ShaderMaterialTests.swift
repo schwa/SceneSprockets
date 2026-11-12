@@ -93,6 +93,22 @@ func opaqueDrawsBeforeTransparentInABatch() throws {
     _ = glass
 }
 
+// #374: the alpha-blending setting reads back what was set; isTransparent is derived from it and the blend mode.
+@Test
+func alphaBlendingReadsBackAndTransparencyIsDerived() throws {
+    var material = try ShaderMaterial.normals()
+    material.renderState.blendMode = .add
+    material.usesAlphaBlending = false
+    #expect(material.usesAlphaBlending == false)
+    #expect(material.isTransparent) // Add blends with the background.
+    material.renderState.blendMode = .alpha
+    #expect(!material.isTransparent)
+    material.usesAlphaBlending = true
+    #expect(material.usesAlphaBlending)
+    #expect(material.isTransparent)
+    #expect(try ShaderMaterial.rim(color: [1, 0, 0, 0.5]).usesAlphaBlending)
+}
+
 @Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func rimMaterialUsesColorParameter() throws {

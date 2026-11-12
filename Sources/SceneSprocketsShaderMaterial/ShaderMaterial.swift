@@ -52,20 +52,20 @@ public struct ShaderMaterial: SceneSprockets.Material, SamplesShadowsInShader, D
     public var renderState: MaterialRenderState
     /// Whether the fragment function reads the lights and shadow map and applies each light's shadow itself.
     public var samplesShadows: Bool
-    var alphaBlends: Bool
+    /// Whether the fragment function's alpha blends the mesh over what is already drawn.
+    public var usesAlphaBlending: Bool
 
     public var samplesShadowsInShader: Bool {
         samplesShadows
     }
 
-    /// Whether the material blends over what is already drawn.
+    /// Whether the material blends over what is already drawn: ``usesAlphaBlending``, or a ``renderState`` blend mode
+    /// that mixes with the background, such as add or multiply.
     ///
     /// A transparent material does not write depth. It draws after opaque meshes with the same `renderingOrder`,
-    /// farthest first. The value is also true when ``renderState`` has a blend mode that mixes with the background,
-    /// such as add or multiply.
+    /// farthest first.
     public var isTransparent: Bool {
-        get { alphaBlends || renderState.blendsWithBackground }
-        set { alphaBlends = newValue }
+        usesAlphaBlending || renderState.blendsWithBackground
     }
 
     /// Creates a shader material.
@@ -74,15 +74,15 @@ public struct ShaderMaterial: SceneSprockets.Material, SamplesShadowsInShader, D
     ///   - vertexShader: The vertex function. It must declare `ShaderMaterialTransforms`.
     ///   - fragmentShader: The fragment function.
     ///   - parameters: The values to bind to shader arguments, by argument name.
-    ///   - isTransparent: Whether the material blends over what is already drawn.
+    ///   - usesAlphaBlending: Whether the fragment function's alpha blends the mesh over what is already drawn.
     ///   - renderState: The depth, color mask, blend and fill settings for the draw.
     ///   - samplesShadows: Whether the fragment function reads the lights and shadow map.
-    public init(vertexShader: VertexShader, fragmentShader: FragmentShader, parameters: [String: Value] = [:], isTransparent: Bool = false, renderState: MaterialRenderState = .init(), samplesShadows: Bool = false) {
+    public init(vertexShader: VertexShader, fragmentShader: FragmentShader, parameters: [String: Value] = [:], usesAlphaBlending: Bool = false, renderState: MaterialRenderState = .init(), samplesShadows: Bool = false) {
         self.samplesShadows = samplesShadows
         self.vertexShader = vertexShader
         self.fragmentShader = fragmentShader
         self.parameters = parameters
-        self.alphaBlends = isTransparent
+        self.usesAlphaBlending = usesAlphaBlending
         self.renderState = renderState
     }
 
@@ -110,7 +110,7 @@ public struct ShaderMaterial: SceneSprockets.Material, SamplesShadowsInShader, D
     /// - Throws: An error if the sample shader library cannot load.
     public static func rim(color: SIMD4<Float>) throws -> Self {
         let library = try ShaderMaterialSampleLibrary.shared()
-        return Self(vertexShader: try library.vertex_main, fragmentShader: try library.fragment_rim, parameters: ["color": .float4(color)], isTransparent: color.w < 1)
+        return Self(vertexShader: try library.vertex_main, fragmentShader: try library.fragment_rim, parameters: ["color": .float4(color)], usesAlphaBlending: color.w < 1)
     }
 
     /// A sample material with Lambert diffuse lighting from the scene's lights, each dimmed only by its own shadow.
@@ -121,7 +121,7 @@ public struct ShaderMaterial: SceneSprockets.Material, SamplesShadowsInShader, D
     /// - Throws: An error if the sample shader library cannot load.
     public static func lit(color: SIMD4<Float>) throws -> Self {
         let library = try ShaderMaterialSampleLibrary.shared()
-        return Self(vertexShader: try library.vertex_main, fragmentShader: try library.fragment_lit, parameters: ["color": .float4(color)], isTransparent: color.w < 1, samplesShadows: true)
+        return Self(vertexShader: try library.vertex_main, fragmentShader: try library.fragment_lit, parameters: ["color": .float4(color)], usesAlphaBlending: color.w < 1, samplesShadows: true)
     }
 }
 

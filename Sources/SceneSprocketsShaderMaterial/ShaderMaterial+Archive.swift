@@ -44,7 +44,7 @@ extension ShaderMaterial: ArchivableMaterial {
         try container.encode(library, forKey: .library)
         try container.encode(vertex.name, forKey: .vertexFunction)
         try container.encode(fragment.name, forKey: .fragmentFunction)
-        try container.encode(alphaBlends, forKey: .isTransparent)
+        try container.encode(usesAlphaBlending, forKey: .isTransparent)
         try container.encode(renderState, forKey: .renderState)
         if samplesShadows {
             try container.encode(samplesShadows, forKey: .samplesShadows)
@@ -118,7 +118,7 @@ extension ShaderMaterial: ArchivableMaterial {
                 context.warn("ShaderMaterial parameter \"\(name)\": no value; skipped")
             }
         }
-        self.init(vertexShader: vertex, fragmentShader: fragment, parameters: parameters, isTransparent: try container.decode(Bool.self, forKey: .isTransparent), renderState: try container.decode(MaterialRenderState.self, forKey: .renderState), samplesShadows: try container.decodeIfPresent(Bool.self, forKey: .samplesShadows) ?? false)
+        self.init(vertexShader: vertex, fragmentShader: fragment, parameters: parameters, usesAlphaBlending: try container.decode(Bool.self, forKey: .isTransparent), renderState: try container.decode(MaterialRenderState.self, forKey: .renderState), samplesShadows: try container.decodeIfPresent(Bool.self, forKey: .samplesShadows) ?? false)
     }
 
     private static func libraryName(for library: any MTLLibrary, context: SceneArchiveContext) -> String? {

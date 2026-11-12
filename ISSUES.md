@@ -8487,12 +8487,13 @@ Related: #372 (other overlapping Node properties).
 ## 374: ShaderMaterial.isTransparent does not read back what was set
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:renderer, effort:s
 created: 2026-11-11T16:35:41Z
-updated: 2026-11-12T01:30:16Z
+updated: 2026-11-12T01:38:21Z
+closed: 2026-11-12T01:38:21Z
 +++
 
 `ShaderMaterial.isTransparent` is a settable property, but its getter is `alphaBlends || renderState.blendsWithBackground`, and the setter writes only `alphaBlends`.
@@ -8508,6 +8509,8 @@ Actual: `true`. The value is derived from two sources and only one is settable t
 Blinn-Phong's `isTransparent` is read-only and derived (`opacity < 1 || usesDiffuseTextureAlpha || renderState.blendsWithBackground`), so the two material families behave differently.
 
 Code: `Sources/SceneSprocketsShaderMaterial/ShaderMaterial.swift`.
+
+- `2026-11-12T01:38:21Z`: isTransparent is now read-only (usesAlphaBlending || renderState.blendsWithBackground), like Blinn-Phong. The setting it wrote is the public stored usesAlphaBlending, which reads back; init parameter renamed to match. Archive key unchanged.
 
 ---
 
