@@ -8,7 +8,7 @@ import SwiftUI
 /// Handles that move, rotate and scale one node, like three.js `TransformControls`.
 ///
 /// The gizmo draws its handles at a constant size on screen with MetalSprocketsAddOns' `GraphicsContext3D`. Pass it to
-/// `SceneView(manipulator:)`. It also responds to pinch and twist gestures.
+/// `SceneView`'s `sceneManipulator(_:)`. It also responds to pinch and twist gestures.
 @MainActor
 public final class TransformGizmo: SceneViewManipulator {
     /// The kind of change that the handles make.

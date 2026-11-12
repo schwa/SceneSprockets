@@ -2,7 +2,9 @@ import GeometryLite3D
 import Metal
 import MetalSprockets
 import MetalSupport
+import os
 import simd
+import Synchronization
 
 /// The camera, lights and settings of one frame, that ``SceneGraphElement`` gives each material renderer.
 public struct SceneGraphRenderContext {
@@ -443,11 +445,31 @@ func partitionMeshEntries(_ entries: [SceneGraph.MeshEntry], renderers: [any Sce
     }
     var partitions = Array(repeating: [SceneGraph.MeshEntry](), count: renderers.count)
     for entry in entries {
-        if let index = indexByType[ObjectIdentifier(type(of: entry.material))] {
+        let materialType = type(of: entry.material)
+        if let index = indexByType[ObjectIdentifier(materialType)] {
             partitions[index].append(entry)
+        } else {
+            MissingRendererWarning.report(materialType)
         }
     }
     return partitions
+}
+
+// Logs once per material type that a mesh was skipped because no renderer draws its material (#369).
+enum MissingRendererWarning {
+    private static let logger = Logger(subsystem: "io.schwa.SceneSprockets", category: "Rendering")
+    private static let reported = Mutex<Set<ObjectIdentifier>>([])
+
+    static func report(_ materialType: any SceneMaterial.Type) {
+        let isNew = reported.withLock { $0.insert(ObjectIdentifier(materialType)).inserted }
+        if isNew {
+            logger.warning("No renderer for \(String(describing: materialType), privacy: .public): meshes with this material are not drawn. Add its renderer to the view's renderers.")
+        }
+    }
+
+    static func hasReported(_ materialType: any SceneMaterial.Type) -> Bool {
+        reported.withLock { $0.contains(ObjectIdentifier(materialType)) }
+    }
 }
 
 extension Element {

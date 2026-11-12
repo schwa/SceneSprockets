@@ -2,7 +2,7 @@
 //
 // A scene graph is a tree of nodes. A node with a shape and a material draws a mesh.
 // SceneView draws the graph. With no camera in the scene, it uses a default camera that frames the scene.
-// `.autoenablesDefaultLighting` adds a light at the camera when the scene has no lights, like SceneKit.
+// `.sceneDefaultLighting()` adds a light at the camera when the scene has no lights, like SceneKit.
 
 import SceneSprockets
 import SceneSprocketsBlinnPhong
@@ -12,7 +12,9 @@ struct Tutorial1Sphere: View {
     @State private var sceneGraph = Self.makeSceneGraph()
 
     var body: some View {
-        SceneView(sceneGraph: sceneGraph, options: [.allowsCameraControl, .autoenablesDefaultLighting], renderers: [BlinnPhongMaterialRenderer()])
+        SceneView(sceneGraph, renderers: [BlinnPhongMaterialRenderer()])
+            .sceneCameraControl()
+            .sceneDefaultLighting()
     }
 
     private static func makeSceneGraph() -> SceneGraph {

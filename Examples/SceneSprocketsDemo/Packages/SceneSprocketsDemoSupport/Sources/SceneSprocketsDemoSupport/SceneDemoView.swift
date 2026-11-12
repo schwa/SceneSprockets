@@ -29,24 +29,21 @@ public struct SceneDemoView: View {
     }
 
     public var body: some View {
-        SceneView(
-            sceneGraph: scene.sceneGraph,
-            options: scene.usesSceneCamera ? [] : [.allowsCameraControl],
-            renderers: scene.renderers,
-            delegate: delegate,
-            isPlaying: !isPaused,
-            shadows: scene.shadows,
-            cameraMatrix: scene.usesSceneCamera ? .constant(nil) : $cameraMatrix,
-            hitTestCategoryBitMask: scene.pickCategoryBitMask,
-            manipulator: gizmo,
-            debugMode: scene.debugMode,
-            onTap: { hit in
+        SceneView(scene.sceneGraph, renderers: scene.renderers)
+            .sceneCameraControl(!scene.usesSceneCamera)
+            .sceneDelegate(delegate)
+            .scenePlaying(!isPaused)
+            .sceneShadows(scene.shadows)
+            .sceneCamera(matrix: scene.usesSceneCamera ? .constant(nil) : $cameraMatrix)
+            .sceneHitTestCategoryBitMask(scene.pickCategoryBitMask)
+            .sceneManipulator(gizmo)
+            .sceneDebugMode(scene.debugMode)
+            .onSceneTap { hit in
                 scene.pick(hit)
-            },
-            overlay: scene.showsSelectionOutline ? { [scene, selectionOutline] viewport in
+            }
+            .sceneOverlay(scene.showsSelectionOutline ? { [scene, selectionOutline] viewport in
                 try selectionOutline.element(nodes: scene.selectedNode.map { [$0] } ?? [], sceneGraph: scene.sceneGraph, viewport: viewport)
-            } : nil
-        )
+            } : nil)
         .onFrameTimingChange { frameTimingStatistics = $0 }
         .onChange(of: scene.selectedNodeID, initial: true) {
             gizmo.target = scene.selectedNode

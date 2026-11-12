@@ -631,8 +631,8 @@ public final class KeynoteDemo: DemoScene {
             let sun = Node(content: .light(Light(type: .directional, intensity: 1.5)))
             sun.transform.translation = [3, 6, 4]
             sun.look(at: .zero)
-            SceneView(sceneGraph: scene, renderers: renderers,
-                      shadows: SceneGraphShadows(intensity: 0.75, softness: 2))
+            SceneView(scene, renderers: renderers)
+                .sceneShadows(SceneGraphShadows(intensity: 0.75, softness: 2))
             """, to: slide)
         case "Custom Shaders":
             customShadersSlide(slide)
@@ -667,7 +667,7 @@ public final class KeynoteDemo: DemoScene {
 
             let galaxy = PointCloud(points: stars, pointSize: 2)
             scene.root.addChild(try galaxy.makeNode(device: device))
-            SceneView(sceneGraph: scene, renderers: renderers + [PointCloudRenderer()])
+            SceneView(scene, renderers: renderers + [PointCloudRenderer()])
             """, to: slide)
         case "Mesh Emitters":
             meshEmittersSlide(slide)
@@ -713,17 +713,17 @@ public final class KeynoteDemo: DemoScene {
         case "Gizmos":
             gizmosSlide(slide)
             addCode("""
-            SceneView(sceneGraph: scene, renderers: renderers,
-                      manipulator: TransformGizmo(target: box, mode: .rotate),
-                      overlay: { viewport in
-                          try outline.element(nodes: [box], sceneGraph: scene, viewport: viewport)
-                      })
+            SceneView(scene, renderers: renderers)
+                .sceneManipulator(TransformGizmo(target: box, mode: .rotate))
+                .sceneOverlay { viewport in
+                    try outline.element(nodes: [box], sceneGraph: scene, viewport: viewport)
+                }
             """, to: slide)
         case "Debug Views":
             debugViewsSlide(slide)
             addCode("""
-            SceneView(sceneGraph: scene, renderers: renderers,
-                      debugMode: .normals)  // .uvChecker, .wireframe, ...
+            SceneView(scene, renderers: renderers)
+                .sceneDebugMode(.normals)  // .uvChecker, .wireframe, ...
             """, to: slide)
         case "Post-Processing":
             postProcessingSlide(slide)
@@ -767,9 +767,10 @@ public final class KeynoteDemo: DemoScene {
             hitTestingSlide(slide)
             addCode("""
             // Click a shape.
-            SceneView(sceneGraph: sceneGraph, renderers: [BlinnPhongMaterialRenderer()]) { hit in
-                hit?.node.run(.move(by: [0, 1, 0], duration: 0.25))
-            }
+            SceneView(sceneGraph, renderers: [BlinnPhongMaterialRenderer()])
+                .onSceneTap { hit in
+                    hit?.node.run(.move(by: [0, 1, 0], duration: 0.25))
+                }
             let hits = sceneGraph.hitTest(ray) // nearest first
             """, to: slide)
         case "Physics":
@@ -786,9 +787,9 @@ public final class KeynoteDemo: DemoScene {
             struct ContentView: View {
                 let sceneGraph = SceneGraph(root: root)
                 var body: some View {
-                    SceneView(sceneGraph: sceneGraph, options: [.allowsCameraControl],
-                              renderers: [BlinnPhongMaterialRenderer()],
-                              shadows: SceneGraphShadows())
+                    SceneView(sceneGraph, renderers: [BlinnPhongMaterialRenderer()])
+                        .sceneCameraControl()
+                        .sceneShadows(SceneGraphShadows())
                 }
             }
             """, to: slide)

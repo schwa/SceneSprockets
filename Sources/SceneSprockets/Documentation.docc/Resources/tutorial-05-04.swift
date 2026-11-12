@@ -9,7 +9,9 @@ struct Tutorial5Constraints: View {
     @State private var shadows = SceneGraphShadows(intensity: 0.7, softness: 2)
 
     var body: some View {
-        SceneView(sceneGraph: sceneGraph, options: [.allowsCameraControl], renderers: [BlinnPhongMaterialRenderer()], shadows: shadows)
+        SceneView(sceneGraph, renderers: [BlinnPhongMaterialRenderer()])
+            .sceneCameraControl()
+            .sceneShadows(shadows)
     }
 
     private static func makeSceneGraph() -> SceneGraph {

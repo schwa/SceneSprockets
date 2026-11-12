@@ -32,20 +32,15 @@ public struct TreeAppreciatorView: View {
     @ViewBuilder
     private func treeView(side: Side) -> some View {
         if let world = side == .left ? model.left : model.right {
-            SceneView(
-                sceneGraph: world.sceneGraph,
-                options: [.allowsCameraControl],
-                renderers: [BlinnPhongMaterialRenderer(ambientLightColor: model.season.ambient)],
-                delegate: model.swayDriver,
-                shadows: side == .left ? leftShadows : rightShadows,
-                cameraMatrix: $model.cameraMatrix,
-                cameraTarget: model.cameraTarget,
-                defaultCamera: Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(60), depthMode: .standard(zClip: 0.1 ... 1_000))),
-                onTapAt: { point, viewport, _ in
+            SceneView(world.sceneGraph, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: model.season.ambient)])
+                .sceneCameraControl()
+                .sceneDelegate(model.swayDriver)
+                .sceneShadows(side == .left ? leftShadows : rightShadows)
+                .sceneCamera(matrix: $model.cameraMatrix, target: model.cameraTarget)
+                .sceneDefaultCamera(.perspective(zClip: 0.1 ... 1_000))
+                .onSceneTap(id: model.levelID) { point, viewport, _ in
                     model.tap(side: side, point: point, viewport: viewport)
-                },
-                closuresID: model.levelID
-            )
+                }
             .id(model.levelID)
             .overlay(alignment: .top) {
                 Text(side == .left ? model.leftName : model.rightName)

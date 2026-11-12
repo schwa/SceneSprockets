@@ -4,8 +4,8 @@ import SwiftUI
 
 /// How ``SceneView``'s built-in camera control behaves, like SceneKit's `SCNCameraController`.
 ///
-/// Set it with the `sceneCameraControl(_:)` view modifier. It only has an effect when the view has
-/// ``SceneView/Options/allowsCameraControl``. Set the orbit target with `SceneView`'s `cameraTarget`.
+/// Set it with the `sceneCameraControl(_:)` view modifier. It only has an effect when camera control is on
+/// (``SceneView/sceneCameraControl(_:)``). Set the orbit target with ``SceneView/sceneCamera(matrix:target:override:)``.
 public struct SceneCameraControl: Sendable, Equatable {
     /// How a drag rotates the camera.
     public enum Mode: Sendable, Equatable {

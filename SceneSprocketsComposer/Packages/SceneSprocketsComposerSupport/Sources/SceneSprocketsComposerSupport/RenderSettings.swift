@@ -52,23 +52,6 @@ struct RenderSettings: Hashable {
 
     static let gridColor: SIMD4<Float> = [1, 1, 1, 0.25]
 
-    var options: SceneView.Options {
-        var result: SceneView.Options = []
-        if usesDefaultLighting {
-            result.insert(.autoenablesDefaultLighting)
-        }
-        if showsStatistics {
-            result.insert(.showsStatistics)
-        }
-        if showsFrameTiming {
-            result.insert(.showsFrameTiming)
-        }
-        if !isFramebufferOnly {
-            result.insert(.disablesFramebufferOnly)
-        }
-        return result
-    }
-
     var camera: Camera {
         Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(fieldOfView), depthMode: .standard(zClip: nearClip ... max(farClip, nearClip * 2))))
     }

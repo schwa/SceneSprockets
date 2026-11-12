@@ -65,7 +65,8 @@ struct ContentView: View {
     let sceneGraph = SceneGraph(root: root)
 
     var body: some View {
-        SceneView(sceneGraph: sceneGraph, options: [.allowsCameraControl], renderers: [BlinnPhongMaterialRenderer()])
+        SceneView(sceneGraph, renderers: [BlinnPhongMaterialRenderer()])
+            .sceneCameraControl()
     }
 }
 ```

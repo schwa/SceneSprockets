@@ -38,24 +38,26 @@ struct ScenePreviewView: View {
         let accent = Color.accentColor.resolve(in: environment)
         let outlineColor = SIMD4<Float>(accent.red, accent.green, accent.blue, accent.opacity)
         // SceneView's camera control leaves drags that start on the gizmo to the gizmo.
-        SceneView(
-            sceneGraph: model.sceneGraph,
-            options: settings.options.union(.allowsCameraControl),
-            renderers: model.renderers,
-            shadows: settings.showsShadows ? model.shadows : nil,
+        // Every value the closures below capture; the rest (model, outline, pointer) are the same objects (#235).
+        let closuresID = ScenePreviewClosuresID(settings: settings, selectedIDs: model.selectedIDs, displayScale: displayScale, outlineColor: outlineColor)
+        SceneView(model.sceneGraph, renderers: model.renderers)
+            .sceneCameraControl()
+            .sceneDefaultLighting(settings.usesDefaultLighting)
+            .sceneStatistics(settings.showsStatistics)
+            .sceneFrameTiming(settings.showsFrameTiming)
+            .sceneReadableDrawable(!settings.isFramebufferOnly)
+            .sceneShadows(settings.showsShadows ? model.shadows : nil)
             // A key-path binding, which SwiftUI can compare; a Binding(get:set:) is new on every pass (#223).
-            cameraMatrix: $model.viewCameraMatrix,
-            cameraTarget: model.camera.target,
-            camera: settings.camera,
-            manipulator: model.gizmo,
-            debugMode: settings.debugMode,
-            materialChannel: settings.materialChannel,
-            onTapAt: { point, viewport, _ in
+            .sceneCamera(matrix: $model.viewCameraMatrix, target: model.camera.target, override: settings.camera)
+            .sceneManipulator(model.gizmo)
+            .sceneDebugMode(settings.debugMode)
+            .sceneMaterialChannel(settings.materialChannel)
+            .onSceneTap(id: closuresID) { point, viewport, _ in
                 isFocused = true
                 // Shift-click adds to or removes from the selection (#201).
                 model.pick(model.node(at: point, in: viewport), extending: pointer.modifiers.contains(.shift))
-            },
-            decorations: { [selectedIDs = model.selectedIDs, sceneGraph = model.sceneGraph, displayScale, accentColor = Color(.sRGB, red: Double(outlineColor.x), green: Double(outlineColor.y), blue: Double(outlineColor.z))] context, drawableSize in
+            }
+            .sceneDecorations(id: closuresID) { [selectedIDs = model.selectedIDs, sceneGraph = model.sceneGraph, displayScale, accentColor = Color(.sRGB, red: Double(outlineColor.x), green: Double(outlineColor.y), blue: Double(outlineColor.z))] context, drawableSize in
                 let grid = try settings.decorations(context: context, drawableSize: drawableSize)
                 // Sized in view points, like hit testing. The scene's reversed depth does not change x and y.
                 let viewport = SceneViewport(cameraMatrix: context.cameraMatrix, projectionMatrix: context.projectionMatrix, viewSize: drawableSize / Float(displayScale), drawableSize: drawableSize)
@@ -76,18 +78,15 @@ struct ScenePreviewView: View {
                     }
                 }
                 .eraseToAnyElement()
-            },
-            overlay: { [selectedNodes = model.selectedNodes, outline = model.selectionOutline, sceneGraph = model.sceneGraph] viewport in
+            }
+            .sceneOverlay(id: closuresID) { [selectedNodes = model.selectedNodes, outline = model.selectionOutline, sceneGraph = model.sceneGraph] viewport in
                 guard settings.outlinesSelection, !selectedNodes.isEmpty else {
                     return nil
                 }
                 outline.color = outlineColor
                 outline.width = 6
                 return try outline.element(nodes: selectedNodes, sceneGraph: sceneGraph, viewport: viewport)
-            },
-            // Every value the closures above capture; the rest (model, outline, pointer) are the same objects (#235).
-            closuresID: ScenePreviewClosuresID(settings: settings, selectedIDs: model.selectedIDs, displayScale: displayScale, outlineColor: outlineColor)
-        )
+            }
         // Compare with SceneView's ==, so an unchanged SceneView does not re-run its body.
         .equatable()
         // Always set, so changing the cap or the display does not rebuild the Metal view.

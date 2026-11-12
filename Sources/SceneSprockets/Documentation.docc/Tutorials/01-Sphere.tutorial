@@ -26,7 +26,7 @@
             }
 
             @Step {
-                Show the graph in a `SceneView`. The scene has no camera, so `SceneView` uses a default camera that frames the scene. The scene has no lights, so `.autoenablesDefaultLighting` adds a light at the camera. `.allowsCameraControl` lets you drag to orbit the camera.
+                Show the graph in a `SceneView`. The scene has no camera, so `SceneView` uses a default camera that frames the scene. The scene has no lights, so `.sceneDefaultLighting()` adds a light at the camera. `.sceneCameraControl()` lets you drag to orbit the camera.
 
                 @Code(name: "Tutorial1Sphere.swift", file: "tutorial-01-03.swift")
             }

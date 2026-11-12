@@ -7,7 +7,7 @@ import simd
 import SwiftMesh
 
 /// Shows every mesh in a scene in one debug view instead of its material (#132). Give it to
-/// SceneGraphElement(debugMode:) or SceneView(debugMode:). Back faces are tinted red in every mode except wireframe.
+/// SceneGraphElement(debugMode:) or SceneView's sceneDebugMode(_:). Back faces are tinted red in every mode except wireframe.
 public enum SceneGraphDebugMode: Int32, CaseIterable, Sendable, Codable {
     /// Grey, lit from the camera: shape only.
     case shaded = 0

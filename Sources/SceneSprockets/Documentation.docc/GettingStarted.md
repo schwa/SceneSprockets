@@ -21,13 +21,17 @@ let sceneGraph = SceneGraph(root: root)
 
 ## Show it
 
-``SceneView`` works like SceneKit's SwiftUI `SceneView`. Give it one renderer for each material family that the scene uses:
+``SceneView`` works like SceneKit's SwiftUI `SceneView`. Give it one renderer for each material family that the scene uses, and configure it with its `scene…` methods:
 
 ```swift
-SceneView(sceneGraph: sceneGraph, options: [.allowsCameraControl], renderers: [BlinnPhongMaterialRenderer()]) { hit in
-    print(hit?.node.label ?? "nothing")
-}
+SceneView(sceneGraph, renderers: [BlinnPhongMaterialRenderer()])
+    .sceneCameraControl()
+    .onSceneTap { hit in
+        print(hit?.node.label ?? "nothing")
+    }
 ```
+
+A mesh whose material has no renderer is not drawn, and SceneSprockets logs a warning once for that material type.
 
 It runs node actions and constraints every frame. If the scene has no camera node, it frames the scene with a default camera.
 

@@ -8316,12 +8316,13 @@ Related: #355, #356, #360.
 ## 369: SceneView initializer has 21 parameters and configuration is split three ways
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: effort:l, area:ui
 created: 2026-11-11T15:54:42Z
-updated: 2026-11-11T15:55:12Z
+updated: 2026-11-12T03:09:10Z
+closed: 2026-11-12T03:09:10Z
 +++
 
 `SceneView.init` takes 21 parameters. Configuration is split between initializer arguments, the `Options` option set, and one environment modifier (`sceneCameraControl`), with no clear rule for which goes where.
@@ -8345,6 +8346,7 @@ Related: #362, #363, #365, #248.
 - `2026-11-11T16:13:47Z`: Question 1 (design): Proposed direction — approve or amend? Keep a short init: SceneView(_ sceneGraph:, pointOfView: = nil, renderers: = [default Blinn-Phong]) and move everything else to view modifiers, like Map/WebView: .sceneCameraControl(...) (exists), .sceneShadows(_:), .sceneAudio(_:), .sceneDelegate(_:), .scenePlaying(_:), .sceneCamera(matrix: Binding, target:, override:), .onSceneTap { hit in } / .onSceneTap { point, viewport, hit in }, .sceneManipulator(_:), .sceneDecorations {...}, .sceneOverlay {...}, .sceneDebugMode(_:), .sceneMaterialChannel(_:), .sceneStatistics(), .sceneFrameTiming(); Options is removed (or kept only as a deprecated shim). closuresID becomes internal (closures in modifiers compared via an explicit id parameter on the modifier). Also: should a mesh whose material type has no renderer log a one-time warning?
 - `2026-11-11T16:13:47Z`: Auto-fixer run: punted. Restructuring SceneView's public configuration (init vs. modifiers vs. Options) is an API design decision that also settles #362 and #363. Unblocker: answer 369-Q1.
 - `2026-11-12T02:15:08Z`: Answer 1: works for me
+- `2026-11-12T03:09:11Z`: Per 369-Q1: SceneView(_:pointOfView:renderers:) plus scene… configuration methods (returning a configured copy, so SceneView's Equatable skipping from #235 keeps working); Options and closuresID removed, each closure modifier takes its own id; a one-time log warning for meshes whose material has no renderer. Not done: renderers cannot default to Blinn-Phong, because SceneView's module does not depend on SceneSprocketsBlinnPhong.
 
 ---
 

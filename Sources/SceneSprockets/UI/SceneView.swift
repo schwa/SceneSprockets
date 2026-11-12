@@ -24,73 +24,74 @@ public extension SceneViewDelegate {
 }
 
 /// Shows a scene graph, like SceneKit's SwiftUI SceneView. Runs node actions every frame.
+///
+/// Configure it with the `scene…` methods, which return a configured copy:
+///
+/// ```swift
+/// SceneView(sceneGraph, renderers: [BlinnPhongMaterialRenderer()])
+///     .sceneCameraControl()
+///     .sceneShadows(shadows)
+///     .onSceneTap { hit in print(hit?.node.label ?? "nothing") }
+/// ```
 public struct SceneView: View {
-    /// Behaviors of a scene view.
-    public struct Options: OptionSet, Sendable {
-        /// The bits of the options.
-        public let rawValue: Int
+    // Debug settings turned on by environment variables, for a run without editing the call site (#365):
+    // SS_SHOWS_STATISTICS, SS_SHOWS_FRAME_TIMING, SS_DISABLES_FRAMEBUFFER_ONLY. They add to the settings in code.
+    struct DebugFlags: Equatable {
+        var showsStatistics = false
+        var showsFrameTiming = false
+        var keepsDrawableReadable = false
 
-        /// Creates options from bits.
-        public init(rawValue: Int) {
-            self.rawValue = rawValue
+        init(showsStatistics: Bool = false, showsFrameTiming: Bool = false, keepsDrawableReadable: Bool = false) {
+            self.showsStatistics = showsStatistics
+            self.showsFrameTiming = showsFrameTiming
+            self.keepsDrawableReadable = keepsDrawableReadable
         }
 
-        /// Orbit, pan and zoom with the mouse or trackpad. The point of view's node is not moved.
-        public static let allowsCameraControl = Self(rawValue: 1 << 0)
-        /// Adds a white directional light at the camera when the scene has no lights.
-        public static let autoenablesDefaultLighting = Self(rawValue: 1 << 1)
-        /// Overlays scene statistics (meshes, triangles, lights), like SCNView.showsStatistics. Also on when the
-        /// `SS_SHOWS_STATISTICS` environment variable is set.
-        public static let showsStatistics = Self(rawValue: 1 << 2)
-        /// Overlays MetalSprocketsUI's frame timing readout. Also on when `SS_SHOWS_FRAME_TIMING` is set.
-        public static let showsFrameTiming = Self(rawValue: 1 << 4)
-        /// Keeps the drawable readable (framebufferOnly false) even without post passes, for example to inspect it in a
-        /// GPU capture. Costs some bandwidth. Also on when `SS_DISABLES_FRAMEBUFFER_ONLY` is set.
-        public static let disablesFramebufferOnly = Self(rawValue: 1 << 3)
-
-        // Debug options turned on by environment variables, for a run without editing the call site (#365):
-        // SS_SHOWS_STATISTICS, SS_SHOWS_FRAME_TIMING, SS_DISABLES_FRAMEBUFFER_ONLY. They add to the options in code.
-        static func debugOptions(from environment: SystemEnvironment) -> Self {
-            let variables: [(String, Self)] = [
-                ("SS_SHOWS_STATISTICS", .showsStatistics),
-                ("SS_SHOWS_FRAME_TIMING", .showsFrameTiming),
-                ("SS_DISABLES_FRAMEBUFFER_ONLY", .disablesFramebufferOnly)
-            ]
-            var options: Self = []
-            for (name, option) in variables {
+        init(environment: SystemEnvironment) {
+            func isOn(_ name: String) -> Bool {
                 let value = environment[name]?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                if let value, ["1", "true", "yes", "y", "on"].contains(value) {
-                    options.insert(option)
-                }
+                return value.map { ["1", "true", "yes", "y", "on"].contains($0) } ?? false
             }
-            return options
+            self.init(showsStatistics: isOn("SS_SHOWS_STATISTICS"), showsFrameTiming: isOn("SS_SHOWS_FRAME_TIMING"), keepsDrawableReadable: isOn("SS_DISABLES_FRAMEBUFFER_ONLY"))
         }
     }
 
     private let sceneGraph: SceneGraph
     private let pointOfView: SceneGraph.Node?
-    private let options: Options
     private let renderers: [any SceneGraphMaterialRenderer]
+    private var allowsCameraControl = false
+    private var usesDefaultLighting = false
+    private var settingsShowStatistics = false
+    private var settingsShowFrameTiming = false
+    private var settingsKeepDrawableReadable = false
+    private let environmentFlags: DebugFlags
     private weak var delegate: (any SceneViewDelegate)?
-    private let isPlaying: Bool
-    private let shadows: SceneGraphShadows?
-    private let audio: SceneAudio?
-    private let externalCameraMatrix: Binding<simd_float4x4?>?
-    private let onTap: ((SceneGraph.Hit?) -> Void)?
-    private let onTapAt: ((SIMD2<Float>, SceneViewport, SceneGraph.Hit?) -> Void)?
-    private let hitTestCategoryBitMask: UInt
-    private let manipulator: (any SceneViewManipulator)?
-    private let decorations: ((SceneGraphRenderContext, SIMD2<Float>) throws -> AnyElement?)?
-    private let defaultCamera: Camera
-    private let cameraOverride: Camera?
-    private let cameraTarget: SIMD3<Float>?
-    private let overlay: ((SceneViewport) throws -> AnyElement?)?
-    private let debugMode: SceneGraphDebugMode?
-    private let materialChannel: SceneGraphMaterialChannel?
-    private let closuresID: AnyHashable?
+    private var isPlaying = true
+    private var shadows: SceneGraphShadows?
+    private var audio: SceneAudio?
+    private var externalCameraMatrix: Binding<simd_float4x4?>?
+    private var onTap: ((SceneGraph.Hit?) -> Void)?
+    private var onTapID: AnyHashable?
+    private var onTapAt: ((SIMD2<Float>, SceneViewport, SceneGraph.Hit?) -> Void)?
+    private var onTapAtID: AnyHashable?
+    private var hitTestCategoryBitMask: UInt = .max
+    private var manipulator: (any SceneViewManipulator)?
+    private var decorations: ((SceneGraphRenderContext, SIMD2<Float>) throws -> AnyElement?)?
+    private var decorationsID: AnyHashable?
+    private var defaultCamera: Camera = .default
+    private var cameraOverride: Camera?
+    private var cameraTarget: SIMD3<Float>?
+    private var overlay: ((SceneViewport) throws -> AnyElement?)?
+    private var overlayID: AnyHashable?
+    private var debugMode: SceneGraphDebugMode?
+    private var materialChannel: SceneGraphMaterialChannel?
     // Whether the scene had fog or post-processing when this view was made. The body reads them to configure the
     // drawable, so == must notice when they change (#235).
     private let hadScenePostPasses: Bool
+
+    private var showsStatistics: Bool { settingsShowStatistics || environmentFlags.showsStatistics }
+    private var showsFrameTiming: Bool { settingsShowFrameTiming || environmentFlags.showsFrameTiming }
+    private var keepsDrawableReadable: Bool { settingsKeepDrawableReadable || environmentFlags.keepsDrawableReadable }
 
     @Environment(\.displayScale) private var displayScale
     @Environment(\.sceneCameraControl) private var cameraControl
@@ -108,75 +109,27 @@ public struct SceneView: View {
     @State private var clock = SceneClock()
     @State private var frameTimingStatistics: FrameTimingStatistics?
 
-    /// `pointOfView` defaults to the first camera node; with no camera node a camera framing the scene is used.
-    /// `renderers` draw the material families, e.g. BlinnPhongMaterialRenderer (SceneSprocketsBlinnPhong) or
-    /// PBRMaterialRenderer (SceneSprocketsPBR). `isPlaying` false freezes scene time (delegate time and actions).
-    /// `cameraMatrix` exposes the camera-control transform (nil: start from the point of view; set nil to reset).
-    /// Without `.allowsCameraControl`, a non-nil `cameraMatrix` still sets the camera, for callers with their own
-    /// camera control.
-    /// `onTap` gets the nearest hit under a tap or click. `manipulator` draws over the scene and takes drags that start
-    /// on it (for example a transform gizmo). `decorations` draws extra content in the scene pass after the meshes, with
-    /// the scene's reversed depth (compare `.greater`), given the frame's context and drawable size in pixels; for
-    /// editor aids such as grids that objects should hide.
-    public init(
-        sceneGraph: SceneGraph,
-        pointOfView: SceneGraph.Node? = nil,
-        options: Options = [],
-        renderers: [any SceneGraphMaterialRenderer],
-        delegate: (any SceneViewDelegate)? = nil,
-        isPlaying: Bool = true,
-        shadows: SceneGraphShadows? = nil,
-        audio: SceneAudio? = nil,
-        cameraMatrix: Binding<simd_float4x4?>? = nil,
-        // The point camera control orbits; nil: the scene's center when the view appears.
-        cameraTarget: SIMD3<Float>? = nil,
-        hitTestCategoryBitMask: UInt = .max,
-        // Used when the scene has no camera node.
-        defaultCamera: Camera = .default,
-        // Replaces the camera node's camera (projection, masks), for editor cameras. The transform still comes from
-        // `cameraMatrix` or the node.
-        camera: Camera? = nil,
-        manipulator: (any SceneViewManipulator)? = nil,
-        // Draws every mesh in a debug view instead of its material (#132).
-        debugMode: SceneGraphDebugMode? = nil,
-        // Shows one material value instead of lighting (#195).
-        materialChannel: SceneGraphMaterialChannel? = nil,
-        onTap: ((SceneGraph.Hit?) -> Void)? = nil,
-        // Like `onTap`, with the tap point (view coordinates) and viewport, for callers that pick things the mesh hit
-        // test cannot see, such as editor icons.
-        onTapAt: ((SIMD2<Float>, SceneViewport, SceneGraph.Hit?) -> Void)? = nil,
-        // After `onTap`, so a trailing closure still means `onTap`.
-        decorations: ((SceneGraphRenderContext, SIMD2<Float>) throws -> AnyElement?)? = nil,
-        // Passes after the scene and before the manipulator, such as selection outlines. They see the finished color
-        // and can load the scene depth (reversed: nearer is greater). Start passes that read the drawable with a barrier.
-        overlay: ((SceneViewport) throws -> AnyElement?)? = nil,
-        // Identifies what `onTap`, `onTapAt`, `decorations` and `overlay` capture. Closures cannot be compared, so
-        // with an id SceneView treats them as unchanged while the id is, and can skip updates when nothing else changed
-        // either (#235). Nil: the closures always count as changed.
-        closuresID: AnyHashable? = nil
-    ) {
-        self.closuresID = closuresID
-        self.hadScenePostPasses = sceneGraph.fog != nil || sceneGraph.postProcessing != nil
-        self.overlay = overlay
-        self.debugMode = debugMode
-        self.materialChannel = materialChannel
-        self.decorations = decorations
-        self.defaultCamera = defaultCamera
-        self.cameraOverride = camera
-        self.cameraTarget = cameraTarget
+    /// Creates a view that shows a scene graph.
+    ///
+    /// - Parameters:
+    ///   - sceneGraph: The scene to show.
+    ///   - pointOfView: The camera node to look through. Nil: the first camera node, or a camera that frames the scene
+    ///     when there is none.
+    ///   - renderers: One renderer for each material family the scene uses, for example `BlinnPhongMaterialRenderer`
+    ///     (SceneSprocketsBlinnPhong) or `PBRMaterialRenderer` (SceneSprocketsPBR). A mesh whose material has no
+    ///     renderer is not drawn, and a warning is logged once.
+    public init(_ sceneGraph: SceneGraph, pointOfView: SceneGraph.Node? = nil, renderers: [any SceneGraphMaterialRenderer]) {
         self.sceneGraph = sceneGraph
         self.pointOfView = pointOfView
-        self.options = options.union(.debugOptions(from: .current))
         self.renderers = renderers
-        self.delegate = delegate
-        self.isPlaying = isPlaying
-        self.shadows = shadows
-        self.audio = audio
-        self.externalCameraMatrix = cameraMatrix
-        self.onTap = onTap
-        self.onTapAt = onTapAt
-        self.hitTestCategoryBitMask = hitTestCategoryBitMask
-        self.manipulator = manipulator
+        self.hadScenePostPasses = sceneGraph.fog != nil || sceneGraph.postProcessing != nil
+        self.environmentFlags = DebugFlags(environment: .current)
+    }
+
+    private func with(_ change: (inout Self) -> Void) -> Self {
+        var copy = self
+        change(&copy)
+        return copy
     }
 
     private var cameraMatrix: simd_float4x4? {
@@ -202,7 +155,7 @@ public struct SceneView: View {
                 renderers: renderers,
                 defaultCamera: defaultCamera,
                 cameraOverride: cameraOverride,
-                defaultLight: options.contains(.autoenablesDefaultLighting) ? Light(type: .directional, color: [1, 1, 1], intensity: 1) : nil,
+                defaultLight: usesDefaultLighting ? Light(type: .directional, color: [1, 1, 1], intensity: 1) : nil,
                 shadows: shadows,
                 storesDepth: overlay != nil,
                 decorations: decorations.map { decorations in
@@ -220,10 +173,10 @@ public struct SceneView: View {
         }
         .metalDepthStencilPixelFormat(.depth32Float)
         // Shadows and fog change the drawable from compute passes that also read depth.
-        .metalFramebufferOnly(!needsPostPasses && !options.contains(.disablesFramebufferOnly))
+        .metalFramebufferOnly(!needsPostPasses && !keepsDrawableReadable)
         .metalDepthStencilAttachmentTextureUsage(needsPostPasses ? [.renderTarget, .shaderRead] : [.renderTarget])
         .metalDepthStencilStorageMode(needsPostPasses || overlay != nil ? .private : .memoryless)
-        .modifier(CameraControl(isEnabled: options.contains(.allowsCameraControl), cameraMatrix: $controlledCameraMatrix, target: cameraTarget ?? orbitTarget ?? viewpoint.target, configuration: cameraControl))
+        .modifier(CameraControl(isEnabled: allowsCameraControl, cameraMatrix: $controlledCameraMatrix, target: cameraTarget ?? orbitTarget ?? viewpoint.target, configuration: cameraControl))
         // Camera control edits a stable @State; these keep it and the source in step (#231).
         .onChange(of: cameraMatrix ?? viewpoint.matrix, initial: true) { _, newValue in
             if controlledCameraMatrix != newValue {
@@ -272,18 +225,18 @@ public struct SceneView: View {
         }
         .onFrameTimingChange { statistics in
             // Only stored while shown; otherwise every frame would update the view.
-            if options.contains(.showsFrameTiming) {
+            if showsFrameTiming {
                 frameTimingStatistics = statistics
             }
         }
         .overlay(alignment: .topTrailing) {
-            if options.contains(.showsFrameTiming), let frameTimingStatistics {
+            if showsFrameTiming, let frameTimingStatistics {
                 FrameTimingView(statistics: frameTimingStatistics, options: .all)
                     .padding()
             }
         }
         .overlay(alignment: .bottomLeading) {
-            if options.contains(.showsStatistics) {
+            if showsStatistics {
                 TimelineView(.periodic(from: .now, by: 0.5)) { _ in
                     let statistics = sceneGraph.statistics
                     Text("\(statistics.meshCount) meshes \u{00B7} \(statistics.triangleCount) triangles \u{00B7} \(statistics.lightCount) lights")
@@ -434,7 +387,7 @@ public struct SceneView: View {
     // Drawn from `cameraMatrix` rather than a camera node: with camera control, or when the caller sets the matrix
     // (for its own camera control).
     private var usesFreeCamera: Bool {
-        options.contains(.allowsCameraControl) || externalCameraMatrix?.wrappedValue != nil
+        allowsCameraControl || externalCameraMatrix?.wrappedValue != nil
     }
 
     // The world transform the frame is drawn from.
@@ -469,16 +422,156 @@ final class SceneClock {
     }
 }
 
+// Configuration, like SwiftUI's Text modifiers: each returns a configured copy (#369).
+public extension SceneView {
+    /// Turns on orbit, pan and zoom with the mouse, trackpad or touch. The point of view's node is not moved. Tune
+    /// it with the `sceneCameraControl(_:)` view modifier that takes a ``SceneCameraControl``.
+    func sceneCameraControl(_ enabled: Bool = true) -> Self {
+        with { $0.allowsCameraControl = enabled }
+    }
+
+    /// Adds a white directional light at the camera when the scene has no lights.
+    func sceneDefaultLighting(_ enabled: Bool = true) -> Self {
+        with { $0.usesDefaultLighting = enabled }
+    }
+
+    /// Draws shadows. Keep the same instance across updates: it holds the shadow map.
+    func sceneShadows(_ shadows: SceneGraphShadows?) -> Self {
+        with { $0.shadows = shadows }
+    }
+
+    /// Plays the audio players of the scene's nodes, with the camera as the listener.
+    func sceneAudio(_ audio: SceneAudio?) -> Self {
+        with { $0.audio = audio }
+    }
+
+    /// Calls the delegate every frame, like SCNSceneRendererDelegate. The view does not keep it alive.
+    func sceneDelegate(_ delegate: (any SceneViewDelegate)?) -> Self {
+        with { $0.delegate = delegate }
+    }
+
+    /// False freezes scene time: actions, particles and delegate time stop.
+    func scenePlaying(_ isPlaying: Bool) -> Self {
+        with { $0.isPlaying = isPlaying }
+    }
+
+    /// Camera settings.
+    ///
+    /// - Parameters:
+    ///   - matrix: Exposes the camera transform that camera control edits (nil: start from the point of view; set nil
+    ///     to reset). Without camera control, a non-nil value still sets the camera, for your own camera control.
+    ///   - target: The point camera control orbits. Nil: the scene's center when the view appears.
+    ///   - override: Replaces the camera node's camera (projection, masks), for editor cameras. The transform still
+    ///     comes from `matrix` or the node.
+    func sceneCamera(matrix: Binding<simd_float4x4?>? = nil, target: SIMD3<Float>? = nil, override: Camera? = nil) -> Self {
+        with {
+            $0.externalCameraMatrix = matrix
+            $0.cameraTarget = target
+            $0.cameraOverride = override
+        }
+    }
+
+    /// The camera to use when the scene has no camera node. The default is ``Camera/default``.
+    func sceneDefaultCamera(_ camera: Camera) -> Self {
+        with { $0.defaultCamera = camera }
+    }
+
+    /// Limits taps to nodes whose `categoryBitMask` shares a bit with this, in addition to the camera's mask.
+    func sceneHitTestCategoryBitMask(_ mask: UInt) -> Self {
+        with { $0.hitTestCategoryBitMask = mask }
+    }
+
+    /// Calls `action` with the nearest hit under a tap or click, or nil.
+    ///
+    /// - Parameters:
+    ///   - id: Identifies what the closure captures. While it stays the same, the view treats the closure as
+    ///     unchanged and can skip updates (#235). Nil: the closure always counts as changed.
+    ///   - action: The closure to call.
+    func onSceneTap(id: AnyHashable? = nil, perform action: @escaping (SceneGraph.Hit?) -> Void) -> Self {
+        with {
+            $0.onTap = action
+            $0.onTapID = id
+        }
+    }
+
+    /// Like ``onSceneTap(id:perform:)-(_,(SceneGraph.Hit?)->Void)``, with the tap point in view coordinates and the
+    /// viewport, for picking things the mesh hit test cannot see, such as editor icons.
+    func onSceneTap(id: AnyHashable? = nil, perform action: @escaping (SIMD2<Float>, SceneViewport, SceneGraph.Hit?) -> Void) -> Self {
+        with {
+            $0.onTapAt = action
+            $0.onTapAtID = id
+        }
+    }
+
+    /// Draws over the scene and takes drags that start on it, for example a transform gizmo.
+    func sceneManipulator(_ manipulator: (any SceneViewManipulator)?) -> Self {
+        with { $0.manipulator = manipulator }
+    }
+
+    /// Draws extra content in the scene pass after the meshes, with the scene's reversed depth (compare `.greater`),
+    /// given the frame's context and drawable size in pixels. For editor aids such as grids that objects should hide.
+    func sceneDecorations(id: AnyHashable? = nil, _ decorations: ((SceneGraphRenderContext, SIMD2<Float>) throws -> AnyElement?)?) -> Self {
+        with {
+            $0.decorations = decorations
+            $0.decorationsID = id
+        }
+    }
+
+    /// Passes after the scene and before the manipulator, such as selection outlines. They see the finished color and
+    /// can load the scene depth (reversed: nearer is greater). Start passes that read the drawable with a barrier.
+    /// Nil removes the overlay; an overlay makes the view keep its depth texture.
+    func sceneOverlay(id: AnyHashable? = nil, _ overlay: ((SceneViewport) throws -> AnyElement?)?) -> Self {
+        with {
+            $0.overlay = overlay
+            $0.overlayID = id
+        }
+    }
+
+    /// Draws every mesh in a debug view instead of its material (#132).
+    func sceneDebugMode(_ mode: SceneGraphDebugMode?) -> Self {
+        with { $0.debugMode = mode }
+    }
+
+    /// Shows one material value instead of lighting (#195).
+    func sceneMaterialChannel(_ channel: SceneGraphMaterialChannel?) -> Self {
+        with { $0.materialChannel = channel }
+    }
+
+    /// Overlays scene statistics (meshes, triangles, lights), like SCNView.showsStatistics. Also on when the
+    /// `SS_SHOWS_STATISTICS` environment variable is set.
+    func sceneStatistics(_ shown: Bool = true) -> Self {
+        with { $0.settingsShowStatistics = shown }
+    }
+
+    /// Overlays MetalSprocketsUI's frame timing readout. Also on when `SS_SHOWS_FRAME_TIMING` is set.
+    func sceneFrameTiming(_ shown: Bool = true) -> Self {
+        with { $0.settingsShowFrameTiming = shown }
+    }
+
+    /// Keeps the drawable readable (framebufferOnly false) even without post passes, for example to inspect it in a
+    /// GPU capture. Costs some bandwidth. Also on when `SS_DISABLES_FRAMEBUFFER_ONLY` is set.
+    func sceneReadableDrawable(_ enabled: Bool = true) -> Self {
+        with { $0.settingsKeepDrawableReadable = enabled }
+    }
+}
+
 // Lets SwiftUI skip SceneView's body when its inputs have not changed (#235). Objects compare by identity; closures by
-// `closuresID`; renderers that are not Equatable, and closures without an id, always count as changed.
+// the id given with them; renderers that are not Equatable, and closures without an id, always count as changed.
 extension SceneView: @MainActor Equatable {
     public static func == (lhs: SceneView, rhs: SceneView) -> Bool {
         // The camera binding compares by value: callers pass key-path bindings to the same model.
-        lhs.closuresID != nil && lhs.closuresID == rhs.closuresID
+        isSameClosure(lhs.onTap == nil, lhs.onTapID, rhs.onTap == nil, rhs.onTapID)
+            && isSameClosure(lhs.onTapAt == nil, lhs.onTapAtID, rhs.onTapAt == nil, rhs.onTapAtID)
+            && isSameClosure(lhs.decorations == nil, lhs.decorationsID, rhs.decorations == nil, rhs.decorationsID)
+            && isSameClosure(lhs.overlay == nil, lhs.overlayID, rhs.overlay == nil, rhs.overlayID)
             && lhs.sceneGraph === rhs.sceneGraph
             && lhs.hadScenePostPasses == rhs.hadScenePostPasses
             && lhs.pointOfView === rhs.pointOfView
-            && lhs.options == rhs.options
+            && lhs.allowsCameraControl == rhs.allowsCameraControl
+            && lhs.usesDefaultLighting == rhs.usesDefaultLighting
+            && lhs.showsStatistics == rhs.showsStatistics
+            && lhs.showsFrameTiming == rhs.showsFrameTiming
+            && lhs.keepsDrawableReadable == rhs.keepsDrawableReadable
             && lhs.renderers.count == rhs.renderers.count
             && zip(lhs.renderers, rhs.renderers).allSatisfy(Self.isSameRenderer)
             && lhs.delegate === rhs.delegate
@@ -494,10 +587,14 @@ extension SceneView: @MainActor Equatable {
             && lhs.cameraTarget == rhs.cameraTarget
             && lhs.debugMode == rhs.debugMode
             && lhs.materialChannel == rhs.materialChannel
-            && (lhs.onTap == nil) == (rhs.onTap == nil)
-            && (lhs.onTapAt == nil) == (rhs.onTapAt == nil)
-            && (lhs.decorations == nil) == (rhs.decorations == nil)
-            && (lhs.overlay == nil) == (rhs.overlay == nil)
+    }
+
+    // Both absent, or both present with the same non-nil id. Closures cannot be compared themselves.
+    private static func isSameClosure(_ lhsIsNil: Bool, _ lhsID: AnyHashable?, _ rhsIsNil: Bool, _ rhsID: AnyHashable?) -> Bool {
+        if lhsIsNil || rhsIsNil {
+            return lhsIsNil == rhsIsNil
+        }
+        return lhsID != nil && lhsID == rhsID
     }
 
     private static func isSameRenderer(_ lhs: any SceneGraphMaterialRenderer, _ rhs: any SceneGraphMaterialRenderer) -> Bool {

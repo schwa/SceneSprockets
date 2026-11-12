@@ -6,7 +6,9 @@ struct Tutorial1Sphere: View {
     @State private var sceneGraph = Self.makeSceneGraph()
 
     var body: some View {
-        SceneView(sceneGraph: sceneGraph, options: [.allowsCameraControl, .autoenablesDefaultLighting], renderers: [BlinnPhongMaterialRenderer()])
+        SceneView(sceneGraph, renderers: [BlinnPhongMaterialRenderer()])
+            .sceneCameraControl()
+            .sceneDefaultLighting()
     }
 
     private static func makeSceneGraph() -> SceneGraph {

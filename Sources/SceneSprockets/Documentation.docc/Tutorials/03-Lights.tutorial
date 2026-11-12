@@ -14,7 +14,7 @@
 
         @Steps {
             @Step {
-                Add a floor and three shapes. Give `SceneView` a `SceneGraphShadows` value to turn on shadows. This scene does not use `.autoenablesDefaultLighting`, so it is dark until you add lights.
+                Add a floor and three shapes. Give `SceneView` a `SceneGraphShadows` value with `.sceneShadows(_:)` to turn on shadows. This scene does not use `.sceneDefaultLighting()`, so it is dark until you add lights.
 
                 @Code(name: "Tutorial3Lights.swift", file: "tutorial-03-01.swift")
             }
