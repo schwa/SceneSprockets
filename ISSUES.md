@@ -8313,6 +8313,7 @@ Related: #355, #356, #360.
 - `2026-11-12T02:14:58Z`: Answer 1: works for me
 - `2026-11-12T02:57:21Z`: Question 2 (design): normalMap: BlinnPhongSceneMaterial.normalMap is a raw MTLTexture? while other channels are Source (.color / .texture(texture, sampler, tint)). Make it a Source? (a .color normal is meaningless), or add a small TextureSource {texture, sampler} used by normalMap (and by Source.texture), or leave it as MTLTexture? and close #368?
 - `2026-11-12T02:57:21Z`: Done in this commit: SceneMaterial rename, BlinnPhongSceneMaterial(color:...), non-throwing PBRSceneMaterial/ShaderMaterial samples with RGB + opacity, tutorial helper removed. Names kept per 370-Q2 (c) because BlinnPhongMaterial/PBRMaterial exist elsewhere. Remaining: normalMap shape (368-Q2).
+- `2026-11-12T04:12:54Z`: Answer 2: yeah a source
 
 ---
 
@@ -8396,6 +8397,7 @@ Related: #295, #106, #362.
 - `2026-11-12T02:15:54Z`: Answer 2: c
 - `2026-11-12T03:34:06Z`: Question 3 (decision): Applying 370-Q2 (c) literally renames ~20 prefixed types to generic top-level names: SceneArchive->Archive, SceneArchiveContext->ArchiveContext, SceneArchiveError->ArchiveError, SceneAudio->Audio, SceneCameraControl->CameraControl, SceneGraphShadows->Shadows, SceneViewport->Viewport, SceneGraphRenderContext->RenderContext, SceneGraphMaterialRenderer->MaterialRenderer, SceneGraphBackgroundRenderer->BackgroundRenderer, SceneGraphPrePassRenderer->PrePassRenderer, SceneGraphDebugMode->DebugMode, SceneGraphMaterialChannel->MaterialChannel, SceneGraphMembershipComponent->MembershipComponent, SceneViewDelegate->ViewDelegate, SceneViewManipulator->ViewManipulator (~700 uses). These clash and keep their prefix: SceneView (SwiftUI.View), SceneGraphElement (MetalSprockets.Element), SceneGraphPhysicsWorld (SwiftJolt), SceneGraphShadowMap (AddOns), SceneMaterial (SwiftGLTF), SceneParticleSystem (MetalSprocketsParticles). The generic names land in every importing app. Do all of these renames, only some (which?), or instead unify on one prefix (e.g. Scene… for all, dropping the SceneGraph… variants)?
 - `2026-11-12T03:34:07Z`: Done: part 1 helpers to package + public ones documented (76e8fd28); part 2 Light.LightType -> Light.Kind (a8ef30ac); part 3 rotate(byEuler:)/rotate(toEuler:) (82609f65); GLTFSceneGraph/ModelIOSceneGraph were made internal by #371. Remaining: the type-prefix sweep, see 370-Q3. Not done either: the other naming items in the description (Shape axis names, tuple returns of meshNodes/lightNodes, isVisible/isShown/isActive, Float radians vs Angle) — they were not covered by 370-Q1/Q2.
+- `2026-11-12T04:13:11Z`: Answer 3: do all
 
 ---
 
