@@ -217,7 +217,7 @@ struct ShaderMaterialDrawsElement: Element {
         let lighting = lighting(lightCount: lightCount, receivesShadow: item.receivesShadow)
         let submesh = item.mesh.submeshes[item.submeshIndex]
         return try RenderPipeline(label: "ShaderMaterial", vertexShader: item.material.vertexShader, fragmentShader: item.material.fragmentShader) {
-            materialDraw(submesh, fillMode: item.material.renderState.fillMode)
+            materialDraw(submesh, cullMode: item.material.renderState.cullMode, isMirrored: item.modelMatrix.isMirroring, fillMode: item.material.renderState.fillMode)
             .vertexBuffers(item.mesh.vertexBuffers)
             .parameters { parameters in
                 parameters.set("transforms", value: transforms)

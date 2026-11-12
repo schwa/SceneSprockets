@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Breaking:** back-face culling lives in `MaterialRenderState.cullMode` (default `.none`) for Blinn-Phong and shader materials (#377). `BlinnPhongSceneMaterial.cullMode` and its initializer parameter are removed; shader materials now cull too. PBR keeps glTF's `doubleSided`. Old archives load their culling.
 - **Breaking:** `PBRSceneMaterial` is a final class (#375). It wraps a shared `PBRMaterial`, so copies already shared state; now the sharing is explicit, like `SCNMaterial`.
 - **Breaking:** `SceneGraph.hitTest(_:categoryBitMask:)` is removed; pass the mask in `HitTestOptions`: `hitTest(ray, options: .init(categoryBitMask: mask))`. `hitTest(_:options:)` now defaults its options (#376).
 - **Breaking:** `ShaderMaterial.isTransparent` is read-only, derived from the new `usesAlphaBlending` and the render state's blend mode, so it reads back what was set (#374). The initializer's `isTransparent:` parameter is now `usesAlphaBlending:`. Archives are unchanged.

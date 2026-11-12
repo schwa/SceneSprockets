@@ -180,8 +180,8 @@ final class SceneKitFeaturesDemo: DemoScene {
             shapesGroup.opacity = self[value: "Shapes Opacity"]
         }
         let cullMode = Self.cullModes[min(Int(self[value: "Cull Mode"]), Self.cullModes.count - 1)].1
-        if case let .mesh(mesh, materials, castsShadow, receivesShadow) = cullSphere.content, var material = materials.first as? BlinnPhongSceneMaterial, material.cullMode != cullMode {
-            material.cullMode = cullMode
+        if case let .mesh(mesh, materials, castsShadow, receivesShadow) = cullSphere.content, var material = materials.first as? BlinnPhongSceneMaterial, material.renderState.cullMode != cullMode {
+            material.renderState.cullMode = cullMode
             cullSphere.content = .mesh(mesh, materials: [material], castsShadow: castsShadow, receivesShadow: receivesShadow)
         }
         let blueLast = self[flag: "Blue Pane Drawn Last"]

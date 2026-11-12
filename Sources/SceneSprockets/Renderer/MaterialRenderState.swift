@@ -2,8 +2,9 @@ import Metal
 import MetalSprockets
 import SwiftMesh
 
-/// How a material's draws blend, use depth, write color and fill, like SCNMaterial's blendMode,
-/// readsFromDepthBuffer/writesToDepthBuffer, colorBufferWriteMask and fillMode. Used by Blinn-Phong and ShaderMaterial.
+/// How a material's draws blend, use depth, write color, fill and cull, like SCNMaterial's blendMode,
+/// readsFromDepthBuffer/writesToDepthBuffer, colorBufferWriteMask, fillMode and cullMode. Used by Blinn-Phong and
+/// ShaderMaterial. PBR materials use glTF's `doubleSided` instead of `cullMode`.
 public struct MaterialRenderState: Sendable, Hashable {
     /// Straight (not premultiplied) alpha.
     public enum BlendMode: String, Sendable, Hashable, CaseIterable, Codable {
@@ -31,14 +32,18 @@ public struct MaterialRenderState: Sendable, Hashable {
     public var colorWriteMask: MTLColorWriteMask
     /// `.lines` draws triangle edges.
     public var fillMode: MTLTriangleFillMode
+    /// The faces not to draw. `.none` draws both sides.
+    public var cullMode: MTLCullMode
 
-    /// Creates render state. The defaults draw normally, with alpha blending for transparent materials.
-    public init(blendMode: BlendMode = .alpha, writesToDepthBuffer: Bool = true, readsFromDepthBuffer: Bool = true, colorWriteMask: MTLColorWriteMask = .all, fillMode: MTLTriangleFillMode = .fill) {
+    /// Creates render state. The defaults draw normally, with alpha blending for transparent materials, and draw both
+    /// sides of each triangle.
+    public init(blendMode: BlendMode = .alpha, writesToDepthBuffer: Bool = true, readsFromDepthBuffer: Bool = true, colorWriteMask: MTLColorWriteMask = .all, fillMode: MTLTriangleFillMode = .fill, cullMode: MTLCullMode = .none) {
         self.blendMode = blendMode
         self.writesToDepthBuffer = writesToDepthBuffer
         self.readsFromDepthBuffer = readsFromDepthBuffer
         self.colorWriteMask = colorWriteMask
         self.fillMode = fillMode
+        self.cullMode = cullMode
     }
 
     /// Add, subtract, multiply and screen blend with what is behind, so they draw with transparent meshes.
@@ -51,7 +56,7 @@ public struct MaterialRenderState: Sendable, Hashable {
 
     /// MTLColorWriteMask is not Hashable.
     public static func == (lhs: Self, rhs: Self) -> Bool {
-        (lhs.blendMode, lhs.writesToDepthBuffer, lhs.readsFromDepthBuffer, lhs.colorWriteMask.rawValue, lhs.fillMode) == (rhs.blendMode, rhs.writesToDepthBuffer, rhs.readsFromDepthBuffer, rhs.colorWriteMask.rawValue, rhs.fillMode)
+        (lhs.blendMode, lhs.writesToDepthBuffer, lhs.readsFromDepthBuffer, lhs.colorWriteMask.rawValue, lhs.fillMode, lhs.cullMode) == (rhs.blendMode, rhs.writesToDepthBuffer, rhs.readsFromDepthBuffer, rhs.colorWriteMask.rawValue, rhs.fillMode, rhs.cullMode)
     }
 
     public func hash(into hasher: inout Hasher) {
@@ -60,6 +65,7 @@ public struct MaterialRenderState: Sendable, Hashable {
         hasher.combine(readsFromDepthBuffer)
         hasher.combine(colorWriteMask.rawValue)
         hasher.combine(fillMode)
+        hasher.combine(cullMode)
     }
 }
 

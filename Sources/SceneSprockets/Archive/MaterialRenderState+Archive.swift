@@ -3,7 +3,7 @@ import Metal
 // Metal enums and option sets are stored as their raw values.
 extension MaterialRenderState: Codable {
     enum ArchiveKeys: String, CodingKey {
-        case blendMode, writesToDepthBuffer, readsFromDepthBuffer, colorWriteMask, fillMode
+        case blendMode, writesToDepthBuffer, readsFromDepthBuffer, colorWriteMask, fillMode, cullMode
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -13,6 +13,7 @@ extension MaterialRenderState: Codable {
         try container.encode(readsFromDepthBuffer, forKey: .readsFromDepthBuffer)
         try container.encode(colorWriteMask.rawValue, forKey: .colorWriteMask)
         try container.encode(fillMode.rawValue, forKey: .fillMode)
+        try container.encode(cullMode.rawValue, forKey: .cullMode)
     }
 
     public init(from decoder: Decoder) throws {
@@ -22,7 +23,9 @@ extension MaterialRenderState: Codable {
             writesToDepthBuffer: try container.decode(Bool.self, forKey: .writesToDepthBuffer),
             readsFromDepthBuffer: try container.decode(Bool.self, forKey: .readsFromDepthBuffer),
             colorWriteMask: MTLColorWriteMask(rawValue: try container.decode(UInt.self, forKey: .colorWriteMask)),
-            fillMode: MTLTriangleFillMode(rawValue: try container.decode(UInt.self, forKey: .fillMode)) ?? .fill
+            fillMode: MTLTriangleFillMode(rawValue: try container.decode(UInt.self, forKey: .fillMode)) ?? .fill,
+            // Archives from before #377 have no cullMode here.
+            cullMode: try container.decodeIfPresent(UInt.self, forKey: .cullMode).flatMap(MTLCullMode.init(rawValue:)) ?? .none
         )
     }
 }

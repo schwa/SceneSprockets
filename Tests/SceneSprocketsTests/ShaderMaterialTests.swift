@@ -93,6 +93,18 @@ func opaqueDrawsBeforeTransparentInABatch() throws {
     _ = glass
 }
 
+// #377: shader materials cull with MaterialRenderState.cullMode, like Blinn-Phong. The box's front face points at the
+// camera (+Z normal, blue); culling it shows the inside of the back face (-Z normal, no blue).
+@Test(.enabled(if: deviceSupportsMetal4))
+@MainActor
+func shaderMaterialCullsFaces() throws {
+    var material = try ShaderMaterial.normals()
+    material.renderState.cullMode = .back
+    #expect(try render(material).x > 200)
+    material.renderState.cullMode = .front
+    #expect(try render(material).x < 10)
+}
+
 // #374: the alpha-blending setting reads back what was set; isTransparent is derived from it and the blend mode.
 @Test
 func alphaBlendingReadsBackAndTransparencyIsDerived() throws {

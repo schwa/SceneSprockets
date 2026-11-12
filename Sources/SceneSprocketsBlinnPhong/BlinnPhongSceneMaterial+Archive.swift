@@ -22,7 +22,6 @@ extension BlinnPhongSceneMaterial: ArchivableMaterial {
         if let normalMap {
             try container.encode(try encoder.sceneArchive.encode(texture: normalMap), forKey: .normalMap)
         }
-        try container.encode(cullMode.rawValue, forKey: .cullMode)
         try container.encode(renderState, forKey: .renderState)
     }
 
@@ -38,9 +37,12 @@ extension BlinnPhongSceneMaterial: ArchivableMaterial {
             usesDiffuseTextureAlpha: try container.decode(Bool.self, forKey: .usesDiffuseTextureAlpha),
             emission: try container.decode(Source.self, forKey: .emission),
             normalMap: normalMap,
-            cullMode: MTLCullMode(rawValue: try container.decode(UInt.self, forKey: .cullMode)) ?? .none,
             renderState: try container.decode(MaterialRenderState.self, forKey: .renderState)
         )
+        // Before #377 the cull mode was a top-level key, not part of renderState.
+        if let cullMode = try container.decodeIfPresent(UInt.self, forKey: .cullMode).flatMap(MTLCullMode.init(rawValue:)) {
+            renderState.cullMode = cullMode
+        }
     }
 }
 

@@ -286,10 +286,10 @@ func sceneKitFeaturesBlinnPhongExtras() throws {
     }
     #expect(emission != .zero)
     #expect(try material("Normal-Mapped Box").normalMap != nil)
-    #expect(try material("Culled Sphere").cullMode == .none)
+    #expect(try material("Culled Sphere").renderState.cullMode == .none)
     scene[value: "Cull Mode"] = 2
     scene.update(time: 0, deltaTime: 0)
-    #expect(try material("Culled Sphere").cullMode == .front)
+    #expect(try material("Culled Sphere").renderState.cullMode == .front)
 }
 
 // The bump map's normals tilt up (+Y, green above 0.5) on the upper half of each bump and down on the lower half.

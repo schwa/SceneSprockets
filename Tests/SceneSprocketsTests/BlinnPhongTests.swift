@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 import GeometryLite3D
 import Metal
 import MetalSprockets
@@ -170,11 +171,29 @@ func cullModeHidesBackFaces() throws {
     var material = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([1, 1, 1]))
     let turned = simd_quatf(angle: .pi, axis: [0, 1, 0])
     #expect(try litQuadPixel(material, quadRotation: turned).x > 200)
-    material.cullMode = .back
+    material.renderState.cullMode = .back
     #expect(try litQuadPixel(material).x > 200)
     #expect(try litQuadPixel(material, quadRotation: turned).x < 5)
-    material.cullMode = .front
+    material.renderState.cullMode = .front
     #expect(try litQuadPixel(material).x < 5)
+}
+
+// #377: archives from before cullMode moved into renderState still load their culling.
+@Test
+func blinnPhongReadsOldTopLevelCullMode() throws {
+    let material = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(1), specular: .color(0), shininess: 1)
+    var json = try #require(try JSONSerialization.jsonObject(with: JSONEncoder().encode(material)) as? [String: Any])
+    var renderState = try #require(json["renderState"] as? [String: Any])
+    renderState["cullMode"] = nil
+    json["renderState"] = renderState
+    json["cullMode"] = MTLCullMode.front.rawValue
+    let old = try JSONDecoder().decode(BlinnPhongSceneMaterial.self, from: JSONSerialization.data(withJSONObject: json))
+    #expect(old.renderState.cullMode == .front)
+    // New archives keep it in renderState.
+    var culled = material
+    culled.renderState.cullMode = .back
+    let roundTripped = try JSONDecoder().decode(BlinnPhongSceneMaterial.self, from: JSONEncoder().encode(culled))
+    #expect(roundTripped.renderState.cullMode == .back)
 }
 
 // #246: per-vertex colors multiply the material's ambient and diffuse colors.

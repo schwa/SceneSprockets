@@ -8593,12 +8593,13 @@ Related: #370 (public API naming), #369 (SceneView configuration).
 ## 377: Back-face culling is configured differently for each material family
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:renderer, effort:m
 created: 2026-11-11T16:35:43Z
-updated: 2026-11-12T01:30:16Z
+updated: 2026-11-12T02:29:01Z
+closed: 2026-11-12T02:29:01Z
 +++
 
 Whether a material draws back faces is set in a different place for each family:
@@ -8620,6 +8621,7 @@ Related: #368 (material API consistency).
 - `2026-11-12T01:42:41Z`: Question 1 (design): Where should culling live? Proposal: add 'cullMode: MTLCullMode = .back' (or a 'isDoubleSided: Bool') to MaterialRenderState, used by Blinn-Phong (replacing BlinnPhongSceneMaterial.cullMode) and ShaderMaterial (which gains culling). PBR keeps glTF's doubleSided on PBRMaterial, since PBRSceneMaterial uses MetalSprocketsPBR's own PBRRenderState, not MaterialRenderState; unifying that means either a MetalSprocketsPBR change or mapping PBRSceneMaterial onto MaterialRenderState (#375/#368). Two choices: (1) cullMode enum vs isDoubleSided bool, and default back vs none (Blinn-Phong defaults to none today); (2) leave PBR on doubleSided, or also move PBR?
 - `2026-11-12T01:42:41Z`: Auto-fixer run: punted. Unifying culling means choosing the shared setting's shape and default, and PBR's render state is a separate MetalSprocketsPBR type, so it touches #375/#368 too. Unblocker: answer 377-Q1.
 - `2026-11-12T02:16:44Z`: Answer 1: thats good
+- `2026-11-12T02:29:01Z`: Per 377-Q1: MaterialRenderState.cullMode (default .none) is the culling setting for Blinn-Phong and ShaderMaterial; BlinnPhongSceneMaterial.cullMode removed; ShaderMaterial now culls (mirror-aware); PBR keeps doubleSided. Old Blinn-Phong archives (top-level cullMode) still load.
 
 ---
 

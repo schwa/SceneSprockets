@@ -61,9 +61,7 @@ public struct BlinnPhongSceneMaterial: SceneSprockets.Material, SamplesShadowsIn
     ///
     /// Meshes do not need tangents.
     public var normalMap: MTLTexture?
-    /// The faces to cull. Counter-clockwise triangles are front faces. `.none` draws both sides.
-    public var cullMode: MTLCullMode
-    /// The depth, color mask, blend and fill settings for the draw.
+    /// The depth, color mask, blend, fill and cull settings for the draw. Counter-clockwise triangles are front faces.
     public var renderState: MaterialRenderState
 
     /// Creates a Blinn-Phong material.
@@ -77,9 +75,8 @@ public struct BlinnPhongSceneMaterial: SceneSprockets.Material, SamplesShadowsIn
     ///   - usesDiffuseTextureAlpha: Whether the diffuse texture's alpha multiplies the opacity.
     ///   - emission: The color that the material adds without lighting.
     ///   - normalMap: A tangent-space normal map.
-    ///   - cullMode: The faces to cull.
-    ///   - renderState: The depth, color mask, blend and fill settings for the draw.
-    public init(ambient: Source, diffuse: Source, specular: Source, shininess: Float, opacity: Float = 1, usesDiffuseTextureAlpha: Bool = false, emission: Source = .color(0), normalMap: MTLTexture? = nil, cullMode: MTLCullMode = .none, renderState: MaterialRenderState = .init()) {
+    ///   - renderState: The depth, color mask, blend, fill and cull settings for the draw.
+    public init(ambient: Source, diffuse: Source, specular: Source, shininess: Float, opacity: Float = 1, usesDiffuseTextureAlpha: Bool = false, emission: Source = .color(0), normalMap: MTLTexture? = nil, renderState: MaterialRenderState = .init()) {
         self.ambient = ambient
         self.diffuse = diffuse
         self.specular = specular
@@ -88,7 +85,6 @@ public struct BlinnPhongSceneMaterial: SceneSprockets.Material, SamplesShadowsIn
         self.usesDiffuseTextureAlpha = usesDiffuseTextureAlpha
         self.emission = emission
         self.normalMap = normalMap
-        self.cullMode = cullMode
         self.renderState = renderState
     }
 
@@ -295,8 +291,8 @@ private struct BlinnPhongBatchesElement: Element {
             let isTransparent = isTransparent
             func passes(_ batches: [InstanceBatch]) -> [(batch: InstanceBatch, cullMode: MTLCullMode)] {
                 batches.flatMap { batch -> [(batch: InstanceBatch, cullMode: MTLCullMode)] in
-                    guard isTransparent, batch.material.cullMode == .none, batch.material.renderState.fillMode == .fill else {
-                        return [(batch, batch.material.cullMode)]
+                    guard isTransparent, batch.material.renderState.cullMode == .none, batch.material.renderState.fillMode == .fill else {
+                        return [(batch, batch.material.renderState.cullMode)]
                     }
                     return [(batch, .front), (batch, .back)]
                 }
@@ -571,7 +567,6 @@ private struct MaterialKey: Hashable {
     var opacity: Float
     var usesDiffuseTextureAlpha: Bool
     var normalMap: ObjectIdentifier?
-    var cullMode: UInt
     var renderState: MaterialRenderState
 
     init(_ material: BlinnPhongSceneMaterial) {
@@ -583,7 +578,6 @@ private struct MaterialKey: Hashable {
         opacity = material.opacity
         usesDiffuseTextureAlpha = material.usesDiffuseTextureAlpha
         normalMap = material.normalMap.map { ObjectIdentifier($0) }
-        cullMode = material.cullMode.rawValue
         renderState = material.renderState
     }
 
