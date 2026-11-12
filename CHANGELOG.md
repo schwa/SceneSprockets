@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Breaking:** materials are simpler to make (#368). The `Material` protocol is now `SceneMaterial` (it clashed with SwiftGLTF's `Material`). `BlinnPhongSceneMaterial(color:shininess:opacity:emission:)` makes a material from one color. `PBRSceneMaterial(baseColor:opacity:metallic:roughness:)` takes an RGB color and a separate opacity and no longer throws; `ShaderMaterial.normals()`, `.rim(color:opacity:)` and `.lit(color:opacity:)` no longer throw either.
 - **Breaking:** back-face culling lives in `MaterialRenderState.cullMode` (default `.none`) for Blinn-Phong and shader materials (#377). `BlinnPhongSceneMaterial.cullMode` and its initializer parameter are removed; shader materials now cull too. PBR keeps glTF's `doubleSided`. Old archives load their culling.
 - **Breaking:** `PBRSceneMaterial` is a final class (#375). It wraps a shared `PBRMaterial`, so copies already shared state; now the sharing is explicit, like `SCNMaterial`.
 - **Breaking:** `SceneGraph.hitTest(_:categoryBitMask:)` is removed; pass the mask in `HitTestOptions`: `hitTest(ray, options: .init(categoryBitMask: mask))`. `hitTest(_:options:)` now defaults its options (#376).

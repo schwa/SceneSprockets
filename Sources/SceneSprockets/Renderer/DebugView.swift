@@ -62,12 +62,12 @@ public enum SceneGraphMaterialChannel: Int32, CaseIterable, Sendable, Codable {
 }
 
 // Stands in for each mesh's material while a debug view is on.
-struct SceneGraphDebugMaterial: Material, DrawsDeformedVertices {
+struct SceneGraphDebugMaterial: SceneMaterial, DrawsDeformedVertices {
     var mode: SceneGraphDebugMode
 }
 
 struct SceneGraphDebugRenderer: SceneGraphMaterialRenderer {
-    var materialType: any Material.Type {
+    var materialType: any SceneMaterial.Type {
         SceneGraphDebugMaterial.self
     }
 

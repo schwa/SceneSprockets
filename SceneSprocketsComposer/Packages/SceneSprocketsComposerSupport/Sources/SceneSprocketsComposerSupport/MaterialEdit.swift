@@ -29,7 +29,7 @@ enum MaterialEdit {
         case pbr(PBRSceneMaterial, uniforms: PBRMaterialUniforms, doubleSided: Bool)
         case other
 
-        init(_ material: any SceneSprockets.Material) {
+        init(_ material: any SceneMaterial) {
             switch material {
             case let material as BlinnPhongSceneMaterial:
                 self = .blinnPhong(material)
@@ -54,7 +54,7 @@ enum MaterialEdit {
 
     // The edited material, or nil when no edit applied. The original is never changed; textures and render state
     // are kept by PBR edits.
-    static func applying(_ edits: [Self], to material: any SceneSprockets.Material) throws -> (any SceneSprockets.Material)? {
+    static func applying(_ edits: [Self], to material: any SceneMaterial) throws -> (any SceneMaterial)? {
         var draft = Draft(material)
         var changed = false
         for edit in edits {
@@ -63,7 +63,7 @@ enum MaterialEdit {
                 guard case let .kind(kind) = edit else {
                     continue
                 }
-                draft = Draft(try EditorModel.converted(color: draft.baseColor, to: kind))
+                draft = Draft(EditorModel.converted(color: draft.baseColor, to: kind))
             case let (.preset(preset), _):
                 draft = Draft(try preset.material(color: draft.baseColor))
             case let (.baseColor(color), .blinnPhong(material)):
@@ -95,7 +95,7 @@ enum MaterialEdit {
         return changed ? try Self.material(of: draft) : nil
     }
 
-    private static func material(of draft: Draft) throws -> (any SceneSprockets.Material)? {
+    private static func material(of draft: Draft) throws -> (any SceneMaterial)? {
         switch draft {
         case let .blinnPhong(material):
             return material

@@ -158,7 +158,7 @@ func makeMeadow(season: Season, seed: UInt32) -> MeshBuilder {
 }
 
 // An inside-out sphere whose emission is a vertical gradient texture.
-func makeSky(season: Season, device: MTLDevice) -> (MetalMesh, [any SceneSprockets.Material])? {
+func makeSky(season: Season, device: MTLDevice) -> (MetalMesh, [any SceneMaterial])? {
     let height = 128
     var pixels = [UInt8](repeating: 255, count: height * 4)
     func encode(_ linear: Float) -> UInt8 {

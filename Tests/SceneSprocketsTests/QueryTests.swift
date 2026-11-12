@@ -27,8 +27,8 @@ func projectPointMapsCenterAndRoundTrips() {
 func statisticsCountVisibleContent() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let root = SceneGraph.Node()
-    root.addChild(SceneGraph.Node(content: .mesh(MetalMesh(mesh: .box(), device: device), material: try ShaderMaterial.normals())))
-    let hidden = root.addChild(SceneGraph.Node(content: .mesh(MetalMesh(mesh: .box(), device: device), material: try ShaderMaterial.normals())))
+    root.addChild(SceneGraph.Node(content: .mesh(MetalMesh(mesh: .box(), device: device), material: ShaderMaterial.normals())))
+    let hidden = root.addChild(SceneGraph.Node(content: .mesh(MetalMesh(mesh: .box(), device: device), material: ShaderMaterial.normals())))
     hidden.isVisible = false
     root.addChild(SceneGraph.Node(content: .light(Light(type: .point))))
     let statistics = SceneGraph(root: root).statistics
@@ -43,7 +43,7 @@ func statisticsCountVisibleContent() throws {
 func frustumQueriesFindVisibleNodes() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let mesh = MetalMesh(mesh: .box(), device: device)
-    let material = try ShaderMaterial.normals()
+    let material = ShaderMaterial.normals()
     let root = SceneGraph.Node()
     let inside = root.addChild(SceneGraph.Node(content: .mesh(mesh, material: material)))
     let behind = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 20]), content: .mesh(mesh, material: material)))

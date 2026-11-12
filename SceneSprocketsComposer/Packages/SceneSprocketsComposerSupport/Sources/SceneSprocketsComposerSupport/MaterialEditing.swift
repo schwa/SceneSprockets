@@ -14,7 +14,7 @@ enum MaterialKind: String, CaseIterable, Identifiable {
 
     var id: Self { self }
 
-    init?(_ material: any SceneSprockets.Material) {
+    init?(_ material: any SceneMaterial) {
         switch material {
         case is BlinnPhongSceneMaterial: self = .blinnPhong
         case is PBRSceneMaterial: self = .pbr
@@ -56,7 +56,7 @@ enum MaterialPreset: String, CaseIterable, Identifiable {
 
 extension EditorModel {
     // One per submesh; empty for nodes without a mesh. Observed, so views refresh after edits.
-    func materials(of node: SceneGraph.Node) -> [any SceneSprockets.Material] {
+    func materials(of node: SceneGraph.Node) -> [any SceneMaterial] {
         observe(.content)
         guard case let .mesh(_, materials, _, _) = node.content else {
             return []
@@ -64,7 +64,7 @@ extension EditorModel {
         return materials
     }
 
-    func setMaterial(_ material: any SceneSprockets.Material, at index: Int, of node: SceneGraph.Node, actionName: String = "Material") {
+    func setMaterial(_ material: any SceneMaterial, at index: Int, of node: SceneGraph.Node, actionName: String = "Material") {
         guard case let .mesh(mesh, materials, castsShadow, receivesShadow) = node.content, materials.indices.contains(index) else {
             return
         }
@@ -76,7 +76,7 @@ extension EditorModel {
     }
 
     // The material's main color, for conversions and presets.
-    static func baseColor(of material: any SceneSprockets.Material) -> SIMD3<Float> {
+    static func baseColor(of material: any SceneMaterial) -> SIMD3<Float> {
         switch material {
         case let material as BlinnPhongSceneMaterial:
             if case let .color(color) = material.diffuse {
@@ -92,16 +92,16 @@ extension EditorModel {
     }
 
     // The same color as the other kind. Textures are not carried over.
-    static func converted(_ material: any SceneSprockets.Material, to kind: MaterialKind) throws -> any SceneSprockets.Material {
-        try converted(color: baseColor(of: material), to: kind)
+    static func converted(_ material: any SceneMaterial, to kind: MaterialKind) -> any SceneMaterial {
+        converted(color: baseColor(of: material), to: kind)
     }
 
-    static func converted(color: SIMD3<Float>, to kind: MaterialKind) throws -> any SceneSprockets.Material {
+    static func converted(color: SIMD3<Float>, to kind: MaterialKind) -> any SceneMaterial {
         switch kind {
         case .blinnPhong:
             return BlinnPhongSceneMaterial(ambient: .color(color * 0.1), diffuse: .color(color), specular: .color(0.5), shininess: 32)
         case .pbr:
-            return try PBRSceneMaterial(baseColor: SIMD4(color, 1), metallic: 0, roughness: 0.5)
+            return PBRSceneMaterial(baseColor: color, metallic: 0, roughness: 0.5)
         }
     }
 

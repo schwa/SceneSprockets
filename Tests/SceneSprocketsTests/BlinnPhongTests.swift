@@ -214,3 +214,18 @@ func vertexColorsTintTheMaterial() throws {
     let white = try centerPixel(plain, BlinnPhongSceneMaterial(ambient: .color(1), diffuse: .color(0), specular: .color(0), shininess: 1))
     #expect(white.x > 250 && white.y > 250 && white.z > 250)
 }
+
+// #368: one color makes a Blinn-Phong material: ambient 30% of it, gray highlights.
+@Test
+func blinnPhongFromOneColor() {
+    let material = BlinnPhongSceneMaterial(color: [0.5, 1, 0], shininess: 8, opacity: 0.25, emission: [0, 0, 1])
+    func color(_ source: BlinnPhongSceneMaterial.Source) -> SIMD3<Float>? {
+        if case let .color(value) = source { value } else { nil }
+    }
+    #expect(color(material.diffuse) == [0.5, 1, 0])
+    #expect(color(material.ambient).map { simd_distance($0, [0.15, 0.3, 0]) < 1e-6 } == true)
+    #expect(color(material.specular) == [0.5, 0.5, 0.5])
+    #expect(color(material.emission) == [0, 0, 1])
+    #expect(material.shininess == 8)
+    #expect(material.opacity == 0.25)
+}

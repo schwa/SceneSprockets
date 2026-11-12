@@ -139,7 +139,7 @@ extension SceneGraph.PhysicsBody: Codable {
 
 extension SceneArchiveContext {
     // The package path of the mesh's codec file, written once for meshes that share buffers.
-    func meshFile(for mesh: MetalMesh, materials: [any Material], name: String?, codec: any ArchivableMeshCodec) throws -> String {
+    func meshFile(for mesh: MetalMesh, materials: [any SceneMaterial], name: String?, codec: any ArchivableMeshCodec) throws -> String {
         let key = meshKey(mesh)
         if let path = meshFiles[key] {
             return path

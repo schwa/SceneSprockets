@@ -41,15 +41,15 @@ Fog and shadows need a color texture with `.shaderWrite` usage and a depth textu
 
 ## Add a material family
 
-A material is a value that conforms to ``Material``. A renderer that conforms to ``SceneGraphMaterialRenderer`` draws the mesh entries that use it. You do not change the scene graph to add one.
+A material is a value that conforms to ``SceneMaterial``. A renderer that conforms to ``SceneGraphMaterialRenderer`` draws the mesh entries that use it. You do not change the scene graph to add one.
 
 ```swift
-struct UnlitMaterial: SceneSprockets.Material {
+struct UnlitMaterial: SceneMaterial {
     var color: SIMD3<Float>
 }
 
 struct UnlitRenderer: SceneGraphMaterialRenderer {
-    var materialType: any SceneSprockets.Material.Type { UnlitMaterial.self }
+    var materialType: any SceneMaterial.Type { UnlitMaterial.self }
 
     func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement {
         // Draw entries[i].mesh.submeshes[entries[i].submeshIndex] at entries[i].worldTransform.

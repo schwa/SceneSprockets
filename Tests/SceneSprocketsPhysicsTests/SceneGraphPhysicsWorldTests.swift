@@ -129,7 +129,7 @@ func boundingBoxAndMeshShapesComeFromTheMesh() throws {
     #expect(abs(box.worldPosition.y + 0.5) < 0.05)
 }
 
-private struct Unlit: SceneSprockets.Material {}
+private struct Unlit: SceneMaterial {}
 
 // #125: the slider constraint stops a node at physics bodies and lets it slide along them.
 @Test

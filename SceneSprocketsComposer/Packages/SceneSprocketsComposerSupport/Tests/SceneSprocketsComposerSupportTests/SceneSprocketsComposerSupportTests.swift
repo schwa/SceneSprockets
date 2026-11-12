@@ -801,7 +801,7 @@ struct SceneEditBoundaryTests {
 // #208: every parameter in the list edits through editedPBR, keeps textures, and leaves the original alone.
 @MainActor
 @Test func everyPBRParameterIsEditable() throws {
-    let original = try PBRSceneMaterial()
+    let original = PBRSceneMaterial()
     for parameter in PBRParameters.scalars {
         let before = original.pbrMaterial.uniforms[keyPath: parameter.keyPath]
         let value = parameter.range.lowerBound + (parameter.range.upperBound - parameter.range.lowerBound) * 0.37

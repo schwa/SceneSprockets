@@ -183,7 +183,7 @@ func constraintsAndAccelerationStatesLiveInTheWorld() {
 func subdivisionLivesInTheWorld() throws {
     let triangles = SceneGraph.Shape.box().metalMesh().submeshes.reduce(0) { $0 + $1.indexCount / 3 }
     let root = SceneGraph.Node()
-    let node = SceneGraph.Node(shape: .box(), material: try ShaderMaterial.normals())
+    let node = SceneGraph.Node(shape: .box(), material: ShaderMaterial.normals())
     root.addChild(node)
     let graph = SceneGraph(root: root)
     let entity = try #require(graph.world[node.id])

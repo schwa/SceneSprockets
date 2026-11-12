@@ -111,7 +111,7 @@ extension EditorModel {
     }
 
     // Material `index` of the selected node, nil when it is missing or another type.
-    subscript(material index: Int) -> (any SceneSprockets.Material)? {
+    subscript(material index: Int) -> (any SceneMaterial)? {
         guard let node = selectedNode else {
             return nil
         }

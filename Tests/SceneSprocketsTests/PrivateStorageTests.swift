@@ -54,7 +54,7 @@ func privateStorageMeshesCanBeReadOnTheCPU() throws {
     #expect(abs((hits.first?.distance ?? 0) - 4.5) < 1e-4)
 
     // PBR conversion reads every attribute and the indices.
-    let pbr = try PBRSceneMaterial()
+    let pbr = PBRSceneMaterial()
     let entry = SceneGraph.MeshEntry(node: node, worldTransform: .identity, mesh: mesh, submeshIndex: 0, material: pbr, castsShadow: true, receivesShadow: true)
     _ = try PBRSceneGraphModelBuilder().makeModel(entries: [entry])
     let input = pbrPrimitiveInput(entry: entry, attributes: mesh.cpuReadable().vertexAttributeData(), skinned: false)

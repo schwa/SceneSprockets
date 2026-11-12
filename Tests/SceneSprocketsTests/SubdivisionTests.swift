@@ -32,8 +32,8 @@ func subdivisionSplitsTrianglesAndSmooths() throws {
 }
 
 @Test
-func nodeSubdivisionLevelRestoresOriginal() throws {
-    let node = SceneGraph.Node(shape: .box(), material: try ShaderMaterial.normals())
+func nodeSubdivisionLevelRestoresOriginal() {
+    let node = SceneGraph.Node(shape: .box(), material: ShaderMaterial.normals())
     guard case let .mesh(original, _, _, _) = node.content else {
         Issue.record("Expected a mesh")
         return

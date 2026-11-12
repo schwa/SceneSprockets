@@ -78,7 +78,7 @@ private struct ModelIOConverter {
     let placeholder: PBRMaterial.Binding
     var channels: [SceneGraph.AnimationClip.Channel] = []
     var warnings: [String] = []
-    var materialCache: [ObjectIdentifier: any SceneSprockets.Material] = [:]
+    var materialCache: [ObjectIdentifier: any SceneMaterial] = [:]
     var textureCache: [ObjectIdentifier: MTLTexture] = [:]
     // Joint nodes per MDLSkeleton, in its jointPaths order.
     var skeletonJoints: [ObjectIdentifier: [SceneGraph.Node]] = [:]
@@ -317,7 +317,7 @@ private struct ModelIOConverter {
     // Repacks to position, normal and texture coordinates (the layout both renderers read), one buffer.
     // Also returns the skin vertices, if the mesh has joint attributes.
     // swiftlint:disable:next large_tuple discouraged_optional_collection
-    mutating func convert(_ mesh: MDLMesh) throws -> (MetalMesh, [any SceneSprockets.Material], [SceneGraph.SkinVertex]?)? {
+    mutating func convert(_ mesh: MDLMesh) throws -> (MetalMesh, [any SceneMaterial], [SceneGraph.SkinVertex]?)? {
         guard mesh.vertexCount > 0, let submeshes = mesh.submeshes as? [MDLSubmesh], !submeshes.isEmpty else {
             return nil
         }
@@ -339,7 +339,7 @@ private struct ModelIOConverter {
         return (metalMesh, materials, skinVertices)
     }
 
-    mutating func material(_ source: MDLMaterial?) throws -> any SceneSprockets.Material {
+    mutating func material(_ source: MDLMaterial?) throws -> any SceneMaterial {
         let key = source.map { ObjectIdentifier($0) }
         if let key, let cached = materialCache[key] {
             return cached
@@ -351,7 +351,7 @@ private struct ModelIOConverter {
         let baseColorTexture = texture(source?.property(with: .baseColor), sRGB: true)
         let emissionTexture = texture(source?.property(with: .emission), sRGB: true)
 
-        let result: any SceneSprockets.Material
+        let result: any SceneMaterial
         switch materialKind {
         case .pbr:
             var uniforms = PBRMaterialUniforms.defaults(baseColor: baseColor, metallic: metallic, roughness: roughness)

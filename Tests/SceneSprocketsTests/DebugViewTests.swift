@@ -50,7 +50,7 @@ func debugModesReplaceMaterials() throws {
 func materialChannelsShowMaterialValues() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
-    func pixel(_ material: any SceneSprockets.Material, _ channel: SceneGraphMaterialChannel, renderer: any SceneGraphMaterialRenderer) throws -> SIMD4<UInt8> {
+    func pixel(_ material: any SceneMaterial, _ channel: SceneGraphMaterialChannel, renderer: any SceneGraphMaterialRenderer) throws -> SIMD4<UInt8> {
         let root = SceneGraph.Node()
         root.addChild(SceneGraph.Node(transform: Transform3D(storing: simd_float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 4, 1]))), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
         root.addChild(SceneGraph.Node(content: .mesh(box, material: material)))
@@ -68,7 +68,7 @@ func materialChannelsShowMaterialValues() throws {
     #expect(specular.x > 200 && specular.z < 20)
     #expect(try pixel(blinnPhong, .metallic, renderer: BlinnPhongMaterialRenderer()).z < 5)
 
-    let pbr = try PBRSceneMaterial(baseColor: [0, 1, 0, 1], metallic: 1, roughness: 0.5)
+    let pbr = PBRSceneMaterial(baseColor: [0, 1, 0], metallic: 1, roughness: 0.5)
     let metallic = try pixel(pbr, .metallic, renderer: PBRMaterialRenderer())
     #expect(metallic.x > 200 && metallic.y > 200 && metallic.z > 200)
     let base = try pixel(pbr, .baseColor, renderer: PBRMaterialRenderer())

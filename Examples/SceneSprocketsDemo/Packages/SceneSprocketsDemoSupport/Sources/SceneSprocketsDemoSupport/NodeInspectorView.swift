@@ -82,7 +82,7 @@ private struct LightSectionView: View {
 }
 
 private struct MeshSectionView: View {
-    var materials: [any SceneSprockets.Material]
+    var materials: [any SceneMaterial]
     var castsShadow: Bool
     var receivesShadow: Bool
 

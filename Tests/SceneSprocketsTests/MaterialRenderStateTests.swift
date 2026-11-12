@@ -11,7 +11,7 @@ import Testing
 
 // #84: a quad at z = 0.5 (`near`) in front of one at z = 0 (`far`), seen from z = 3. Returns BGRA at `pixel`.
 @MainActor
-private func render(near: any SceneSprockets.Material, far: (any SceneSprockets.Material)?, farDrawsLast: Bool = false, pixel: (x: Int, y: Int) = (8, 8)) throws -> SIMD4<UInt8> {
+private func render(near: any SceneMaterial, far: (any SceneMaterial)?, farDrawsLast: Bool = false, pixel: (x: Int, y: Int) = (8, 8)) throws -> SIMD4<UInt8> {
     let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
     let root = SceneGraph.Node()
     root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
@@ -90,7 +90,7 @@ func linesFillModeDrawsEdgesOnly() throws {
 @MainActor
 func shaderMaterialUsesRenderState() throws {
     // Facing the camera, rim is the plain color.
-    let near = try ShaderMaterial(vertexShader: ShaderMaterial.rim(color: [1, 0, 0, 1]).vertexShader, fragmentShader: ShaderMaterial.rim(color: [1, 0, 0, 1]).fragmentShader, parameters: ["color": .float4([1, 0, 0, 1])], renderState: MaterialRenderState(blendMode: .add))
+    let near = ShaderMaterial(vertexShader: ShaderMaterial.rim(color: [1, 0, 0]).vertexShader, fragmentShader: ShaderMaterial.rim(color: [1, 0, 0]).fragmentShader, parameters: ["color": .float4([1, 0, 0, 1])], renderState: MaterialRenderState(blendMode: .add))
     #expect(near.isTransparent)
     let value = try render(near: near, far: glow([0, 0, 1]))
     #expect(isHigh(value.z) && isHigh(value.x))

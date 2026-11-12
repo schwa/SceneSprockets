@@ -13,7 +13,7 @@ let root = SceneGraph.Node(label: "Root")
 root.addChild(.camera(.perspective(fieldOfView: .degrees(45)), label: "Camera", transform: .init(translation: [0, 1, 6])))
 root.addChild(.light(.point(intensity: 20, range: 100), label: "Light", transform: .init(translation: [2, 3, 2])))
 
-let material = BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color([0.8, 0.5, 0.2]), specular: .color(0.3), shininess: 16)
+let material = BlinnPhongSceneMaterial(color: [0.8, 0.5, 0.2], shininess: 16)
 let crate = root.addChild(SceneGraph.Node(label: "Crate", shape: .box(), material: material))
 
 let sceneGraph = SceneGraph(root: root)

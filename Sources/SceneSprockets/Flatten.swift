@@ -10,7 +10,7 @@ extension SceneGraph.Node {
     /// keeps its material. Lights, cameras and other content are dropped. Nil when the meshes have different vertex
     /// layouts, or when any is skinned or morphed. Runs on the CPU; vertex buffers must be CPU-visible.
     public func flattenedClone() -> SceneGraph.Node? {
-        var parts: [(mesh: MetalMesh, materials: [any Material], transform: simd_float4x4, castsShadow: Bool, receivesShadow: Bool)] = []
+        var parts: [(mesh: MetalMesh, materials: [any SceneMaterial], transform: simd_float4x4, castsShadow: Bool, receivesShadow: Bool)] = []
         func collect(_ node: SceneGraph.Node, transform: simd_float4x4) -> Bool {
             guard node.isShown else {
                 return true
@@ -34,7 +34,7 @@ extension SceneGraph.Node {
         let layout = first.mesh.cpuReadable().vertexAttributeData().map { ($0.semantic, $0.format) }
         var attributes = layout.map { MergedAttribute(semantic: $0.0, format: $0.1) }
         var submeshes: [MetalMesh.SubmeshIndices] = []
-        var materials: [any Material] = []
+        var materials: [any SceneMaterial] = []
         var vertexCount = 0
         for part in parts {
             let readable = part.mesh.cpuReadable()

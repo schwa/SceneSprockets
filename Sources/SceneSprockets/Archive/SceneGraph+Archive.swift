@@ -181,7 +181,7 @@ extension SceneGraph.Node: Codable {
             let mesh = try container.nestedContainer(keyedBy: MeshKeys.self, forKey: .mesh)
             let shape = try mesh.decodeIfPresent(SceneGraph.Shape.self, forKey: .shape)
             var list = try mesh.nestedUnkeyedContainer(forKey: .materials)
-            var materials: [any Material] = []
+            var materials: [any SceneMaterial] = []
             while !list.isAtEnd {
                 let item = try list.nestedContainer(keyedBy: MaterialKeys.self)
                 let name = try item.decode(String.self, forKey: .type)
@@ -305,7 +305,7 @@ extension SceneGraph.Node: Codable {
             context.warn("\(nodeDescription): the archive has no mesh codec; levels of detail not saved")
             return
         }
-        let materials: [any Material] = if case let .mesh(_, materials, _, _) = content { materials } else { [] }
+        let materials: [any SceneMaterial] = if case let .mesh(_, materials, _, _) = content { materials } else { [] }
         let archived = try levelsOfDetail.map { level in
             ArchivedLevelOfDetail(file: try level.mesh.map { try context.meshFile(for: $0, materials: materials, name: label, codec: codec) }, distance: level.distance)
         }

@@ -561,7 +561,7 @@ public final class KeynoteDemo: DemoScene {
             addCode("""
             BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color([0.9, 0.35, 0.25]),
                                     specular: .color(0.5), shininess: 44)
-            try PBRSceneMaterial(baseColor: [0.95, 0.75, 0.3, 1],
+            PBRSceneMaterial(baseColor: [0.95, 0.75, 0.3],
                                  metallic: 1, roughness: 0.3)
             """, to: slide)
         case "Lights":
@@ -621,7 +621,7 @@ public final class KeynoteDemo: DemoScene {
         case "Glass":
             glassSlide(slide)
             addCode("""
-            let glass = try PBRSceneMaterial(roughness: 0)
+            let glass = PBRSceneMaterial(roughness: 0)
             glass.pbrMaterial.uniforms.transmissionFactor = 1
             // Blinn-Phong and PBR objects behind it are refracted alike.
             """, to: slide)
@@ -637,8 +637,8 @@ public final class KeynoteDemo: DemoScene {
         case "Custom Shaders":
             customShadersSlide(slide)
             addCode("""
-            let normals = try ShaderMaterial.normals()
-            let rim = try ShaderMaterial.rim(color: [0.3, 0.8, 1, 1])
+            let normals = ShaderMaterial.normals()
+            let rim = ShaderMaterial.rim(color: [0.3, 0.8, 1])
             ShaderMaterial(vertexShader: vertex, fragmentShader: fragment,
                            parameters: ["time": .float(t)])
             """, to: slide)
@@ -885,8 +885,8 @@ public final class KeynoteDemo: DemoScene {
         // A dim fill from the camera side, so the planets' night sides are not pure black.
         addLight(to: slide, at: [0, 4, 10], color: [0.4, 0.5, 0.8], intensity: 6)
         let sun = system.addChild(SceneGraph.Node(label: "Sun", shape: .sphere(radius: 0.75), material: BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([1, 0.7, 0.25]))))
-        func pbr(_ color: SIMD3<Float>, metallic: Float = 0, roughness: Float) -> any SceneSprockets.Material {
-            (try? PBRSceneMaterial(baseColor: SIMD4(color, 1), metallic: metallic, roughness: roughness)) ?? BlinnPhongSceneMaterial.plastic(color)
+        func pbr(_ color: SIMD3<Float>, metallic: Float = 0, roughness: Float) -> any SceneMaterial {
+            PBRSceneMaterial(baseColor: color, metallic: metallic, roughness: roughness)
         }
         let pathMaterial = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0.25, 0.27, 0.35]), renderState: MaterialRenderState(fillMode: .lines))
         // (radius, size, period, color, roughness)
@@ -945,18 +945,15 @@ public final class KeynoteDemo: DemoScene {
         for column in 0..<6 {
             let x = Float(column) * 1.6 - 4
             let smoothness = Float(column) / 5
-            var materials: [any SceneSprockets.Material] = [BlinnPhongSceneMaterial.plastic(paints[column], shininess: 4 + smoothness * 120)]
-            if let metal = try? PBRSceneMaterial(baseColor: SIMD4(metals[column], 1), metallic: 1, roughness: 0.75 - smoothness * 0.7) {
-                materials.append(metal)
+            var materials: [any SceneMaterial] = [BlinnPhongSceneMaterial.plastic(paints[column], shininess: 4 + smoothness * 120)]
+            materials.append(PBRSceneMaterial(baseColor: metals[column], metallic: 1, roughness: 0.75 - smoothness * 0.7))
+            let plastic = PBRSceneMaterial(baseColor: plastics[column], metallic: 0, roughness: 0.8 - smoothness * 0.7)
+            // The glossiest plastics get a clear coat, like car paint.
+            if column >= 4 {
+                plastic.pbrMaterial.uniforms.clearcoatFactor = 1
+                plastic.pbrMaterial.uniforms.clearcoatRoughnessFactor = 0.05
             }
-            if let plastic = try? PBRSceneMaterial(baseColor: SIMD4(plastics[column], 1), metallic: 0, roughness: 0.8 - smoothness * 0.7) {
-                // The glossiest plastics get a clear coat, like car paint.
-                if column >= 4 {
-                    plastic.pbrMaterial.uniforms.clearcoatFactor = 1
-                    plastic.pbrMaterial.uniforms.clearcoatRoughnessFactor = 0.05
-                }
-                materials.append(plastic)
-            }
+            materials.append(plastic)
             for (row, material) in materials.enumerated() {
                 let node = slide.addChild(SceneGraph.Node(shape: shapes[(column + row * 2) % shapes.count], material: material, transform: .init(translation: [x, 2.7 - Float(row) * 1.3, 0])))
                 node.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([0.3, 1, 0.2]), duration: 8 + Float(column + row))))
@@ -1008,9 +1005,9 @@ public final class KeynoteDemo: DemoScene {
         addLight(to: slide, at: [0, 6, 6], intensity: 70)
         // Each sphere fades out and back in, a little after the one before it. Blinn-Phong and PBR both fade.
         for index in 0..<6 {
-            let material: any SceneSprockets.Material = index.isMultiple(of: 2)
+            let material: any SceneMaterial = index.isMultiple(of: 2)
                 ? BlinnPhongSceneMaterial.plastic([0.95, 0.4, 0.6], shininess: 48)
-                : (try? PBRSceneMaterial(baseColor: [0.4, 0.6, 1, 1], metallic: 0, roughness: 0.3)) ?? BlinnPhongSceneMaterial.plastic([0.4, 0.6, 1])
+                : PBRSceneMaterial(baseColor: [0.4, 0.6, 1], metallic: 0, roughness: 0.3)
             let sphere = slide.addChild(SceneGraph.Node(shape: .sphere(radius: 0.6), material: material, transform: .init(translation: [Float(index) * 1.6 - 4, 1.2, 0])))
             // Eased, with a pause while invisible: linear fades that turn around at once look abrupt (#340).
             let fadeOut = SceneGraph.Action.fadeOut(duration: 1.2).timingMode(.easeInEaseOut)
@@ -1062,9 +1059,9 @@ public final class KeynoteDemo: DemoScene {
         let colors: [SIMD3<Float>] = [[0.95, 0.3, 0.25], [0.95, 0.8, 0.2], [0.3, 0.8, 0.4], [0.25, 0.5, 1], [0.8, 0.35, 0.9]]
         for (index, color) in colors.enumerated() {
             let x = Float(index) * 1.6 - 3.2
-            let material: any SceneSprockets.Material = index.isMultiple(of: 2)
+            let material: any SceneMaterial = index.isMultiple(of: 2)
                 ? BlinnPhongSceneMaterial.plastic(color, shininess: 32)
-                : (try? PBRSceneMaterial(baseColor: SIMD4(color, 1), metallic: 0, roughness: 0.4)) ?? BlinnPhongSceneMaterial.plastic(color)
+                : PBRSceneMaterial(baseColor: color, metallic: 0, roughness: 0.4)
             let bar = slide.addChild(SceneGraph.Node(shape: .box(width: 0.5, height: 3, length: 0.5), material: material, transform: .init(translation: [x, 1.6, -2.5])))
             bar.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 6 + Float(index))))
         }
@@ -1074,9 +1071,7 @@ public final class KeynoteDemo: DemoScene {
             (.torus(ringRadius: 0.75, pipeRadius: 0.3), 2.6, 0.05)
         ]
         for (shape, x, roughness) in shapes {
-            guard let glass = try? PBRSceneMaterial(baseColor: [1, 1, 1, 1], metallic: 0, roughness: roughness) else {
-                continue
-            }
+            let glass = PBRSceneMaterial(baseColor: [1, 1, 1], metallic: 0, roughness: roughness)
             glass.pbrMaterial.uniforms.transmissionFactor = 1
             glass.pbrMaterial.uniforms.thicknessFactor = 0.6
             let node = slide.addChild(SceneGraph.Node(shape: shape, material: glass, transform: .init(translation: [x, 1.6, 1])))
@@ -1176,9 +1171,7 @@ public final class KeynoteDemo: DemoScene {
         let ring = finale.addChild(SceneGraph.Node(label: "Candy Ring", transform: .init(translation: [0, 1.5, 0], rotation: simd_quatf(angle: 0.35, axis: [1, 0, 0]))))
         ring.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 8)))
         for index in 0..<6 {
-            guard let candy = try? PBRSceneMaterial(baseColor: SIMD4(colors[index % 3], 1), metallic: 0.8, roughness: 0.2) else {
-                continue
-            }
+            let candy = PBRSceneMaterial(baseColor: colors[index % 3], metallic: 0.8, roughness: 0.2)
             candy.pbrMaterial.uniforms.clearcoatFactor = 1
             candy.pbrMaterial.uniforms.clearcoatRoughnessFactor = 0.03
             let angle = Float(index) * 2 * .pi / 6
@@ -1192,9 +1185,7 @@ public final class KeynoteDemo: DemoScene {
             (.capsule(capRadius: 0.35, height: 1.2), [5.4, -0.4, -1], false)
         ]
         for (index, (shape, position, isGlass)) in props.enumerated() {
-            guard let material = try? PBRSceneMaterial(baseColor: isGlass ? [1, 1, 1, 1] : [1, 0.8, 0.4, 1], metallic: isGlass ? 0 : 1, roughness: isGlass ? 0 : 0.15) else {
-                continue
-            }
+            let material = PBRSceneMaterial(baseColor: isGlass ? [1, 1, 1] : [1, 0.8, 0.4], metallic: isGlass ? 0 : 1, roughness: isGlass ? 0 : 0.15)
             if isGlass {
                 material.pbrMaterial.uniforms.transmissionFactor = 1
                 material.pbrMaterial.uniforms.thicknessFactor = 0.6
@@ -1418,10 +1409,10 @@ public final class KeynoteDemo: DemoScene {
 
     private func customShadersSlide(_ slide: SceneGraph.Node) {
         addLight(to: slide, at: [0, 6, 6], intensity: 70)
-        let materials: [any SceneSprockets.Material] = [
-            try? ShaderMaterial.normals(),
-            try? ShaderMaterial.rim(color: [0.3, 0.8, 1, 1]),
-            try? ShaderMaterial.rim(color: [1, 0.4, 0.7, 1])
+        let materials: [any SceneMaterial] = [
+            ShaderMaterial.normals(),
+            ShaderMaterial.rim(color: [0.3, 0.8, 1]),
+            ShaderMaterial.rim(color: [1, 0.4, 0.7])
         ].compactMap { $0 }
         let shapes: [SceneGraph.Shape] = [.torus(ringRadius: 0.7, pipeRadius: 0.28), .sphere(radius: 0.9), .capsule(capRadius: 0.5, height: 1.8)]
         for (index, (shape, material)) in zip(shapes, materials).enumerated() {
@@ -1538,7 +1529,7 @@ public final class KeynoteDemo: DemoScene {
         let squashDeltas = positions.map { SIMD3<Float>($0.x * 0.5, -$0.y * 0.5, $0.z * 0.5) }
         let bumps = SceneGraph.MorphTarget(positionDeltas: bumpDeltas, normalDeltas: DeformationMeshes.normalDeltas(positions: positions, normals: normals, deltas: bumpDeltas, indices: indices))
         let squash = SceneGraph.MorphTarget(positionDeltas: squashDeltas, normalDeltas: DeformationMeshes.normalDeltas(positions: positions, normals: normals, deltas: squashDeltas, indices: indices))
-        let blobMaterial: any SceneSprockets.Material = (try? PBRSceneMaterial(baseColor: [0.3, 0.8, 0.5, 1], metallic: 0.1, roughness: 0.3)) ?? BlinnPhongSceneMaterial.plastic([0.3, 0.8, 0.5])
+        let blobMaterial = PBRSceneMaterial(baseColor: [0.3, 0.8, 0.5], metallic: 0.1, roughness: 0.3)
         let blob = slide.addChild(SceneGraph.Node(label: "Blob", transform: .init(translation: [-2.5, 1.5, 0]), content: .mesh(mesh, material: blobMaterial)))
         blob.morphTargets = [bumps, squash]
         blob.morphWeights = [0, 0]
@@ -1563,7 +1554,7 @@ public final class KeynoteDemo: DemoScene {
         // Skinned vertices end up in world space, so the tube node's own transform does not matter.
         let skeletonInverse = skeleton.worldTransform.inverse
         let inverseBind = joints.map { (skeletonInverse * $0.worldTransform).inverse }
-        let tubeMaterial: any SceneSprockets.Material = (try? PBRSceneMaterial(baseColor: [0.9, 0.6, 0.2, 1], metallic: 0, roughness: 0.4)) ?? BlinnPhongSceneMaterial.plastic([0.9, 0.6, 0.2])
+        let tubeMaterial = PBRSceneMaterial(baseColor: [0.9, 0.6, 0.2], metallic: 0, roughness: 0.4)
         let skinned = slide.addChild(SceneGraph.Node(label: "Tube", content: .mesh(tube, material: tubeMaterial)))
         skinned.skin = SceneGraph.Skin(joints: joints, inverseBindMatrices: inverseBind)
         skinned.skinVertices = skinVertices

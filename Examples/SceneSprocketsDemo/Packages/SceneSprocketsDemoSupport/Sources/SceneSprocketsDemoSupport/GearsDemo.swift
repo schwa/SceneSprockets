@@ -75,9 +75,9 @@ final class GearsDemo: DemoScene {
         train.removeAllChildren()
         links = []
         let materials = [
-            (try? PBRSceneMaterial(baseColor: [0.85, 0.65, 0.3, 1], metallic: 1, roughness: 0.3)),
-            (try? PBRSceneMaterial(baseColor: [0.75, 0.76, 0.78, 1], metallic: 1, roughness: 0.25)),
-            (try? PBRSceneMaterial(baseColor: [0.9, 0.5, 0.35, 1], metallic: 1, roughness: 0.35))
+            PBRSceneMaterial(baseColor: [0.85, 0.65, 0.3], metallic: 1, roughness: 0.3),
+            PBRSceneMaterial(baseColor: [0.75, 0.76, 0.78], metallic: 1, roughness: 0.25),
+            PBRSceneMaterial(baseColor: [0.9, 0.5, 0.35], metallic: 1, roughness: 0.35)
         ]
         let directions: [Float] = [0, -0.5, 0.45, -0.3]
         var center = SIMD2<Float>(-2.2, 0.4)
@@ -88,7 +88,7 @@ final class GearsDemo: DemoScene {
                 direction = directions[index]
                 center = GearTrain.center(of: spec, meshingWith: links[index - 1].spec, at: center, direction: direction)
             }
-            let material: any SceneSprockets.Material = materials[index % materials.count] ?? BlinnPhongSceneMaterial.plastic([0.7, 0.6, 0.3])
+            let material = materials[index % materials.count]
             let node = train.addChild(SceneGraph.Node(label: "Gear \(teeth)", transform: .init(translation: [center.x, center.y, 0]), content: .mesh(MetalMesh(mesh: .gear(spec), device: demoDevice), material: material)))
             // An axle through each bore.
             train.addChild(SceneGraph.Node(label: "Axle", shape: .cylinder(radius: 0.11, height: 0.6), material: BlinnPhongSceneMaterial.plastic([0.2, 0.2, 0.22], shininess: 48), transform: .init(translation: [center.x, center.y, -0.1], rotation: simd_quatf(angle: .pi / 2, axis: [1, 0, 0]))))

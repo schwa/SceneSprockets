@@ -53,7 +53,7 @@ func particlesDrawInFrontAndAreHiddenBehindMeshes() throws {
     let (sceneGraph, _) = makeScene()
     #expect(try centerPixel(sceneGraph, frames: 5).x > 200)
     // A black-faced box in front hides them (reversed depth test).
-    sceneGraph.root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 2]), content: .mesh(MetalMesh(mesh: .box(), device: device), material: try ShaderMaterial.rim(color: [0, 0, 0, 1]))))
+    sceneGraph.root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 2]), content: .mesh(MetalMesh(mesh: .box(), device: device), material: ShaderMaterial.rim(color: [0, 0, 0]))))
     #expect(try centerPixel(sceneGraph, frames: 1).x < 5)
 }
 
@@ -81,7 +81,7 @@ func softParticlesFadeIntoGeometry() throws {
         let emitter = root.addChild(SceneGraph.Node())
         emitter.particleSystems = [SceneParticleSystem(system, seed: 3)]
         // A black wall just behind the particles.
-        root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, -0.6]), content: .mesh(MetalMesh(mesh: .box(), device: device), material: try ShaderMaterial.rim(color: [0, 0, 0, 1]))))
+        root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, -0.6]), content: .mesh(MetalMesh(mesh: .box(), device: device), material: ShaderMaterial.rim(color: [0, 0, 0]))))
         let sceneGraph = SceneGraph(root: root)
         let renderer = try OffscreenRenderer(size: CGSize(width: 32, height: 32), colorUsage: SceneGraphShadows.requiredColorUsage, depthUsage: SceneGraphShadows.requiredDepthUsage)
         var value = SIMD4<UInt8>.zero

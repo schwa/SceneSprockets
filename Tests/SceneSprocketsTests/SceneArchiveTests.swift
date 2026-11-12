@@ -33,7 +33,7 @@ struct SceneArchiveTests {
         return texture
     }
 
-    func makeScene() throws -> SceneGraph {
+    func makeScene() -> SceneGraph {
         let root = SceneGraph.Node(label: "Root")
         let textured = BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .texture(makeTexture(), tint: [1, 0.5, 0.25]), specular: .color(0.3), shininess: 24, opacity: 0.75, renderState: .init(blendMode: .add, fillMode: .lines))
         let box = root.addChild(SceneGraph.Node(shape: .box(width: 2, height: 1, length: 0.5), material: textured, transform: .init(translation: [1, 2, 3], rotation: simd_quatf(angle: 0.5, axis: [0, 1, 0]), scale: [1, 2, 1])))
@@ -41,7 +41,7 @@ struct SceneArchiveTests {
         box.lightCategoryBitMask = 3
         box.renderingOrder = 2
         box.opacity = 0.5
-        let metal = try PBRSceneMaterial(baseColor: [0.9, 0.7, 0.2, 1], metallic: 1, roughness: 0.3)
+        let metal = PBRSceneMaterial(baseColor: [0.9, 0.7, 0.2], metallic: 1, roughness: 0.3)
         let sphere = box.addChild(SceneGraph.Node(shape: .sphere(radius: 0.4), material: metal))
         sphere.transform = Transform3D(storing: float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [4, 5, 6, 1])))
         sphere.pivot = float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0.1, 0.2, 0.3, 1]))
@@ -67,7 +67,7 @@ struct SceneArchiveTests {
     // #238: a capture holds values. Edits after capturing do not reach it, and it writes textures without the graph.
     @Test
     func captureIsUnaffectedByLaterEdits() throws {
-        let sceneGraph = try makeScene()
+        let sceneGraph = makeScene()
         let box = try #require(sceneGraph.root.children.first)
         box.label = "Before"
         let cache = SceneArchive.TextureCache()
@@ -127,7 +127,7 @@ struct SceneArchiveTests {
             try? FileManager.default.removeItem(at: first)
             try? FileManager.default.removeItem(at: second)
         }
-        let warnings = try archive.write(try makeScene(), to: first)
+        let warnings = try archive.write(makeScene(), to: first)
         #expect(warnings.isEmpty, "\(warnings)")
         let (loaded, readWarnings) = try archive.read(from: first)
         #expect(readWarnings.isEmpty, "\(readWarnings)")
@@ -158,7 +158,7 @@ struct SceneArchiveTests {
     func texturesRoundTripExactly() throws {
         let url = temporaryURL()
         defer { try? FileManager.default.removeItem(at: url) }
-        try archive.write(try makeScene(), to: url)
+        try archive.write(makeScene(), to: url)
         let (loaded, _) = try archive.read(from: url)
         guard case let .mesh(_, materials, _, _) = loaded.root.children[0].content,
               let material = materials.first as? BlinnPhongSceneMaterial,
@@ -447,8 +447,8 @@ struct SceneArchiveTests {
     }
 
     // #163
-    func pbrScene() throws -> (SceneGraph, PBRMaterialUniforms) {
-        let material = try PBRSceneMaterial(baseColor: [0.9, 0.7, 0.2, 0.5], metallic: 0.25, roughness: 0.75)
+    func pbrScene() -> (SceneGraph, PBRMaterialUniforms) {
+        let material = PBRSceneMaterial(baseColor: [0.9, 0.7, 0.2], opacity: 0.5, metallic: 0.25, roughness: 0.75)
         var uniforms = material.pbrMaterial.uniforms
         uniforms.emissiveFactor = [1, 0.5, 0]
         uniforms.ior = 1.7
@@ -476,7 +476,7 @@ struct SceneArchiveTests {
     func pbrUniformsAreStoredByName() throws {
         let url = temporaryURL()
         defer { try? FileManager.default.removeItem(at: url) }
-        let (scene, uniforms) = try pbrScene()
+        let (scene, uniforms) = pbrScene()
         try archive.write(scene, to: url)
         let json = try sceneJSON(url)
         #expect(json.contains(#""metallicFactor" : 0.25"#))
@@ -496,7 +496,7 @@ struct SceneArchiveTests {
     func shaderMaterialRoundTripsByReference() throws {
         let url = temporaryURL()
         defer { try? FileManager.default.removeItem(at: url) }
-        var material = try ShaderMaterial.rim(color: [1, 0.5, 0, 0.5])
+        var material = ShaderMaterial.rim(color: [1, 0.5, 0], opacity: 0.5)
         material.parameters["tint"] = .float3([0.1, 0.2, 0.3])
         material.parameters["matrix"] = .float4x4(.init(diagonal: [1, 2, 3, 4]))
         material.parameters["texture"] = .texture(makeTexture())
@@ -556,7 +556,7 @@ struct SceneArchiveTests {
     func pbrTextureTransformsRoundTrip() throws {
         let url = temporaryURL()
         defer { try? FileManager.default.removeItem(at: url) }
-        let (scene, _) = try pbrScene()
+        let (scene, _) = pbrScene()
         guard case let .mesh(_, materials, _, _) = scene.root.children[0].content, let pbr = materials.first as? PBRSceneMaterial else {
             Issue.record("expected a PBR mesh")
             return
@@ -579,7 +579,7 @@ struct SceneArchiveTests {
     func rawPBRUniformsStillRead() throws {
         let url = temporaryURL()
         defer { try? FileManager.default.removeItem(at: url) }
-        let (scene, uniforms) = try pbrScene()
+        let (scene, uniforms) = pbrScene()
         try archive.write(scene, to: url)
         let sceneURL = url.appendingPathComponent("scene.json")
         var object = try #require(try JSONSerialization.jsonObject(with: Data(contentsOf: sceneURL)) as? [String: Any])
@@ -609,7 +609,7 @@ struct SceneArchiveTests {
         defer { try? FileManager.default.removeItem(at: url) }
         let root = SceneGraph.Node()
         root.addChild(SceneGraph.Node(transform: Transform3D(storing: .init(diagonal: [1, 2, 3, 1])), content: .light(Light(type: .directional))))
-        try archive.write(try makeScene(), to: url)
+        try archive.write(makeScene(), to: url)
         let json = try sceneJSON(url)
         #expect(json.contains(#""background" : "none""#) || json.contains(#""background" : {"#))
         #expect(json.contains(#""blendMode" : "add""#))

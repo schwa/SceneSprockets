@@ -22,7 +22,7 @@ public struct GLTFMeshCodec: ArchivableMeshCodec {
     /// Creates a glTF mesh codec.
     public init() {}
 
-    public func encode(_ mesh: MetalMesh, materials: [any SceneSprockets.Material], name: String?, context: SceneArchiveContext) throws -> String {
+    public func encode(_ mesh: MetalMesh, materials: [any SceneMaterial], name: String?, context: SceneArchiveContext) throws -> String {
         let path = context.newFile(in: "meshes", pathExtension: "glb")
         var builder = GLTFDocumentBuilder()
         let attributeData = mesh.vertexAttributeData()
@@ -265,7 +265,7 @@ struct GLTFDocumentBuilder {
     }
 
     // A glTF material for `material`: PBR values as they are, Blinn-Phong mapped to the nearest PBR values.
-    fileprivate mutating func material(for material: any SceneSprockets.Material, context: SceneArchiveContext, packagePath: String) throws -> GLTFMaterial {
+    fileprivate mutating func material(for material: any SceneMaterial, context: SceneArchiveContext, packagePath: String) throws -> GLTFMaterial {
         switch material {
         case let pbr as PBRSceneMaterial:
             let uniforms = pbr.pbrMaterial.uniforms

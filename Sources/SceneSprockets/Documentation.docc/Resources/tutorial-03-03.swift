@@ -18,10 +18,10 @@ struct Tutorial3Lights: View {
 
         root.addChild(.light(.spot(intensity: 80, range: 30, outerConeAngle: .pi / 4), label: "Spot", transform: .init(position: [3, 7, 3], lookingAt: .zero)))
 
-        root.addChild(SceneGraph.Node(shape: .floor(width: 8, length: 8), material: material([0.4, 0.42, 0.45], shininess: 4), transform: .init(translation: [0, -1, 0])))
-        root.addChild(SceneGraph.Node(shape: .sphere(radius: 1), material: material([0.2, 0.45, 0.9], shininess: 64), transform: .init(translation: [0, 0.5, 0])))
-        root.addChild(SceneGraph.Node(shape: .box(width: 1.2, height: 1.2, length: 1.2), material: material([0.9, 0.25, 0.25]), transform: .init(translation: [2.2, -0.4, 0.8])))
-        root.addChild(SceneGraph.Node(shape: .teapot(diameter: 1.6), material: material([0.75, 0.5, 0.85], shininess: 64), transform: .init(translation: [-2.2, -0.5, 1])))
+        root.addChild(SceneGraph.Node(shape: .floor(width: 8, length: 8), material: BlinnPhongSceneMaterial(color: [0.4, 0.42, 0.45], shininess: 4), transform: .init(translation: [0, -1, 0])))
+        root.addChild(SceneGraph.Node(shape: .sphere(radius: 1), material: BlinnPhongSceneMaterial(color: [0.2, 0.45, 0.9], shininess: 64), transform: .init(translation: [0, 0.5, 0])))
+        root.addChild(SceneGraph.Node(shape: .box(width: 1.2, height: 1.2, length: 1.2), material: BlinnPhongSceneMaterial(color: [0.9, 0.25, 0.25]), transform: .init(translation: [2.2, -0.4, 0.8])))
+        root.addChild(SceneGraph.Node(shape: .teapot(diameter: 1.6), material: BlinnPhongSceneMaterial(color: [0.75, 0.5, 0.85], shininess: 64), transform: .init(translation: [-2.2, -0.5, 1])))
 
         return SceneGraph(root: root)
     }

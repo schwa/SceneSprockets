@@ -153,12 +153,12 @@ public class SceneGraph {
             var worldTransform: float4x4
             var mesh: MetalMesh
             var submeshIndex: Int
-            var material: any Material
+            var material: any SceneMaterial
             var castsShadow: Bool
             var receivesShadow: Bool
             var opacity: Float
 
-            init(node: Node, worldTransform: float4x4, mesh: MetalMesh, submeshIndex: Int, material: any Material, castsShadow: Bool, receivesShadow: Bool, opacity: Float) {
+            init(node: Node, worldTransform: float4x4, mesh: MetalMesh, submeshIndex: Int, material: any SceneMaterial, castsShadow: Bool, receivesShadow: Bool, opacity: Float) {
                 self.node = node
                 self.worldTransform = worldTransform
                 self.mesh = mesh
@@ -177,7 +177,7 @@ public class SceneGraph {
         private var storage: Storage
 
         /// Creates a mesh entry.
-        public init(node: Node, worldTransform: float4x4, mesh: MetalMesh, submeshIndex: Int, material: any Material, castsShadow: Bool, receivesShadow: Bool, opacity: Float = 1) {
+        public init(node: Node, worldTransform: float4x4, mesh: MetalMesh, submeshIndex: Int, material: any SceneMaterial, castsShadow: Bool, receivesShadow: Bool, opacity: Float = 1) {
             storage = Storage(node: node, worldTransform: worldTransform, mesh: mesh, submeshIndex: submeshIndex, material: material, castsShadow: castsShadow, receivesShadow: receivesShadow, opacity: opacity)
         }
 
@@ -213,7 +213,7 @@ public class SceneGraph {
         }
 
         /// The material of the submesh.
-        public var material: any Material {
+        public var material: any SceneMaterial {
             get { storage.material }
             set { uniqueStorage().material = newValue }
         }
@@ -293,7 +293,7 @@ public class SceneGraph {
     }
 
     /// Returns one entry per submesh whose material matches the given type, with world transforms.
-    public func meshNodes<M: Material>(withMaterial _: M.Type, worldTransform initialTransform: float4x4 = .identity) -> [(node: Node, worldTransform: float4x4, mesh: MetalMesh, submeshIndex: Int, material: M, castsShadow: Bool, receivesShadow: Bool)] {
+    public func meshNodes<M: SceneMaterial>(withMaterial _: M.Type, worldTransform initialTransform: float4x4 = .identity) -> [(node: Node, worldTransform: float4x4, mesh: MetalMesh, submeshIndex: Int, material: M, castsShadow: Bool, receivesShadow: Bool)] {
         meshEntries(worldTransform: initialTransform).compactMap { entry in
             guard let material = entry.material as? M else {
                 return nil

@@ -56,7 +56,7 @@ private func pbrOverBlue(opacity: Float, renderer pbrRenderer: PBRMaterialRender
     let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
     let root = SceneGraph.Node()
     root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
-    let red = try PBRSceneMaterial(baseColor: [1, 0, 0, 1])
+    let red = PBRSceneMaterial(baseColor: [1, 0, 0])
     let fader = fader ?? SceneGraph.Node(transform: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: red))
     root.addChild(fader)
     fader.opacity = opacity
@@ -96,10 +96,10 @@ func pbrOpacityChangeReusesTheModel() throws {
 @MainActor
 func nodeOpacityBlends(usesShaderMaterial: Bool) throws {
     let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
-    func flat(_ color: SIMD3<Float>) throws -> any SceneSprockets.Material {
+    func flat(_ color: SIMD3<Float>) -> any SceneMaterial {
         if usesShaderMaterial {
             // Facing the camera, rim is the plain color.
-            return try ShaderMaterial.rim(color: SIMD4(color, 1))
+            return ShaderMaterial.rim(color: color)
         }
         return BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color(color))
     }
@@ -107,8 +107,8 @@ func nodeOpacityBlends(usesShaderMaterial: Bool) throws {
     root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
     let fader = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 0.5])))
     fader.opacity = 0.5
-    fader.addChild(SceneGraph.Node(content: .mesh(quad, material: try flat([1, 0, 0]))))
-    root.addChild(SceneGraph.Node(content: .mesh(quad, material: try flat([0, 0, 1]))))
+    fader.addChild(SceneGraph.Node(content: .mesh(quad, material: flat([1, 0, 0]))))
+    root.addChild(SceneGraph.Node(content: .mesh(quad, material: flat([0, 0, 1]))))
     let renderer = try OffscreenRenderer(size: CGSize(width: 16, height: 16))
     let renderers: [any SceneGraphMaterialRenderer] = [BlinnPhongMaterialRenderer(ambientLightColor: .zero), ShaderMaterialRenderer()]
     let texture = try renderer.render(SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: renderers)).texture

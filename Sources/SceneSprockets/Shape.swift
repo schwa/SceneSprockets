@@ -140,7 +140,7 @@ extension SceneGraph {
 
 extension SceneGraph.Node {
     /// A mesh node for `shape`. Set `shape` later to rebuild its mesh, keeping the materials.
-    public convenience init(label: String? = nil, shape: SceneGraph.Shape, material: any Material, transform: Transform3D = .identity) {
+    public convenience init(label: String? = nil, shape: SceneGraph.Shape, material: any SceneMaterial, transform: Transform3D = .identity) {
         let mesh = shape.metalMesh()
         self.init(label: label ?? shape.label, transform: transform, content: .mesh(mesh, material: material))
         shapeStorage = (shape, mesh, nil)

@@ -5,7 +5,7 @@ import simd
 import SwiftMesh
 import Testing
 
-private struct Tag: SceneSprockets.Material {
+private struct Tag: SceneMaterial {
     var name: String
 }
 

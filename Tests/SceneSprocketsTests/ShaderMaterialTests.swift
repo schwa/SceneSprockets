@@ -39,8 +39,8 @@ func transparentDrawOrderFollowsRenderingOrder(blueLast: Bool) throws {
     let root = SceneGraph.Node()
     root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 4]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
     let quad = MetalMesh(mesh: .quad(extents: [2, 2]), device: device)
-    let red = root.addChild(SceneGraph.Node(content: .mesh(quad, material: try ShaderMaterial.rim(color: [1, 0, 0, 0.5]))))
-    let blue = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 0.1]), content: .mesh(quad, material: try ShaderMaterial.rim(color: [0, 0, 1, 0.5]))))
+    let red = root.addChild(SceneGraph.Node(content: .mesh(quad, material: ShaderMaterial.rim(color: [1, 0, 0], opacity: 0.5))))
+    let blue = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 0.1]), content: .mesh(quad, material: ShaderMaterial.rim(color: [0, 0, 1], opacity: 0.5))))
     red.renderingOrder = blueLast ? 1 : 2
     blue.renderingOrder = blueLast ? 2 : 1
     let renderer = try OffscreenRenderer(size: CGSize(width: 32, height: 32))
@@ -63,8 +63,8 @@ func transparentEntriesDrawBackToFront(nearFirstInScene: Bool) throws {
     let root = SceneGraph.Node()
     root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 4]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
     let quad = MetalMesh(mesh: .quad(extents: [2, 2]), device: device)
-    let near = SceneGraph.Node(transform: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: try ShaderMaterial.rim(color: [1, 0, 0, 0.5])))
-    let far = SceneGraph.Node(content: .mesh(quad, material: try ShaderMaterial.rim(color: [0, 0, 1, 0.5])))
+    let near = SceneGraph.Node(transform: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: ShaderMaterial.rim(color: [1, 0, 0], opacity: 0.5)))
+    let far = SceneGraph.Node(content: .mesh(quad, material: ShaderMaterial.rim(color: [0, 0, 1], opacity: 0.5)))
     for node in nearFirstInScene ? [near, far] : [far, near] {
         root.addChild(node)
     }
@@ -84,8 +84,8 @@ func opaqueDrawsBeforeTransparentInABatch() throws {
     let camera = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 4]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
     _ = camera
     let quad = MetalMesh(mesh: .quad(extents: [2, 2]), device: device)
-    let glass = root.addChild(SceneGraph.Node(content: .mesh(quad, material: try ShaderMaterial.rim(color: [1, 0, 0, 0.5]))))
-    let solid = root.addChild(SceneGraph.Node(content: .mesh(quad, material: try ShaderMaterial.normals())))
+    let glass = root.addChild(SceneGraph.Node(content: .mesh(quad, material: ShaderMaterial.rim(color: [1, 0, 0], opacity: 0.5))))
+    let solid = root.addChild(SceneGraph.Node(content: .mesh(quad, material: ShaderMaterial.normals())))
     let sceneGraph = SceneGraph(root: root)
     let context = try #require(makeRenderContext(sceneGraph: sceneGraph, camera: nil, cameraMatrix: nil, aspectRatio: 1))
     let batches = renderBatches(sceneGraph.meshEntries(), context: context)
@@ -98,7 +98,7 @@ func opaqueDrawsBeforeTransparentInABatch() throws {
 @Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func shaderMaterialCullsFaces() throws {
-    var material = try ShaderMaterial.normals()
+    var material = ShaderMaterial.normals()
     material.renderState.cullMode = .back
     #expect(try render(material).x > 200)
     material.renderState.cullMode = .front
@@ -107,8 +107,8 @@ func shaderMaterialCullsFaces() throws {
 
 // #374: the alpha-blending setting reads back what was set; isTransparent is derived from it and the blend mode.
 @Test
-func alphaBlendingReadsBackAndTransparencyIsDerived() throws {
-    var material = try ShaderMaterial.normals()
+func alphaBlendingReadsBackAndTransparencyIsDerived() {
+    var material = ShaderMaterial.normals()
     material.renderState.blendMode = .add
     material.usesAlphaBlending = false
     #expect(material.usesAlphaBlending == false)
@@ -118,13 +118,13 @@ func alphaBlendingReadsBackAndTransparencyIsDerived() throws {
     material.usesAlphaBlending = true
     #expect(material.usesAlphaBlending)
     #expect(material.isTransparent)
-    #expect(try ShaderMaterial.rim(color: [1, 0, 0, 0.5]).usesAlphaBlending)
+    #expect(ShaderMaterial.rim(color: [1, 0, 0], opacity: 0.5).usesAlphaBlending)
 }
 
 @Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func rimMaterialUsesColorParameter() throws {
-    let value = try render(.rim(color: [1, 0, 0, 1]))
+    let value = try render(.rim(color: [1, 0, 0]))
     #expect(value.z > 200) // Red, fully facing the camera.
     #expect(value.x < 10 && value.y < 10)
 }

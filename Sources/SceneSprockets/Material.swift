@@ -5,7 +5,9 @@
 /// Materials are opaque data attached to mesh nodes. Concrete material types
 /// (e.g. PBR, Blinn-Phong) are defined outside this package. At render time,
 /// techniques filter nodes by material type and downcast to access material-specific data.
-public protocol Material {
+///
+/// Named `SceneMaterial`, not `Material`, so it does not clash with other packages' `Material` types (#368).
+public protocol SceneMaterial {
     /// Blends over what is behind it. Transparent entries draw after opaque ones of the same rendering order,
     /// farthest first.
     var isTransparent: Bool { get }
@@ -14,7 +16,7 @@ public protocol Material {
     var appliesNodeOpacity: Bool { get }
 }
 
-public extension Material {
+public extension SceneMaterial {
     var isTransparent: Bool { false }
     var appliesNodeOpacity: Bool { false }
 }

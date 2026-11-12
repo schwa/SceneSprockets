@@ -35,7 +35,7 @@ public struct GLTFSceneGraph {
     /// Swaps every mesh node's materials for variant `index` (into variantNames; nil for the default materials).
     /// Node state and animation players are kept. Throws for an out-of-range index.
     public func selectVariant(_ index: Int?) throws {
-        var materials: [Int: [any SceneSprockets.Material]] = [:]
+        var materials: [Int: [any SceneMaterial]] = [:]
         for (node, meshIndex) in meshNodes {
             guard case let .mesh(mesh, _, castsShadow, receivesShadow) = node.content else {
                 continue
@@ -56,7 +56,7 @@ public extension GLTFAsset {
 
 private struct ConvertedMesh {
     var mesh: MetalMesh
-    var materials: [any SceneSprockets.Material]
+    var materials: [any SceneMaterial]
     var skinVertices: [SceneGraph.SkinVertex]
     var morphTargets: [SceneGraph.MorphTarget]
     var defaultWeights: [Float]
@@ -70,7 +70,7 @@ private struct GLTFSceneGraphBuilder {
     func build() throws -> GLTFSceneGraph {
         var warnings: [String] = []
         let materials = materialsByPrimitive()
-        let defaultMaterial = try PBRSceneMaterial()
+        let defaultMaterial = PBRSceneMaterial()
         var meshes: [Int: ConvertedMesh?] = [:]
         func mesh(_ index: Int) throws -> ConvertedMesh? {
             if let cached = meshes[index] {
@@ -339,7 +339,7 @@ private struct GLTFSceneGraphBuilder {
         }
         let label = document.meshes[index].name
         let mesh = MetalMesh(device: device, attributes: attributes, submeshes: submeshes, label: label)
-        let meshMaterials: [any SceneSprockets.Material] = primitives.map { primitive in
+        let meshMaterials: [any SceneMaterial] = primitives.map { primitive in
             materials[primitive.key].map { PBRSceneMaterial($0) } ?? defaultMaterial
         }
         return ConvertedMesh(mesh: mesh, materials: meshMaterials, skinVertices: skinVertices, morphTargets: morphTargets, defaultWeights: defaultWeights)

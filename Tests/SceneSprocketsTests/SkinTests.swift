@@ -29,7 +29,7 @@ func skinnedMeshBuildsPBRSkin() throws {
     let box = MetalMesh(mesh: .box(), device: device)
     let root = SceneGraph.Node()
     let joint = root.addChild(SceneGraph.Node(label: "joint", transform: Transform3D(storing: translation(0, 5, 0))))
-    let skinned = root.addChild(SceneGraph.Node(content: .mesh(box, material: try PBRSceneMaterial())))
+    let skinned = root.addChild(SceneGraph.Node(content: .mesh(box, material: PBRSceneMaterial())))
     skinned.skin = SceneGraph.Skin(joints: [joint], inverseBindMatrices: [matrix_identity_float4x4])
     skinned.skinVertices = Array(repeating: SceneGraph.SkinVertex(joints: [0, 0, 0, 0], weights: [1, 0, 0, 0]), count: box.vertexCount)
 
@@ -49,7 +49,7 @@ func skinVerticesWithWrongCountAreIgnored() throws {
     let box = MetalMesh(mesh: .box(), device: device)
     let root = SceneGraph.Node()
     let joint = root.addChild(SceneGraph.Node())
-    let skinned = root.addChild(SceneGraph.Node(content: .mesh(box, material: try PBRSceneMaterial())))
+    let skinned = root.addChild(SceneGraph.Node(content: .mesh(box, material: PBRSceneMaterial())))
     skinned.skin = SceneGraph.Skin(joints: [joint], inverseBindMatrices: [matrix_identity_float4x4])
     skinned.skinVertices = [SceneGraph.SkinVertex(joints: [0, 0, 0, 0], weights: [1, 0, 0, 0])]
 

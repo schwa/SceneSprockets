@@ -91,7 +91,7 @@ final class MeshBuilder {
         positions.isEmpty
     }
 
-    func build(device: MTLDevice, label: String) -> (MetalMesh, [any SceneSprockets.Material])? {
+    func build(device: MTLDevice, label: String) -> (MetalMesh, [any SceneMaterial])? {
         let used = order.filter { !(groups[$0]?.isEmpty ?? true) }
         guard !used.isEmpty else {
             return nil

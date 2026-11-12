@@ -13,7 +13,7 @@ import Testing
 func pbrModelIsBuiltFromSceneGraph() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
-    let material = try PBRSceneMaterial(baseColor: [1, 0, 0, 1], metallic: 0, roughness: 0.5)
+    let material = PBRSceneMaterial(baseColor: [1, 0, 0], metallic: 0, roughness: 0.5)
 
     let root = SceneGraph.Node()
     let translation = simd_float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [2, 3, 4, 1]))
@@ -36,7 +36,7 @@ func pbrPrimitiveHonorsIndexTypeAndPrimitiveType() throws {
     let buffer = try #require(device.makeBuffer(bytes: indices, length: indices.count * 2, options: .storageModeShared))
     mesh.submeshes = [MetalMesh.Submesh(indexBuffer: buffer, indexBufferOffset: 4, indexCount: 4, indexType: .uint16, primitiveType: .line)]
 
-    let node = SceneGraph.Node(content: .mesh(mesh, material: try PBRSceneMaterial()))
+    let node = SceneGraph.Node(content: .mesh(mesh, material: PBRSceneMaterial()))
     let primitive = pbrPrimitiveInput(entry: SceneGraph(root: node).meshEntries()[0], attributes: mesh.vertexAttributeData(), skinned: false)
     #expect(primitive.indices == [0, 1, 2, 3])
     #expect(primitive.primitiveType == .line)
@@ -46,7 +46,7 @@ func pbrPrimitiveHonorsIndexTypeAndPrimitiveType() throws {
 func pbrModelIsReusedUntilStructureChanges() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
-    let material = try PBRSceneMaterial()
+    let material = PBRSceneMaterial()
     let root = SceneGraph.Node()
     let node = root.addChild(SceneGraph.Node(content: .mesh(box, material: material)))
     let sceneGraph = SceneGraph(root: root)
@@ -68,7 +68,7 @@ func morphTargetsReachPBRPrimitiveAndPose() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
     let up = SceneGraph.MorphTarget(positionDeltas: Array(repeating: [0, 1, 0], count: box.vertexCount))
-    let node = SceneGraph.Node(content: .mesh(box, material: try PBRSceneMaterial()))
+    let node = SceneGraph.Node(content: .mesh(box, material: PBRSceneMaterial()))
     node.morphTargets = [up]
     node.morphWeights = [0.5]
     let entries = SceneGraph(root: node).meshEntries()
@@ -85,7 +85,7 @@ func morphTargetsReachPBRPrimitiveAndPose() throws {
 func morphTargetsWithWrongVertexCountAreIgnored() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
-    let node = SceneGraph.Node(content: .mesh(box, material: try PBRSceneMaterial()))
+    let node = SceneGraph.Node(content: .mesh(box, material: PBRSceneMaterial()))
     node.morphTargets = [SceneGraph.MorphTarget(positionDeltas: [[0, 1, 0]])]
     let primitive = pbrPrimitiveInput(entry: SceneGraph(root: node).meshEntries()[0], attributes: box.vertexAttributeData(), skinned: false)
     #expect(primitive.morphTargets == nil)
@@ -96,7 +96,7 @@ func pbrModelIsBuiltForEachBufferLayout() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     for layout in [MetalMesh.BufferLayout.interleaved, .separateBuffers] {
         let box = MetalMesh(mesh: .box(), device: device, bufferLayout: layout)
-        let node = SceneGraph.Node(content: .mesh(box, material: try PBRSceneMaterial()))
+        let node = SceneGraph.Node(content: .mesh(box, material: PBRSceneMaterial()))
         let model = try PBRSceneGraphModelBuilder().makeModel(entries: SceneGraph(root: node).meshEntries())
         #expect(model.opaqueInstances.count == 1)
     }
@@ -120,7 +120,7 @@ func pbrRenderStateIsApplied() throws {
     func centerPixel(_ renderState: PBRRenderState) throws -> SIMD4<UInt8> {
         let root = SceneGraph.Node()
         root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
-        let material = try PBRSceneMaterial(baseColor: [0, 0, 0, 1])
+        let material = PBRSceneMaterial(baseColor: [0, 0, 0])
         material.pbrMaterial.uniforms.emissiveFactor = [1, 0, 0]
         material.renderState = renderState
         root.addChild(SceneGraph.Node(content: .mesh(quad, material: material)))
@@ -135,17 +135,26 @@ func pbrRenderStateIsApplied() throws {
     #expect(try centerPixel(PBRRenderState()).z > 200)
     #expect(try centerPixel(PBRRenderState(colorWriteMask: [.green, .blue, .alpha])).z < 10)
 
-    let additive = try PBRSceneMaterial()
+    let additive = PBRSceneMaterial()
     additive.renderState = PBRRenderState(blendMode: .additive)
     #expect(additive.isTransparent)
     let faded = try additive.faded(0.5)
     #expect(faded.renderState == additive.renderState)
 }
 
+// #368: plain PBR materials are made without `try`, from an RGB color and a separate opacity.
+@Test(.enabled(if: deviceSupportsMetal4))
+func pbrSceneMaterialFromRGBAndOpacity() {
+    let material = PBRSceneMaterial(baseColor: [0.2, 0.4, 0.6], opacity: 0.5, metallic: 1, roughness: 0.3)
+    #expect(material.pbrMaterial.uniforms.baseColorFactor == SIMD4<Float>(0.2, 0.4, 0.6, 0.5))
+    #expect(material.pbrMaterial.uniforms.metallicFactor == 1)
+    #expect(PBRSceneMaterial().pbrMaterial.uniforms.baseColorFactor == SIMD4<Float>(1, 1, 1, 1))
+}
+
 // #375: PBRSceneMaterial wraps a shared PBRMaterial, so it is a class: assigning shares it, visibly.
 @Test(.enabled(if: deviceSupportsMetal4))
-func pbrSceneMaterialHasReferenceSemantics() throws {
-    let a = try PBRSceneMaterial(baseColor: [1, 0, 0, 1])
+func pbrSceneMaterialHasReferenceSemantics() {
+    let a = PBRSceneMaterial(baseColor: [1, 0, 0])
     let b = a
     #expect(a === b)
     b.renderState.blendMode = .additive

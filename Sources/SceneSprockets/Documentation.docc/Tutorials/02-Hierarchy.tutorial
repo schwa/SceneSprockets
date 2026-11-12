@@ -14,12 +14,6 @@
 
         @Steps {
             @Step {
-                Add a helper. `material(_:)` makes a Blinn-Phong material from one color.
-
-                @Code(name: "Helpers.swift", file: "tutorial-02-helpers.swift")
-            }
-
-            @Step {
                 Add a planet. `run(_:)` starts an action on a node, and `repeatForever` makes it loop. The planet turns once every 20 seconds.
 
                 @Code(name: "Tutorial2Hierarchy.swift", file: "tutorial-02-01.swift")

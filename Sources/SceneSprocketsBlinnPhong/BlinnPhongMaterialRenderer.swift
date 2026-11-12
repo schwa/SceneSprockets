@@ -12,7 +12,7 @@ import SwiftMesh
 ///
 /// Each term is a color, or a texture tinted by a color. The renderer's ambient light lights the ambient term. If a
 /// mesh has vertex colors, the first color set multiplies the ambient, diffuse and opacity terms.
-public struct BlinnPhongSceneMaterial: SceneSprockets.Material, SamplesShadowsInShader, DrawsDeformedVertices {
+public struct BlinnPhongSceneMaterial: SceneMaterial, SamplesShadowsInShader, DrawsDeformedVertices {
     /// Where a term of the material gets its color.
     public enum Source {
         /// A color in linear RGB.
@@ -88,6 +88,19 @@ public struct BlinnPhongSceneMaterial: SceneSprockets.Material, SamplesShadowsIn
         self.renderState = renderState
     }
 
+    /// Creates a Blinn-Phong material from one color.
+    ///
+    /// The ambient color is 30% of `color` and the highlights are a 50% gray.
+    ///
+    /// - Parameters:
+    ///   - color: The diffuse color, in linear RGB.
+    ///   - shininess: The specular exponent.
+    ///   - opacity: The opacity, from 0 to 1.
+    ///   - emission: The color that the material adds without lighting.
+    public init(color: SIMD3<Float>, shininess: Float = 32, opacity: Float = 1, emission: SIMD3<Float> = .zero) {
+        self.init(ambient: .color(color * 0.3), diffuse: .color(color), specular: .color(0.5), shininess: shininess, opacity: opacity, emission: .color(emission))
+    }
+
     public var isTransparent: Bool {
         opacity < 1 || usesDiffuseTextureAlpha || renderState.blendsWithBackground
     }
@@ -119,7 +132,7 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer, Equatable 
         self.ambientLightColor = ambientLightColor
     }
 
-    public var materialType: any SceneSprockets.Material.Type {
+    public var materialType: any SceneMaterial.Type {
         BlinnPhongSceneMaterial.self
     }
 

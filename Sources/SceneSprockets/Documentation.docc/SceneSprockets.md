@@ -20,7 +20,7 @@ SceneSprockets stores node data in a SwiftECS `World`. Your app can query this w
 - ``SceneGraph/Shape``
 - ``Camera``
 - ``Light``
-- ``Material``
+- ``SceneMaterial``
 - ``MaterialTexture``
 - ``VideoTexture``
 

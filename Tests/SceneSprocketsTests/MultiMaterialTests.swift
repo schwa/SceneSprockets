@@ -5,12 +5,12 @@ import MetalSprockets
 import SwiftMesh
 import Testing
 
-private struct UnlitMaterial: SceneSprockets.Material {
+private struct UnlitMaterial: SceneMaterial {
     var color: SIMD3<Float>
 }
 
 private struct UnlitRenderer: SceneGraphMaterialRenderer {
-    var materialType: any SceneSprockets.Material.Type { UnlitMaterial.self }
+    var materialType: any SceneMaterial.Type { UnlitMaterial.self }
 
     func makeElement(entries _: [SceneGraph.MeshEntry], context _: SceneGraphRenderContext) -> AnyElement {
         EmptyElement().eraseToAnyElement()

@@ -155,7 +155,7 @@ func screenSpaceMaskSkipsBlinnPhong() throws {
     let (sceneGraph, _) = try makeScene()
     let floor = try #require(sceneGraph.nodesWithWorldTransforms().first { $0.node.label == "Floor" }?.node)
     if case let .mesh(mesh, _, castsShadow, receivesShadow) = floor.content {
-        floor.content = .mesh(mesh, materials: [try ShaderMaterial.normals()], castsShadow: castsShadow, receivesShadow: receivesShadow)
+        floor.content = .mesh(mesh, materials: [ShaderMaterial.normals()], castsShadow: castsShadow, receivesShadow: receivesShadow)
     }
     let context = try #require(makeRenderContext(sceneGraph: sceneGraph, camera: nil, cameraMatrix: nil, aspectRatio: 1))
     let frame = try #require(try SceneGraphShadows().prepare(entries: sceneGraph.meshEntries(), context: context, bounds: sceneGraph.bounds, viewSize: (128, 128)))
@@ -204,7 +204,7 @@ func shadowsDimOnlyTheirOwnLight() throws {
 @MainActor
 func pbrShadowsDimOnlyTheirOwnLight() throws {
     let (sceneGraph, pixel) = try makeScene()
-    let gray = try PBRSceneMaterial(baseColor: [0.5, 0.5, 0.5, 1], roughness: 1)
+    let gray = PBRSceneMaterial(baseColor: [0.5, 0.5, 0.5], roughness: 1)
     for (node, _) in sceneGraph.nodesWithWorldTransforms() {
         if case let .mesh(mesh, _, castsShadow, receivesShadow) = node.content {
             node.content = .mesh(mesh, materials: [gray], castsShadow: castsShadow, receivesShadow: receivesShadow)
@@ -227,7 +227,7 @@ func pbrShadowsDimOnlyTheirOwnLight() throws {
 @MainActor
 func shaderMaterialShadowsDimOnlyTheirOwnLight() throws {
     let (sceneGraph, pixel) = try makeScene()
-    let gray = try ShaderMaterial.lit(color: [0.5, 0.5, 0.5, 1])
+    let gray = ShaderMaterial.lit(color: [0.5, 0.5, 0.5])
     for (node, _) in sceneGraph.nodesWithWorldTransforms() {
         if case let .mesh(mesh, _, castsShadow, receivesShadow) = node.content {
             node.content = .mesh(mesh, materials: [gray], castsShadow: castsShadow, receivesShadow: receivesShadow)

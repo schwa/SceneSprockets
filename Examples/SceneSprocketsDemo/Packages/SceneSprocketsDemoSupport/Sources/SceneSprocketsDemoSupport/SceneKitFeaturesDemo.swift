@@ -75,8 +75,8 @@ final class SceneKitFeaturesDemo: DemoScene {
             homePositions.append(position)
             let holder = shapesGroup.addChild(SceneGraph.Node(label: "Holder \(index)", transform: .init(translation: position)))
             // The capsule uses a custom shader (ShaderMaterial, #48); the rest use Blinn-Phong.
-            let material: any SceneSprockets.Material = if case .capsule = shape, let normals = try? ShaderMaterial.normals() {
-                normals
+            let material: any SceneMaterial = if case .capsule = shape {
+                ShaderMaterial.normals()
             } else {
                 BlinnPhongSceneMaterial.plastic(color)
             }
@@ -128,11 +128,8 @@ final class SceneKitFeaturesDemo: DemoScene {
 
         // Two overlapping translucent panes: transparent materials blend in renderingOrder, so the toggle swaps which
         // one looks in front.
-        let paneMaterial = { (color: SIMD4<Float>) -> any SceneSprockets.Material in
-            (try? ShaderMaterial.rim(color: color)).map { $0 as any SceneSprockets.Material } ?? BlinnPhongSceneMaterial.plastic(SIMD3(color.x, color.y, color.z))
-        }
-        redPane = root.addChild(SceneGraph.Node(label: "Red Pane", shape: .plane(width: 2, height: 1.5), material: paneMaterial([1, 0.1, 0.1, 0.6]), transform: .init(translation: [-5.4, 1.2, -1.5])))
-        bluePane = root.addChild(SceneGraph.Node(label: "Blue Pane", shape: .plane(width: 2, height: 1.5), material: paneMaterial([0.1, 0.3, 1, 0.6]), transform: .init(translation: [-4.6, 1.6, -1.5])))
+        redPane = root.addChild(SceneGraph.Node(label: "Red Pane", shape: .plane(width: 2, height: 1.5), material: ShaderMaterial.rim(color: [1, 0.1, 0.1], opacity: 0.6), transform: .init(translation: [-5.4, 1.2, -1.5])))
+        bluePane = root.addChild(SceneGraph.Node(label: "Blue Pane", shape: .plane(width: 2, height: 1.5), material: ShaderMaterial.rim(color: [0.1, 0.3, 1], opacity: 0.6), transform: .init(translation: [-4.6, 1.6, -1.5])))
         for pane in [redPane, bluePane] {
             // Translucent panes would otherwise cast solid shadows.
             if case let .mesh(mesh, materials, _, receivesShadow) = pane.content {

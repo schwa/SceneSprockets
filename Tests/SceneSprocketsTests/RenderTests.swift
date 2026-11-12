@@ -100,7 +100,7 @@ func blinnPhongDirectionalLightFollowsNodeRotation() throws {
 @Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func pbrBoxIsDrawnAtCenter() throws {
-    let material = try PBRSceneMaterial(baseColor: [0.1, 0.8, 0.1, 1], metallic: 0, roughness: 0.5)
+    let material = PBRSceneMaterial(baseColor: [0.1, 0.8, 0.1], metallic: 0, roughness: 0.5)
     let (sceneGraph, _) = try makeScene { .mesh($0, material: material) }
     let renderer = try OffscreenRenderer(size: size)
     let element = SceneGraphElement(sceneGraph: sceneGraph, aspectRatio: 1, renderers: [PBRMaterialRenderer()])
@@ -117,7 +117,7 @@ func pbrBoxIsDrawnAtCenter() throws {
 func mixedRenderersShareOnePass() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
-    let pbr = try PBRSceneMaterial(baseColor: [0.1, 0.8, 0.1, 1], metallic: 0, roughness: 0.5)
+    let pbr = PBRSceneMaterial(baseColor: [0.1, 0.8, 0.1], metallic: 0, roughness: 0.5)
     let root = SceneGraph.Node()
     root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(0, 0, 6)), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
     root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(0, 2, 4)), content: .light(Light(type: .point, color: [1, 1, 1], intensity: 5))))

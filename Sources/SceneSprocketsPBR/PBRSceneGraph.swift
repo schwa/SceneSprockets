@@ -14,7 +14,7 @@ import SwiftMesh
 ///
 /// It is a class, like SceneKit's `SCNMaterial`: nodes that use the same instance share it, and a change shows on all
 /// of them (#375).
-public final class PBRSceneMaterial: SceneSprockets.Material, SamplesShadowsInShader {
+public final class PBRSceneMaterial: SceneMaterial, SamplesShadowsInShader {
     /// The MetalSprocketsPBR material.
     public var pbrMaterial: PBRMaterial
 
@@ -50,15 +50,21 @@ public final class PBRSceneMaterial: SceneSprockets.Material, SamplesShadowsInSh
 
     /// Creates a material without textures.
     ///
+    /// Traps if Metal cannot allocate the material's small uniform buffer.
+    ///
     /// - Parameters:
-    ///   - baseColor: The base color in linear RGB, with alpha in `w`.
+    ///   - baseColor: The base color in linear RGB.
+    ///   - opacity: The base color's alpha, from 0 to 1.
     ///   - metallic: The metalness, from 0 (dielectric) to 1 (metal).
     ///   - roughness: The roughness, from 0 (smooth) to 1 (rough).
-    /// - Throws: An error if the material's buffers cannot be created.
-    public init(baseColor: SIMD4<Float> = [1, 1, 1, 1], metallic: Float = 0, roughness: Float = 0.5) throws {
+    public init(baseColor: SIMD3<Float> = [1, 1, 1], opacity: Float = 1, metallic: Float = 0, roughness: Float = 0.5) {
         let device = _MTLCreateSystemDefaultDevice()
-        let uniforms = PBRMaterialUniforms.defaults(baseColor: baseColor, metallic: metallic, roughness: roughness)
-        pbrMaterial = try PBRMaterial(uniforms: uniforms, placeholder: PBRMaterial.placeholderBinding(device: device), device: device)
+        let uniforms = PBRMaterialUniforms.defaults(baseColor: SIMD4(baseColor, opacity), metallic: metallic, roughness: roughness)
+        do {
+            pbrMaterial = try PBRMaterial(uniforms: uniforms, placeholder: PBRMaterial.placeholderBinding(device: device), device: device)
+        } catch {
+            fatalError("Could not create a PBR material: \(error)")
+        }
     }
 
     /// The common glTF texture slots. `MaterialTexture` loads textures from images.
@@ -92,10 +98,10 @@ public final class PBRSceneMaterial: SceneSprockets.Material, SamplesShadowsInSh
     ///   - roughness: The roughness factor.
     ///   - textures: The textures. An emissive texture sets the emissive factor to 1.
     ///   - sampler: The sampler for every texture, or `nil` for linear filtering with repeat.
-    /// - Throws: An error if the material's buffers cannot be created.
-    public init(baseColor: SIMD4<Float> = [1, 1, 1, 1], metallic: Float = 0, roughness: Float = 0.5, textures: Textures, sampler: MTLSamplerDescriptor? = nil) throws {
+    /// - Throws: An error if a texture cannot be bound with the sampler.
+    public init(baseColor: SIMD3<Float> = [1, 1, 1], opacity: Float = 1, metallic: Float = 0, roughness: Float = 0.5, textures: Textures, sampler: MTLSamplerDescriptor? = nil) throws {
         let device = _MTLCreateSystemDefaultDevice()
-        var uniforms = PBRMaterialUniforms.defaults(baseColor: baseColor, metallic: metallic, roughness: roughness)
+        var uniforms = PBRMaterialUniforms.defaults(baseColor: SIMD4(baseColor, opacity), metallic: metallic, roughness: roughness)
         let placeholder = try PBRMaterial.placeholderBinding(device: device)
         var bindings = Array(repeating: placeholder, count: Int(kPBRMaterialTextureCount.rawValue))
         let slots: [(MTLTexture?, PBRMaterialTextureIndex, WritableKeyPath<PBRMaterialUniforms, PBRTextureSlot>)] = [
@@ -277,7 +283,7 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
         self.exposure = exposure
     }
 
-    public var materialType: any SceneSprockets.Material.Type {
+    public var materialType: any SceneMaterial.Type {
         PBRSceneMaterial.self
     }
 

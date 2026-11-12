@@ -18,14 +18,14 @@ extension SceneGraph {
             /// A mesh with one material for each submesh.
             ///
             /// `materials[i]` applies to submesh `i`. The last material covers any extra submeshes.
-            case mesh(MetalMesh, materials: [any Material], castsShadow: Bool = true, receivesShadow: Bool = true)
+            case mesh(MetalMesh, materials: [any SceneMaterial], castsShadow: Bool = true, receivesShadow: Bool = true)
             /// A light.
             case light(Light)
             /// A camera.
             case camera(Camera)
 
             /// A mesh with one material for all submeshes.
-            public static func mesh(_ mesh: MetalMesh, material: any Material, castsShadow: Bool = true, receivesShadow: Bool = true) -> Self {
+            public static func mesh(_ mesh: MetalMesh, material: any SceneMaterial, castsShadow: Bool = true, receivesShadow: Bool = true) -> Self {
                 .mesh(mesh, materials: [material], castsShadow: castsShadow, receivesShadow: receivesShadow)
             }
         }

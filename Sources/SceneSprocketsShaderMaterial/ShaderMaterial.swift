@@ -21,7 +21,7 @@ import SwiftMesh
 /// `shadowMap`, `shadowSampler`; see `ShaderMaterialLighting` in `ShaderMaterial.h`), and the fragment function shades
 /// each light with its own shadow, as Blinn-Phong and PBR do. Without it, shadows darken the mesh in screen space after
 /// the scene pass, every light's shadow at once.
-public struct ShaderMaterial: SceneSprockets.Material, SamplesShadowsInShader, DrawsDeformedVertices {
+public struct ShaderMaterial: SceneMaterial, SamplesShadowsInShader, DrawsDeformedVertices {
     /// A value to bind to a shader argument.
     public enum Value {
         /// A `float`.
@@ -95,33 +95,33 @@ public struct ShaderMaterial: SceneSprockets.Material, SamplesShadowsInShader, D
     }
 
     /// A sample material that shows world-space normals as colors.
-    ///
-    /// - Throws: An error if the sample shader library cannot load.
-    public static func normals() throws -> Self {
-        let library = try ShaderMaterialSampleLibrary.shared()
-        return Self(vertexShader: try library.vertex_main, fragmentShader: try library.fragment_normals)
+    public static func normals() -> Self {
+        let shaders = ShaderMaterialSampleLibrary.functions(fragment: "fragment_normals")
+        return Self(vertexShader: shaders.vertex, fragmentShader: shaders.fragment)
     }
 
     /// A sample material with a flat color that darkens where the surface turns away from the camera.
     ///
-    /// The material needs no lights. It is transparent when `color.w` is less than 1.
+    /// The material needs no lights. It blends when `opacity` is less than 1.
     ///
-    /// - Parameter color: The color, with alpha in `w`.
-    /// - Throws: An error if the sample shader library cannot load.
-    public static func rim(color: SIMD4<Float>) throws -> Self {
-        let library = try ShaderMaterialSampleLibrary.shared()
-        return Self(vertexShader: try library.vertex_main, fragmentShader: try library.fragment_rim, parameters: ["color": .float4(color)], usesAlphaBlending: color.w < 1)
+    /// - Parameters:
+    ///   - color: The color, in linear RGB.
+    ///   - opacity: The opacity, from 0 to 1.
+    public static func rim(color: SIMD3<Float>, opacity: Float = 1) -> Self {
+        let shaders = ShaderMaterialSampleLibrary.functions(fragment: "fragment_rim")
+        return Self(vertexShader: shaders.vertex, fragmentShader: shaders.fragment, parameters: ["color": .float4(SIMD4(color, opacity))], usesAlphaBlending: opacity < 1)
     }
 
     /// A sample material with Lambert diffuse lighting from the scene's lights, each dimmed only by its own shadow.
     ///
     /// A starting point for custom shaders that use ``samplesShadows``.
     ///
-    /// - Parameter color: The diffuse color, with alpha in `w`.
-    /// - Throws: An error if the sample shader library cannot load.
-    public static func lit(color: SIMD4<Float>) throws -> Self {
-        let library = try ShaderMaterialSampleLibrary.shared()
-        return Self(vertexShader: try library.vertex_main, fragmentShader: try library.fragment_lit, parameters: ["color": .float4(color)], usesAlphaBlending: color.w < 1, samplesShadows: true)
+    /// - Parameters:
+    ///   - color: The diffuse color, in linear RGB.
+    ///   - opacity: The opacity, from 0 to 1.
+    public static func lit(color: SIMD3<Float>, opacity: Float = 1) -> Self {
+        let shaders = ShaderMaterialSampleLibrary.functions(fragment: "fragment_lit")
+        return Self(vertexShader: shaders.vertex, fragmentShader: shaders.fragment, parameters: ["color": .float4(SIMD4(color, opacity))], usesAlphaBlending: opacity < 1, samplesShadows: true)
     }
 }
 
@@ -133,7 +133,7 @@ public struct ShaderMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
     public init() {
     }
 
-    public var materialType: any SceneSprockets.Material.Type {
+    public var materialType: any SceneMaterial.Type {
         ShaderMaterial.self
     }
 
@@ -288,6 +288,17 @@ enum ShaderMaterialSampleLibrary {
         let library = try ShaderLibrary(bundle: .sceneSprocketsShaders()).namespaced("ShaderMaterialSamples")
         cached = library
         return library
+    }
+
+    // The sample vertex function and a sample fragment function. They ship in this package's bundle, so failing to load
+    // them is a packaging bug and traps.
+    static func functions(fragment name: String) -> (vertex: VertexShader, fragment: FragmentShader) {
+        do {
+            let library = try shared()
+            return (try library.function(named: "vertex_main", type: VertexShader.self), try library.function(named: name, type: FragmentShader.self))
+        } catch {
+            fatalError("Could not load the ShaderMaterial sample shaders: \(error)")
+        }
     }
 
     nonisolated(unsafe) private static var cachedShadowMap: MTLTexture?

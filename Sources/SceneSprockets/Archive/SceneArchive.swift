@@ -187,7 +187,7 @@ public protocol ArchivableMeshCodec {
     ///   - context: The archive context. Use ``SceneArchiveContext/newFile(in:pathExtension:)`` and
     ///     ``SceneArchiveContext/addFile(_:data:)`` to add the file.
     /// - Returns: The path of the file in the package.
-    func encode(_ mesh: MetalMesh, materials: [any Material], name: String?, context: SceneArchiveContext) throws -> String
+    func encode(_ mesh: MetalMesh, materials: [any SceneMaterial], name: String?, context: SceneArchiveContext) throws -> String
     /// Reads a mesh from a file in the package.
     ///
     /// - Parameters:
@@ -199,7 +199,7 @@ public protocol ArchivableMeshCodec {
 /// A material that a scene archive can save and load.
 ///
 /// The material encodes itself with `Codable`. It encodes textures through the ``SceneArchiveContext`` of the coder.
-public protocol ArchivableMaterial: Material, Codable {
+public protocol ArchivableMaterial: SceneMaterial, Codable {
     /// The name that identifies the material type in `scene.json`. It must be unique among the archive's types.
     static var archiveTypeName: String { get }
     /// Returns why the material cannot be saved, or `nil` if it can.

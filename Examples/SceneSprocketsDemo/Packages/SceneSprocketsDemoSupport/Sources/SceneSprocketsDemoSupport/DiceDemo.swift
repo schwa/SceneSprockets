@@ -198,7 +198,7 @@ final class DiceDemo: DemoScene {
     // A wooden floor and four walls, all static.
     static func buildTray(in root: SceneGraph.Node) {
         // Poly Haven's Dark Wood (CC0): color, normal, and roughness packed in green.
-        let wood: any SceneSprockets.Material = {
+        let wood: any SceneMaterial = {
             let loader = MTKTextureLoader(device: demoDevice)
             func texture(_ name: String, sRGB: Bool) -> MTLTexture? {
                 Bundle.module.url(forResource: name, withExtension: "jpg", subdirectory: "Resources/Dice").flatMap {
@@ -269,11 +269,12 @@ final class DiceDemo: DemoScene {
         if gearMeshes[spec] == nil {
             gearMeshes[spec] = MetalMesh(mesh: .gear(spec), device: demoDevice, label: "Gear \(teeth)")
         }
-        let metals: [(SIMD4<Float>, Float)] = [([0.85, 0.65, 0.3, 1], 0.3), ([0.75, 0.76, 0.78, 1], 0.22), ([0.9, 0.5, 0.35, 1], 0.35), ([0.35, 0.36, 0.4, 1], 0.45)]
+        let metals: [(SIMD3<Float>, Float)] = [([0.85, 0.65, 0.3], 0.3), ([0.75, 0.76, 0.78], 0.22), ([0.9, 0.5, 0.35], 0.35), ([0.35, 0.36, 0.4], 0.45)]
         let metal = metals[index % metals.count]
-        guard let mesh = gearMeshes[spec], let material = try? PBRSceneMaterial(baseColor: metal.0, metallic: 1, roughness: metal.1) else {
+        guard let mesh = gearMeshes[spec] else {
             return nil
         }
+        let material = PBRSceneMaterial(baseColor: metal.0, metallic: 1, roughness: metal.1)
         let gear = SceneGraph.Node(label: "Gear \(teeth)", content: .mesh(mesh, material: material))
         gear.physicsBody = .init(type: .dynamic, shape: .convexHull, friction: 0.5, restitution: 0.3)
         return gear

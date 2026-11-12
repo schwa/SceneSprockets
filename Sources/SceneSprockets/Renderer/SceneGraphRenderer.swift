@@ -35,7 +35,7 @@ public struct SceneGraphRenderContext {
 /// To add a material family, write a type that conforms to this protocol. The scene graph does not change.
 public protocol SceneGraphMaterialRenderer {
     /// The material type that the renderer draws.
-    var materialType: any SceneSprockets.Material.Type { get }
+    var materialType: any SceneMaterial.Type { get }
     /// Returns an element that draws mesh entries whose material is ``materialType``.
     ///
     /// The element draws inside the scene's render pass. ``SceneGraphElement`` can call this method several times in
@@ -292,7 +292,7 @@ public struct SceneGraphElement: Element {
     }
 
     // Opaque batches of every renderer except the one for `excluding`, with reversed depth.
-    private func makeOpaqueContent(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, excluding: any SceneSprockets.Material.Type) throws -> AnyElement? {
+    private func makeOpaqueContent(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, excluding: any SceneMaterial.Type) throws -> AnyElement? {
         var elements: [AnyElement] = []
         for batch in renderBatches(entries.filter { !$0.isTransparent }, context: context) {
             let partitions = partitionMeshEntries(batch.entries, renderers: renderers)

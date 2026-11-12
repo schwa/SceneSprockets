@@ -97,7 +97,7 @@ func avoidOccluderMovesInFrontOfBlocker() throws {
     let target = root.addChild(SceneGraph.Node())
     let camera = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 10])))
     // A 1-unit box centered at z = 5 blocks the line from the target to the camera.
-    root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 5]), content: .mesh(MetalMesh(mesh: .box(), device: device), material: try ShaderMaterial.normals())))
+    root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 5]), content: .mesh(MetalMesh(mesh: .box(), device: device), material: ShaderMaterial.normals())))
     camera.constraints = [.avoidOccluder(target: target, bias: 0)]
     SceneGraph(root: root).applyConstraints(pointOfView: matrix_identity_float4x4)
     let bounds = try #require(root.children[2].meshBounds)

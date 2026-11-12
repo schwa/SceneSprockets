@@ -23,10 +23,10 @@ private func pose(eye: SIMD3<Float>, target: SIMD3<Float>, up: SIMD3<Float> = [0
 private func render(offset: SIMD3<Float>, kind: MaterialKind) throws -> [SIMD4<UInt8>] {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
-    let material: any SceneSprockets.Material = switch kind {
-    case .shaderMaterial: try ShaderMaterial.rim(color: [0.8, 0.8, 0.8, 1])
+    let material: any SceneMaterial = switch kind {
+    case .shaderMaterial: ShaderMaterial.rim(color: [0.8, 0.8, 0.8])
     case .blinnPhong: BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color(0.7), specular: .color(0), shininess: 1)
-    case .pbr: try PBRSceneMaterial(baseColor: [0.8, 0.8, 0.8, 1], metallic: 0, roughness: 0.3)
+    case .pbr: PBRSceneMaterial(baseColor: [0.8, 0.8, 0.8], metallic: 0, roughness: 0.3)
     }
     let root = SceneGraph.Node()
     let world = root.addChild(SceneGraph.Node(transform: .init(translation: offset)))
