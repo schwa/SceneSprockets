@@ -8308,6 +8308,7 @@ Related: #355, #356, #360.
 - `2026-11-11T16:04:54Z`: Question 1 (design): Proposed API — approve or amend? (1) BlinnPhongSceneMaterial gets a convenience init(color: SIMD3<Float>, shininess: Float = 32, opacity: Float = 1, emission: SIMD3<Float> = .zero) with ambient = color*0.3, specular 0.5. (2) PBRSceneMaterial(baseColor:metallic:roughness:) stops throwing: GPU buffers are created lazily by PBRMaterialRenderer. Same for ShaderMaterial.normals()/rim(). (3) Colors: keep SIMD3 for RGB everywhere and add a separate opacity: Float to PBR (instead of SIMD4 baseColor)? (4) Rename for consistency: ShaderMaterial -> ShaderSceneMaterial, or drop 'Scene' from all three (BlinnPhongMaterial, PBRMaterial clashes with MetalSprocketsPBR)? (5) Rename the Material protocol to SceneMaterial to remove the SceneSprockets.Material ambiguity. (6) normalMap becomes a Source-like texture reference.
 - `2026-11-11T16:04:55Z`: Auto-fixer run: punted. Fixes rename public types, change throwing initializers and color types — design decisions. Unblocker: answer 368-Q1.
 - `2026-11-12T02:14:58Z`: Answer 1: works for me
+- `2026-11-12T02:57:21Z`: Question 2 (design): normalMap: BlinnPhongSceneMaterial.normalMap is a raw MTLTexture? while other channels are Source (.color / .texture(texture, sampler, tint)). Make it a Source? (a .color normal is meaningless), or add a small TextureSource {texture, sampler} used by normalMap (and by Source.texture), or leave it as MTLTexture? and close #368?
 
 ---
 
