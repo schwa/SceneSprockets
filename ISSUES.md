@@ -7069,13 +7069,14 @@ Starting point: the Open Sea example in MetalSprocketsExamples (Gerstner-wave oc
 ## 319: No grass or foliage fields
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:addons, effort:l, deferred
 depends: 314
 created: 2026-11-07T17:19:21Z
-updated: 2026-11-08T03:35:02Z
+updated: 2026-11-12T04:32:25Z
+closed: 2026-11-12T04:32:25Z
 +++
 
 SceneSprockets cannot cover ground with grass or similar foliage: there is no node that scatters many blades or plants over a surface cheaply, with wind. Documentation/Features.md lists 'Foliage with wind' as missing.
@@ -7083,6 +7084,7 @@ SceneSprockets cannot cover ground with grass or similar foliage: there is no no
 Starting points in MetalSprocketsExamples: Grass (mesh-shader procedural grass), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/GrassDemo/, and Meadow (ray-traced procedural meadow), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/MeadowDemo/. Candidate for SceneSprocketsAddOns (#314); pairs with terrain (#315).
 
 - `2026-11-08T02:46:17Z`: Autonomous run: scoped, not changed. 'Cheap, many blades, with wind' needs per-frame GPU vertex animation (the Grass example uses a mesh shader). In SceneSprockets that is either a ShaderMaterial in SceneSprocketsAddOns (no scene lights or shadows, own sun parameter) or wind support in the Blinn-Phong/PBR vertex shaders (lit, but touches every renderer). Static scattered blades on the CPU would be lit but have no wind and cost a lot of vertices. Punting: same lit-vs-self-contained decision as #318, #322 and #300. Question: which approach, and should it wait for terrain (#315) to scatter on?
+- `2026-11-12T04:32:26Z`: Closed in deferred-issue cleanup: wishful, with no concrete use case in SceneSprockets.
 
 ---
 
