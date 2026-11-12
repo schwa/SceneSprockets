@@ -8843,3 +8843,52 @@ Once MetalSprockets ships a shared StereoViews (#MetalSprockets#558) in a tagged
 - `2026-11-12T21:04:00Z`: Adopted the shared MetalSprockets StereoViews (0.2.11); removed SceneSprockets.StereoViews and the PBR/Particles conversions. AddOns, PBR and Particles are pinned to main until they are tagged.
 
 ---
+
+## 385: Demo has no way to view a scene in a visionOS immersive space
+
++++
+status: new
+priority: medium
+kind: feature
+labels: area:demo, effort:m
+depends: 386
+created: 2026-11-12T21:05:10Z
+updated: 2026-11-12T21:24:48Z
++++
+
+SceneImmersiveElement (#381) exists but no app uses it. SceneSprocketsDemo has no ImmersiveSpace scene and no control to open one, so stereo rendering has never run on a device.
+
+The visionOS build of SceneSprocketsDemo also fails: CodeSign of SceneSprocketsDemoSupport_SceneSprocketsDemoSupport.bundle reports 'bundle format unrecognized, invalid, or unsuitable' (build with -destination generic/platform=visionOS).
+
+- `2026-11-12T21:24:48Z`: The immersive space and toggle are written (uncommitted) but crash when the window edits the scene while immersive; blocked on #386.
+
+---
+
+## 386: Scene graph cannot be rendered from a thread other than the one that edits it
+
++++
+status: new
+priority: high
+kind: bug
+labels: area:renderer, effort:xl
+created: 2026-11-12T21:24:45Z
++++
+
+The visionOS immersive render loop (MetalSprockets ImmersiveRuntime) builds frames off the main thread. SceneImmersiveElement traverses the scene graph there while the app edits it on the main thread. Node data lives in a SwiftECS World, which has no synchronization, so this is a data race.
+
+Steps to reproduce (visionOS device):
+1. Run SceneSprocketsDemo, open the keynote demo.
+2. Open the immersive space (toolbar Immersive button, uncommitted work for #385).
+3. Advance a slide with the toolbar.
+
+Actual: crash, 'Swift runtime failure: Index out of range' in ComponentRef.untrackedValue via SceneGraph.Node.readField (Node+Entity.swift:306), reached from SceneGraph.advanceParticles -> visitActive -> Node.transform on the render thread, while the main thread runs KeynoteDemo.breakIntroTitles() creating nodes.
+
+Expected: the app can edit the scene graph on its own thread while another thread renders it.
+
+Renderers read live nodes throughout frame building (MeshEntry.node, level of detail, deformation, particles, text), and the World can also be written directly by an ECS app (#269), so no single place guards the reads.
+
+## Proposed fix (per schwa)
+
+A presentation snapshot, like SceneKit's presentation tree: once per frame, on the thread that owns the scene graph, copy what rendering needs (mesh entries with their values, lights, cameras, particles, text, environment, revisions) into an immutable snapshot. Renderers read only the snapshot, so the render thread takes no locks and never touches live nodes. Reuse unchanged parts across frames using revision.structure and revision.transform. A per-graph lock was considered and rejected: it adds a lock to every field access on both threads and blocks one thread on the other.
+
+---
