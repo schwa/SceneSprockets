@@ -19,7 +19,7 @@ let package = Package(
         .package(url: "https://github.com/schwa/Interaction3D", .upToNextMinor(from: "0.2.1")),
         .package(url: "https://github.com/schwa/MetalSprockets", .upToNextMinor(from: "0.2.11")),
         .package(url: "https://github.com/schwa/MetalSprocketsAddOns", branch: "main"),
-        .package(url: "https://github.com/schwa/MetalSprocketsPBR", branch: "main"),
+        .package(url: "https://github.com/schwa/MetalSprocketsPBR", .upToNextMinor(from: "0.1.2")),
         .package(url: "https://github.com/schwa/MetalSupport", .upToNextMinor(from: "1.0.7")),
         .package(url: "https://github.com/schwa/SwiftMesh", .upToNextMinor(from: "0.1.0")),
         .package(url: "https://github.com/schwa/SwiftFields", .upToNextMinor(from: "0.1.5")),

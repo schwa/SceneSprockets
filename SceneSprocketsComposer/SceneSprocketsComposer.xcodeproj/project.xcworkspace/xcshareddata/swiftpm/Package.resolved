@@ -1,5 +1,5 @@
 {
-  "originHash" : "34a2bed8c13da9041cac1fa7223f6608535e8e4f21b8f2f68cc0775af25aebd0",
+  "originHash" : "58baa5729240dc00427fdfda2ceb5f8a1210b873cf5cc98d208b0fa6a711c1e1",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -78,8 +78,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsGLTF",
       "state" : {
-        "revision" : "f16140c83f7b30639e47afd85e77e677acb0f952",
-        "version" : "0.0.4"
+        "revision" : "21f7afff18929a8d10bf7d47fdf6619f27ef4ba0",
+        "version" : "0.0.7"
       }
     },
     {
@@ -87,8 +87,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsParticles",
       "state" : {
-        "branch" : "main",
-        "revision" : "989463d2108085d2ae3e0a22c87b2535718326db"
+        "revision" : "37590a849271ec2d4583008f2103bd215a68fe47",
+        "version" : "0.0.5"
       }
     },
     {
@@ -96,8 +96,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsPBR",
       "state" : {
-        "branch" : "main",
-        "revision" : "ee632b095b790b021b57dcfd4c11e4f49b585c94"
+        "revision" : "019dca8644a55c79709ab3af49fee6d2cfab1a3e",
+        "version" : "0.1.2"
       }
     },
     {
@@ -204,8 +204,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/SwiftGLTF",
       "state" : {
-        "revision" : "978ddbbecd1d842c1b35233d8ea9db4176c18127",
-        "version" : "1.0.6"
+        "revision" : "6d75539d60456554aa6395ec94bf114a977af178",
+        "version" : "1.0.7"
       }
     },
     {
@@ -231,8 +231,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/SwiftPLY",
       "state" : {
-        "revision" : "46a78c2f61babad1b950bd354b83f072c21489b8",
-        "version" : "0.0.1"
+        "revision" : "4b8558957e85f5e9d5c8ff7624ee1c7412ba74a8",
+        "version" : "0.0.2"
       }
     }
   ],
