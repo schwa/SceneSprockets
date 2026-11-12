@@ -188,7 +188,7 @@ public final class KeynoteDemo: DemoScene {
         """,
         "SceneView": """
         • SceneView is the SwiftUI view: give it a scene graph and some renderers.
-        • Options such as allowsCameraControl give you orbit and zoom for free.
+        • .sceneCameraControl() gives you orbit and zoom for free.
         • Shadows are one more argument.
         """,
         "Scene Graph": """
