@@ -8307,6 +8307,7 @@ Related: #355, #356, #360.
 
 - `2026-11-11T16:04:54Z`: Question 1 (design): Proposed API — approve or amend? (1) BlinnPhongSceneMaterial gets a convenience init(color: SIMD3<Float>, shininess: Float = 32, opacity: Float = 1, emission: SIMD3<Float> = .zero) with ambient = color*0.3, specular 0.5. (2) PBRSceneMaterial(baseColor:metallic:roughness:) stops throwing: GPU buffers are created lazily by PBRMaterialRenderer. Same for ShaderMaterial.normals()/rim(). (3) Colors: keep SIMD3 for RGB everywhere and add a separate opacity: Float to PBR (instead of SIMD4 baseColor)? (4) Rename for consistency: ShaderMaterial -> ShaderSceneMaterial, or drop 'Scene' from all three (BlinnPhongMaterial, PBRMaterial clashes with MetalSprocketsPBR)? (5) Rename the Material protocol to SceneMaterial to remove the SceneSprockets.Material ambiguity. (6) normalMap becomes a Source-like texture reference.
 - `2026-11-11T16:04:55Z`: Auto-fixer run: punted. Fixes rename public types, change throwing initializers and color types — design decisions. Unblocker: answer 368-Q1.
+- `2026-11-12T02:14:58Z`: Answer 1: works for me
 
 ---
 
@@ -8341,6 +8342,7 @@ Related: #362, #363, #365, #248.
 - `2026-11-11T15:55:12Z`: Related: #362 (option names), #363 (comparison with Apple's SwiftUI views), #365 (debug options from environment variables). Each covers one part of this issue.
 - `2026-11-11T16:13:47Z`: Question 1 (design): Proposed direction — approve or amend? Keep a short init: SceneView(_ sceneGraph:, pointOfView: = nil, renderers: = [default Blinn-Phong]) and move everything else to view modifiers, like Map/WebView: .sceneCameraControl(...) (exists), .sceneShadows(_:), .sceneAudio(_:), .sceneDelegate(_:), .scenePlaying(_:), .sceneCamera(matrix: Binding, target:, override:), .onSceneTap { hit in } / .onSceneTap { point, viewport, hit in }, .sceneManipulator(_:), .sceneDecorations {...}, .sceneOverlay {...}, .sceneDebugMode(_:), .sceneMaterialChannel(_:), .sceneStatistics(), .sceneFrameTiming(); Options is removed (or kept only as a deprecated shim). closuresID becomes internal (closures in modifiers compared via an explicit id parameter on the modifier). Also: should a mesh whose material type has no renderer log a one-time warning?
 - `2026-11-11T16:13:47Z`: Auto-fixer run: punted. Restructuring SceneView's public configuration (init vs. modifiers vs. Options) is an API design decision that also settles #362 and #363. Unblocker: answer 369-Q1.
+- `2026-11-12T02:15:08Z`: Answer 1: works for me
 
 ---
 
@@ -8383,6 +8385,8 @@ Related: #295, #106, #362.
 - `2026-11-11T16:14:32Z`: Auto-fixer run: punted. Findings: (1) correction — the Node...Component structs are intentionally public: WorkingWithTheWorld.md documents them for ECS queries over SceneGraph.world (#269). Not accidental. (2) The free functions renderBatches, materialDraw and meshEntriesInFrustum are used by BlinnPhong/PBR/ShaderMaterial in other targets and are plausibly API for third-party SceneGraphMaterialRenderer authors; culledMeshEntries, sortedFrontToBack, groupedByVertexDescriptor, distanceSquared and cameraRelative have no users outside this package. (3) Every naming item (prefixes, nesting, GLTFSceneGraph/ModelIOSceneGraph, Light.LightType, rotateBy/rotateTo, angle types, Shape axis names, tuple returns, hitTest overloads, isVisible/isShown/isActive) is a rename of public API. Unblocker: answer 370-Q1 and 370-Q2.
 - `2026-11-11T16:14:32Z`: Question 1 (decision): Renderer helpers: are renderBatches, materialDraw and meshEntriesInFrustum supported API for third-party material renderers (keep public, document), and should culledMeshEntries, sortedFrontToBack, groupedByVertexDescriptor, distanceSquared and cameraRelative become 'package' (still usable by sibling targets, hidden from clients)?
 - `2026-11-11T16:14:33Z`: Question 2 (design): Naming convention to apply across modules: (a) nest everything under SceneGraph (SceneGraph.Light, SceneGraph.Camera, SceneGraph.Shadows, SceneGraph.Audio, SceneGraph.ParticleSystem, SceneGraph.PhysicsWorld), or (b) top-level types with one prefix 'Scene' (SceneLight, SceneCamera, SceneShadows ...), or (c) top-level, no prefix except where it clashes? Plus: rename GLTFSceneGraph/ModelIOSceneGraph to ...Import (or merge per #371), Light.LightType -> Light.Kind, rotateBy(x:y:z:) -> rotate(byEuler:), and angles as Angle in public API?
+- `2026-11-12T02:15:28Z`: Answer 1: yes
+- `2026-11-12T02:15:54Z`: Answer 2: c
 
 ---
 
@@ -8418,6 +8422,7 @@ Related: #358, #31.
 
 - `2026-11-11T16:15:14Z`: Question 1 (design): Proposed: one entry point, 'ModelFile.load(_ url:) throws -> ModelFile.Result' where Result is a struct { node: SceneGraph.Node (root named after the file, detached), animations: [SceneGraph.AnimationClip], warnings: [String] } for every format (glTF variants exposed as an optional 'variants' field). GLTFSceneGraph and ModelIOSceneGraph become internal (or renamed GLTFImport/ModelIOImport and kept for format-specific options), and ModelIOSceneGraph's single 'animation' becomes 'animations'. Callers that want a whole SceneGraph wrap the node. Approve or amend?
 - `2026-11-11T16:15:15Z`: Auto-fixer run: punted. Unifying the loaders changes or removes public types (GLTFSceneGraph, ModelIOSceneGraph, ModelFile.load's tuple); users: Composer EditorModel, KeynoteDemo, BurningFox. Unblocker: answer 371-Q1. Related naming question: 370-Q2.
+- `2026-11-12T02:16:05Z`: Answer 1: approve
 
 ---
 
@@ -8548,6 +8553,7 @@ Related: #368 (material API consistency).
 
 - `2026-11-12T01:36:44Z`: Question 1 (design): PBRSceneMaterial exposes 'public var pbrMaterial: PBRMaterial' (a class), so any copy can mutate shared state through it, not only through renderState. Fix by (a) copy-on-write: make pbrMaterial internal, expose value properties (uniforms, renderState, doubleSided, textureTransforms) with mutating setters that copy the PBRMaterial when not uniquely referenced (copying allocates a GPU buffer, so a failed copy would have to trap or keep sharing); or (b) make PBRSceneMaterial a final class, so sharing is explicit, like SCNMaterial? Option (b) also changes BlinnPhongSceneMaterial/ShaderMaterial consistency (#368). Which one?
 - `2026-11-12T01:36:45Z`: Auto-fixer run: punted. The shared state is reachable through the public pbrMaterial class reference, not only renderState, so a real fix is either copy-on-write with pbrMaterial hidden, or making the type a class. That is an API decision (it also touches #368). Unblocker: answer 375-Q1.
+- `2026-11-12T02:16:33Z`: Answer 1: b
 
 ---
 
@@ -8611,6 +8617,7 @@ Related: #368 (material API consistency).
 
 - `2026-11-12T01:42:41Z`: Question 1 (design): Where should culling live? Proposal: add 'cullMode: MTLCullMode = .back' (or a 'isDoubleSided: Bool') to MaterialRenderState, used by Blinn-Phong (replacing BlinnPhongSceneMaterial.cullMode) and ShaderMaterial (which gains culling). PBR keeps glTF's doubleSided on PBRMaterial, since PBRSceneMaterial uses MetalSprocketsPBR's own PBRRenderState, not MaterialRenderState; unifying that means either a MetalSprocketsPBR change or mapping PBRSceneMaterial onto MaterialRenderState (#375/#368). Two choices: (1) cullMode enum vs isDoubleSided bool, and default back vs none (Blinn-Phong defaults to none today); (2) leave PBR on doubleSided, or also move PBR?
 - `2026-11-12T01:42:41Z`: Auto-fixer run: punted. Unifying culling means choosing the shared setting's shape and default, and PBR's render state is a separate MetalSprocketsPBR type, so it touches #375/#368 too. Unblocker: answer 377-Q1.
+- `2026-11-12T02:16:44Z`: Answer 1: thats good
 
 ---
 
