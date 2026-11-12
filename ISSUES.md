@@ -7172,18 +7172,21 @@ Starting point: the cloud demo in MetalSprocketsExamples (sun-lit volumetric clo
 ## 324: No fluid simulation
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:addons, effort:xl, deferred
 depends: 314
 created: 2026-11-07T17:19:23Z
-updated: 2026-11-08T03:35:03Z
+updated: 2026-11-12T04:31:39Z
+closed: 2026-11-12T04:31:39Z
 +++
 
 SceneSprockets has no fluid simulation, such as a water volume that splashes and flows around objects.
 
 Starting point: the FLIP Fluid example in MetalSprocketsExamples (3D PIC/FLIP simulation), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/MetalFLIPDemo/. A later candidate for SceneSprocketsAddOns (#314): heavier than the others.
+
+- `2026-11-12T04:31:39Z`: Closed in deferred-issue cleanup: wishful: FLIP fluid simulation, xl effort, with no concrete use case in SceneSprockets.
 
 ---
 
