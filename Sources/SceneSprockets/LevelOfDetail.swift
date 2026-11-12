@@ -26,28 +26,29 @@ extension SceneGraph {
 
 // Swaps in each node's level of detail for the camera at `cameraPosition`. Nodes without levels pass through.
 func applyLevelsOfDetail(_ entries: [SceneGraph.MeshEntry], cameraPosition: SIMD3<Float>) -> [SceneGraph.MeshEntry] {
-    guard entries.contains(where: { !$0.node.levelsOfDetail.isEmpty }) else {
+    guard entries.contains(where: { !$0.levelsOfDetail.isEmpty }) else {
         return entries
     }
     var result: [SceneGraph.MeshEntry] = []
-    var handled = Set<ObjectIdentifier>()
+    var handled = Set<SceneGraph.Node.ID>()
     for entry in entries {
-        let node = entry.node
-        guard !node.levelsOfDetail.isEmpty else {
+        let nodeID = entry.nodeID
+        guard !entry.levelsOfDetail.isEmpty else {
             result.append(entry)
             continue
         }
         // A node's entries are one per submesh; replace them all at its first.
-        guard handled.insert(ObjectIdentifier(node)).inserted else {
+        guard handled.insert(nodeID).inserted else {
             continue
         }
         let position = entry.worldTransform.columns.3.xyz
         let distance = simd_distance(position, cameraPosition)
-        guard let level = node.levelsOfDetail.filter({ $0.distance <= distance }).max(by: { $0.distance < $1.distance }) else {
-            result += entries.filter { $0.node === node }
+        guard let level = entry.levelsOfDetail.filter({ $0.distance <= distance }).max(by: { $0.distance < $1.distance }) else {
+            result += entries.filter { $0.nodeID == nodeID }
             continue
         }
-        guard let mesh = level.mesh, case let .mesh(_, materials, _, _) = node.content, let lastMaterial = materials.last else {
+        let materials = entry.nodeMaterials
+        guard let mesh = level.mesh, let lastMaterial = materials.last else {
             continue
         }
         for submeshIndex in mesh.submeshes.indices {

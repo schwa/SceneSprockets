@@ -163,6 +163,8 @@ public class SceneGraph {
             var renderingOrder: Int
             var meshBounds: BoundingBox3D?
             var levelsOfDetail: [LevelOfDetail]
+            // The node's materials, for level-of-detail meshes.
+            var nodeMaterials: [any SceneMaterial]
 
             init(node: Node, worldTransform: float4x4, mesh: MetalMesh, submeshIndex: Int, material: any SceneMaterial, castsShadow: Bool, receivesShadow: Bool, opacity: Float) {
                 self.nodeID = node.id
@@ -170,6 +172,11 @@ public class SceneGraph {
                 self.renderingOrder = node.renderingOrder
                 self.meshBounds = node.meshBounds
                 self.levelsOfDetail = node.levelsOfDetail
+                if case let .mesh(_, materials, _, _) = node.content {
+                    self.nodeMaterials = materials
+                } else {
+                    self.nodeMaterials = [material]
+                }
                 self.node = node
                 self.worldTransform = worldTransform
                 self.mesh = mesh
@@ -194,6 +201,7 @@ public class SceneGraph {
                 renderingOrder = other.renderingOrder
                 meshBounds = other.meshBounds
                 levelsOfDetail = other.levelsOfDetail
+                nodeMaterials = other.nodeMaterials
             }
 
             func copy() -> Storage {
@@ -273,6 +281,8 @@ public class SceneGraph {
         public var meshBounds: BoundingBox3D? { storage.meshBounds }
         /// The node's levels of detail, copied when the entry was made.
         public var levelsOfDetail: [LevelOfDetail] { storage.levelsOfDetail }
+        /// The node's materials, one per submesh, copied when the entry was made.
+        public var nodeMaterials: [any SceneMaterial] { storage.nodeMaterials }
 
         /// Blends: the material is transparent, or it applies node opacity and that is below 1.
         public var isTransparent: Bool {

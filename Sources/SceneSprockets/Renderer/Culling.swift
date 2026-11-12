@@ -18,7 +18,7 @@ package func culledMeshEntries(_ entries: [SceneGraph.MeshEntry], viewProjection
 public func meshEntriesInFrustum(_ entries: [SceneGraph.MeshEntry], viewProjection: simd_float4x4) -> [Bool] {
     let frustum = Frustum(viewProjection: viewProjection)
     return entries.map { entry in
-        guard let bounds = entry.node.meshBounds else {
+        guard let bounds = entry.meshBounds else {
             return true
         }
         return frustum.intersects(bounds.transformed(by: entry.worldTransform))
@@ -39,7 +39,7 @@ public func meshEntriesInFrustum(_ entries: [SceneGraph.MeshEntry], projectionMa
     let cameraPosition = cameraMatrix.columns.3.xyz
     let frustum = Frustum(viewProjection: projectionMatrix * cameraMatrix.cameraRelative(to: cameraPosition).inverse)
     return entries.map { entry in
-        guard let bounds = entry.node.meshBounds else {
+        guard let bounds = entry.meshBounds else {
             return true
         }
         return frustum.intersects(bounds.transformed(by: entry.worldTransform.cameraRelative(to: cameraPosition)))
@@ -51,7 +51,7 @@ public func meshEntriesInFrustum(_ entries: [SceneGraph.MeshEntry], projectionMa
 func sortedBackToFront(_ entries: [SceneGraph.MeshEntry], cameraPosition: SIMD3<Float>) -> [SceneGraph.MeshEntry] {
     entries
         .map { entry in
-            let center = entry.node.meshBounds.map { ($0.min + $0.max) / 2 } ?? .zero
+            let center = entry.meshBounds.map { ($0.min + $0.max) / 2 } ?? .zero
             let world = entry.worldTransform * SIMD4(center, 1)
             return (entry, simd_distance_squared(SIMD3(world.x, world.y, world.z), cameraPosition))
         }

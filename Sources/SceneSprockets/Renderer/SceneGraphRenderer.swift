@@ -87,8 +87,9 @@ public protocol PrePassRenderer {
 /// `cameraOverride` replaces the camera node's camera (projection and masks) even when there is one, for editor cameras.
 /// `defaultLight` is added at the camera when the scene has no lights, like SceneKit's autoenablesDefaultLighting.
 public struct SceneGraphElement: Element {
-    var sceneGraph: SceneGraph
-    var camera: SceneGraph.Node?
+    // Read instead of the live graph, so the element can be built on another thread (#388).
+    var presentation: SceneGraph.Presentation
+    var cameraID: SceneGraph.Node.ID?
     var cameraMatrix: simd_float4x4?
     var aspectRatio: Float
     var renderers: [any MaterialRenderer]
@@ -134,15 +135,24 @@ public struct SceneGraphElement: Element {
     ///   - materialChannel: A material value to show instead of lighting.
     ///   - stereoViews: Views to draw at once, such as a visionOS immersive space's eyes. They replace the camera's view
     ///     and projection; the camera still supplies the category mask.
+    ///
+    /// Makes the scene's ``SceneGraph/presentation()`` snapshot, so call it on the thread that edits the graph.
     public init(sceneGraph: SceneGraph, camera: SceneGraph.Node? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any MaterialRenderer], defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, shadows: Shadows? = nil, storesDepth: Bool = false, decorations: ((RenderContext) throws -> AnyElement?)? = nil, debugMode: DebugMode? = nil, materialChannel: MaterialChannel? = nil, stereoViews: StereoViews? = nil) {
+        self.init(presentation: sceneGraph.presentation(), cameraID: camera?.id, cameraMatrix: cameraMatrix, aspectRatio: aspectRatio, renderers: renderers, defaultCamera: defaultCamera, cameraOverride: cameraOverride, defaultLight: defaultLight, shadows: shadows, storesDepth: storesDepth, decorations: decorations, debugMode: debugMode, materialChannel: materialChannel, stereoViews: stereoViews)
+    }
+
+    /// Creates an element that draws a snapshot of a scene graph, from ``SceneGraph/presentation()``. The snapshot can
+    /// be drawn on any thread. `cameraID` picks the camera node (the first camera if `nil`); the other parameters are
+    /// as in ``init(sceneGraph:camera:cameraMatrix:aspectRatio:renderers:defaultCamera:cameraOverride:defaultLight:shadows:storesDepth:decorations:debugMode:materialChannel:stereoViews:)``.
+    public init(presentation: SceneGraph.Presentation, cameraID: SceneGraph.Node.ID? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any MaterialRenderer], defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, shadows: Shadows? = nil, storesDepth: Bool = false, decorations: ((RenderContext) throws -> AnyElement?)? = nil, debugMode: DebugMode? = nil, materialChannel: MaterialChannel? = nil, stereoViews: StereoViews? = nil) {
+        self.presentation = presentation
+        self.cameraID = cameraID
         self.stereoViews = stereoViews
         self.debugMode = debugMode
         self.materialChannel = materialChannel
         self.cameraOverride = cameraOverride
         self.storesDepth = storesDepth
         self.decorations = decorations
-        self.sceneGraph = sceneGraph
-        self.camera = camera
         self.cameraMatrix = cameraMatrix
         self.aspectRatio = aspectRatio
         // Kept with the debug renderer, so background renderers still draw.
@@ -154,12 +164,12 @@ public struct SceneGraphElement: Element {
 
     public var body: some Element {
         get throws {
-            guard var context = makeRenderContext(sceneGraph: sceneGraph, camera: camera, cameraMatrix: cameraMatrix, aspectRatio: aspectRatio, defaultCamera: defaultCamera ?? (stereoViews == nil ? nil : Camera(projection: PerspectiveProjection())), cameraOverride: cameraOverride, defaultLight: defaultLight, stereoViews: stereoViews) else {
+            guard var context = makeRenderContext(presentation: presentation, cameraID: cameraID, cameraMatrix: cameraMatrix, aspectRatio: aspectRatio, defaultCamera: defaultCamera ?? (stereoViews == nil ? nil : Camera(projection: PerspectiveProjection())), cameraOverride: cameraOverride, defaultLight: defaultLight, stereoViews: stereoViews) else {
                 return EmptyElement().eraseToAnyElement()
             }
             let cameraPosition = context.cameraMatrix.columns.3.xyz
             context.materialChannel = debugMode == nil ? materialChannel : nil
-            var entries = applyLevelsOfDetail(sceneGraph.meshEntries().filter { $0.node.categoryBitMask & context.categoryBitMask != 0 }, cameraPosition: cameraPosition)
+            var entries = applyLevelsOfDetail(presentation.meshes.filter { $0.categoryBitMask & context.categoryBitMask != 0 }, cameraPosition: cameraPosition)
             if let debugMode {
                 entries = entries.map { entry in
                     var entry = entry
@@ -180,7 +190,7 @@ public struct SceneGraphElement: Element {
             }()
             // Prepared before the renderers, which sample it while shading.
             let shadowFrame = try postTargets.flatMap { targets in
-                try shadows?.prepare(entries: entries, context: context, bounds: sceneGraph.bounds, viewSize: (targets.color.width, targets.color.height))
+                try shadows?.prepare(entries: entries, context: context, bounds: presentation.bounds, viewSize: (targets.color.width, targets.color.height))
             }
             if let shadows, let shadowFrame {
                 context.shadow = Shadows.Sampling(shadowMap: shadowFrame.shadowMap, intensity: shadows.intensity, color: shadows.color, softness: shadows.softness)
@@ -239,14 +249,14 @@ public struct SceneGraphElement: Element {
             #if arch(arm64)
             // Node text (#119): after the meshes, depth-tested against them.
             if let color = renderPassDescriptor?.colorAttachments[0].texture, debugMode == nil {
-                let texts = sceneGraph.visibleTexts(categoryBitMask: context.categoryBitMask)
+                let texts = presentation.texts.filter { $0.categoryBitMask & context.categoryBitMask != 0 }.map { ($0.text, $0.worldTransform) }
                 elements += try Self.makeTextElements(texts, context: context, viewportSize: [Float(color.width), Float(color.height)], device: color.device)
             }
             #endif
             // Particles simulate in their own compute pass before the scene pass, then draw after the meshes.
-            let particleSimulations = try sceneGraph.allParticleSystems().map { try $0.simulate(view: context.viewMatrix).eraseToAnyElement() }
+            let particleSimulations = try presentation.particleSystems.map { try $0.simulate(view: context.viewMatrix).eraseToAnyElement() }
             prePasses = particleSimulations + prePasses
-            let visibleParticleSystems = sceneGraph.visibleParticleSystems()
+            let visibleParticleSystems = presentation.visibleParticleSystems
             // Soft particles read the scene's depth, so they draw in a second pass after a depth copy. That needs depth
             // that can be stored and read, and no MSAA resolve (the second pass would have to reload the samples).
             let softParticleDepth: (scene: MTLTexture, copy: MTLTexture)? = try {
@@ -277,8 +287,8 @@ public struct SceneGraphElement: Element {
             } else {
                 nil
             }
-            let fog = postTargets == nil ? nil : sceneGraph.fog
-            let postProcessing = postTargets == nil ? nil : sceneGraph.postProcessing
+            let fog = postTargets == nil ? nil : presentation.fog
+            let postProcessing = postTargets == nil ? nil : presentation.postProcessing
             let ambientOcclusion = postProcessing?.ambientOcclusion
             let adjustsColor = postProcessing?.adjustsColor ?? false
             let hasPostPasses = shadowFrame != nil || fog != nil || ambientOcclusion != nil || adjustsColor
@@ -424,8 +434,12 @@ public struct SceneGraphElement: Element {
 }
 
 func makeRenderContext(sceneGraph: SceneGraph, camera: SceneGraph.Node?, cameraMatrix: simd_float4x4?, aspectRatio: Float, defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, stereoViews: StereoViews? = nil) -> RenderContext? {
-    let cameras = sceneGraph.cameraNodes()
-    let entry = camera.map { camera in cameras.first { $0.node === camera } } ?? cameras.first
+    makeRenderContext(presentation: sceneGraph.presentation(), cameraID: camera?.id, cameraMatrix: cameraMatrix, aspectRatio: aspectRatio, defaultCamera: defaultCamera, cameraOverride: cameraOverride, defaultLight: defaultLight, stereoViews: stereoViews)
+}
+
+func makeRenderContext(presentation: SceneGraph.Presentation, cameraID: SceneGraph.Node.ID?, cameraMatrix: simd_float4x4?, aspectRatio: Float, defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, stereoViews: StereoViews? = nil) -> RenderContext? {
+    let cameras = presentation.cameras
+    let entry = cameraID.map { id in cameras.first { $0.nodeID == id } } ?? cameras.first
     let resolved: (camera: Camera, worldTransform: simd_float4x4)
     if let cameraOverride {
         resolved = (cameraOverride, cameraMatrix ?? entry?.worldTransform ?? .identity)
@@ -437,9 +451,8 @@ func makeRenderContext(sceneGraph: SceneGraph, camera: SceneGraph.Node?, cameraM
         return nil
     }
     let cameraMatrix = stereoViews?.centerCameraMatrix ?? resolved.worldTransform
-    let lightNodes = sceneGraph.lightNodes()
-    var lights = lightNodes.map { (worldTransform: $0.worldTransform, light: $0.light) }
-    var lightMasks = lightNodes.map(\.node.lightCategoryBitMask)
+    var lights = presentation.lights.map { (worldTransform: $0.worldTransform, light: $0.light) }
+    var lightMasks = presentation.lights.map(\.lightCategoryBitMask)
     if lights.isEmpty, let defaultLight {
         lights = [(cameraMatrix, defaultLight)]
         lightMasks = [.max]
@@ -449,8 +462,8 @@ func makeRenderContext(sceneGraph: SceneGraph, camera: SceneGraph.Node?, cameraM
         projectionMatrix: stereoViews?.projectionMatrices[0] ?? .reverseZ * resolved.camera.projection.projectionMatrix(aspectRatio: aspectRatio),
         cameraMatrix: cameraMatrix,
         lights: lights,
-        revision: sceneGraph.revision,
-        environment: sceneGraph.environment,
+        revision: presentation.revision,
+        environment: presentation.environment,
         categoryBitMask: resolved.camera.categoryBitMask,
         lightCategoryBitMasks: lightMasks
     )
@@ -481,9 +494,9 @@ public func renderBatches(_ entries: [SceneGraph.MeshEntry], context: RenderCont
         // Lights without a mask light everything.
         let lights = context.lights.indices.filter { index in
             let mask = index < context.lightCategoryBitMasks.count ? context.lightCategoryBitMasks[index] : .max
-            return mask & entry.node.categoryBitMask != 0
+            return mask & entry.categoryBitMask != 0
         }
-        let key = Key(order: entry.node.renderingOrder, isTransparent: entry.isTransparent, lights: lights)
+        let key = Key(order: entry.renderingOrder, isTransparent: entry.isTransparent, lights: lights)
         if groups[key] == nil {
             keys.append(key)
         }

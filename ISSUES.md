@@ -8919,15 +8919,19 @@ There is no SceneGraph.Presentation: an immutable copy, built once per frame on 
 ## 388: SceneGraphElement walks the live scene graph while building a frame
 
 +++
-status: new
+status: closed
 priority: high
 kind: task
 labels: area:renderer, effort:m, subtask
 depends: 387
 created: 2026-11-12T21:25:34Z
+updated: 2026-11-12T21:32:38Z
+closed: 2026-11-12T21:32:38Z
 +++
 
 SceneGraphElement and its shared steps (culling, level of detail, batching, shadows) read live nodes. Done when: it takes a snapshot, SceneView builds one per frame on the main thread, and the shared steps read only the snapshot. Part of #386.
+
+- `2026-11-12T21:32:38Z`: SceneGraphElement now stores a Presentation (new init(presentation:cameraID:...); init(sceneGraph:) snapshots on the calling thread, which for SceneView is the main thread). Camera/light/context, LOD, culling, sorting, batching, text, particles list, fog, post-processing and shadow bounds read the snapshot. Remaining live-node reads are deformation/skin (GPUDeformation, shadow caster skinning) and the material renderers: #389. Test: an element built from a snapshot still draws a node removed from the graph afterwards.
 
 ---
 

@@ -2,6 +2,7 @@ import GeometryLite3D
 import Metal
 import MetalSprockets
 @testable import SceneSprockets
+@testable import SceneSprocketsBlinnPhong
 import simd
 import SwiftMesh
 import Testing
@@ -71,4 +72,24 @@ func presentationKeepsItsValuesWhenTheGraphChanges() throws {
     let entry = try #require(presentation.meshes.first)
     #expect(entry.worldTransform.columns.3 == [1, 2, 3, 1])
     #expect(entry.categoryBitMask == 0b10)
+}
+
+// #388: SceneGraphElement draws the snapshot, not the live graph.
+@Test(.enabled(if: deviceSupportsMetal4))
+@MainActor
+func sceneGraphElementDrawsTheSnapshot() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let root = SceneGraph.Node()
+    root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 4]), content: .camera(Camera(projection: PerspectiveProjection()))))
+    let box = root.addChild(SceneGraph.Node(content: .mesh(MetalMesh(mesh: .box(), device: device), material: BlinnPhongSceneMaterial(ambient: .color(1), diffuse: .color(1), specular: .color(0), shininess: 1))))
+    let graph = SceneGraph(root: root)
+    graph.environment.background = .color([0, 0, 0, 1])
+    let presentation = graph.presentation()
+    // Gone from the live graph after the snapshot was made.
+    box.removeFromParent()
+    let renderer = try OffscreenRenderer(size: CGSize(width: 16, height: 16))
+    let texture = try renderer.render(SceneGraphElement(presentation: presentation, aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [1, 1, 1])])).texture
+    var center = SIMD4<UInt8>.zero
+    texture.getBytes(&center, bytesPerRow: 4, from: MTLRegionMake2D(8, 8, 1, 1), mipmapLevel: 0)
+    #expect(center.x > 100, "\(center)")
 }
