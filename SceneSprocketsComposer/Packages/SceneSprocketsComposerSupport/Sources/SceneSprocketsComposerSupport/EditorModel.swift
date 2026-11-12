@@ -680,7 +680,8 @@ public final class EditorModel {
                 scopedURL.stopAccessingSecurityScopedResource()
             }
         }
-        let (node, warnings) = try ModelFile.load(url)
+        let model = try ModelFile.load(url)
+        let (node, warnings) = (model.node, model.warnings)
         let parent = selectedNode.flatMap { canAddChildren(to: $0) ? $0 : nil } ?? sceneGraph.root
         insert(node, into: parent, at: parent.children.count, actionName: "Insert \(node.displayName)")
         frameSelection()

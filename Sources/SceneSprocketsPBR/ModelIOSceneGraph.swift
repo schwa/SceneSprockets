@@ -9,26 +9,17 @@ import SceneSprocketsBlinnPhong
 import simd
 import SwiftMesh
 
-/// A Model I/O asset converted to a scene graph, with its object hierarchy.
-///
-/// Model I/O reads OBJ, PLY, STL, ABC, USD and more. The conversion keeps meshes, materials, cameras, lights and
-/// keyframed transforms, including orthographic cameras, and skins with their joint animation. It does not import
-/// blend shapes: Model I/O does not expose them.
-public struct ModelIOSceneGraph {
-    /// The kind of scene material to make from the asset's materials.
-    public enum MaterialKind: Sendable {
-        /// ``PBRSceneMaterial`` materials.
-        case pbr
-        /// Blinn-Phong materials.
-        case blinnPhong
-    }
-
-    /// The converted scene.
-    public var sceneGraph: SceneGraph
-    /// The keyframed transforms, sampled at their key times, or `nil` if nothing is animated.
-    public var animation: SceneGraph.AnimationClip?
-    /// Messages about parts of the asset that the conversion skipped or changed.
-    public var warnings: [String]
+// A Model I/O asset converted to a scene graph, with its object hierarchy; ModelFile.load is the public entry point
+// (#371).
+//
+// Model I/O reads OBJ, PLY, STL, ABC, USD and more. The conversion keeps meshes, materials, cameras, lights and
+// keyframed transforms, including orthographic cameras, and skins with their joint animation. It does not import
+// blend shapes: Model I/O does not expose them.
+struct ModelIOImport {
+    var sceneGraph: SceneGraph
+    // The keyframed transforms, sampled at their key times; empty if nothing is animated.
+    var animations: [SceneGraph.AnimationClip]
+    var warnings: [String]
 
     /// Loads a file with Model I/O and converts it.
     ///
@@ -36,7 +27,7 @@ public struct ModelIOSceneGraph {
     ///   - url: The file to load.
     ///   - materials: The kind of scene material to make.
     /// - Throws: An error if the file is empty or the conversion fails.
-    public init(url: URL, materials: MaterialKind = .pbr) throws {
+    init(url: URL, materials: ModelFile.MaterialKind = .pbr) throws {
         let allocator = MTKMeshBufferAllocator(device: _MTLCreateSystemDefaultDevice())
         let asset = MDLAsset(url: url, vertexDescriptor: nil, bufferAllocator: allocator)
         // swiftlint:disable:next empty_count - MDLAsset has no isEmpty
@@ -53,7 +44,7 @@ public struct ModelIOSceneGraph {
     ///   - materials: The kind of scene material to make.
     ///   - label: The label of the root node.
     /// - Throws: An error if the conversion fails.
-    public init(asset: MDLAsset, materials: MaterialKind = .pbr, label: String? = nil) throws {
+    init(asset: MDLAsset, materials: ModelFile.MaterialKind = .pbr, label: String? = nil) throws {
         var converter = try ModelIOConverter(materialKind: materials)
         let root = SceneGraph.Node(label: label)
         for index in 0..<asset.count {
@@ -61,7 +52,7 @@ public struct ModelIOSceneGraph {
         }
         converter.resolveSkins()
         sceneGraph = SceneGraph(root: root)
-        animation = converter.channels.isEmpty ? nil : SceneGraph.AnimationClip(name: label, channels: converter.channels)
+        animations = converter.channels.isEmpty ? [] : [SceneGraph.AnimationClip(name: label, channels: converter.channels)]
         warnings = converter.warnings
     }
 }
@@ -72,7 +63,7 @@ enum ModelIOSceneGraphError: Error {
 
 private struct ModelIOConverter {
     let device: MTLDevice
-    let materialKind: ModelIOSceneGraph.MaterialKind
+    let materialKind: ModelFile.MaterialKind
     let textureLoader: MTKTextureLoader
     let samplerDescriptor: MTLSamplerDescriptor
     let placeholder: PBRMaterial.Binding
@@ -85,7 +76,7 @@ private struct ModelIOConverter {
     // Skinned meshes, resolved after the walk because a mesh can come before its skeleton.
     var pendingSkins: [(node: SceneGraph.Node, bind: MDLAnimationBindComponent, skeleton: MDLSkeleton)] = []
 
-    init(materialKind: ModelIOSceneGraph.MaterialKind) throws {
+    init(materialKind: ModelFile.MaterialKind) throws {
         device = _MTLCreateSystemDefaultDevice()
         self.materialKind = materialKind
         textureLoader = MTKTextureLoader(device: device)

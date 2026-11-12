@@ -25,7 +25,7 @@ func gltfOrthographicCameraLoads() throws {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
     try Data(json.utf8).write(to: url)
     let device = try #require(MTLCreateSystemDefaultDevice())
-    let result = try GLTFAsset(url: url, device: device).makeSceneGraph()
+    let result = try GLTFAsset(url: url, device: device).importScene()
     #expect(result.warnings.isEmpty)
     let node = try #require(result.nodes[0])
     guard case let .camera(camera) = node.content else {

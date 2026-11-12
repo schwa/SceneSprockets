@@ -759,8 +759,8 @@ public final class KeynoteDemo: DemoScene {
         case "glTF & Model I/O":
             importSlide(slide)
             addCode("""
-            let plant = try GLTFAsset(url: plantURL, device: device).makeSceneGraph()
-            let pedestal = try ModelIOSceneGraph(url: objURL)
+            let plant = try ModelFile.load(plantURL)     // .glb, .gltf, .usdz, .obj, ...
+            let pedestal = try ModelFile.load(objURL)
             player = AnimationPlayer(clip: plant.animations[0]) // fireflies with point lights
             """, to: slide)
         case "Hit Testing":
@@ -1288,9 +1288,9 @@ public final class KeynoteDemo: DemoScene {
         let holder = slide.addChild(SceneGraph.Node(label: "Imported", transform: .init(translation: [0, 0.3, -1], scale: [1.4, 1.4, 1.4])))
         do {
             if let url = Bundle.module.url(forResource: "DiffuseTransmissionPlant", withExtension: "glb", subdirectory: "Resources") {
-                let plant = try GLTFAsset(url: url, device: demoDevice).makeSceneGraph()
+                let plant = try ModelFile.load(url)
                 let plantHolder = holder.addChild(SceneGraph.Node(label: "Plant", transform: .init(scale: [3, 3, 3])))
-                for child in plant.sceneGraph.root.children {
+                for child in plant.node.children {
                     plantHolder.addChild(child)
                 }
                 // The asset has chase cameras behind its fireflies; the keynote flies its own camera.
@@ -1321,9 +1321,9 @@ public final class KeynoteDemo: DemoScene {
                 importedPlayer = plant.animations.first.map { SceneGraph.AnimationPlayer(clip: $0) }
             }
             if let url = Bundle.module.url(forResource: "Pedestal", withExtension: "obj", subdirectory: "Resources") {
-                let pedestal = try ModelIOSceneGraph(url: url)
-                pedestal.sceneGraph.root.label = "Pedestal"
-                holder.addChild(pedestal.sceneGraph.root)
+                let pedestal = try ModelFile.load(url)
+                pedestal.node.label = "Pedestal"
+                holder.addChild(pedestal.node)
             }
         } catch {
             // The slide shows whatever loaded.

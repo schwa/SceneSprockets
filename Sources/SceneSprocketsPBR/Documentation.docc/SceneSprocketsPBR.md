@@ -6,7 +6,7 @@ Physically based materials for SceneSprockets, and loading scenes from glTF and 
 
 ``PBRSceneMaterial`` wraps a MetalSprocketsPBR material: metallic-roughness with most glTF material extensions, such as transmission, volume, clearcoat, sheen, iridescence and anisotropy. To draw meshes that use it, add a ``PBRMaterialRenderer`` to the renderers. Keep one renderer instance across frames, because the renderer caches its model.
 
-``GLTFSceneGraph`` loads a glTF scene: its hierarchy, meshes with PBR materials, cameras, lights, skins, morph targets and animations. ``ModelIOSceneGraph`` loads any format that Model I/O reads, such as OBJ, PLY, STL, ABC and USD, including skins and their joint animation.
+``ModelFile/load(_:materials:)`` loads a model file and returns a ``ModelFile/Result``: the root node, its animations, warnings and, for glTF, material variants and the image-based light. glTF files keep their hierarchy, meshes with PBR materials, cameras, lights, skins, morph targets and animations. Formats that Model I/O reads, such as OBJ, PLY, STL, ABC and USD, keep their hierarchy, meshes, cameras, lights, skins and joint animation.
 
 ## Topics
 
@@ -17,7 +17,5 @@ Physically based materials for SceneSprockets, and loading scenes from glTF and 
 
 ### Loading Scenes
 
-- ``GLTFSceneGraph``
-- ``ModelIOSceneGraph``
 - ``ModelFile``
 - ``ModelFileLoader``

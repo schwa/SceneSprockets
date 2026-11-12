@@ -14,27 +14,27 @@ import SwiftMesh
 /// animations. `EXT_mesh_gpu_instancing` copies become child nodes, and `KHR_node_visibility` sets `isVisible`.
 /// `KHR_animation_pointer` channels for visibility, materials, lights and cameras become property channels. The
 /// conversion does not support the camera properties `xmag` and `aspectRatio`.
-public struct GLTFSceneGraph {
+struct GLTFImport {
     /// The converted scene.
-    public var sceneGraph: SceneGraph
+    var sceneGraph: SceneGraph
     /// The glTF animations, as clips that animate nodes of ``sceneGraph``.
-    public var animations: [SceneGraph.AnimationClip]
+    var animations: [SceneGraph.AnimationClip]
     /// The scene graph node for each glTF node, in document order. The value is `nil` for nodes outside the loaded
     /// scene.
-    public var nodes: [SceneGraph.Node?]
+    var nodes: [SceneGraph.Node?]
     /// The names of the `KHR_materials_variants` variants.
     ///
     /// The scene graph starts with the variant that the asset was loaded with. `selectVariant(_:)` changes it.
-    public var variantNames: [String]
+    var variantNames: [String]
     /// Messages about parts of the file that the conversion skipped or changed.
-    public var warnings: [String]
+    var warnings: [String]
     let asset: GLTFAsset
     // Every scene node showing a glTF mesh, with that mesh's index.
     let meshNodes: [(node: SceneGraph.Node, mesh: Int)]
 
     /// Swaps every mesh node's materials for variant `index` (into variantNames; nil for the default materials).
     /// Node state and animation players are kept. Throws for an out-of-range index.
-    public func selectVariant(_ index: Int?) throws {
+    func selectVariant(_ index: Int?) throws {
         var materials: [Int: [any SceneMaterial]] = [:]
         for (node, meshIndex) in meshNodes {
             guard case let .mesh(mesh, _, castsShadow, receivesShadow) = node.content else {
@@ -48,8 +48,8 @@ public struct GLTFSceneGraph {
     }
 }
 
-public extension GLTFAsset {
-    func makeSceneGraph() throws -> GLTFSceneGraph {
+extension GLTFAsset {
+    func importScene() throws -> GLTFImport {
         try GLTFSceneGraphBuilder(asset: self).build()
     }
 }
@@ -67,7 +67,7 @@ private struct GLTFSceneGraphBuilder {
     let device = _MTLCreateSystemDefaultDevice()
     var document: Document { asset.container.document }
 
-    func build() throws -> GLTFSceneGraph {
+    func build() throws -> GLTFImport {
         var warnings: [String] = []
         let materials = materialsByPrimitive()
         let defaultMaterial = PBRSceneMaterial()
@@ -261,7 +261,7 @@ private struct GLTFSceneGraphBuilder {
         } catch {
             warnings.append("Image-based light skipped: \(error)")
         }
-        return GLTFSceneGraph(sceneGraph: sceneGraph, animations: animations, nodes: nodes, variantNames: asset.variantNames, warnings: asset.warnings + warnings, asset: asset, meshNodes: meshNodeList)
+        return GLTFImport(sceneGraph: sceneGraph, animations: animations, nodes: nodes, variantNames: asset.variantNames, warnings: asset.warnings + warnings, asset: asset, meshNodes: meshNodeList)
     }
 
     // The asset resolves each primitive's material (including variants); instances carry the result.

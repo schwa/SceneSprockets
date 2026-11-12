@@ -76,7 +76,7 @@ private func makeSceneFile() throws -> URL {
 func gltfSceneLoadsIntoSceneGraph() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let asset = try GLTFAsset(url: try makeSceneFile(), device: device)
-    let result = try asset.makeSceneGraph()
+    let result = try asset.importScene()
 
     #expect(result.sceneGraph.root.label == "Scene")
     #expect(result.sceneGraph.root.children.map(\.label) == ["Mesh", "Joint", "Camera"])
@@ -127,7 +127,7 @@ func gltfSceneLoadsIntoSceneGraph() throws {
 func gltfSceneGraphBuildsPBRModel() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let asset = try GLTFAsset(url: try makeSceneFile(), device: device)
-    let sceneGraph = try asset.makeSceneGraph().sceneGraph
+    let sceneGraph = try asset.importScene().sceneGraph
     let model = try PBRSceneGraphModelBuilder().makeModel(entries: sceneGraph.meshEntries())
     #expect(model.opaqueInstances.count == 2)
     #expect(model.skins.count == 1)
@@ -159,7 +159,7 @@ func gltfInstancingAndVisibilityAreMapped() throws {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
     try Data(json.utf8).write(to: url)
     let device = try #require(MTLCreateSystemDefaultDevice())
-    let result = try GLTFAsset(url: url, device: device).makeSceneGraph()
+    let result = try GLTFAsset(url: url, device: device).importScene()
     let copies = try #require(result.nodes[0])
     #expect(copies.children.count == 2)
     #expect(copies.children.map(\.transform.matrix.columns.3.x) == [5, -5])
@@ -199,7 +199,7 @@ func gltfSkippedPointerIsNamedInTheWarning() throws {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
     try Data(json.utf8).write(to: url)
     let device = try #require(MTLCreateSystemDefaultDevice())
-    let result = try GLTFAsset(url: url, device: device).makeSceneGraph()
+    let result = try GLTFAsset(url: url, device: device).importScene()
     #expect(result.warnings.contains { $0.contains("/cameras/0/perspective/aspectRatio") }, "\(result.warnings)")
 }
 
@@ -251,7 +251,7 @@ func gltfPointerAnimationsAreMapped() throws {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
     try Data(json.utf8).write(to: url)
     let device = try #require(MTLCreateSystemDefaultDevice())
-    let result = try GLTFAsset(url: url, device: device).makeSceneGraph()
+    let result = try GLTFAsset(url: url, device: device).importScene()
     let clip = try #require(result.animations.first)
     #expect(clip.channels.count == 3)
     #expect(!result.warnings.contains { $0.contains("animation channels skipped") })
@@ -275,7 +275,7 @@ func gltfPointerAnimationsAreMapped() throws {
 
 // A triangle whose material's baseColorFactor goes from white to red and roughnessFactor from 1 to 0.2 over 1 s,
 // through KHR_animation_pointer.
-private func materialPointerAnimationSceneGraph() throws -> GLTFSceneGraph {
+private func materialPointerAnimationSceneGraph() throws -> GLTFImport {
     var data = Data()
     // Triangle positions, times, then baseColorFactor and roughnessFactor keyframes.
     [Float](arrayLiteral: 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0.2).withUnsafeBytes { data.append(contentsOf: $0) }
@@ -312,7 +312,7 @@ private func materialPointerAnimationSceneGraph() throws -> GLTFSceneGraph {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
     try Data(json.utf8).write(to: url)
     let device = try #require(MTLCreateSystemDefaultDevice())
-    return try GLTFAsset(url: url, device: device).makeSceneGraph()
+    return try GLTFAsset(url: url, device: device).importScene()
 }
 
 private func pbrMaterial(of node: SceneGraph.Node?) throws -> PBRSceneMaterial {
@@ -374,7 +374,7 @@ func gltfMorphTargetNamesAreRead() throws {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
     try Data(json.utf8).write(to: url)
     let device = try #require(MTLCreateSystemDefaultDevice())
-    let result = try GLTFAsset(url: url, device: device).makeSceneGraph()
+    let result = try GLTFAsset(url: url, device: device).importScene()
     let node = try #require(result.nodes[0])
     #expect(node.morphTargets.map(\.name) == ["Smile"])
     #expect(node.morphWeight(forTargetNamed: "Smile") == 0.25)
@@ -421,7 +421,7 @@ func gltfImageBasedLightAndVariantNamesAreMapped() throws {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
     try Data(json.utf8).write(to: url)
     let device = try #require(MTLCreateSystemDefaultDevice())
-    let result = try GLTFAsset(url: url, device: device).makeSceneGraph()
+    let result = try GLTFAsset(url: url, device: device).importScene()
     #expect(result.sceneGraph.environment.map is PBREnvironment)
     #expect(result.variantNames == ["Red", "Blue"])
 }
@@ -452,16 +452,19 @@ func gltfMaterialVariantsSwitchInPlace() throws {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
     try Data(json.utf8).write(to: url)
     let device = try #require(MTLCreateSystemDefaultDevice())
-    let result = try GLTFAsset(url: url, device: device).makeSceneGraph()
-    let node = try #require(result.nodes[0])
+    // #371: through ModelFile's one result type.
+    let result = try ModelFile.load(GLTFAsset(url: url, device: device))
+    let variants = try #require(result.variants)
+    #expect(variants.names == ["Red", "Blue"])
+    let node = try #require(SceneGraph(root: result.node).meshEntries().first?.node)
     #expect(try pbrMaterial(of: node).pbrMaterial.uniforms.baseColorFactor == [1, 1, 1, 1])
-    try result.selectVariant(1)
+    try variants.select(1)
     #expect(try pbrMaterial(of: node).pbrMaterial.uniforms.baseColorFactor == [0, 0, 1, 1])
-    try result.selectVariant(0)
+    try variants.select(0)
     #expect(try pbrMaterial(of: node).pbrMaterial.uniforms.baseColorFactor == [1, 0, 0, 1])
-    try result.selectVariant(nil)
+    try variants.select(nil)
     #expect(try pbrMaterial(of: node).pbrMaterial.uniforms.baseColorFactor == [1, 1, 1, 1])
-    #expect(throws: (any Error).self) { try result.selectVariant(5) }
+    #expect(throws: (any Error).self) { try variants.select(5) }
 }
 
 // #197: ModelFile picks the loader by extension and returns one subtree named after the file.

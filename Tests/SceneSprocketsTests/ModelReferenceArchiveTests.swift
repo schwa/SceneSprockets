@@ -50,7 +50,7 @@ struct ModelReferenceArchiveTests {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
-        let (model, _) = try ModelFile.load(writeTriangle(in: folder))
+        let model = try ModelFile.load(writeTriangle(in: folder)).node
         model.transform.translation = [5, 0, 0]
         let root = SceneGraph.Node()
         root.addChild(model)
@@ -87,7 +87,7 @@ struct ModelReferenceArchiveTests {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
-        let (model, _) = try ModelFile.load(writeTriangle(in: folder))
+        let model = try ModelFile.load(writeTriangle(in: folder)).node
         let root = SceneGraph.Node()
         root.addChild(model)
         var archive = archive

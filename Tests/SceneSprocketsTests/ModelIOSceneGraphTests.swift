@@ -77,12 +77,12 @@ private func makeUSDA() throws -> URL {
 
 @Test(.enabled(if: deviceSupportsMetal4))
 func objLoadsWithPerSubmeshMaterials() throws {
-    let result = try ModelIOSceneGraph(url: try makeOBJ())
+    let result = try ModelIOImport(url: try makeOBJ())
     let entries = result.sceneGraph.meshEntries()
     #expect(entries.count == 2)
     let colors = entries.compactMap { ($0.material as? PBRSceneMaterial)?.pbrMaterial.uniforms.baseColorFactor }
     #expect(Set(colors.map { [$0.x, $0.y, $0.z] }) == [[1, 0, 0], [0, 0, 1]])
-    #expect(result.animation == nil)
+    #expect(result.animations.isEmpty)
 
     let model = try PBRSceneGraphModelBuilder().makeModel(entries: entries)
     #expect(model.opaqueInstances.count == 2)
@@ -90,13 +90,13 @@ func objLoadsWithPerSubmeshMaterials() throws {
 
 @Test
 func objLoadsAsBlinnPhong() throws {
-    let result = try ModelIOSceneGraph(url: try makeOBJ(), materials: .blinnPhong)
+    let result = try ModelIOImport(url: try makeOBJ(), materials: .blinnPhong)
     #expect(result.sceneGraph.meshEntries().allSatisfy { $0.material is BlinnPhongSceneMaterial })
 }
 
 @Test
 func usdHierarchyAndTransformsAreKept() throws {
-    let result = try ModelIOSceneGraph(url: try makeUSDA())
+    let result = try ModelIOImport(url: try makeUSDA())
     let entries = result.sceneGraph.meshEntries()
     let entry = try #require(entries.first)
     #expect(entries.count == 1)
@@ -130,7 +130,7 @@ func pbrMaterialMapsAreImported() throws {
     }
     let asset = MDLAsset()
     asset.add(mesh)
-    let result = try ModelIOSceneGraph(asset: asset)
+    let result = try ModelIOImport(asset: asset)
     let pbr = try #require(result.sceneGraph.meshEntries().first?.material as? PBRSceneMaterial)
     let uniforms = pbr.pbrMaterial.uniforms
     #expect(uniforms.normal.enabled == 1)
@@ -164,7 +164,7 @@ func orthographicCameraLoads() throws {
     }
     """
     try Data(usda.utf8).write(to: url)
-    let result = try ModelIOSceneGraph(url: url)
+    let result = try ModelIOImport(url: url)
     var cameras: [Camera] = []
     result.sceneGraph.visit { node, _ in
         if case let .camera(camera) = node.content {
@@ -224,7 +224,7 @@ private func skinnedLegUSDA(animation: String = "") -> String {
 func skinLoadsAndDeformsTheMesh() throws {
     let url = try temporaryDirectory().appendingPathComponent("skin.usda")
     try Data(skinnedLegUSDA().utf8).write(to: url)
-    let result = try ModelIOSceneGraph(url: url)
+    let result = try ModelIOImport(url: url)
     let entry = try #require(result.sceneGraph.meshEntries().first)
     let skin = try #require(entry.node.skin)
     #expect(skin.joints.map(\.label) == ["Hip", "Knee"])
@@ -250,11 +250,16 @@ func jointAnimationBecomesChannels() throws {
     }
     """
     try Data(skinnedLegUSDA(animation: animation).utf8).write(to: url)
-    let result = try ModelIOSceneGraph(url: url)
-    let clip = try #require(result.animation)
+    let result = try ModelIOImport(url: url)
+    let clip = try #require(result.animations.first)
     let knee = try #require(result.sceneGraph.meshEntries().first?.node.skin?.joints.last)
     let translation = try #require(clip.channels.first { $0.target === knee && $0.path == .translation })
     #expect(translation.sampler.values.first.map { abs($0) < 1e-4 } == true)
     #expect(translation.sampler.values.count == translation.sampler.times.count * 3)
     #expect(translation.sampler.values.suffix(2).first.map { abs($0 - 3) < 1e-4 } == true)
+    // #371: ModelFile returns the same clip in its animations array, with no glTF-only parts.
+    let loaded = try ModelFile.load(url)
+    #expect(loaded.animations.count == 1)
+    #expect(loaded.variants == nil)
+    #expect(loaded.environmentMap == nil)
 }

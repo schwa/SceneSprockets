@@ -8399,12 +8399,13 @@ Related: #295, #106, #362.
 ## 371: Model loading has three entry points with different result shapes
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: effort:m, area:assets
 created: 2026-11-11T15:54:43Z
-updated: 2026-11-11T15:55:12Z
+updated: 2026-11-12T03:30:20Z
+closed: 2026-11-12T03:30:20Z
 +++
 
 There are three public ways to load a model file, and each returns something different.
@@ -8429,6 +8430,7 @@ Related: #358, #31.
 - `2026-11-11T16:15:14Z`: Question 1 (design): Proposed: one entry point, 'ModelFile.load(_ url:) throws -> ModelFile.Result' where Result is a struct { node: SceneGraph.Node (root named after the file, detached), animations: [SceneGraph.AnimationClip], warnings: [String] } for every format (glTF variants exposed as an optional 'variants' field). GLTFSceneGraph and ModelIOSceneGraph become internal (or renamed GLTFImport/ModelIOImport and kept for format-specific options), and ModelIOSceneGraph's single 'animation' becomes 'animations'. Callers that want a whole SceneGraph wrap the node. Approve or amend?
 - `2026-11-11T16:15:15Z`: Auto-fixer run: punted. Unifying the loaders changes or removes public types (GLTFSceneGraph, ModelIOSceneGraph, ModelFile.load's tuple); users: Composer EditorModel, KeynoteDemo, BurningFox. Unblocker: answer 371-Q1. Related naming question: 370-Q2.
 - `2026-11-12T02:16:05Z`: Answer 1: approve
+- `2026-11-12T03:30:21Z`: Per 371-Q1: ModelFile.load (URL, GLTFAsset or MDLAsset) returns ModelFile.Result {node, animations, warnings, variants, environmentMap}; GLTFSceneGraph/ModelIOSceneGraph are internal (GLTFImport/ModelIOImport); Model I/O animations are an array. environmentMap added beyond the approved list so glTF image-based light is not lost.
 
 ---
 

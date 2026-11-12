@@ -37,10 +37,10 @@ final class BurningFox {
         guard let url = Bundle.module.url(forResource: "Fox", withExtension: "glb", subdirectory: "Resources") else {
             throw CocoaError(.fileNoSuchFile)
         }
-        let asset = try GLTFAsset(url: url, device: demoDevice).makeSceneGraph()
+        let asset = try ModelFile.load(url)
         // The fox is about 150 units long, in centimeters.
         fox = node.addChild(SceneGraph.Node(label: "Fox", transform: .init(scale: SIMD3(repeating: 0.015 * scale))))
-        for child in asset.sceneGraph.root.children {
+        for child in asset.node.children {
             fox.addChild(child)
         }
         // Survey, Walk, Run in the sample.
