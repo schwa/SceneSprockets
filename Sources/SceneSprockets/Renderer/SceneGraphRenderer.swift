@@ -204,6 +204,13 @@ public struct SceneGraphElement: Element {
             if let decorations, let decoration = try decorations(context) {
                 elements.append(decoration)
             }
+            #if arch(arm64)
+            // Node text (#119): after the meshes, depth-tested against them.
+            if let color = renderPassDescriptor?.colorAttachments[0].texture, debugMode == nil {
+                let texts = sceneGraph.visibleTexts(categoryBitMask: context.categoryBitMask)
+                elements += try Self.makeTextElements(texts, context: context, viewportSize: [Float(color.width), Float(color.height)], device: color.device)
+            }
+            #endif
             // Particles simulate in their own compute pass before the scene pass, then draw after the meshes.
             let particleSimulations = try sceneGraph.allParticleSystems().map { try $0.simulate(view: context.viewMatrix).eraseToAnyElement() }
             prePasses = particleSimulations + prePasses

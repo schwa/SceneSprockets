@@ -65,9 +65,10 @@ SceneSprockets stores node data in a SwiftECS `World`. Your app can query this w
 - ``ViewManipulator``
 - ``Viewport``
 
-### Particles, Physics and Audio
+### Particles, Text, Physics and Audio
 
 - ``SceneParticleSystem``
+- ``SceneText``
 - ``SceneGraph/PhysicsBody``
 - ``Audio``
 

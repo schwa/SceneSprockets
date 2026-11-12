@@ -41,6 +41,8 @@ let package = Package(
                 "SceneSprocketsAudio",
                 "SceneSprocketsShaders",
                 .product(name: "MetalSprocketsParticles", package: "MetalSprocketsParticles"),
+                // Slug text for SceneText (#119).
+                .product(name: "MetalSprocketsAddOns", package: "MetalSprocketsAddOns"),
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
                 .product(name: "Interaction3D", package: "Interaction3D"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),

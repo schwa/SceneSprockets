@@ -260,6 +260,22 @@ public struct NodeParticleSystemsComponent: NodeField {
     static var revision: NodeFieldRevision { .none }
 }
 
+/// The component that stores ``SceneGraph/Node/text`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
+public struct NodeTextComponent: NodeField {
+    /// The value of ``SceneGraph/Node/text``.
+    public var value: SceneText?
+
+    /// Creates the component with a value.
+    public init(value: SceneText?) {
+        self.value = value
+    }
+
+    static var defaultValue: SceneText? { nil }
+    static var revision: NodeFieldRevision { .none }
+}
+
 /// The component that stores ``SceneGraph/Node/audioPlayers`` for a node in ``SceneGraph/world``.
 ///
 /// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.

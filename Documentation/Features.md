@@ -34,7 +34,7 @@ The Source column shows where the feature comes from: SceneKit, RealityKit, thre
 | ✅ | Frustum culling | | SceneKit | |
 | ⬜ | Segment counts, chamfers, geodesic spheres | #80 | SceneKit | |
 | ⬜ | Tube, pyramid, floor, extruded Bézier path | #81 | SceneKit | |
-| ⬜ | Flat 2D text | #119 | three.js | MetalSprocketsAddOns has this. |
+| ✅ | Flat 2D text | #119 | three.js | `Node.text` (`SceneText`), drawn with MetalSprocketsAddOns Slug. Unlit, no shadows or hit tests. |
 | ⬜ | Lines with width, sprites | ||MetalSprocketsAddOns has this.|
 | ✅ | Point clouds | #321 | three.js | `PointCloud` in the separate SceneSprocketsAddOns package, drawn with MetalSprocketsAddOns' compute rasterizer (#353) |
 | ⬜ | Terrain / heightmaps | | Babylon.js, Godot | |

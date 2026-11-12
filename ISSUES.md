@@ -2417,12 +2417,13 @@ Expected: curved shapes shade smoothly; box and plane stay flat.
 ## 119: No 2D text rendering
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: effort:m, area:text
 created: 2026-10-15T21:21:02Z
-updated: 2026-11-12T04:34:49Z
+updated: 2026-11-12T19:37:39Z
+closed: 2026-11-12T19:37:39Z
 +++
 
 SceneGraph can only show text as extruded 3D meshes (Shape.text, SwiftMesh extrusion). There is no flat, resolution-independent 2D text for labels, HUDs or slide copy.
@@ -2432,6 +2433,7 @@ MetalSprocketsAddOns has a Slug text renderer (Sources/MetalSprocketsAddOns/Slug
 Want: 2D text in the scene graph using Slug from MetalSprocketsAddOns.
 
 - `2026-11-07T17:19:23Z`: Possible starting point: the Slug text examples in MetalSprocketsExamples (Slug Debug, Text Panel, Spinning Sphere, Matrix Rain), MetalSprocketsExamples/Packages/MetalSprocketsExamples/Sources/MetalSprocketsExamples/Demos/Slug*Demo/.
+- `2026-11-12T19:37:39Z`: Added SceneText and Node.text: flat text in the node's XY plane, drawn with MetalSprocketsAddOns Slug after the meshes, depth-tested, archived and cloned. Not covered: screen-space HUD text (use a node attached to the camera), node opacity, shadows, hit tests.
 
 ---
 

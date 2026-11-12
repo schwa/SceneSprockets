@@ -45,7 +45,7 @@ extension SceneGraph.Node: Codable {
     enum ArchiveKeys: String, CodingKey {
         case label, transform, pivot, isVisible, isActive, opacity, categoryBitMask, lightCategoryBitMask, renderingOrder
         case subdivisionLevel, actionSpeed, mesh, light, camera, constraints, children, model
-        case morphTargets, morphWeights, skin, skinVertices, physicsBody, particleSystems, levelsOfDetail, audioPlayers
+        case morphTargets, morphWeights, skin, skinVertices, physicsBody, particleSystems, levelsOfDetail, audioPlayers, text
     }
 
     enum MeshKeys: String, CodingKey {
@@ -225,6 +225,7 @@ extension SceneGraph.Node: Codable {
             system.usesNodeTransform = $0.usesNodeTransform ?? true
             return system
         }
+        text = try container.decodeIfPresent(SceneText.self, forKey: .text)
         if let levels = try container.decodeIfPresent([ArchivedLevelOfDetail].self, forKey: .levelsOfDetail) {
             levelsOfDetail = try decodeLevelsOfDetail(levels, context: context)
         }
@@ -288,6 +289,7 @@ extension SceneGraph.Node: Codable {
             }
             try container.encode(archived, forKey: .particleSystems)
         }
+        try container.encodeIfPresent(text, forKey: .text)
         try encodeLevelsOfDetail(into: &container, context: context)
         if !audioPlayers.isEmpty {
             let archived = try audioPlayers.map {

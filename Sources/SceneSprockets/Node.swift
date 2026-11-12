@@ -65,6 +65,7 @@ extension SceneGraph {
         @ObservationIgnored @exclusivity(unchecked) var levelsOfDetailStorage = NodeFieldStorage<NodeLevelsOfDetailComponent>()
         @ObservationIgnored @exclusivity(unchecked) var particleSystemsStorage = NodeFieldStorage<NodeParticleSystemsComponent>()
         @ObservationIgnored @exclusivity(unchecked) var audioPlayersStorage = NodeFieldStorage<NodeAudioPlayersComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var textStorage = NodeFieldStorage<NodeTextComponent>()
         @ObservationIgnored @exclusivity(unchecked) var skinStorage = NodeFieldStorage<NodeSkinComponent>()
         @ObservationIgnored @exclusivity(unchecked) var skinVerticesStorage = NodeFieldStorage<NodeSkinVerticesComponent>()
         @ObservationIgnored @exclusivity(unchecked) var morphTargetsStorage = NodeFieldStorage<NodeMorphTargetsComponent>()
@@ -327,6 +328,7 @@ extension SceneGraph {
             copy.renderingOrder = renderingOrder
             copy.levelsOfDetail = levelsOfDetail
             copy.particleSystems = particleSystems
+            copy.text = text
             copy.subdivisionBase = subdivisionBase
             copy.subdivisionLevel = subdivisionLevel
             copy.actionSpeed = actionSpeed

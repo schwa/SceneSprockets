@@ -23,6 +23,7 @@ private enum FieldKeyPaths {
     static let levelsOfDetail = \SceneGraph.Node.levelsOfDetail
     static let particleSystems = \SceneGraph.Node.particleSystems
     static let audioPlayers = \SceneGraph.Node.audioPlayers
+    static let text = \SceneGraph.Node.text
     static let skin = \SceneGraph.Node.skin
     static let skinVertices = \SceneGraph.Node.skinVertices
     static let morphTargets = \SceneGraph.Node.morphTargets
@@ -59,6 +60,7 @@ extension SceneGraph.Node {
         NodeFieldSlot(\.levelsOfDetail, \.levelsOfDetailStorage),
         NodeFieldSlot(\.particleSystems, \.particleSystemsStorage),
         NodeFieldSlot(\.audioPlayers, \.audioPlayersStorage),
+        NodeFieldSlot(\.text, \.textStorage),
         NodeFieldSlot(\.skin, \.skinStorage),
         NodeFieldSlot(\.skinVertices, \.skinVerticesStorage),
         NodeFieldSlot(\.morphTargets, \.morphTargetsStorage),
@@ -149,6 +151,12 @@ extension SceneGraph.Node {
     public var particleSystems: [SceneParticleSystem] {
         get { getField(FieldKeyPaths.particleSystems, \.particleSystemsStorage) }
         set { setField(FieldKeyPaths.particleSystems, \.particleSystemsStorage, newValue) }
+    }
+
+    /// Flat text at this node; see SceneText.
+    public var text: SceneText? {
+        get { getField(FieldKeyPaths.text, \.textStorage) }
+        set { setField(FieldKeyPaths.text, \.textStorage, newValue) }
     }
 
     /// Sounds that play from this node; see Audio. Not copied by clone().
