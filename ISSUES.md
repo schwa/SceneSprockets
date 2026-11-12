@@ -3358,12 +3358,13 @@ Already tracked elsewhere: HDR, tone mapping, bloom, depth of field (#45); save/
 ## 153: Game demo: 3D platformer like SceneKit's Fox
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: deferred, area:demo, effort:xl
 created: 2026-10-22T01:56:58Z
-updated: 2026-10-23T13:22:39Z
+updated: 2026-11-12T04:35:00Z
+closed: 2026-11-12T04:35:00Z
 +++
 
 A small playable platformer, in the spirit of Apple's SceneKit Fox demo, to exercise the engine as a whole.
@@ -3383,6 +3384,8 @@ Asset candidates (verify each license before adding; prefer CC0 glTF so no conve
 Suggested start: a Quaternius character with Kenney's Platformer Kit.
 
 Related: #151 (demos for every feature), #152 (feature gaps: character controller, contact callbacks, follow camera).
+
+- `2026-11-12T04:35:00Z`: Closed: not planned.
 
 ---
 
