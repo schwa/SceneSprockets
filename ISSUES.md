@@ -8457,11 +8457,12 @@ Related: #367 (node construction verbosity, the proposed `position` property), #
 ## 373: Node.shape can disagree with the mesh in Node.content
 
 +++
-status: new
+status: open
 priority: medium
 kind: bug
 labels: area:scenegraph, effort:s
 created: 2026-11-11T16:35:41Z
+updated: 2026-11-12T01:30:16Z
 +++
 
 `SceneGraph.Node.shape` is stored separately (`shapeStorage`) from the mesh in `content`. Setting `shape` rebuilds `content`, but setting `content` does not touch `shapeStorage`.
@@ -8483,11 +8484,12 @@ Related: #372 (other overlapping Node properties).
 ## 374: ShaderMaterial.isTransparent does not read back what was set
 
 +++
-status: new
+status: open
 priority: low
 kind: bug
 labels: area:renderer, effort:s
 created: 2026-11-11T16:35:41Z
+updated: 2026-11-12T01:30:16Z
 +++
 
 `ShaderMaterial.isTransparent` is a settable property, but its getter is `alphaBlends || renderState.blendsWithBackground`, and the setter writes only `alphaBlends`.
@@ -8509,11 +8511,12 @@ Code: `Sources/SceneSprocketsShaderMaterial/ShaderMaterial.swift`.
 ## 375: PBRSceneMaterial is a value type that shares mutable state between copies
 
 +++
-status: new
+status: open
 priority: medium
 kind: bug
 labels: area:renderer, effort:m
 created: 2026-11-11T16:35:42Z
+updated: 2026-11-12T01:30:16Z
 +++
 
 `PBRSceneMaterial` is a struct, but it wraps a `PBRMaterial` class and `renderState` writes through to it (`nonmutating set { pbrMaterial.renderState = newValue }`).
@@ -8538,11 +8541,12 @@ Related: #368 (material API consistency).
 ## 376: Hit-test category mask is passed several different ways
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
 labels: area:scenegraph, effort:s
 created: 2026-11-11T16:35:42Z
+updated: 2026-11-12T01:30:16Z
 +++
 
 The node category filter for hit testing reaches the hit test through several paths:
@@ -8565,11 +8569,12 @@ Related: #370 (public API naming), #369 (SceneView configuration).
 ## 377: Back-face culling is configured differently for each material family
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
 labels: area:renderer, effort:m
 created: 2026-11-11T16:35:43Z
+updated: 2026-11-12T01:30:16Z
 +++
 
 Whether a material draws back faces is set in a different place for each family:
