@@ -8568,13 +8568,14 @@ Related: #368 (material API consistency).
 ## 376: Hit-test category mask is passed several different ways
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:scenegraph, effort:s
 depends: 369
 created: 2026-11-11T16:35:42Z
-updated: 2026-11-12T01:42:25Z
+updated: 2026-11-12T03:10:43Z
+closed: 2026-11-12T03:10:43Z
 +++
 
 The node category filter for hit testing reaches the hit test through several paths:
@@ -8593,6 +8594,7 @@ Expected: one way to give a hit test its category filter.
 Related: #370 (public API naming), #369 (SceneView configuration).
 
 - `2026-11-12T01:42:26Z`: SceneGraph part done: hitTest(_:categoryBitMask:) removed, the mask lives only in HitTestOptions. Remaining: SceneView's hitTestCategoryBitMask (combined with the camera mask). That parameter's fate belongs to the SceneView configuration redesign, so this now depends on #369.
+- `2026-11-12T03:10:43Z`: SceneView part done: .sceneHitTestOptions(_:) takes the same SceneGraph.HitTestOptions as hitTest(_:options:), so the category mask has one home everywhere; the camera's mask narrows it for taps (documented, tested). Replaces sceneHitTestCategoryBitMask.
 
 ---
 

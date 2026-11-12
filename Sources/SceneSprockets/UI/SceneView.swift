@@ -74,7 +74,7 @@ public struct SceneView: View {
     private var onTapID: AnyHashable?
     private var onTapAt: ((SIMD2<Float>, SceneViewport, SceneGraph.Hit?) -> Void)?
     private var onTapAtID: AnyHashable?
-    private var hitTestCategoryBitMask: UInt = .max
+    private var hitTestOptions = SceneGraph.HitTestOptions()
     private var manipulator: (any SceneViewManipulator)?
     private var decorations: ((SceneGraphRenderContext, SIMD2<Float>) throws -> AnyElement?)?
     private var decorationsID: AnyHashable?
@@ -402,8 +402,14 @@ public struct SceneView: View {
         guard let viewport = viewport() else {
             return nil
         }
-        // Like SceneKit, taps only hit nodes the camera can see, further limited by hitTestCategoryBitMask.
-        return sceneGraph.hitTest(viewport.ray(through: [Float(location.x), Float(location.y)]), options: .init(categoryBitMask: activeCamera.categoryBitMask & hitTestCategoryBitMask)).first
+        return sceneGraph.hitTest(viewport.ray(through: [Float(location.x), Float(location.y)]), options: Self.tapHitTestOptions(hitTestOptions, cameraCategoryBitMask: activeCamera.categoryBitMask)).first
+    }
+
+    // Like SceneKit, taps only hit nodes the camera can see: the camera's mask narrows the options' mask.
+    static func tapHitTestOptions(_ options: SceneGraph.HitTestOptions, cameraCategoryBitMask: UInt) -> SceneGraph.HitTestOptions {
+        var options = options
+        options.categoryBitMask &= cameraCategoryBitMask
+        return options
     }
 }
 
@@ -476,9 +482,10 @@ public extension SceneView {
         with { $0.defaultCamera = camera }
     }
 
-    /// Limits taps to nodes whose `categoryBitMask` shares a bit with this, in addition to the camera's mask.
-    func sceneHitTestCategoryBitMask(_ mask: UInt) -> Self {
-        with { $0.hitTestCategoryBitMask = mask }
+    /// How taps hit-test the scene, with the same options as `SceneGraph.hitTest(_:options:)`. Taps only hit nodes the
+    /// camera can see, so the camera's `categoryBitMask` further narrows `options.categoryBitMask`.
+    func sceneHitTestOptions(_ options: SceneGraph.HitTestOptions) -> Self {
+        with { $0.hitTestOptions = options }
     }
 
     /// Calls `action` with the nearest hit under a tap or click, or nil.
@@ -580,13 +587,19 @@ extension SceneView: @MainActor Equatable {
             && lhs.audio === rhs.audio
             && (lhs.externalCameraMatrix == nil) == (rhs.externalCameraMatrix == nil)
             && lhs.externalCameraMatrix?.wrappedValue == rhs.externalCameraMatrix?.wrappedValue
-            && lhs.hitTestCategoryBitMask == rhs.hitTestCategoryBitMask
+            && isSameHitTestOptions(lhs.hitTestOptions, rhs.hitTestOptions)
             && lhs.manipulator === rhs.manipulator
             && Self.isSameCamera(lhs.defaultCamera, rhs.defaultCamera)
             && Self.isSameCamera(lhs.cameraOverride, rhs.cameraOverride)
             && lhs.cameraTarget == rhs.cameraTarget
             && lhs.debugMode == rhs.debugMode
             && lhs.materialChannel == rhs.materialChannel
+    }
+
+    // HitTestOptions holds a node, so it is not Equatable; the node compares by identity.
+    private static func isSameHitTestOptions(_ lhs: SceneGraph.HitTestOptions, _ rhs: SceneGraph.HitTestOptions) -> Bool {
+        (lhs.categoryBitMask, lhs.backFaceCulling, lhs.boundingBoxOnly, lhs.firstFoundOnly, lhs.maximumDistance) == (rhs.categoryBitMask, rhs.backFaceCulling, rhs.boundingBoxOnly, rhs.firstFoundOnly, rhs.maximumDistance)
+            && lhs.rootNode === rhs.rootNode
     }
 
     // Both absent, or both present with the same non-nil id. Closures cannot be compared themselves.

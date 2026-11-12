@@ -41,5 +41,17 @@ struct SceneViewEquatableTests {
         #expect(view(renderers: [BlinnPhongMaterialRenderer()]) != view())
         // A closure added on one side only.
         #expect(view().sceneOverlay(id: "a") { _ in nil } != view())
+        #expect(view().sceneHitTestOptions(.init(categoryBitMask: 0b10)) != view())
+        #expect(view().sceneHitTestOptions(.init(categoryBitMask: 0b10)) == view().sceneHitTestOptions(.init(categoryBitMask: 0b10)))
+    }
+
+    // #376: taps use the same HitTestOptions as SceneGraph.hitTest, narrowed by the camera's mask.
+    @Test
+    func tapHitTestOptionsCombineWithTheCameraMask() {
+        let root = SceneGraph.Node()
+        let options = SceneView.tapHitTestOptions(.init(categoryBitMask: 0b0110, backFaceCulling: true, rootNode: root), cameraCategoryBitMask: 0b0011)
+        #expect(options.categoryBitMask == 0b0010)
+        #expect(options.backFaceCulling)
+        #expect(options.rootNode === root)
     }
 }

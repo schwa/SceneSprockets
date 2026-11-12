@@ -35,7 +35,7 @@ public struct SceneDemoView: View {
             .scenePlaying(!isPaused)
             .sceneShadows(scene.shadows)
             .sceneCamera(matrix: scene.usesSceneCamera ? .constant(nil) : $cameraMatrix)
-            .sceneHitTestCategoryBitMask(scene.pickCategoryBitMask)
+            .sceneHitTestOptions(.init(categoryBitMask: scene.pickCategoryBitMask))
             .sceneManipulator(gizmo)
             .sceneDebugMode(scene.debugMode)
             .onSceneTap { hit in
