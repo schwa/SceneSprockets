@@ -8994,3 +8994,37 @@ SceneImmersiveElement advances and reads the live graph on the render thread. Do
 - `2026-11-12T21:46:10Z`: Added ScenePresenter (main actor): steps update hook, actions, particles, constraints (with the viewer transform reported by the render side) and publishes presentation(); takePresentation() hands particle steps out once, peekPresentation() reads without taking. SceneImmersiveElement now takes a presenter and never touches the live graph; the demo uses one. Test: main actor edits and steps the graph while another thread renders snapshots. Under TSan: no scene graph races (control run rendering the live graph reproduces 'Index out of range' and ~20 scene graph races). Remaining TSan report is in MetalSprockets SubmissionCompletion (init vs Metal completion callback).
 
 ---
+
+## 392: Crash (EXC_BAD_ACCESS) in ParticleSystemRuntime.planFrame while the window's SceneView simulates particles (visionOS demo)
+
++++
+status: new
+priority: high
+kind: bug
+labels: area:renderer,crash
+created: 2026-11-12T22:24:08Z
++++
+
+Seen on Apple Vision Pro in SceneSprocketsDemo. Exact steps not recorded; the session used the immersive space (#385). Not yet known whether the immersive space was open, opening or closing at the time.
+
+Actual: EXC_BAD_ACCESS (code=1, address=0x51e39e5388717e50) on the main thread, in a Swift release during particle frame planning:
+
+  * thread #1, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0x51e39e5388717e50)
+    frame #0: libswiftCore.dylib`_swift_release_dealloc + 48
+    frame #1: libswiftCore.dylib`swift::RefCounts<...>::doDecrementSlow<(swift::PerformDeinit)1>(...) + 168
+    frame #2: SceneSprocketsDemo`merged outlined destroy of Swift.Optional<SwiftUI.Font.Design> + 48
+    frame #3: SceneSprocketsDemo`ParticleSystemRuntime.planFrame(deltaTime:colliders:transforms:trackedObjects:) at <compiler-generated>:0 [opt]
+    frame #4: SceneSprocketsDemo`ParticleSystemRuntime.simulate(deltaTime:colliders:transforms:trackedObjects:view:) at ParticleSystemRuntime.swift:585:24 [opt]
+    frame #5: SceneSprocketsDemo`SceneParticleSystem.simulate(_:view:) at Particles.swift:140:28 [opt]
+    frame #6: SceneSprocketsDemo`closure #10 in SceneGraphElement.body.getter at SceneGraphRenderer.swift:257:91 [opt]
+    frame #8: SceneSprocketsDemo`SceneGraphElement.body.getter() at SceneGraphRenderer.swift:257:71 [opt]
+    ...
+    frame #88: SceneSprocketsDemo`closure #1 in RenderViewViewModel.draw(_:) at RenderView.swift:765:32 [opt]
+    frame #92: MetalKit`-[MTKView draw] + 180
+    frame #93: MetalKit`-[MTKViewDisplayLinkTarget draw] + 32
+
+The caller is the window's SceneView (RenderView/MTKView display link, element tree SceneGraphElement + overlay + ManipulatorOverlayPass), not the immersive render loop. A freed object is released inside planFrame, which suggests memory corruption.
+
+Possibly related (unverified): each SceneParticleSystem has one GPU ParticleSystemRuntime. With #391, the immersive render loop simulates it off the main thread. If the window's SceneView and the immersive space ever render the same scene at once (for example while the space opens or closes, or if the window is not blanked), two threads would drive the same runtime.
+
+---
