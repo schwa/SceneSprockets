@@ -1,6 +1,7 @@
 import GeometryLite3D
 import Metal
 import MetalSprockets
+import MetalSprocketsParticles
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
 import simd
@@ -95,6 +96,37 @@ func presentationCopiesSkinPoses() throws {
     #expect(skin.jointWorldTransforms.first?.columns.3 == [0, 5, 0, 1])
     #expect(entry.morphWeights == [0.5])
     #expect(entry.skinVertices.count == box.vertexCount)
+}
+
+// #390: particle edits travel to the rendering side in frames; the editing side never makes or touches the runtime.
+@Test
+@MainActor
+func particleEditsTravelInFrames() throws {
+    let root = SceneGraph.Node()
+    let emitter = root.addChild(SceneGraph.Node(transform: .init(translation: [3, 0, 0])))
+    let system = SceneParticleSystem(ParticleSystem("Glow") { EmitterDescription("Glow") { RateModule(birthRate: 10) } }, seed: 1)
+    emitter.particleSystems = [system]
+    let graph = SceneGraph(root: root)
+
+    graph.advanceParticles(by: 0.01)
+    system.restart()
+    graph.advanceParticles(by: 0.02)
+    emitter.isVisible = false
+    graph.advanceParticles(by: 0.01)
+    #expect(system.renderRuntime == nil)
+
+    let presentation = graph.presentation()
+    let frame = try #require(presentation.particleFrames.first)
+    #expect(frame.system === system)
+    #expect(abs(frame.deltaTime - 0.03) < 1e-6)
+    #expect(frame.restarts)
+    #expect(frame.isHidden)
+    #expect(frame.placement.columns.3 == [3, 0, 0, 1])
+    #expect(presentation.visibleParticleIndices.isEmpty)
+    // Drained: the next frame starts fresh.
+    let next = try #require(graph.presentation().particleFrames.first)
+    #expect(next.deltaTime == 0)
+    #expect(!next.restarts)
 }
 
 // #388: SceneGraphElement draws the snapshot, not the live graph.

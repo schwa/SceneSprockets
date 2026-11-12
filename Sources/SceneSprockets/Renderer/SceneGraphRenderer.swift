@@ -254,22 +254,25 @@ public struct SceneGraphElement: Element {
             }
             #endif
             // Particles simulate in their own compute pass before the scene pass, then draw after the meshes.
-            let particleSimulations = try presentation.particleSystems.map { try $0.simulate(view: context.viewMatrix).eraseToAnyElement() }
+            let particleSimulations = try presentation.particleFrames.map { try $0.system.simulate($0, view: context.viewMatrix).eraseToAnyElement() }
             prePasses = particleSimulations + prePasses
-            let visibleParticleSystems = presentation.visibleParticleSystems
+            let visibleParticleFrames = presentation.visibleParticleIndices.map { presentation.particleFrames[$0] }
             // Soft particles read the scene's depth, so they draw in a second pass after a depth copy. That needs depth
             // that can be stored and read, and no MSAA resolve (the second pass would have to reload the samples).
             let softParticleDepth: (scene: MTLTexture, copy: MTLTexture)? = try {
-                guard let postTargets, visibleParticleSystems.contains(where: \.isSoft), renderPassDescriptor?.colorAttachments[0].resolveTexture == nil else {
+                guard let postTargets, visibleParticleFrames.contains(where: \.isSoft), renderPassDescriptor?.colorAttachments[0].resolveTexture == nil else {
                     return nil
                 }
                 let copy = try ParticleDepthShaders.sceneDepthTexture(device: postTargets.depth.device, width: postTargets.depth.width, height: postTargets.depth.height)
                 return (postTargets.depth, copy)
             }()
             var particleElements: [AnyElement] = []
-            for system in visibleParticleSystems {
+            for frame in visibleParticleFrames {
+                // Made by the simulation above.
+                guard let runtime = frame.system.renderRuntime else {
+                    continue
+                }
                 // Sprite draws inherit the scene pass's depth state, which writes depth; blended sprites must not.
-                let runtime = try system.runtime()
                 let rendered: AnyElement = if let stereoViews = context.stereoViews {
                     // Simulation already sorts for context.viewMatrix, the center camera (#379).
                     try runtime.render(views: stereoViews, sceneDepth: softParticleDepth?.copy).eraseToAnyElement()

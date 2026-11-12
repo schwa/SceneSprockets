@@ -6,10 +6,15 @@ import simd
 /// A MetalSprocketsParticles effect at a node. The description is `system`; the GPU state is made on first use.
 /// Emitters follow the node's world transform times their own motion. SceneView advances them with
 /// advanceParticles(by:); SceneGraphElement simulates them before the scene pass and draws them after the meshes.
+///
+/// Two sides use it: the thread that edits the scene graph (``system``, ``restart()``, `advanceParticles(by:)`) and the
+/// thread that renders it, which alone touches the GPU runtime. ``SceneGraph/presentation()`` hands the edits over as
+/// a ``Frame`` (#390). ``runtime()`` and ``time`` belong to the rendering side: when rendering on another thread, as in
+/// a visionOS immersive space, do not use them from the editing thread.
 public final class SceneParticleSystem {
-    /// The MetalSprocketsParticles description of the emitters. Changes apply on the next update.
+    /// The MetalSprocketsParticles description of the emitters. Changes apply on the next frame.
     public var system: ParticleSystem {
-        didSet { needsApply = true }
+        didSet { generation += 1 }
     }
     /// The random seed. Two systems with the same description and seed make the same particles.
     public let seed: UInt32
@@ -19,13 +24,35 @@ public final class SceneParticleSystem {
     /// Seconds simulated, for emitter motion and animated colliders.
     public private(set) var time: Float = 0
 
-    private var storedRuntime: ParticleSystemRuntime?
-    private var needsApply = false
+    // Editing side.
+    private var generation = 0
     private var pendingDeltaTime: Float = 0
     private var worldTransform = matrix_identity_float4x4
     private var isHidden = false
+    private var pendingRestart = false
+
+    // Rendering side.
+    private var storedRuntime: ParticleSystemRuntime?
+    private var appliedGeneration = 0
+    private var appliedHidden = false
     // Each emitter's isEmitting from before the node was hidden.
     private var emittingBeforeHidden: [Bool] = []
+
+    /// What one frame hands from the editing side to the rendering side.
+    public struct Frame {
+        let system: SceneParticleSystem
+        let description: ParticleSystem
+        let generation: Int
+        let deltaTime: Float
+        let placement: simd_float4x4
+        let isHidden: Bool
+        let restarts: Bool
+
+        // Whether any emitter fades into scene geometry (SpriteModule.softness), which needs the scene's depth.
+        var isSoft: Bool {
+            description.layers.contains { ($0.modules[SpriteModule.self]?.softness ?? 0) > 0 }
+        }
+    }
 
     /// Creates a particle system for a node.
     ///
@@ -41,64 +68,76 @@ public final class SceneParticleSystem {
     ///
     /// - Throws: An error if the runtime's buffers or pipelines cannot be created.
     public func runtime() throws -> ParticleSystemRuntime {
+        try runtime(description: system, generation: generation)
+    }
+
+    private func runtime(description: ParticleSystem, generation: Int) throws -> ParticleSystemRuntime {
         if let storedRuntime {
-            if needsApply {
-                try storedRuntime.apply(system)
-                needsApply = false
+            if appliedGeneration != generation {
+                try storedRuntime.apply(description)
+                appliedGeneration = generation
             }
             return storedRuntime
         }
         let runtime = try ParticleSystemRuntime(seed: seed)
         runtime.reverseZ = true
-        try runtime.load(system)
+        try runtime.load(description)
         storedRuntime = runtime
-        needsApply = false
+        appliedGeneration = generation
         return runtime
     }
 
-    // Whether any emitter fades into scene geometry (SpriteModule.softness), which needs the scene's depth.
-    var isSoft: Bool {
-        system.layers.contains { ($0.modules[SpriteModule.self]?.softness ?? 0) > 0 }
+    // Rendering side: the runtime made by `simulate`, without applying edits.
+    var renderRuntime: ParticleSystemRuntime? {
+        storedRuntime
     }
 
-    /// Removes every particle and restarts the clock.
+    /// Removes every particle and restarts the clock, on the next frame.
     public func restart() {
-        time = 0
         pendingDeltaTime = 0
-        storedRuntime?.restart()
+        pendingRestart = true
     }
 
     func advance(by deltaTime: Float, worldTransform: simd_float4x4, isHidden: Bool) {
         pendingDeltaTime += max(deltaTime, 0)
         self.worldTransform = worldTransform
-        guard isHidden != self.isHidden, let runtime = try? runtime() else {
-            return
-        }
         self.isHidden = isHidden
-        if isHidden {
-            emittingBeforeHidden = runtime.emitters.map(\.isEmitting)
-            for emitter in runtime.emitters {
-                emitter.isEmitting = false
-            }
-        } else {
-            for (emitter, wasEmitting) in zip(runtime.emitters, emittingBeforeHidden) {
-                emitter.isEmitting = wasEmitting
-            }
-        }
     }
 
-    // One step by the time advanced since the last call, capped at ParticleSystemRuntime.maximumStep; the rest is
-    // dropped. Not several steps: the runtime reads its live-particle counts back from earlier frames, which breaks when
-    // many steps share one frame. Place before the render pass.
-    func simulate(view: simd_float4x4) throws -> some Element {
-        let runtime = try runtime()
+    // Editing side: hands this frame's edits to the rendering side. The step is the time advanced since the last frame,
+    // capped at ParticleSystemRuntime.maximumStep; the rest is dropped. Not several steps: the runtime reads its
+    // live-particle counts back from earlier frames, which breaks when many steps share one frame.
+    func makeFrame() -> Frame {
         let deltaTime = min(pendingDeltaTime, ParticleSystemRuntime.maximumStep)
         pendingDeltaTime = 0
-        time += deltaTime * max(runtime.speedFactor, 0)
-        let placement = usesNodeTransform ? worldTransform : matrix_identity_float4x4
-        let transforms = system.transforms(at: time).map { placement * $0 }
-        let colliders = system.colliders(at: time).map { $0.transformed(by: placement) }
-        return try runtime.simulate(deltaTime: deltaTime, colliders: colliders, transforms: transforms, view: view)
+        defer { pendingRestart = false }
+        return Frame(system: self, description: system, generation: generation, deltaTime: deltaTime, placement: usesNodeTransform ? worldTransform : matrix_identity_float4x4, isHidden: isHidden, restarts: pendingRestart)
+    }
+
+    // Rendering side: applies `frame` and simulates one step. Place before the render pass.
+    func simulate(_ frame: Frame, view: simd_float4x4) throws -> some Element {
+        let runtime = try runtime(description: frame.description, generation: frame.generation)
+        if frame.restarts {
+            time = 0
+            runtime.restart()
+        }
+        if frame.isHidden != appliedHidden {
+            appliedHidden = frame.isHidden
+            if frame.isHidden {
+                emittingBeforeHidden = runtime.emitters.map(\.isEmitting)
+                for emitter in runtime.emitters {
+                    emitter.isEmitting = false
+                }
+            } else {
+                for (emitter, wasEmitting) in zip(runtime.emitters, emittingBeforeHidden) {
+                    emitter.isEmitting = wasEmitting
+                }
+            }
+        }
+        time += frame.deltaTime * max(runtime.speedFactor, 0)
+        let transforms = frame.description.transforms(at: time).map { frame.placement * $0 }
+        let colliders = frame.description.colliders(at: time).map { $0.transformed(by: frame.placement) }
+        return try runtime.simulate(deltaTime: frame.deltaTime, colliders: colliders, transforms: transforms, view: view)
     }
 }
 

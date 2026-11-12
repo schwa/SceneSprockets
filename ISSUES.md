@@ -8957,15 +8957,19 @@ Blinn-Phong, PBR, ShaderMaterial, debug views and GPU deformation read entry.nod
 ## 390: Particles and node text are read from live nodes during rendering
 
 +++
-status: new
+status: closed
 priority: high
 kind: task
 labels: area:renderer, effort:s, subtask
 depends: 388
 created: 2026-11-12T21:25:35Z
+updated: 2026-11-12T21:38:45Z
+closed: 2026-11-12T21:38:45Z
 +++
 
 Particle simulation input (world transforms, visibility) and SceneText are gathered from live nodes at render time. Done when: both come from the snapshot. Part of #386.
+
+- `2026-11-12T21:38:45Z`: Particles: SceneParticleSystem split into an editing side (system, restart, advance) and a rendering side (runtime, time). presentation() drains each system's edits into a SceneParticleSystem.Frame (step, placement, hidden, description + generation, restart); SceneGraphElement simulates and draws from frames only. Text already came from the snapshot (#388); the old visibleTexts walk is gone. Caveat (documented): runtime() and time are rendering-side; apps that poke the runtime directly (BurningFox) are only safe when rendering on the editing thread. Test: edits travel in frames and the editing side never creates the runtime.
 
 ---
 

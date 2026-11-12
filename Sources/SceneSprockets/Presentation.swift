@@ -37,10 +37,11 @@ extension SceneGraph {
         public var lights: [LightEntry]
         public var cameras: [CameraEntry]
         public var texts: [TextEntry]
-        /// Particle systems on visible nodes, each once.
-        public var visibleParticleSystems: [SceneParticleSystem]
-        /// Every particle system on an active node, hidden or not, each once.
-        public var particleSystems: [SceneParticleSystem]
+        /// This frame's edits of every particle system on an active node, hidden or not, each once. Made fresh by each
+        /// ``SceneGraph/presentation()`` call, which takes the time advanced since the previous call.
+        public var particleFrames: [SceneParticleSystem.Frame]
+        /// Indices into ``particleFrames`` of the systems on visible nodes.
+        public var visibleParticleIndices: [Int]
         public var environment: Environment
         public var fog: Fog?
         public var postProcessing: PostProcessing?
@@ -65,8 +66,8 @@ extension SceneGraph {
             lights: parts.lights,
             cameras: parts.cameras,
             texts: parts.texts,
-            visibleParticleSystems: parts.visibleParticleSystems,
-            particleSystems: parts.particleSystems,
+            particleFrames: parts.particleSystems.map { $0.makeFrame() },
+            visibleParticleIndices: parts.visibleParticleIndices,
             environment: environment,
             fog: fog,
             postProcessing: postProcessing,
@@ -81,8 +82,8 @@ extension SceneGraph {
         var lights: [Presentation.LightEntry]
         var cameras: [Presentation.CameraEntry]
         var texts: [Presentation.TextEntry]
-        var visibleParticleSystems: [SceneParticleSystem]
         var particleSystems: [SceneParticleSystem]
+        var visibleParticleIndices: [Int]
         var bounds: BoundingBox3D?
     }
 
@@ -94,14 +95,16 @@ extension SceneGraph {
                 texts.append(.init(text: text, worldTransform: worldTransform, categoryBitMask: node.categoryBitMask))
             }
         }
+        let particleSystems = allParticleSystems()
+        let visible = Set(visibleParticleSystems().map(ObjectIdentifier.init))
         return PresentationParts(
             revision: revision,
             meshes: flattened.meshes,
             lights: flattened.lights.map { .init(nodeID: $0.node.id, worldTransform: $0.worldTransform, light: $0.light, lightCategoryBitMask: $0.node.lightCategoryBitMask) },
             cameras: flattened.cameras.map { .init(nodeID: $0.node.id, worldTransform: $0.worldTransform, camera: $0.camera) },
             texts: texts,
-            visibleParticleSystems: visibleParticleSystems(),
-            particleSystems: allParticleSystems(),
+            particleSystems: particleSystems,
+            visibleParticleIndices: particleSystems.indices.filter { visible.contains(ObjectIdentifier(particleSystems[$0])) },
             bounds: bounds
         )
     }
