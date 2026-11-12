@@ -35,7 +35,7 @@ public enum DemoSnapshot {
         }
         let scene = demo.make()
         configure(scene)
-        let renderer = try OffscreenRenderer(size: CGSize(width: width, height: height), colorUsage: SceneGraphShadows.requiredColorUsage, depthUsage: SceneGraphShadows.requiredDepthUsage)
+        let renderer = try OffscreenRenderer(size: CGSize(width: width, height: height), colorUsage: Shadows.requiredColorUsage, depthUsage: Shadows.requiredDepthUsage)
         let deltaTime: Float = 1 / 60
         var times: [Double] = []
         for frame in 0..<(warmUp + frames) {
@@ -63,7 +63,7 @@ public enum DemoSnapshot {
         let scene = demo.make()
         scene.values.merge(values) { $1 }
         configure(scene)
-        let renderer = try OffscreenRenderer(size: CGSize(width: width, height: height), colorUsage: SceneGraphShadows.requiredColorUsage, depthUsage: SceneGraphShadows.requiredDepthUsage)
+        let renderer = try OffscreenRenderer(size: CGSize(width: width, height: height), colorUsage: Shadows.requiredColorUsage, depthUsage: Shadows.requiredDepthUsage)
         let outline = SelectionOutline()
         func makeElement() throws -> AnyElement {
             try frameElement(scene, width: width, height: height, outline: outline)
@@ -106,7 +106,7 @@ public enum DemoSnapshot {
         }
         let camera = cameraNode?.camera ?? Camera.default
         let size = SIMD2<Float>(Float(width), Float(height))
-        let viewport = SceneViewport(cameraMatrix: cameraMatrix, camera: camera, viewSize: size, drawableSize: size)
+        let viewport = Viewport(cameraMatrix: cameraMatrix, camera: camera, viewSize: size, drawableSize: size)
         let outlineElement = scene.showsSelectionOutline ? try outline.element(nodes: [selected], sceneGraph: scene.sceneGraph, viewport: viewport) : nil
         let gizmoOverlay = try TransformGizmo(target: selected, mode: scene.gizmoMode ?? .translate).overlay(viewport: viewport)
         return try MetalSprockets.Group {
@@ -147,8 +147,8 @@ public enum DemoSnapshot {
             frameRate: frameRate,
             outputURL: url,
             pixelFormat: .bgra8Unorm_srgb,
-            colorUsage: SceneGraphShadows.requiredColorUsage,
-            depthUsage: SceneGraphShadows.requiredDepthUsage,
+            colorUsage: Shadows.requiredColorUsage,
+            depthUsage: Shadows.requiredDepthUsage,
             clearDepth: 0
         )
         let deltaTime = Float(1 / frameRate)
@@ -185,8 +185,8 @@ public enum DemoSnapshot {
     }
 
     // Generated meshes (dice, gears) are saved as glTF (#158).
-    static var archive: SceneArchive {
-        SceneArchive(materialTypes: [BlinnPhongSceneMaterial.self, PBRSceneMaterial.self, ShaderMaterial.self], environmentMapTypes: [PBREnvironment.self], meshCodec: GLTFMeshCodec())
+    static var archive: Archive {
+        Archive(materialTypes: [BlinnPhongSceneMaterial.self, PBRSceneMaterial.self, ShaderMaterial.self], environmentMapTypes: [PBREnvironment.self], meshCodec: GLTFMeshCodec())
     }
 
     public static func writePNG(_ image: CGImage, to url: URL) throws {

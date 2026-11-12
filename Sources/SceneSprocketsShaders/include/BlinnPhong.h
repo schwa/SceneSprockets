@@ -45,7 +45,7 @@ struct BlinnPhongFrame {
     simd_float3 cameraPosition;
     simd_float3 ambientLightColor;
     int lightCount;
-    // SceneGraphMaterialChannel's raw value, or 0 for lit output.
+    // MaterialChannel's raw value, or 0 for lit output.
     int materialChannel;
 };
 typedef struct BlinnPhongFrame BlinnPhongFrame;

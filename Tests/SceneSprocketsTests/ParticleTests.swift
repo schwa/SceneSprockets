@@ -83,7 +83,7 @@ func softParticlesFadeIntoGeometry() throws {
         // A black wall just behind the particles.
         root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, -0.6]), content: .mesh(MetalMesh(mesh: .box(), device: device), material: ShaderMaterial.rim(color: [0, 0, 0]))))
         let sceneGraph = SceneGraph(root: root)
-        let renderer = try OffscreenRenderer(size: CGSize(width: 32, height: 32), colorUsage: SceneGraphShadows.requiredColorUsage, depthUsage: SceneGraphShadows.requiredDepthUsage)
+        let renderer = try OffscreenRenderer(size: CGSize(width: 32, height: 32), colorUsage: Shadows.requiredColorUsage, depthUsage: Shadows.requiredDepthUsage)
         var value = SIMD4<UInt8>.zero
         for _ in 0..<5 {
             sceneGraph.advanceParticles(by: 1.0 / 30.0)

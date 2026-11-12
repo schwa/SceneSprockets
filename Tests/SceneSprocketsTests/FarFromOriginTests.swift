@@ -37,9 +37,9 @@ private func render(offset: SIMD3<Float>, kind: MaterialKind) throws -> [SIMD4<U
     let sceneGraph = SceneGraph(root: root)
     sceneGraph.fog = SceneGraph.Fog(color: [0.3, 0.4, 0.9, 1], startDistance: 2, endDistance: 7)
     let size = 64
-    let renderer = try OffscreenRenderer(size: CGSize(width: size, height: size), colorUsage: SceneGraphShadows.requiredColorUsage, depthUsage: SceneGraphShadows.requiredDepthUsage)
-    let renderers: [any SceneGraphMaterialRenderer] = [BlinnPhongMaterialRenderer(ambientLightColor: [1, 1, 1]), ShaderMaterialRenderer(), PBRMaterialRenderer()]
-    let element = SceneGraphElement(sceneGraph: sceneGraph, aspectRatio: 1, renderers: renderers, shadows: SceneGraphShadows(intensity: 0.8))
+    let renderer = try OffscreenRenderer(size: CGSize(width: size, height: size), colorUsage: Shadows.requiredColorUsage, depthUsage: Shadows.requiredDepthUsage)
+    let renderers: [any MaterialRenderer] = [BlinnPhongMaterialRenderer(ambientLightColor: [1, 1, 1]), ShaderMaterialRenderer(), PBRMaterialRenderer()]
+    let element = SceneGraphElement(sceneGraph: sceneGraph, aspectRatio: 1, renderers: renderers, shadows: Shadows(intensity: 0.8))
     let texture = try renderer.render(element).texture
     var pixels = [SIMD4<UInt8>](repeating: .zero, count: size * size)
     texture.getBytes(&pixels, bytesPerRow: size * 4, from: MTLRegionMake2D(0, 0, size, size), mipmapLevel: 0)

@@ -3,7 +3,7 @@
 // Lights are nodes too, so you place and aim them with the node's transform.
 // A point light shines in all directions. A spot light shines in a cone along its -Z axis;
 // `Transform3D(position:lookingAt:)` aims it.
-// Pass SceneGraphShadows to SceneView, and lights with `castsShadow` (the default) cast shadows.
+// Pass Shadows to SceneView, and lights with `castsShadow` (the default) cast shadows.
 
 import GeometryLite3D
 import SceneSprockets
@@ -12,7 +12,7 @@ import SwiftUI
 
 struct Tutorial3Lights: View {
     @State private var sceneGraph = Self.makeSceneGraph()
-    @State private var shadows = SceneGraphShadows(intensity: 0.7, softness: 2)
+    @State private var shadows = Shadows(intensity: 0.7, softness: 2)
 
     var body: some View {
         SceneView(sceneGraph, renderers: [BlinnPhongMaterialRenderer()])

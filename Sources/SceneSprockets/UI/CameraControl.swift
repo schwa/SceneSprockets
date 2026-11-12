@@ -6,7 +6,7 @@ import SwiftUI
 ///
 /// Set it with the `sceneCameraControl(_:)` view modifier. It only has an effect when camera control is on
 /// (``SceneView/sceneCameraControl(_:)``). Set the orbit target with ``SceneView/sceneCamera(matrix:target:override:)``.
-public struct SceneCameraControl: Sendable, Equatable {
+public struct CameraControl: Sendable, Equatable {
     /// How a drag rotates the camera.
     public enum Mode: Sendable, Equatable {
         /// Yaw around the up axis and pitch toward or away from it. The horizon stays level.
@@ -113,7 +113,7 @@ public struct SceneCameraControl: Sendable, Equatable {
 }
 
 extension EnvironmentValues {
-    @Entry var sceneCameraControl = SceneCameraControl()
+    @Entry var sceneCameraControl = CameraControl()
 }
 
 public extension View {
@@ -121,7 +121,7 @@ public extension View {
     ///
     /// - Parameter configuration: The camera control configuration.
     /// - Returns: A view that uses `configuration` for camera control.
-    func sceneCameraControl(_ configuration: SceneCameraControl) -> some View {
+    func sceneCameraControl(_ configuration: CameraControl) -> some View {
         environment(\.sceneCameraControl, configuration)
     }
 }

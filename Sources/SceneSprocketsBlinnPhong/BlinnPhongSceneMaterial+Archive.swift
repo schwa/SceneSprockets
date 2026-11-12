@@ -1,7 +1,7 @@
 import Metal
 import SceneSprockets
 
-// Saved by SceneArchive. Samplers are saved with their textures (#180); without one, the default linear, repeating
+// Saved by Archive. Samplers are saved with their textures (#180); without one, the default linear, repeating
 // sampler is used.
 extension BlinnPhongSceneMaterial: ArchivableMaterial {
     public static let archiveTypeName = "blinnPhong"
@@ -26,7 +26,7 @@ extension BlinnPhongSceneMaterial: ArchivableMaterial {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: ArchiveKeys.self)
         // Before #368 the normal map was a bare texture reference.
-        let normalMap: Source? = if let reference = try? container.decodeIfPresent(SceneArchiveContext.TextureReference.self, forKey: .normalMap) {
+        let normalMap: Source? = if let reference = try? container.decodeIfPresent(ArchiveContext.TextureReference.self, forKey: .normalMap) {
             .texture(try decoder.sceneArchive.texture(for: reference))
         } else {
             try container.decodeIfPresent(Source.self, forKey: .normalMap)
@@ -61,15 +61,15 @@ extension BlinnPhongSceneMaterial.Source: Codable {
             try container.encode(color, forKey: .color)
         case let .texture(texture, sampler, tint):
             try container.encode(try encoder.sceneArchive.encode(texture: texture), forKey: .texture)
-            try container.encodeIfPresent(sampler.map(SceneArchiveContext.SamplerReference.init), forKey: .sampler)
+            try container.encodeIfPresent(sampler.map(ArchiveContext.SamplerReference.init), forKey: .sampler)
             try container.encode(tint, forKey: .tint)
         }
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: ArchiveKeys.self)
-        if let reference = try container.decodeIfPresent(SceneArchiveContext.TextureReference.self, forKey: .texture) {
-            let sampler = try container.decodeIfPresent(SceneArchiveContext.SamplerReference.self, forKey: .sampler)?.descriptor
+        if let reference = try container.decodeIfPresent(ArchiveContext.TextureReference.self, forKey: .texture) {
+            let sampler = try container.decodeIfPresent(ArchiveContext.SamplerReference.self, forKey: .sampler)?.descriptor
             self = .texture(try decoder.sceneArchive.texture(for: reference), sampler: sampler, tint: try container.decode(SIMD3<Float>.self, forKey: .tint))
         } else {
             self = .color(try container.decode(SIMD3<Float>.self, forKey: .color))

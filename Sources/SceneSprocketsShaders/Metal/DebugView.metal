@@ -23,7 +23,7 @@ namespace DebugView {
         float2 textureCoordinate;
     };
 
-    // Matches SceneGraphDebugMode's raw values.
+    // Matches DebugMode's raw values.
     constant int modeShaded = 0;
     constant int modeNormals = 1;
     constant int modeTextureCoordinates = 2;

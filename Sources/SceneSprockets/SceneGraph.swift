@@ -30,7 +30,7 @@ public class SceneGraph {
     /// - ChildOf and SiblingIndexComponent edits move nodes in the tree; setParent(nil) removes the node from the
     ///   graph, like removeFromParent(). Destroying an entity removes its node from the tree (#271, #273).
     /// - Entities without a Node, and ChildOf edges to them, are ignored.
-    /// Several graphs can share one World; SceneGraphMembershipComponent tells their entities apart.
+    /// Several graphs can share one World; MembershipComponent tells their entities apart.
     public var world: World {
         store.world
     }
@@ -59,7 +59,7 @@ public class SceneGraph {
         root.detach(from: store)
     }
 
-    /// For SceneArchive; see SceneGraph+Archive.swift.
+    /// For Archive; see SceneGraph+Archive.swift.
     public required convenience init(from decoder: Decoder) throws {
         self.init(root: Node())
         try decodeArchive(from: decoder)

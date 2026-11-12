@@ -2,7 +2,7 @@
 
 using namespace metal;
 
-// Depth-only drawing of shadow casters from a light, for SceneGraphShadows.
+// Depth-only drawing of shadow casters from a light, for Shadows.
 namespace ShadowCasters {
 
     struct StaticIn {

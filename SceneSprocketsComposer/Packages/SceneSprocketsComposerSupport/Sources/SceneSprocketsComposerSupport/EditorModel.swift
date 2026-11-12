@@ -182,12 +182,12 @@ public final class EditorModel {
     // Set by the view from the document's environment; registering undo marks the document edited.
     @ObservationIgnored public weak var undoManager: UndoManager?
     // PBRMaterialRenderer caches GPU state, so keep one instance per editor.
-    @ObservationIgnored public let renderers: [any SceneGraphMaterialRenderer]
+    @ObservationIgnored public let renderers: [any MaterialRenderer]
     @ObservationIgnored public let gizmo = TransformGizmo()
     // Keeps its textures between frames.
     @ObservationIgnored let selectionOutline = SelectionOutline()
     // One instance, so it keeps its GPU state and SceneView sees the same shadows between updates (#235).
-    @ObservationIgnored let shadows = SceneGraphShadows()
+    @ObservationIgnored let shadows = Shadows()
     // Observable itself; for the frame rate cap.
     @ObservationIgnored let display = DisplayFrameRate()
 

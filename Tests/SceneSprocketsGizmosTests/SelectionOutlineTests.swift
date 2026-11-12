@@ -11,7 +11,7 @@ import Testing
 // #172
 @MainActor
 struct SelectionOutlineTests {
-    let viewport = SceneViewport(
+    let viewport = Viewport(
         cameraMatrix: LookAt(position: [0, 0, 10], target: .zero, up: [0, 1, 0]).cameraMatrix,
         projectionMatrix: PerspectiveProjection(verticalAngleOfView: .degrees(40), depthMode: .standard(zClip: 0.1 ... 100)).projectionMatrix(aspectRatio: 1),
         viewSize: [400, 400],

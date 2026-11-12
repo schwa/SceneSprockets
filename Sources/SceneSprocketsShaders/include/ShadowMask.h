@@ -4,7 +4,7 @@
 
 #define SCENE_SHADOW_MAX_SLICES 8
 
-// Uniforms for SceneGraphShadows' screen-space mask pass.
+// Uniforms for Shadows' screen-space mask pass.
 struct SceneShadowMaskUniforms {
     // Clip space (with the renderer's reversed depth) to world space.
     simd_float4x4 inverseViewProjection;

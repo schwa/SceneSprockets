@@ -95,7 +95,7 @@ final class DiceDemo: DemoScene {
                 .toggle("Line Up", default: false)
             ]
         )
-        shadows = SceneGraphShadows(intensity: 0.65, softness: 2)
+        shadows = Shadows(intensity: 0.65, softness: 2)
         physics = try? SceneGraphPhysicsWorld(sceneGraph: sceneGraph)
         actions = [DemoAction("Roll", systemImage: "dice", shortcut: .space) { [weak self] in self?.roll() }]
         roll()

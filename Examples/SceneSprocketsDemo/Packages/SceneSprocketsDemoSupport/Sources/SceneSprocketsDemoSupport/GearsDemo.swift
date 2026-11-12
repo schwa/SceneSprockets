@@ -45,7 +45,7 @@ final class GearsDemo: DemoScene {
                 .slider("Speed", 0...2, default: 0.5)
             ]
         )
-        shadows = SceneGraphShadows(intensity: 0.6, softness: 2)
+        shadows = Shadows(intensity: 0.6, softness: 2)
         rebuild()
     }
 

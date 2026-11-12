@@ -21,7 +21,7 @@ func appOwnedWorldHoldsTheGraphsNodes() throws {
     let entity = try #require(world[child.id])
     #expect(entity[NodeTransformComponent.self]?.value.matrix.columns.3.x == 1)
     #expect(entity[NodeLabelComponent.self] != nil)
-    #expect(entity[SceneGraphMembershipComponent.self]?.rootID == root.id)
+    #expect(entity[MembershipComponent.self]?.rootID == root.id)
     #expect(entity[NodeReferenceComponent.self]?.node === child)
     #expect(entity[SiblingIndexComponent.self]?.index == 0)
 

@@ -156,7 +156,7 @@ namespace BlinnPhong {
         if (material.hasEmissionTexture) {
             emission *= emissionTexture.sample(textureSampler, in.textureCoordinate).rgb;
         }
-        // Material channel views (#195), matching SceneGraphMaterialChannel. Blinn-Phong has no metallic, and
+        // Material channel views (#195), matching MaterialChannel. Blinn-Phong has no metallic, and
         // roughness comes from shininess as in the usual Phong-to-microfacet mapping.
         switch (frame.materialChannel) {
             case 1: return float4(diffuseColor, 1);

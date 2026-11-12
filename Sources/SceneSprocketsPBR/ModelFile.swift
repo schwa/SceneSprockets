@@ -148,12 +148,12 @@ public enum ModelFile {
     }
 }
 
-/// The loader that `SceneArchive` uses for models that a scene package keeps by reference.
+/// The loader that `Archive` uses for models that a scene package keeps by reference.
 public struct ModelFileLoader: ArchivableModelLoader {
     /// Creates a model file loader.
     public init() {}
 
-    public func load(_ url: URL, context _: SceneArchiveContext) throws -> (node: SceneGraph.Node, warnings: [String]) {
+    public func load(_ url: URL, context _: ArchiveContext) throws -> (node: SceneGraph.Node, warnings: [String]) {
         let result = try ModelFile.load(url)
         return (result.node, result.warnings)
     }

@@ -103,8 +103,8 @@ extension RenderSettings: Codable {
         try read(\.fieldOfView, .fieldOfView)
         try read(\.nearClip, .nearClip)
         try read(\.farClip, .farClip)
-        debugMode = try container.decodeIfPresent(SceneGraphDebugMode.self, forKey: .debugMode)
-        materialChannel = try container.decodeIfPresent(SceneGraphMaterialChannel.self, forKey: .materialChannel)
+        debugMode = try container.decodeIfPresent(DebugMode.self, forKey: .debugMode)
+        materialChannel = try container.decodeIfPresent(MaterialChannel.self, forKey: .materialChannel)
         maximumFramesPerSecond = try container.decodeIfPresent(Int.self, forKey: .maximumFramesPerSecond)
     }
 

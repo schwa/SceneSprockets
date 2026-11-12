@@ -28,7 +28,7 @@ struct ArchivedLevelOfDetail: Codable {
 }
 
 // An audio player's buffer is a CAF file in the package; players that share a buffer share the file (#182). The
-// position is not saved: SceneAudio sets it from the node every frame.
+// position is not saved: Audio sets it from the node every frame.
 struct ArchivedAudioPlayer: Codable {
     var file: String
     var loops: Bool
@@ -137,7 +137,7 @@ extension SceneGraph.PhysicsBody: Codable {
     }
 }
 
-extension SceneArchiveContext {
+extension ArchiveContext {
     // The package path of the mesh's codec file, written once for meshes that share buffers.
     func meshFile(for mesh: MetalMesh, materials: [any SceneMaterial], name: String?, codec: any ArchivableMeshCodec) throws -> String {
         let key = meshKey(mesh)

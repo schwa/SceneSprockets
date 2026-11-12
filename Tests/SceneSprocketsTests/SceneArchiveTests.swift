@@ -17,10 +17,10 @@ import Testing
 @MainActor
 struct SceneArchiveTests {
     let device = MTLCreateSystemDefaultDevice()!
-    let archive = SceneArchive(materialTypes: [BlinnPhongSceneMaterial.self, PBRSceneMaterial.self], environmentMapTypes: [PBREnvironment.self])
+    let archive = Archive(materialTypes: [BlinnPhongSceneMaterial.self, PBRSceneMaterial.self], environmentMapTypes: [PBREnvironment.self])
 
     func temporaryURL() -> URL {
-        FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension(SceneArchive.pathExtension)
+        FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension(Archive.pathExtension)
     }
 
     // A 2x2 RGBA texture with distinct pixels, including partial alpha.
@@ -70,7 +70,7 @@ struct SceneArchiveTests {
         let sceneGraph = makeScene()
         let box = try #require(sceneGraph.root.children.first)
         box.label = "Before"
-        let cache = SceneArchive.TextureCache()
+        let cache = Archive.TextureCache()
         let capture = try archive.capture(sceneGraph, textureCache: cache)
         box.label = "After"
         box.removeFromParent()
@@ -552,7 +552,7 @@ struct SceneArchiveTests {
         material.renderState = MaterialRenderState(blendMode: .add)
         let root = SceneGraph.Node()
         root.addChild(SceneGraph.Node(label: "Rim", shape: .sphere(), material: material))
-        let shaderArchive = SceneArchive(materialTypes: [ShaderMaterial.self])
+        let shaderArchive = Archive(materialTypes: [ShaderMaterial.self])
         let warnings = try shaderArchive.write(SceneGraph(root: root), to: url)
         #expect(warnings.isEmpty, "\(warnings)")
         let (loaded, readWarnings) = try shaderArchive.read(from: url)
@@ -586,10 +586,10 @@ struct SceneArchiveTests {
         let material = ShaderMaterial(vertexShader: try VertexShader(ShaderFunction(library: library, name: "custom_vertex", type: .vertex)), fragmentShader: try FragmentShader(ShaderFunction(library: library, name: "custom_fragment", type: .fragment)))
         let root = SceneGraph.Node()
         root.addChild(SceneGraph.Node(label: "Custom", shape: .sphere(), material: material))
-        let unregistered = try SceneArchive(materialTypes: [ShaderMaterial.self]).write(SceneGraph(root: root), to: url)
+        let unregistered = try Archive(materialTypes: [ShaderMaterial.self]).write(SceneGraph(root: root), to: url)
         #expect(unregistered.contains { $0.contains("Custom") && $0.contains("shaderLibraries") })
         // Registered, it saves and reads back.
-        let registered = SceneArchive(materialTypes: [ShaderMaterial.self], shaderLibraries: ["custom": library])
+        let registered = Archive(materialTypes: [ShaderMaterial.self], shaderLibraries: ["custom": library])
         #expect(try registered.write(SceneGraph(root: root), to: url).isEmpty)
         let (loaded, _) = try registered.read(from: url)
         guard case let .mesh(_, materials, _, _) = loaded.root.children.first?.content, let shader = materials.first as? ShaderMaterial else {

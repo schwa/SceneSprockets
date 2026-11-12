@@ -56,9 +56,9 @@ private func expectEditedValues(_ box: SceneGraph.Node) {
 @Test
 func archiveRoundTripsValuesStoredInTheWorld() throws {
     let (graph, _) = makeGraphEditedInPlace()
-    let archive = SceneArchive(materialTypes: [BlinnPhongSceneMaterial.self])
+    let archive = Archive(materialTypes: [BlinnPhongSceneMaterial.self])
     let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        .appendingPathExtension(SceneArchive.pathExtension)
+        .appendingPathExtension(Archive.pathExtension)
     defer { try? FileManager.default.removeItem(at: url) }
     let warnings = try archive.write(graph, to: url)
     #expect(warnings.isEmpty, "\(warnings)")

@@ -10,7 +10,7 @@ import SwiftUI
 /// The gizmo draws its handles at a constant size on screen with MetalSprocketsAddOns' `GraphicsContext3D`. Pass it to
 /// `SceneView`'s `sceneManipulator(_:)`. It also responds to pinch and twist gestures.
 @MainActor
-public final class TransformGizmo: SceneViewManipulator {
+public final class TransformGizmo: ViewManipulator {
     /// The kind of change that the handles make.
     public enum Mode: String, CaseIterable, Sendable {
         /// The handles move the node.
@@ -149,7 +149,7 @@ public final class TransformGizmo: SceneViewManipulator {
         }
     }
 
-    func frame(viewport: SceneViewport) -> Frame? {
+    func frame(viewport: Viewport) -> Frame? {
         guard let target else {
             return nil
         }
@@ -234,7 +234,7 @@ public final class TransformGizmo: SceneViewManipulator {
     }
 
     // The handle under `point` (view points), nearest first; nil when none is within reach.
-    func handle(at point: SIMD2<Float>, viewport: SceneViewport) -> Handle? {
+    func handle(at point: SIMD2<Float>, viewport: Viewport) -> Handle? {
         guard let frame = frame(viewport: viewport) else {
             return nil
         }
@@ -275,7 +275,7 @@ public final class TransformGizmo: SceneViewManipulator {
     }
 
     // Distance of `point` from the gizmo's center on screen, as a fraction of the axis rings' radius.
-    private func trackballDistance(_ point: SIMD2<Float>, frame: Frame, viewport: SceneViewport) -> Float? {
+    private func trackballDistance(_ point: SIMD2<Float>, frame: Frame, viewport: Viewport) -> Float? {
         guard let center = viewport.project(frame.origin)?.xy, let edge = viewport.project(frame.origin + frame.cameraRight * frame.length * 0.9)?.xy else {
             return nil
         }
@@ -343,7 +343,7 @@ public final class TransformGizmo: SceneViewManipulator {
     }
 
     // The point on the handle's line or plane under `point`.
-    func hit(_ handle: Handle, frame: Frame, point: SIMD2<Float>, viewport: SceneViewport) -> SIMD3<Float>? {
+    func hit(_ handle: Handle, frame: Frame, point: SIMD2<Float>, viewport: Viewport) -> SIMD3<Float>? {
         let ray = viewport.ray(through: point)
         switch (mode, handle) {
         case (.rotate, .axis(let axis)):
@@ -361,12 +361,12 @@ public final class TransformGizmo: SceneViewManipulator {
         }
     }
 
-    public func hitTest(_ point: SIMD2<Float>, viewport: SceneViewport) -> Bool {
+    public func hitTest(_ point: SIMD2<Float>, viewport: Viewport) -> Bool {
         hoveredHandle = handle(at: point, viewport: viewport)
         return hoveredHandle != nil
     }
 
-    public func beginDrag(at point: SIMD2<Float>, viewport: SceneViewport) {
+    public func beginDrag(at point: SIMD2<Float>, viewport: Viewport) {
         guard let target, let frame = frame(viewport: viewport), let handle = handle(at: point, viewport: viewport) else {
             return
         }
@@ -375,7 +375,7 @@ public final class TransformGizmo: SceneViewManipulator {
         onBegin?(target)
     }
 
-    public func drag(to point: SIMD2<Float>, viewport: SceneViewport) {
+    public func drag(to point: SIMD2<Float>, viewport: Viewport) {
         guard let target, let drag else {
             return
         }
@@ -440,7 +440,7 @@ public final class TransformGizmo: SceneViewManipulator {
 
     /// Pinches and twists that start within the gizmo's reach on screen (its handle length) scale and turn the
     /// target, whatever the mode.
-    public func claimsTwoFingerGesture(at point: SIMD2<Float>, viewport: SceneViewport) -> Bool {
+    public func claimsTwoFingerGesture(at point: SIMD2<Float>, viewport: Viewport) -> Bool {
         guard target != nil, let frame = frame(viewport: viewport), let center = viewport.project(frame.origin)?.xy else {
             return false
         }
@@ -448,7 +448,7 @@ public final class TransformGizmo: SceneViewManipulator {
         return simd_distance(point, center) <= reach
     }
 
-    public func beginTwoFingerGesture(viewport: SceneViewport) {
+    public func beginTwoFingerGesture(viewport: Viewport) {
         guard let target, let frame = frame(viewport: viewport) else {
             return
         }
@@ -458,7 +458,7 @@ public final class TransformGizmo: SceneViewManipulator {
 
     /// Scales uniformly by `scale` and turns about the view direction by `rotation` (clockwise on screen, as seen from
     /// the camera), each snapped like the handles.
-    public func twoFingerGesture(scale: Float, rotation: Float, viewport _: SceneViewport) {
+    public func twoFingerGesture(scale: Float, rotation: Float, viewport _: Viewport) {
         guard let target, let start = twoFingerStart else {
             return
         }
@@ -500,7 +500,7 @@ public final class TransformGizmo: SceneViewManipulator {
     static let axisColors: [Color] = [.red, .green, .blue]
 
     // swiftlint:disable:next unneeded_throws_rethrows
-    public func overlay(viewport: SceneViewport) throws -> AnyElement? {
+    public func overlay(viewport: Viewport) throws -> AnyElement? {
         guard var frame = frame(viewport: viewport) else {
             return nil
         }

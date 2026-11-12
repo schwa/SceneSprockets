@@ -5,7 +5,7 @@ import simd
 /// Plays every node's audio players in 3D, like SCNView's audioEngine and audioListener. Call `update` each frame
 /// with the listener's world transform (usually the camera); players on hidden nodes are paused, and players that
 /// leave the graph are detached.
-public final class SceneAudio {
+public final class Audio {
     /// The mixer that plays and positions the players.
     public let mixer: SpatialAudioMixer
 

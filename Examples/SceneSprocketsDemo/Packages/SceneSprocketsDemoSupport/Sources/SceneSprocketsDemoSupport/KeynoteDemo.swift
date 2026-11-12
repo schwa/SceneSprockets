@@ -41,7 +41,7 @@ public final class KeynoteDemo: DemoScene {
     private var fogAmount: Float = 0
 
     // Per-slide state: each is used only while its slide is showing.
-    private let shadowRenderer = SceneGraphShadows(intensity: 0.75, softness: 2)
+    private let shadowRenderer = Shadows(intensity: 0.75, softness: 2)
     private var shuffleCubes: [SceneGraph.Node] = []
     private var sinceShuffle: Float = 0
     private var blendMixer: SceneGraph.AnimationMixer?
@@ -214,7 +214,7 @@ public final class KeynoteDemo: DemoScene {
         """,
         "Shadows": """
         • Shadow maps from a directional sun light.
-        • Turn them on in SceneView with SceneGraphShadows; softness and intensity are settings.
+        • Turn them on in SceneView with Shadows; softness and intensity are settings.
         """,
         "Fog": """
         • Distance fog: one property on the scene graph.
@@ -632,7 +632,7 @@ public final class KeynoteDemo: DemoScene {
             sun.transform.translation = [3, 6, 4]
             sun.look(at: .zero)
             SceneView(scene, renderers: renderers)
-                .sceneShadows(SceneGraphShadows(intensity: 0.75, softness: 2))
+                .sceneShadows(Shadows(intensity: 0.75, softness: 2))
             """, to: slide)
         case "Custom Shaders":
             customShadersSlide(slide)
@@ -789,7 +789,7 @@ public final class KeynoteDemo: DemoScene {
                 var body: some View {
                     SceneView(sceneGraph, renderers: [BlinnPhongMaterialRenderer()])
                         .sceneCameraControl()
-                        .sceneShadows(SceneGraphShadows())
+                        .sceneShadows(Shadows())
                 }
             }
             """, to: slide)
@@ -1605,7 +1605,7 @@ public final class KeynoteDemo: DemoScene {
     }
 
     // nil shows the materials; the debug views replace them for the whole view, title and code panel included.
-    private static let debugModes: [SceneGraphDebugMode?] = [nil, .normals, .textureCoordinates, .uvChecker, .worldPosition, .wireframe]
+    private static let debugModes: [DebugMode?] = [nil, .normals, .textureCoordinates, .uvChecker, .worldPosition, .wireframe]
 
     // A selected box with its outline and the transform gizmo, which cycles through its modes.
     private func gizmosSlide(_ slide: SceneGraph.Node) {

@@ -250,7 +250,7 @@ public struct PBRSceneGraphModelBuilder {
 /// The renderer caches its model and rebuilds it only when the scene structure changes. Keep one instance across frames,
 /// for example in `@State`. Instances are equal only to themselves, because `SceneView` only needs to know whether the
 /// renderer is the same.
-public final class PBRMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
+public final class PBRMaterialRenderer: MaterialRenderer, Equatable {
     public static func == (lhs: PBRMaterialRenderer, rhs: PBRMaterialRenderer) -> Bool {
         lhs === rhs
     }
@@ -325,7 +325,7 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
         return overrides
     }
 
-    public func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement {
+    public func makeElement(entries: [SceneGraph.MeshEntry], context: RenderContext) throws -> AnyElement {
         let renderer = try makeRenderer(entries: entries, context: context, transmissionTarget: frameTransmissionTarget)
         return PBRShadowedElement(shadow: context.shadow) { shadows in
             var renderer = renderer
@@ -335,7 +335,7 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
         .eraseToAnyElement()
     }
 
-    func makeRenderer(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, transmissionTarget: PBRTransmissionTarget?) throws -> PBRRenderer {
+    func makeRenderer(entries: [SceneGraph.MeshEntry], context: RenderContext, transmissionTarget: PBRTransmissionTarget?) throws -> PBRRenderer {
         let layout = PBRNodeLayout(entries: entries)
         let (model, keys) = try modelAndKeys(for: entries, layout: layout, structureRevision: context.revision.structure)
         // Camera-relative (#254): poses and lights are shifted by the camera position and the view keeps only its
@@ -357,7 +357,7 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
         return renderer
     }
 
-    static func debugView(for channel: SceneGraphMaterialChannel) -> PBRDebugView {
+    static func debugView(for channel: MaterialChannel) -> PBRDebugView {
         switch channel {
         case .baseColor: .baseColor
         case .alpha: .alpha
@@ -369,10 +369,10 @@ public final class PBRMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
     }
 }
 
-extension PBRMaterialRenderer: SceneGraphPrePassRenderer {
+extension PBRMaterialRenderer: PrePassRenderer {
     /// Draws the opaque scene behind transmissive surfaces, so glass refracts it: PBR with the same batches (lights,
     /// fades) as the main pass, then the other renderers' opaque batches. Their output must be linear (not tone-mapped).
-    public func makePrePassElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, viewSize: (width: Int, height: Int), otherOpaqueContent: () throws -> AnyElement?) throws -> AnyElement? {
+    public func makePrePassElement(entries: [SceneGraph.MeshEntry], context: RenderContext, viewSize: (width: Int, height: Int), otherOpaqueContent: () throws -> AnyElement?) throws -> AnyElement? {
         frameTransmissionTarget = nil
         let hasTransmission = entries.contains { ($0.material as? PBRSceneMaterial)?.pbrMaterial.isTransmissive ?? false }
         guard hasTransmission, viewSize.width > 0, viewSize.height > 0 else {
@@ -410,7 +410,7 @@ extension PBRMaterialRenderer: SceneGraphPrePassRenderer {
 
 // Binds this frame's shadow map, which is chosen by submission index, so only known while building the frame.
 private struct PBRShadowedElement: Element {
-    var shadow: SceneGraphShadows.Sampling?
+    var shadow: Shadows.Sampling?
     var content: (PBRShadows?) throws -> AnyElement
 
     @MSEnvironment(\.submissionIndex)
@@ -457,10 +457,10 @@ private struct FadeKey: Hashable {
 
 extension PBREnvironment: EnvironmentMap {}
 
-extension PBRMaterialRenderer: SceneGraphBackgroundRenderer {
+extension PBRMaterialRenderer: BackgroundRenderer {
     // The scene's environment map when it is a PBREnvironment, otherwise `environment`; intensities multiply.
     // Light positions are shifted by `cameraPosition` for camera-relative rendering.
-    func lighting(context: SceneGraphRenderContext, cameraPosition: SIMD3<Float> = .zero) -> PBRLighting {
+    func lighting(context: RenderContext, cameraPosition: SIMD3<Float> = .zero) -> PBRLighting {
         var lighting = PBRLighting(
             lights: context.lights.enumerated().map { index, light in
                 var result = pbrLight(worldTransform: light.worldTransform.cameraRelative(to: cameraPosition), light: light.light)
@@ -481,7 +481,7 @@ extension PBRMaterialRenderer: SceneGraphBackgroundRenderer {
     }
 
     // swiftlint:disable:next unneeded_throws_rethrows
-    public func makeBackgroundElement(context: SceneGraphRenderContext) throws -> AnyElement? {
+    public func makeBackgroundElement(context: RenderContext) throws -> AnyElement? {
         guard case let .environment(blur) = context.environment.background else {
             return nil
         }

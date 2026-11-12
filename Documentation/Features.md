@@ -19,7 +19,7 @@ The Source column shows where the feature comes from: SceneKit, RealityKit, thre
 | ⬜ | Presentation tree | | SceneKit | |
 | ✅ | Entity-component system | #250 | RealityKit, Godot | Node data is in a SwiftECS `World` |
 | ⬜ | ~Prefabs / reusable subtrees | | Godot, Unity | |
-| ✅ | Save and load scenes | #52 | SceneKit | `SceneArchive` |
+| ✅ | Save and load scenes | #52 | SceneKit | `Archive` |
 
 ## Geometry
 

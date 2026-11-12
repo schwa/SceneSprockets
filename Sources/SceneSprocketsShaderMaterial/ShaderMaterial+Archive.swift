@@ -4,7 +4,7 @@ import MetalSprockets
 import SceneSprockets
 import simd
 
-// Saved by SceneArchive (#160) as references to its shaders: a library name from SceneArchive.shaderLibraries
+// Saved by Archive (#160) as references to its shaders: a library name from Archive.shaderLibraries
 // (the sample shaders are always available) and the function names. Specialized functions (function constants) and
 // samplers are not saved; they are skipped with a warning. Buffers are saved as their bytes when the CPU can read
 // them.
@@ -19,13 +19,13 @@ extension ShaderMaterial: ArchivableMaterial {
         case name, float, float2, float3, float4, float4x4, texture, buffer
     }
 
-    public func archiveProblem(context: SceneArchiveContext) -> String? {
+    public func archiveProblem(context: ArchiveContext) -> String? {
         let vertex = vertexShader.reference, fragment = fragmentShader.reference
         if vertex.library !== fragment.library {
             return "ShaderMaterial functions come from different libraries"
         }
         if Self.libraryName(for: vertex.library, context: context) == nil {
-            return "ShaderMaterial library \(vertex.library.label.map { "\"\($0)\"" } ?? "") is not in SceneArchive.shaderLibraries"
+            return "ShaderMaterial library \(vertex.library.label.map { "\"\($0)\"" } ?? "") is not in Archive.shaderLibraries"
         }
         if !vertex.constants.isEmpty || !fragment.constants.isEmpty || vertex.specializedName != nil || fragment.specializedName != nil {
             return "specialized ShaderMaterial functions (function constants) cannot be saved"
@@ -85,7 +85,7 @@ extension ShaderMaterial: ArchivableMaterial {
         let container = try decoder.container(keyedBy: ArchiveKeys.self)
         let libraryName = try container.decode(String.self, forKey: .library)
         guard let library = try Self.library(named: libraryName, context: context) else {
-            throw DecodingError.dataCorruptedError(forKey: .library, in: container, debugDescription: "No shader library \"\(libraryName)\" in SceneArchive.shaderLibraries")
+            throw DecodingError.dataCorruptedError(forKey: .library, in: container, debugDescription: "No shader library \"\(libraryName)\" in Archive.shaderLibraries")
         }
         let vertex = try VertexShader(ShaderFunction(library: library, name: try container.decode(String.self, forKey: .vertexFunction), type: .vertex))
         let fragment = try FragmentShader(ShaderFunction(library: library, name: try container.decode(String.self, forKey: .fragmentFunction), type: .fragment))
@@ -107,7 +107,7 @@ extension ShaderMaterial: ArchivableMaterial {
                     throw DecodingError.dataCorruptedError(forKey: .float4x4, in: item, debugDescription: "A float4x4 needs 16 values")
                 }
                 parameters[name] = .float4x4(simd_float4x4(columns: ([values[0], values[1], values[2], values[3]], [values[4], values[5], values[6], values[7]], [values[8], values[9], values[10], values[11]], [values[12], values[13], values[14], values[15]])))
-            } else if let reference = try item.decodeIfPresent(SceneArchiveContext.TextureReference.self, forKey: .texture) {
+            } else if let reference = try item.decodeIfPresent(ArchiveContext.TextureReference.self, forKey: .texture) {
                 parameters[name] = .texture(try context.texture(for: reference))
             } else if let data = try item.decodeIfPresent(Data.self, forKey: .buffer) {
                 guard let buffer = data.withUnsafeBytes({ bytes in bytes.baseAddress.flatMap { library.device.makeBuffer(bytes: $0, length: bytes.count, options: .storageModeShared) } }) else {
@@ -121,7 +121,7 @@ extension ShaderMaterial: ArchivableMaterial {
         self.init(vertexShader: vertex, fragmentShader: fragment, parameters: parameters, usesAlphaBlending: try container.decode(Bool.self, forKey: .isTransparent), renderState: try container.decode(MaterialRenderState.self, forKey: .renderState), samplesShadows: try container.decodeIfPresent(Bool.self, forKey: .samplesShadows) ?? false)
     }
 
-    private static func libraryName(for library: any MTLLibrary, context: SceneArchiveContext) -> String? {
+    private static func libraryName(for library: any MTLLibrary, context: ArchiveContext) -> String? {
         if let name = context.shaderLibraryName(for: library) {
             return name
         }
@@ -129,7 +129,7 @@ extension ShaderMaterial: ArchivableMaterial {
         return samples === library ? ShaderMaterialSampleLibrary.archiveName : nil
     }
 
-    private static func library(named name: String, context: SceneArchiveContext) throws -> (any MTLLibrary)? {
+    private static func library(named name: String, context: ArchiveContext) throws -> (any MTLLibrary)? {
         if let library = context.shaderLibrary(named: name) {
             return library
         }

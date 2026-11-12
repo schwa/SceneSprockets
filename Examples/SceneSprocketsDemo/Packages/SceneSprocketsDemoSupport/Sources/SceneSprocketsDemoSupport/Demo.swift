@@ -88,16 +88,16 @@ public struct DemoAction: Identifiable {
 @Observable
 open class DemoScene {
     @ObservationIgnored public let sceneGraph: SceneGraph
-    @ObservationIgnored public var renderers: [any SceneGraphMaterialRenderer]
+    @ObservationIgnored public var renderers: [any MaterialRenderer]
     @ObservationIgnored public let initialCameraMatrix: simd_float4x4
     public let parameters: [DemoParameter]
     public var values: [String: Float]
     @ObservationIgnored public var actions: [DemoAction] = []
     // Set to draw shadows from directional lights.
     // Observed: the view needs different texture settings with and without shadows.
-    public var shadows: SceneGraphShadows?
+    public var shadows: Shadows?
     // Set to draw every mesh in a debug view instead of its material.
-    public var debugMode: SceneGraphDebugMode?
+    public var debugMode: DebugMode?
     // Bumped when the hierarchy or visibility changes, so outline views refresh.
     public private(set) var outlineRevision = 0
     // Shared by the outline and click-to-select in the view.
@@ -111,7 +111,7 @@ open class DemoScene {
     // True when the demo moves its own camera node: the view then turns off user camera control.
     @ObservationIgnored public var usesSceneCamera = false
 
-    public init(sceneGraph: SceneGraph, renderers: [any SceneGraphMaterialRenderer] = [BlinnPhongMaterialRenderer()], cameraMatrix: simd_float4x4, parameters: [DemoParameter] = []) {
+    public init(sceneGraph: SceneGraph, renderers: [any MaterialRenderer] = [BlinnPhongMaterialRenderer()], cameraMatrix: simd_float4x4, parameters: [DemoParameter] = []) {
         self.sceneGraph = sceneGraph
         self.renderers = renderers
         self.initialCameraMatrix = cameraMatrix

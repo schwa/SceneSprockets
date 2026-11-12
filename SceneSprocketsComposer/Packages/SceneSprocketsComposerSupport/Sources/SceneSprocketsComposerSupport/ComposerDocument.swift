@@ -13,16 +13,16 @@ extension UTType {
     public static let sceneSprocketsDocument = UTType(exportedAs: "io.schwa.scenesprockets-document", conformingTo: .package)
 }
 
-extension SceneArchive {
-    static var composer: SceneArchive {
+extension Archive {
+    static var composer: Archive {
         // Imported glTF files are kept as they are (#157); other meshes that are not shapes are saved as glTF (#158).
-        SceneArchive(materialTypes: [BlinnPhongSceneMaterial.self, PBRSceneMaterial.self], environmentMapTypes: [PBREnvironment.self], meshCodec: GLTFMeshCodec(), modelLoader: ModelFileLoader())
+        Archive(materialTypes: [BlinnPhongSceneMaterial.self, PBRSceneMaterial.self], environmentMapTypes: [PBREnvironment.self], meshCodec: GLTFMeshCodec(), modelLoader: ModelFileLoader())
     }
 }
 
 private let logger = Logger(subsystem: "io.schwa.SceneSprocketsComposer", category: "Document")
 
-// A .scenesprocketsd bundle, read and written by SceneArchive.
+// A .scenesprocketsd bundle, read and written by Archive.
 // Unchecked Sendable: the scene graph and editor are used only on the main actor. Off the main actor, snapshot reads
 // only the locked captures (#227).
 public final class ComposerDocument: ReferenceFileDocument, @unchecked Sendable {
@@ -48,8 +48,8 @@ public final class ComposerDocument: ReferenceFileDocument, @unchecked Sendable 
     }
 
     // The scene to save off the main actor, captured after each undoable change (#227, #238).
-    private let savedSceneLock = OSAllocatedUnfairLock<SceneArchive.Capture?>(initialState: nil)
-    @MainActor private let textureCache = SceneArchive.TextureCache()
+    private let savedSceneLock = OSAllocatedUnfairLock<Archive.Capture?>(initialState: nil)
+    @MainActor private let textureCache = Archive.TextureCache()
     @MainActor private var isSceneCapturePending = false
     @MainActor private var undoObservers: [any NSObjectProtocol] = []
 
@@ -88,9 +88,9 @@ public final class ComposerDocument: ReferenceFileDocument, @unchecked Sendable 
 
     @MainActor
     @discardableResult
-    private func captureScene() -> SceneArchive.Capture? {
+    private func captureScene() -> Archive.Capture? {
         do {
-            let capture = try SceneArchive.composer.capture(sceneGraph, textureCache: textureCache)
+            let capture = try Archive.composer.capture(sceneGraph, textureCache: textureCache)
             savedSceneLock.withLock { $0 = capture }
             return capture
         } catch {
@@ -130,7 +130,7 @@ public final class ComposerDocument: ReferenceFileDocument, @unchecked Sendable 
     }
 
     public convenience init(configuration: ReadConfiguration) throws {
-        // SceneArchive reads from a URL, so copy the bundle out of the file wrapper first.
+        // Archive reads from a URL, so copy the bundle out of the file wrapper first.
         let url = try Self.makeTemporaryURL()
         defer { try? FileManager.default.removeItem(at: url) }
         try configuration.file.write(to: url, options: [], originalContentsURL: nil)
@@ -139,7 +139,7 @@ public final class ComposerDocument: ReferenceFileDocument, @unchecked Sendable 
 
     // For readers outside DocumentGroup, such as the Quick Look extension.
     public convenience init(contentsOf url: URL) throws {
-        let result = try SceneArchive.composer.read(from: url)
+        let result = try Archive.composer.read(from: url)
         Self.log(result.warnings)
         self.init(sceneGraph: result.sceneGraph, editorState: EditorState.read(fromBundleAt: url))
     }
@@ -152,7 +152,7 @@ public final class ComposerDocument: ReferenceFileDocument, @unchecked Sendable 
         defer { try? FileManager.default.removeItem(at: url) }
         if Thread.isMainThread {
             try MainActor.assumeIsolated {
-                let capture = try SceneArchive.composer.capture(sceneGraph, textureCache: textureCache)
+                let capture = try Archive.composer.capture(sceneGraph, textureCache: textureCache)
                 savedSceneLock.withLock { $0 = capture }
                 try write(capture, to: url)
                 // Saving still works without a preview.
@@ -169,7 +169,7 @@ public final class ComposerDocument: ReferenceFileDocument, @unchecked Sendable 
             try write(capture, to: url)
             // The preview comes from the bundle just written, a private copy of the captured scene.
             do {
-                let saved = try SceneArchive.composer.read(from: url)
+                let saved = try Archive.composer.read(from: url)
                 try DocumentPreview.write(saved.sceneGraph, into: url)
             } catch {
                 logger.warning("Could not write the preview: \(error, privacy: .public)")
@@ -179,7 +179,7 @@ public final class ComposerDocument: ReferenceFileDocument, @unchecked Sendable 
     }
 
     // The scene files and editor state. Any thread.
-    private func write(_ capture: SceneArchive.Capture, to url: URL) throws {
+    private func write(_ capture: Archive.Capture, to url: URL) throws {
         Self.log(capture.warnings)
         try capture.write(to: url)
         // Saving still works without the editor state.
@@ -196,7 +196,7 @@ public final class ComposerDocument: ReferenceFileDocument, @unchecked Sendable 
 
     private static func makeTemporaryURL() throws -> URL {
         let directory = try FileManager.default.url(for: .itemReplacementDirectory, in: .userDomainMask, appropriateFor: FileManager.default.temporaryDirectory, create: true)
-        return directory.appendingPathComponent("Scene").appendingPathExtension(SceneArchive.pathExtension)
+        return directory.appendingPathComponent("Scene").appendingPathExtension(Archive.pathExtension)
     }
 
     private static func log(_ warnings: [String]) {

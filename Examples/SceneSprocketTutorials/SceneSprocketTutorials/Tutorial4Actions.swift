@@ -14,7 +14,7 @@ import SwiftUI
 
 struct Tutorial4Actions: View {
     @State private var sceneGraph = Self.makeSceneGraph()
-    @State private var shadows = SceneGraphShadows(intensity: 0.7, softness: 2)
+    @State private var shadows = Shadows(intensity: 0.7, softness: 2)
 
     var body: some View {
         SceneView(sceneGraph, renderers: [BlinnPhongMaterialRenderer()])

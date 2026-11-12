@@ -32,7 +32,7 @@ final class SceneKitFeaturesDemo: DemoScene {
 
     private let cameraNode: SceneGraph.Node
     private let torus: SceneGraph.Node
-    private let shadowRenderer = SceneGraphShadows(intensity: 0.5)
+    private let shadowRenderer = Shadows(intensity: 0.5)
     private let redPane: SceneGraph.Node
     private let bluePane: SceneGraph.Node
     private let text: SceneGraph.Node

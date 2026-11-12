@@ -7,7 +7,7 @@ import simd
 import Synchronization
 
 /// The camera, lights and settings of one frame, that ``SceneGraphElement`` gives each material renderer.
-public struct SceneGraphRenderContext {
+public struct RenderContext {
     /// The view matrix: the inverse of ``cameraMatrix``.
     public var viewMatrix: simd_float4x4
     /// The projection matrix. It already contains the reversed-depth flip, so use `.greater` depth tests.
@@ -25,17 +25,17 @@ public struct SceneGraphRenderContext {
     /// Parallel to `lights`: each light node's lightCategoryBitMask.
     public var lightCategoryBitMasks: [UInt] = []
     /// Set when shadows are on, for renderers that sample them while shading.
-    public internal(set) var shadow: SceneGraphShadows.Sampling?
+    public internal(set) var shadow: Shadows.Sampling?
     /// Parallel to `lights` when `shadow` is set: each light's shadow map slices (empty for none).
     public internal(set) var lightShadowSlices: [Range<Int>] = []
     /// When set, renderers output this material value instead of lighting (#195).
-    public internal(set) var materialChannel: SceneGraphMaterialChannel?
+    public internal(set) var materialChannel: MaterialChannel?
 }
 
 /// A renderer for one material family.
 ///
 /// To add a material family, write a type that conforms to this protocol. The scene graph does not change.
-public protocol SceneGraphMaterialRenderer {
+public protocol MaterialRenderer {
     /// The material type that the renderer draws.
     var materialType: any SceneMaterial.Type { get }
     /// Returns an element that draws mesh entries whose material is ``materialType``.
@@ -46,22 +46,22 @@ public protocol SceneGraphMaterialRenderer {
     /// - Parameters:
     ///   - entries: The mesh entries to draw.
     ///   - context: The camera, lights and settings of the frame.
-    func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement
+    func makeElement(entries: [SceneGraph.MeshEntry], context: RenderContext) throws -> AnyElement
 }
 
 /// A renderer that can draw `SceneGraph.Environment.Background.environment`. The element asks each one in order and
 /// draws the first non-nil result before any meshes, even when the renderer has no entries.
-public protocol SceneGraphBackgroundRenderer {
+public protocol BackgroundRenderer {
     /// Returns an element that draws the environment background, or `nil` if this renderer cannot draw it.
-    func makeBackgroundElement(context: SceneGraphRenderContext) throws -> AnyElement?
+    func makeBackgroundElement(context: RenderContext) throws -> AnyElement?
 }
 
 /// A renderer that needs its own passes before the scene pass, such as one that draws what is behind glass.
 /// `entries` are all of this renderer's entries; `makeElement` is called after this for each batch.
 /// `otherOpaqueContent` makes the other renderers' opaque batches, for a pass that needs the rest of the scene; nil
 /// when there are none.
-public protocol SceneGraphPrePassRenderer {
-    func makePrePassElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, viewSize: (width: Int, height: Int), otherOpaqueContent: () throws -> AnyElement?) throws -> AnyElement?
+public protocol PrePassRenderer {
+    func makePrePassElement(entries: [SceneGraph.MeshEntry], context: RenderContext, viewSize: (width: Int, height: Int), otherOpaqueContent: () throws -> AnyElement?) throws -> AnyElement?
 }
 
 /// Renders every mesh entry in one pass by handing each material family to its renderer.
@@ -75,18 +75,18 @@ public struct SceneGraphElement: Element {
     var camera: SceneGraph.Node?
     var cameraMatrix: simd_float4x4?
     var aspectRatio: Float
-    var renderers: [any SceneGraphMaterialRenderer]
+    var renderers: [any MaterialRenderer]
     var defaultCamera: Camera?
     var cameraOverride: Camera?
     // Keep the scene depth for later passes (it must not be memoryless), such as depth-tested overlays.
     var storesDepth: Bool
     var defaultLight: Light?
-    var shadows: SceneGraphShadows?
-    var decorations: ((SceneGraphRenderContext) throws -> AnyElement?)?
+    var shadows: Shadows?
+    var decorations: ((RenderContext) throws -> AnyElement?)?
     // Draws every mesh in this debug view instead of its material (#132).
-    var debugMode: SceneGraphDebugMode?
+    var debugMode: DebugMode?
     // Each renderer shows this material value instead of lighting (#195). Ignored while debugMode is set.
-    var materialChannel: SceneGraphMaterialChannel?
+    var materialChannel: MaterialChannel?
 
     @MSEnvironment(\.renderPassDescriptor)
     private var renderPassDescriptor
@@ -110,7 +110,7 @@ public struct SceneGraphElement: Element {
     ///   - decorations: A closure that returns extra elements to draw in the scene pass.
     ///   - debugMode: A debug view to show instead of the materials.
     ///   - materialChannel: A material value to show instead of lighting.
-    public init(sceneGraph: SceneGraph, camera: SceneGraph.Node? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any SceneGraphMaterialRenderer], defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, shadows: SceneGraphShadows? = nil, storesDepth: Bool = false, decorations: ((SceneGraphRenderContext) throws -> AnyElement?)? = nil, debugMode: SceneGraphDebugMode? = nil, materialChannel: SceneGraphMaterialChannel? = nil) {
+    public init(sceneGraph: SceneGraph, camera: SceneGraph.Node? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any MaterialRenderer], defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, shadows: Shadows? = nil, storesDepth: Bool = false, decorations: ((RenderContext) throws -> AnyElement?)? = nil, debugMode: DebugMode? = nil, materialChannel: MaterialChannel? = nil) {
         self.debugMode = debugMode
         self.materialChannel = materialChannel
         self.cameraOverride = cameraOverride
@@ -145,7 +145,7 @@ public struct SceneGraphElement: Element {
             // The shadow mask and fog passes read and write the view's textures, so they need the right usage.
             let postTargets: (color: MTLTexture, depth: MTLTexture)? = {
                 guard let color = renderPassDescriptor?.colorAttachments[0].texture, let depth = renderPassDescriptor?.depthAttachment.texture,
-                      color.usage.isSuperset(of: SceneGraphShadows.requiredColorUsage), depth.usage.isSuperset(of: SceneGraphShadows.requiredDepthUsage),
+                      color.usage.isSuperset(of: Shadows.requiredColorUsage), depth.usage.isSuperset(of: Shadows.requiredDepthUsage),
                       depth.storageMode != .memoryless
                 else {
                     return nil
@@ -157,7 +157,7 @@ public struct SceneGraphElement: Element {
                 try shadows?.prepare(entries: entries, context: context, bounds: sceneGraph.bounds, viewSize: (targets.color.width, targets.color.height))
             }
             if let shadows, let shadowFrame {
-                context.shadow = SceneGraphShadows.Sampling(shadowMap: shadowFrame.shadowMap, intensity: shadows.intensity, color: shadows.color, softness: shadows.softness)
+                context.shadow = Shadows.Sampling(shadowMap: shadowFrame.shadowMap, intensity: shadows.intensity, color: shadows.color, softness: shadows.softness)
                 context.lightShadowSlices = shadowFrame.lightSlices
             }
             var prePasses: [AnyElement] = []
@@ -169,7 +169,7 @@ public struct SceneGraphElement: Element {
             }
             if let color = renderPassDescriptor?.colorAttachments[0].texture {
                 for (renderer, rendererEntries) in zip(renderers, partitionMeshEntries(entries, renderers: renderers)) {
-                    guard let prePassRenderer = renderer as? any SceneGraphPrePassRenderer, !rendererEntries.isEmpty else {
+                    guard let prePassRenderer = renderer as? any PrePassRenderer, !rendererEntries.isEmpty else {
                         continue
                     }
                     let frameContext = context
@@ -186,7 +186,7 @@ public struct SceneGraphElement: Element {
                 elements.append(SkyGradientBackground(gradient: gradient, viewMatrix: context.viewMatrix, projectionMatrix: context.projectionMatrix).eraseToAnyElement())
             }
             if case .environment = context.environment.background {
-                for case let renderer as any SceneGraphBackgroundRenderer in renderers {
+                for case let renderer as any BackgroundRenderer in renderers {
                     if let background = try renderer.makeBackgroundElement(context: context) {
                         elements.append(background)
                         break
@@ -294,7 +294,7 @@ public struct SceneGraphElement: Element {
     }
 
     // Opaque batches of every renderer except the one for `excluding`, with reversed depth.
-    private func makeOpaqueContent(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, excluding: any SceneMaterial.Type) throws -> AnyElement? {
+    private func makeOpaqueContent(entries: [SceneGraph.MeshEntry], context: RenderContext, excluding: any SceneMaterial.Type) throws -> AnyElement? {
         var elements: [AnyElement] = []
         for batch in renderBatches(entries.filter { !$0.isTransparent }, context: context) {
             let partitions = partitionMeshEntries(batch.entries, renderers: renderers)
@@ -358,7 +358,7 @@ public struct SceneGraphElement: Element {
     }
 }
 
-func makeRenderContext(sceneGraph: SceneGraph, camera: SceneGraph.Node?, cameraMatrix: simd_float4x4?, aspectRatio: Float, defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil) -> SceneGraphRenderContext? {
+func makeRenderContext(sceneGraph: SceneGraph, camera: SceneGraph.Node?, cameraMatrix: simd_float4x4?, aspectRatio: Float, defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil) -> RenderContext? {
     let cameras = sceneGraph.cameraNodes()
     let entry = camera.map { camera in cameras.first { $0.node === camera } } ?? cameras.first
     let resolved: (camera: Camera, worldTransform: simd_float4x4)
@@ -379,7 +379,7 @@ func makeRenderContext(sceneGraph: SceneGraph, camera: SceneGraph.Node?, cameraM
         lights = [(cameraMatrix, defaultLight)]
         lightMasks = [.max]
     }
-    return SceneGraphRenderContext(
+    return RenderContext(
         viewMatrix: cameraMatrix.inverse,
         projectionMatrix: .reverseZ * resolved.camera.projection.projectionMatrix(aspectRatio: aspectRatio),
         cameraMatrix: cameraMatrix,
@@ -393,7 +393,7 @@ func makeRenderContext(sceneGraph: SceneGraph, camera: SceneGraph.Node?, cameraM
 
 /// Splits mesh entries into the batches that ``SceneGraphElement`` draws, each with the context for that batch.
 ///
-/// For custom elements that draw a scene with ``SceneGraphMaterialRenderer`` types. Entries are grouped by
+/// For custom elements that draw a scene with ``MaterialRenderer`` types. Entries are grouped by
 /// `renderingOrder` (ascending), then opaque before transparent, then by the lights whose category masks match,
 /// keeping first-seen order. Transparent entries are sorted farthest first. Each batch's context holds only its
 /// lights.
@@ -402,7 +402,7 @@ func makeRenderContext(sceneGraph: SceneGraph, camera: SceneGraph.Node?, cameraM
 ///   - entries: The mesh entries to draw.
 ///   - context: The frame's context.
 /// - Returns: The batches in draw order.
-public func renderBatches(_ entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) -> [(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext)] {
+public func renderBatches(_ entries: [SceneGraph.MeshEntry], context: RenderContext) -> [(entries: [SceneGraph.MeshEntry], context: RenderContext)] {
     struct Key: Hashable {
         var order: Int
         var isTransparent: Bool
@@ -446,7 +446,7 @@ public func renderBatches(_ entries: [SceneGraph.MeshEntry], context: SceneGraph
 }
 
 // Returns one array per renderer, in renderer order.
-func partitionMeshEntries(_ entries: [SceneGraph.MeshEntry], renderers: [any SceneGraphMaterialRenderer]) -> [[SceneGraph.MeshEntry]] {
+func partitionMeshEntries(_ entries: [SceneGraph.MeshEntry], renderers: [any MaterialRenderer]) -> [[SceneGraph.MeshEntry]] {
     var indexByType: [ObjectIdentifier: Int] = [:]
     for (index, renderer) in renderers.enumerated() {
         indexByType[ObjectIdentifier(renderer.materialType)] = index

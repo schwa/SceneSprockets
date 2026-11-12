@@ -110,7 +110,7 @@ func nodeOpacityBlends(usesShaderMaterial: Bool) throws {
     fader.addChild(SceneGraph.Node(content: .mesh(quad, material: flat([1, 0, 0]))))
     root.addChild(SceneGraph.Node(content: .mesh(quad, material: flat([0, 0, 1]))))
     let renderer = try OffscreenRenderer(size: CGSize(width: 16, height: 16))
-    let renderers: [any SceneGraphMaterialRenderer] = [BlinnPhongMaterialRenderer(ambientLightColor: .zero), ShaderMaterialRenderer()]
+    let renderers: [any MaterialRenderer] = [BlinnPhongMaterialRenderer(ambientLightColor: .zero), ShaderMaterialRenderer()]
     let texture = try renderer.render(SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: renderers)).texture
     var value = SIMD4<UInt8>.zero
     texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(8, 8, 1, 1), mipmapLevel: 0)

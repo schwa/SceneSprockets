@@ -128,7 +128,7 @@ public struct ShaderMaterial: SceneMaterial, SamplesShadowsInShader, DrawsDeform
 /// The renderer that draws every mesh with a ``ShaderMaterial``.
 ///
 /// Add one instance to the renderers of a `SceneView` or `SceneGraphElement`.
-public struct ShaderMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
+public struct ShaderMaterialRenderer: MaterialRenderer, Equatable {
     /// Creates a shader material renderer.
     public init() {
     }
@@ -138,7 +138,7 @@ public struct ShaderMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
     }
 
     // swiftlint:disable:next unneeded_throws_rethrows
-    public func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement {
+    public func makeElement(entries: [SceneGraph.MeshEntry], context: RenderContext) throws -> AnyElement {
         let cameraPosition = context.cameraMatrix.columns.3.xyz
         // Skinned and morphed meshes are deformed by SceneGraphElement's GPU pre-pass (#298).
         let items: [ShaderMaterialItem] = entries.compactMap { entry in
@@ -166,7 +166,7 @@ struct ShaderMaterialItem {
 // An element so it can read the submission index: the shadow map has one texture per frame in flight.
 struct ShaderMaterialDrawsElement: Element {
     var items: [ShaderMaterialItem]
-    var context: SceneGraphRenderContext
+    var context: RenderContext
     var cameraPosition: SIMD3<Float>
     var lights: [ShaderMaterialLight]
 
@@ -212,7 +212,7 @@ struct ShaderMaterialDrawsElement: Element {
     }
 
     // swiftlint:disable:next function_parameter_count
-    private func draw(_ item: ShaderMaterialItem, context: SceneGraphRenderContext, cameraPosition: SIMD3<Float>, lightValues: [ShaderMaterialLight], lightCount: Int32, shadowTexture: MTLTexture?, shadowSampler: MTLSamplerState?) throws -> some Element {
+    private func draw(_ item: ShaderMaterialItem, context: RenderContext, cameraPosition: SIMD3<Float>, lightValues: [ShaderMaterialLight], lightCount: Int32, shadowTexture: MTLTexture?, shadowSampler: MTLSamplerState?) throws -> some Element {
         let transforms = ShaderMaterialTransforms(modelMatrix: item.modelMatrix, viewMatrix: context.viewMatrix, projectionMatrix: context.projectionMatrix, cameraPosition: cameraPosition, opacity: item.opacity)
         let lighting = lighting(lightCount: lightCount, receivesShadow: item.receivesShadow)
         let submesh = item.mesh.submeshes[item.submeshIndex]
@@ -273,7 +273,7 @@ func shaderMaterialLights(_ lights: [(worldTransform: simd_float4x4, light: Ligh
 }
 
 enum ShaderMaterialSampleLibrary {
-    // The name saved archives use for the sample shaders; registered with every SceneArchive.
+    // The name saved archives use for the sample shaders; registered with every Archive.
     static let archiveName = "SceneSprocketsShaderMaterialSamples"
 
     nonisolated(unsafe) private static var cached: ShaderNamespace?

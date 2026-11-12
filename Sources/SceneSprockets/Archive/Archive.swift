@@ -11,7 +11,7 @@ import UniformTypeIdentifiers
 /// The package (`.scenesprocketsd`) holds `scene.json` for the graph and `textures/` for textures that the archive
 /// reads back from the GPU. The core module does not know the renderer modules, so you give the archive the material
 /// and environment map types that the scene uses.
-public struct SceneArchive {
+public struct Archive {
     /// The file extension of a scene package.
     public static let pathExtension = "scenesprocketsd"
     static let sceneFileName = "scene.json"
@@ -74,7 +74,7 @@ public struct SceneArchive {
     ///     texture from the GPU only once.
     /// - Throws: An error if encoding fails or a texture cannot be read.
     public func capture(_ sceneGraph: SceneGraph, textureCache: TextureCache? = nil) throws -> Capture {
-        let context = SceneArchiveContext(directory: nil, archive: self)
+        let context = ArchiveContext(directory: nil, archive: self)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.nonConformingFloatEncodingStrategy = .convertToString(positiveInfinity: "inf", negativeInfinity: "-inf", nan: "nan")
@@ -109,7 +109,7 @@ public struct SceneArchive {
             if let entry = entries[ObjectIdentifier(texture)], entry.isPNG == isPNG {
                 return entry.data
             }
-            let data = try SceneArchiveContext.fileData(texture, isPNG: isPNG)
+            let data = try ArchiveContext.fileData(texture, isPNG: isPNG)
             entries[ObjectIdentifier(texture)] = (texture, isPNG, data)
             return data
         }
@@ -121,7 +121,7 @@ public struct SceneArchive {
         }
     }
 
-    /// The contents of a package's files, made by ``SceneArchive/capture(_:textureCache:)``.
+    /// The contents of a package's files, made by ``Archive/capture(_:textureCache:)``.
     public struct Capture: Sendable {
         let scene: Data
         // Textures and mesh files by path in the package.
@@ -138,7 +138,7 @@ public struct SceneArchive {
                 try fileManager.removeItem(at: url)
             }
             try fileManager.createDirectory(at: url, withIntermediateDirectories: true)
-            try scene.write(to: url.appendingPathComponent(SceneArchive.sceneFileName))
+            try scene.write(to: url.appendingPathComponent(Archive.sceneFileName))
             for (file, data) in files {
                 let fileURL = url.appendingPathComponent(file)
                 try fileManager.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -152,9 +152,9 @@ public struct SceneArchive {
     /// - Parameters:
     ///   - url: The package to read.
     /// - Returns: The scene graph, and messages about parts of the package that the archive could not load.
-    /// - Throws: A ``SceneArchiveError``, or an error if a file cannot be read or decoded.
+    /// - Throws: A ``ArchiveError``, or an error if a file cannot be read or decoded.
     public func read(from url: URL) throws -> (sceneGraph: SceneGraph, warnings: [String]) {
-        let context = SceneArchiveContext(directory: url, archive: self)
+        let context = ArchiveContext(directory: url, archive: self)
         let decoder = JSONDecoder()
         decoder.nonConformingFloatDecodingStrategy = .convertFromString(positiveInfinity: "inf", negativeInfinity: "-inf", nan: "nan")
         decoder.userInfo[.sceneArchive] = context
@@ -171,7 +171,7 @@ public protocol ArchivableModelLoader {
     ///   - url: The model file.
     ///   - context: The archive context, for the device and warnings.
     /// - Returns: The file's subtree under one root node, and messages from the loader.
-    func load(_ url: URL, context: SceneArchiveContext) throws -> (node: SceneGraph.Node, warnings: [String])
+    func load(_ url: URL, context: ArchiveContext) throws -> (node: SceneGraph.Node, warnings: [String])
 }
 
 /// A codec that saves meshes that are not shapes as files in a scene package.
@@ -184,21 +184,21 @@ public protocol ArchivableMeshCodec {
     ///   - mesh: The mesh to save.
     ///   - materials: The materials of the mesh's submeshes.
     ///   - name: A name for the mesh, for example the node label.
-    ///   - context: The archive context. Use ``SceneArchiveContext/newFile(in:pathExtension:)`` and
-    ///     ``SceneArchiveContext/addFile(_:data:)`` to add the file.
+    ///   - context: The archive context. Use ``ArchiveContext/newFile(in:pathExtension:)`` and
+    ///     ``ArchiveContext/addFile(_:data:)`` to add the file.
     /// - Returns: The path of the file in the package.
-    func encode(_ mesh: MetalMesh, materials: [any SceneMaterial], name: String?, context: SceneArchiveContext) throws -> String
+    func encode(_ mesh: MetalMesh, materials: [any SceneMaterial], name: String?, context: ArchiveContext) throws -> String
     /// Reads a mesh from a file in the package.
     ///
     /// - Parameters:
     ///   - path: The path that ``encode(_:materials:name:context:)`` returned.
     ///   - context: The archive context, for the device and the file.
-    func decode(path: String, context: SceneArchiveContext) throws -> MetalMesh
+    func decode(path: String, context: ArchiveContext) throws -> MetalMesh
 }
 
 /// A material that a scene archive can save and load.
 ///
-/// The material encodes itself with `Codable`. It encodes textures through the ``SceneArchiveContext`` of the coder.
+/// The material encodes itself with `Codable`. It encodes textures through the ``ArchiveContext`` of the coder.
 public protocol ArchivableMaterial: SceneMaterial, Codable {
     /// The name that identifies the material type in `scene.json`. It must be unique among the archive's types.
     static var archiveTypeName: String { get }
@@ -206,12 +206,12 @@ public protocol ArchivableMaterial: SceneMaterial, Codable {
     ///
     /// The archive calls this method before it encodes the material. If there is a reason, the archive skips the
     /// material and adds a warning, instead of failing. The default implementation returns `nil`.
-    func archiveProblem(context: SceneArchiveContext) -> String?
+    func archiveProblem(context: ArchiveContext) -> String?
 }
 
 public extension ArchivableMaterial {
     /// Returns `nil`: the material can always be saved.
-    func archiveProblem(context _: SceneArchiveContext) -> String? {
+    func archiveProblem(context _: ArchiveContext) -> String? {
         nil
     }
 }
@@ -222,15 +222,15 @@ public extension ArchivableMaterial {
 public protocol ArchivableEnvironmentMap: EnvironmentMap {
     /// The name that identifies the map type in `scene.json`. It must be unique among the archive's types.
     static var archiveTypeName: String { get }
-    /// Encodes the map. Encode textures through the coder's ``SceneArchiveContext``.
+    /// Encodes the map. Encode textures through the coder's ``ArchiveContext``.
     func encode(to encoder: Encoder) throws
     /// Decodes a map that ``encode(to:)`` encoded.
     static func decodeEnvironmentMap(from decoder: Decoder) throws -> any EnvironmentMap
 }
 
 /// Errors from saving or loading a scene archive.
-public enum SceneArchiveError: Error, CustomStringConvertible {
-    /// The coder has no ``SceneArchiveContext``. Encode and decode scene graphs through ``SceneArchive``.
+public enum ArchiveError: Error, CustomStringConvertible {
+    /// The coder has no ``ArchiveContext``. Encode and decode scene graphs through ``Archive``.
     case missingContext
     /// Reading needs the package directory, and there is none.
     case missingDirectory
@@ -245,28 +245,28 @@ public enum SceneArchiveError: Error, CustomStringConvertible {
 
     public var description: String {
         switch self {
-        case .missingContext: "Coding a scene graph needs a SceneArchive"
+        case .missingContext: "Coding a scene graph needs a Archive"
         case .missingDirectory: "Reading a scene archive needs its directory"
         case .unsupportedTexture(let reason): "Unsupported texture: \(reason)"
         case .unreadableTexture(let name): "Could not read texture \(name)"
         case .unsupportedMesh(let reason): "Cannot save or read the mesh: \(reason)"
-        case .unsupportedFormatVersion(let version): "Scene archive format \(version) is newer than this code (\(SceneArchive.formatVersion))"
+        case .unsupportedFormatVersion(let version): "Scene archive format \(version) is newer than this code (\(Archive.formatVersion))"
         }
     }
 }
 
 public extension CodingUserInfoKey {
-    /// The key for the ``SceneArchiveContext`` in a coder's user info.
+    /// The key for the ``ArchiveContext`` in a coder's user info.
     static let sceneArchive = CodingUserInfoKey(rawValue: "io.schwa.SceneSprockets.sceneArchive")! // swiftlint:disable:this force_unwrapping
 }
 
 public extension Encoder {
     /// The archive context of the encoder.
     ///
-    /// - Throws: ``SceneArchiveError/missingContext`` if the encoder is not encoding a scene archive.
-    var sceneArchive: SceneArchiveContext {
+    /// - Throws: ``ArchiveError/missingContext`` if the encoder is not encoding a scene archive.
+    var sceneArchive: ArchiveContext {
         get throws {
-            try (userInfo[.sceneArchive] as? SceneArchiveContext).orThrow(SceneArchiveError.missingContext)
+            try (userInfo[.sceneArchive] as? ArchiveContext).orThrow(ArchiveError.missingContext)
         }
     }
 }
@@ -274,10 +274,10 @@ public extension Encoder {
 public extension Decoder {
     /// The archive context of the decoder.
     ///
-    /// - Throws: ``SceneArchiveError/missingContext`` if the decoder is not decoding a scene archive.
-    var sceneArchive: SceneArchiveContext {
+    /// - Throws: ``ArchiveError/missingContext`` if the decoder is not decoding a scene archive.
+    var sceneArchive: ArchiveContext {
         get throws {
-            try (userInfo[.sceneArchive] as? SceneArchiveContext).orThrow(SceneArchiveError.missingContext)
+            try (userInfo[.sceneArchive] as? ArchiveContext).orThrow(ArchiveError.missingContext)
         }
     }
 }
@@ -296,15 +296,15 @@ private extension Optional {
 /// The context holds the archive's types, the textures that are already written or read, the package files, and the
 /// warnings. Materials and other coded values get it from their coder's ``Swift/Encoder/sceneArchive`` or
 /// ``Swift/Decoder/sceneArchive``. A context exists for one write or read, on one thread.
-public final class SceneArchiveContext: @unchecked Sendable {
+public final class ArchiveContext: @unchecked Sendable {
     // Where to read from; nil while capturing, which only encodes.
     let directory: URL?
-    let archive: SceneArchive
+    let archive: Archive
     /// Messages about parts of the scene that the archive skipped or changed.
     public private(set) var warnings: [String] = []
     private var writtenTextures: [ObjectIdentifier: TextureReference] = [:]
     // Textures named while encoding, written after (#238).
-    var pendingTextures: [SceneArchive.PendingTexture] = []
+    var pendingTextures: [Archive.PendingTexture] = []
     // Other files to write, such as meshes (#158), by path in the package.
     private(set) var files: [String: Data] = [:]
 
@@ -390,7 +390,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
     var pendingConstraints: [(node: SceneGraph.Node, constraints: [ArchivedConstraint])] = []
     var pendingSkins: [(node: SceneGraph.Node, skin: ArchivedSkin)] = []
 
-    init(directory: URL?, archive: SceneArchive) {
+    init(directory: URL?, archive: Archive) {
         self.directory = directory
         self.archive = archive
     }
@@ -398,7 +398,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
     // Reading has a directory; capturing has none.
     private var readDirectory: URL {
         get throws {
-            try directory.orThrow(SceneArchiveError.missingDirectory)
+            try directory.orThrow(ArchiveError.missingDirectory)
         }
     }
 
@@ -415,13 +415,13 @@ public final class SceneArchiveContext: @unchecked Sendable {
         pendingConstraints = []
     }
 
-    /// Returns the name of a shader library in ``SceneArchive/shaderLibraries``, or `nil` if the archive does not
+    /// Returns the name of a shader library in ``Archive/shaderLibraries``, or `nil` if the archive does not
     /// have it.
     public func shaderLibraryName(for library: any MTLLibrary) -> String? {
         archive.shaderLibraries.first { $0.value === library }?.key
     }
 
-    /// Returns the shader library with a name in ``SceneArchive/shaderLibraries``, or `nil` if there is none.
+    /// Returns the shader library with a name in ``Archive/shaderLibraries``, or `nil` if there is none.
     public func shaderLibrary(named name: String) -> (any MTLLibrary)? {
         archive.shaderLibraries[name]
     }
@@ -538,24 +538,24 @@ public final class SceneArchiveContext: @unchecked Sendable {
 
     /// Reads `texture` back from the GPU and writes it once per archive. 2D 8-bit RGBA and BGRA textures are a PNG of
     /// level 0 (mips are regenerated on load); everything else is raw bytes of every slice and mip level.
-    /// Names the texture's file. The bytes are written now, or by SceneArchive.Capture.write when capturing (#238).
+    /// Names the texture's file. The bytes are written now, or by Archive.Capture.write when capturing (#238).
     public func encode(texture: MTLTexture) throws -> TextureReference {
         if let reference = writtenTextures[ObjectIdentifier(texture)] {
             return reference
         }
         guard let typeName = Self.textureTypeNames.first(where: { $0.value == texture.textureType })?.key else {
-            throw SceneArchiveError.unsupportedTexture("type \(texture.textureType.rawValue)")
+            throw ArchiveError.unsupportedTexture("type \(texture.textureType.rawValue)")
         }
         guard TextureLayout(texture.pixelFormat) != nil else {
-            throw SceneArchiveError.unsupportedTexture("pixel format \(texture.pixelFormat.rawValue)")
+            throw ArchiveError.unsupportedTexture("pixel format \(texture.pixelFormat.rawValue)")
         }
         let index = writtenTextures.count
         let isPNG = texture.textureType == .type2D && Self.pngFormats.contains(texture.pixelFormat)
         let reference = if isPNG {
-            TextureReference(file: "\(SceneArchive.texturesDirectoryName)/\(index).png", pixelFormat: texture.pixelFormat.rawValue, width: texture.width, height: texture.height, mipmapped: texture.mipmapLevelCount > 1)
+            TextureReference(file: "\(Archive.texturesDirectoryName)/\(index).png", pixelFormat: texture.pixelFormat.rawValue, width: texture.width, height: texture.height, mipmapped: texture.mipmapLevelCount > 1)
         } else {
             TextureReference(
-                file: "\(SceneArchive.texturesDirectoryName)/\(index).bin",
+                file: "\(Archive.texturesDirectoryName)/\(index).bin",
                 pixelFormat: texture.pixelFormat.rawValue,
                 width: texture.width,
                 height: texture.height,
@@ -567,14 +567,14 @@ public final class SceneArchiveContext: @unchecked Sendable {
             )
         }
         writtenTextures[ObjectIdentifier(texture)] = reference
-        pendingTextures.append(SceneArchive.PendingTexture(texture: texture, file: reference.file))
+        pendingTextures.append(Archive.PendingTexture(texture: texture, file: reference.file))
         return reference
     }
 
     // The texture's file contents, read back from the GPU: PNG data, or raw texels of every slice and level.
     static func fileData(_ texture: MTLTexture, isPNG: Bool) throws -> Data {
         guard let layout = TextureLayout(texture.pixelFormat) else {
-            throw SceneArchiveError.unsupportedTexture("pixel format \(texture.pixelFormat.rawValue)")
+            throw ArchiveError.unsupportedTexture("pixel format \(texture.pixelFormat.rawValue)")
         }
         guard isPNG else {
             var bytes: [UInt8] = []
@@ -601,7 +601,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
 
     /// Returns the texture for a reference, and reads it from the package the first time.
     ///
-    /// - Throws: ``SceneArchiveError/unreadableTexture(_:)`` if the file does not match the reference, or an error if
+    /// - Throws: ``ArchiveError/unreadableTexture(_:)`` if the file does not match the reference, or an error if
     ///   it cannot be read.
     public func texture(for reference: TextureReference) throws -> MTLTexture {
         if let texture = readTextures[reference.file] {
@@ -611,10 +611,10 @@ public final class SceneArchiveContext: @unchecked Sendable {
         let url = try readDirectory.appendingPathComponent(reference.file)
         let pixelFormat = MTLPixelFormat(rawValue: reference.pixelFormat) ?? .rgba8Unorm
         guard let layout = TextureLayout(pixelFormat) else {
-            throw SceneArchiveError.unsupportedTexture("pixel format \(reference.pixelFormat)")
+            throw ArchiveError.unsupportedTexture("pixel format \(reference.pixelFormat)")
         }
         guard let textureType = Self.textureTypeNames[reference.type ?? "2D"] else {
-            throw SceneArchiveError.unsupportedTexture("type \(reference.type ?? "")")
+            throw ArchiveError.unsupportedTexture("type \(reference.type ?? "")")
         }
         if let levels = reference.levels {
             return try readRawTexture(reference, pixelFormat: pixelFormat, textureType: textureType, levels: levels, layout: layout)
@@ -633,13 +633,13 @@ public final class SceneArchiveContext: @unchecked Sendable {
             bytes = [UInt8](try Data(contentsOf: url))
         }
         guard bytes.count == reference.width * reference.height * bytesPerPixel else {
-            throw SceneArchiveError.unreadableTexture(reference.file)
+            throw ArchiveError.unreadableTexture(reference.file)
         }
         let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: pixelFormat, width: reference.width, height: reference.height, mipmapped: reference.mipmapped)
         descriptor.usage = .shaderRead
         descriptor.storageMode = .shared
         guard let texture = device.makeTexture(descriptor: descriptor) else {
-            throw SceneArchiveError.unreadableTexture(reference.file)
+            throw ArchiveError.unreadableTexture(reference.file)
         }
         texture.replace(region: MTLRegionMake2D(0, 0, reference.width, reference.height), mipmapLevel: 0, withBytes: bytes, bytesPerRow: reference.width * bytesPerPixel)
         if reference.mipmapped {
@@ -715,7 +715,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
         descriptor.storageMode = .shared
         let device = _MTLCreateSystemDefaultDevice()
         guard let texture = device.makeTexture(descriptor: descriptor) else {
-            throw SceneArchiveError.unreadableTexture(reference.file)
+            throw ArchiveError.unreadableTexture(reference.file)
         }
         let bytes = try data(for: reference)
         var offset = 0
@@ -723,7 +723,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
             for level in 0 ..< descriptor.mipmapLevelCount {
                 let size = layout.size(of: (texture.width, texture.height, texture.depth), level: level)
                 guard offset + size.count <= bytes.count else {
-                    throw SceneArchiveError.unreadableTexture(reference.file)
+                    throw ArchiveError.unreadableTexture(reference.file)
                 }
                 bytes.withUnsafeBytes { buffer in
                     guard let baseAddress = buffer.baseAddress else {
@@ -735,7 +735,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
             }
         }
         guard offset == bytes.count else {
-            throw SceneArchiveError.unreadableTexture(reference.file)
+            throw ArchiveError.unreadableTexture(reference.file)
         }
         texture.label = reference.file
         readTextures[reference.file] = texture
@@ -756,7 +756,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
               let commandBuffer = queue.makeCommandBuffer(),
               let blit = commandBuffer.makeBlitCommandEncoder()
         else {
-            throw SceneArchiveError.unsupportedTexture("could not read back \(texture.label ?? "texture")")
+            throw ArchiveError.unsupportedTexture("could not read back \(texture.label ?? "texture")")
         }
         blit.copy(from: texture, sourceSlice: slice, sourceLevel: level, sourceOrigin: MTLOrigin(), sourceSize: size.region.size, to: buffer, destinationOffset: 0, destinationBytesPerRow: size.bytesPerRow, destinationBytesPerImage: size.bytesPerImage)
         blit.endEncoding()
@@ -770,7 +770,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
 
     private static func generateMipmaps(_ texture: MTLTexture) throws {
         guard let queue = texture.device.makeCommandQueue(), let commandBuffer = queue.makeCommandBuffer(), let blit = commandBuffer.makeBlitCommandEncoder() else {
-            throw SceneArchiveError.unreadableTexture(texture.label ?? "texture")
+            throw ArchiveError.unreadableTexture(texture.label ?? "texture")
         }
         blit.generateMipmaps(for: texture)
         blit.endEncoding()
@@ -782,7 +782,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
     // which premultiplies alpha.
     private static func readPNG(_ url: URL, width: Int, height: Int) throws -> [UInt8] {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil), let image = CGImageSourceCreateImageAtIndex(source, 0, nil), image.width == width, image.height == height else {
-            throw SceneArchiveError.unreadableTexture(url.lastPathComponent)
+            throw ArchiveError.unreadableTexture(url.lastPathComponent)
         }
         let isStraightRGBA = image.bitsPerComponent == 8 && image.bitsPerPixel == 32 && image.alphaInfo == .last && image.bitmapInfo.isDisjoint(with: .byteOrderMask)
         if isStraightRGBA, let data = image.dataProvider?.data as Data? {
@@ -795,7 +795,7 @@ public final class SceneArchiveContext: @unchecked Sendable {
         }
         // swiftlint:disable:next force_unwrapping - the sRGB color space always exists
         guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
-            throw SceneArchiveError.unreadableTexture(url.lastPathComponent)
+            throw ArchiveError.unreadableTexture(url.lastPathComponent)
         }
         context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
         return [UInt8](UnsafeRawBufferPointer(start: context.data, count: width * height * 4))
@@ -809,11 +809,11 @@ public final class SceneArchiveContext: @unchecked Sendable {
               let image = CGImage(width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: width * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.last.rawValue), provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent),
               let destination = CGImageDestinationCreateWithData(data as CFMutableData, UTType.png.identifier as CFString, 1, nil)
         else {
-            throw SceneArchiveError.unsupportedTexture("could not encode PNG")
+            throw ArchiveError.unsupportedTexture("could not encode PNG")
         }
         CGImageDestinationAddImage(destination, image, nil)
         guard CGImageDestinationFinalize(destination) else {
-            throw SceneArchiveError.unsupportedTexture("could not encode PNG")
+            throw ArchiveError.unsupportedTexture("could not encode PNG")
         }
         return data as Data
     }

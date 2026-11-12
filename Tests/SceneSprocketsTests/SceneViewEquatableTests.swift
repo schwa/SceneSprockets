@@ -12,7 +12,7 @@ struct SceneViewEquatableTests {
     let sceneGraph = SceneGraph(root: SceneGraph.Node())
     let renderer = BlinnPhongMaterialRenderer()
 
-    func view(id: AnyHashable? = "a", shadows: SceneGraphShadows? = nil, cameraMatrix: Binding<simd_float4x4?>? = nil, renderers: [any SceneGraphMaterialRenderer]? = nil) -> SceneView {
+    func view(id: AnyHashable? = "a", shadows: Shadows? = nil, cameraMatrix: Binding<simd_float4x4?>? = nil, renderers: [any MaterialRenderer]? = nil) -> SceneView {
         SceneView(sceneGraph, renderers: renderers ?? [renderer])
             .sceneShadows(shadows)
             .sceneCamera(matrix: cameraMatrix)
@@ -22,7 +22,7 @@ struct SceneViewEquatableTests {
 
     @Test
     func sameInputsAndClosureIDsAreEqual() {
-        let shadows = SceneGraphShadows()
+        let shadows = Shadows()
         #expect(view(shadows: shadows) == view(shadows: shadows))
         #expect(view(cameraMatrix: .constant(.init(diagonal: [1, 1, 1, 1]))) == view(cameraMatrix: .constant(.init(diagonal: [1, 1, 1, 1]))))
         // No closures need no id.
@@ -36,7 +36,7 @@ struct SceneViewEquatableTests {
         #expect(view().sceneStatistics() != view())
         #expect(view().sceneCameraControl() != view())
         #expect(view().sceneDefaultLighting() != view())
-        #expect(view(shadows: SceneGraphShadows()) != view(shadows: SceneGraphShadows()))
+        #expect(view(shadows: Shadows()) != view(shadows: Shadows()))
         #expect(view(cameraMatrix: .constant(.init(diagonal: [2, 1, 1, 1]))) != view(cameraMatrix: .constant(.init(diagonal: [1, 1, 1, 1]))))
         #expect(view(renderers: [BlinnPhongMaterialRenderer()]) != view())
         // A closure added on one side only.

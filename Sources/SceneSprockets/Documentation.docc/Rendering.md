@@ -19,7 +19,7 @@ RenderView { _, size in
 ```
 
 - **Camera.** The default camera is the first camera node, at its world transform. To select a different camera node, use `camera:`. To replace the world transform of the camera, for example with an interactive camera, use `cameraMatrix:`.
-- **One pass.** All renderers draw in one render pass and share the depth buffer. The pass uses reversed depth (near 1, far 0, compare `.greater`), because MetalSprocketsPBR needs it. ``SceneGraphRenderContext/projectionMatrix`` already contains the depth flip. If you write a renderer, use `.greater` depth tests.
+- **One pass.** All renderers draw in one render pass and share the depth buffer. The pass uses reversed depth (near 1, far 0, compare `.greater`), because MetalSprocketsPBR needs it. ``RenderContext/projectionMatrix`` already contains the depth flip. If you write a renderer, use `.greater` depth tests.
 - **Unclaimed meshes.** The element does not draw meshes whose material type has no renderer.
 - **Keep the PBR renderer.** `PBRMaterialRenderer` caches its model and rebuilds it only when the structure changes. Keep one instance across frames, for example in `@State`.
 
@@ -31,7 +31,7 @@ RenderView { _, size in
 
 ## Shadows
 
-Pass a ``SceneGraphShadows`` to `SceneView`'s `.sceneShadows(_:)` or `SceneGraphElement(shadows:)`. Keep one instance across frames. Directional, spot and point lights cast shadow maps from meshes with `castsShadow`. Blinn-Phong and PBR sample the shadows when they shade a pixel. For other materials, a screen-space pass darkens shadowed pixels after the scene pass, so shadows work with every renderer.
+Pass a ``Shadows`` to `SceneView`'s `.sceneShadows(_:)` or `SceneGraphElement(shadows:)`. Keep one instance across frames. Directional, spot and point lights cast shadow maps from meshes with `castsShadow`. Blinn-Phong and PBR sample the shadows when they shade a pixel. For other materials, a screen-space pass darkens shadowed pixels after the scene pass, so shadows work with every renderer.
 
 Fog and shadows need a color texture with `.shaderWrite` usage and a depth texture with `.shaderRead` usage. ``SceneView`` configures these textures.
 
@@ -41,17 +41,17 @@ Fog and shadows need a color texture with `.shaderWrite` usage and a depth textu
 
 ## Add a material family
 
-A material is a value that conforms to ``SceneMaterial``. A renderer that conforms to ``SceneGraphMaterialRenderer`` draws the mesh entries that use it. You do not change the scene graph to add one.
+A material is a value that conforms to ``SceneMaterial``. A renderer that conforms to ``MaterialRenderer`` draws the mesh entries that use it. You do not change the scene graph to add one.
 
 ```swift
 struct UnlitMaterial: SceneMaterial {
     var color: SIMD3<Float>
 }
 
-struct UnlitRenderer: SceneGraphMaterialRenderer {
+struct UnlitRenderer: MaterialRenderer {
     var materialType: any SceneMaterial.Type { UnlitMaterial.self }
 
-    func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement {
+    func makeElement(entries: [SceneGraph.MeshEntry], context: RenderContext) throws -> AnyElement {
         // Draw entries[i].mesh.submeshes[entries[i].submeshIndex] at entries[i].worldTransform.
     }
 }

@@ -177,7 +177,7 @@ extension SceneGraph {
             }
         }
 
-        /// For SceneArchive; see SceneGraph+Archive.swift.
+        /// For Archive; see SceneGraph+Archive.swift.
         public required convenience init(from decoder: Decoder) throws {
             self.init()
             try decodeArchive(from: decoder)

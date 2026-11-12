@@ -6,7 +6,7 @@ import MetalSprocketsPBR
 import simd
 import Testing
 
-private func context(for sceneGraph: SceneGraph) throws -> SceneGraphRenderContext {
+private func context(for sceneGraph: SceneGraph) throws -> RenderContext {
     try #require(makeRenderContext(sceneGraph: sceneGraph, camera: nil, cameraMatrix: nil, aspectRatio: 1))
 }
 

@@ -18,7 +18,7 @@ enum DebugShapes {
     }
 
     @MainActor
-    static func shapes(sceneGraph: SceneGraph, viewport: SceneViewport) -> [Shape] {
+    static func shapes(sceneGraph: SceneGraph, viewport: Viewport) -> [Shape] {
         let aspect = viewport.viewSize.y > 0 ? viewport.viewSize.x / viewport.viewSize.y : 1
         var result: [Shape] = []
         for entry in sceneGraph.lightNodes() {
@@ -84,7 +84,7 @@ enum DebugShapes {
     }
 
     @MainActor
-    static func element(sceneGraph: SceneGraph, selected: Set<SceneGraph.Node.ID>, viewport: SceneViewport) -> AnyElement? {
+    static func element(sceneGraph: SceneGraph, selected: Set<SceneGraph.Node.ID>, viewport: Viewport) -> AnyElement? {
         let shapes = shapes(sceneGraph: sceneGraph, viewport: viewport)
         guard !shapes.isEmpty else {
             return nil
@@ -107,7 +107,7 @@ enum DebugShapes {
 
     // The node whose shape passes within hitDistance points of `point`, nearest first.
     @MainActor
-    static func hitTest(_ point: SIMD2<Float>, sceneGraph: SceneGraph, viewport: SceneViewport) -> SceneGraph.Node? {
+    static func hitTest(_ point: SIMD2<Float>, sceneGraph: SceneGraph, viewport: Viewport) -> SceneGraph.Node? {
         var best: (node: SceneGraph.Node, distance: Float)?
         for shape in shapes(sceneGraph: sceneGraph, viewport: viewport) {
             for line in shape.lines {

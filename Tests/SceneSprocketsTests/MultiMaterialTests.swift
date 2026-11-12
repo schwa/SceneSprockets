@@ -9,10 +9,10 @@ private struct UnlitMaterial: SceneMaterial {
     var color: SIMD3<Float>
 }
 
-private struct UnlitRenderer: SceneGraphMaterialRenderer {
+private struct UnlitRenderer: MaterialRenderer {
     var materialType: any SceneMaterial.Type { UnlitMaterial.self }
 
-    func makeElement(entries _: [SceneGraph.MeshEntry], context _: SceneGraphRenderContext) -> AnyElement {
+    func makeElement(entries _: [SceneGraph.MeshEntry], context _: RenderContext) -> AnyElement {
         EmptyElement().eraseToAnyElement()
     }
 }
@@ -29,7 +29,7 @@ func mixedMaterialsArePartitionedPerRenderer() throws {
         SceneGraph.Node(content: .mesh(box, material: UnlitMaterial(color: [0, 0, 1])))
     ])
 
-    let renderers: [any SceneGraphMaterialRenderer] = [BlinnPhongMaterialRenderer(), UnlitRenderer()]
+    let renderers: [any MaterialRenderer] = [BlinnPhongMaterialRenderer(), UnlitRenderer()]
     let partitions = partitionMeshEntries(SceneGraph(root: root).meshEntries(), renderers: renderers)
 
     #expect(partitions.count == 2)

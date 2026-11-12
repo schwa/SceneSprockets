@@ -11,10 +11,10 @@ import Testing
 @MainActor
 struct ModelReferenceArchiveTests {
     let device = MTLCreateSystemDefaultDevice()!
-    let archive = SceneArchive(materialTypes: [BlinnPhongSceneMaterial.self, PBRSceneMaterial.self], meshCodec: GLTFMeshCodec(), modelLoader: ModelFileLoader())
+    let archive = Archive(materialTypes: [BlinnPhongSceneMaterial.self, PBRSceneMaterial.self], meshCodec: GLTFMeshCodec(), modelLoader: ModelFileLoader())
 
     func temporaryURL() -> URL {
-        FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension(SceneArchive.pathExtension)
+        FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension(Archive.pathExtension)
     }
 
     // A red triangle as Triangle.gltf with its buffer in Triangle.bin.

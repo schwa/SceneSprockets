@@ -36,9 +36,9 @@ struct RenderSettings: Hashable {
     // Wireframe world bounds (#211).
     var boundingBoxes = BoundingBoxes.Mode.none
     // Draws every mesh in this view instead of its material (#132).
-    var debugMode: SceneGraphDebugMode?
+    var debugMode: DebugMode?
     // One material value instead of lighting (#195); ignored while debugMode is set.
-    var materialChannel: SceneGraphMaterialChannel?
+    var materialChannel: MaterialChannel?
     var outlinesSelection = true
     // Off keeps the drawable readable, for example to inspect it in a GPU capture.
     var isFramebufferOnly = true
@@ -58,7 +58,7 @@ struct RenderSettings: Hashable {
 
     // Grid and axes, drawn in the scene pass. SceneSprockets uses reversed depth: test with `.greater` and do not
     // write, so objects hide them.
-    func decorations(context: SceneGraphRenderContext, drawableSize: SIMD2<Float>) throws -> AnyElement? {
+    func decorations(context: RenderContext, drawableSize: SIMD2<Float>) throws -> AnyElement? {
         guard showsGrid || showsAxes, drawableSize.x > 0, drawableSize.y > 0 else {
             return nil
         }

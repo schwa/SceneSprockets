@@ -11,7 +11,7 @@ import SwiftMesh
 private typealias GLTFMesh = SwiftGLTF.Mesh
 private typealias GLTFMaterial = SwiftGLTF.Material
 
-/// The codec that `SceneArchive` uses to save meshes as glTF files.
+/// The codec that `Archive` uses to save meshes as glTF files.
 ///
 /// The codec saves meshes that are not shapes, such as generated geometry, as `meshes/N.glb` in a scene package. Other
 /// tools can open these files. Each file holds every vertex attribute, one primitive for each submesh, and a glTF
@@ -22,7 +22,7 @@ public struct GLTFMeshCodec: ArchivableMeshCodec {
     /// Creates a glTF mesh codec.
     public init() {}
 
-    public func encode(_ mesh: MetalMesh, materials: [any SceneMaterial], name: String?, context: SceneArchiveContext) throws -> String {
+    public func encode(_ mesh: MetalMesh, materials: [any SceneMaterial], name: String?, context: ArchiveContext) throws -> String {
         let path = context.newFile(in: "meshes", pathExtension: "glb")
         var builder = GLTFDocumentBuilder()
         let attributeData = mesh.vertexAttributeData()
@@ -30,7 +30,7 @@ public struct GLTFMeshCodec: ArchivableMeshCodec {
         var order: [JSONValue] = []
         for attribute in attributeData {
             guard let accessorType = GLTFVertexFormat(attribute.format) else {
-                throw SceneArchiveError.unsupportedMesh("vertex format \(attribute.format.rawValue) has no glTF equivalent")
+                throw ArchiveError.unsupportedMesh("vertex format \(attribute.format.rawValue) has no glTF equivalent")
             }
             let semantic = Self.semanticName(attribute.semantic, format: attribute.format, existing: attributes.keys.map(\.rawValue))
             let bounds = attribute.semantic == .position ? Self.bounds(of: attribute) : nil
@@ -43,7 +43,7 @@ public struct GLTFMeshCodec: ArchivableMeshCodec {
         }
         let primitives = try mesh.submeshes.enumerated().map { index, submesh in
             guard let mode = Self.mode(submesh.primitiveType) else {
-                throw SceneArchiveError.unsupportedMesh("primitive type \(submesh.primitiveType.rawValue)")
+                throw ArchiveError.unsupportedMesh("primitive type \(submesh.primitiveType.rawValue)")
             }
             let indices = submesh.indices
             let indexAccessor = builder.addAccessor(bytes: indices.withUnsafeBytes { Array($0) }, count: indices.count, format: GLTFVertexFormat(componentType: .UNSIGNED_INT, type: .SCALAR), target: .ELEMENT_ARRAY_BUFFER)
@@ -69,14 +69,14 @@ public struct GLTFMeshCodec: ArchivableMeshCodec {
         return path
     }
 
-    public func decode(path: String, context: SceneArchiveContext) throws -> MetalMesh {
+    public func decode(path: String, context: ArchiveContext) throws -> MetalMesh {
         let container = try Container(url: context.url(forPath: path))
         let document = container.document
         guard let mesh = document.meshes.first, let first = mesh.primitives.first else {
-            throw SceneArchiveError.unsupportedMesh("\(path) has no mesh")
+            throw ArchiveError.unsupportedMesh("\(path) has no mesh")
         }
         guard case let .object(extras) = mesh.extras, case let .array(orderValues) = extras[Self.orderKey] else {
-            throw SceneArchiveError.unsupportedMesh("\(path) was not written by SceneSprockets")
+            throw ArchiveError.unsupportedMesh("\(path) was not written by SceneSprockets")
         }
         let order = orderValues.compactMap { value -> String? in
             if case let .string(name) = value { name } else { nil }
@@ -84,18 +84,18 @@ public struct GLTFMeshCodec: ArchivableMeshCodec {
         var attributes: [MetalMesh.VertexAttributeData] = []
         for name in order {
             guard let index = first.attributes[GLTFMesh.Primitive.Semantic(rawValue: name)] else {
-                throw SceneArchiveError.unsupportedMesh("\(path) has no \(name) attribute")
+                throw ArchiveError.unsupportedMesh("\(path) has no \(name) attribute")
             }
             let accessor = try index.resolve(in: document)
             guard let format = GLTFVertexFormat(componentType: accessor.componentType, type: accessor.type, normalized: accessor.normalized).metalFormat else {
-                throw SceneArchiveError.unsupportedMesh("\(path): \(name) has an unsupported format")
+                throw ArchiveError.unsupportedMesh("\(path): \(name) has an unsupported format")
             }
             let bytes = [UInt8](try container.data(for: accessor))
             attributes.append(MetalMesh.VertexAttributeData(semantic: Self.semantic(name), format: format, bytes: bytes, count: accessor.count))
         }
         let submeshes = try mesh.primitives.map { primitive in
             guard let index = primitive.indices else {
-                throw SceneArchiveError.unsupportedMesh("\(path): a primitive has no indices")
+                throw ArchiveError.unsupportedMesh("\(path): a primitive has no indices")
             }
             let accessor = try index.resolve(in: document)
             let data = try container.data(for: accessor)
@@ -103,7 +103,7 @@ public struct GLTFMeshCodec: ArchivableMeshCodec {
             case .UNSIGNED_INT: data.withUnsafeBytes { Array($0.bindMemory(to: UInt32.self)) }
             case .UNSIGNED_SHORT: data.withUnsafeBytes { $0.bindMemory(to: UInt16.self).map(UInt32.init) }
             case .UNSIGNED_BYTE: data.map(UInt32.init)
-            default: throw SceneArchiveError.unsupportedMesh("\(path): unsupported index type")
+            default: throw ArchiveError.unsupportedMesh("\(path): unsupported index type")
             }
             return MetalMesh.SubmeshIndices(indices: indices, primitiveType: Self.primitiveType(primitive.mode))
         }
@@ -265,7 +265,7 @@ struct GLTFDocumentBuilder {
     }
 
     // A glTF material for `material`: PBR values as they are, Blinn-Phong mapped to the nearest PBR values.
-    fileprivate mutating func material(for material: any SceneMaterial, context: SceneArchiveContext, packagePath: String) throws -> GLTFMaterial {
+    fileprivate mutating func material(for material: any SceneMaterial, context: ArchiveContext, packagePath: String) throws -> GLTFMaterial {
         switch material {
         case let pbr as PBRSceneMaterial:
             let uniforms = pbr.pbrMaterial.uniforms
@@ -324,7 +324,7 @@ struct GLTFDocumentBuilder {
     }
 
     // A glTF texture for `texture`, pointing at the package's PNG of it. Nil for textures not saved as PNG.
-    private mutating func texture(_ texture: MTLTexture, context: SceneArchiveContext, packagePath: String) throws -> Index<Texture>? {
+    private mutating func texture(_ texture: MTLTexture, context: ArchiveContext, packagePath: String) throws -> Index<Texture>? {
         let file = try context.encode(texture: texture).file
         guard file.hasSuffix(".png") else {
             return nil

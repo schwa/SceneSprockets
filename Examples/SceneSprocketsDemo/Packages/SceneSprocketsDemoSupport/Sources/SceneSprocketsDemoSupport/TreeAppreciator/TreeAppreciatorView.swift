@@ -6,8 +6,8 @@ import SwiftUI
 
 public struct TreeAppreciatorView: View {
     @State private var model = GameModel()
-    @State private var leftShadows = SceneGraphShadows(intensity: 0.55, softness: 2)
-    @State private var rightShadows = SceneGraphShadows(intensity: 0.55, softness: 2)
+    @State private var leftShadows = Shadows(intensity: 0.55, softness: 2)
+    @State private var rightShadows = Shadows(intensity: 0.55, softness: 2)
 
     public init() {}
 

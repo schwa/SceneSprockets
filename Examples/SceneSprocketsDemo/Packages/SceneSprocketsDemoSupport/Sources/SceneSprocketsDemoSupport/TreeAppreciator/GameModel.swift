@@ -112,7 +112,7 @@ final class GameModel {
     }
 
     // `point` and `viewport` come from the tapped side's SceneView.
-    func tap(side: Side, point: SIMD2<Float>, viewport: SceneViewport) {
+    func tap(side: Side, point: SIMD2<Float>, viewport: Viewport) {
         guard !isComplete, !showsIntro, let world = side == .left ? left : right else {
             return
         }
@@ -231,7 +231,7 @@ extension SceneGraph.Node.Content {
 
 // Rocks both trees with the same wall-clock time so the wind never creates a fake difference.
 @MainActor
-final class SwayDriver: SceneViewDelegate {
+final class SwayDriver: ViewDelegate {
     var trees: [SceneGraph.Node] = []
     private let start = CACurrentMediaTime()
 

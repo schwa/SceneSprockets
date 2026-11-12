@@ -34,18 +34,18 @@ extension EditorModel {
     }
 
     // The editor camera's viewport for a preview of `viewSize` points, as SceneView builds it (#240).
-    func viewport(viewSize: SIMD2<Float>) -> SceneViewport? {
+    func viewport(viewSize: SIMD2<Float>) -> Viewport? {
         guard viewSize.x > 0, viewSize.y > 0 else {
             return nil
         }
-        return SceneViewport(cameraMatrix: camera.matrix, camera: renderSettings.camera, viewSize: viewSize, drawableSize: viewSize)
+        return Viewport(cameraMatrix: camera.matrix, camera: renderSettings.camera, viewSize: viewSize, drawableSize: viewSize)
     }
 
     // The node under a point (view coordinates, origin top-left), as a click picks it: light and camera shapes first
     // when shown, because they are drawn on top, then the nearest mesh the camera can see. Clicks and the context
     // menu both use this (#220, #240).
     // A hit inside an imported model is the model (#157).
-    func node(at point: SIMD2<Float>, in viewport: SceneViewport) -> SceneGraph.Node? {
+    func node(at point: SIMD2<Float>, in viewport: Viewport) -> SceneGraph.Node? {
         if renderSettings.showsLightsAndCameras, let shape = DebugShapes.hitTest(point, sceneGraph: sceneGraph, viewport: viewport) {
             return modelRoot(containing: shape) ?? shape
         }

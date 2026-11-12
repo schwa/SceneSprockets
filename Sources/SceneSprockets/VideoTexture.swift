@@ -8,7 +8,7 @@ import QuartzCore
 /// `material.diffuse.contents = player`.
 ///
 /// The ``texture`` stays the same object; ``update(atHostTime:)`` copies the player's latest frame into it. Call it
-/// once per frame, for example from `SceneViewDelegate.sceneView(updateAtTime:deltaTime:)`. The texture is sRGB, with
+/// once per frame, for example from `ViewDelegate.sceneView(updateAtTime:deltaTime:)`. The texture is sRGB, with
 /// the top row of the video at texture coordinate `v = 0`, as for ``MaterialTexture``.
 public final class VideoTexture {
     /// The player whose video the texture shows. Control playback (play, pause, seek) with it.

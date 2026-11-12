@@ -1,8 +1,8 @@
 # Keynote: data and code
 
-This document lists, for each slide of the keynote demo (`KeynoteDemo.swift`), what could be stored as scene data (a `SceneArchive`) and what must stay in code (#345).
+This document lists, for each slide of the keynote demo (`KeynoteDemo.swift`), what could be stored as scene data (a `Archive`) and what must stay in code (#345).
 
-## What SceneArchive stores today
+## What Archive stores today
 
 - Nodes: label, transform, pivot, visibility, opacity, masks, rendering order.
 - Content: shapes, model files, meshes, Blinn-Phong, PBR and ShaderMaterial materials, lights, cameras.

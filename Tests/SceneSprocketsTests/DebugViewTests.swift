@@ -9,7 +9,7 @@ import SwiftMesh
 import Testing
 
 // #132: debug views replace every mesh's material.
-private func render(_ mode: SceneGraphDebugMode?, mesh: MetalMesh) throws -> SIMD4<UInt8> {
+private func render(_ mode: DebugMode?, mesh: MetalMesh) throws -> SIMD4<UInt8> {
     let root = SceneGraph.Node()
     root.addChild(SceneGraph.Node(transform: Transform3D(storing: simd_float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 4, 1]))), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
     root.addChild(SceneGraph.Node(transform: Transform3D(storing: simd_float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [1, 1, 3, 1]))), content: .light(Light(type: .point, intensity: 5))))
@@ -38,10 +38,10 @@ func debugModesReplaceMaterials() throws {
     #expect(normals.x > normals.y && normals.x > normals.z)
 
     var colors: Set<SIMD4<UInt8>> = []
-    for mode in SceneGraphDebugMode.allCases where mode != .wireframe {
+    for mode in DebugMode.allCases where mode != .wireframe {
         colors.insert(try render(mode, mesh: box))
     }
-    #expect(colors.count == SceneGraphDebugMode.allCases.count - 1)
+    #expect(colors.count == DebugMode.allCases.count - 1)
 }
 
 // #195: each renderer shows its own version of a material channel; values are unlit.
@@ -50,7 +50,7 @@ func debugModesReplaceMaterials() throws {
 func materialChannelsShowMaterialValues() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
-    func pixel(_ material: any SceneMaterial, _ channel: SceneGraphMaterialChannel, renderer: any SceneGraphMaterialRenderer) throws -> SIMD4<UInt8> {
+    func pixel(_ material: any SceneMaterial, _ channel: MaterialChannel, renderer: any MaterialRenderer) throws -> SIMD4<UInt8> {
         let root = SceneGraph.Node()
         root.addChild(SceneGraph.Node(transform: Transform3D(storing: simd_float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 4, 1]))), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
         root.addChild(SceneGraph.Node(content: .mesh(box, material: material)))

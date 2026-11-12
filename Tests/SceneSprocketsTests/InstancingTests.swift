@@ -52,7 +52,7 @@ func cachedOpaqueBatchesFollowChanges() throws {
 
     func groups() throws -> (single: [InstanceBatch], instanced: [InstanceBatch]) {
         let entries = graph.meshEntries()
-        let context = SceneGraphRenderContext(viewMatrix: .identity, projectionMatrix: .identity, cameraMatrix: .identity, lights: [], revision: graph.revision, environment: .init())
+        let context = RenderContext(viewMatrix: .identity, projectionMatrix: .identity, cameraMatrix: .identity, lights: [], revision: graph.revision, environment: .init())
         let groups = try #require(renderer.cachedOpaqueGroups(entries: entries, inFrustum: entries.map { _ in true }, context: context, cameraPosition: .zero))
         return (groups.flatMap(\.single), groups.flatMap(\.instanced))
     }

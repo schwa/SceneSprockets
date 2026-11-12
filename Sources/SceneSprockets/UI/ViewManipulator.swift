@@ -4,7 +4,7 @@ import simd
 
 /// The camera a SceneView draws with, for overlays and pointer input. Points are view coordinates (origin top-left,
 /// y down); `drawableSize` is in pixels.
-public struct SceneViewport {
+public struct Viewport {
     /// The camera's world transform.
     public var cameraMatrix: simd_float4x4
     /// Standard depth (near 0, far 1), whatever depth the scene itself uses.
@@ -83,47 +83,47 @@ public struct SceneViewport {
 /// as a transform gizmo. SceneView asks `hitTest` at the start of each drag; a hit routes that drag here
 /// and keeps camera control off it. It also asks while the pointer hovers, for highlighting.
 @MainActor
-public protocol SceneViewManipulator: AnyObject {
+public protocol ViewManipulator: AnyObject {
     /// Returns an element to draw after the scene, or `nil` to draw nothing.
     ///
     /// The element draws in its own render pass. The pass loads the scene's color and clears depth to 1, for standard
     /// depth.
-    func overlay(viewport: SceneViewport) throws -> AnyElement?
+    func overlay(viewport: Viewport) throws -> AnyElement?
     /// Returns whether a drag that starts at a point belongs to the manipulator. The method can update hover state.
-    func hitTest(_ point: SIMD2<Float>, viewport: SceneViewport) -> Bool
+    func hitTest(_ point: SIMD2<Float>, viewport: Viewport) -> Bool
     /// Starts a drag at a point that ``hitTest(_:viewport:)`` claimed.
-    func beginDrag(at point: SIMD2<Float>, viewport: SceneViewport)
+    func beginDrag(at point: SIMD2<Float>, viewport: Viewport)
     /// Continues a drag to a point.
-    func drag(to point: SIMD2<Float>, viewport: SceneViewport)
+    func drag(to point: SIMD2<Float>, viewport: Viewport)
     /// Ends a drag.
     func endDrag()
     /// Returns whether a two-finger pinch and twist that starts at a point belongs to the manipulator.
     ///
     /// Two-finger gestures are available on iOS and visionOS. If the manipulator claims a gesture, camera control does
     /// not zoom with it. The default implementation returns false.
-    func claimsTwoFingerGesture(at point: SIMD2<Float>, viewport: SceneViewport) -> Bool
+    func claimsTwoFingerGesture(at point: SIMD2<Float>, viewport: Viewport) -> Bool
     /// Starts a two-finger gesture that the manipulator claimed.
-    func beginTwoFingerGesture(viewport: SceneViewport)
+    func beginTwoFingerGesture(viewport: Viewport)
     /// Continues a two-finger gesture.
     ///
     /// - Parameters:
     ///   - scale: The pinch scale, relative to the start of the gesture.
     ///   - rotation: The twist angle in radians, clockwise on screen, relative to the start of the gesture.
     ///   - viewport: The camera and view size.
-    func twoFingerGesture(scale: Float, rotation: Float, viewport: SceneViewport)
+    func twoFingerGesture(scale: Float, rotation: Float, viewport: Viewport)
     /// Ends a two-finger gesture.
     func endTwoFingerGesture()
 }
 
-public extension SceneViewManipulator {
-    func claimsTwoFingerGesture(at _: SIMD2<Float>, viewport _: SceneViewport) -> Bool {
+public extension ViewManipulator {
+    func claimsTwoFingerGesture(at _: SIMD2<Float>, viewport _: Viewport) -> Bool {
         false
     }
 
-    func beginTwoFingerGesture(viewport _: SceneViewport) {
+    func beginTwoFingerGesture(viewport _: Viewport) {
     }
 
-    func twoFingerGesture(scale _: Float, rotation _: Float, viewport _: SceneViewport) {
+    func twoFingerGesture(scale _: Float, rotation _: Float, viewport _: Viewport) {
     }
 
     func endTwoFingerGesture() {
@@ -137,7 +137,7 @@ public extension SceneViewManipulator {
 public struct ManipulatorOverlayPass: Element {
     var content: AnyElement
 
-    /// Creates the pass, usually with the element that ``SceneViewManipulator/overlay(viewport:)`` returns.
+    /// Creates the pass, usually with the element that ``ViewManipulator/overlay(viewport:)`` returns.
     public init(content: AnyElement) {
         self.content = content
     }

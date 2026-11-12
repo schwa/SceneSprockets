@@ -10,7 +10,7 @@ final class ShadowsDemo: DemoScene {
 
     private let light: SceneGraph.Node
     private let floor: SceneGraph.Node
-    private let shadowRenderer = SceneGraphShadows(intensity: 0.7)
+    private let shadowRenderer = Shadows(intensity: 0.7)
 
     init() {
         let root = SceneGraph.Node(label: "Root")

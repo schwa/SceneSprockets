@@ -106,7 +106,7 @@ public struct SceneDemoView: View {
 }
 
 // Forwards SceneView's per-frame update to the demo.
-final class DemoSceneDelegate: SceneViewDelegate {
+final class DemoSceneDelegate: ViewDelegate {
     let scene: DemoScene
 
     init(scene: DemoScene) {

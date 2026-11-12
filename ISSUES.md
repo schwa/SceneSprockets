@@ -8359,12 +8359,13 @@ Related: #362, #363, #365, #248.
 ## 370: Public API surface is wider than intended and naming is uneven
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: effort:l, area:scenegraph, release
 created: 2026-11-11T15:54:42Z
-updated: 2026-11-11T15:55:11Z
+updated: 2026-11-12T04:27:02Z
+closed: 2026-11-12T04:27:02Z
 +++
 
 Before the first release tag (#295), the public surface needs an audit. Several symbols look public by accident, and naming conventions differ between areas.
@@ -8400,6 +8401,7 @@ Related: #295, #106, #362.
 - `2026-11-12T03:34:06Z`: Question 3 (decision): Applying 370-Q2 (c) literally renames ~20 prefixed types to generic top-level names: SceneArchive->Archive, SceneArchiveContext->ArchiveContext, SceneArchiveError->ArchiveError, SceneAudio->Audio, SceneCameraControl->CameraControl, SceneGraphShadows->Shadows, SceneViewport->Viewport, SceneGraphRenderContext->RenderContext, SceneGraphMaterialRenderer->MaterialRenderer, SceneGraphBackgroundRenderer->BackgroundRenderer, SceneGraphPrePassRenderer->PrePassRenderer, SceneGraphDebugMode->DebugMode, SceneGraphMaterialChannel->MaterialChannel, SceneGraphMembershipComponent->MembershipComponent, SceneViewDelegate->ViewDelegate, SceneViewManipulator->ViewManipulator (~700 uses). These clash and keep their prefix: SceneView (SwiftUI.View), SceneGraphElement (MetalSprockets.Element), SceneGraphPhysicsWorld (SwiftJolt), SceneGraphShadowMap (AddOns), SceneMaterial (SwiftGLTF), SceneParticleSystem (MetalSprocketsParticles). The generic names land in every importing app. Do all of these renames, only some (which?), or instead unify on one prefix (e.g. Scene… for all, dropping the SceneGraph… variants)?
 - `2026-11-12T03:34:07Z`: Done: part 1 helpers to package + public ones documented (76e8fd28); part 2 Light.LightType -> Light.Kind (a8ef30ac); part 3 rotate(byEuler:)/rotate(toEuler:) (82609f65); GLTFSceneGraph/ModelIOSceneGraph were made internal by #371. Remaining: the type-prefix sweep, see 370-Q3. Not done either: the other naming items in the description (Shape axis names, tuple returns of meshNodes/lightNodes, isVisible/isShown/isActive, Float radians vs Angle) — they were not covered by 370-Q1/Q2.
 - `2026-11-12T04:13:11Z`: Answer 3: do all
+- `2026-11-12T04:27:03Z`: Per 370-Q3 (do all): 16 prefixed types renamed to plain names with deprecated aliases; clashing names keep their prefix. Earlier parts: 76e8fd28, a8ef30ac, 82609f65; #371 for the importers. Description items not covered by the answers (Shape axis names, meshNodes/lightNodes tuples, isVisible/isShown/isActive, Angle vs Float) are left as they are.
 
 ---
 

@@ -20,7 +20,7 @@ private func render(near: any SceneMaterial, far: (any SceneMaterial)?, farDraws
         farNode.renderingOrder = farDrawsLast ? 1 : -1
     }
     root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: near)))
-    let renderers: [any SceneGraphMaterialRenderer] = [BlinnPhongMaterialRenderer(ambientLightColor: .zero), ShaderMaterialRenderer()]
+    let renderers: [any MaterialRenderer] = [BlinnPhongMaterialRenderer(ambientLightColor: .zero), ShaderMaterialRenderer()]
     let texture = try OffscreenRenderer(size: CGSize(width: 16, height: 16)).render(SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: renderers)).texture
     var value = SIMD4<UInt8>.zero
     texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(pixel.x, pixel.y, 1, 1), mipmapLevel: 0)

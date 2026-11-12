@@ -12,7 +12,7 @@ func audioPlayersFollowTheirNodes() throws {
     buffer.frameLength = 4_410
     let engine = AVAudioEngine()
     try engine.enableManualRenderingMode(.offline, format: format, maximumFrameCount: 1_024)
-    let audio = SceneAudio(mixer: SpatialAudioMixer(engine: engine))
+    let audio = Audio(mixer: SpatialAudioMixer(engine: engine))
 
     let root = SceneGraph.Node()
     let parent = root.addChild(SceneGraph.Node(transform: .init(translation: [1, 0, 0])))

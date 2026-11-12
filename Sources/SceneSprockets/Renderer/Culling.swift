@@ -8,7 +8,7 @@ package func culledMeshEntries(_ entries: [SceneGraph.MeshEntry], viewProjection
 
 /// Returns, for each mesh entry, whether its bounds may be inside a view frustum.
 ///
-/// For custom ``SceneGraphMaterialRenderer`` types that cull. Entries without bounds count as visible. Far from the
+/// For custom ``MaterialRenderer`` types that cull. Entries without bounds count as visible. Far from the
 /// world origin, prefer ``meshEntriesInFrustum(_:projectionMatrix:cameraMatrix:)``.
 ///
 /// - Parameters:
@@ -32,8 +32,8 @@ public func meshEntriesInFrustum(_ entries: [SceneGraph.MeshEntry], viewProjecti
 ///
 /// - Parameters:
 ///   - entries: The mesh entries to test.
-///   - projectionMatrix: The camera's projection matrix, for example ``SceneGraphRenderContext/projectionMatrix``.
-///   - cameraMatrix: The camera's world transform, for example ``SceneGraphRenderContext/cameraMatrix``.
+///   - projectionMatrix: The camera's projection matrix, for example ``RenderContext/projectionMatrix``.
+///   - cameraMatrix: The camera's world transform, for example ``RenderContext/cameraMatrix``.
 /// - Returns: One value per entry, in the same order.
 public func meshEntriesInFrustum(_ entries: [SceneGraph.MeshEntry], projectionMatrix: simd_float4x4, cameraMatrix: simd_float4x4) -> [Bool] {
     let cameraPosition = cameraMatrix.columns.3.xyz

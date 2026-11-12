@@ -28,7 +28,7 @@ private func writePNG(_ image: CGImage) throws -> URL {
 }
 
 @MainActor
-private func centerPixel(_ material: any SceneMaterial, renderer: any SceneGraphMaterialRenderer, channel: SceneGraphMaterialChannel? = nil) throws -> SIMD4<UInt8> {
+private func centerPixel(_ material: any SceneMaterial, renderer: any MaterialRenderer, channel: MaterialChannel? = nil) throws -> SIMD4<UInt8> {
     let root = SceneGraph.Node()
     root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
     root.addChild(SceneGraph.Node(content: .mesh(SceneGraph.Shape.plane(width: 2, height: 2).metalMesh(), material: material)))
@@ -79,7 +79,7 @@ func loadedTexturesSurviveAnArchive() throws {
     let red = try MaterialTexture.load(solidImage(red: 1, green: 0, blue: 0))
     let root = SceneGraph.Node(label: "Root")
     root.addChild(SceneGraph.Node(shape: .plane(), material: BlinnPhongSceneMaterial(ambient: .texture(red), diffuse: .color(0), specular: .color(0), shininess: 1)))
-    let archive = SceneArchive(materialTypes: [BlinnPhongSceneMaterial.self], meshCodec: GLTFMeshCodec())
+    let archive = Archive(materialTypes: [BlinnPhongSceneMaterial.self], meshCodec: GLTFMeshCodec())
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("MaterialTexture-\(UUID().uuidString).scenesprockets")
     defer { try? FileManager.default.removeItem(at: url) }
     _ = try archive.write(SceneGraph(root: root), to: url)

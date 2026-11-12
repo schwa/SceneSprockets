@@ -36,7 +36,7 @@ public struct NodeReferenceComponent: Component {
 }
 
 /// The scene graph of an entity, when several scene graphs share one world.
-public struct SceneGraphMembershipComponent: Component {
+public struct MembershipComponent: Component {
     /// The entity of the root node of the scene graph that the entity belongs to.
     public let rootID: EntityID
 }

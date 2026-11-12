@@ -5,7 +5,7 @@ import MetalSprocketsPBRShaders
 import MetalSupport
 import SceneSprockets
 
-// Saved by SceneArchive. The uniforms are stored field by field (see PBRUniformsArchive); archives from before that
+// Saved by Archive. The uniforms are stored field by field (see PBRUniformsArchive); archives from before that
 // stored raw bytes, which still read when the layout matches. Animatable texture transforms are stored by their
 // slot's name. Samplers are saved next to their textures (#180); older archives load with the placeholder's sampler.
 extension PBRSceneMaterial: ArchivableMaterial {
@@ -27,7 +27,7 @@ extension PBRSceneMaterial: ArchivableMaterial {
         }
         try container.encode(textures, forKey: .textures)
         let samplers = pbrMaterial.textureBindings.map { binding in
-            Self.isPlaceholder(binding.texture) ? nil : SceneArchiveContext.SamplerReference(binding.samplerDescriptor)
+            Self.isPlaceholder(binding.texture) ? nil : ArchiveContext.SamplerReference(binding.samplerDescriptor)
         }
         try container.encode(samplers, forKey: .samplers)
         let state = pbrMaterial.renderState
@@ -50,9 +50,9 @@ extension PBRSceneMaterial: ArchivableMaterial {
             uniforms = try Self.decodeRawUniforms(container)
         }
         let placeholder = try PBRMaterial.placeholderBinding(device: device)
-        let references = try container.decode([SceneArchiveContext.TextureReference?].self, forKey: .textures)
+        let references = try container.decode([ArchiveContext.TextureReference?].self, forKey: .textures)
         var bindings = Array(repeating: placeholder, count: Int(kPBRMaterialTextureCount.rawValue))
-        let samplers = try container.decodeIfPresent([SceneArchiveContext.SamplerReference?].self, forKey: .samplers) ?? []
+        let samplers = try container.decodeIfPresent([ArchiveContext.SamplerReference?].self, forKey: .samplers) ?? []
         for (index, reference) in references.enumerated() where index < bindings.count {
             if let reference {
                 let sampler = (index < samplers.count ? samplers[index] : nil)?.descriptor ?? placeholder.samplerDescriptor
@@ -75,7 +75,7 @@ extension PBRSceneMaterial: ArchivableMaterial {
         case slot, offset, rotation, scale
     }
 
-    private func encodeTextureTransforms(into container: inout KeyedEncodingContainer<ArchiveKeys>, context: SceneArchiveContext) throws {
+    private func encodeTextureTransforms(into container: inout KeyedEncodingContainer<ArchiveKeys>, context: ArchiveContext) throws {
         guard !pbrMaterial.textureTransforms.isEmpty else {
             return
         }
@@ -93,7 +93,7 @@ extension PBRSceneMaterial: ArchivableMaterial {
         }
     }
 
-    private static func decodeTextureTransforms(_ container: KeyedDecodingContainer<ArchiveKeys>, context: SceneArchiveContext) throws -> [String: PBRMaterial.TextureTransform] {
+    private static func decodeTextureTransforms(_ container: KeyedDecodingContainer<ArchiveKeys>, context: ArchiveContext) throws -> [String: PBRMaterial.TextureTransform] {
         guard container.contains(.textureTransforms) else {
             return [:]
         }
@@ -181,7 +181,7 @@ extension PBREnvironment: ArchivableEnvironmentMap {
             return Self.studio
         }
         let context = try decoder.sceneArchive
-        let reference = try container.decode(SceneArchiveContext.TextureReference.self, forKey: .source)
+        let reference = try container.decode(ArchiveContext.TextureReference.self, forKey: .source)
         guard reference.pixelFormat == MTLPixelFormat.rgba16Float.rawValue else {
             throw DecodingError.dataCorruptedError(forKey: .source, in: container, debugDescription: "Environment source must be rgba16Float")
         }

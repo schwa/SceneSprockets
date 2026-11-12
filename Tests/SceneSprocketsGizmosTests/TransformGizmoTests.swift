@@ -12,7 +12,7 @@ import Testing
 @MainActor
 struct TransformGizmoTests {
     // A camera 10 units back on +Z looking at the origin, in a 400x400 point view.
-    let viewport = SceneViewport(
+    let viewport = Viewport(
         cameraMatrix: LookAt(position: [0, 0, 10], target: .zero, up: [0, 1, 0]).cameraMatrix,
         projectionMatrix: PerspectiveProjection(verticalAngleOfView: .degrees(40), depthMode: .standard(zClip: 0.1 ... 100)).projectionMatrix(aspectRatio: 1),
         viewSize: [400, 400],
@@ -158,7 +158,7 @@ struct TransformGizmoTests {
     @Test(.enabled(if: deviceSupportsMetal4), arguments: [TransformGizmo.Mode.translate, .rotate, .scale])
     func drawsTheSameFarFromOrigin(mode: TransformGizmo.Mode) throws {
         func render(offset: SIMD3<Float>) throws -> [UInt8] {
-            let viewport = SceneViewport(
+            let viewport = Viewport(
                 cameraMatrix: LookAt(position: offset + [3, 4, 10], target: offset, up: [0, 1, 0]).cameraMatrix,
                 projectionMatrix: self.viewport.projectionMatrix,
                 viewSize: [200, 200],

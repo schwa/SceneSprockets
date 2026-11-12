@@ -20,7 +20,7 @@ public struct BlinnPhongSceneMaterial: SceneMaterial, SamplesShadowsInShader, Dr
         /// A texture, sampled at the mesh's first texture coordinates and multiplied by `tint`.
         ///
         /// A `nil` sampler uses linear filtering with repeat. The sampler is a descriptor, not a sampler state, so that
-        /// `SceneArchive` can save it.
+        /// `Archive` can save it.
         case texture(MTLTexture, sampler: MTLSamplerDescriptor? = nil, tint: SIMD3<Float> = .one)
 
         /// A grey color with the same value in red, green and blue.
@@ -117,7 +117,7 @@ public struct BlinnPhongSceneMaterial: SceneMaterial, SamplesShadowsInShader, Dr
 /// The renderer draws repeated meshes with automatic instancing. Copies share one cache, so a SwiftUI view can
 /// re-create the renderer each update. The type is `Equatable` so that `SceneView` can find an unchanged renderer
 /// list.
-public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer, Equatable {
+public struct BlinnPhongMaterialRenderer: MaterialRenderer, Equatable {
     /// The color of the ambient light, in linear RGB. It lights the ambient term of each material.
     public var ambientLightColor: SIMD3<Float>
     // Shared by copies of the renderer, so SwiftUI re-creating the struct keeps the cache.
@@ -139,7 +139,7 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer, Equatable 
     }
 
     // swiftlint:disable:next unneeded_throws_rethrows
-    public func makeElement(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) throws -> AnyElement {
+    public func makeElement(entries: [SceneGraph.MeshEntry], context: RenderContext) throws -> AnyElement {
         let cameraPosition = context.cameraMatrix.columns.3.xyz
         // The shader works in camera-relative space (#253): the camera is at the origin, and lights and model
         // matrices are shifted by the camera position in Double.
@@ -222,7 +222,7 @@ public struct BlinnPhongMaterialRenderer: SceneGraphMaterialRenderer, Equatable 
     // the model matrices are gathered each frame (#134). Nil (use the full path) when an entry may deform or swap
     // its level of detail, since those change meshes without a structure change.
     // swiftlint:disable:next discouraged_optional_collection - nil is a cache miss
-    func cachedOpaqueGroups(entries: [SceneGraph.MeshEntry], inFrustum: [Bool], context: SceneGraphRenderContext, cameraPosition: SIMD3<Float>) -> [(key: PipelineKey, single: [InstanceBatch], instanced: [InstanceBatch])]? {
+    func cachedOpaqueGroups(entries: [SceneGraph.MeshEntry], inFrustum: [Bool], context: RenderContext, cameraPosition: SIMD3<Float>) -> [(key: PipelineKey, single: [InstanceBatch], instanced: [InstanceBatch])]? {
         var hasher = Hasher()
         hasher.combine(context.revision.structure)
         hasher.combine(entries.count)
@@ -268,7 +268,7 @@ private struct BlinnPhongBatchesElement: Element {
     var groups: [(key: PipelineKey, single: [InstanceBatch], instanced: [InstanceBatch])]
     var frame: BlinnPhongFrame
     var lights: [BlinnPhongLight]
-    var shadow: SceneGraphShadows.Sampling?
+    var shadow: Shadows.Sampling?
     // World-space camera position; model matrices and shadow lookups are shifted by it.
     var cameraPosition: SIMD3<Float>
     // Blends and does not write depth.

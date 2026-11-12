@@ -100,7 +100,7 @@ extension SceneGraph {
     final class NodeStore {
         // Possibly shared with an ECS app and other graphs (#269); held strongly.
         let world: World
-        // The graph's root entity; tagged on every entity of this graph (SceneGraphMembershipComponent).
+        // The graph's root entity; tagged on every entity of this graph (MembershipComponent).
         var rootID: EntityID
         // Above 0 while a Node setter writes, so its own change event is not handled twice.
         var nodeWriteDepth = 0
@@ -346,7 +346,7 @@ extension SceneGraph.Node {
         store.world.createEntity(id: id, types: Self.entityComponentTypes) { initializer in
             initializer.set(SiblingIndexComponent(index: siblingIndex))
             initializer.set(NodeReferenceComponent(node: self))
-            initializer.set(SceneGraphMembershipComponent(rootID: store.rootID))
+            initializer.set(MembershipComponent(rootID: store.rootID))
             for slot in Self.worldFields {
                 slot.insert(self, initializer)
             }

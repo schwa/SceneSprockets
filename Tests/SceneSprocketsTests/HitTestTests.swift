@@ -150,7 +150,7 @@ func viewportFromCameraCastsTheProjectionsRays(_ depthMode: PerspectiveProjectio
     let projection = PerspectiveProjection(verticalAngleOfView: .degrees(50), depthMode: depthMode)
     let cameraMatrix = LookAt(position: [3, 2, 5], target: .zero, up: [0, 1, 0]).cameraMatrix
     let viewSize: SIMD2<Float> = [640, 480]
-    let viewport = SceneViewport(cameraMatrix: cameraMatrix, camera: Camera(projection: projection), viewSize: viewSize, drawableSize: viewSize * 2)
+    let viewport = Viewport(cameraMatrix: cameraMatrix, camera: Camera(projection: projection), viewSize: viewSize, drawableSize: viewSize * 2)
     let reference = ViewProjection(viewMatrix: cameraMatrix.inverse, projection: projection, viewSize: viewSize)
     for point: SIMD2<Float> in [[0, 0], [320, 240], [600, 50]] {
         let ray = viewport.ray(through: point)

@@ -50,7 +50,7 @@ func dragFrameCosts() throws {
     let ids = try tools.create(kind: "box", count: 500, label: nil, parent: nil, translation: nil, translations: (0..<500).map { [Double($0 % 25), 0, Double($0 / 25)] }, rotationDegrees: nil, scale: nil, color: nil).components(separatedBy: ", ")
     let nodes = try ids.map { try tools.node(id: $0) }
     model.select([nodes[0].id, nodes[1].id, nodes[2].id], primary: nodes[0].id)
-    let viewport = SceneViewport(
+    let viewport = Viewport(
         cameraMatrix: LookAt(position: [0, 10, 30], target: .zero, up: [0, 1, 0]).cameraMatrix,
         projectionMatrix: PerspectiveProjection(verticalAngleOfView: .degrees(60)).projectionMatrix(aspectRatio: 1.5),
         viewSize: [1_200, 800],

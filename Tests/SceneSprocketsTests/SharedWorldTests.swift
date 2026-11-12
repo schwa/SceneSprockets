@@ -12,8 +12,8 @@ func twoGraphsShareAWorldWithoutCrossTalk() throws {
     let first = SceneGraph(root: SceneGraph.Node(children: [firstChild]), world: world)
     let secondChild = SceneGraph.Node()
     let second = SceneGraph(root: SceneGraph.Node(children: [secondChild]), world: world)
-    #expect(world[firstChild.id]?[SceneGraphMembershipComponent.self]?.rootID == first.root.id)
-    #expect(world[secondChild.id]?[SceneGraphMembershipComponent.self]?.rootID == second.root.id)
+    #expect(world[firstChild.id]?[MembershipComponent.self]?.rootID == first.root.id)
+    #expect(world[secondChild.id]?[MembershipComponent.self]?.rootID == second.root.id)
 
     // A direct write to one graph's node bumps only that graph.
     let firstBefore = first.revision

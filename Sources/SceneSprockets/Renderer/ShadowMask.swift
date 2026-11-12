@@ -7,7 +7,7 @@ import simd
 // Darkens shadowed pixels after the scene pass, skipping meshes that do not receive shadows. Siblings of the scene
 // pass: the receiver mask is a render pass and the mask a compute pass.
 struct SceneShadowMaskPass: Element {
-    var frame: SceneGraphShadows.Frame
+    var frame: Shadows.Frame
     var sceneDepthTexture: MTLTexture
     var outputTexture: MTLTexture
     var viewProjection: simd_float4x4
@@ -66,7 +66,7 @@ struct SceneShadowMaskPass: Element {
 
     // Marks the visible pixels of non-receivers: drawn against the scene depth (not written), nudged towards the
     // camera so they pass where they are the front surface.
-    private func receiverMaskPass(casters: [SceneGraphShadows.Caster], mask: MTLTexture) throws -> some Element {
+    private func receiverMaskPass(casters: [Shadows.Caster], mask: MTLTexture) throws -> some Element {
         let shaders = try ShadowCasterShaders.shared()
         let staticCasters = casters.filter { if case .model = $0.placement { true } else { false } }
         let skinnedCasters = casters.filter { if case .skinned = $0.placement { true } else { false } }

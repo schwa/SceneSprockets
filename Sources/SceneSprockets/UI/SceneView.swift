@@ -8,7 +8,7 @@ import SwiftUI
 
 /// Per-frame callbacks, like SCNSceneRendererDelegate. All are optional.
 @MainActor
-public protocol SceneViewDelegate: AnyObject {
+public protocol ViewDelegate: AnyObject {
     /// Before actions run. Change the scene here.
     func sceneView(updateAtTime time: Float, deltaTime: Float)
     /// After actions ran, before constraints.
@@ -17,7 +17,7 @@ public protocol SceneViewDelegate: AnyObject {
     func sceneView(didApplyConstraintsAtTime time: Float)
 }
 
-public extension SceneViewDelegate {
+public extension ViewDelegate {
     func sceneView(updateAtTime _: Float, deltaTime _: Float) {}
     func sceneView(didApplyActionsAtTime _: Float) {}
     func sceneView(didApplyConstraintsAtTime _: Float) {}
@@ -58,33 +58,33 @@ public struct SceneView: View {
 
     private let sceneGraph: SceneGraph
     private let pointOfView: SceneGraph.Node?
-    private let renderers: [any SceneGraphMaterialRenderer]
+    private let renderers: [any MaterialRenderer]
     private var allowsCameraControl = false
     private var usesDefaultLighting = false
     private var settingsShowStatistics = false
     private var settingsShowFrameTiming = false
     private var settingsKeepDrawableReadable = false
     private let environmentFlags: DebugFlags
-    private weak var delegate: (any SceneViewDelegate)?
+    private weak var delegate: (any ViewDelegate)?
     private var isPlaying = true
-    private var shadows: SceneGraphShadows?
-    private var audio: SceneAudio?
+    private var shadows: Shadows?
+    private var audio: Audio?
     private var externalCameraMatrix: Binding<simd_float4x4?>?
     private var onTap: ((SceneGraph.Hit?) -> Void)?
     private var onTapID: AnyHashable?
-    private var onTapAt: ((SIMD2<Float>, SceneViewport, SceneGraph.Hit?) -> Void)?
+    private var onTapAt: ((SIMD2<Float>, Viewport, SceneGraph.Hit?) -> Void)?
     private var onTapAtID: AnyHashable?
     private var hitTestOptions = SceneGraph.HitTestOptions()
-    private var manipulator: (any SceneViewManipulator)?
-    private var decorations: ((SceneGraphRenderContext, SIMD2<Float>) throws -> AnyElement?)?
+    private var manipulator: (any ViewManipulator)?
+    private var decorations: ((RenderContext, SIMD2<Float>) throws -> AnyElement?)?
     private var decorationsID: AnyHashable?
     private var defaultCamera: Camera = .default
     private var cameraOverride: Camera?
     private var cameraTarget: SIMD3<Float>?
-    private var overlay: ((SceneViewport) throws -> AnyElement?)?
+    private var overlay: ((Viewport) throws -> AnyElement?)?
     private var overlayID: AnyHashable?
-    private var debugMode: SceneGraphDebugMode?
-    private var materialChannel: SceneGraphMaterialChannel?
+    private var debugMode: DebugMode?
+    private var materialChannel: MaterialChannel?
     // Whether the scene had fog or post-processing when this view was made. The body reads them to configure the
     // drawable, so == must notice when they change (#235).
     private let hadScenePostPasses: Bool
@@ -118,7 +118,7 @@ public struct SceneView: View {
     ///   - renderers: One renderer for each material family the scene uses, for example `BlinnPhongMaterialRenderer`
     ///     (SceneSprocketsBlinnPhong) or `PBRMaterialRenderer` (SceneSprocketsPBR). A mesh whose material has no
     ///     renderer is not drawn, and a warning is logged once.
-    public init(_ sceneGraph: SceneGraph, pointOfView: SceneGraph.Node? = nil, renderers: [any SceneGraphMaterialRenderer]) {
+    public init(_ sceneGraph: SceneGraph, pointOfView: SceneGraph.Node? = nil, renderers: [any MaterialRenderer]) {
         self.sceneGraph = sceneGraph
         self.pointOfView = pointOfView
         self.renderers = renderers
@@ -176,7 +176,7 @@ public struct SceneView: View {
         .metalFramebufferOnly(!needsPostPasses && !keepsDrawableReadable)
         .metalDepthStencilAttachmentTextureUsage(needsPostPasses ? [.renderTarget, .shaderRead] : [.renderTarget])
         .metalDepthStencilStorageMode(needsPostPasses || overlay != nil ? .private : .memoryless)
-        .modifier(CameraControl(isEnabled: allowsCameraControl, cameraMatrix: $controlledCameraMatrix, target: cameraTarget ?? orbitTarget ?? viewpoint.target, configuration: cameraControl))
+        .modifier(CameraControlModifier(isEnabled: allowsCameraControl, cameraMatrix: $controlledCameraMatrix, target: cameraTarget ?? orbitTarget ?? viewpoint.target, configuration: cameraControl))
         // Camera control edits a stable @State; these keep it and the source in step (#231).
         .onChange(of: cameraMatrix ?? viewpoint.matrix, initial: true) { _, newValue in
             if controlledCameraMatrix != newValue {
@@ -341,13 +341,13 @@ public struct SceneView: View {
     }
 
     // The camera the frame is drawn with. `drawableSize` defaults to the view size at the display scale.
-    private func viewport(drawableSize: CGSize? = nil) -> SceneViewport? {
+    private func viewport(drawableSize: CGSize? = nil) -> Viewport? {
         guard viewSize.width > 0, viewSize.height > 0 else {
             return nil
         }
         let size = SIMD2<Float>(Float(viewSize.width), Float(viewSize.height))
         let drawable = drawableSize.map { SIMD2<Float>(Float($0.width), Float($0.height)) } ?? size * Float(displayScale)
-        return SceneViewport(cameraMatrix: currentCameraMatrix, camera: activeCamera, viewSize: size, drawableSize: drawable)
+        return Viewport(cameraMatrix: currentCameraMatrix, camera: activeCamera, viewSize: size, drawableSize: drawable)
     }
 
     private var activeCameraNode: (node: SceneGraph.Node, camera: Camera, worldTransform: simd_float4x4)? {
@@ -431,7 +431,7 @@ final class SceneClock {
 // Configuration, like SwiftUI's Text modifiers: each returns a configured copy (#369).
 public extension SceneView {
     /// Turns on orbit, pan and zoom with the mouse, trackpad or touch. The point of view's node is not moved. Tune
-    /// it with the `sceneCameraControl(_:)` view modifier that takes a ``SceneCameraControl``.
+    /// it with the `sceneCameraControl(_:)` view modifier that takes a ``CameraControl``.
     func sceneCameraControl(_ enabled: Bool = true) -> Self {
         with { $0.allowsCameraControl = enabled }
     }
@@ -442,17 +442,17 @@ public extension SceneView {
     }
 
     /// Draws shadows. Keep the same instance across updates: it holds the shadow map.
-    func sceneShadows(_ shadows: SceneGraphShadows?) -> Self {
+    func sceneShadows(_ shadows: Shadows?) -> Self {
         with { $0.shadows = shadows }
     }
 
     /// Plays the audio players of the scene's nodes, with the camera as the listener.
-    func sceneAudio(_ audio: SceneAudio?) -> Self {
+    func sceneAudio(_ audio: Audio?) -> Self {
         with { $0.audio = audio }
     }
 
     /// Calls the delegate every frame, like SCNSceneRendererDelegate. The view does not keep it alive.
-    func sceneDelegate(_ delegate: (any SceneViewDelegate)?) -> Self {
+    func sceneDelegate(_ delegate: (any ViewDelegate)?) -> Self {
         with { $0.delegate = delegate }
     }
 
@@ -503,7 +503,7 @@ public extension SceneView {
 
     /// Like ``onSceneTap(id:perform:)-(_,(SceneGraph.Hit?)->Void)``, with the tap point in view coordinates and the
     /// viewport, for picking things the mesh hit test cannot see, such as editor icons.
-    func onSceneTap(id: AnyHashable? = nil, perform action: @escaping (SIMD2<Float>, SceneViewport, SceneGraph.Hit?) -> Void) -> Self {
+    func onSceneTap(id: AnyHashable? = nil, perform action: @escaping (SIMD2<Float>, Viewport, SceneGraph.Hit?) -> Void) -> Self {
         with {
             $0.onTapAt = action
             $0.onTapAtID = id
@@ -511,13 +511,13 @@ public extension SceneView {
     }
 
     /// Draws over the scene and takes drags that start on it, for example a transform gizmo.
-    func sceneManipulator(_ manipulator: (any SceneViewManipulator)?) -> Self {
+    func sceneManipulator(_ manipulator: (any ViewManipulator)?) -> Self {
         with { $0.manipulator = manipulator }
     }
 
     /// Draws extra content in the scene pass after the meshes, with the scene's reversed depth (compare `.greater`),
     /// given the frame's context and drawable size in pixels. For editor aids such as grids that objects should hide.
-    func sceneDecorations(id: AnyHashable? = nil, _ decorations: ((SceneGraphRenderContext, SIMD2<Float>) throws -> AnyElement?)?) -> Self {
+    func sceneDecorations(id: AnyHashable? = nil, _ decorations: ((RenderContext, SIMD2<Float>) throws -> AnyElement?)?) -> Self {
         with {
             $0.decorations = decorations
             $0.decorationsID = id
@@ -527,7 +527,7 @@ public extension SceneView {
     /// Passes after the scene and before the manipulator, such as selection outlines. They see the finished color and
     /// can load the scene depth (reversed: nearer is greater). Start passes that read the drawable with a barrier.
     /// Nil removes the overlay; an overlay makes the view keep its depth texture.
-    func sceneOverlay(id: AnyHashable? = nil, _ overlay: ((SceneViewport) throws -> AnyElement?)?) -> Self {
+    func sceneOverlay(id: AnyHashable? = nil, _ overlay: ((Viewport) throws -> AnyElement?)?) -> Self {
         with {
             $0.overlay = overlay
             $0.overlayID = id
@@ -535,12 +535,12 @@ public extension SceneView {
     }
 
     /// Draws every mesh in a debug view instead of its material (#132).
-    func sceneDebugMode(_ mode: SceneGraphDebugMode?) -> Self {
+    func sceneDebugMode(_ mode: DebugMode?) -> Self {
         with { $0.debugMode = mode }
     }
 
     /// Shows one material value instead of lighting (#195).
-    func sceneMaterialChannel(_ channel: SceneGraphMaterialChannel?) -> Self {
+    func sceneMaterialChannel(_ channel: MaterialChannel?) -> Self {
         with { $0.materialChannel = channel }
     }
 
@@ -610,7 +610,7 @@ extension SceneView: @MainActor Equatable {
         return lhsID != nil && lhsID == rhsID
     }
 
-    private static func isSameRenderer(_ lhs: any SceneGraphMaterialRenderer, _ rhs: any SceneGraphMaterialRenderer) -> Bool {
+    private static func isSameRenderer(_ lhs: any MaterialRenderer, _ rhs: any MaterialRenderer) -> Bool {
         func isEqual<T: Equatable>(_ lhs: T, _ rhs: Any) -> Bool {
             (rhs as? T) == lhs
         }
@@ -631,11 +631,11 @@ extension SceneView: @MainActor Equatable {
     }
 }
 
-private struct CameraControl: ViewModifier {
+private struct CameraControlModifier: ViewModifier {
     var isEnabled: Bool
     @Binding var cameraMatrix: simd_float4x4
     var target: SIMD3<Float>
-    var configuration: SceneCameraControl
+    var configuration: CameraControl
 
     func body(content: Content) -> some View {
         if isEnabled {

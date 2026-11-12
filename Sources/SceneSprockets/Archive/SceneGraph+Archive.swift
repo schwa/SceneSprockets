@@ -3,8 +3,8 @@ import GeometryLite3D
 import SceneSprocketsAudio
 import simd
 
-// Codable for the scene graph types, used by SceneArchive. Metal-backed content (textures, environment maps,
-// materials) goes through the SceneArchiveContext in the coder's userInfo.
+// Codable for the scene graph types, used by Archive. Metal-backed content (textures, environment maps,
+// materials) goes through the ArchiveContext in the coder's userInfo.
 
 // MARK: - Scene graph
 
@@ -15,7 +15,7 @@ extension SceneGraph: Codable {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: ArchiveKeys.self)
-        try container.encode(SceneArchive.formatVersion, forKey: .formatVersion)
+        try container.encode(Archive.formatVersion, forKey: .formatVersion)
         try encoder.sceneArchive.encodingRoot = root
         try container.encode(root, forKey: .root)
         try container.encode(environment, forKey: .environment)
@@ -27,8 +27,8 @@ extension SceneGraph: Codable {
     func decodeArchive(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: ArchiveKeys.self)
         let version = try container.decode(Int.self, forKey: .formatVersion)
-        guard version <= SceneArchive.formatVersion else {
-            throw SceneArchiveError.unsupportedFormatVersion(version)
+        guard version <= Archive.formatVersion else {
+            throw ArchiveError.unsupportedFormatVersion(version)
         }
         root = try container.decode(Node.self, forKey: .root)
         try decoder.sceneArchive.resolveConstraints(root: root)
@@ -238,7 +238,7 @@ extension SceneGraph.Node: Codable {
         }
     }
 
-    private func encodeConstraints(into container: inout KeyedEncodingContainer<ArchiveKeys>, context: SceneArchiveContext) throws {
+    private func encodeConstraints(into container: inout KeyedEncodingContainer<ArchiveKeys>, context: ArchiveContext) throws {
         guard !constraints.isEmpty else {
             return
         }
@@ -262,7 +262,7 @@ extension SceneGraph.Node: Codable {
         }
     }
 
-    private func encodeNodeFeatures(into container: inout KeyedEncodingContainer<ArchiveKeys>, context: SceneArchiveContext) throws {
+    private func encodeNodeFeatures(into container: inout KeyedEncodingContainer<ArchiveKeys>, context: ArchiveContext) throws {
         if !morphTargets.isEmpty {
             try container.encode(morphTargets, forKey: .morphTargets)
         }
@@ -297,7 +297,7 @@ extension SceneGraph.Node: Codable {
         }
     }
 
-    private func encodeLevelsOfDetail(into container: inout KeyedEncodingContainer<ArchiveKeys>, context: SceneArchiveContext) throws {
+    private func encodeLevelsOfDetail(into container: inout KeyedEncodingContainer<ArchiveKeys>, context: ArchiveContext) throws {
         guard !levelsOfDetail.isEmpty else {
             return
         }
@@ -312,7 +312,7 @@ extension SceneGraph.Node: Codable {
         try container.encode(archived, forKey: .levelsOfDetail)
     }
 
-    private func decodeLevelsOfDetail(_ levels: [ArchivedLevelOfDetail], context: SceneArchiveContext) throws -> [SceneGraph.LevelOfDetail] {
+    private func decodeLevelsOfDetail(_ levels: [ArchivedLevelOfDetail], context: ArchiveContext) throws -> [SceneGraph.LevelOfDetail] {
         guard let codec = context.meshCodec else {
             if levels.contains(where: { $0.file != nil }) {
                 context.warn("\(label ?? "node"): no mesh codec to read levels of detail; dropped")
@@ -330,7 +330,7 @@ extension SceneGraph.Node: Codable {
     }
 
     // Later steps of #52.
-    private func warnAboutUnsavedFeatures(_ context: SceneArchiveContext) {
+    private func warnAboutUnsavedFeatures(_ context: ArchiveContext) {
         let unsaved: [(String, Bool)] = [
             ("running actions", !runningActions.isEmpty)
         ]

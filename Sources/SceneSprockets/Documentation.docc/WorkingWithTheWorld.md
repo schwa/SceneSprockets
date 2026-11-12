@@ -15,4 +15,4 @@ An ECS app can add its own components to these entities and query or write the n
 
 ## Share a world
 
-`SceneGraph(root:world:)` uses a world that your app owns. Several scene graphs can share one world. ``SceneGraphMembershipComponent`` identifies the scene graph of each entity.
+`SceneGraph(root:world:)` uses a world that your app owns. Several scene graphs can share one world. ``MembershipComponent`` identifies the scene graph of each entity.

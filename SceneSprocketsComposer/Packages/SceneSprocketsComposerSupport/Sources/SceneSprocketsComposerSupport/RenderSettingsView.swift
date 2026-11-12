@@ -42,18 +42,18 @@ struct RenderSettingsView: View {
             }
             Section("Debug") {
                 Picker("View", selection: $model.renderSettings.debugMode) {
-                    Text("Materials").tag(SceneGraphDebugMode?.none)
+                    Text("Materials").tag(DebugMode?.none)
                     Divider()
-                    ForEach(SceneGraphDebugMode.allCases, id: \.self) { mode in
-                        Text(mode.name).tag(SceneGraphDebugMode?.some(mode))
+                    ForEach(DebugMode.allCases, id: \.self) { mode in
+                        Text(mode.name).tag(DebugMode?.some(mode))
                     }
                 }
                 .help("Show every mesh as shape, normals, texture coordinates and so on, instead of its material")
                 Picker("Channel", selection: $model.renderSettings.materialChannel) {
-                    Text("Lit").tag(SceneGraphMaterialChannel?.none)
+                    Text("Lit").tag(MaterialChannel?.none)
                     Divider()
-                    ForEach(SceneGraphMaterialChannel.allCases, id: \.self) { channel in
-                        Text(channel.name).tag(SceneGraphMaterialChannel?.some(channel))
+                    ForEach(MaterialChannel.allCases, id: \.self) { channel in
+                        Text(channel.name).tag(MaterialChannel?.some(channel))
                     }
                 }
                 .disabled(model.renderSettings.debugMode != nil)

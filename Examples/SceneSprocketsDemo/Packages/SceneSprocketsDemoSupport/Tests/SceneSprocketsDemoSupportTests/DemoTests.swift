@@ -34,7 +34,7 @@ func demoBuildsUpdatesAndRenders(demo: Demo) throws {
 @Test
 @MainActor
 func generatedDiceRoundTrip() throws {
-    let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension(SceneArchive.pathExtension)
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension(Archive.pathExtension)
     defer { try? FileManager.default.removeItem(at: url) }
     let warnings = try DemoSnapshot.save(demoID: "dice", to: url, frames: 1)
     #expect(!warnings.contains { $0.contains("not a shape") })

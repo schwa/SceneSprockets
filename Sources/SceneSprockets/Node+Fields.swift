@@ -41,7 +41,7 @@ extension SceneGraph.Node {
     static let entityComponentTypes: [ComponentType] = [
         ComponentType(SiblingIndexComponent.self),
         ComponentType(NodeReferenceComponent.self),
-        ComponentType(SceneGraphMembershipComponent.self)
+        ComponentType(MembershipComponent.self)
     ] + worldFields.map(\.componentType)
 
     static let worldFields: [NodeFieldSlot] = [
@@ -151,7 +151,7 @@ extension SceneGraph.Node {
         set { setField(FieldKeyPaths.particleSystems, \.particleSystemsStorage, newValue) }
     }
 
-    /// Sounds that play from this node; see SceneAudio. Not copied by clone().
+    /// Sounds that play from this node; see Audio. Not copied by clone().
     public var audioPlayers: [AudioPlayer] {
         get { getField(FieldKeyPaths.audioPlayers, \.audioPlayersStorage) }
         set { setField(FieldKeyPaths.audioPlayers, \.audioPlayersStorage, newValue) }

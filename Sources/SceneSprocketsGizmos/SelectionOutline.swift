@@ -41,7 +41,7 @@ public final class SelectionOutline {
     ///   - sceneGraph: The scene graph that contains the nodes.
     ///   - viewport: The camera and view size of the overlay.
     /// - Throws: An error if the outline's textures or pipelines cannot be created.
-    public func element(nodes: [SceneGraph.Node], sceneGraph: SceneGraph, viewport: SceneViewport) throws -> AnyElement? {
+    public func element(nodes: [SceneGraph.Node], sceneGraph: SceneGraph, viewport: Viewport) throws -> AnyElement? {
         guard !nodes.isEmpty, width > 0 else {
             return nil
         }

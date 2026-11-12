@@ -32,7 +32,7 @@ public extension SamplesShadowsInShader {
 /// `receivesShadow: false` receive none.
 /// The view's color texture needs `.shaderWrite` and its depth texture `.shaderRead` usage (see
 /// `requiredColorUsage`); otherwise no shadows are drawn.
-public final class SceneGraphShadows {
+public final class Shadows {
     /// Usage the view's color texture needs: the shadow and post-processing passes write it from compute.
     public static let requiredColorUsage: MTLTextureUsage = [.renderTarget, .shaderRead, .shaderWrite]
     /// Usage the view's depth texture needs: the passes sample it.
@@ -112,7 +112,7 @@ public final class SceneGraphShadows {
     }
 
     // Nil when nothing casts or there is no light.
-    func prepare(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext, bounds: BoundingBox3D?, viewSize: (width: Int, height: Int)? = nil) throws -> Frame? {
+    func prepare(entries: [SceneGraph.MeshEntry], context: RenderContext, bounds: BoundingBox3D?, viewSize: (width: Int, height: Int)? = nil) throws -> Frame? {
         guard let bounds else {
             return nil
         }
@@ -347,7 +347,7 @@ private struct InfluenceKey: Hashable {
 // Draws casters into each light's slice of the shadow map, with a second pipeline that
 // skins vertices on the GPU.
 struct ShadowCasterDepthPass: Element {
-    var frame: SceneGraphShadows.Frame
+    var frame: Shadows.Frame
 
     @MSEnvironment(\.submissionIndex)
     private var submissionIndex
@@ -393,13 +393,13 @@ struct ShadowCasterDepthPass: Element {
         }
     }
 
-    private func pipeline(_ label: String, vertexShader: VertexShader, fragmentShader: FragmentShader, vertexDescriptor: MTLVertexDescriptor, casters: [SceneGraphShadows.Caster], lightViewProjection: simd_float4x4) throws -> some Element {
+    private func pipeline(_ label: String, vertexShader: VertexShader, fragmentShader: FragmentShader, vertexDescriptor: MTLVertexDescriptor, casters: [Shadows.Caster], lightViewProjection: simd_float4x4) throws -> some Element {
         try casterPipeline(label, vertexShader: vertexShader, fragmentShader: fragmentShader, vertexDescriptor: vertexDescriptor, casters: casters, viewProjection: lightViewProjection, colorPixelFormat: .invalid)
     }
 }
 
 // Draws position-only geometry with `viewProjection`; shared by the shadow map and the receiver mask.
-func casterPipeline(_ label: String, vertexShader: VertexShader, fragmentShader: FragmentShader, vertexDescriptor: MTLVertexDescriptor, casters: [SceneGraphShadows.Caster], viewProjection: simd_float4x4, colorPixelFormat: MTLPixelFormat) throws -> some Element {
+func casterPipeline(_ label: String, vertexShader: VertexShader, fragmentShader: FragmentShader, vertexDescriptor: MTLVertexDescriptor, casters: [Shadows.Caster], viewProjection: simd_float4x4, colorPixelFormat: MTLPixelFormat) throws -> some Element {
     try RenderPipeline(label: label, vertexShader: vertexShader, fragmentShader: fragmentShader) {
         ForEach(Array(casters.enumerated()), id: \.offset) { _, caster in
             drawCaster(caster)
@@ -413,7 +413,7 @@ func casterPipeline(_ label: String, vertexShader: VertexShader, fragmentShader:
     }
 }
 
-private func drawCaster(_ caster: SceneGraphShadows.Caster) -> AnyElement {
+private func drawCaster(_ caster: Shadows.Caster) -> AnyElement {
     let draw = Draw(
         primitiveType: caster.submesh.primitiveType,
         indexBuffer: caster.submesh.indexBuffer,

@@ -61,7 +61,7 @@ struct SceneEditBoundaryTests {
     func sceneJSON(_ model: EditorModel) throws -> String {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("scenesprocketsd")
         defer { try? FileManager.default.removeItem(at: url) }
-        try SceneArchive.composer.write(model.sceneGraph, to: url)
+        try Archive.composer.write(model.sceneGraph, to: url)
         return try String(contentsOf: url.appendingPathComponent("scene.json"), encoding: .utf8)
     }
 
@@ -252,7 +252,7 @@ struct SceneEditBoundaryTests {
         model.addLight(type)
     }
     model.addCamera()
-    let viewport = SceneViewport(
+    let viewport = Viewport(
         cameraMatrix: LookAt(position: [0, 0, 20], target: .zero, up: [0, 1, 0]).cameraMatrix,
         projectionMatrix: PerspectiveProjection(verticalAngleOfView: .degrees(60)).projectionMatrix(aspectRatio: 1),
         viewSize: [400, 400],

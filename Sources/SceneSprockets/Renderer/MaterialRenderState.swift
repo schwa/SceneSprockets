@@ -109,7 +109,7 @@ extension Element {
 
 /// Returns an element that draws one submesh with a cull and fill mode.
 ///
-/// For custom ``SceneGraphMaterialRenderer`` types. A plain draw resets the cull and fill mode, so this sets them in
+/// For custom ``MaterialRenderer`` types. A plain draw resets the cull and fill mode, so this sets them in
 /// the draw itself.
 ///
 /// - Parameters:
