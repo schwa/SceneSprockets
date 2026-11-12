@@ -19,6 +19,8 @@ public struct SceneDemoView: View {
     @State private var gizmoMode = TransformGizmo.Mode.translate
     @State private var gizmoSpace = TransformGizmo.Space.world
     @State private var selectionOutline = SelectionOutline()
+    // The scene is also drawn in the immersive space (#385); this view pauses so it is advanced only once per frame.
+    @State private var isImmersive = false
 
     public init(demo: Demo) {
         self.demo = demo
@@ -32,7 +34,7 @@ public struct SceneDemoView: View {
         SceneView(scene.sceneGraph, renderers: scene.renderers)
             .sceneCameraControl(!scene.usesSceneCamera)
             .sceneDelegate(delegate)
-            .scenePlaying(!isPaused)
+            .scenePlaying(!isPaused && !isImmersive)
             .sceneShadows(scene.shadows)
             .sceneCamera(matrix: scene.usesSceneCamera ? .constant(nil) : $cameraMatrix)
             .sceneHitTestOptions(.init(categoryBitMask: scene.pickCategoryBitMask))
@@ -92,6 +94,9 @@ public struct SceneDemoView: View {
             Button(isPaused ? "Play" : "Pause", systemImage: isPaused ? "play.fill" : "pause.fill") {
                 isPaused.toggle()
             }
+            #if os(visionOS)
+            ImmersiveSceneToggle(scene: scene, isImmersive: $isImmersive)
+            #endif
             if !scene.usesSceneCamera {
                 Button("Reset Camera", systemImage: "camera.viewfinder") {
                     cameraMatrix = scene.initialCameraMatrix

@@ -34,6 +34,9 @@ public struct SceneGraphDemosScene: Scene {
         #if os(macOS)
         PresenterNotesWindow()
         #endif
+        #if os(visionOS)
+        SceneDemoImmersiveSpace()
+        #endif
     }
 }
 

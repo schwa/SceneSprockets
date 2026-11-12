@@ -8861,6 +8861,7 @@ SceneImmersiveElement (#381) exists but no app uses it. SceneSprocketsDemo has n
 The visionOS build of SceneSprocketsDemo also fails: CodeSign of SceneSprocketsDemoSupport_SceneSprocketsDemoSupport.bundle reports 'bundle format unrecognized, invalid, or unsuitable' (build with -destination generic/platform=visionOS).
 
 - `2026-11-12T21:24:48Z`: The immersive space and toggle are written (uncommitted) but crash when the window edits the scene while immersive; blocked on #386.
+- `2026-11-12T21:25:34Z`: Immersive space and toolbar toggle committed. Known: crashes when the window edits the scene while immersive (data race, #386). Leave open until #386 lands.
 
 ---
 
