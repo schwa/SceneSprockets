@@ -1552,12 +1552,13 @@ The difference must be in SceneDemoView or SceneView: .onGeometryChange, .onTapG
 ## 75: Reach 120 fps in every demo
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: area:renderer, effort:l, deferred
 created: 2026-10-14T16:41:14Z
-updated: 2026-10-15T20:11:38Z
+updated: 2026-11-12T04:31:38Z
+closed: 2026-11-12T04:31:38Z
 +++
 
 Target: 120 fps (8.3 ms frames) on a ProMotion display in every demo. Some demos drop well below that.
@@ -1572,6 +1573,7 @@ Likely CPU costs per frame: SceneGraphElement rebuilding element trees; meshEntr
 Plan: measure each demo (CPU and GPU, Instruments time profile), list the top costs per demo, fix them one by one, and add a CLI timing mode (scenegraph-demos --bench <id>, see #73) to track regressions.
 
 - `2026-10-15T19:45:35Z`: Looked at measuring headlessly: scenegraph-demos --render uses OffscreenRenderer, which skips SwiftUI, the display link and SceneView's per-frame work, the suspected main-thread costs. Punting: the target (120 fps on ProMotion) and the root causes need on-screen runs with Instruments, which opens windows. Unblocker: OK to run the demo app and profile it, or split out a --bench <id> CLI mode (renders N frames through the same per-frame path and reports CPU/GPU ms) as its own issue first.
+- `2026-11-12T04:31:38Z`: Closed in deferred-issue cleanup: an open-ended performance goal. File specific slow paths (with measurements) as their own issues; #135 already covers the main CPU cost found.
 
 ---
 
