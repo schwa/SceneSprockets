@@ -197,8 +197,9 @@ extension SceneGraph.Node: Codable {
                 let castsShadow = try mesh.decode(Bool.self, forKey: .castsShadow)
                 let receivesShadow = try mesh.decode(Bool.self, forKey: .receivesShadow)
                 if let shape {
-                    content = .mesh(shape.metalMesh(), materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
-                    shapeStorage = shape
+                    let shapeMesh = shape.metalMesh()
+                    content = .mesh(shapeMesh, materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
+                    shapeStorage = (shape, shapeMesh, nil)
                 } else if let path = try mesh.decodeIfPresent(String.self, forKey: .file) {
                     if let codec = context.meshCodec {
                         // Nodes that shared a mesh share it again.

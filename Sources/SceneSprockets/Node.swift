@@ -102,7 +102,9 @@ extension SceneGraph {
         @ObservationIgnored var deformationCache: (revision: Revision, mesh: MetalMesh)?
         // See GPUDeformation.swift.
         @ObservationIgnored var gpuDeformation: GPUDeformationState?
-        @ObservationIgnored var shapeStorage: Shape?
+        // The shape, the mesh it built and that mesh subdivided; `shape` reports it only while `content` still shows one of
+        // them (#373).
+        @ObservationIgnored var shapeStorage: (shape: Shape, mesh: MetalMesh, subdivided: MetalMesh?)?
         func applySubdivision() {
             guard case let .mesh(mesh, materials, castsShadow, receivesShadow) = content else {
                 return
@@ -110,6 +112,9 @@ extension SceneGraph {
             let base = subdivisionBase ?? mesh
             subdivisionBase = subdivisionLevel > 0 ? base : nil
             let result = base.subdivided(levels: max(subdivisionLevel, 0)) ?? base
+            if let shapeStorage, base.hasSameBuffers(as: shapeStorage.mesh) {
+                self.shapeStorage?.subdivided = result
+            }
             content = .mesh(result, materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
         }
 

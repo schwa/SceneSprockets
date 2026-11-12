@@ -104,3 +104,29 @@ func settingShapeRebuildsMeshAndKeepsMaterial() throws {
     }
     #expect(materials.first is BlinnPhongSceneMaterial)
 }
+
+// #373: `shape` describes what the node shows. Replacing the mesh in `content` ends the shape; changing only the
+// materials or shadow flags, or subdividing, keeps it.
+@Test
+func shapeFollowsContent() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let node = SceneGraph.Node(shape: .sphere(radius: 1), material: material)
+    guard case let .mesh(mesh, _, _, _) = node.content else {
+        Issue.record("Expected mesh content")
+        return
+    }
+    node.content = .mesh(mesh, material: material, castsShadow: false)
+    #expect(node.shape == .sphere(radius: 1))
+    node.subdivisionLevel = 1
+    #expect(node.shape == .sphere(radius: 1))
+
+    node.content = .mesh(MetalMesh(mesh: .box(), device: device), material: material)
+    #expect(node.shape == nil)
+
+    let light = SceneGraph.Node(shape: .box(), material: material)
+    light.content = .light(.point())
+    #expect(light.shape == nil)
+    // A shape set again rebuilds nothing on a non-mesh node.
+    light.shape = .box()
+    #expect(light.shape == nil)
+}

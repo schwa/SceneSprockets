@@ -8457,12 +8457,13 @@ Related: #367 (node construction verbosity, the proposed `position` property), #
 ## 373: Node.shape can disagree with the mesh in Node.content
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:scenegraph, effort:s
 created: 2026-11-11T16:35:41Z
-updated: 2026-11-12T01:30:16Z
+updated: 2026-11-12T01:36:26Z
+closed: 2026-11-12T01:36:26Z
 +++
 
 `SceneGraph.Node.shape` is stored separately (`shapeStorage`) from the mesh in `content`. Setting `shape` rebuilds `content`, but setting `content` does not touch `shapeStorage`.
@@ -8478,6 +8479,8 @@ Actual: `.sphere(radius: 1)`. The node reports a shape that it does not draw. Ar
 Code: `Sources/SceneSprockets/Shape.swift` (`shape` getter/setter), `Node+Fields.swift` (`content` setter).
 
 Related: #372 (other overlapping Node properties).
+
+- `2026-11-12T01:36:27Z`: Node remembers the mesh its shape built (and that mesh subdivided); shape returns nil once content shows any other mesh or non-mesh content. Materials, shadow flags and subdivision keep the shape. Test shapeFollowsContent.
 
 ---
 

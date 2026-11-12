@@ -141,27 +141,48 @@ extension SceneGraph {
 extension SceneGraph.Node {
     /// A mesh node for `shape`. Set `shape` later to rebuild its mesh, keeping the materials.
     public convenience init(label: String? = nil, shape: SceneGraph.Shape, material: any Material, transform: Transform3D = .identity) {
-        self.init(label: label ?? shape.label, transform: transform, content: .mesh(shape.metalMesh(), material: material))
-        shapeStorage = shape
+        let mesh = shape.metalMesh()
+        self.init(label: label ?? shape.label, transform: transform, content: .mesh(mesh, material: material))
+        shapeStorage = (shape, mesh, nil)
     }
 
     /// The shape this node's mesh was built from; nil for other nodes. Setting it on a mesh node rebuilds the mesh.
+    ///
+    /// Setting `content` to another mesh, or to a light, camera or nothing, ends the shape. Changing only the materials
+    /// or shadow flags, or the subdivision level, keeps it.
     public var shape: SceneGraph.Shape? {
-        get { shapeStorage }
+        get {
+            guard let shapeStorage, case let .mesh(mesh, _, _, _) = content else {
+                return nil
+            }
+            let isShapeMesh = mesh.hasSameBuffers(as: shapeStorage.mesh) || shapeStorage.subdivided.map(mesh.hasSameBuffers(as:)) == true
+            return isShapeMesh ? shapeStorage.shape : nil
+        }
         set {
             guard let newValue else {
                 shapeStorage = nil
                 return
             }
-            guard case let .mesh(_, materials, castsShadow, receivesShadow) = content, newValue != shapeStorage else {
+            guard case let .mesh(_, materials, castsShadow, receivesShadow) = content, newValue != shape else {
                 return
             }
-            shapeStorage = newValue
-            content = .mesh(newValue.metalMesh(), materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
+            let mesh = newValue.metalMesh()
+            shapeStorage = (newValue, mesh, nil)
+            content = .mesh(mesh, materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
             if subdivisionLevel > 0 {
                 subdivisionBase = nil
                 applySubdivision()
             }
         }
+    }
+}
+
+extension MetalMesh {
+    // Whether both meshes read the same vertex buffers, so they are the same geometry.
+    func hasSameBuffers(as other: MetalMesh) -> Bool {
+        vertexCount == other.vertexCount
+            && vertexBuffers.count == other.vertexBuffers.count
+            && vertexBuffers.allSatisfy { index, buffer in other.vertexBuffers[index] === buffer }
+            && vertexBufferOffsets == other.vertexBufferOffsets
     }
 }
