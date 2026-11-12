@@ -8722,3 +8722,84 @@ Upstream review issues: GeometryLite3D #49–#55.
 - `2026-11-11T22:49:22Z`: Ported to GeometryLite3D 0.3.0 (and SwiftMesh 0.1.0, MetalSprockets 0.2.10, PBR 0.1.1, GLTF 0.0.4, Interaction3D 0.2.1, Particles 0.0.3, AddOns 0.2.6). Demo package still blocked on SceneSprocketsAddOns #1.
 
 ---
+
+## 379: visionOS immersive: SceneSprockets shaders cannot render stereo
+
++++
+status: open
+priority: medium
+kind: feature
+labels: effort:m, area:renderer
+depends: 380
+created: 2026-11-12T19:17:28Z
+updated: 2026-11-12T19:31:56Z
++++
+
+SceneSprockets' own vertex shaders take one camera and ignore [[amplification_id]]: BlinnPhong, DebugView, Deformation, ShaderMaterialSamples, ShadowCasters, SkyGradient. Their pipelines do not set maxVertexAmplificationCount. Both eyes cannot be drawn in one pass.
+
+Dependencies with the same gap: MetalSprocketsAddOns (most shaders, see its issue tracker) and MetalSprocketsParticles #98. MetalSprocketsPBR and GaussianSplats already support stereo.
+
+---
+
+## 380: visionOS immersive: scene renderer has a single camera, no per-eye views
+
++++
+status: open
+priority: medium
+kind: feature
+labels: effort:l, area:renderer
+created: 2026-11-12T19:17:29Z
+updated: 2026-11-12T19:31:55Z
++++
+
+The scene renderer carries one view and projection matrix. Immersive rendering needs 1–2 views (view matrix, projection, viewport per eye) passed to every material renderer, plus the amplification and viewport setup on each draw. MetalSprocketsPBR's PBRStereoViews already does this for PBR only; nothing shared exists for other renderers.
+
+---
+
+## 381: visionOS immersive: no way to show a SceneSprockets scene in an ImmersiveSpace
+
++++
+status: open
+priority: medium
+kind: feature
+labels: effort:m, area:renderer
+depends: 379, 380
+created: 2026-11-12T19:17:29Z
+updated: 2026-11-12T19:31:56Z
++++
+
+There is no immersive entry point that takes a SceneSprockets scene and renders it with MetalSprockets' ImmersiveRenderContent / CompositorServices (head tracking, per-eye matrices, layered drawable). GLTF (GLTFImmersiveSpace), GaussianSplats (SplatImmersiveContent) and PBR (PBRImmersiveScene) have equivalents.
+
+---
+
+## 382: visionOS immersive: screen-space passes assume a single 2D target
+
++++
+status: open
+priority: low
+kind: feature
+labels: effort:m, area:renderer
+depends: 380
+created: 2026-11-12T19:17:30Z
+updated: 2026-11-12T19:31:56Z
++++
+
+Passes that read or write screen-space textures (outline via JumpFlood/SilhouetteMask, post effects, anything sampling depth) assume one non-layered target. A stereo drawable is a layered texture (one slice per eye) so these passes would break or only cover one eye.
+
+---
+
+## 383: visionOS immersive: culling and transparency sorting use one camera
+
++++
+status: open
+priority: low
+kind: feature
+labels: effort:s, area:renderer
+depends: 380
+created: 2026-11-12T19:17:30Z
+updated: 2026-11-12T19:31:56Z
++++
+
+Frustum culling and back-to-front transparency sorting are computed from a single camera. In stereo, objects visible to only one eye could be culled, and sort order should be consistent across both eyes.
+
+---
