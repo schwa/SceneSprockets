@@ -1203,9 +1203,9 @@ Want:
 status: open
 priority: medium
 kind: bug
-labels: area:renderer, effort:m
+labels: area:renderer, effort:m, deferred
 created: 2026-10-14T01:11:25Z
-updated: 2026-11-07T15:46:16Z
+updated: 2026-11-12T02:09:39Z
 +++
 
 In the Imported Assets demo, shadowed pixels sometimes flash unshadowed for a frame. It is mostly the fox's self-shadowed side. It happens with the camera still and the animation paused (speed 0). The flashes are random and rare. They are clearly less frequent with the inspector sidebar closed, so they likely depend on frame timing.
@@ -6652,8 +6652,9 @@ The PBR renderer deforms morph targets and skins on the GPU. Blinn-Phong and Sha
 status: open
 priority: low
 kind: enhancement
-labels: area:renderer, effort:m
+labels: area:renderer, effort:m, deferred
 created: 2026-11-07T15:41:12Z
+updated: 2026-11-12T02:09:41Z
 +++
 
 SceneGraphShadows has 8 shadow map slices: a directional or spot light takes one, a point light six. Lights that do not fit cast no shadow; SceneGraphShadows.droppedLightCount counts them (#68). A scene with two point lights already loses one light's shadows. Listed under Limitations in the README.
@@ -7231,8 +7232,9 @@ Actual: the look changes abruptly partway through. Unverified guesses: shadows s
 status: open
 priority: medium
 kind: bug
-labels: area:demo, effort:s
+labels: area:demo, effort:s, deferred
 created: 2026-11-07T17:55:57Z
+updated: 2026-11-12T02:09:42Z
 +++
 
 The Glass slide in the keynote demo does odd things while it fades in and while it fades out. Cause not investigated.
