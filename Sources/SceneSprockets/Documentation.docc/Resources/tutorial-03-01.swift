@@ -14,10 +14,10 @@ struct Tutorial3Lights: View {
     private static func makeSceneGraph() -> SceneGraph {
         let root = SceneGraph.Node(label: "Root")
 
-        root.addShape(.floor(width: 8, length: 8), material([0.4, 0.42, 0.45], shininess: 4), at: [0, -1, 0])
-        root.addShape(.sphere(radius: 1), material([0.2, 0.45, 0.9], shininess: 64), at: [0, 0.5, 0])
-        root.addShape(.box(width: 1.2, height: 1.2, length: 1.2), material([0.9, 0.25, 0.25]), at: [2.2, -0.4, 0.8])
-        root.addShape(.teapot(diameter: 1.6), material([0.75, 0.5, 0.85], shininess: 64), at: [-2.2, -0.5, 1])
+        root.addChild(SceneGraph.Node(shape: .floor(width: 8, length: 8), material: material([0.4, 0.42, 0.45], shininess: 4), transform: .init(translation: [0, -1, 0])))
+        root.addChild(SceneGraph.Node(shape: .sphere(radius: 1), material: material([0.2, 0.45, 0.9], shininess: 64), transform: .init(translation: [0, 0.5, 0])))
+        root.addChild(SceneGraph.Node(shape: .box(width: 1.2, height: 1.2, length: 1.2), material: material([0.9, 0.25, 0.25]), transform: .init(translation: [2.2, -0.4, 0.8])))
+        root.addChild(SceneGraph.Node(shape: .teapot(diameter: 1.6), material: material([0.75, 0.5, 0.85], shininess: 64), transform: .init(translation: [-2.2, -0.5, 1])))
 
         return SceneGraph(root: root)
     }

@@ -95,7 +95,7 @@ public final class KeynoteDemo: DemoScene {
 
     init() {
         let root = SceneGraph.Node(label: "Root")
-        cameraNode = .camera(fieldOfView: 40, eye: Self.eye(for: 0), target: Self.target(for: 0))
+        cameraNode = .camera(.perspective(fieldOfView: .degrees(40), zClip: 0.01 ... 100), label: "Camera", transform: .init(position: Self.eye(for: 0), lookingAt: Self.target(for: 0)))
         root.addChild(cameraNode)
         super.init(
             sceneGraph: SceneGraph(root: root),
@@ -483,7 +483,7 @@ public final class KeynoteDemo: DemoScene {
         let cameraNode = cameraNode
         let fly = SceneGraph.Action.run { _ in
             SceneGraph.Transaction.animate(duration: 1.2, timingMode: .easeInEaseOut) {
-                cameraNode.transform = Transform3D(storing: .camera(eye: Self.eye(for: next), target: Self.target(for: next)))
+                cameraNode.transform = Transform3D(position: Self.eye(for: next), lookingAt: Self.target(for: next))
             }
         }
         cameraNode.run(.sequence([.wait(duration: delay), fly]), forKey: "fly")
@@ -506,7 +506,7 @@ public final class KeynoteDemo: DemoScene {
             slide.opacity = slideIndex == index ? 1 : 0
             slide.isVisible = slideIndex == index
         }
-        cameraNode.transform = Transform3D(storing: .camera(eye: Self.eye(for: index), target: Self.target(for: index)))
+        cameraNode.transform = Transform3D(position: Self.eye(for: index), lookingAt: Self.target(for: index))
         cameraNode.removeAction(forKey: "fly")
         restoreIntroTitles()
         current = index
@@ -1088,7 +1088,7 @@ public final class KeynoteDemo: DemoScene {
         // Tilted toward the camera so the shadows on the floor show.
         let stage = slide.addChild(SceneGraph.Node(label: "Stage", transform: .init(translation: [0, 0.8, -2.5], rotation: simd_quatf(angle: 0.35, axis: [1, 0, 0]))))
         let slide = stage
-        slide.addChild(SceneGraph.Node(label: "Sun", transform: Transform3D(storing: .camera(eye: [3, 6, 4], target: .zero)), content: .light(Light(type: .directional, color: [1, 0.95, 0.9], intensity: 1.5))))
+        slide.addChild(SceneGraph.Node(label: "Sun", transform: Transform3D(position: [3, 6, 4], lookingAt: .zero), content: .light(Light(type: .directional, color: [1, 0.95, 0.9], intensity: 1.5))))
         slide.addChild(SceneGraph.Node(label: "Floor", shape: .box(width: 12, height: 0.1, length: 6), material: BlinnPhongSceneMaterial.plastic([0.7, 0.7, 0.75], shininess: 8), transform: .init(translation: [0, -0.05, 0])))
         let torus = slide.addChild(SceneGraph.Node(shape: .torus(ringRadius: 0.8, pipeRadius: 0.25), material: BlinnPhongSceneMaterial.plastic([0.95, 0.75, 0.3], shininess: 48), transform: .init(translation: [0, 1.8, 0])))
         torus.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([1, 0.5, 0]), duration: 6)))
@@ -1237,7 +1237,7 @@ public final class KeynoteDemo: DemoScene {
     }
 
     private func fogSlide(_ slide: SceneGraph.Node) {
-        slide.addChild(SceneGraph.Node(label: "Moon", transform: Transform3D(storing: .camera(eye: [2, 5, 6], target: .zero)), content: .light(Light(type: .directional, color: [0.8, 0.85, 1], intensity: 1.2))))
+        slide.addChild(SceneGraph.Node(label: "Moon", transform: Transform3D(position: [2, 5, 6], lookingAt: .zero), content: .light(Light(type: .directional, color: [0.8, 0.85, 1], intensity: 1.2))))
         // Two rows of pillars running away from the camera, fading into the fog.
         for row in 0..<8 {
             for side in [-1, 1] as [Float] {
@@ -1290,7 +1290,7 @@ public final class KeynoteDemo: DemoScene {
     }
 
     private func importSlide(_ slide: SceneGraph.Node) {
-        slide.addChild(SceneGraph.Node(label: "Sun", transform: Transform3D(storing: .camera(eye: [2, 4, 3], target: .zero)), content: .light(Light(type: .directional, color: [1, 0.95, 0.9], intensity: 2))))
+        slide.addChild(SceneGraph.Node(label: "Sun", transform: Transform3D(position: [2, 4, 3], lookingAt: .zero), content: .light(Light(type: .directional, color: [1, 0.95, 0.9], intensity: 2))))
         addLight(to: slide, at: [-3, 3, 5], color: [0.6, 0.7, 1], intensity: 30)
         // The plant is about 0.6 units tall and the pedestal 1 wide (its top at y = 0); the holder scales both up.
         let holder = slide.addChild(SceneGraph.Node(label: "Imported", transform: .init(translation: [0, 0.3, -1], scale: [1.4, 1.4, 1.4])))
@@ -1570,7 +1570,7 @@ public final class KeynoteDemo: DemoScene {
     }
 
     private func performanceSlide(_ slide: SceneGraph.Node) {
-        slide.addChild(SceneGraph.Node(label: "Sun", transform: Transform3D(storing: .camera(eye: [2, 6, 4], target: .zero)), content: .light(Light(type: .directional, intensity: 1))))
+        slide.addChild(SceneGraph.Node(label: "Sun", transform: Transform3D(position: [2, 6, 4], lookingAt: .zero), content: .light(Light(type: .directional, intensity: 1))))
         addLight(to: slide, at: [0, 4, 6], color: [0.5, 0.6, 0.9], intensity: 30)
         let box = MetalMesh(mesh: .box(), device: demoDevice)
         let materials = [[0.8, 0.5, 0.2], [0.6, 0.3, 0.15], [0.7, 0.6, 0.3]].map { BlinnPhongSceneMaterial.plastic($0, shininess: 16) }

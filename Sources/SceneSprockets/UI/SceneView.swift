@@ -132,7 +132,7 @@ public struct SceneView: View {
         cameraTarget: SIMD3<Float>? = nil,
         hitTestCategoryBitMask: UInt = .max,
         // Used when the scene has no camera node.
-        defaultCamera: Camera = Self.defaultCamera,
+        defaultCamera: Camera = .default,
         // Replaces the camera node's camera (projection, masks), for editor cameras. The transform still comes from
         // `cameraMatrix` or the node.
         camera: Camera? = nil,
@@ -414,8 +414,11 @@ public struct SceneView: View {
         shadows != nil || sceneGraph.fog != nil || sceneGraph.postProcessing != nil
     }
 
-    /// The camera that the view uses when the scene has no camera node: a 60° perspective camera.
-    public static let defaultCamera = Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(60), depthMode: .standard(zClip: 0.01 ... 1_000)))
+    /// The camera that the view uses when the scene has no camera node.
+    @available(*, deprecated, renamed: "Camera.default")
+    public static var defaultCamera: Camera {
+        .default
+    }
 
     // The starting camera transform, and the point camera control orbits around.
     private var viewpoint: (matrix: simd_float4x4, target: SIMD3<Float>) {

@@ -15,16 +15,11 @@ struct Tutorial5Constraints: View {
     private static func makeSceneGraph() -> SceneGraph {
         let root = SceneGraph.Node(label: "Root")
 
-        let fill = root.addChild(SceneGraph.Node(label: "Fill", content: .light(Light(type: .point, intensity: 15, range: 50, castsShadow: false))))
-        fill.transform.translation = [-5, 4, 4]
-        let spot = root.addChild(SceneGraph.Node(label: "Spot", content: .light(Light(type: .spot, intensity: 80, range: 30, outerConeAngle: .pi / 4))))
-        spot.transform.translation = [3, 7, 3]
-        spot.look(at: .zero)
-        root.addShape(.floor(width: 8, length: 8), material([0.4, 0.42, 0.45], shininess: 4), at: [0, -1, 0])
+        root.addChild(.light(.point(intensity: 15, range: 50, castsShadow: false), label: "Fill", transform: .init(translation: [-5, 4, 4])))
+        root.addChild(.light(.spot(intensity: 80, range: 30, outerConeAngle: .pi / 4), label: "Spot", transform: .init(position: [3, 7, 3], lookingAt: .zero)))
+        root.addChild(SceneGraph.Node(shape: .floor(width: 8, length: 8), material: material([0.4, 0.42, 0.45], shininess: 4), transform: .init(translation: [0, -1, 0])))
 
-        let camera = root.addChild(SceneGraph.Node(label: "Camera", content: .camera(SceneView.defaultCamera)))
-        camera.transform.translation = [0, 3, 8]
-        camera.look(at: [0, 0.5, 0])
+        root.addChild(.camera(label: "Camera", transform: .init(position: [0, 3, 8], lookingAt: [0, 0.5, 0])))
 
         return SceneGraph(root: root)
     }

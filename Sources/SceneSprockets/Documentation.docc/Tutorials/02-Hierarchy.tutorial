@@ -14,7 +14,7 @@
 
         @Steps {
             @Step {
-                Add two helpers. `addShape(_:_:at:)` adds a child node with a shape at a position. `material(_:)` makes a Blinn-Phong material from one color.
+                Add a helper. `material(_:)` makes a Blinn-Phong material from one color.
 
                 @Code(name: "Helpers.swift", file: "tutorial-02-helpers.swift")
             }
@@ -32,7 +32,7 @@
             }
 
             @Step {
-                Without a camera, `SceneView` frames the bounds of the scene, so the view moves as the moon moves. Add a camera node, and aim it with `look(at:)`. `SceneView` uses the first camera node in the scene.
+                Without a camera, `SceneView` frames the bounds of the scene, so the view moves as the moon moves. Add a camera node, placed and aimed with `Transform3D(position:lookingAt:)`. `SceneView` uses the first camera node in the scene.
 
                 @Code(name: "Tutorial2Hierarchy.swift", file: "tutorial-02-03.swift")
             }

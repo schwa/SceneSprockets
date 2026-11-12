@@ -26,7 +26,7 @@
             }
 
             @Step {
-                Add a spot light above the scene. A spot light shines in a cone along its -Z axis, so `look(at:)` aims it. Lights cast shadows by default.
+                Add a spot light above the scene. A spot light shines in a cone along its -Z axis, so `Transform3D(position:lookingAt:)` aims it. Lights cast shadows by default.
 
                 @Code(name: "Tutorial3Lights.swift", file: "tutorial-03-03.swift")
             }

@@ -49,9 +49,9 @@ final class SceneKitFeaturesDemo: DemoScene {
     init() {
         let root = SceneGraph.Node(label: "Root")
         let eye: SIMD3<Float> = [0, 5, 11]
-        cameraNode = .camera(eye: eye, target: [0, 1, 0])
+        cameraNode = .camera(.demo, label: "Camera", transform: .init(position: eye, lookingAt: [0, 1, 0]))
         root.addChild(cameraNode)
-        root.addChild(SceneGraph.Node(label: "Sun", transform: Transform3D(storing: .camera(eye: [3, 8, 4], target: .zero)), content: .light(Light(type: .directional, color: [1, 0.97, 0.9], intensity: 0.9))))
+        root.addChild(SceneGraph.Node(label: "Sun", transform: Transform3D(position: [3, 8, 4], lookingAt: .zero), content: .light(Light(type: .directional, color: [1, 0.97, 0.9], intensity: 0.9))))
         let redLight = root.addChild(SceneGraph.Node(label: "Red Light (category 2 only)", transform: Transform3D(storing: .translation(0, 3, 3)), content: .light(Light(type: .point, color: [1, 0.15, 0.1], intensity: 25))))
         redLight.lightCategoryBitMask = Self.categoryTwo
 

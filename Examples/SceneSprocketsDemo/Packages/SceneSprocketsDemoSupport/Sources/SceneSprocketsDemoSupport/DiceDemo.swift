@@ -73,8 +73,8 @@ final class DiceDemo: DemoScene {
         let root = SceneGraph.Node(label: "Root")
         let eye: SIMD3<Float> = [0, 6.5, 5.5]
         let target: SIMD3<Float> = [0, 0, 0.3]
-        root.addChild(.camera(eye: eye, target: target))
-        root.addChild(SceneGraph.Node(label: "Sun", transform: Transform3D(storing: .camera(eye: [2.5, 7, 3], target: .zero)), content: .light(Light(type: .directional, color: [1, 0.96, 0.9], intensity: 2.5))))
+        root.addChild(.camera(.demo, label: "Camera", transform: .init(position: eye, lookingAt: target)))
+        root.addChild(SceneGraph.Node(label: "Sun", transform: Transform3D(position: [2.5, 7, 3], lookingAt: .zero), content: .light(Light(type: .directional, color: [1, 0.96, 0.9], intensity: 2.5))))
         var fill = Light(type: .point, color: [0.6, 0.7, 1], intensity: 20)
         fill.range = 20
         root.addChild(SceneGraph.Node(label: "Fill", transform: .init(translation: [-4, 4, 4]), content: .light(fill)))

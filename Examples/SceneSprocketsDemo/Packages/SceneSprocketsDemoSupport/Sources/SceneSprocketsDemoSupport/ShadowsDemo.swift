@@ -15,7 +15,7 @@ final class ShadowsDemo: DemoScene {
     init() {
         let root = SceneGraph.Node(label: "Root")
         let eye: SIMD3<Float> = [0, 6, 9]
-        root.addChild(.camera(eye: eye, target: [0, 0.5, 0]))
+        root.addChild(.camera(.demo, label: "Camera", transform: .init(position: eye, lookingAt: [0, 0.5, 0])))
         light = root.addChild(SceneGraph.Node(label: "Light"))
         floor = root.addChild(SceneGraph.Node(label: "Floor", shape: .box(width: 12, height: 0.1, length: 12), material: BlinnPhongSceneMaterial.plastic([0.6, 0.6, 0.65], shininess: 8), transform: .init(translation: [0, -0.05, 0])))
         let casters: [(SceneGraph.Shape, SIMD3<Float>, SIMD3<Float>)] = [
@@ -50,7 +50,7 @@ final class ShadowsDemo: DemoScene {
     override func update(time _: Float, deltaTime _: Float) {
         let angle = self[value: "Light Angle"]
         let position = SIMD3<Float>(cos(angle) * 3, 4, sin(angle) * 3)
-        light.transform = Transform3D(storing: .camera(eye: position, target: .zero))
+        light.transform = Transform3D(position: position, lookingAt: .zero)
         let content: Light = switch Int(self[value: "Light"]) {
         case 1: .spot(color: [1, 1, 1], intensity: 40, innerConeAngle: .pi / 8, outerConeAngle: .pi / 5)
         case 2: Light(type: .point, color: [1, 1, 1], intensity: 40)

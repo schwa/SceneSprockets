@@ -190,14 +190,9 @@ extension BlinnPhongSceneMaterial {
     }
 }
 
-extension SceneGraph.Node {
-    static func camera(_ label: String = "Camera", fieldOfView: Float = 45, eye: SIMD3<Float>, target: SIMD3<Float> = .zero) -> SceneGraph.Node {
-        SceneGraph.Node(label: label, transform: Transform3D(storing: .camera(eye: eye, target: target)), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(fieldOfView)))))
-    }
-
-    static func pointLight(_ label: String, at position: SIMD3<Float>, color: SIMD3<Float> = [1, 1, 1], intensity: Float) -> SceneGraph.Node {
-        SceneGraph.Node(label: label, transform: Transform3D(storing: .translation(position.x, position.y, position.z)), content: .light(Light(type: .point, color: color, intensity: intensity)))
-    }
+extension Camera {
+    // The demos' camera: 45° with a 100 m far plane.
+    static let demo = Camera.perspective(fieldOfView: .degrees(45), zClip: 0.01 ... 100)
 }
 
 extension MetalMesh {

@@ -8223,12 +8223,13 @@ Screenshot: ~/Library/Application Support/CleanShot/media/media_I9GDftQ8kv/Scree
 ## 367: Building a light, camera or shape node takes too many words
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: effort:m, area:scenegraph
 created: 2026-11-11T15:54:40Z
-updated: 2026-11-11T15:55:12Z
+updated: 2026-11-12T01:28:33Z
+closed: 2026-11-12T01:28:33Z
 +++
 
 Making a common node needs deeply nested initializers and a second statement to place it. The tutorials, the demo app and Composer each wrote their own helpers to hide this.
@@ -8268,6 +8269,7 @@ Related: #364, #106, #372 (closed: `Node.transform: Transform3D` is now the sing
 - `2026-11-12T00:10:25Z`: Question 2 (design): Updated proposal after #372 — approve or amend? (1) No stored position property (it would alias transform.translation). (2) Transform3D gains a look-at initializer, e.g. Transform3D(position:lookingAt:up:), stored as components, replacing Transform3D(storing: .camera(eye:target:)) and the local pose(eye:target:) helpers. (3) Factories on SceneGraph.Node: .light(_ light:, label:, transform:) and .camera(_ camera: = .perspective(), label:, transform:), so a placed, aimed light is one expression: root.addChild(.light(.point(intensity: 15), transform: .init(position: [-5, 4, 4], lookingAt: .zero))). (4) Light gains .point(...) and .directional(...) factories; .spot gets castsShadow. (5) Camera gains .perspective(fieldOfView: Angle = .degrees(60), zClip:) and .orthographic(...); SceneView.defaultCamera becomes Camera.default (old name deprecated). (6) No addShape helper: addChild(Node(shape:material:transform: .init(translation: p))). The tutorial Helpers.swift and the demo's Node.camera/pointLight helpers are deleted.
 - `2026-11-12T00:12:20Z`: Answer 2: Approved in full (per schwa): (1) no position property; (2) look-at initializer lives in GeometryLite3D as Transform3D(position:lookingAt:up:), filed as GeometryLite3D #56; (3) add Node.light(_:label:transform:) and Node.camera(_:label:transform:); (4)+(5) add Light.point/.directional, castsShadow on .spot, Camera.perspective/.orthographic, and move SceneView.defaultCamera to Camera.default (old name deprecated); (6) no addShape helper, delete the tutorial and demo helpers.
 - `2026-11-12T00:12:21Z`: Part (2) depends on GeometryLite3D #56 (Transform3D look-at initializer). The rest can land first.
+- `2026-11-12T01:28:33Z`: Done: Node.light/.camera factories, Light.point/.directional (+castsShadow on .spot), Camera.perspective/.orthographic/.default (SceneView.defaultCamera deprecated), and Transform3D(position:lookingAt:up:) from GeometryLite3D #56. Tutorials and demo use them; addShape and the demo Node.camera/pointLight helpers are gone. The tutorials' material() helper remains until #368.
 
 ---
 

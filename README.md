@@ -53,8 +53,7 @@ import SwiftUI
 
 // Build a tree of nodes: a light and a box.
 let root = SceneGraph.Node(label: "Root")
-let light = root.addChild(SceneGraph.Node(content: .light(Light(type: .point, color: [1, 1, 1], intensity: 20, range: 100))))
-light.transform.translation = [2, 3, 2]
+root.addChild(.light(.point(intensity: 20, range: 100), transform: .init(translation: [2, 3, 2])))
 let material = BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color([0.8, 0.5, 0.2]), specular: .color(0.3), shininess: 16)
 let box = root.addChild(SceneGraph.Node(shape: .box(), material: material))
 

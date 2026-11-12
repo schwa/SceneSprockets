@@ -264,7 +264,7 @@ struct SceneEditBoundaryTests {
 
     // Only a camera, at the origin facing -Z (away from the viewer): its frustum outline surrounds the center.
     let cameraOnly = SceneGraph.empty()
-    let camera = cameraOnly.root.addChild(SceneGraph.Node(label: "Camera", content: .camera(SceneView.defaultCamera)))
+    let camera = cameraOnly.root.addChild(SceneGraph.Node(label: "Camera", content: .camera(Camera.default)))
     let shape = try #require(DebugShapes.shapes(sceneGraph: cameraOnly, viewport: viewport).first)
     let projected = try #require(viewport.project(shape.lines[1][1]))
     #expect(DebugShapes.hitTest(projected.xy, sceneGraph: cameraOnly, viewport: viewport) === camera)

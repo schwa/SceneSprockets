@@ -26,8 +26,8 @@ final class GearsDemo: DemoScene {
         let root = SceneGraph.Node(label: "Root")
         let eye: SIMD3<Float> = [0.6, 1.2, 7]
         let target: SIMD3<Float> = [0.6, 0.2, 0]
-        root.addChild(.camera(eye: eye, target: target))
-        root.addChild(SceneGraph.Node(label: "Key", transform: Transform3D(storing: .camera(eye: [3, 4, 6], target: .zero)), content: .light(Light(type: .directional, color: [1, 0.95, 0.88], intensity: 2.5))))
+        root.addChild(.camera(.demo, label: "Camera", transform: .init(position: eye, lookingAt: target)))
+        root.addChild(SceneGraph.Node(label: "Key", transform: Transform3D(position: [3, 4, 6], lookingAt: .zero), content: .light(Light(type: .directional, color: [1, 0.95, 0.88], intensity: 2.5))))
         var rim = Light(type: .point, color: [0.5, 0.65, 1], intensity: 25)
         rim.range = 20
         root.addChild(SceneGraph.Node(label: "Rim", transform: .init(translation: [-4, 2, -2]), content: .light(rim)))

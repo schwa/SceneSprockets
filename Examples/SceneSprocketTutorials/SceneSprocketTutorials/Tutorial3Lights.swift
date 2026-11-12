@@ -1,7 +1,8 @@
 // Tutorial 3: lights and shadows.
 //
 // Lights are nodes too, so you place and aim them with the node's transform.
-// A point light shines in all directions. A spot light shines in a cone along its -Z axis; `look(at:)` aims it.
+// A point light shines in all directions. A spot light shines in a cone along its -Z axis;
+// `Transform3D(position:lookingAt:)` aims it.
 // Pass SceneGraphShadows to SceneView, and lights with `castsShadow` (the default) cast shadows.
 
 import GeometryLite3D
@@ -21,20 +22,17 @@ struct Tutorial3Lights: View {
         let root = SceneGraph.Node(label: "Root")
 
         // A soft fill light that does not cast shadows.
-        let fill = root.addChild(SceneGraph.Node(label: "Fill", content: .light(Light(type: .point, intensity: 15, range: 50, castsShadow: false))))
-        fill.transform.translation = [-5, 4, 4]
+        root.addChild(.light(.point(intensity: 15, range: 50, castsShadow: false), label: "Fill", transform: .init(translation: [-5, 4, 4])))
 
         // A spot light above the scene, aimed at the origin.
-        let spot = root.addChild(SceneGraph.Node(label: "Spot", content: .light(Light(type: .spot, intensity: 80, range: 30, outerConeAngle: .pi / 4))))
-        spot.transform.translation = [3, 7, 3]
-        spot.look(at: .zero)
+        root.addChild(.light(.spot(intensity: 80, range: 30, outerConeAngle: .pi / 4), label: "Spot", transform: .init(position: [3, 7, 3], lookingAt: .zero)))
 
         // A floor to catch the shadows.
-        root.addShape(.floor(width: 8, length: 8), material([0.4, 0.42, 0.45], shininess: 4), at: [0, -1, 0])
+        root.addChild(SceneGraph.Node(shape: .floor(width: 8, length: 8), material: material([0.4, 0.42, 0.45], shininess: 4), transform: .init(translation: [0, -1, 0])))
 
-        root.addShape(.sphere(radius: 1), material([0.2, 0.45, 0.9], shininess: 64), at: [0, 0.5, 0])
-        root.addShape(.box(width: 1.2, height: 1.2, length: 1.2), material([0.9, 0.25, 0.25]), at: [2.2, -0.4, 0.8])
-        root.addShape(.teapot(diameter: 1.6), material([0.75, 0.5, 0.85], shininess: 64), at: [-2.2, -0.5, 1])
+        root.addChild(SceneGraph.Node(shape: .sphere(radius: 1), material: material([0.2, 0.45, 0.9], shininess: 64), transform: .init(translation: [0, 0.5, 0])))
+        root.addChild(SceneGraph.Node(shape: .box(width: 1.2, height: 1.2, length: 1.2), material: material([0.9, 0.25, 0.25]), transform: .init(translation: [2.2, -0.4, 0.8])))
+        root.addChild(SceneGraph.Node(shape: .teapot(diameter: 1.6), material: material([0.75, 0.5, 0.85], shininess: 64), transform: .init(translation: [-2.2, -0.5, 1])))
 
         return SceneGraph(root: root)
     }

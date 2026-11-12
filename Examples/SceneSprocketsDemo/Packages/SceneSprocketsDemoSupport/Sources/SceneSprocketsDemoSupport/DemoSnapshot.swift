@@ -104,7 +104,7 @@ public enum DemoSnapshot {
         guard let selected else {
             return element.eraseToAnyElement()
         }
-        let camera = cameraNode?.camera ?? SceneView.defaultCamera
+        let camera = cameraNode?.camera ?? Camera.default
         let size = SIMD2<Float>(Float(width), Float(height))
         let viewport = SceneViewport(cameraMatrix: cameraMatrix, camera: camera, viewSize: size, drawableSize: size)
         let outlineElement = scene.showsSelectionOutline ? try outline.element(nodes: [selected], sceneGraph: scene.sceneGraph, viewport: viewport) : nil

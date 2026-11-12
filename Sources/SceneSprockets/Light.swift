@@ -62,8 +62,18 @@ public struct Light: Sendable, Equatable, Codable {
         castsShadow = try container.decodeIfPresent(Bool.self, forKey: .castsShadow) ?? true
     }
 
-    /// Creates a spot light.
-    public static func spot(color: SIMD3<Float> = [1, 1, 1], intensity: Float = 1, range: Float = .infinity, innerConeAngle: Float = .pi / 8, outerConeAngle: Float = .pi / 6) -> Self {
-        Self(type: .spot, color: color, intensity: intensity, range: range, innerConeAngle: innerConeAngle, outerConeAngle: outerConeAngle)
+    /// Creates a spot light. It shines along its node's -Z axis.
+    public static func spot(color: SIMD3<Float> = [1, 1, 1], intensity: Float = 1, range: Float = .infinity, innerConeAngle: Float = .pi / 8, outerConeAngle: Float = .pi / 6, castsShadow: Bool = true) -> Self {
+        Self(type: .spot, color: color, intensity: intensity, range: range, innerConeAngle: innerConeAngle, outerConeAngle: outerConeAngle, castsShadow: castsShadow)
+    }
+
+    /// Creates a point light. It shines in all directions from its node's position.
+    public static func point(color: SIMD3<Float> = [1, 1, 1], intensity: Float = 1, range: Float = .infinity, castsShadow: Bool = true) -> Self {
+        Self(type: .point, color: color, intensity: intensity, range: range, castsShadow: castsShadow)
+    }
+
+    /// Creates a directional light. Its rays are parallel to its node's -Z axis.
+    public static func directional(color: SIMD3<Float> = [1, 1, 1], intensity: Float = 1, castsShadow: Bool = true) -> Self {
+        Self(type: .directional, color: color, intensity: intensity, castsShadow: castsShadow)
     }
 }

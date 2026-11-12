@@ -13,7 +13,7 @@ struct Tutorial2Hierarchy: View {
     private static func makeSceneGraph() -> SceneGraph {
         let root = SceneGraph.Node(label: "Root")
 
-        let planet = root.addShape(.sphere(radius: 1), material([0.2, 0.45, 0.9], shininess: 64))
+        let planet = root.addChild(SceneGraph.Node(shape: .sphere(radius: 1), material: material([0.2, 0.45, 0.9], shininess: 64)))
         planet.run(.repeatForever(.rotate(by: 2 * .pi, around: [0, 1, 0], duration: 20)))
 
         return SceneGraph(root: root)

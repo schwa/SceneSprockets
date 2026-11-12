@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Shorter node construction (#367): `Node.light(_:label:transform:)` and `Node.camera(_:label:transform:)`, so `root.addChild(.light(.point(intensity: 15), transform: .init(translation: [0, 4, 0])))` is one expression. `Light.point(...)` and `Light.directional(...)`, and `castsShadow` on `Light.spot(...)`. `Camera.perspective(...)`, `Camera.orthographic(...)` and `Camera.default`; `SceneView.defaultCamera` is deprecated in favor of `Camera.default`. Aimed nodes use GeometryLite3D's `Transform3D(position:lookingAt:up:)`, so the tutorials no longer need `look(at:)` or local helpers.
 - **Breaking:** `Node.transform` is now a GeometryLite3D `Transform3D` and the only stored local transform (#372). `trs`, `localTransform`, `eulerAngles` and `SceneGraph.LocalTransform` are removed. Use `transform.translation`, `transform.rotation` (`.quaternion`, `.euler`), `transform.scale` and `transform.matrix`. Initializers take `transform: Transform3D`; wrap a matrix with `Transform3D(storing:)`. Archives are unchanged.
 - **Breaking:** requires GeometryLite3D 0.3: `Transform3D.rotation` is a `Rotation3D` (#378).
 - Shadows with `softness` above 1 no longer make a floor shadow itself in bands and stripes (#366).
