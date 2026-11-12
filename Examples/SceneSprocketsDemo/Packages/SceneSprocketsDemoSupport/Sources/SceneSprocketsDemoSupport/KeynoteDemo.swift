@@ -541,19 +541,19 @@ public final class KeynoteDemo: DemoScene {
             addTitle(title, y: 4, to: slide)
             sceneGraphSlide(slide)
             addCode("""
-            let orbit = sun.addChild(Node(label: "Planet Orbit"))
+            let orbit = sun.addChild(SceneGraph.Node(label: "Planet Orbit"))
             orbit.run(.repeatForever(.rotate(by: 2 * .pi, around: [0, 1, 0], duration: 8)))
-            let planet = orbit.addChild(Node(shape: .sphere(radius: 0.4), material: blue))
+            let planet = orbit.addChild(SceneGraph.Node(shape: .sphere(radius: 0.4), material: blue))
             planet.transform.translation = [3.2, 0, 0]
             """, to: slide)
         case "Shapes":
             addTitle(title, y: 4, to: slide)
             shapesSlide(slide)
             addCode("""
-            Node(shape: .box(width: 1, height: 1, length: 1), material: red)
-            Node(shape: .torus(ringRadius: 0.5, pipeRadius: 0.18), material: pink)
-            Node(shape: .teapot(diameter: 2.2), material: porcelain)
-            Node(shape: .text("Hello", fontName: "Helvetica-Bold", fontSize: 1), material: white)
+            SceneGraph.Node(shape: .box(width: 1, height: 1, length: 1), material: red)
+            SceneGraph.Node(shape: .torus(ringRadius: 0.5, pipeRadius: 0.18), material: pink)
+            SceneGraph.Node(shape: .teapot(diameter: 2.2), material: porcelain)
+            SceneGraph.Node(shape: .text("Hello", fontName: "Helvetica-Bold", fontSize: 1), material: white)
             """, to: slide)
         case "Materials":
             addTitle(title, y: 4, to: slide)
@@ -570,16 +570,16 @@ public final class KeynoteDemo: DemoScene {
             addCode("""
             var light = Light(type: .point, color: [1, 0.2, 0.2], intensity: 25)
             light.range = 14
-            pivot.addChild(Node(content: .light(light)))
+            pivot.addChild(SceneGraph.Node(content: .light(light)))
             """, to: slide)
         case "Actions":
             addTitle(title, y: 4, to: slide)
             actionsSlide(slide)
             addCode("""
-            var up = Action.move(by: [0, 2, 0], duration: 0.6)
+            var up = SceneGraph.Action.move(by: [0, 2, 0], duration: 0.6)
             up.timingMode = .easeInEaseOut
             let down = up.reversed()
-            let spin = Action.rotate(by: .pi, around: [0, 1, 0], duration: 0.6)
+            let spin = SceneGraph.Action.rotate(by: .pi, around: [0, 1, 0], duration: 0.6)
             cube.run(.repeatForever(.sequence([.group([up, spin]), down, .wait(duration: 0.8)])))
             """, to: slide)
         case "Constraints":
@@ -628,7 +628,7 @@ public final class KeynoteDemo: DemoScene {
         case "Shadows":
             shadowsSlide(slide)
             addCode("""
-            let sun = Node(content: .light(Light(type: .directional, intensity: 1.5)))
+            let sun = SceneGraph.Node(content: .light(Light(type: .directional, intensity: 1.5)))
             sun.transform.translation = [3, 6, 4]
             sun.look(at: .zero)
             SceneView(scene, renderers: renderers)
@@ -682,14 +682,14 @@ public final class KeynoteDemo: DemoScene {
             addCode("""
             blob.morphTargets = [bumps, squash]
             blob.morphWeights = [0.5, 0.2]
-            tube.skin = Skin(joints: joints, inverseBindMatrices: inverseBind)
+            tube.skin = SceneGraph.Skin(joints: joints, inverseBindMatrices: inverseBind)
             """, to: slide)
         case "Level of Detail":
             levelOfDetailSlide(slide)
             addCode("""
             node.levelsOfDetail = [
-                LevelOfDetail(mesh: medium, distance: 15),
-                LevelOfDetail(mesh: low, distance: 22),
+                SceneGraph.LevelOfDetail(mesh: medium, distance: 15),
+                SceneGraph.LevelOfDetail(mesh: low, distance: 22),
             ]
             """, to: slide)
         case "Performance":
@@ -697,7 +697,7 @@ public final class KeynoteDemo: DemoScene {
             addCode("""
             // Same mesh + material: one instanced draw per color.
             // Nodes outside the view are culled.
-            grid.addChild(Node(content: .mesh(box, material: crate)))
+            grid.addChild(SceneGraph.Node(content: .mesh(box, material: crate)))
             """, to: slide)
         case "SwiftECS World":
             addLight(to: slide, at: [2, 6, 5], intensity: 70)
@@ -729,8 +729,8 @@ public final class KeynoteDemo: DemoScene {
             postProcessingSlide(slide)
             addCode("""
             // Noir
-            sceneGraph.postProcessing = PostProcessing(contrast: 1.8, saturation: 0,
-                                                       vignetteIntensity: 0.9, vignetteRadius: 0.35)
+            sceneGraph.postProcessing = SceneGraph.PostProcessing(contrast: 1.8, saturation: 0,
+                                                                  vignetteIntensity: 0.9, vignetteRadius: 0.35)
             """, to: slide)
         case "Fog":
             fogSlide(slide)
@@ -750,8 +750,8 @@ public final class KeynoteDemo: DemoScene {
         case "Animation Blending":
             animationBlendingSlide(slide)
             addCode("""
-            let mixer = AnimationMixer(clips: [bounce, sway])
-            var controller = AnimationController(clips: [bounce, sway])
+            let mixer = SceneGraph.AnimationMixer(clips: [bounce, sway])
+            var controller = SceneGraph.AnimationController(clips: [bounce, sway])
             controller.blend([0, 1], parameter: weight)
             controller.advance(by: deltaTime)
             mixer.apply(controller.layers)
@@ -761,7 +761,7 @@ public final class KeynoteDemo: DemoScene {
             addCode("""
             let plant = try ModelFile.load(plantURL)     // .glb, .gltf, .usdz, .obj, ...
             let pedestal = try ModelFile.load(objURL)
-            player = AnimationPlayer(clip: plant.animations[0]) // fireflies with point lights
+            player = SceneGraph.AnimationPlayer(clip: plant.animations[0]) // fireflies with point lights
             """, to: slide)
         case "Hit Testing":
             hitTestingSlide(slide)

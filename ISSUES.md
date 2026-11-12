@@ -2626,15 +2626,18 @@ Some code panels in KeynoteDemo.swift differ from the code that builds the slide
 ## 128: Keynote code panels: decide on short type names
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:demo, effort:s
 created: 2026-10-16T00:06:57Z
-updated: 2026-11-12T04:34:48Z
+updated: 2026-11-12T22:29:03Z
+closed: 2026-11-12T22:29:03Z
 +++
 
 Keynote code panels use Node, Action, AnimationController and AnimationPlayer. The real names are SceneGraph.Node and so on, and there are no typealiases. Decide: keep short names for readability, use full names, or add public typealiases.
+
+- `2026-11-12T22:29:03Z`: Decided: full names. Keynote code panels now use SceneGraph.Node, SceneGraph.Action, SceneGraph.Skin, SceneGraph.LevelOfDetail, SceneGraph.PostProcessing, SceneGraph.AnimationMixer/AnimationController/AnimationPlayer, so slide code compiles as written. No typealiases (Node/Action would pollute the global namespace).
 
 ---
 
@@ -9001,7 +9004,7 @@ SceneImmersiveElement advances and reads the live graph on the render thread. Do
 status: new
 priority: high
 kind: bug
-labels: area:renderer,crash
+labels: area:renderer, crash
 created: 2026-11-12T22:24:08Z
 +++
 
