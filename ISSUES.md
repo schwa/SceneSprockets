@@ -8743,20 +8743,25 @@ SceneSprockets' own vertex shaders take one camera and ignore [[amplification_id
 
 Dependencies with the same gap: MetalSprocketsAddOns (most shaders, see its issue tracker) and MetalSprocketsParticles #98. MetalSprocketsPBR and GaussianSplats already support stereo.
 
+- `2026-11-12T19:40:04Z`: #380 landed: renderers read context.stereoViews / viewCount / viewProjections (and StereoViews.relativeViewProjections for camera-relative ones like Blinn-Phong and PBR), call stereoViews.configure(encoder) per draw, and set maxVertexAmplificationCount. SceneSprocketsPBR can map StereoViews to PBRStereoViews.
+
 ---
 
 ## 380: visionOS immersive: scene renderer has a single camera, no per-eye views
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: effort:l, area:renderer
 created: 2026-11-12T19:17:29Z
-updated: 2026-11-12T19:31:55Z
+updated: 2026-11-12T19:40:03Z
+closed: 2026-11-12T19:40:03Z
 +++
 
 The scene renderer carries one view and projection matrix. Immersive rendering needs 1–2 views (view matrix, projection, viewport per eye) passed to every material renderer, plus the amplification and viewport setup on each draw. MetalSprocketsPBR's PBRStereoViews already does this for PBR only; nothing shared exists for other renderers.
+
+- `2026-11-12T19:40:04Z`: Added StereoViews (per-view view/projection/viewport, amplification setup, camera-relative view-projections) and SceneGraphElement(stereoViews:). RenderContext carries stereoViews, viewCount and viewProjections; viewMatrix/cameraMatrix become a center camera. SceneText draws stereo already. Other renderers still draw one view: #379.
 
 ---
 

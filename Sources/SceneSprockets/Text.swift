@@ -100,13 +100,17 @@ extension SceneGraphElement {
     // One Slug draw per text node. The node transform goes into the view-projection, so cached meshes keep their
     // identity model matrix and nodes sharing a text need no per-node buffers.
     static func makeTextElements(_ texts: [(text: SceneText, worldTransform: simd_float4x4)], context: RenderContext, viewportSize: SIMD2<Float>, device: MTLDevice) throws -> [AnyElement] {
-        let viewProjection = context.projectionMatrix * context.viewMatrix
+        let viewProjections = context.viewProjections
+        let viewports = context.stereoViews?.viewports
         return try texts.compactMap { text, worldTransform in
             guard let scene = try SceneTextMeshCache.shared.scene(for: text, device: device) else {
                 return nil
             }
-            let constants = SlugFrameConstants(viewProjectionMatrix: viewProjection * worldTransform, viewportSize: viewportSize)
-            return try SlugTextRenderPipeline(scene: scene, viewConstants: [constants], depthCompare: (.greater, false)).eraseToAnyElement()
+            let constants = viewProjections.enumerated().map { index, viewProjection in
+                let size = viewports.map { SIMD2(Float($0[index].width), Float($0[index].height)) } ?? viewportSize
+                return SlugFrameConstants(viewProjectionMatrix: viewProjection * worldTransform, viewportSize: size)
+            }
+            return try SlugTextRenderPipeline(scene: scene, viewConstants: constants, viewports: viewports, depthCompare: (.greater, false)).eraseToAnyElement()
         }
     }
 }

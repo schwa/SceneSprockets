@@ -30,6 +30,18 @@ public struct RenderContext {
     public internal(set) var lightShadowSlices: [Range<Int>] = []
     /// When set, renderers output this material value instead of lighting (#195).
     public internal(set) var materialChannel: MaterialChannel?
+    /// Set when the frame draws several views at once (stereo, #380). ``viewMatrix``, ``cameraMatrix`` and
+    /// ``projectionMatrix`` then describe one camera between the views, for culling, sorting and renderers without
+    /// stereo support.
+    public internal(set) var stereoViews: StereoViews?
+
+    /// The number of views that each draw goes to: 1, or the stereo view count.
+    public var viewCount: Int { stereoViews?.count ?? 1 }
+
+    /// Each view's projection times its view matrix.
+    public var viewProjections: [simd_float4x4] {
+        stereoViews?.viewProjections ?? [projectionMatrix * viewMatrix]
+    }
 }
 
 /// A renderer for one material family.
@@ -87,6 +99,8 @@ public struct SceneGraphElement: Element {
     var debugMode: DebugMode?
     // Each renderer shows this material value instead of lighting (#195). Ignored while debugMode is set.
     var materialChannel: MaterialChannel?
+    // Draws these views at once instead of the camera's (#380).
+    var stereoViews: StereoViews?
 
     @MSEnvironment(\.renderPassDescriptor)
     private var renderPassDescriptor
@@ -110,7 +124,10 @@ public struct SceneGraphElement: Element {
     ///   - decorations: A closure that returns extra elements to draw in the scene pass.
     ///   - debugMode: A debug view to show instead of the materials.
     ///   - materialChannel: A material value to show instead of lighting.
-    public init(sceneGraph: SceneGraph, camera: SceneGraph.Node? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any MaterialRenderer], defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, shadows: Shadows? = nil, storesDepth: Bool = false, decorations: ((RenderContext) throws -> AnyElement?)? = nil, debugMode: DebugMode? = nil, materialChannel: MaterialChannel? = nil) {
+    ///   - stereoViews: Views to draw at once, such as a visionOS immersive space's eyes. They replace the camera's view
+    ///     and projection; the camera still supplies the category mask.
+    public init(sceneGraph: SceneGraph, camera: SceneGraph.Node? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any MaterialRenderer], defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, shadows: Shadows? = nil, storesDepth: Bool = false, decorations: ((RenderContext) throws -> AnyElement?)? = nil, debugMode: DebugMode? = nil, materialChannel: MaterialChannel? = nil, stereoViews: StereoViews? = nil) {
+        self.stereoViews = stereoViews
         self.debugMode = debugMode
         self.materialChannel = materialChannel
         self.cameraOverride = cameraOverride
@@ -129,7 +146,7 @@ public struct SceneGraphElement: Element {
 
     public var body: some Element {
         get throws {
-            guard var context = makeRenderContext(sceneGraph: sceneGraph, camera: camera, cameraMatrix: cameraMatrix, aspectRatio: aspectRatio, defaultCamera: defaultCamera, cameraOverride: cameraOverride, defaultLight: defaultLight) else {
+            guard var context = makeRenderContext(sceneGraph: sceneGraph, camera: camera, cameraMatrix: cameraMatrix, aspectRatio: aspectRatio, defaultCamera: defaultCamera ?? (stereoViews == nil ? nil : Camera(projection: PerspectiveProjection())), cameraOverride: cameraOverride, defaultLight: defaultLight, stereoViews: stereoViews) else {
                 return EmptyElement().eraseToAnyElement()
             }
             let cameraPosition = context.cameraMatrix.columns.3.xyz
@@ -365,7 +382,7 @@ public struct SceneGraphElement: Element {
     }
 }
 
-func makeRenderContext(sceneGraph: SceneGraph, camera: SceneGraph.Node?, cameraMatrix: simd_float4x4?, aspectRatio: Float, defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil) -> RenderContext? {
+func makeRenderContext(sceneGraph: SceneGraph, camera: SceneGraph.Node?, cameraMatrix: simd_float4x4?, aspectRatio: Float, defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, stereoViews: StereoViews? = nil) -> RenderContext? {
     let cameras = sceneGraph.cameraNodes()
     let entry = camera.map { camera in cameras.first { $0.node === camera } } ?? cameras.first
     let resolved: (camera: Camera, worldTransform: simd_float4x4)
@@ -378,7 +395,7 @@ func makeRenderContext(sceneGraph: SceneGraph, camera: SceneGraph.Node?, cameraM
     } else {
         return nil
     }
-    let cameraMatrix = resolved.worldTransform
+    let cameraMatrix = stereoViews?.centerCameraMatrix ?? resolved.worldTransform
     let lightNodes = sceneGraph.lightNodes()
     var lights = lightNodes.map { (worldTransform: $0.worldTransform, light: $0.light) }
     var lightMasks = lightNodes.map(\.node.lightCategoryBitMask)
@@ -386,9 +403,9 @@ func makeRenderContext(sceneGraph: SceneGraph, camera: SceneGraph.Node?, cameraM
         lights = [(cameraMatrix, defaultLight)]
         lightMasks = [.max]
     }
-    return RenderContext(
+    var context = RenderContext(
         viewMatrix: cameraMatrix.inverse,
-        projectionMatrix: .reverseZ * resolved.camera.projection.projectionMatrix(aspectRatio: aspectRatio),
+        projectionMatrix: stereoViews?.projectionMatrices[0] ?? .reverseZ * resolved.camera.projection.projectionMatrix(aspectRatio: aspectRatio),
         cameraMatrix: cameraMatrix,
         lights: lights,
         revision: sceneGraph.revision,
@@ -396,6 +413,8 @@ func makeRenderContext(sceneGraph: SceneGraph, camera: SceneGraph.Node?, cameraM
         categoryBitMask: resolved.camera.categoryBitMask,
         lightCategoryBitMasks: lightMasks
     )
+    context.stereoViews = stereoViews
+    return context
 }
 
 /// Splits mesh entries into the batches that ``SceneGraphElement`` draws, each with the context for that batch.
