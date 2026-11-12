@@ -30,7 +30,7 @@ let package = Package(
         .package(url: "https://github.com/schwa/MetalCompilerPlugin", .upToNextMinor(from: "0.4.1")),
         .package(url: "https://github.com/schwa/SwiftJolt.git", .upToNextMinor(from: "0.0.1")),
         .package(url: "https://github.com/schwa/MetalSprocketsParticles", .upToNextMinor(from: "0.0.5")),
-        .package(url: "https://github.com/schwa/MetalSprocketsAddOns", branch: "main"),
+        .package(url: "https://github.com/schwa/MetalSprocketsAddOns", .upToNextMinor(from: "0.2.8")),
         .package(url: "https://github.com/schwa/SwiftECS", .upToNextMinor(from: "0.1.1")),
         .package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.0.0"),
     ],
