@@ -450,7 +450,7 @@ public struct SceneView: View {
             return nil
         }
         // Like SceneKit, taps only hit nodes the camera can see, further limited by hitTestCategoryBitMask.
-        return sceneGraph.hitTest(viewport.ray(through: [Float(location.x), Float(location.y)]), categoryBitMask: activeCamera.categoryBitMask & hitTestCategoryBitMask).first
+        return sceneGraph.hitTest(viewport.ray(through: [Float(location.x), Float(location.y)]), options: .init(categoryBitMask: activeCamera.categoryBitMask & hitTestCategoryBitMask)).first
     }
 }
 

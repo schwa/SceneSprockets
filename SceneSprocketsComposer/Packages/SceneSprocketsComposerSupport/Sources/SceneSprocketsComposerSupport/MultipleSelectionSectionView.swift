@@ -49,7 +49,7 @@ extension EditorModel {
         if renderSettings.showsLightsAndCameras, let shape = DebugShapes.hitTest(point, sceneGraph: sceneGraph, viewport: viewport) {
             return modelRoot(containing: shape) ?? shape
         }
-        return sceneGraph.hitTest(viewport.ray(through: point), categoryBitMask: renderSettings.camera.categoryBitMask).first.map { modelRoot(containing: $0.node) ?? $0.node }
+        return sceneGraph.hitTest(viewport.ray(through: point), options: .init(categoryBitMask: renderSettings.camera.categoryBitMask)).first.map { modelRoot(containing: $0.node) ?? $0.node }
     }
 
     func node(at point: SIMD2<Float>, viewSize: SIMD2<Float>) -> SceneGraph.Node? {

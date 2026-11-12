@@ -67,13 +67,6 @@ extension SceneGraph {
         }
     }
 
-    /// Every triangle hit by `ray`, nearest first. Uses CPU-deformed geometry for skinned and morphed meshes.
-    /// Only triangle and triangle strip submeshes can be hit; vertex buffers must be CPU-visible.
-    /// Only nodes whose categoryBitMask shares a bit with `categoryBitMask` can be hit.
-    public func hitTest(_ ray: Ray3D, categoryBitMask: UInt = .max) -> [Hit] {
-        hitTest(ray, options: HitTestOptions(categoryBitMask: categoryBitMask))
-    }
-
     /// Hits between two world points, nearest first, like SCNNode.hitTestWithSegment(from:to:options:).
     public func hitTest(segmentFrom start: SIMD3<Float>, to end: SIMD3<Float>, options: HitTestOptions = HitTestOptions()) -> [Hit] {
         guard simd_distance(start, end) > 0 else {
@@ -86,8 +79,10 @@ extension SceneGraph {
 
     /// Returns every place where a world-space ray hits a mesh, nearest first.
     ///
-    /// Only triangle and triangle strip submeshes can be hit. The vertex buffers must be CPU-visible.
-    public func hitTest(_ ray: Ray3D, options: HitTestOptions) -> [Hit] {
+    /// Only triangle and triangle strip submeshes can be hit. The vertex buffers must be CPU-visible. Skinned and morphed
+    /// meshes are hit as deformed on the CPU. `options.categoryBitMask` limits the hits to nodes whose
+    /// `categoryBitMask` shares a bit with it.
+    public func hitTest(_ ray: Ray3D, options: HitTestOptions = HitTestOptions()) -> [Hit] {
         let revision = self.revision
         var hits: [Hit] = []
         var positionsCache: [PositionsKey: [SIMD3<Float>]] = [:]

@@ -241,7 +241,7 @@ func sceneKitFeaturesOrthographicToggle() throws {
     // The torus has a hole at its center; the sphere does not.
     let target = try #require(scene.sceneGraph.meshEntries().first { $0.node.label == "Sphere" }?.node)
     let point = try #require(viewProjection.project(target.worldPosition))
-    let hit = scene.sceneGraph.hitTest(viewProjection.ray(through: [point.x, point.y]), categoryBitMask: camera.categoryBitMask).first
+    let hit = scene.sceneGraph.hitTest(viewProjection.ray(through: [point.x, point.y]), options: .init(categoryBitMask: camera.categoryBitMask)).first
     #expect(hit?.node === target)
 
     scene[flag: "Orthographic"] = false

@@ -54,8 +54,8 @@ func hitTestRespectsMask() throws {
     box.categoryBitMask = 0b10
     let ray = Ray3D(origin: [0, 0, 4], direction: [0, 0, -1])
     #expect(!sceneGraph.hitTest(ray).isEmpty)
-    #expect(sceneGraph.hitTest(ray, categoryBitMask: 0b01).isEmpty)
-    #expect(!sceneGraph.hitTest(ray, categoryBitMask: 0b10).isEmpty)
+    #expect(sceneGraph.hitTest(ray, options: .init(categoryBitMask: 0b01)).isEmpty)
+    #expect(!sceneGraph.hitTest(ray, options: .init(categoryBitMask: 0b10)).isEmpty)
 }
 
 @Test
