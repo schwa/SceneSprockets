@@ -41,7 +41,7 @@ struct ArchiveAnyKey: CodingKey {
     }
 }
 
-extension Light.LightType {
+extension Light.Kind {
     public func encode(to encoder: Encoder) throws {
         try ArchiveStringEnum.encode(self, to: encoder)
     }

@@ -643,7 +643,7 @@ public final class EditorModel {
     }
 
     // Directional and spot lights shine along -Z, so they start above and aimed at the origin.
-    func addLight(_ type: Light.LightType) {
+    func addLight(_ type: Light.Kind) {
         let label = Self.label(for: type)
         var transform = LookAt(position: [3, 5, 3], target: .zero, up: [0, 1, 0]).cameraMatrix
         if type == .point {
@@ -661,7 +661,7 @@ public final class EditorModel {
         insert(node, into: sceneGraph.root, at: sceneGraph.root.children.count, actionName: "Add Camera")
     }
 
-    static func label(for type: Light.LightType) -> String {
+    static func label(for type: Light.Kind) -> String {
         "\(type.rawValue.prefix(1).uppercased())\(type.rawValue.dropFirst()) Light"
     }
 

@@ -631,8 +631,8 @@ struct SceneArchiveTests {
     @Test
     func oldEnumFormatStillReads() throws {
         let decoder = JSONDecoder()
-        #expect(try decoder.decode(Light.LightType.self, from: Data(#"{"spot": {}}"#.utf8)) == .spot)
-        #expect(try decoder.decode(Light.LightType.self, from: Data(#""point""#.utf8)) == .point)
+        #expect(try decoder.decode(Light.Kind.self, from: Data(#"{"spot": {}}"#.utf8)) == .spot)
+        #expect(try decoder.decode(Light.Kind.self, from: Data(#""point""#.utf8)) == .point)
         #expect(try decoder.decode(MaterialRenderState.BlendMode.self, from: Data(#"{"screen": {}}"#.utf8)) == .screen)
         guard case .none = try decoder.decode(SceneGraph.Environment.Background.self, from: Data(#"{"none": {}}"#.utf8)) else {
             Issue.record("expected .none")

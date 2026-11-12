@@ -124,7 +124,7 @@ final class SceneTools {
         let lowered = kind.lowercased()
         if let shapeKind = ShapeKind.allCases.first(where: { $0.label.lowercased() == lowered }) {
             model.addShape(shapeKind.shape, label: label ?? shapeKind.label)
-        } else if let lightType = Light.LightType(rawValue: lowered.replacingOccurrences(of: " light", with: "")) {
+        } else if let lightType = Light.Kind(rawValue: lowered.replacingOccurrences(of: " light", with: "")) {
             model.addLight(lightType)
         } else if lowered == "camera" {
             model.addCamera()

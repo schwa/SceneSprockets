@@ -248,7 +248,7 @@ struct SceneEditBoundaryTests {
 @MainActor
 @Test func debugShapesDrawAndPickLightsAndCameras() throws {
     let model = EditorModel(sceneGraph: SceneGraph.empty())
-    for type in Light.LightType.allCases {
+    for type in Light.Kind.allCases {
         model.addLight(type)
     }
     model.addCamera()
@@ -1180,7 +1180,7 @@ struct SceneEditBoundaryTests {
     let undoManager = UndoManager()
     undoManager.groupsByEvent = false
     model.undoManager = undoManager
-    for type in Light.LightType.allCases {
+    for type in Light.Kind.allCases {
         undoManager.beginUndoGrouping()
         model.addLight(type)
         undoManager.endUndoGrouping()

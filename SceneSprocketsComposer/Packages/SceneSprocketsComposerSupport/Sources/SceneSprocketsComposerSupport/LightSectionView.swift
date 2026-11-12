@@ -12,9 +12,9 @@ struct LightSectionView: View {
     var body: some View {
         Section("Light") {
             Picker("Type", selection: $light.type) {
-                Text("Directional").tag(Light.LightType.directional)
-                Text("Point").tag(Light.LightType.point)
-                Text("Spot").tag(Light.LightType.spot)
+                Text("Directional").tag(Light.Kind.directional)
+                Text("Point").tag(Light.Kind.point)
+                Text("Spot").tag(Light.Kind.spot)
             }
             ColorPicker("Color", selection: $light.color.linearColor, supportsOpacity: false)
             LabeledContent("Intensity") {

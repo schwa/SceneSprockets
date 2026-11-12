@@ -224,7 +224,7 @@ struct AddShapeMenuView: View {
                 }
             }
             Divider()
-            ForEach(Light.LightType.allCases, id: \.self) { type in
+            ForEach(Light.Kind.allCases, id: \.self) { type in
                 Button(EditorModel.label(for: type), systemImage: type == .point ? "lightbulb" : "sun.max") {
                     model.addLight(type)
                 }

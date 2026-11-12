@@ -1,7 +1,7 @@
 /// A light's color and shape, like SCNLight. Its node places it: lights point down their node's -Z axis.
 public struct Light: Sendable, Equatable, Codable {
     /// The shape of a light.
-    public enum LightType: String, Sendable, Equatable, CaseIterable, Codable {
+    public enum Kind: String, Sendable, Equatable, CaseIterable, Codable {
         /// Parallel rays along the node's -Z axis. The position of the node does not matter.
         case directional
         /// Light in all directions from the node's position.
@@ -10,8 +10,12 @@ public struct Light: Sendable, Equatable, Codable {
         case spot
     }
 
+    /// The former name of ``Kind``.
+    @available(*, deprecated, renamed: "Kind")
+    public typealias LightType = Kind
+
     /// The shape of the light.
-    public var type: LightType
+    public var type: Kind
     /// Linear RGB.
     public var color: SIMD3<Float>
     /// The brightness, which multiplies ``color``.
@@ -36,7 +40,7 @@ public struct Light: Sendable, Equatable, Codable {
     ///   - innerConeAngle: The half-angle of a spot light's full-intensity cone, in radians.
     ///   - outerConeAngle: The half-angle of a spot light's cone, in radians.
     ///   - castsShadow: Whether the light casts shadows when the scene has shadows.
-    public init(type: LightType, color: SIMD3<Float> = [1, 1, 1], intensity: Float = 1, range: Float = .infinity, innerConeAngle: Float = .pi / 8, outerConeAngle: Float = .pi / 6, castsShadow: Bool = true) {
+    public init(type: Kind, color: SIMD3<Float> = [1, 1, 1], intensity: Float = 1, range: Float = .infinity, innerConeAngle: Float = .pi / 8, outerConeAngle: Float = .pi / 6, castsShadow: Bool = true) {
         self.castsShadow = castsShadow
         self.type = type
         self.color = color
@@ -53,7 +57,7 @@ public struct Light: Sendable, Equatable, Codable {
     /// Decodes a light. Archives from before `castsShadow` decode with shadows on.
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        type = try container.decode(LightType.self, forKey: .type)
+        type = try container.decode(Kind.self, forKey: .type)
         color = try container.decode(SIMD3<Float>.self, forKey: .color)
         intensity = try container.decode(Float.self, forKey: .intensity)
         range = try container.decode(Float.self, forKey: .range)

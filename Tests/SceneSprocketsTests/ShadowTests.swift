@@ -27,7 +27,7 @@ private var material: BlinnPhongSceneMaterial {
 // A floor, a box floating above it, and a directional light shining down and towards -x, so the box's shadow
 // falls on the floor around x = -1 (a visible spot left of the box). Returns the scene and that spot in pixels.
 @MainActor
-private func makeScene(boxCastsShadow: Bool = true, skinned: Bool = false, light: Light.LightType = .directional) throws -> (SceneGraph, SIMD2<Int>) {
+private func makeScene(boxCastsShadow: Bool = true, skinned: Bool = false, light: Light.Kind = .directional) throws -> (SceneGraph, SIMD2<Int>) {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
     let root = SceneGraph.Node()
@@ -94,9 +94,9 @@ func skinnedCasterIsSkinnedOnGPU() throws {
     #expect(frame.casters.contains { if case .skinned = $0.placement { true } else { false } })
 }
 
-@Test(.enabled(if: deviceSupportsMetal4), arguments: [Light.LightType.spot, .point])
+@Test(.enabled(if: deviceSupportsMetal4), arguments: [Light.Kind.spot, .point])
 @MainActor
-func spotAndPointLightsCastShadows(light: Light.LightType) throws {
+func spotAndPointLightsCastShadows(light: Light.Kind) throws {
     let (sceneGraph, pixel) = try makeScene(light: light)
     let lit = try brightness(sceneGraph, at: pixel, shadows: nil)
     let shadowed = try brightness(sceneGraph, at: pixel, shadows: SceneGraphShadows(intensity: 0.8))
@@ -310,9 +310,9 @@ func directionalCasterDepthOffsetIsWorldSpace() throws {
 }
 
 // #366: a lit floor that casts shadows must not shadow itself (acne) when the PCF kernel is wider than one texel.
-@Test(.enabled(if: deviceSupportsMetal4), arguments: [Light.LightType.spot, .point, .directional], [1, 2, 4])
+@Test(.enabled(if: deviceSupportsMetal4), arguments: [Light.Kind.spot, .point, .directional], [1, 2, 4])
 @MainActor
-func wideSoftShadowsDoNotSelfShadowFloor(light: Light.LightType, softness: Int) throws {
+func wideSoftShadowsDoNotSelfShadowFloor(light: Light.Kind, softness: Int) throws {
     let root = SceneGraph.Node()
     root.addChild(SceneGraph.Node(transform: Transform3D(storing: pose(eye: [3, 7, 3], target: .zero)), content: .light(Light(type: light, intensity: light == .directional ? 1 : 80, range: 30, outerConeAngle: .pi / 4))))
     root.addChild(SceneGraph.Node(shape: .floor(width: 8, length: 8), material: material, transform: .init(translation: [0, -1, 0])))
