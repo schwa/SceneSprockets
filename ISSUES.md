@@ -2793,6 +2793,9 @@ On the keynote's Performance slide this scales with crate count: 1,600 crates to
 
 There is no way to give the scene graph a single node holding a mesh, a material and an array of instance transforms (and optionally per-instance colors), like SCNGeometry with a custom instance buffer or EXT_mesh_gpu_instancing, so that the cost does not grow with one node per copy. glTF EXT_mesh_gpu_instancing is currently expanded into child nodes for the same reason.
 
+- `2026-11-12T20:08:30Z`: Autonomous run: punted. Looked at adding per-node instance transforms carried on MeshEntry. It touches 16 files (every renderer, PBR's per-node poses, shadows, culling, bounds, LOD, hit testing, deformation, selection outline, archive, glTF EXT_mesh_gpu_instancing import), and several design choices have no answer in the repo yet. Unblocker: answer the design question on this issue.
+- `2026-11-12T20:08:30Z`: Question 1 (design): Shape of explicit instancing: (a) Node field 'instances: [float4x4]' (+ optional per-instance colors) on a mesh node, carried on one MeshEntry, with renderers that cannot draw instances getting an expanded fallback; or (b) a separate content case like .instancedMesh(mesh, material, transforms)? And: should hit tests report an instance index, should shadows/LOD/culling treat instances individually or as one bounds, and must PBR support it in the first cut?
+
 ---
 
 ## 136: Ambient occlusion is part of PostProcessing and darkens the final lit color
@@ -8815,5 +8818,25 @@ updated: 2026-11-12T19:31:56Z
 +++
 
 Frustum culling and back-to-front transparency sorting are computed from a single camera. In stereo, objects visible to only one eye could be culled, and sort order should be consistent across both eyes.
+
+---
+
+## 384: Own StereoViews duplicates other packages' stereo view types
+
++++
+status: new
+priority: medium
+kind: enhancement
+labels: effort:s
+created: 2026-11-12T20:42:21Z
++++
+
+StereoViews is this package's own copy of per-view stereo matrices, viewports and vertex amplification setup. MetalSprocketsAddOns, MetalSprocketsPBR, MetalSprocketsParticles and SceneSprockets each have one, and callers convert between them at every boundary. See MetalSprockets #MetalSprockets#558.
+
+## Proposed fix (per schwa)
+
+Once MetalSprockets ships a shared StereoViews (#MetalSprockets#558) in a tagged release, adopt it in place of StereoViews and bump the MetalSprockets dependency.
+
+- `2026-11-12T20:42:25Z`: Also: SceneSprockets.StereoViews collides with MetalSprocketsAddOns.StereoViews (0.2.7), so files importing both get 'StereoViews is ambiguous'. Resolving this needs the MetalSprockets, AddOns (#MetalSprocketsAddOns#126), PBR (#MetalSprocketsPBR#25) and Particles (#MetalSprocketsParticles#245) releases, then removing the PBRStereoViews/ParticleStereoViews conversions in PBRSceneGraph and SceneGraphRenderer.
 
 ---
