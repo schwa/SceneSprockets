@@ -8539,6 +8539,8 @@ Code: `Sources/SceneSprocketsPBR/PBRSceneGraph.swift`.
 
 Related: #368 (material API consistency).
 
+- `2026-11-12T01:36:44Z`: Question 1 (design): PBRSceneMaterial exposes 'public var pbrMaterial: PBRMaterial' (a class), so any copy can mutate shared state through it, not only through renderState. Fix by (a) copy-on-write: make pbrMaterial internal, expose value properties (uniforms, renderState, doubleSided, textureTransforms) with mutating setters that copy the PBRMaterial when not uniquely referenced (copying allocates a GPU buffer, so a failed copy would have to trap or keep sharing); or (b) make PBRSceneMaterial a final class, so sharing is explicit, like SCNMaterial? Option (b) also changes BlinnPhongSceneMaterial/ShaderMaterial consistency (#368). Which one?
+
 ---
 
 ## 376: Hit-test category mask is passed several different ways
