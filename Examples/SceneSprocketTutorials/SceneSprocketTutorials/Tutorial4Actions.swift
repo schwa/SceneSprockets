@@ -42,7 +42,7 @@ struct Tutorial4Actions: View {
         // Opacity: a glass torus that tumbles and fades out and back in.
         let glass = root.addChild(SceneGraph.Node(shape: .torus(ringRadius: 0.7, pipeRadius: 0.2), material: BlinnPhongSceneMaterial(color: [0.6, 0.9, 0.8], shininess: 128, opacity: 0.5), transform: .init(translation: [-2, 0.5, 0])))
         glass.run(.repeatForever(.group([
-            .rotateBy(x: 2 * .pi, y: 0, z: .pi, duration: 8),
+            .rotate(byEuler: [2 * .pi, 0, .pi], duration: 8),
             .sequence([.fadeOut(duration: 2), .fadeIn(duration: 2)]),
         ])))
 

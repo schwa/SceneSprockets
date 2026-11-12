@@ -170,12 +170,16 @@ func actionForKeyReturnsRunningAction() {
 @Test
 func eulerRotationsAndCustomTiming() {
     let node = SceneGraph.Node()
-    run(.rotateTo(x: 0, y: .pi / 2, z: 0, duration: 1), on: node, steps: [1])
+    run(.rotate(toEuler: [0, .pi / 2, 0], duration: 1), on: node, steps: [1])
     #expect(near(node.transform.rotation.quaternion.act([0, 0, 1]), [1, 0, 0]))
 
     let spun = SceneGraph.Node()
-    run(.rotateBy(x: .pi / 2, y: 0, z: 0, duration: 1), on: spun, steps: [1])
+    run(.rotate(byEuler: [.pi / 2, 0, 0], duration: 1), on: spun, steps: [1])
     #expect(near(spun.transform.rotation.quaternion.act([0, 1, 0]), [0, 0, 1]))
+    // Reversed, it turns back.
+    run(SceneGraph.Action.rotate(byEuler: [.pi / 2, 0.3, 0], duration: 1).reversed(), on: spun, steps: [1])
+    run(.rotate(byEuler: [0, 0.3, 0], duration: 1), on: spun, steps: [1])
+    #expect(near(spun.transform.rotation.quaternion.act([0, 1, 0]), [0, 1, 0]))
 
     let stepped = SceneGraph.Node()
     run(.move(by: [1, 0, 0], duration: 1).timingMode(.custom { $0 < 0.5 ? 0 : 1 }), on: stepped, steps: [0.4])

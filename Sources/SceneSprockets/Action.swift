@@ -136,18 +136,39 @@ extension SceneGraph {
             }
         }
 
-        /// Rotates by Euler angles in radians, like SCNAction.rotateBy(x:y:z:duration:): about the parent's X, then Y,
-        /// then Z axes, through the node's origin.
-        public static func rotateBy(x: Float, y: Float, z: Float, duration: Float) -> Self {
-            interval(duration, reversed: { .rotateBy(x: -x, y: -y, z: -z, duration: duration) }) { node, from, to in
-                let step = to - from
-                node.transform.rotation = Rotation3D(simd_normalize(eulerRotation(x: x * step, y: y * step, z: z * step) * node.transform.rotation.quaternion))
+        /// Rotates by Euler angles, like SCNAction.rotateBy(x:y:z:duration:): about the parent's X, then Y, then Z axes,
+        /// through the node's origin.
+        ///
+        /// - Parameters:
+        ///   - angles: The X, Y and Z angles, in radians.
+        ///   - duration: The duration, in seconds.
+        public static func rotate(byEuler angles: SIMD3<Float>, duration: Float) -> Self {
+            interval(duration, reversed: { .rotate(byEuler: -angles, duration: duration) }) { node, from, to in
+                let step = angles * (to - from)
+                node.transform.rotation = Rotation3D(simd_normalize(eulerRotation(x: step.x, y: step.y, z: step.z) * node.transform.rotation.quaternion))
             }
         }
 
-        /// Rotates to Euler angles in radians (X, then Y, then Z), like SCNAction.rotateTo(x:y:z:duration:).
+        /// Rotates to Euler angles (X, then Y, then Z), like SCNAction.rotateTo(x:y:z:duration:). The action cannot be
+        /// reversed.
+        ///
+        /// - Parameters:
+        ///   - angles: The X, Y and Z angles, in radians.
+        ///   - duration: The duration, in seconds.
+        public static func rotate(toEuler angles: SIMD3<Float>, duration: Float) -> Self {
+            rotate(to: eulerRotation(x: angles.x, y: angles.y, z: angles.z), duration: duration)
+        }
+
+        /// The former name of ``rotate(byEuler:duration:)``.
+        @available(*, deprecated, renamed: "rotate(byEuler:duration:)")
+        public static func rotateBy(x: Float, y: Float, z: Float, duration: Float) -> Self {
+            rotate(byEuler: [x, y, z], duration: duration)
+        }
+
+        /// The former name of ``rotate(toEuler:duration:)``.
+        @available(*, deprecated, renamed: "rotate(toEuler:duration:)")
         public static func rotateTo(x: Float, y: Float, z: Float, duration: Float) -> Self {
-            rotate(to: eulerRotation(x: x, y: y, z: z), duration: duration)
+            rotate(toEuler: [x, y, z], duration: duration)
         }
 
         /// Rotates the node to an orientation, with spherical interpolation. The action cannot be reversed.
