@@ -8074,13 +8074,14 @@ There were 179 `_ = SceneGraph.Node(parent:` occurrences in Tests and Examples. 
 ## 362: SceneView.Options names are inconsistent (.allowsCameraControl vs .autoenablesDefaultLighting)
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: effort:s, area:ui
 depends: 369
 created: 2026-11-10T18:37:02Z
-updated: 2026-11-11T16:14:41Z
+updated: 2026-11-12T03:09:22Z
+closed: 2026-11-12T03:09:22Z
 +++
 
 The two `SceneView.Options` follow different naming patterns:
@@ -8098,6 +8099,7 @@ Both names are copied from SceneKit (`SCNView.allowsCameraControl`, `SCNView.aut
 
 - `2026-11-11T15:58:23Z`: Related: #369 (SceneView configuration).
 - `2026-11-11T16:14:42Z`: Auto-fixer run: punted. Renaming the options is a naming decision, and 369-Q1 proposes replacing Options with view modifiers, which would remove these names entirely. Unblocker: answer 369-Q1; if Options stays, pick names (e.g. .allowsCameraControl + .usesDefaultLighting).
+- `2026-11-12T03:09:22Z`: Obsolete after #369: SceneView.Options is gone; the switches are now consistently named methods (sceneCameraControl(), sceneDefaultLighting(), sceneStatistics(), sceneFrameTiming(), sceneReadableDrawable()).
 
 ---
 
