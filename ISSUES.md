@@ -2809,6 +2809,7 @@ Expected: ambient occlusion reduces only ambient and indirect lighting, and is c
 
 - `2026-11-07T15:50:56Z`: Autonomous run: scoped, not changed. Doing this needs (1) the AO texture computed before the material passes (a depth prepass, or reordering so AO runs between a depth-only pass and shading), (2) Blinn-Phong to multiply only its ambient term by it, (3) PBR to multiply only its IBL/indirect term by it; MetalSprocketsPBR has no screen-space occlusion input today, so that is a change in MetalSprocketsPBR, and (4) a public API move of PostProcessing.ambientOcclusion to a lighting setting (for example SceneGraph.ambientOcclusion or Environment.ambientOcclusion). Punting: it is a cross-package design change, and the API placement is your call. Questions: where should the setting live, and is a depth prepass for AO acceptable (it costs a second geometry pass when AO is on)?
 - `2026-11-07T16:59:55Z`: Question 1 (design): Where should the ambient occlusion setting live (for example SceneGraph.ambientOcclusion or Environment.ambientOcclusion), and is a depth prepass acceptable when AO is on?
+- `2026-11-12T02:06:16Z`: Answer 1: do not care
 
 ---
 
@@ -5487,6 +5488,7 @@ SceneView has no way to draw several scene graphs into split viewports of one Re
 - `2026-11-04T20:59:53Z`: Looked at SceneView (one RenderView, one SceneGraphElement, one camera/manipulator, onTapAt with one SceneViewport). Punting: this needs API design decisions the code cannot answer. (1) Shape of the API: a SceneView taking [(sceneGraph, camera, rect)] viewports, a separate MultiSceneView, or making SceneGraphElement + a reusable 'scene runtime' (actions/constraints/particles advance, tap handling) public so apps compose their own RenderView. (2) Camera control: shared camera across viewports (TreeAppreciator's case) vs per-viewport manipulators, and which viewport gets gestures. (3) Shared resources: one shadow map per viewport or reused across them; particle runtimes per scene graph. (4) onTapAt must report which viewport was hit. Unblocker: pick (1) and (2); the TreeAppreciator side-by-side case with one shared camera is a good first target.
 - `2026-11-07T16:53:24Z`: Autonomous run: still waiting on the 2026-11-04 API decisions (API shape and camera control). Not changed.
 - `2026-11-07T16:59:57Z`: Question 1 (design): Which API shape for several scene graphs or viewports: a SceneView taking viewports, a separate MultiSceneView, or public building blocks (SceneGraphElement plus a reusable scene runtime) for custom RenderViews? And is camera control shared across viewports or per viewport?
+- `2026-11-12T02:06:25Z`: Answer 1: defer this issue for now
 
 ---
 
