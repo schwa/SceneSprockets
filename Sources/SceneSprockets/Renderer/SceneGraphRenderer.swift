@@ -391,9 +391,17 @@ func makeRenderContext(sceneGraph: SceneGraph, camera: SceneGraph.Node?, cameraM
     )
 }
 
-/// Groups entries by rendering order (ascending), then opaque before transparent, then by the lights whose masks
-/// match, keeping first-seen order. Transparent entries are sorted farthest first. Each batch's context holds only
-/// its lights.
+/// Splits mesh entries into the batches that ``SceneGraphElement`` draws, each with the context for that batch.
+///
+/// For custom elements that draw a scene with ``SceneGraphMaterialRenderer`` types. Entries are grouped by
+/// `renderingOrder` (ascending), then opaque before transparent, then by the lights whose category masks match,
+/// keeping first-seen order. Transparent entries are sorted farthest first. Each batch's context holds only its
+/// lights.
+///
+/// - Parameters:
+///   - entries: The mesh entries to draw.
+///   - context: The frame's context.
+/// - Returns: The batches in draw order.
 public func renderBatches(_ entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext) -> [(entries: [SceneGraph.MeshEntry], context: SceneGraphRenderContext)] {
     struct Key: Hashable {
         var order: Int
@@ -482,7 +490,7 @@ extension Element {
 }
 
 /// Groups entries by vertex descriptor, keeping first-seen order.
-public func groupedByVertexDescriptor<Entry>(_ entries: [Entry], vertexDescriptor: (Entry) -> VertexDescriptor) -> [(vertexDescriptor: VertexDescriptor, entries: [Entry])] {
+package func groupedByVertexDescriptor<Entry>(_ entries: [Entry], vertexDescriptor: (Entry) -> VertexDescriptor) -> [(vertexDescriptor: VertexDescriptor, entries: [Entry])] {
     var groups: [(vertexDescriptor: VertexDescriptor, entries: [Entry])] = []
     for entry in entries {
         let descriptor = vertexDescriptor(entry)

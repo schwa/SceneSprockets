@@ -107,8 +107,18 @@ extension Element {
     }
 }
 
-/// Draw resets cull and fill mode, so draws that need them set them in their own closure. Mirrored transforms flip the
-/// winding.
+/// Returns an element that draws one submesh with a cull and fill mode.
+///
+/// For custom ``SceneGraphMaterialRenderer`` types. A plain draw resets the cull and fill mode, so this sets them in
+/// the draw itself.
+///
+/// - Parameters:
+///   - submesh: The submesh to draw.
+///   - instanceCount: The number of instances.
+///   - cullMode: The faces not to draw, usually ``MaterialRenderState/cullMode``.
+///   - isMirrored: Whether the model matrix mirrors (negative determinant). Mirroring flips the winding, so the
+///     culled side flips too.
+///   - fillMode: `.lines` draws triangle edges.
 public func materialDraw(_ submesh: MetalMesh.Submesh, instanceCount: Int = 1, cullMode: MTLCullMode = .none, isMirrored: Bool = false, fillMode: MTLTriangleFillMode = .fill) -> AnyElement {
     guard cullMode != .none || fillMode != .fill else {
         return Draw(primitiveType: submesh.primitiveType, indexBuffer: submesh.indexBuffer, indexType: submesh.indexType, indexCount: submesh.indexCount, indexBufferOffset: submesh.indexBufferOffset, instanceCount: instanceCount).eraseToAnyElement()

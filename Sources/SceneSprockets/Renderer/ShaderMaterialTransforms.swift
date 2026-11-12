@@ -3,7 +3,7 @@ import simd
 
 // Camera-relative rendering (#251, #253): shaders get positions with the camera at the origin, so values near the
 // camera stay small and precise even far from the world origin.
-public extension simd_float4x4 {
+package extension simd_float4x4 {
     /// Returns this transform with the camera position subtracted from its translation, computed in `Double`.
     func cameraRelative(to cameraPosition: SIMD3<Float>) -> simd_float4x4 {
         var result = self
@@ -20,7 +20,7 @@ public extension simd_float4x4 {
 }
 
 /// Returns a position minus the camera position, computed in `Double` to keep precision far from the origin.
-public func cameraRelative(_ position: SIMD3<Float>, to cameraPosition: SIMD3<Float>) -> SIMD3<Float> {
+package func cameraRelative(_ position: SIMD3<Float>, to cameraPosition: SIMD3<Float>) -> SIMD3<Float> {
     SIMD3<Float>(SIMD3<Double>(position) - SIMD3<Double>(cameraPosition))
 }
 
