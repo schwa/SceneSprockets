@@ -1,6 +1,9 @@
 import GeometryLite3D
 import Metal
 import MetalSprockets
+#if os(visionOS)
+import MetalSprocketsUI
+#endif
 import MetalSupport
 import os
 import simd
@@ -101,6 +104,10 @@ public struct SceneGraphElement: Element {
     var materialChannel: MaterialChannel?
     // Draws these views at once instead of the camera's (#380).
     var stereoViews: StereoViews?
+    #if os(visionOS)
+    // Set by SceneImmersiveContent: the scene pass is the compositor's pass (#381).
+    var immersiveContext: ImmersiveContext?
+    #endif
 
     @MSEnvironment(\.renderPassDescriptor)
     private var renderPassDescriptor
@@ -161,7 +168,8 @@ public struct SceneGraphElement: Element {
             }
             // The shadow mask and fog passes read and write the view's textures, so they need the right usage.
             let postTargets: (color: MTLTexture, depth: MTLTexture)? = {
-                guard let color = renderPassDescriptor?.colorAttachments[0].texture, let depth = renderPassDescriptor?.depthAttachment.texture,
+                // Shadow and post passes read and write one 2D target; stereo targets are layered (#382).
+                guard stereoViews == nil, let color = renderPassDescriptor?.colorAttachments[0].texture, let depth = renderPassDescriptor?.depthAttachment.texture,
                       color.usage.isSuperset(of: Shadows.requiredColorUsage), depth.usage.isSuperset(of: Shadows.requiredDepthUsage),
                       depth.storageMode != .memoryless
                 else {
@@ -198,6 +206,12 @@ public struct SceneGraphElement: Element {
                     }
                 }
             }
+            #if os(visionOS)
+            if immersiveContext != nil {
+                // Only the compositor's pass may end through its render context, which also ends the command buffer.
+                prePasses = prePasses.map { $0.immersiveRenderContext(nil).eraseToAnyElement() }
+            }
+            #endif
             var elements: [AnyElement] = []
             if case let .gradient(gradient) = context.environment.background {
                 elements.append(SkyGradientBackground(gradient: gradient, viewMatrix: context.viewMatrix, projectionMatrix: context.projectionMatrix, stereoViews: context.stereoViews).eraseToAnyElement())
@@ -352,9 +366,27 @@ public struct SceneGraphElement: Element {
         }
     }
 
-    private func makeScenePass(elements: [AnyElement], clearColor: MTLClearColor?, storesDepth: Bool) throws -> some Element {
+    private func makeScenePass(elements: [AnyElement], clearColor: MTLClearColor?, storesDepth: Bool) throws -> AnyElement {
+        #if os(visionOS)
+        if let immersiveContext {
+            // The compositor's pass: progressive immersion's stencil mask, and the compositor ends the encoder.
+            return ImmersiveRenderPass(context: immersiveContext, label: "Scene") {
+                ForEach(Array(elements.enumerated()), id: \.offset) { _, element in
+                    element
+                }
+            }
+            .depthCompare(function: .greater, writes: true)
+            .renderPassDescriptorModifier { descriptor in
+                if let clearColor {
+                    descriptor.colorAttachments[0].clearColor = clearColor
+                    descriptor.colorAttachments[0].loadAction = .clear
+                }
+            }
+            .eraseToAnyElement()
+        }
+        #endif
         // Reversed depth (near 1, far 0) for every renderer, because MetalSprocketsPBR requires it.
-        try RenderPass {
+        return try RenderPass {
             if storesDepth {
                 // The view's depth texture is shared by every frame in flight, and Metal 4 does not track hazards:
                 // without this, the previous frame's shadow mask pass can still be reading depth while this pass
@@ -379,6 +411,7 @@ public struct SceneGraphElement: Element {
                 descriptor.colorAttachments[0].loadAction = .clear
             }
         }
+        .eraseToAnyElement()
     }
 }
 

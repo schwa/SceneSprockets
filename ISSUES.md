@@ -8770,16 +8770,19 @@ The scene renderer carries one view and projection matrix. Immersive rendering n
 ## 381: visionOS immersive: no way to show a SceneSprockets scene in an ImmersiveSpace
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: effort:m, area:renderer
 depends: 379, 380
 created: 2026-11-12T19:17:29Z
-updated: 2026-11-12T19:31:56Z
+updated: 2026-11-12T20:08:06Z
+closed: 2026-11-12T20:08:06Z
 +++
 
 There is no immersive entry point that takes a SceneSprockets scene and renders it with MetalSprockets' ImmersiveRenderContent / CompositorServices (head tracking, per-eye matrices, layered drawable). GLTF (GLTFImmersiveSpace), GaussianSplats (SplatImmersiveContent) and PBR (PBRImmersiveScene) have equivalents.
+
+- `2026-11-12T20:08:06Z`: Added SceneImmersiveElement (visionOS): draws a scene graph inside ImmersiveRenderContent with StereoViews from the ImmersiveContext, the scene pass as the compositor's ImmersiveRenderPass (progressive stencil), pre-passes detached from the compositor context, sceneTransform placement, and per-frame actions/particles/constraints. Stereo frames skip shadow, fog, AO and color passes (#382). Compiles for visionOS device; not run on a device or simulator (MetalSprockets' immersive runtime encodes nothing in the simulator). No demo yet: the SceneSprocketsDemo visionOS build fails at CodeSign of SceneSprocketsDemoSupport's resource bundle, unrelated to this change; the visionOS simulator build fails in MetalSupport (MTLGPUFamily.metal4 missing in the xrsimulator SDK).
 
 ---
 
