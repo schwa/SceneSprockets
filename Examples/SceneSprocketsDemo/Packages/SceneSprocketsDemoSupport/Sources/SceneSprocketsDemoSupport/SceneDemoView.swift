@@ -31,21 +31,7 @@ public struct SceneDemoView: View {
     }
 
     public var body: some View {
-        SceneView(scene.sceneGraph, renderers: scene.renderers)
-            .sceneCameraControl(!scene.usesSceneCamera)
-            .sceneDelegate(delegate)
-            .scenePlaying(!isPaused && !isImmersive)
-            .sceneShadows(scene.shadows)
-            .sceneCamera(matrix: scene.usesSceneCamera ? .constant(nil) : $cameraMatrix)
-            .sceneHitTestOptions(.init(categoryBitMask: scene.pickCategoryBitMask))
-            .sceneManipulator(gizmo)
-            .sceneDebugMode(scene.debugMode)
-            .onSceneTap { hit in
-                scene.pick(hit)
-            }
-            .sceneOverlay(scene.showsSelectionOutline ? { [scene, selectionOutline] viewport in
-                try selectionOutline.element(nodes: scene.selectedNode.map { [$0] } ?? [], sceneGraph: scene.sceneGraph, viewport: viewport)
-            } : nil)
+        sceneContent
         .onFrameTimingChange { frameTimingStatistics = $0 }
         .onChange(of: scene.selectedNodeID, initial: true) {
             gizmo.target = scene.selectedNode
@@ -106,6 +92,30 @@ public struct SceneDemoView: View {
         // DemoKit shows this in its own inspector, with a toolbar button to toggle it.
         .demoConfiguration {
             DemoInspectorView(scene: scene)
+        }
+    }
+
+    // While the immersive space shows the scene (#385), the window draws nothing, so the scene is drawn once.
+    @ViewBuilder
+    private var sceneContent: some View {
+        if isImmersive {
+            ContentUnavailableView("Showing in Immersive Space", systemImage: "visionpro", description: Text("Exit Immersive to see the scene here."))
+        } else {
+            SceneView(scene.sceneGraph, renderers: scene.renderers)
+                .sceneCameraControl(!scene.usesSceneCamera)
+                .sceneDelegate(delegate)
+                .scenePlaying(!isPaused)
+                .sceneShadows(scene.shadows)
+                .sceneCamera(matrix: scene.usesSceneCamera ? .constant(nil) : $cameraMatrix)
+                .sceneHitTestOptions(.init(categoryBitMask: scene.pickCategoryBitMask))
+                .sceneManipulator(gizmo)
+                .sceneDebugMode(scene.debugMode)
+                .onSceneTap { hit in
+                    scene.pick(hit)
+                }
+                .sceneOverlay(scene.showsSelectionOutline ? { [scene, selectionOutline] viewport in
+                    try selectionOutline.element(nodes: scene.selectedNode.map { [$0] } ?? [], sceneGraph: scene.sceneGraph, viewport: viewport)
+                } : nil)
         }
     }
 }

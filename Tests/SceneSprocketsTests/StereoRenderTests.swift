@@ -122,6 +122,69 @@ func skyGradientStereoMatchesMono() throws {
     try expectStereoMatchesMono(plainMaterial, renderers: [BlinnPhongMaterialRenderer()], background: .gradient(gradient))
 }
 
+// A textured, alpha-cut, emissive plane like the demo's code panels (#385).
+@Test(.enabled(if: deviceSupportsMetal4))
+@MainActor
+func alphaTexturedPlaneStereoMatchesMono() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let side = 8
+    // Opaque white in a ring around a transparent middle.
+    var texels = [SIMD4<UInt8>](repeating: .zero, count: side * side)
+    for y in 0 ..< side {
+        for x in 0 ..< side where x == 0 || y == 0 || x == side - 1 || y == side - 1 {
+            texels[y * side + x] = [255, 255, 255, 255]
+        }
+    }
+    let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba8Unorm_srgb, width: side, height: side, mipmapped: false)
+    let texture = try #require(device.makeTexture(descriptor: descriptor))
+    texture.replace(region: MTLRegionMake2D(0, 0, side, side), mipmapLevel: 0, withBytes: texels, bytesPerRow: side * 4)
+    let material = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .texture(texture, tint: .zero), specular: .color(0), shininess: 1, usesDiffuseTextureAlpha: true, emission: .texture(texture))
+    let root = SceneGraph.Node()
+    root.addChild(SceneGraph.Node(label: "Panel", shape: .plane(width: 2, height: 1.5), material: material))
+    let sceneGraph = SceneGraph(root: root)
+    sceneGraph.environment.background = .color([0, 0, 0, 1])
+    let (mono, stereo) = try stereoAndMonoRenders(sceneGraph, renderers: [BlinnPhongMaterialRenderer()], eyes: eyePair(at: [0, 0, 3], separation: 0.6))
+    #expect(mono[0].contains { $0.x > 200 }, "mono should show the panel")
+    for eye in 0 ..< 2 {
+        #expect(largestDifference(mono[eye], stereo[eye]) <= 3, "eye \(eye): \(largestDifference(mono[eye], stereo[eye]))")
+    }
+}
+
+// Blended surfaces write depth in stereo: visionOS's compositor needs depth for every pixel drawn (#385).
+@Test(.enabled(if: deviceSupportsMetal4))
+@MainActor
+func blendedSurfacesWriteDepthInStereo() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let material = BlinnPhongSceneMaterial(ambient: .color(1), diffuse: .color(1), specular: .color(0), shininess: 1, opacity: 0.5)
+    let root = SceneGraph.Node()
+    root.addChild(SceneGraph.Node(label: "Panel", shape: .plane(width: 4, height: 4), material: material))
+    let sceneGraph = SceneGraph(root: root)
+    let camera = Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(60)))
+    let projection = simd_float4x4.reverseZ * camera.projection.projectionMatrix(aspectRatio: 1)
+    let eyes = eyePair(at: [0, 0, 3], separation: 0.2)
+    let viewport = MTLViewport(originX: 0, originY: 0, width: Double(size), height: Double(size), znear: 0, zfar: 1)
+    let views = StereoViews(viewMatrices: eyes.map(\.inverse), projectionMatrices: [projection, projection], viewports: [viewport, viewport])
+    let colorDescriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm_srgb, width: size, height: size, mipmapped: false)
+    colorDescriptor.textureType = .type2DArray
+    colorDescriptor.arrayLength = 2
+    colorDescriptor.usage = [.renderTarget, .shaderRead]
+    let depthDescriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .depth32Float, width: size, height: size, mipmapped: false)
+    depthDescriptor.textureType = .type2DArray
+    depthDescriptor.arrayLength = 2
+    depthDescriptor.usage = [.renderTarget, .shaderRead]
+    depthDescriptor.storageMode = .shared
+    let color = try #require(device.makeTexture(descriptor: colorDescriptor))
+    let depth = try #require(device.makeTexture(descriptor: depthDescriptor))
+    let renderer = try OffscreenRenderer(size: CGSize(width: size, height: size), colorTexture: color, depthTexture: depth, clearDepth: 0)
+    renderer.renderPassDescriptor.renderTargetArrayLength = 2
+    _ = try renderer.render(SceneGraphElement(sceneGraph: sceneGraph, aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer()], defaultCamera: camera, storesDepth: true, stereoViews: views))
+    for slice in 0 ..< 2 {
+        var value: Float = 0
+        depth.getBytes(&value, bytesPerRow: 4, bytesPerImage: 4, from: MTLRegionMake2D(size / 2, size / 2, 1, 1), mipmapLevel: 0, slice: slice)
+        #expect(value > 0, "slice \(slice) depth \(value)")
+    }
+}
+
 // Billboards face the center camera in stereo, not each eye, so slices are not compared with mono renders. Each eye
 // must see the cloud, shifted by parallax.
 @Test(.enabled(if: deviceSupportsMetal4))

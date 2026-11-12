@@ -242,7 +242,7 @@ struct ShaderMaterialDrawsElement: Element {
             }
         }
         .vertexDescriptor(item.mesh.vertexDescriptor.mtlVertexDescriptor)
-        .materialRenderState(item.material.renderState, isTransparent: item.isTransparent)
+        .materialRenderState(item.material.renderState, isTransparent: item.isTransparent, writesBlendedDepth: context.stereoViews != nil)
         .vertexAmplification(count: context.viewCount)
     }
 }

@@ -85,7 +85,8 @@ final class SceneTextMeshCache: @unchecked Sendable {
 
 extension SceneGraphElement {
     // One Slug draw per text node. The node transform goes into the view-projection, so cached meshes keep their
-    // identity model matrix and nodes sharing a text need no per-node buffers.
+    // identity model matrix and nodes sharing a text need no per-node buffers. In stereo it writes depth, which
+    // visionOS's compositor needs for every pixel drawn.
     static func makeTextElements(_ texts: [(text: SceneText, worldTransform: simd_float4x4)], context: RenderContext, viewportSize: SIMD2<Float>, device: MTLDevice) throws -> [AnyElement] {
         let viewProjections = context.viewProjections
         let viewports = context.stereoViews?.viewports
@@ -97,7 +98,7 @@ extension SceneGraphElement {
                 let size = viewports.map { SIMD2(Float($0[index].width), Float($0[index].height)) } ?? viewportSize
                 return SlugFrameConstants(viewProjectionMatrix: viewProjection * worldTransform, viewportSize: size)
             }
-            return try SlugTextRenderPipeline(scene: scene, viewConstants: constants, viewports: viewports, depthCompare: (.greater, false)).eraseToAnyElement()
+            return try SlugTextRenderPipeline(scene: scene, viewConstants: constants, viewports: viewports, depthCompare: (.greater, viewports != nil)).eraseToAnyElement()
         }
     }
 }

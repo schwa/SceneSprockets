@@ -384,7 +384,7 @@ private struct BlinnPhongBatchesElement: Element {
                         }
                     }
                     .vertexDescriptor(layout.descriptor)
-                    .materialRenderState(group.key.renderState, isTransparent: isTransparent)
+                    .materialRenderState(group.key.renderState, isTransparent: isTransparent, writesBlendedDepth: stereoViews != nil)
                     .vertexAmplification(count: viewCount)
                 }
                 if !group.instanced.isEmpty {
@@ -394,7 +394,7 @@ private struct BlinnPhongBatchesElement: Element {
                         }
                     }
                     .vertexDescriptor(layout.descriptor)
-                    .materialRenderState(group.key.renderState, isTransparent: isTransparent)
+                    .materialRenderState(group.key.renderState, isTransparent: isTransparent, writesBlendedDepth: stereoViews != nil)
                     .vertexAmplification(count: viewCount)
                 }
             }
