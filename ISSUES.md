@@ -2790,12 +2790,12 @@ There is no way to give the scene graph a single node holding a mesh, a material
 ## 136: Ambient occlusion is part of PostProcessing and darkens the final lit color
 
 +++
-status: open
+status: blocked
 priority: medium
 kind: bug
 labels: effort:m, area:renderer
 created: 2026-10-17T13:09:48Z
-updated: 2026-11-07T15:46:16Z
+updated: 2026-11-12T03:34:31Z
 +++
 
 Screen-space ambient occlusion is configured as SceneGraph.PostProcessing.ambientOcclusion, next to exposure, contrast, saturation and vignette, and runs as a post pass (ambient_occlusion in PostProcessing.metal) that multiplies the final rendered color.
