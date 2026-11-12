@@ -7700,12 +7700,13 @@ Related: #345 (what in the keynote needs code).
 ## 347: No hardware ray tracing in the renderer
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:renderer, effort:xl, deferred
 created: 2026-11-07T18:54:26Z
-updated: 2026-11-10T17:37:52Z
+updated: 2026-11-12T04:31:38Z
+closed: 2026-11-12T04:31:38Z
 +++
 
 The renderer is raster-only. It does not use Metal ray tracing (acceleration structures, intersection functions), so effects that ray tracing does well are missing or approximated: ray-traced shadows (sharp contact and soft area-light shadows without shadow maps), reflections, ambient occlusion, global illumination, and offline path tracing of a scene for reference images.
@@ -7713,6 +7714,8 @@ The renderer is raster-only. It does not use Metal ray tracing (acceleration str
 Starting points in MetalSprocketsExamples: Ray Traced Shadows (hardware-accelerated shadows with acceleration structures), Ray Tracing (Cornell box path tracer), Meadow (ray-traced procedural meadow).
 
 Related: #337 (spatial acceleration structure; Metal acceleration structures could also serve hit testing).
+
+- `2026-11-12T04:31:38Z`: Closed in deferred-issue cleanup: wishful: hardware ray tracing as a whole renderer feature, with no concrete use case or design.
 
 ---
 
