@@ -8606,6 +8606,7 @@ Expected: one culling setting that every material family honors, in the same pla
 Related: #368 (material API consistency).
 
 - `2026-11-12T01:42:41Z`: Question 1 (design): Where should culling live? Proposal: add 'cullMode: MTLCullMode = .back' (or a 'isDoubleSided: Bool') to MaterialRenderState, used by Blinn-Phong (replacing BlinnPhongSceneMaterial.cullMode) and ShaderMaterial (which gains culling). PBR keeps glTF's doubleSided on PBRMaterial, since PBRSceneMaterial uses MetalSprocketsPBR's own PBRRenderState, not MaterialRenderState; unifying that means either a MetalSprocketsPBR change or mapping PBRSceneMaterial onto MaterialRenderState (#375/#368). Two choices: (1) cullMode enum vs isDoubleSided bool, and default back vs none (Blinn-Phong defaults to none today); (2) leave PBR on doubleSided, or also move PBR?
+- `2026-11-12T01:42:41Z`: Auto-fixer run: punted. Unifying culling means choosing the shared setting's shape and default, and PBR's render state is a separate MetalSprocketsPBR type, so it touches #375/#368 too. Unblocker: answer 377-Q1.
 
 ---
 
