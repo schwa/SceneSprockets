@@ -22,6 +22,13 @@ struct ShaderMaterialTransforms {
     // The view matrix without the camera's translation. projectionMatrix * cameraRelativeViewMatrix *
     // cameraRelativeModelMatrix equals modelViewProjectionMatrix.
     simd_float4x4 cameraRelativeViewMatrix;
+    // Stereo (#379): with vertex amplification, index these by [[amplification_id]]. Entry 0 is the only view in mono;
+    // in stereo, cameraRelativeModelMatrix is relative to a center camera between the eyes. Model matrix to clip space
+    // per view:
+    simd_float4x4 modelViewProjectionMatrices[2];
+    // Per view: the eye minus the camera position (zero in mono). The direction to the eye is this minus a
+    // camera-relative position.
+    simd_float3 cameraRelativeEyePositions[2];
 };
 typedef struct ShaderMaterialTransforms ShaderMaterialTransforms;
 

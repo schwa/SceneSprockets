@@ -1,4 +1,5 @@
 import Metal
+import MetalSprockets
 import simd
 
 /// The views that one frame draws at once, such as the two eyes of a visionOS immersive space.
@@ -79,5 +80,15 @@ public struct StereoViews: Sendable {
         let mappings = (0 ..< count).map { MTLVertexAmplificationViewMapping(viewportArrayIndexOffset: UInt32($0), renderTargetArrayIndexOffset: UInt32($0)) }
         encoder.setVertexAmplificationCount(mappings)
         encoder.setViewports(viewports)
+    }
+}
+
+public extension Element {
+    /// Lets the render pipelines inside draw to `count` views at once with vertex amplification. Usually
+    /// ``RenderContext/viewCount``.
+    func vertexAmplification(count: Int) -> some Element {
+        renderPipelineDescriptorTransformer { descriptor in
+            descriptor.maxVertexAmplificationCount = count
+        }
     }
 }

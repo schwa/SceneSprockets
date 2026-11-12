@@ -148,7 +148,25 @@ public struct BlinnPhongMaterialRenderer: MaterialRenderer, Equatable {
             light.position = cameraRelative(light.position, to: cameraPosition)
             return light
         }
-        let frame = BlinnPhongFrame(viewProjection: context.projectionMatrix * context.viewMatrix.rotationOnlyView, cameraPosition: .zero, ambientLightColor: ambientLightColor, lightCount: Int32(lights.count), materialChannel: context.materialChannel?.rawValue ?? 0)
+        var frame = BlinnPhongFrame()
+        frame.ambientLightColor = ambientLightColor
+        frame.lightCount = Int32(lights.count)
+        frame.materialChannel = context.materialChannel?.rawValue ?? 0
+        // Per view (#379). Stereo eyes sit around the render origin (the center camera), so their positions are not zero.
+        let viewProjections = context.stereoViews?.relativeViewProjections(origin: cameraPosition) ?? [context.projectionMatrix * context.viewMatrix.rotationOnlyView]
+        let eyePositions = context.stereoViews?.cameraPositions.map { $0 - cameraPosition } ?? [.zero]
+        withUnsafeMutableBytes(of: &frame.viewProjections) { buffer in
+            let slots = buffer.bindMemory(to: simd_float4x4.self)
+            for index in 0 ..< slots.count {
+                slots[index] = viewProjections[min(index, viewProjections.count - 1)]
+            }
+        }
+        withUnsafeMutableBytes(of: &frame.cameraPositions) { buffer in
+            let slots = buffer.bindMemory(to: SIMD3<Float>.self)
+            for index in 0 ..< slots.count {
+                slots[index] = eyePositions[min(index, eyePositions.count - 1)]
+            }
+        }
         // An empty array cannot be bound; the shader reads none of it when lightCount is 0.
         let lightValues = lights.isEmpty ? [BlinnPhongLight()] : lights
         // The shader has no morph or skin inputs, so SceneGraphElement deforms those meshes in a GPU pre-pass (#298). They skip culling because
@@ -157,7 +175,7 @@ public struct BlinnPhongMaterialRenderer: MaterialRenderer, Equatable {
         let isTransparent = entries.first?.isTransparent ?? false
         let inFrustum = meshEntriesInFrustum(entries, projectionMatrix: context.projectionMatrix, cameraMatrix: context.cameraMatrix)
         if !isTransparent, let groups = cachedOpaqueGroups(entries: entries, inFrustum: inFrustum, context: context, cameraPosition: cameraPosition) {
-            return BlinnPhongBatchesElement(groups: groups, frame: frame, lights: lightValues, shadow: context.shadow, cameraPosition: cameraPosition, isTransparent: false).eraseToAnyElement()
+            return BlinnPhongBatchesElement(groups: groups, frame: frame, lights: lightValues, shadow: context.shadow, cameraPosition: cameraPosition, isTransparent: false, stereoViews: context.stereoViews).eraseToAnyElement()
         }
         // One pass, with capacity reserved: this runs every frame over every entry, so copies add up.
         var items: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, modelMatrix: simd_float4x4, material: BlinnPhongSceneMaterial)] = []
@@ -215,7 +233,7 @@ public struct BlinnPhongMaterialRenderer: MaterialRenderer, Equatable {
                 return (key: group.key, single: sortedSingle, instanced: batches.filter { $0.modelMatrices.count > 1 })
             }
         }
-        return BlinnPhongBatchesElement(groups: groups, frame: frame, lights: lightValues, shadow: context.shadow, cameraPosition: cameraPosition, isTransparent: isTransparent).eraseToAnyElement()
+        return BlinnPhongBatchesElement(groups: groups, frame: frame, lights: lightValues, shadow: context.shadow, cameraPosition: cameraPosition, isTransparent: isTransparent, stereoViews: context.stereoViews).eraseToAnyElement()
     }
 
     // Opaque batching depends on structure, opacity and mirroring, not on where things are, so it is cached and only
@@ -273,6 +291,7 @@ private struct BlinnPhongBatchesElement: Element {
     var cameraPosition: SIMD3<Float>
     // Blends and does not write depth.
     var isTransparent: Bool
+    var stereoViews: StereoViews?
 
     @MSEnvironment(\.submissionIndex)
     private var submissionIndex
@@ -317,7 +336,7 @@ private struct BlinnPhongBatchesElement: Element {
                 let submesh = batch.mesh.submeshes[batch.submeshIndex]
                 let normalMatrices = batch.modelMatrices.map(\.normalMatrix)
                 let modelMatrices = batch.modelMatrices.map { $0.cameraRelative(to: cameraPosition) }
-                var element = materialDraw(submesh, instanceCount: batch.modelMatrices.count, cullMode: cullMode, isMirrored: batch.isMirrored, fillMode: batch.material.renderState.fillMode)
+                var element = materialDraw(submesh, instanceCount: batch.modelMatrices.count, cullMode: cullMode, isMirrored: batch.isMirrored, fillMode: batch.material.renderState.fillMode, stereoViews: stereoViews)
                 .vertexBuffers(batch.mesh.vertexBuffers)
                 .parameter("frame", functionType: .vertex, value: frame)
                 .eraseToAnyElement()
@@ -356,6 +375,7 @@ private struct BlinnPhongBatchesElement: Element {
                 return element
             }
 
+            let viewCount = stereoViews?.count ?? 1
             return ForEach(Array(groups.enumerated()), id: \.offset) { _, group in
                 let layout = blinnPhongVertexLayout(group.key.vertexDescriptor)
                 if !group.single.isEmpty {
@@ -366,6 +386,7 @@ private struct BlinnPhongBatchesElement: Element {
                     }
                     .vertexDescriptor(layout.descriptor)
                     .materialRenderState(group.key.renderState, isTransparent: isTransparent)
+                    .vertexAmplification(count: viewCount)
                 }
                 if !group.instanced.isEmpty {
                     try RenderPipeline(label: "Blinn-Phong Instanced", vertexShader: layout.hasColors ? shaders.coloredInstancedVertex : shaders.instancedVertex, fragmentShader: fragmentShader) {
@@ -375,6 +396,7 @@ private struct BlinnPhongBatchesElement: Element {
                     }
                     .vertexDescriptor(layout.descriptor)
                     .materialRenderState(group.key.renderState, isTransparent: isTransparent)
+                    .vertexAmplification(count: viewCount)
                 }
             }
         }

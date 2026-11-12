@@ -27,19 +27,26 @@ package func cameraRelative(_ position: SIMD3<Float>, to cameraPosition: SIMD3<F
 public extension ShaderMaterialTransforms {
     /// Far from the world origin, view * model cancels two large translations in Float and loses the small difference
     /// (#251). Subtracting the camera position in Double first keeps modelViewProjectionMatrix precise.
-    init(modelMatrix: simd_float4x4, viewMatrix: simd_float4x4, projectionMatrix: simd_float4x4, cameraPosition: SIMD3<Float>, opacity: Float) {
+    ///
+    /// With `stereoViews`, the per-view fields hold each view; `cameraPosition` is then the render origin between them.
+    init(modelMatrix: simd_float4x4, viewMatrix: simd_float4x4, projectionMatrix: simd_float4x4, cameraPosition: SIMD3<Float>, opacity: Float, stereoViews: StereoViews? = nil) {
         let cameraRelativeModelMatrix = modelMatrix.cameraRelative(to: cameraPosition)
         let cameraRelativeViewMatrix = viewMatrix.rotationOnlyView
+        let modelViewProjectionMatrix = projectionMatrix * cameraRelativeViewMatrix * cameraRelativeModelMatrix
+        let perView = stereoViews?.relativeViewProjections(origin: cameraPosition).map { $0 * cameraRelativeModelMatrix } ?? [modelViewProjectionMatrix]
+        let eyes = stereoViews?.cameraPositions.map { cameraRelative($0, to: cameraPosition) } ?? [.zero]
         self.init(
             modelMatrix: modelMatrix,
             viewMatrix: viewMatrix,
             projectionMatrix: projectionMatrix,
-            modelViewProjectionMatrix: projectionMatrix * cameraRelativeViewMatrix * cameraRelativeModelMatrix,
+            modelViewProjectionMatrix: modelViewProjectionMatrix,
             normalMatrix: modelMatrix.inverse.transpose,
             cameraPosition: cameraPosition,
             opacity: opacity,
             cameraRelativeModelMatrix: cameraRelativeModelMatrix,
-            cameraRelativeViewMatrix: cameraRelativeViewMatrix
+            cameraRelativeViewMatrix: cameraRelativeViewMatrix,
+            modelViewProjectionMatrices: (perView[0], perView[min(1, perView.count - 1)]),
+            cameraRelativeEyePositions: (eyes[0], eyes[min(1, eyes.count - 1)])
         )
     }
 }

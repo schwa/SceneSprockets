@@ -333,6 +333,7 @@ public final class PBRMaterialRenderer: MaterialRenderer, Equatable {
             renderer.lighting.shadows = shadows
             return renderer.eraseToAnyElement()
         }
+        .vertexAmplification(count: context.viewCount)
         .eraseToAnyElement()
     }
 
@@ -352,10 +353,21 @@ public final class PBRMaterialRenderer: MaterialRenderer, Equatable {
             transmissionTarget: transmissionTarget
         )
         renderer.materialOverrides = try materialOverrides(for: entries, keys: keys)
+        renderer.stereo = context.stereoViews.map { Self.pbrStereoViews($0, origin: cameraPosition) }
         if let channel = context.materialChannel {
             renderer.debugView = Self.debugView(for: channel)
         }
         return renderer
+    }
+
+    // The views relative to the render origin, matching the camera-relative poses and lights.
+    static func pbrStereoViews(_ views: StereoViews, origin: SIMD3<Float>) -> PBRStereoViews {
+        let relative = views.viewMatrices.map { view in
+            var translated = view
+            translated.columns.3 = view * SIMD4(origin, 1)
+            return translated
+        }
+        return PBRStereoViews(viewMatrices: relative, projectionMatrices: views.projectionMatrices, viewports: views.viewports)
     }
 
     static func debugView(for channel: MaterialChannel) -> PBRDebugView {
@@ -376,7 +388,8 @@ extension PBRMaterialRenderer: PrePassRenderer {
     public func makePrePassElement(entries: [SceneGraph.MeshEntry], context: RenderContext, viewSize: (width: Int, height: Int), otherOpaqueContent: () throws -> AnyElement?) throws -> AnyElement? {
         frameTransmissionTarget = nil
         let hasTransmission = entries.contains { ($0.material as? PBRSceneMaterial)?.pbrMaterial.isTransmissive ?? false }
-        guard hasTransmission, viewSize.width > 0, viewSize.height > 0 else {
+        // In stereo, PBR draws transmission as coverage instead (no pre-pass).
+        guard hasTransmission, context.stereoViews == nil, viewSize.width > 0, viewSize.height > 0 else {
             return nil
         }
         let target: PBRTransmissionTarget
@@ -486,7 +499,10 @@ extension PBRMaterialRenderer: BackgroundRenderer {
         guard case let .environment(blur) = context.environment.background else {
             return nil
         }
-        return PBREnvironmentBackground(lighting: lighting(context: context), viewMatrix: context.viewMatrix, projectionMatrix: context.projectionMatrix, blur: blur)
+        var background = PBREnvironmentBackground(lighting: lighting(context: context), viewMatrix: context.viewMatrix, projectionMatrix: context.projectionMatrix, blur: blur)
+        background.stereo = context.stereoViews.map { PBRStereoViews(viewMatrices: $0.viewMatrices, projectionMatrices: $0.projectionMatrices, viewports: $0.viewports) }
+        return background
+            .vertexAmplification(count: context.viewCount)
             .eraseToAnyElement()
     }
 }

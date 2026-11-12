@@ -64,10 +64,13 @@ namespace BlinnPhong {
         float2 textureCoordinate;
         // Multiplies ambient, diffuse and alpha; white without vertex colors.
         float4 color;
+        // The view (amplification ID) this is drawn for.
+        uint view [[flat]];
     };
 
     // One draw per mesh.
     [[vertex]] Fragment vertex_main(
+        ushort view [[amplification_id]],
         Vertex in [[stage_in]],
         constant BlinnPhongFrame &frame [[buffer(1)]],
         constant float4x4 &modelMatrix [[buffer(2)]],
@@ -75,7 +78,8 @@ namespace BlinnPhong {
     ) {
         float4 world = modelMatrix * float4(in.position, 1);
         Fragment out;
-        out.position = frame.viewProjection * world;
+        out.position = frame.viewProjections[view] * world;
+        out.view = view;
         out.worldPosition = world.xyz / world.w;
         // Not normalized here: a zero normal must stay zero (normalize would give NaN).
         out.normal = normalMatrix * in.normal;
@@ -87,6 +91,7 @@ namespace BlinnPhong {
     // One draw for many copies of a mesh.
     [[vertex]] Fragment vertex_instanced(
         uint instanceID [[instance_id]],
+        ushort view [[amplification_id]],
         Vertex in [[stage_in]],
         constant BlinnPhongFrame &frame [[buffer(1)]],
         constant float4x4 *modelMatrices [[buffer(2)]],
@@ -94,7 +99,8 @@ namespace BlinnPhong {
     ) {
         float4 world = modelMatrices[instanceID] * float4(in.position, 1);
         Fragment out;
-        out.position = frame.viewProjection * world;
+        out.position = frame.viewProjections[view] * world;
+        out.view = view;
         out.worldPosition = world.xyz / world.w;
         out.normal = normalMatrices[instanceID] * in.normal;
         out.textureCoordinate = in.textureCoordinate;
@@ -141,7 +147,7 @@ namespace BlinnPhong {
             normal = normalize(in.normal);
         } else {
             normal = normalize(cross(dfdx(in.worldPosition), dfdy(in.worldPosition)));
-            if (dot(normal, frame.cameraPosition - in.worldPosition) < 0) {
+            if (dot(normal, frame.cameraPositions[in.view] - in.worldPosition) < 0) {
                 normal = -normal;
             }
         }
@@ -167,7 +173,7 @@ namespace BlinnPhong {
             case 6: return float4(emission, 1);
             default: break;
         }
-        float3 viewDirection = normalize(frame.cameraPosition - in.worldPosition);
+        float3 viewDirection = normalize(frame.cameraPositions[in.view] - in.worldPosition);
         float3 diffuse = 0;
         float3 specular = 0;
         for (int index = 0; index < frame.lightCount; index++) {

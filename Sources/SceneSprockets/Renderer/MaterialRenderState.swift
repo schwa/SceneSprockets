@@ -119,14 +119,16 @@ extension Element {
 ///   - isMirrored: Whether the model matrix mirrors (negative determinant). Mirroring flips the winding, so the
 ///     culled side flips too.
 ///   - fillMode: `.lines` draws triangle edges.
-public func materialDraw(_ submesh: MetalMesh.Submesh, instanceCount: Int = 1, cullMode: MTLCullMode = .none, isMirrored: Bool = false, fillMode: MTLTriangleFillMode = .fill) -> AnyElement {
-    guard cullMode != .none || fillMode != .fill else {
+///   - stereoViews: Views to draw to at once with vertex amplification, usually ``RenderContext/stereoViews``.
+public func materialDraw(_ submesh: MetalMesh.Submesh, instanceCount: Int = 1, cullMode: MTLCullMode = .none, isMirrored: Bool = false, fillMode: MTLTriangleFillMode = .fill, stereoViews: StereoViews? = nil) -> AnyElement {
+    guard cullMode != .none || fillMode != .fill || stereoViews != nil else {
         return Draw(primitiveType: submesh.primitiveType, indexBuffer: submesh.indexBuffer, indexType: submesh.indexType, indexCount: submesh.indexCount, indexBufferOffset: submesh.indexBufferOffset, instanceCount: instanceCount).eraseToAnyElement()
     }
     let indexBuffer = submesh.indexBuffer
     let offset = submesh.indexBufferOffset
     let (primitiveType, indexType, indexCount) = (submesh.primitiveType, submesh.indexType, submesh.indexCount)
     return Draw { encoder in
+        stereoViews?.configure(encoder)
         encoder.setCullMode(cullMode)
         encoder.setFrontFacing(isMirrored ? .clockwise : .counterClockwise)
         encoder.setTriangleFillMode(fillMode)

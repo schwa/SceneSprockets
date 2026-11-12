@@ -8730,13 +8730,14 @@ Upstream review issues: GeometryLite3D #49–#55.
 ## 379: visionOS immersive: SceneSprockets shaders cannot render stereo
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: effort:m, area:renderer
 depends: 380
 created: 2026-11-12T19:17:28Z
-updated: 2026-11-12T19:31:56Z
+updated: 2026-11-12T19:46:22Z
+closed: 2026-11-12T19:46:22Z
 +++
 
 SceneSprockets' own vertex shaders take one camera and ignore [[amplification_id]]: BlinnPhong, DebugView, Deformation, ShaderMaterialSamples, ShadowCasters, SkyGradient. Their pipelines do not set maxVertexAmplificationCount. Both eyes cannot be drawn in one pass.
@@ -8744,6 +8745,7 @@ SceneSprockets' own vertex shaders take one camera and ignore [[amplification_id
 Dependencies with the same gap: MetalSprocketsAddOns (most shaders, see its issue tracker) and MetalSprocketsParticles #98. MetalSprocketsPBR and GaussianSplats already support stereo.
 
 - `2026-11-12T19:40:04Z`: #380 landed: renderers read context.stereoViews / viewCount / viewProjections (and StereoViews.relativeViewProjections for camera-relative ones like Blinn-Phong and PBR), call stereoViews.configure(encoder) per draw, and set maxVertexAmplificationCount. SceneSprocketsPBR can map StereoViews to PBRStereoViews.
+- `2026-11-12T19:46:22Z`: Stereo via vertex amplification for Blinn-Phong (single + instanced), ShaderMaterial (new per-view ShaderMaterialTransforms fields, appended so old layouts still work; samples use them), DebugView, SkyGradient, PBR (maps StereoViews to PBRStereoViews; no transmission pre-pass in stereo, PBR uses coverage) and SceneText. Each is tested: stereo slices match per-eye mono renders. Not covered here: particles (MetalSprocketsParticles #98) and AddOns-drawn decorations/gizmos/outlines (MetalSprocketsAddOns #113) still draw one view; screen-space passes are #382. Custom ShaderMaterial shaders that ignore [[amplification_id]] draw eye 0 into both slices.
 
 ---
 

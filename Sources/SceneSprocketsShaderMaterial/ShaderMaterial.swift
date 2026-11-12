@@ -213,11 +213,11 @@ struct ShaderMaterialDrawsElement: Element {
 
     // swiftlint:disable:next function_parameter_count
     private func draw(_ item: ShaderMaterialItem, context: RenderContext, cameraPosition: SIMD3<Float>, lightValues: [ShaderMaterialLight], lightCount: Int32, shadowTexture: MTLTexture?, shadowSampler: MTLSamplerState?) throws -> some Element {
-        let transforms = ShaderMaterialTransforms(modelMatrix: item.modelMatrix, viewMatrix: context.viewMatrix, projectionMatrix: context.projectionMatrix, cameraPosition: cameraPosition, opacity: item.opacity)
+        let transforms = ShaderMaterialTransforms(modelMatrix: item.modelMatrix, viewMatrix: context.viewMatrix, projectionMatrix: context.projectionMatrix, cameraPosition: cameraPosition, opacity: item.opacity, stereoViews: context.stereoViews)
         let lighting = lighting(lightCount: lightCount, receivesShadow: item.receivesShadow)
         let submesh = item.mesh.submeshes[item.submeshIndex]
         return try RenderPipeline(label: "ShaderMaterial", vertexShader: item.material.vertexShader, fragmentShader: item.material.fragmentShader) {
-            materialDraw(submesh, cullMode: item.material.renderState.cullMode, isMirrored: item.modelMatrix.isMirroring, fillMode: item.material.renderState.fillMode)
+            materialDraw(submesh, cullMode: item.material.renderState.cullMode, isMirrored: item.modelMatrix.isMirroring, fillMode: item.material.renderState.fillMode, stereoViews: context.stereoViews)
             .vertexBuffers(item.mesh.vertexBuffers)
             .parameters { parameters in
                 parameters.set("transforms", value: transforms)
@@ -243,6 +243,7 @@ struct ShaderMaterialDrawsElement: Element {
         }
         .vertexDescriptor(item.mesh.vertexDescriptor.mtlVertexDescriptor)
         .materialRenderState(item.material.renderState, isTransparent: item.isTransparent)
+        .vertexAmplification(count: context.viewCount)
     }
 }
 

@@ -21,6 +21,7 @@ namespace DebugView {
         // World position minus the camera position; precise far from the origin (#251).
         float3 cameraRelativePosition;
         float2 textureCoordinate;
+        uint view [[flat]];
     };
 
     // Matches DebugMode's raw values.
@@ -31,9 +32,10 @@ namespace DebugView {
     constant int modeWorldPosition = 4;
     constant int modeWireframe = 5;
 
-    [[vertex]] VertexOut vertex_main(VertexIn in [[stage_in]], constant ShaderMaterialTransforms &transforms [[buffer(10)]]) {
+    [[vertex]] VertexOut vertex_main(VertexIn in [[stage_in]], ushort view [[amplification_id]], constant ShaderMaterialTransforms &transforms [[buffer(10)]]) {
         VertexOut out;
-        out.position = transforms.modelViewProjectionMatrix * float4(in.position, 1);
+        out.position = transforms.modelViewProjectionMatrices[view] * float4(in.position, 1);
+        out.view = view;
         out.worldNormal = (transforms.normalMatrix * float4(in.normal, 0)).xyz;
         out.worldPosition = (transforms.modelMatrix * float4(in.position, 1)).xyz;
         out.cameraRelativePosition = (transforms.cameraRelativeModelMatrix * float4(in.position, 1)).xyz;
@@ -51,7 +53,7 @@ namespace DebugView {
         if (!isFrontFacing) {
             normal = -normal;
         }
-        float3 toCamera = normalize(-in.cameraRelativePosition);
+        float3 toCamera = normalize(transforms.cameraRelativeEyePositions[in.view] - in.cameraRelativePosition);
         float facing = saturate(dot(normal, toCamera));
         float3 color;
         switch (mode) {

@@ -8,13 +8,18 @@ struct SkyGradientBackground: Element {
     var gradient: SceneGraph.Environment.SkyGradient
     var viewMatrix: simd_float4x4
     var projectionMatrix: simd_float4x4
+    var stereoViews: StereoViews?
 
     var body: some Element {
         get throws {
-            var rotationOnly = viewMatrix
-            rotationOnly.columns.3 = [0, 0, 0, 1]
+            let views = stereoViews.map { Array(zip($0.viewMatrices, $0.projectionMatrices)) } ?? [(viewMatrix, projectionMatrix)]
+            let inverses = views.map { view, projection in
+                var rotationOnly = view
+                rotationOnly.columns.3 = [0, 0, 0, 1]
+                return (projection * rotationOnly).inverse
+            }
             let uniforms = SkyGradientUniforms(
-                inverseViewProjection: (projectionMatrix * rotationOnly).inverse,
+                inverseViewProjections: (inverses[0], inverses[min(1, inverses.count - 1)]),
                 zenith: gradient.zenith,
                 horizon: gradient.horizon,
                 ground: gradient.ground,
@@ -22,12 +27,14 @@ struct SkyGradientBackground: Element {
             )
             let shaders = try SkyGradientShaders.shared()
             return try RenderPipeline(label: "Sky Gradient", vertexShader: shaders.vertex, fragmentShader: shaders.fragment) {
-                Draw { encoder in
+                Draw { [stereoViews] encoder in
+                    stereoViews?.configure(encoder)
                     encoder.drawPrimitives(primitiveType: .triangle, vertexStart: 0, vertexCount: 3)
                 }
                 .parameter("uniforms", value: uniforms)
             }
             .depthCompare(function: .always, writes: false)
+            .vertexAmplification(count: views.count)
         }
     }
 }

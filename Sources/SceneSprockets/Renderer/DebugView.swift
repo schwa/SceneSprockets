@@ -82,13 +82,14 @@ struct SceneGraphDebugRenderer: MaterialRenderer {
             let deformed = entry.renderDeformed(revision: context.revision)
             let mesh = deformed?.mesh ?? entry.mesh
             let modelMatrix = deformed?.modelMatrix ?? entry.worldTransform
-            let transforms = ShaderMaterialTransforms(modelMatrix: modelMatrix, viewMatrix: context.viewMatrix, projectionMatrix: context.projectionMatrix, cameraPosition: cameraPosition, opacity: 1)
+            let transforms = ShaderMaterialTransforms(modelMatrix: modelMatrix, viewMatrix: context.viewMatrix, projectionMatrix: context.projectionMatrix, cameraPosition: cameraPosition, opacity: 1, stereoViews: context.stereoViews)
             let layout = Self.vertexLayout(mesh.vertexDescriptor)
             let debug = SIMD4<Int32>(mode.rawValue, layout.hasNormals ? 1 : 0, layout.hasTextureCoordinates ? 1 : 0, 0)
             let submesh = mesh.submeshes[entry.submeshIndex]
             try RenderPipeline(label: "DebugView", vertexShader: vertexShader, fragmentShader: fragmentShader) {
                 // Sets the winding even with default cull and fill, so [[front_facing]] is right.
-                Draw { encoder in
+                Draw { [stereoViews = context.stereoViews] encoder in
+                    stereoViews?.configure(encoder)
                     encoder.setFrontFacing(simd_determinant(modelMatrix) < 0 ? .clockwise : .counterClockwise)
                     encoder.setTriangleFillMode(mode == .wireframe ? .lines : .fill)
                     encoder.drawIndexedPrimitives(primitiveType: submesh.primitiveType, indexCount: submesh.indexCount, indexType: submesh.indexType, indexBuffer: submesh.indexBuffer.gpuAddress + UInt64(submesh.indexBufferOffset), indexBufferLength: submesh.indexBuffer.length - submesh.indexBufferOffset, instanceCount: 1)
@@ -100,6 +101,7 @@ struct SceneGraphDebugRenderer: MaterialRenderer {
             }
             .vertexDescriptor(layout.descriptor)
             .depthCompare(function: .greater, writes: true)
+            .vertexAmplification(count: context.viewCount)
         }
         .eraseToAnyElement()
     }

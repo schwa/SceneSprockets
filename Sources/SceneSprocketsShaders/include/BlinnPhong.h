@@ -38,11 +38,15 @@ struct BlinnPhongShadowUniforms {
 typedef struct BlinnPhongShadowUniforms BlinnPhongShadowUniforms;
 
 // Per-draw lighting state, shared by every mesh in a batch.
+// Views drawn at once: 1, or 2 for stereo, where vertex amplification draws each primitive once per view and
+// [[amplification_id]] picks the view's entry in the per-view arrays.
+#define kBlinnPhongMaxViewCount 2
+
 struct BlinnPhongFrame {
-    // Projection times the view's rotation only; model matrices are camera-relative.
-    simd_float4x4 viewProjection;
-    // Zero from the renderer (camera-relative space).
-    simd_float3 cameraPosition;
+    // Per view: projection times the view, relative to the render origin; model matrices are relative to it too.
+    simd_float4x4 viewProjections[kBlinnPhongMaxViewCount];
+    // Per view: the eye relative to the render origin (zero for a single view).
+    simd_float3 cameraPositions[kBlinnPhongMaxViewCount];
     simd_float3 ambientLightColor;
     int lightCount;
     // MaterialChannel's raw value, or 0 for lit output.
