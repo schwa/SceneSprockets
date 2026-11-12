@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Breaking:** `PBRSceneMaterial` is a final class (#375). It wraps a shared `PBRMaterial`, so copies already shared state; now the sharing is explicit, like `SCNMaterial`.
 - **Breaking:** `SceneGraph.hitTest(_:categoryBitMask:)` is removed; pass the mask in `HitTestOptions`: `hitTest(ray, options: .init(categoryBitMask: mask))`. `hitTest(_:options:)` now defaults its options (#376).
 - **Breaking:** `ShaderMaterial.isTransparent` is read-only, derived from the new `usesAlphaBlending` and the render state's blend mode, so it reads back what was set (#374). The initializer's `isTransparent:` parameter is now `usesAlphaBlending:`. Archives are unchanged.
 - Shorter node construction (#367): `Node.light(_:label:transform:)` and `Node.camera(_:label:transform:)`, so `root.addChild(.light(.point(intensity: 15), transform: .init(translation: [0, 4, 0])))` is one expression. `Light.point(...)` and `Light.directional(...)`, and `castsShadow` on `Light.spot(...)`. `Camera.perspective(...)`, `Camera.orthographic(...)` and `Camera.default`; `SceneView.defaultCamera` is deprecated in favor of `Camera.default`. Aimed nodes use GeometryLite3D's `Transform3D(position:lookingAt:up:)`, so the tutorials no longer need `look(at:)` or local helpers.

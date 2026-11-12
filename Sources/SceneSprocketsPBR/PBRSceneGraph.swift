@@ -11,8 +11,11 @@ import SwiftMesh
 ///
 /// The material wraps a MetalSprocketsPBR `PBRMaterial`: metallic-roughness with most glTF material extensions. A
 /// ``PBRMaterialRenderer`` draws it.
-public struct PBRSceneMaterial: SceneSprockets.Material, SamplesShadowsInShader {
-    /// The MetalSprocketsPBR material. It is a class, so copies of this value share it.
+///
+/// It is a class, like SceneKit's `SCNMaterial`: nodes that use the same instance share it, and a change shows on all
+/// of them (#375).
+public final class PBRSceneMaterial: SceneSprockets.Material, SamplesShadowsInShader {
+    /// The MetalSprocketsPBR material.
     public var pbrMaterial: PBRMaterial
 
     /// Creates a scene material that wraps a PBR material.
@@ -28,12 +31,10 @@ public struct PBRSceneMaterial: SceneSprockets.Material, SamplesShadowsInShader 
         true
     }
 
-    /// The blend mode, depth test and write, color write mask and fill mode.
-    ///
-    /// The value is stored on the shared ``pbrMaterial``, so every `PBRSceneMaterial` that wraps it sees a change.
+    /// The blend mode, depth test and write, color write mask and fill mode. Stored on ``pbrMaterial``.
     public var renderState: PBRRenderState {
         get { pbrMaterial.renderState }
-        nonmutating set { pbrMaterial.renderState = newValue }
+        set { pbrMaterial.renderState = newValue }
     }
 
     // A blended copy with base color alpha scaled by `opacity`. Masked materials lose their cutoff while fading.

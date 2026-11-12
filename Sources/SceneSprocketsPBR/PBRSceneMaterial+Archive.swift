@@ -39,7 +39,7 @@ extension PBRSceneMaterial: ArchivableMaterial {
         try encodeTextureTransforms(into: &container, context: context)
     }
 
-    public init(from decoder: Decoder) throws {
+    public convenience init(from decoder: Decoder) throws {
         let context = try decoder.sceneArchive
         let device = _MTLCreateSystemDefaultDevice()
         let container = try decoder.container(keyedBy: ArchiveKeys.self)

@@ -141,3 +141,13 @@ func pbrRenderStateIsApplied() throws {
     let faded = try additive.faded(0.5)
     #expect(faded.renderState == additive.renderState)
 }
+
+// #375: PBRSceneMaterial wraps a shared PBRMaterial, so it is a class: assigning shares it, visibly.
+@Test(.enabled(if: deviceSupportsMetal4))
+func pbrSceneMaterialHasReferenceSemantics() throws {
+    let a = try PBRSceneMaterial(baseColor: [1, 0, 0, 1])
+    let b = a
+    #expect(a === b)
+    b.renderState.blendMode = .additive
+    #expect(a.renderState.blendMode == .additive)
+}

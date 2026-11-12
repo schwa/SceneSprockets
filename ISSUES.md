@@ -8526,12 +8526,13 @@ Code: `Sources/SceneSprocketsShaderMaterial/ShaderMaterial.swift`.
 ## 375: PBRSceneMaterial is a value type that shares mutable state between copies
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:renderer, effort:m
 created: 2026-11-11T16:35:42Z
-updated: 2026-11-12T01:30:16Z
+updated: 2026-11-12T02:22:44Z
+closed: 2026-11-12T02:22:44Z
 +++
 
 `PBRSceneMaterial` is a struct, but it wraps a `PBRMaterial` class and `renderState` writes through to it (`nonmutating set { pbrMaterial.renderState = newValue }`).
@@ -8554,6 +8555,7 @@ Related: #368 (material API consistency).
 - `2026-11-12T01:36:44Z`: Question 1 (design): PBRSceneMaterial exposes 'public var pbrMaterial: PBRMaterial' (a class), so any copy can mutate shared state through it, not only through renderState. Fix by (a) copy-on-write: make pbrMaterial internal, expose value properties (uniforms, renderState, doubleSided, textureTransforms) with mutating setters that copy the PBRMaterial when not uniquely referenced (copying allocates a GPU buffer, so a failed copy would have to trap or keep sharing); or (b) make PBRSceneMaterial a final class, so sharing is explicit, like SCNMaterial? Option (b) also changes BlinnPhongSceneMaterial/ShaderMaterial consistency (#368). Which one?
 - `2026-11-12T01:36:45Z`: Auto-fixer run: punted. The shared state is reachable through the public pbrMaterial class reference, not only renderState, so a real fix is either copy-on-write with pbrMaterial hidden, or making the type a class. That is an API decision (it also touches #368). Unblocker: answer 375-Q1.
 - `2026-11-12T02:16:33Z`: Answer 1: b
+- `2026-11-12T02:22:44Z`: Per 375-Q1 (b): PBRSceneMaterial is now a final class, so sharing is explicit (like SCNMaterial); renderState has a normal setter. Test pbrSceneMaterialHasReferenceSemantics.
 
 ---
 
