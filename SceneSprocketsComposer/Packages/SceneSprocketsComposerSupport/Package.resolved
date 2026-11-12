@@ -1,5 +1,5 @@
 {
-  "originHash" : "58baa5729240dc00427fdfda2ceb5f8a1210b873cf5cc98d208b0fa6a711c1e1",
+  "originHash" : "3b2a0bed891b1dd132190593f4aac8a10047bffa1324d7241a7727b02cbfb855",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -33,8 +33,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/GeometryLite3D",
       "state" : {
-        "branch" : "main",
-        "revision" : "e678c093e8b3845c2721714c28a2767a7f37f7c5"
+        "revision" : "e678c093e8b3845c2721714c28a2767a7f37f7c5",
+        "version" : "0.3.1"
       }
     },
     {
