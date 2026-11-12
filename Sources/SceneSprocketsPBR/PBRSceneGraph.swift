@@ -93,7 +93,8 @@ public final class PBRSceneMaterial: SceneMaterial, SamplesShadowsInShader {
     /// Creates a material with textures.
     ///
     /// - Parameters:
-    ///   - baseColor: The base color factor in linear RGB, with alpha in `w`. It multiplies the base color texture.
+    ///   - baseColor: The base color factor in linear RGB. It multiplies the base color texture.
+    ///   - opacity: The opacity, from 0 to 1. It multiplies the base color texture's alpha.
     ///   - metallic: The metalness factor.
     ///   - roughness: The roughness factor.
     ///   - textures: The textures. An emissive texture sets the emissive factor to 1.
