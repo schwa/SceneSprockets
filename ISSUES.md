@@ -9072,3 +9072,26 @@ SceneView calls some closures every frame to build elements: sceneOverlay, scene
 If frame building moves off the main thread (#393, MetalSprockets #560), these closures run on the render thread. Their current signatures and callers do not account for that: reading main-actor or scene graph state from them would be a data race, and ViewManipulator is @MainActor-isolated.
 
 ---
+
+## 395: SceneView on the render thread aborts: memoryless depth cannot be stored
+
++++
+status: closed
+priority: high
+kind: bug
+labels: effort:s
+created: 2026-11-14T22:48:29Z
+updated: 2026-11-14T22:48:32Z
+closed: 2026-11-14T22:48:32Z
++++
+
+With SceneView rendering on MetalSprockets' render thread (#393), the demo app aborts in Metal API validation:
+
+    _MTLDebugValidateRenderPassDescriptorAndTrackAttachments:487: failed assertion `RenderPass Descriptor Validation
+    Memoryless attachment content cannot be stored in memory.
+
+Stack: MetalSprockets.RenderThread → RenderPass.workloadEnter → RecordingScope.beginRenderPass, while drawing SceneGraphElement.
+
+SceneGraphElement's storesDepth comes from inputs that the main-thread step publishes, but the view's depth storage mode (memoryless unless there are post passes or an overlay) comes from SceneView's body. On the render thread the two can be from different updates, so the scene pass asks to store depth into a memoryless texture. MetalSprockets #571 describes a similar race inside RenderView.
+
+---

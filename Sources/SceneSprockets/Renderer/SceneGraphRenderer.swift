@@ -295,6 +295,9 @@ public struct SceneGraphElement: Element {
             let ambientOcclusion = postProcessing?.ambientOcclusion
             let adjustsColor = postProcessing?.adjustsColor ?? false
             let hasPostPasses = shadowFrame != nil || fog != nil || ambientOcclusion != nil || adjustsColor
+            // The view's depth storage can lag behind `storesDepth` when the frame is built on a render thread (#393):
+            // memoryless depth cannot be stored.
+            let storesDepth = storesDepth && renderPassDescriptor?.depthAttachment.texture?.storageMode != .memoryless
             let scenePass = try MetalSprockets.Group {
                 try makeScenePass(elements: elements, clearColor: clearColor, storesDepth: storesDepth || hasPostPasses || softParticleDepth != nil)
                 if let softParticleDepth {
