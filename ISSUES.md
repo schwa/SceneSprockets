@@ -9031,3 +9031,25 @@ The caller is the window's SceneView (RenderView/MTKView display link, element t
 Possibly related (unverified): each SceneParticleSystem has one GPU ParticleSystemRuntime. With #391, the immersive render loop simulates it off the main thread. If the window's SceneView and the immersive space ever render the same scene at once (for example while the space opens or closes, or if the window is not blanked), two threads would drive the same runtime.
 
 ---
+
+## 393: SceneView does its per-frame CPU work on the main thread
+
++++
+status: new
+priority: medium
+kind: enhancement
+labels: effort:l
+created: 2026-11-14T21:32:01Z
++++
+
+SceneView builds and encodes each frame on the main thread: advancing actions and particles, taking the presentation, culling, and encoding the scene, shadow and particle passes. In a busy scene this takes most of the main thread, so everything else on it waits: UI, input handling, and app logic in the delegate.
+
+Seen in TinyTorii (TinyTorii #68): in first-person mode there is a noticeable lag between pressing a movement key and the camera moving. An offscreen frame of its sample town takes about 70 ms of CPU. The demo frame meter also shows CPU frame time well above GPU time in several demos (see the profiling notes in this file).
+
+The scene graph already hands edits to a rendering side through presentation() and Frame (#390), which visionOS immersive spaces use to render on another thread. SceneView on macOS and iOS does not.
+
+## Proposed fix (per user)
+
+Move the per-frame work off the main thread, so the main thread only edits the scene graph and handles UI and input.
+
+---
