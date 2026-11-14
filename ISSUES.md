@@ -9055,3 +9055,20 @@ Move the per-frame work off the main thread, so the main thread only edits the s
 - `2026-11-14T21:36:45Z`: Blocked by MetalSprockets #560: RenderView on macOS and iOS can only render on the main thread (MTKView delegate), so SceneView has no way to encode frames elsewhere. The SceneSprockets side (ScenePresenter stepping on main, SceneGraphElement(presentation:) on the render thread) already exists. Note: user closures that build elements per frame (sceneOverlay, sceneDecorations, ViewManipulator.overlay) would then run off the main actor.
 
 ---
+
+## 394: SceneView's per-frame element closures assume they run on the main actor
+
++++
+status: new
+priority: medium
+kind: task
+labels: effort:m
+depends: 393
+created: 2026-11-14T21:37:01Z
++++
+
+SceneView calls some closures every frame to build elements: sceneOverlay, sceneDecorations and ViewManipulator.overlay(viewport:). They run inside RenderView's content closure, which today is on the main thread, so callers read main-actor state (models, selection, gizmo state) from them freely.
+
+If frame building moves off the main thread (#393, MetalSprockets #560), these closures run on the render thread. Their current signatures and callers do not account for that: reading main-actor or scene graph state from them would be a data race, and ViewManipulator is @MainActor-isolated.
+
+---
