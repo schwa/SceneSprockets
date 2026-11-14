@@ -9097,3 +9097,30 @@ Stack: MetalSprockets.RenderThread → RenderPass.workloadEnter → RecordingSco
 SceneGraphElement's storesDepth comes from inputs that the main-thread step publishes, but the view's depth storage mode (memoryless unless there are post passes or an overlay) comes from SceneView's body. On the render thread the two can be from different updates, so the scene pass asks to store depth into a memoryless texture. MetalSprockets #571 describes a similar race inside RenderView.
 
 ---
+
+## 396: Frame timing overlay is hidden under app chrome when SceneView ignores the safe area
+
++++
+status: new
+priority: medium
+kind: bug
+labels: area:ui
+created: 2026-11-14T23:29:43Z
++++
+
+SceneView draws FrameTimingView in its own overlay at `.topTrailing` with a fixed `.padding()`. When the app makes SceneView ignore the safe area (so the scene draws under a translucent top bar) the overlay sits under the app's bar.
+
+The app cannot work around this:
+- The overlay position and padding are fixed and do not follow safe area insets.
+- SceneView sets its own `onFrameTimingChange` callback inside, which replaces any callback the app sets outside, so the app cannot get the statistics to draw its own FrameTimingView.
+
+## Repro
+1. Put `SceneView(...).sceneFrameTiming(true).ignoresSafeArea()` in a ZStack with a top bar overlay.
+2. Run.
+
+Expected: the frame timing panel is visible below the bar, or the app can place it.
+Actual: the top of the panel is under the bar.
+
+Seen in TinyTorii (wander mode) with SceneSprockets 0.1.0.
+
+---
