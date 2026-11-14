@@ -1,5 +1,5 @@
 {
-  "originHash" : "2c7731a91fb0df40c23bf2b8b1f12237df41766653fbcde458468b06e0567c33",
+  "originHash" : "5592e6692668fedcb3773a75f0973e78f789731fcd83c291ddb521cd4e8e5e9e",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -51,8 +51,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/Interaction3D",
       "state" : {
-        "revision" : "adda7b248ed655393c26bab8f7b74dac3d4619b7",
-        "version" : "0.2.1"
+        "revision" : "ecd7ebee003045dab972b90c1ea6c4dcf6186f8f",
+        "version" : "0.2.2"
       }
     },
     {
@@ -69,8 +69,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprockets",
       "state" : {
-        "revision" : "bf8ce022914262a9070320007b1c23fa851b3f76",
-        "version" : "0.2.11"
+        "revision" : "54e122456aea1e830c634f5a087fb83341d00c6f",
+        "version" : "0.3.1"
       }
     },
     {
@@ -78,8 +78,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsAddOns",
       "state" : {
-        "revision" : "df5f49859d2182eef9ec03227231613f880c142d",
-        "version" : "0.2.8"
+        "revision" : "3ada026b6ccc752a491c814831acd4995b7307e2",
+        "version" : "0.3.0"
       }
     },
     {
@@ -87,8 +87,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsGLTF",
       "state" : {
-        "revision" : "21f7afff18929a8d10bf7d47fdf6619f27ef4ba0",
-        "version" : "0.0.7"
+        "revision" : "2396218482e40be8aa10042ce3cb1eb1cf0f5e08",
+        "version" : "0.1.0"
       }
     },
     {
@@ -96,8 +96,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsParticles",
       "state" : {
-        "revision" : "37590a849271ec2d4583008f2103bd215a68fe47",
-        "version" : "0.0.5"
+        "revision" : "bf71cbace0a71a66270c68c439a84714ec703ee7",
+        "version" : "0.1.0"
       }
     },
     {
@@ -105,8 +105,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsPBR",
       "state" : {
-        "revision" : "019dca8644a55c79709ab3af49fee6d2cfab1a3e",
-        "version" : "0.1.2"
+        "revision" : "158082e413431a0f83ae998a1c89708442817c31",
+        "version" : "0.2.0"
       }
     },
     {
@@ -124,7 +124,7 @@
       "location" : "https://github.com/schwa/SceneSprocketsAddOns",
       "state" : {
         "branch" : "main",
-        "revision" : "f51139478729523256e5f6ddb197d7c01f5a81ca"
+        "revision" : "90aec8ffa5788c2b127f003394b4546b0575654b"
       }
     },
     {
@@ -132,8 +132,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/SpaceMouse",
       "state" : {
-        "revision" : "b5182a7d024b4e8206b4ff21842867d4cabc5fe3",
-        "version" : "0.0.1"
+        "revision" : "6a75314f205b5b60481829fb0400c58e1dc6376c",
+        "version" : "0.0.2"
       }
     },
     {
@@ -195,8 +195,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/SwiftECS",
       "state" : {
-        "revision" : "9fee9e48ba84944ab4e42368ce7270ef0c37f367",
-        "version" : "0.1.1"
+        "revision" : "e22b81a287363fc0a92d05088840e4db0961ded2",
+        "version" : "0.1.2"
       }
     },
     {

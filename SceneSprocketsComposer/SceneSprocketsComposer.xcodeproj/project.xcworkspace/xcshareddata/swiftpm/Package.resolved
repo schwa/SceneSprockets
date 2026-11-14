@@ -1,5 +1,5 @@
 {
-  "originHash" : "de86c1591bae7232ce49cbeed4ab445bcc4abe1c4c32f325823b932263fa9f6b",
+  "originHash" : "90818f3b00c5d8689f9c2e89980d6d4625614edfabf52b864ac0b0a5ce0b229f",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -60,8 +60,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprockets",
       "state" : {
-        "revision" : "bf8ce022914262a9070320007b1c23fa851b3f76",
-        "version" : "0.2.11"
+        "revision" : "54e122456aea1e830c634f5a087fb83341d00c6f",
+        "version" : "0.3.1"
       }
     },
     {
@@ -69,8 +69,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsAddOns",
       "state" : {
-        "revision" : "df5f49859d2182eef9ec03227231613f880c142d",
-        "version" : "0.2.8"
+        "revision" : "3ada026b6ccc752a491c814831acd4995b7307e2",
+        "version" : "0.3.0"
       }
     },
     {
@@ -78,8 +78,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsGLTF",
       "state" : {
-        "revision" : "21f7afff18929a8d10bf7d47fdf6619f27ef4ba0",
-        "version" : "0.0.7"
+        "revision" : "2396218482e40be8aa10042ce3cb1eb1cf0f5e08",
+        "version" : "0.1.0"
       }
     },
     {
@@ -87,8 +87,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsParticles",
       "state" : {
-        "revision" : "37590a849271ec2d4583008f2103bd215a68fe47",
-        "version" : "0.0.5"
+        "revision" : "bf71cbace0a71a66270c68c439a84714ec703ee7",
+        "version" : "0.1.0"
       }
     },
     {
@@ -96,8 +96,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsPBR",
       "state" : {
-        "revision" : "019dca8644a55c79709ab3af49fee6d2cfab1a3e",
-        "version" : "0.1.2"
+        "revision" : "158082e413431a0f83ae998a1c89708442817c31",
+        "version" : "0.2.0"
       }
     },
     {
