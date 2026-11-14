@@ -35,6 +35,7 @@ This document lists, for each slide of the keynote demo (`KeynoteDemo.swift`), w
 | Glass | Wall, bars, glass shapes. | None, apart from spin actions. |
 | PBR Extensions | Shapes, PBR materials. | Turning each piece every frame (actions could do this). |
 | Custom Shaders | Shapes, ShaderMaterials. | The shader functions are Metal code. |
+| Video Textures | Screen, cube, light, video file. | Making the player and its looping; updating the texture every frame; playing only while the slide shows. |
 | glTF & Model I/O | Model files (plant, pedestal). | Advancing the plant's animation player (#179); adding glow, lights and trails to the fireflies. |
 | Actions | Cubes. | The action sequences themselves (#179). |
 | Implicit Animation | Cubes. | Shuffling to random positions in a transaction every 1.6 s. |

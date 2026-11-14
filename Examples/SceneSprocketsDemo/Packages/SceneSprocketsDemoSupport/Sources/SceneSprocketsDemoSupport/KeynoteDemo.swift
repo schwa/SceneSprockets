@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 import GeometryLite3D
 import Metal
@@ -25,7 +26,7 @@ public final class KeynoteDemo: DemoScene {
     // debugging last (#310). Slides are built by title, so reordering only means editing this list.
     public static let titles = [
         "SceneSprockets", "SceneView", "Scene Graph", "Shapes", "Materials", "Lights",
-        "Shadows", "Fog", "Opacity & Fades", "Blend Modes", "Glass", "PBR Extensions", "Custom Shaders", "glTF & Model I/O",
+        "Shadows", "Fog", "Opacity & Fades", "Blend Modes", "Glass", "PBR Extensions", "Custom Shaders", "Video Textures", "glTF & Model I/O",
         "Actions", "Implicit Animation", "Constraints", "Animation Blending", "Deformation",
         "Particles", "Mesh Emitters", "Point Clouds",
         "Physics", "Post-Processing", "Level of Detail", "Performance", "SwiftECS World",
@@ -54,6 +55,8 @@ public final class KeynoteDemo: DemoScene {
     private var diceGenerator = SystemRandomNumberGenerator()
     private static let tubeJointCount = 7
     private var pbrExtensionPieces: [(node: SceneGraph.Node, axis: SIMD3<Float>, speed: Float)] = []
+    private var videoTexture: VideoTexture?
+    private var videoLoopObserver: NSObjectProtocol?
     private var burningFox: BurningFox?
     // The Thank You slide's fireworks, glass and lights, hidden until the title has been read (#317).
     private var finale: SceneGraph.Node?
@@ -240,6 +243,11 @@ public final class KeynoteDemo: DemoScene {
         • ShaderMaterial runs your own Metal vertex and fragment functions.
         • Built-in samples: normals and rim lighting. Parameters such as time pass straight to the shader.
         """,
+        "Video Textures": """
+        • VideoTexture plays an AVPlayer into a Metal texture.
+        • Use it in any material slot that takes a texture, like SceneKit's material.diffuse.contents = player.
+        • Here it is the emission of a screen and of a spinning cube.
+        """,
         "glTF & Model I/O": """
         • Load glTF files and anything Model I/O reads (OBJ, USD) into a scene graph.
         • The plant is glTF with its animation; the fireflies carry point lights.
@@ -387,6 +395,8 @@ public final class KeynoteDemo: DemoScene {
         case "Gizmos":
             let modes: [TransformGizmo.Mode] = [.translate, .rotate, .scale]
             gizmoMode = modes[Int(time / 2.5) % modes.count]
+        case "Video Textures":
+            videoTexture?.update()
         case "glTF & Model I/O":
             importedPlayer?.advance(by: deltaTime)
         case "Particles":
@@ -417,6 +427,9 @@ public final class KeynoteDemo: DemoScene {
         debugIndex = 0
         sinceDebugMode = 0
         debugMode = nil
+        if currentTitle != "Video Textures" {
+            videoTexture?.player.pause()
+        }
         if currentTitle == "Post-Processing" {
             gradeIndex = 0
             sinceGrade = 0
@@ -436,6 +449,10 @@ public final class KeynoteDemo: DemoScene {
         // The fox walks in unharmed each time its slide comes up, then catches fire.
         if currentTitle == "Mesh Emitters" {
             burningFox?.restart()
+        }
+        if currentTitle == "Video Textures", let player = videoTexture?.player {
+            player.seek(to: .zero)
+            player.play()
         }
         Self.isolateLights(of: slides[current], index: current)
     }
@@ -641,6 +658,15 @@ public final class KeynoteDemo: DemoScene {
             let rim = ShaderMaterial.rim(color: [0.3, 0.8, 1])
             ShaderMaterial(vertexShader: vertex, fragmentShader: fragment,
                            parameters: ["time": .float(t)])
+            """, to: slide)
+        case "Video Textures":
+            videoTexturesSlide(slide)
+            addCode("""
+            let video = try await VideoTexture.load(contentsOf: url)
+            video.player.play()
+            BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0),
+                                    shininess: 1, emission: .texture(video.texture))
+            // Every frame: video.update()
             """, to: slide)
         case "PBR Extensions":
             pbrExtensionsSlide(slide)
@@ -1420,6 +1446,29 @@ public final class KeynoteDemo: DemoScene {
             let node = slide.addChild(SceneGraph.Node(shape: shape, material: material, transform: .init(translation: [Float(index) * 3 - 3, 1.4, 0])))
             node.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([0.4, 1, 0.2]), duration: 7 + Float(index))))
         }
+    }
+
+    // A screen and a spinning cube, both showing the same video as emission.
+    private func videoTexturesSlide(_ slide: SceneGraph.Node) {
+        addLight(to: slide, at: [0, 6, 6], intensity: 40)
+        guard let url = Bundle.module.url(forResource: "AppleEventVideo", withExtension: "mp4", subdirectory: "DemoAssets") else {
+            return
+        }
+        let player = AVPlayer(url: url)
+        player.isMuted = true
+        player.actionAtItemEnd = .none
+        videoLoopObserver = NotificationCenter.default.addObserver(forName: AVPlayerItem.didPlayToEndTimeNotification, object: player.currentItem, queue: .main) { _ in
+            player.seek(to: .zero)
+        }
+        // The asset is 512 × 512.
+        guard let video = try? VideoTexture(player: player, width: 512, height: 512) else {
+            return
+        }
+        videoTexture = video
+        let material = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0.2), shininess: 32, emission: .texture(video.texture))
+        slide.addChild(SceneGraph.Node(shape: .box(width: 3.4, height: 3.4, length: 0.1), material: material, transform: .init(translation: [-1.8, 1.5, 0])))
+        let cube = slide.addChild(SceneGraph.Node(shape: .box(width: 1.8, height: 1.8, length: 1.8), material: material, transform: .init(translation: [2.6, 1.5, 0])))
+        cube.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([0.3, 1, 0.2]), duration: 9)))
     }
 
     // Sheen, diffuse transmission and clearcoat on speckled pieces; iridescence on pearls. Slowly turning.
