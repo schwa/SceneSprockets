@@ -9035,11 +9035,13 @@ Possibly related (unverified): each SceneParticleSystem has one GPU ParticleSyst
 ## 393: SceneView does its per-frame CPU work on the main thread
 
 +++
-status: new
+status: closed
 priority: medium
 kind: enhancement
 labels: effort:l
 created: 2026-11-14T21:32:01Z
+updated: 2026-11-14T23:17:41Z
+closed: 2026-11-14T23:17:41Z
 +++
 
 SceneView builds and encodes each frame on the main thread: advancing actions and particles, taking the presentation, culling, and encoding the scene, shadow and particle passes. In a busy scene this takes most of the main thread, so everything else on it waits: UI, input handling, and app logic in the delegate.

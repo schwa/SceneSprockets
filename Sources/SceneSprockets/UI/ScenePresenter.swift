@@ -17,6 +17,10 @@ public final class ScenePresenter {
     /// Called first in every step with the scene time and the time since the last step, both 0-based and paused with
     /// ``isPlaying``. Make per-frame edits here.
     public var update: ((_ time: Float, _ deltaTime: Float) -> Void)?
+    /// Called with the scene time after actions and particles advance, before constraints.
+    public var didApplyActions: ((_ time: Float) -> Void)?
+    /// Called with the scene time after constraints, before the snapshot is published.
+    public var didApplyConstraints: ((_ time: Float) -> Void)?
 
     private let clock = SceneClock()
     private let shared = Shared()
@@ -34,7 +38,9 @@ public final class ScenePresenter {
         update?(time, deltaTime)
         sceneGraph.advanceActions(by: deltaTime)
         sceneGraph.advanceParticles(by: deltaTime)
+        didApplyActions?(time)
         sceneGraph.applyConstraints(pointOfView: shared.viewerTransform, deltaTime: deltaTime)
+        didApplyConstraints?(time)
         shared.publish(sceneGraph.presentation())
     }
 

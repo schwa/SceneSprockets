@@ -106,7 +106,7 @@ public struct SceneView: View {
     // Fixed when the view appears: recomputing it from the bounds every frame makes the camera chase objects that
     // move far away (for example a body falling forever).
     @State private var orbitTarget: SIMD3<Float>?
-    @State private var clock = SceneClock()
+    @State private var frames = SceneViewFrames()
     @State private var frameTimingStatistics: FrameTimingStatistics?
 
     /// Creates a view that shows a scene graph.
@@ -137,38 +137,34 @@ public struct SceneView: View {
     }
 
     public var body: some View {
-        RenderView { context, size in
-            let (time, deltaTime) = clock.advance(to: context.frameUniforms.time, isPaused: !isPlaying)
-            let _ = delegate?.sceneView(updateAtTime: time, deltaTime: deltaTime)
-            let _ = sceneGraph.advanceActions(by: deltaTime)
-            let _ = sceneGraph.advanceParticles(by: deltaTime)
-            let _ = delegate?.sceneView(didApplyActionsAtTime: time)
-            let _ = sceneGraph.applyConstraints(pointOfView: currentCameraMatrix, deltaTime: deltaTime)
-            let _ = delegate?.sceneView(didApplyConstraintsAtTime: time)
-            // The listener is the camera. Audio failures leave the frame drawing.
-            let _ = try? audio?.update(sceneGraph: sceneGraph, listener: currentCameraMatrix)
-            SceneGraphElement(
-                sceneGraph: sceneGraph,
-                camera: pointOfView,
-                cameraMatrix: usesFreeCamera ? cameraMatrix ?? viewpoint.matrix : nil,
-                aspectRatio: size.height > 0 ? Float(size.width / size.height) : 1,
-                renderers: renderers,
-                defaultCamera: defaultCamera,
-                cameraOverride: cameraOverride,
-                defaultLight: usesDefaultLighting ? Light(type: .directional, color: [1, 1, 1], intensity: 1) : nil,
-                shadows: shadows,
-                storesDepth: overlay != nil,
-                decorations: decorations.map { decorations in
-                    { context in try decorations(context, SIMD2<Float>(Float(size.width), Float(size.height))) }
-                },
-                debugMode: debugMode,
-                materialChannel: materialChannel
-            )
-            if let overlay, let viewport = viewport(drawableSize: size), let element = try overlay(viewport) {
-                element
-            }
-            if let overlay = manipulatorOverlay(drawableSize: size) {
-                ManipulatorOverlayPass(content: overlay)
+        // Each step runs with this view's current settings.
+        let _ = frames.setStep { frameTime, drawableSize in
+            step(frameTime: frameTime, drawableSize: drawableSize)
+        }
+        // Culling and encoding run on the render thread; the scene is edited only on the main thread (#393).
+        RenderView(threading: .renderThread) { [frames] context, size in
+            if let inputs = frames.inputs(frameTime: context.frameUniforms.time, drawableSize: size) {
+                SceneGraphElement(
+                    presentation: inputs.presenter.takePresentation(),
+                    cameraID: inputs.cameraID,
+                    cameraMatrix: inputs.cameraMatrix,
+                    aspectRatio: size.height > 0 ? Float(size.width / size.height) : 1,
+                    renderers: inputs.renderers,
+                    defaultCamera: inputs.defaultCamera,
+                    cameraOverride: inputs.cameraOverride,
+                    defaultLight: inputs.defaultLight,
+                    shadows: inputs.shadows,
+                    storesDepth: inputs.storesDepth,
+                    decorations: inputs.decorations.map { element in { _ in element } },
+                    debugMode: inputs.debugMode,
+                    materialChannel: inputs.materialChannel
+                )
+                if let overlay = inputs.overlay {
+                    overlay
+                }
+                if let overlay = inputs.manipulatorOverlay {
+                    ManipulatorOverlayPass(content: overlay)
+                }
             }
         }
         .metalDepthStencilPixelFormat(.depth32Float)
@@ -249,6 +245,49 @@ public struct SceneView: View {
                 }
             }
         }
+    }
+
+    // One frame's main-thread work: delegate callbacks, actions, particles, constraints and audio, then the snapshot
+    // and the elements that read the live scene graph, for the render thread to draw.
+    private func step(frameTime: Float, drawableSize: CGSize) {
+        let presenter = frames.presenter(for: sceneGraph)
+        presenter.isPlaying = isPlaying
+        presenter.update = { [weak delegate] time, deltaTime in delegate?.sceneView(updateAtTime: time, deltaTime: deltaTime) }
+        presenter.didApplyActions = { [weak delegate] time in delegate?.sceneView(didApplyActionsAtTime: time) }
+        presenter.didApplyConstraints = { [weak delegate] time in delegate?.sceneView(didApplyConstraintsAtTime: time) }
+        presenter.setViewerTransform(currentCameraMatrix)
+        presenter.step(frameTime: frameTime)
+        // The listener is the camera. Audio failures leave the frame drawing.
+        try? audio?.update(sceneGraph: sceneGraph, listener: currentCameraMatrix)
+
+        let drawCameraMatrix = usesFreeCamera ? cameraMatrix ?? viewpoint.matrix : nil
+        let aspectRatio: Float = drawableSize.height > 0 ? Float(drawableSize.width / drawableSize.height) : 1
+        let defaultLight = usesDefaultLighting ? Light(type: .directional, color: [1, 1, 1], intensity: 1) : nil
+        // Built here, not on the render thread, because they read the live scene graph. Errors skip the element.
+        let decorationElement: AnyElement? = decorations.flatMap { decorations in
+            makeRenderContext(presentation: presenter.peekPresentation(), cameraID: pointOfView?.id, cameraMatrix: drawCameraMatrix, aspectRatio: aspectRatio, defaultCamera: defaultCamera, cameraOverride: cameraOverride, defaultLight: defaultLight).flatMap { context in
+                try? decorations(context, SIMD2<Float>(Float(drawableSize.width), Float(drawableSize.height)))
+            }
+        }
+        let overlayElement: AnyElement? = overlay.flatMap { overlay in
+            viewport(drawableSize: drawableSize).flatMap { viewport in try? overlay(viewport) }
+        }
+        frames.publish(SceneViewFrames.Inputs(
+            presenter: presenter,
+            cameraID: pointOfView?.id,
+            cameraMatrix: drawCameraMatrix,
+            renderers: renderers,
+            defaultCamera: defaultCamera,
+            cameraOverride: cameraOverride,
+            defaultLight: defaultLight,
+            shadows: shadows,
+            storesDepth: overlay != nil,
+            decorations: decorationElement,
+            debugMode: debugMode,
+            materialChannel: materialChannel,
+            overlay: overlayElement,
+            manipulatorOverlay: manipulatorOverlay(drawableSize: drawableSize)
+        ))
     }
 
     private func reportTap(at location: CGPoint) {
@@ -410,6 +449,82 @@ public struct SceneView: View {
         var options = options
         options.categoryBitMask &= cameraCategoryBitMask
         return options
+    }
+}
+
+// Hands frames between SceneView's main thread and its render thread (#393). Each render frame asks the main thread
+// for a step and draws the latest published inputs, so drawing runs one step behind the scene.
+final class SceneViewFrames: @unchecked Sendable {
+    // What the render thread draws. Built on the main thread and not changed after publishing.
+    struct Inputs {
+        var presenter: ScenePresenter
+        var cameraID: SceneGraph.Node.ID?
+        var cameraMatrix: simd_float4x4?
+        var renderers: [any MaterialRenderer]
+        var defaultCamera: Camera
+        var cameraOverride: Camera?
+        var defaultLight: Light?
+        var shadows: Shadows?
+        var storesDepth: Bool
+        var decorations: AnyElement?
+        var debugMode: DebugMode?
+        var materialChannel: MaterialChannel?
+        var overlay: AnyElement?
+        var manipulatorOverlay: AnyElement?
+    }
+
+    private let lock = NSLock()
+    private var latest: Inputs?
+    private var frameTime: Float = 0
+    private var drawableSize: CGSize = .zero
+    private var isStepPending = false
+
+    // Main thread only; the methods that touch them are main-actor isolated.
+    private var step: (@MainActor (Float, CGSize) -> Void)?
+    private var presenter: ScenePresenter?
+
+    @MainActor
+    func setStep(_ step: @escaping @MainActor (Float, CGSize) -> Void) {
+        self.step = step
+    }
+
+    @MainActor
+    func presenter(for sceneGraph: SceneGraph) -> ScenePresenter {
+        if let presenter, presenter.sceneGraph === sceneGraph {
+            return presenter
+        }
+        let presenter = ScenePresenter(sceneGraph: sceneGraph)
+        self.presenter = presenter
+        return presenter
+    }
+
+    @MainActor
+    func publish(_ inputs: Inputs) {
+        lock.withLock { latest = inputs }
+    }
+
+    // Called on the render thread. Asks for a step unless one is already waiting, and returns the latest inputs.
+    func inputs(frameTime: Float, drawableSize: CGSize) -> Inputs? {
+        let (inputs, needsStep) = lock.withLock {
+            self.frameTime = frameTime
+            self.drawableSize = drawableSize
+            let needsStep = !isStepPending
+            isStepPending = true
+            return (latest, needsStep)
+        }
+        if needsStep {
+            Task { @MainActor in self.runStep() }
+        }
+        return inputs
+    }
+
+    @MainActor
+    private func runStep() {
+        let (frameTime, drawableSize) = lock.withLock {
+            isStepPending = false
+            return (self.frameTime, self.drawableSize)
+        }
+        step?(frameTime, drawableSize)
     }
 }
 
