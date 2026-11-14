@@ -9052,4 +9052,6 @@ The scene graph already hands edits to a rendering side through presentation() a
 
 Move the per-frame work off the main thread, so the main thread only edits the scene graph and handles UI and input.
 
+- `2026-11-14T21:36:45Z`: Blocked by MetalSprockets #560: RenderView on macOS and iOS can only render on the main thread (MTKView delegate), so SceneView has no way to encode frames elsewhere. The SceneSprockets side (ScenePresenter stepping on main, SceneGraphElement(presentation:) on the render thread) already exists. Note: user closures that build elements per frame (sceneOverlay, sceneDecorations, ViewManipulator.overlay) would then run off the main actor.
+
 ---
