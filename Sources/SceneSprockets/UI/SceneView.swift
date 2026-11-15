@@ -74,6 +74,8 @@ public struct SceneView: View {
     private var onTapID: AnyHashable?
     private var onTapAt: ((SIMD2<Float>, Viewport, SceneGraph.Hit?) -> Void)?
     private var onTapAtID: AnyHashable?
+    private var onFrameTiming: ((FrameTimingStatistics) -> Void)?
+    private var onFrameTimingID: AnyHashable?
     private var hitTestOptions = SceneGraph.HitTestOptions()
     private var manipulator: (any ViewManipulator)?
     private var decorations: ((RenderContext, SIMD2<Float>) throws -> AnyElement?)?
@@ -224,6 +226,7 @@ public struct SceneView: View {
             if showsFrameTiming {
                 frameTimingStatistics = statistics
             }
+            onFrameTiming?(statistics)
         }
         .overlay(alignment: .topTrailing) {
             if showsFrameTiming, let frameTimingStatistics {
@@ -670,6 +673,15 @@ public extension SceneView {
         with { $0.settingsShowFrameTiming = shown }
     }
 
+    /// Calls `action` every frame with the frame timing statistics. Use this instead of `onFrameTimingChange`,
+    /// which SceneView replaces inside, for example to draw your own `FrameTimingView` (#396).
+    func onSceneFrameTimingChange(id: AnyHashable? = nil, perform action: @escaping (FrameTimingStatistics) -> Void) -> Self {
+        with {
+            $0.onFrameTiming = action
+            $0.onFrameTimingID = id
+        }
+    }
+
     /// Keeps the drawable readable (framebufferOnly false) even without post passes, for example to inspect it in a
     /// GPU capture. Costs some bandwidth. Also on when `SS_DISABLES_FRAMEBUFFER_ONLY` is set.
     func sceneReadableDrawable(_ enabled: Bool = true) -> Self {
@@ -686,6 +698,7 @@ extension SceneView: @MainActor Equatable {
             && isSameClosure(lhs.onTapAt == nil, lhs.onTapAtID, rhs.onTapAt == nil, rhs.onTapAtID)
             && isSameClosure(lhs.decorations == nil, lhs.decorationsID, rhs.decorations == nil, rhs.decorationsID)
             && isSameClosure(lhs.overlay == nil, lhs.overlayID, rhs.overlay == nil, rhs.overlayID)
+            && isSameClosure(lhs.onFrameTiming == nil, lhs.onFrameTimingID, rhs.onFrameTiming == nil, rhs.onFrameTimingID)
             && lhs.sceneGraph === rhs.sceneGraph
             && lhs.hadScenePostPasses == rhs.hadScenePostPasses
             && lhs.pointOfView === rhs.pointOfView

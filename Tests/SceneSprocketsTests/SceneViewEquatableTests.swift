@@ -41,6 +41,8 @@ struct SceneViewEquatableTests {
         #expect(view(renderers: [BlinnPhongMaterialRenderer()]) != view())
         // A closure added on one side only.
         #expect(view().sceneOverlay(id: "a") { _ in nil } != view())
+        #expect(view().onSceneFrameTimingChange(id: "a") { _ in } != view())
+        #expect(view().onSceneFrameTimingChange(id: "a") { _ in } == view().onSceneFrameTimingChange(id: "a") { _ in })
         #expect(view().sceneHitTestOptions(.init(categoryBitMask: 0b10)) != view())
         #expect(view().sceneHitTestOptions(.init(categoryBitMask: 0b10)) == view().sceneHitTestOptions(.init(categoryBitMask: 0b10)))
     }

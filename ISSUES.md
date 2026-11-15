@@ -9101,11 +9101,13 @@ SceneGraphElement's storesDepth comes from inputs that the main-thread step publ
 ## 396: Frame timing overlay is hidden under app chrome when SceneView ignores the safe area
 
 +++
-status: new
+status: closed
 priority: medium
 kind: bug
 labels: area:ui
 created: 2026-11-14T23:29:43Z
+updated: 2026-11-15T01:58:40Z
+closed: 2026-11-15T01:58:40Z
 +++
 
 SceneView draws FrameTimingView in its own overlay at `.topTrailing` with a fixed `.padding()`. When the app makes SceneView ignore the safe area (so the scene draws under a translucent top bar) the overlay sits under the app's bar.
