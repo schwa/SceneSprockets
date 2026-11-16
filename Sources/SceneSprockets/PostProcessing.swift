@@ -5,8 +5,8 @@ import SceneSprocketsShaders
 import simd
 
 extension SceneGraph {
-    /// Screen-space effects after the scene, like SCNCamera's colorGrading, vignetting and screenSpaceAmbientOcclusion
-    /// settings. Applied by SceneGraphElement on the view's own (low dynamic range) color, so there is no HDR, bloom or
+    /// Screen-space effects after the scene, like SCNCamera's colorGrading and vignetting settings. Ambient occlusion
+    /// is a lighting setting: ``Environment/ambientOcclusion``. Applied by SceneGraphElement on the view's own (low dynamic range) color, so there is no HDR, bloom or
     /// tone mapping. Like fog, it needs a readable depth texture and a writable color texture.
     public struct PostProcessing: Sendable, Equatable, Codable {
         /// In stops: 1 doubles brightness.
@@ -19,17 +19,14 @@ extension SceneGraph {
         public var vignetteIntensity: Float
         /// Fraction of the center-to-corner distance where the vignette starts.
         public var vignetteRadius: Float
-        /// Nil turns ambient occlusion off.
-        public var ambientOcclusion: AmbientOcclusion?
 
         /// Creates post-processing settings. The defaults change nothing.
-        public init(exposure: Float = 0, contrast: Float = 1, saturation: Float = 1, vignetteIntensity: Float = 0, vignetteRadius: Float = 0.6, ambientOcclusion: AmbientOcclusion? = nil) {
+        public init(exposure: Float = 0, contrast: Float = 1, saturation: Float = 1, vignetteIntensity: Float = 0, vignetteRadius: Float = 0.6) {
             self.exposure = exposure
             self.contrast = contrast
             self.saturation = saturation
             self.vignetteIntensity = vignetteIntensity
             self.vignetteRadius = vignetteRadius
-            self.ambientOcclusion = ambientOcclusion
         }
 
         var adjustsColor: Bool {
@@ -37,7 +34,9 @@ extension SceneGraph {
         }
     }
 
-    /// Screen-space ambient occlusion: creases and contacts get darker.
+    /// Screen-space ambient occlusion: creases and contacts get less ambient light, like SCNCamera's
+    /// screenSpaceAmbientOcclusion settings. Computed from a depth pre-pass before shading. Blinn-Phong darkens only its
+    /// ambient term; other materials, PBR included, are darkened after the scene pass (#136, #408).
     public struct AmbientOcclusion: Sendable, Equatable, Codable {
         /// World units searched around each pixel.
         public var radius: Float
@@ -55,10 +54,11 @@ extension SceneGraph {
     }
 }
 
+// Writes ambient visibility from the pre-pass depth.
 struct AmbientOcclusionPass: Element {
     var settings: SceneGraph.AmbientOcclusion
     var depthTexture: MTLTexture
-    var colorTexture: MTLTexture
+    var visibilityTexture: MTLTexture
     var viewProjection: simd_float4x4
     var cameraPosition: SIMD3<Float>
 
@@ -76,12 +76,42 @@ struct AmbientOcclusionPass: Element {
                 QueueBarrier(after: [.fragment, .dispatch], before: .dispatch)
                 try ComputePipeline(label: "Ambient Occlusion", computeKernel: try PostProcessingShaders.kernel("ambient_occlusion")) {
                     try ComputeDispatch(
-                        threadsPerGrid: MTLSize(width: colorTexture.width, height: colorTexture.height, depth: 1),
+                        threadsPerGrid: MTLSize(width: visibilityTexture.width, height: visibilityTexture.height, depth: 1),
                         threadsPerThreadgroup: MTLSize(width: 8, height: 8, depth: 1)
                     )
                     .parameter("sceneDepth", texture: depthTexture)
-                    .parameter("outputTexture", texture: colorTexture)
+                    .parameter("outputTexture", texture: visibilityTexture)
                     .parameter("uniforms", value: uniforms)
+                }
+            }
+            // The scene pass samples the visibility.
+            .barrierAfterPass(after: .dispatch, beforeQueueStages: [.vertex, .fragment, .dispatch])
+        }
+    }
+}
+
+// Darkens the final color by the visibility where the front surface's material does not apply it while shading.
+struct ApplyAmbientOcclusionPass: Element {
+    var visibilityTexture: MTLTexture
+    var depthTexture: MTLTexture
+    // Depth of the in-shader materials alone; nil when there are none.
+    var inShaderDepthTexture: MTLTexture?
+    var colorTexture: MTLTexture
+
+    var body: some Element {
+        get throws {
+            try ComputePass(label: "Apply Ambient Occlusion") {
+                QueueBarrier(after: [.fragment, .dispatch], before: .dispatch)
+                try ComputePipeline(label: "Apply Ambient Occlusion", computeKernel: try PostProcessingShaders.kernel("apply_ambient_occlusion")) {
+                    try ComputeDispatch(
+                        threadsPerGrid: MTLSize(width: colorTexture.width, height: colorTexture.height, depth: 1),
+                        threadsPerThreadgroup: MTLSize(width: 8, height: 8, depth: 1)
+                    )
+                    .parameter("visibility", texture: visibilityTexture)
+                    .parameter("sceneDepth", texture: depthTexture)
+                    .parameter("inShaderDepth", texture: inShaderDepthTexture ?? depthTexture)
+                    .parameter("outputTexture", texture: colorTexture)
+                    .parameter("hasInShaderDepth", value: Int32(inShaderDepthTexture == nil ? 0 : 1))
                 }
             }
         }

@@ -175,7 +175,7 @@ public struct BlinnPhongMaterialRenderer: MaterialRenderer, Equatable {
         let isTransparent = entries.first?.isTransparent ?? false
         let inFrustum = meshEntriesInFrustum(entries, projectionMatrix: context.projectionMatrix, cameraMatrix: context.cameraMatrix)
         if !isTransparent, let groups = cachedOpaqueGroups(entries: entries, inFrustum: inFrustum, context: context, cameraPosition: cameraPosition) {
-            return BlinnPhongBatchesElement(groups: groups, frame: frame, lights: lightValues, shadow: context.shadow, cameraPosition: cameraPosition, isTransparent: false, stereoViews: context.stereoViews).eraseToAnyElement()
+            return BlinnPhongBatchesElement(groups: groups, frame: frame, lights: lightValues, shadow: context.shadow, ambientOcclusion: context.ambientOcclusion, cameraPosition: cameraPosition, isTransparent: false, stereoViews: context.stereoViews).eraseToAnyElement()
         }
         // One pass, with capacity reserved: this runs every frame over every entry, so copies add up.
         var items: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, modelMatrix: simd_float4x4, material: BlinnPhongSceneMaterial)] = []
@@ -233,7 +233,7 @@ public struct BlinnPhongMaterialRenderer: MaterialRenderer, Equatable {
                 return (key: group.key, single: sortedSingle, instanced: batches.filter { $0.modelMatrices.count > 1 })
             }
         }
-        return BlinnPhongBatchesElement(groups: groups, frame: frame, lights: lightValues, shadow: context.shadow, cameraPosition: cameraPosition, isTransparent: isTransparent, stereoViews: context.stereoViews).eraseToAnyElement()
+        return BlinnPhongBatchesElement(groups: groups, frame: frame, lights: lightValues, shadow: context.shadow, ambientOcclusion: context.ambientOcclusion, cameraPosition: cameraPosition, isTransparent: isTransparent, stereoViews: context.stereoViews).eraseToAnyElement()
     }
 
     // Opaque batching depends on structure, opacity and mirroring, not on where things are, so it is cached and only
@@ -286,6 +286,7 @@ private struct BlinnPhongBatchesElement: Element {
     var frame: BlinnPhongFrame
     var lights: [BlinnPhongLight]
     var shadow: Shadows.Sampling?
+    var ambientOcclusion: MTLTexture?
     // World-space camera position; model matrices and shadow lookups are shifted by it.
     var cameraPosition: SIMD3<Float>
     // Blends and does not write depth.
@@ -381,6 +382,7 @@ private struct BlinnPhongBatchesElement: Element {
                     .parameter("specularTexture", texture: resolved.specularTexture)
                     .parameter("emissionTexture", texture: resolved.emissionTexture)
                     .parameter("normalTexture", texture: resolved.normalTexture)
+                    .parameter("ambientOcclusion", texture: ambientOcclusion ?? placeholder)
                     .parameter("textureSampler", samplerState: resolved.sampler)
                     .eraseToAnyElement()
                 if let shadowBinding {
@@ -454,6 +456,8 @@ func blinnPhongVertexLayout(_ vertexDescriptor: VertexDescriptor) -> (descriptor
     descriptor.attributes[3].bufferIndex = color.bufferIndex
     return (descriptor, true)
 }
+
+extension BlinnPhongSceneMaterial: AppliesAmbientOcclusionInShader {}
 
 struct PipelineKey: Equatable {
     var vertexDescriptor: VertexDescriptor

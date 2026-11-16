@@ -24,7 +24,7 @@ struct AmbientOcclusionUniforms {
     simd_float3 cameraPosition;
     // World-space sampling radius.
     float radius;
-    // 0 leaves pixels unchanged, 1 darkens fully occluded ones to black.
+    // 0 leaves visibility at 1, 1 makes fully occluded pixels 0.
     float intensity;
     int sampleCount;
 };

@@ -36,6 +36,14 @@ extension SceneGraph: Codable {
         environment = try container.decode(Environment.self, forKey: .environment)
         fog = try container.decodeIfPresent(Fog.self, forKey: .fog)
         postProcessing = try container.decodeIfPresent(PostProcessing.self, forKey: .postProcessing)
+        // Older archives kept ambient occlusion in post-processing (#136).
+        if environment.ambientOcclusion == nil, let legacy = try container.decodeIfPresent(LegacyPostProcessing.self, forKey: .postProcessing) {
+            environment.ambientOcclusion = legacy.ambientOcclusion
+        }
+    }
+
+    private struct LegacyPostProcessing: Decodable {
+        var ambientOcclusion: AmbientOcclusion?
     }
 }
 
@@ -461,7 +469,7 @@ extension Camera: Codable {
 
 extension SceneGraph.Environment: Codable {
     enum ArchiveKeys: String, CodingKey {
-        case background, map, mapType, intensity, rotation
+        case background, map, mapType, intensity, rotation, ambientOcclusion
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -469,6 +477,7 @@ extension SceneGraph.Environment: Codable {
         try container.encode(background, forKey: .background)
         try container.encode(intensity, forKey: .intensity)
         try container.encode(rotation, forKey: .rotation)
+        try container.encodeIfPresent(ambientOcclusion, forKey: .ambientOcclusion)
         guard let map else {
             return
         }
@@ -491,6 +500,6 @@ extension SceneGraph.Environment: Codable {
                 context.warn("No registered environment map type \"\(name)\"; skipped")
             }
         }
-        self.init(background: try container.decode(Background.self, forKey: .background), map: map, intensity: try container.decode(Float.self, forKey: .intensity), rotation: try container.decode(Float.self, forKey: .rotation))
+        self.init(background: try container.decode(Background.self, forKey: .background), map: map, intensity: try container.decode(Float.self, forKey: .intensity), rotation: try container.decode(Float.self, forKey: .rotation), ambientOcclusion: try container.decodeIfPresent(SceneGraph.AmbientOcclusion.self, forKey: .ambientOcclusion))
     }
 }

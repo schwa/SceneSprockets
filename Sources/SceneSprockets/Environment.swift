@@ -50,6 +50,8 @@ extension SceneGraph {
         public var intensity: Float
         /// Radians about +Y.
         public var rotation: Float
+        /// Screen-space ambient occlusion; nil turns it off.
+        public var ambientOcclusion: AmbientOcclusion?
 
         /// Creates an environment.
         ///
@@ -58,11 +60,13 @@ extension SceneGraph {
         ///   - map: The image-based lighting source, or `nil` for the renderers' defaults.
         ///   - intensity: The strength of the image-based lighting.
         ///   - rotation: The rotation of the map about +Y, in radians.
-        public init(background: Background = .none, map: (any EnvironmentMap)? = nil, intensity: Float = 1, rotation: Float = 0) {
+        ///   - ambientOcclusion: Screen-space ambient occlusion, or `nil` for none.
+        public init(background: Background = .none, map: (any EnvironmentMap)? = nil, intensity: Float = 1, rotation: Float = 0, ambientOcclusion: AmbientOcclusion? = nil) {
             self.background = background
             self.map = map
             self.intensity = intensity
             self.rotation = rotation
+            self.ambientOcclusion = ambientOcclusion
         }
     }
 }

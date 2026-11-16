@@ -34,6 +34,9 @@ public struct RenderContext {
     public internal(set) var lightShadowSlices: [Range<Int>] = []
     /// When set, renderers output this material value instead of lighting (#195).
     public internal(set) var materialChannel: MaterialChannel?
+    /// Set when ambient occlusion is on, for renderers that apply it while shading (#136): an `.r16Float` texture of
+    /// ambient visibility (1 is unoccluded), one texel per pixel of the color target.
+    public internal(set) var ambientOcclusion: MTLTexture?
     /// Set when the frame draws several views at once (stereo, #380). ``viewMatrix``, ``cameraMatrix`` and
     /// ``projectionMatrix`` then describe one camera between the views, for culling, sorting and renderers without
     /// stereo support.
@@ -203,6 +206,28 @@ public struct SceneGraphElement: Element {
             if !deformationJobs.isEmpty {
                 prePasses.append(DeformationPass(jobs: deformationJobs).eraseToAnyElement())
             }
+            // Ambient occlusion from a depth pre-pass, before shading, so in-shader materials darken only their
+            // ambient light (#136).
+            var ambientOcclusionApply: ApplyAmbientOcclusionPass?
+            if let settings = context.environment.ambientOcclusion, let postTargets, debugMode == nil {
+                let opaque = entries.filter { !$0.isTransparent }
+                let appliesInShader = { (entry: SceneGraph.MeshEntry) in entry.material is any AppliesAmbientOcclusionInShader }
+                let inShader = opaque.filter(appliesInShader)
+                if !opaque.isEmpty, let content = try makeOpaqueContent(entries: opaque, context: context, excluding: nil) {
+                    let targets = try AmbientOcclusionTargets.targets(device: postTargets.color.device, width: postTargets.color.width, height: postTargets.color.height, colorFormat: postTargets.color.pixelFormat, depthFormat: postTargets.depth.pixelFormat)
+                    let relativeViewProjection = context.projectionMatrix * context.viewMatrix.rotationOnlyView
+                    prePasses.append(AmbientOcclusionDepthPass(label: "Ambient Occlusion Depth", depth: targets.depth, scratchColor: targets.scratchColor, content: content).eraseToAnyElement())
+                    let isMixed = !inShader.isEmpty && inShader.count < opaque.count
+                    if isMixed, let inShaderContent = try makeOpaqueContent(entries: inShader, context: context, excluding: nil) {
+                        prePasses.append(AmbientOcclusionDepthPass(label: "Ambient Occlusion In-Shader Depth", depth: targets.inShaderDepth, scratchColor: targets.scratchColor, content: inShaderContent).eraseToAnyElement())
+                    }
+                    prePasses.append(AmbientOcclusionPass(settings: settings, depthTexture: targets.depth, visibilityTexture: targets.visibility, viewProjection: relativeViewProjection, cameraPosition: .zero).eraseToAnyElement())
+                    context.ambientOcclusion = targets.visibility
+                    if inShader.count < opaque.count {
+                        ambientOcclusionApply = ApplyAmbientOcclusionPass(visibilityTexture: targets.visibility, depthTexture: targets.depth, inShaderDepthTexture: isMixed ? targets.inShaderDepth : nil, colorTexture: postTargets.color)
+                    }
+                }
+            }
             if let color = renderPassDescriptor?.colorAttachments[0].texture {
                 for (renderer, rendererEntries) in zip(renderers, partitionMeshEntries(entries, renderers: renderers)) {
                     guard let prePassRenderer = renderer as? any PrePassRenderer, !rendererEntries.isEmpty else {
@@ -292,9 +317,8 @@ public struct SceneGraphElement: Element {
             }
             let fog = postTargets == nil ? nil : presentation.fog
             let postProcessing = postTargets == nil ? nil : presentation.postProcessing
-            let ambientOcclusion = postProcessing?.ambientOcclusion
             let adjustsColor = postProcessing?.adjustsColor ?? false
-            let hasPostPasses = shadowFrame != nil || fog != nil || ambientOcclusion != nil || adjustsColor
+            let hasPostPasses = shadowFrame != nil || fog != nil || ambientOcclusionApply != nil || adjustsColor
             // The view's depth storage can lag behind `storesDepth` when the frame is built on a render thread (#393):
             // memoryless depth cannot be stored.
             let storesDepth = storesDepth && renderPassDescriptor?.depthAttachment.texture?.storageMode != .memoryless
@@ -341,8 +365,8 @@ public struct SceneGraphElement: Element {
                     )
                 }
                 // Occlusion darkens geometry before fog covers it; color adjustment comes last.
-                if let ambientOcclusion {
-                    AmbientOcclusionPass(settings: ambientOcclusion, depthTexture: postTargets.depth, colorTexture: postTargets.color, viewProjection: relativeViewProjection, cameraPosition: .zero)
+                if let ambientOcclusionApply {
+                    ambientOcclusionApply
                 }
                 if let fog {
                     FogPass(fog: fog, depthTexture: postTargets.depth, colorTexture: postTargets.color, inverseViewProjection: relativeViewProjection.inverse, cameraPosition: .zero)
@@ -357,11 +381,11 @@ public struct SceneGraphElement: Element {
 
     // Batches of every renderer except the one for `excluding`, in draw order, with reversed depth. Transparent and
     // faded entries are included, so glass still shows a scene that is fading (#327).
-    private func makeOpaqueContent(entries: [SceneGraph.MeshEntry], context: RenderContext, excluding: any SceneMaterial.Type) throws -> AnyElement? {
+    private func makeOpaqueContent(entries: [SceneGraph.MeshEntry], context: RenderContext, excluding: (any SceneMaterial.Type)?) throws -> AnyElement? {
         var elements: [AnyElement] = []
         for batch in renderBatches(entries, context: context) {
             let partitions = partitionMeshEntries(batch.entries, renderers: renderers)
-            for (renderer, entries) in zip(renderers, partitions) where !entries.isEmpty && ObjectIdentifier(renderer.materialType) != ObjectIdentifier(excluding) {
+            for (renderer, entries) in zip(renderers, partitions) where !entries.isEmpty && ObjectIdentifier(renderer.materialType) != excluding.map(ObjectIdentifier.init) {
                 elements.append(try renderer.makeElement(entries: entries, context: batch.context))
             }
         }

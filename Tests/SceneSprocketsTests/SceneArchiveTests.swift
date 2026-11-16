@@ -54,9 +54,9 @@ struct SceneArchiveTests {
         root.addChild(SceneGraph.Node(label: "Camera", content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40), depthMode: .reversed(zClip: 0.1 ... 50)), categoryBitMask: 7))))
         root.addChild(SceneGraph.Node(label: "Ortho", content: .camera(Camera(projection: OrthographicProjection(halfHeight: 3)))))
         let scene = SceneGraph(root: root)
-        scene.environment = .init(background: .color([0.1, 0.2, 0.3, 1]), map: PBREnvironment.studio, intensity: 0.8, rotation: 1.2)
+        scene.environment = .init(background: .color([0.1, 0.2, 0.3, 1]), map: PBREnvironment.studio, intensity: 0.8, rotation: 1.2, ambientOcclusion: .init(radius: 0.4, intensity: 0.7, sampleCount: 8))
         scene.fog = .init(color: [0.5, 0.5, 0.6, 0.9], startDistance: 3, endDistance: 20, densityExponent: 2)
-        scene.postProcessing = .init(exposure: 0.5, contrast: 1.1, saturation: 0.9, vignetteIntensity: 0.3, ambientOcclusion: .init(radius: 0.4, intensity: 0.7, sampleCount: 8))
+        scene.postProcessing = .init(exposure: 0.5, contrast: 1.1, saturation: 0.9, vignetteIntensity: 0.3)
         return scene
     }
 
@@ -151,7 +151,7 @@ struct SceneArchiveTests {
         #expect(pbr.pbrMaterial.uniforms.baseColorFactor == [0.9, 0.7, 0.2, 1])
         #expect(loaded.environment.map === PBREnvironment.studio)
         #expect(loaded.fog?.densityExponent == 2)
-        #expect(loaded.postProcessing?.ambientOcclusion?.sampleCount == 8)
+        #expect(loaded.environment.ambientOcclusion?.sampleCount == 8)
     }
 
     // #368: the normal map is a Source; archives that saved a bare texture reference still load.
@@ -648,6 +648,25 @@ struct SceneArchiveTests {
         try JSONSerialization.data(withJSONObject: object).write(to: sceneURL)
         let loaded = try loadedUniforms(url)
         #expect(loaded.ior == 1.7 && loaded.alphaMode == .mask && loaded.normal.transform == uniforms.normal.transform)
+    }
+
+    // Archives from before #136 kept ambient occlusion in post-processing.
+    @Test
+    func postProcessingAmbientOcclusionStillReads() throws {
+        let url = temporaryURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let scene = SceneGraph(root: SceneGraph.Node())
+        scene.postProcessing = .init(exposure: 0.5)
+        try archive.write(scene, to: url)
+        let sceneURL = url.appendingPathComponent("scene.json")
+        var object = try #require(try JSONSerialization.jsonObject(with: Data(contentsOf: sceneURL)) as? [String: Any])
+        var postProcessing = try #require(object["postProcessing"] as? [String: Any])
+        postProcessing["ambientOcclusion"] = ["radius": 0.4, "intensity": 0.7, "sampleCount": 8]
+        object["postProcessing"] = postProcessing
+        try JSONSerialization.data(withJSONObject: object).write(to: sceneURL)
+        let (loaded, _) = try archive.read(from: url)
+        #expect(loaded.environment.ambientOcclusion == .init(radius: 0.4, intensity: 0.7, sampleCount: 8))
+        #expect(loaded.postProcessing?.exposure == 0.5)
     }
 
     // #159

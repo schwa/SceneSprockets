@@ -51,12 +51,12 @@ namespace PostProcessing {
         return float(value & 0x00FFFFFFu) / float(0x01000000u);
     }
 
-    // Darkens geometry by how much of the hemisphere above it is blocked by nearby geometry. Normals come from
-    // depth; background pixels are left alone.
+    // Writes ambient visibility: 1 minus how much of the hemisphere above each pixel is blocked by nearby geometry.
+    // Normals come from depth; background pixels get 1.
     [[kernel]] void ambient_occlusion(
         uint2 tid [[thread_position_in_grid]],
         depth2d<float, access::read> sceneDepth [[texture(0)]],
-        texture2d<float, access::read_write> outputTexture [[texture(1)]],
+        texture2d<float, access::write> outputTexture [[texture(1)]],
         constant AmbientOcclusionUniforms &uniforms [[buffer(0)]]
     ) {
         uint2 size = uint2(outputTexture.get_width(), outputTexture.get_height());
@@ -65,6 +65,7 @@ namespace PostProcessing {
         }
         float depth = depthAt(sceneDepth, tid, size);
         if (depth == 0.0) {
+            outputTexture.write(float4(1), tid);
             return;
         }
         float3 position = worldPosition(tid, depth, size, uniforms.inverseViewProjection);
@@ -115,8 +116,30 @@ namespace PostProcessing {
             occluded += (sceneDistance < sampleDistance - uniforms.radius * 0.02 ? 1.0 : 0.0) * rangeCheck;
         }
         float visibility = 1.0 - uniforms.intensity * (occluded / float(count));
+        outputTexture.write(float4(saturate(visibility)), tid);
+    }
+
+    // Multiplies the final color by the visibility, for pixels whose front surface does not apply it while shading:
+    // where the depth of those materials alone is in front of the full depth (#136).
+    [[kernel]] void apply_ambient_occlusion(
+        uint2 tid [[thread_position_in_grid]],
+        texture2d<float, access::read> visibility [[texture(0)]],
+        depth2d<float, access::read> sceneDepth [[texture(1)]],
+        depth2d<float, access::read> inShaderDepth [[texture(2)]],
+        texture2d<float, access::read_write> outputTexture [[texture(3)]],
+        constant int &hasInShaderDepth [[buffer(0)]]
+    ) {
+        uint2 size = uint2(outputTexture.get_width(), outputTexture.get_height());
+        if (tid.x >= size.x || tid.y >= size.y) {
+            return;
+        }
+        float depth = depthAt(sceneDepth, tid, size);
+        if (depth == 0.0 || (hasInShaderDepth != 0 && depthAt(inShaderDepth, tid, size) >= depth)) {
+            return;
+        }
+        uint2 visibilitySize = uint2(visibility.get_width(), visibility.get_height());
         float4 color = outputTexture.read(tid);
-        color.rgb *= saturate(visibility);
+        color.rgb *= visibility.read(min(tid * visibilitySize / size, visibilitySize - 1)).r;
         outputTexture.write(color, tid);
     }
 

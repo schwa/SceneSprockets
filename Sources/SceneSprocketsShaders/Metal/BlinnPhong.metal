@@ -118,6 +118,8 @@ namespace BlinnPhong {
         texture2d<float> specularTexture [[texture(2)]],
         texture2d<float> emissionTexture [[texture(4)]],
         texture2d<float> normalTexture [[texture(5)]],
+        // Screen-space ambient visibility (#136); 1x1 white when off.
+        texture2d<float, access::read> ambientOcclusion [[texture(6)]],
         sampler textureSampler [[sampler(0)]],
         depth2d_array<float, access::sample> shadowMap [[texture(3), function_constant(HAS_SHADOWS)]],
         sampler shadowSampler [[sampler(1), function_constant(HAS_SHADOWS)]],
@@ -212,7 +214,9 @@ namespace BlinnPhong {
             diffuse += diffuseColor * lambertian * light.color * attenuation * shadowing;
             specular += specularColor * highlight * light.color * attenuation * shadowing;
         }
-        return float4(frame.ambientLightColor * ambientColor + diffuse + specular + emission, alpha);
+        uint2 occlusionSize = uint2(ambientOcclusion.get_width(), ambientOcclusion.get_height());
+        float occlusion = ambientOcclusion.read(min(uint2(in.position.xy), occlusionSize - 1)).r;
+        return float4(frame.ambientLightColor * ambientColor * occlusion + diffuse + specular + emission, alpha);
     }
 
 }
