@@ -1,5 +1,6 @@
 #include <metal_stdlib>
 #include "SceneSprocketsShaders.h"
+#include "BlinnPhongLighting.h"
 
 using namespace metal;
 
@@ -10,25 +11,6 @@ namespace BlinnPhong {
     constant bool HAS_SHADOWS [[function_constant(0)]];
     // True when the mesh has per-vertex colors, bound at attribute 3 (#246).
     constant bool HAS_VERTEX_COLORS [[function_constant(1)]];
-
-    // PCF in one slice; 1 is lit. Positions outside the slice's view are lit.
-    static float sliceShadow(float3 world, float4x4 viewProjection, float mapSize, int radius, depth2d_array<float, access::sample> shadowMap, sampler shadowSampler, uint slice) {
-        float4 clip = viewProjection * float4(world, 1);
-        float3 ndc = clip.xyz / clip.w;
-        float2 uv = float2(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5);
-        if (any(uv < 0.0) || any(uv > 1.0) || ndc.z < 0.0 || ndc.z > 1.0) {
-            return 1;
-        }
-        float shadow = 0;
-        float texel = 1.0 / mapSize;
-        for (int x = -radius; x <= radius; x++) {
-            for (int y = -radius; y <= radius; y++) {
-                shadow += shadowMap.sample_compare(shadowSampler, uv + float2(x, y) * texel, slice, ndc.z, level(0));
-            }
-        }
-        float side = float(2 * radius + 1);
-        return shadow / (side * side);
-    }
 
     // Tangent frame from screen-space derivatives (Christian Schuler, "Followup: Normal Mapping Without Precomputed
     // Tangents"), so meshes need no tangent attribute. Texture v runs down, and normal maps point +Y up, hence -B.
@@ -164,59 +146,14 @@ namespace BlinnPhong {
         if (material.hasEmissionTexture) {
             emission *= emissionTexture.sample(textureSampler, in.textureCoordinate).rgb;
         }
-        // Material channel views (#195), matching MaterialChannel. Blinn-Phong has no metallic, and
-        // roughness comes from shininess as in the usual Phong-to-microfacet mapping.
-        switch (frame.materialChannel) {
-            case 1: return float4(diffuseColor, 1);
-            case 2: return float4(float3(alpha), 1);
-            case 3: return float4(0, 0, 0, 1);
-            case 4: return float4(float3(sqrt(2.0 / (material.shininess + 2.0))), 1);
-            case 5: return float4(specularColor, 1);
-            case 6: return float4(emission, 1);
-            default: break;
-        }
-        float3 viewDirection = normalize(frame.cameraPositions[in.view] - in.worldPosition);
-        float3 diffuse = 0;
-        float3 specular = 0;
-        for (int index = 0; index < frame.lightCount; index++) {
-            BlinnPhongLight light = lights[index];
-            // From the surface towards the light.
-            float3 toLight;
-            float attenuation = 1;
-            if (light.type == BLINN_PHONG_LIGHT_DIRECTIONAL) {
-                toLight = -light.direction;
-            } else {
-                toLight = light.position - in.worldPosition;
-                float distanceSquared = length_squared(toLight);
-                toLight = normalize(toLight);
-                // Inverse-square with a smooth cutoff at `range`.
-                float rangeRatio = sqrt(distanceSquared) / light.range;
-                float rangeFalloff = saturate(1.0 - rangeRatio * rangeRatio * rangeRatio * rangeRatio);
-                attenuation = rangeFalloff * rangeFalloff / (distanceSquared + 1.0);
-                if (light.type == BLINN_PHONG_LIGHT_SPOT) {
-                    attenuation *= smoothstep(light.outerConeCos, light.innerConeCos, dot(-toLight, light.direction));
-                }
-            }
-            float lambertian = max(dot(toLight, normal), 0.0);
-            if (lambertian == 0.0 || attenuation == 0.0) {
-                continue;
-            }
-            float highlight = pow(max(dot(normalize(toLight + viewDirection), normal), 0.0), material.shininess);
-            // Only this light's shadow scales only this light's contribution.
-            float3 shadowing = 1;
-            if (HAS_SHADOWS && material.receivesShadow != 0 && light.shadowSliceCount > 0) {
-                float lit = 1;
-                for (int slice = light.shadowSliceStart; slice < light.shadowSliceStart + light.shadowSliceCount; slice++) {
-                    lit *= sliceShadow(in.worldPosition, shadow.sliceViewProjections[slice], shadow.mapSize, shadow.radius, shadowMap, shadowSampler, uint(slice));
-                }
-                shadowing = mix(float3(1), shadow.color, shadow.intensity * (1.0 - lit));
-            }
-            diffuse += diffuseColor * lambertian * light.color * attenuation * shadowing;
-            specular += specularColor * highlight * light.color * attenuation * shadowing;
+        Surface surface = { ambientColor, diffuseColor, specularColor, emission, material.shininess, alpha, material.receivesShadow != 0 };
+        float4 channel;
+        if (channelColor(surface, frame.materialChannel, channel)) {
+            return channel;
         }
         uint2 occlusionSize = uint2(ambientOcclusion.get_width(), ambientOcclusion.get_height());
         float occlusion = ambientOcclusion.read(min(uint2(in.position.xy), occlusionSize - 1)).r;
-        return float4(frame.ambientLightColor * ambientColor * occlusion + diffuse + specular + emission, alpha);
+        return shade(surface, in.worldPosition, normal, frame.cameraPositions[in.view], frame, lights, occlusion, HAS_SHADOWS, shadowMap, shadowSampler, shadow);
     }
 
 }
