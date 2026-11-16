@@ -51,6 +51,8 @@ struct RenderSettings: Hashable {
     var farClip: Float = 1_000
 
     static let gridColor: SIMD4<Float> = [1, 1, 1, 0.25]
+    // World units from the camera.
+    static let gridFadeDistance: ClosedRange<Float> = 10...40
 
     var camera: Camera {
         Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(fieldOfView), depthMode: .standard(zClip: nearClip ... max(farClip, nearClip * 2))))
@@ -74,7 +76,10 @@ struct RenderSettings: Hashable {
                     majorDivision: .init(interval: 10, color: [1, 1, 1, 0.4]),
                     depthCompareFunction: .greater,
                     writesDepth: false,
-                    blendsWithBackground: true
+                    blendsWithBackground: true,
+                    // Fades out with distance instead of running to the horizon, which made environment backgrounds
+                    // look nearer than the grid (#184).
+                    fadeDistance: Self.gridFadeDistance
                 )
             }
             if showsAxes, !axes.isEmpty {
