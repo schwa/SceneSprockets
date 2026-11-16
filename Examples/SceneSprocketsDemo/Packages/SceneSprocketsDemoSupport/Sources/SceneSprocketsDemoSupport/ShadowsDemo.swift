@@ -1,23 +1,31 @@
 import GeometryLite3D
 import SceneSprockets
 import SceneSprocketsBlinnPhong
+import SceneSprocketsPBR
 import simd
 
 // One light at a time over a few casters, to compare directional, spot and point shadows (#67), with the shadow
-// settings and a floor that can stop receiving shadows (#66).
+// settings and a floor that can stop receiving shadows (#66). Ambient occlusion darkens only ambient (Blinn-Phong) or
+// image-based (PBR) light, so the emissive sphere stays bright at its contact (#136, #408).
 final class ShadowsDemo: DemoScene {
     private static let lightTypes = ["Directional", "Spot", "Point"]
 
     private let light: SceneGraph.Node
     private let floor: SceneGraph.Node
     private let shadowRenderer = Shadows(intensity: 0.7)
+    // Each mesh node with its Blinn-Phong and PBR material, for the "PBR Materials" toggle.
+    private var materialSets: [(node: SceneGraph.Node, blinnPhong: any SceneMaterial, pbr: any SceneMaterial)] = []
+    private var usesPBR = false
 
     init() {
         let root = SceneGraph.Node(label: "Root")
         let eye: SIMD3<Float> = [0, 6, 9]
         root.addChild(.camera(.demo, label: "Camera", transform: .init(position: eye, lookingAt: [0, 0.5, 0])))
         light = root.addChild(SceneGraph.Node(label: "Light"))
-        floor = root.addChild(SceneGraph.Node(label: "Floor", shape: .box(width: 12, height: 0.1, length: 12), material: BlinnPhongSceneMaterial.plastic([0.6, 0.6, 0.65], shininess: 8), transform: .init(translation: [0, -0.05, 0])))
+        let floorColor: SIMD3<Float> = [0.6, 0.6, 0.65]
+        floor = root.addChild(SceneGraph.Node(label: "Floor", shape: .box(width: 12, height: 0.1, length: 12), material: BlinnPhongSceneMaterial.plastic(floorColor, shininess: 8), transform: .init(translation: [0, -0.05, 0])))
+        var materialSets: [(node: SceneGraph.Node, blinnPhong: any SceneMaterial, pbr: any SceneMaterial)] = []
+        materialSets.append((floor, BlinnPhongSceneMaterial.plastic(floorColor, shininess: 8), PBRSceneMaterial(baseColor: floorColor, roughness: 0.8)))
         let casters: [(SceneGraph.Shape, SIMD3<Float>, SIMD3<Float>)] = [
             (.box(), [-2.5, 0.5, 0], [0.9, 0.35, 0.3]),
             (.sphere(radius: 0.6), [0, 0.6, -1], [0.3, 0.6, 0.9]),
@@ -26,12 +34,21 @@ final class ShadowsDemo: DemoScene {
         ]
         for (shape, position, color) in casters {
             let node = root.addChild(SceneGraph.Node(shape: shape, material: BlinnPhongSceneMaterial.plastic(color), transform: .init(translation: position)))
+            materialSets.append((node, BlinnPhongSceneMaterial.plastic(color), PBRSceneMaterial(baseColor: color, roughness: 0.4)))
             if case .torus = shape {
                 node.run(.repeatForever(.rotate(by: .pi * 2, around: [1, 0, 0], duration: 6)), forKey: "spin")
             }
         }
+        let glow: SIMD3<Float> = [1, 0.45, 0.15]
+        let emissivePBR = PBRSceneMaterial(baseColor: .zero, roughness: 1)
+        emissivePBR.pbrMaterial.uniforms.emissiveFactor = glow
+        let emissiveBlinnPhong = BlinnPhongSceneMaterial(color: .zero, emission: glow)
+        let emissive = root.addChild(SceneGraph.Node(label: "Emissive", shape: .sphere(radius: 0.4), material: emissiveBlinnPhong, transform: .init(translation: [-1.2, 0.4, 1.5])))
+        materialSets.append((emissive, emissiveBlinnPhong, emissivePBR))
+        self.materialSets = materialSets
         super.init(
             sceneGraph: SceneGraph(root: root),
+            renderers: [BlinnPhongMaterialRenderer(), PBRMaterialRenderer()],
             cameraMatrix: .camera(eye: eye, target: [0, 0.5, 0]),
             parameters: [
                 .choice("Light", Self.lightTypes),
@@ -42,6 +59,7 @@ final class ShadowsDemo: DemoScene {
                 .toggle("Floor Receives Shadows", default: true),
                 .slider("Light Angle", 0...(2 * .pi), default: 0.6),
                 .toggle("Ambient Occlusion", default: false),
+                .toggle("PBR Materials", default: false),
                 .slider("Vignette", 0...1, default: 0)
             ]
         )
@@ -68,6 +86,14 @@ final class ShadowsDemo: DemoScene {
         shadowRenderer.softness = Int(self[value: "Softness"].rounded())
         shadowRenderer.color = self[flag: "Blue Shadows"] ? [0.2, 0.3, 1] : .zero
         sceneGraph.environment.ambientOcclusion = self[flag: "Ambient Occlusion"] ? SceneGraph.AmbientOcclusion(radius: 0.6, intensity: 0.9, sampleCount: 16) : nil
+        if self[flag: "PBR Materials"] != usesPBR {
+            usesPBR = self[flag: "PBR Materials"]
+            for set in materialSets {
+                if case let .mesh(mesh, _, castsShadow, receivesShadow) = set.node.content {
+                    set.node.content = .mesh(mesh, materials: [usesPBR ? set.pbr : set.blinnPhong], castsShadow: castsShadow, receivesShadow: receivesShadow)
+                }
+            }
+        }
         let vignette = self[value: "Vignette"]
         sceneGraph.postProcessing = vignette == 0 ? nil : SceneGraph.PostProcessing(vignetteIntensity: vignette)
         let receives = self[flag: "Floor Receives Shadows"]
