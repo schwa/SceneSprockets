@@ -9565,7 +9565,7 @@ Update the existing body with SwiftJolt's `setFriction`, `setRestitution`, `setM
 status: new
 priority: low
 kind: enhancement
-labels: area:physics,effort:s
+labels: area:physics, effort:s
 depends: 410
 created: 2026-11-16T23:34:12Z
 +++
@@ -9574,6 +9574,24 @@ joltShape bakes the node's scale into each shape: spheres use the largest scale 
 
 ## Proposed fix (per schwa)
 Use SwiftJolt's `Shape.scaled` (with `isValidScale` / `validScale(closestTo:)`) and `Shape.rotatedTranslated`.
+
+---
+
+## 417: Finding the node of a physics body scans every entry
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:physics,effort:xs
+depends: 410
+created: 2026-11-16T23:34:12Z
++++
+
+SceneGraphPhysicsWorld.node(of:) does a linear search over all entries. The slider constraint calls it for every sweep hit, every frame, so cost grows with scene size.
+
+## Proposed fix (per schwa)
+Store an index or key in SwiftJolt body user data (`BodyOptions.userData` / `userData(of:)`) or keep a BodyID→node dictionary.
 
 ---
 
