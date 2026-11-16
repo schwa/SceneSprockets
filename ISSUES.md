@@ -9637,7 +9637,7 @@ Write only awake bodies, e.g. via SwiftJolt's `PhysicsWorld.activeBodies` or `is
 status: new
 priority: low
 kind: feature
-labels: area:physics,effort:m
+labels: area:physics, effort:m
 depends: 410
 created: 2026-11-16T23:34:13Z
 +++
@@ -9646,6 +9646,24 @@ Custom forces (wind, buoyancy, magnets, SceneKit-style physics fields) can only 
 
 ## Proposed fix (per schwa)
 Expose SwiftJolt's `StepListener` (`addStepListener`) through SceneGraphPhysicsWorld.
+
+---
+
+## 421: Physics solver and sleep settings cannot be tuned
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:physics,effort:xs
+depends: 410
+created: 2026-11-16T23:34:13Z
++++
+
+SceneGraphPhysicsWorld has no way to change solver iterations, baumgarte, penetration slop, sleep time or other world-wide settings. Stacks and joints that need more iterations cannot be fixed from SceneSprockets.
+
+## Proposed fix (per schwa)
+Expose SwiftJolt's `PhysicsWorld.settings` (`PhysicsSettings`).
 
 ---
 
