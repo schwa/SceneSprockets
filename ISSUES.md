@@ -9673,7 +9673,7 @@ Expose SwiftJolt's `PhysicsWorld.settings` (`PhysicsSettings`).
 status: new
 priority: low
 kind: enhancement
-labels: area:physics,effort:xs
+labels: area:physics, effort:xs
 depends: 410
 created: 2026-11-16T23:34:13Z
 +++
@@ -9682,6 +9682,24 @@ Jolt prints its trace messages to stdout. They don't reach os.Logger, so they ar
 
 ## Proposed fix (per schwa)
 Install SwiftJolt's `JoltEngine.setTraceHandler` and forward to the package logger.
+
+---
+
+## 423: Physics contacts are not reported to the scene graph
+
++++
+status: new
+priority: medium
+kind: feature
+labels: area:physics,effort:m
+depends: 410
+created: 2026-11-16T23:34:13Z
++++
+
+There is no way to learn that two nodes' bodies started or stopped touching (SceneKit's SCNPhysicsContactDelegate). Games need this for hits, pickups and sounds; the Jolt world's contact listener is only reachable through `world` and reports BodyIDs, not nodes.
+
+## Proposed fix (per schwa)
+Wrap SwiftJolt's `ContactListener` (and `wereBodiesInContact`), map BodyIDs to nodes (user data), and deliver events on the caller's thread after step().
 
 ---
 
