@@ -4078,13 +4078,14 @@ Imported glTFs are kept as mostly complete units (#157), not edited in detail. A
 ## 184: Composer: environment background looks closer than the grid
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: investigate, area:composer, effort:s
 milestone: M001-Correctness
 created: 2026-10-24T14:09:41Z
-updated: 2026-11-16T20:12:42Z
+updated: 2026-11-16T22:41:36Z
+closed: 2026-11-16T22:41:36Z
 +++
 
 With the Studio environment as background, the grid looks like it runs past and under the environment's walls, so the environment seems nearer than the grid.
