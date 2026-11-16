@@ -9601,7 +9601,7 @@ Store an index or key in SwiftJolt body user data (`BodyOptions.userData` / `use
 status: new
 priority: low
 kind: enhancement
-labels: area:physics,effort:s
+labels: area:physics, effort:s
 depends: 410
 created: 2026-11-16T23:34:12Z
 +++
@@ -9610,6 +9610,24 @@ sliderConstraint casts against all bodies with castShapeAll and then discards hi
 
 ## Proposed fix (per schwa)
 Pass a SwiftJolt `QueryFilter` (excludedBodies, shouldInclude, layers) to castShapeAll so Jolt skips them.
+
+---
+
+## 419: Every dynamic node's transform is written each step, even when asleep
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:physics,effort:xs
+depends: 410
+created: 2026-11-16T23:34:12Z
++++
+
+step() writes the pose of every dynamic body to its node every step. Sleeping bodies don't move, but their nodes are still written, which bumps the transform revision and costs time in large scenes.
+
+## Proposed fix (per schwa)
+Write only awake bodies, e.g. via SwiftJolt's `PhysicsWorld.activeBodies` or `isActive(_:)`.
 
 ---
 
