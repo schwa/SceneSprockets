@@ -2,7 +2,7 @@ import Foundation
 import Metal
 import MetalSprockets
 
-/// Materials whose renderer multiplies only its ambient light by ``RenderContext/ambientOcclusion`` (Blinn-Phong).
+/// Materials whose renderer multiplies only its ambient light by ``RenderContext/ambientOcclusion`` (Blinn-Phong, PBR).
 /// Other materials are darkened as a whole after the scene pass (#136).
 public protocol AppliesAmbientOcclusionInShader {}
 

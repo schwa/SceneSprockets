@@ -9397,14 +9397,15 @@ Moved from SceneSprocketsAddOns #36.
 ## 408: PBR materials still get screen-space AO as a final-color post pass
 
 +++
-status: blocked
+status: closed
 priority: medium
 kind: bug
 labels: area:renderer, effort:m
 milestone: M001-Correctness
 depends: 136
 created: 2026-11-16T21:30:40Z
-updated: 2026-11-16T21:30:43Z
+updated: 2026-11-16T22:48:42Z
+closed: 2026-11-16T22:48:42Z
 +++
 
 Follow-up to #136. #136 moves screen-space ambient occlusion out of post-processing and into lighting **for Blinn-Phong only**: the setting becomes `SceneGraph.Environment.ambientOcclusion`, a depth prepass feeds an SSAO pass before shading, and Blinn-Phong multiplies only its ambient term by the occlusion factor.

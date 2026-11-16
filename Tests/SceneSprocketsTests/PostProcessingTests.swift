@@ -90,13 +90,26 @@ func ambientOcclusionLeavesEmissionAlone() throws {
     #expect(abs(Int(occludedContact.x) - Int(plainContact.x)) <= 2)
 }
 
-// #136: materials that do not apply occlusion while shading, PBR included (#408), are still darkened after the scene
-// pass.
+// #408: PBR emission at a contact is unchanged; occlusion reduces only its image-based light.
+@Test(.enabled(if: deviceSupportsMetal4))
+@MainActor
+func pbrAmbientOcclusionLeavesEmissionAlone() throws {
+    let material = PBRSceneMaterial(baseColor: [0, 0, 0], roughness: 1)
+    material.pbrMaterial.uniforms.emissiveFactor = [0.8, 0.8, 0.8]
+    let renderers: [any MaterialRenderer] = [PBRMaterialRenderer(environmentIntensity: 0)]
+    let (sceneGraph, plain) = try render(nil, material: material, renderers: renderers)
+    let (_, occluded) = try render(nil, ambientOcclusion: strongOcclusion, material: material, renderers: renderers)
+    #expect(abs(Int(try pixel(occluded, sceneGraph, at: contact).x) - Int(try pixel(plain, sceneGraph, at: contact).x)) <= 2)
+}
+
+// #136: shader materials are darkened after the scene pass; PBR (#408) darkens its image-based light while shading.
+// Both lit only by ambient or image-based light here, so both get darker at the contact.
 @Test(.enabled(if: deviceSupportsMetal4), arguments: [false, true])
 @MainActor
 func ambientOcclusionDarkensOtherMaterials(usesPBR: Bool) throws {
     let material: any SceneMaterial = usesPBR ? PBRSceneMaterial(baseColor: [0.8, 0.8, 0.8], roughness: 1) : ShaderMaterial.rim(color: [0.8, 0.8, 0.8])
-    let renderers: [any MaterialRenderer] = usesPBR ? [PBRMaterialRenderer()] : [ShaderMaterialRenderer()]
+    // Dim enough that tone mapping does not flatten the change.
+    let renderers: [any MaterialRenderer] = usesPBR ? [PBRMaterialRenderer(environmentIntensity: 0.2)] : [ShaderMaterialRenderer()]
     let (sceneGraph, plain) = try render(nil, material: material, renderers: renderers)
     let (_, occluded) = try render(nil, ambientOcclusion: strongOcclusion, material: material, renderers: renderers)
     #expect(Int(try pixel(occluded, sceneGraph, at: contact).x) < Int(try pixel(plain, sceneGraph, at: contact).x) - 10)

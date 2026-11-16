@@ -463,6 +463,8 @@ private struct FadeKey: Hashable {
 
 extension PBREnvironment: EnvironmentMap {}
 
+extension PBRSceneMaterial: AppliesAmbientOcclusionInShader {}
+
 extension PBRMaterialRenderer: BackgroundRenderer {
     // The scene's environment map when it is a PBREnvironment, otherwise `environment`; intensities multiply.
     // Light positions are shifted by `cameraPosition` for camera-relative rendering.
@@ -483,6 +485,8 @@ extension PBRMaterialRenderer: BackgroundRenderer {
             exposure: exposure
         )
         lighting.environmentRotation = context.environment.rotation
+        // Darkens only image-based light (#408). The visibility already includes the setting's intensity.
+        lighting.ambientOcclusion = context.ambientOcclusion.map { PBRAmbientOcclusion(texture: $0) }
         return lighting
     }
 

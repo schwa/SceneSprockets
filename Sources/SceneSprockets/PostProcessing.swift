@@ -36,7 +36,7 @@ extension SceneGraph {
 
     /// Screen-space ambient occlusion: creases and contacts get less ambient light, like SCNCamera's
     /// screenSpaceAmbientOcclusion settings. Computed from a depth pre-pass before shading. Blinn-Phong darkens only its
-    /// ambient term; other materials, PBR included, are darkened after the scene pass (#136, #408).
+    /// ambient term and PBR only its image-based light; other materials are darkened after the scene pass (#136, #408).
     public struct AmbientOcclusion: Sendable, Equatable, Codable {
         /// World units searched around each pixel.
         public var radius: Float
