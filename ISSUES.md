@@ -1202,13 +1202,14 @@ Want:
 ## 59: Shadow flicker on still frames (self-shadowed fox, Dice tray and dice)
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:renderer, effort:m
 milestone: M001-Correctness
 created: 2026-10-14T01:11:25Z
-updated: 2026-11-16T20:12:42Z
+updated: 2026-11-16T21:24:14Z
+closed: 2026-11-16T21:24:14Z
 +++
 
 In the Imported Assets demo, shadowed pixels sometimes flash unshadowed for a frame. It is mostly the fox's self-shadowed side. It happens with the camera still and the animation paused (speed 0). The flashes are random and rare. They are clearly less frequent with the inspector sidebar closed, so they likely depend on frame timing.
@@ -2810,19 +2811,20 @@ There is no way to give the scene graph a single node holding a mesh, a material
 
 - `2026-11-12T20:08:30Z`: Autonomous run: punted. Looked at adding per-node instance transforms carried on MeshEntry. It touches 16 files (every renderer, PBR's per-node poses, shadows, culling, bounds, LOD, hit testing, deformation, selection outline, archive, glTF EXT_mesh_gpu_instancing import), and several design choices have no answer in the repo yet. Unblocker: answer the design question on this issue.
 - `2026-11-12T20:08:30Z`: Question 1 (design): Shape of explicit instancing: (a) Node field 'instances: [float4x4]' (+ optional per-instance colors) on a mesh node, carried on one MeshEntry, with renderers that cannot draw instances getting an expanded fallback; or (b) a separate content case like .instancedMesh(mesh, material, transforms)? And: should hit tests report an instance index, should shadows/LOD/culling treat instances individually or as one bounds, and must PBR support it in the first cut?
+- `2026-11-16T21:28:02Z`: Answer 1: b, unsure about othe rquestions - lets go with default answers and improve later
 
 ---
 
 ## 136: Ambient occlusion is part of PostProcessing and darkens the final lit color
 
 +++
-status: blocked
+status: open
 priority: medium
 kind: bug
 labels: effort:m, area:renderer
 milestone: M001-Correctness
 created: 2026-10-17T13:09:48Z
-updated: 2026-11-16T20:12:42Z
+updated: 2026-11-16T21:30:10Z
 +++
 
 Screen-space ambient occlusion is configured as SceneGraph.PostProcessing.ambientOcclusion, next to exposure, contrast, saturation and vignette, and runs as a post pass (ambient_occlusion in PostProcessing.metal) that multiplies the final rendered color.
@@ -2834,10 +2836,19 @@ Problems:
 
 Expected: ambient occlusion reduces only ambient and indirect lighting, and is configured as a lighting setting, separate from post-processing color adjustments.
 
-- `2026-11-07T15:50:56Z`: Autonomous run: scoped, not changed. Doing this needs (1) the AO texture computed before the material passes (a depth prepass, or reordering so AO runs between a depth-only pass and shading), (2) Blinn-Phong to multiply only its ambient term by it, (3) PBR to multiply only its IBL/indirect term by it; MetalSprocketsPBR has no screen-space occlusion input today, so that is a change in MetalSprocketsPBR, and (4) a public API move of PostProcessing.ambientOcclusion to a lighting setting (for example SceneGraph.ambientOcclusion or Environment.ambientOcclusion). Punting: it is a cross-package design change, and the API placement is your call. Questions: where should the setting live, and is a depth prepass for AO acceptable (it costs a second geometry pass when AO is on)?
-- `2026-11-07T16:59:55Z`: Question 1 (design): Where should the ambient occlusion setting live (for example SceneGraph.ambientOcclusion or Environment.ambientOcclusion), and is a depth prepass acceptable when AO is on?
-- `2026-11-12T02:06:16Z`: Answer 1: do not care
-- `2026-11-12T03:34:31Z`: Auto-fixer run: punted on an upstream dependency. Per 136-Q1 ('do not care') the plan is: the setting moves from PostProcessing to SceneGraph.Environment.ambientOcclusion; with AO on, a depth prepass feeds an SSAO pass before shading; Blinn-Phong multiplies only its ambient term and PBR only its indirect/IBL terms. MetalSprocketsPBR has no screen-space occlusion input (only the material occlusion texture), filed as MetalSprocketsPBR #24. Doing Blinn-Phong alone would leave PBR scenes on the old post-process path, so the whole change waits for #24.
+\- `2026-11-07T15:50:56Z`: Autonomous run: scoped, not changed. Doing this needs (1) the AO texture computed before the material passes (a depth prepass, or reordering so AO runs between a depth-only pass and shading), (2) Blinn-Phong to multiply only its ambient term by it, (3) PBR to multiply only its IBL/indirect term by it; MetalSprocketsPBR has no screen-space occlusion input today, so that is a change in MetalSprocketsPBR, and (4) a public API move of PostProcessing.ambientOcclusion to a lighting setting (for example SceneGraph.ambientOcclusion or Environment.ambientOcclusion). Punting: it is a cross-package design change, and the API placement is your call. Questions: where should the setting live, and is a depth prepass for AO acceptable (it costs a second geometry pass when AO is on)?
+\- `2026-11-07T16:59:55Z`: Question 1 (design): Where should the ambient occlusion setting live (for example SceneGraph.ambientOcclusion or Environment.ambientOcclusion), and is a depth prepass acceptable when AO is on?
+\- `2026-11-12T02:06:16Z`: Answer 1: do not care
+\- `2026-11-12T03:34:31Z`: Auto-fixer run: punted on an upstream dependency. Per 136-Q1 ('do not care') the plan is: the setting moves from PostProcessing to SceneGraph.Environment.ambientOcclusion; with AO on, a depth prepass feeds an SSAO pass before shading; Blinn-Phong multiplies only its ambient term and PBR only its indirect/IBL terms. MetalSprocketsPBR has no screen-space occlusion input (only the material occlusion texture), filed as MetalSprocketsPBR #24. Doing Blinn-Phong alone would leave PBR scenes on the old post-process path, so the whole change waits for #24.
+\- `2026-11-16T21:30:14Z`: Unblocked by decision: do **not** wait for MetalSprocketsPBR #24. Land the Blinn-Phong path first and accept that PBR scenes temporarily stay on the old post-process AO path.
+
+Scope for this issue:
+1. Move the setting from `SceneGraph.PostProcessing.ambientOcclusion` to `SceneGraph.Environment.ambientOcclusion`.
+2. With AO enabled, run a depth prepass feeding an SSAO pass before shading (accepted cost: a second geometry pass when AO is on).
+3. Blinn-Phong multiplies **only** its ambient term by the occlusion factor.
+4. PBR: unchanged for now — still the final-color post pass — until MetalSprocketsPBR gains a screen-space occlusion input (MetalSprocketsPBR #24). Note the inconsistency in release notes/docs so PBR scenes are not assumed fixed.
+
+- `2026-11-16T21:30:43Z`: Follow-up for the PBR half filed as #408 (blocked on this issue and on MetalSprocketsPBR #24). Closing this one should not be read as "AO is fixed for PBR scenes".
 
 ---
 
@@ -6706,6 +6717,8 @@ SceneGraphShadows has 8 shadow map slices: a directional or spot light takes one
 - `2026-11-07T16:18:08Z`: Autonomous run: scoped, not changed. The 8 is a fixed array size in shader uniforms in three places: BlinnPhong.h (sliceViewProjections[8]), ShadowMask.h (SCENE_SHADOW_MAX_SLICES 8), and MetalSprocketsPBR's PBRShaderTypes.h (kPBRMaxShadowSliceCount 8). Raising it here alone would leave PBR at 8, so a fix needs a MetalSprocketsPBR change and release too (the depth array texture also grows with it: 2048x2048 depth32 is 16 MB per slice per frame in flight). Punting: cross-package, and two decisions are yours: (1) the new limit (16? configurable on SceneGraphShadows?), and (2) which lights get shadows when they still do not fit (today: first come, first served; alternatives: brightest, or nearest to the camera).
 - `2026-11-07T16:59:55Z`: Question 1 (decision): What should the shadow slice limit be: a fixed 16, or configurable on SceneGraphShadows? (Needs the same change in MetalSprocketsPBR.)
 - `2026-11-07T16:59:56Z`: Question 2 (decision): When lights still do not fit, which get shadows: first come first served (today), brightest, or nearest to the camera?
+- `2026-11-16T21:25:11Z`: Answer 1: Configurable
+- `2026-11-16T21:25:34Z`: Answer 2: Configurable
 
 ---
 
@@ -7327,6 +7340,8 @@ Punting: both fixes change renderer behavior for every fade, so they need a deci
 - `2026-11-11T15:58:52Z`: Question 1 (decision): Node-opacity fades of closed meshes blend twice (back + front faces). Fix with a depth prepass for faded entries (correct, costs a pass) or cull back faces while fading (cheap; double-sided planes seen from behind vanish mid-fade)?
 - `2026-11-11T15:58:52Z`: Question 2 (decision): Should the PBR transmission backdrop (makeOpaqueContent) include transparent/faded entries of other renderers, so faded glass still refracts the faded scene behind it?
 - `2026-11-11T15:58:53Z`: Auto-fixer run: root cause already known (see 2026-11-08 comment). Punting again: both fixes change renderer behavior for every fade. Unblocker: answer 327-Q1 and 327-Q2.
+- `2026-11-16T21:26:22Z`: Answer 1: Best is bette rthan cheap
+- `2026-11-16T21:26:29Z`: Answer 2: Yes
 
 ---
 
@@ -7564,6 +7579,7 @@ Open question (per schwa): where should this live? Candidates: SceneSprockets (n
 
 - `2026-11-07T18:39:49Z`: Question 1 (decision): Where should the spatial acceleration structure live: SceneSprockets, SwiftMesh, a separate package, or split (triangles in SwiftMesh, nodes in SceneSprockets)?
 - `2026-11-16T20:08:31Z`: Related: #402 (positions re-read per hit test call).
+- `2026-11-16T21:26:58Z`: Answer 1: SwiftMesh seems correct
 
 ---
 
@@ -9363,6 +9379,36 @@ There are no spline paths in the scene, and nothing that moves cameras or object
 Related: #81 (extruded Bézier path shape) could share the same spline type. Constraints (Constraint.swift) have no follow-path kind.
 
 Moved from SceneSprocketsAddOns #36.
+
+---
+
+## 408: PBR materials still get screen-space AO as a final-color post pass
+
++++
+status: blocked
+priority: medium
+kind: bug
+labels: area:renderer, effort:m
+milestone: M001-Correctness
+depends: 136
+created: 2026-11-16T21:30:40Z
+updated: 2026-11-16T21:30:43Z
++++
+
+Follow-up to #136. #136 moves screen-space ambient occlusion out of post-processing and into lighting **for Blinn-Phong only**: the setting becomes `SceneGraph.Environment.ambientOcclusion`, a depth prepass feeds an SSAO pass before shading, and Blinn-Phong multiplies only its ambient term by the occlusion factor.
+
+PBR is deliberately left out of that change, because MetalSprocketsPBR has no screen-space occlusion input today — `SceneSprocketsPBR` only exposes the per-material occlusion texture (`PBRSceneGraph.swift`: `/// Ambient occlusion in red.` `public var occlusion: MTLTexture?`, bound as `kPBRTextureOcclusion`). Tracked upstream as MetalSprocketsPBR #24.
+
+So after #136 lands, scenes using PBR materials still have the original defect from #136:
+
+- AO darkens the **final lit color**, including direct lighting, specular highlights and emissive/unlit content, instead of only ambient and image-based lighting.
+- Blinn-Phong and PBR scenes with the same `ambientOcclusion` settings look different.
+
+Expected: PBR multiplies only its indirect/IBL terms by the screen-space occlusion factor, consuming the same SSAO texture produced by the prepass in #136, so AO behaves identically for both material types.
+
+Blocked on MetalSprocketsPBR #24 (screen-space occlusion input in the PBR shader) and on #136 landing the prepass and the `Environment.ambientOcclusion` setting.
+
+Unknown (not verified here): whether the SSAO texture produced in #136 is exposed in a form `SceneSprocketsPBR` can bind, or whether that plumbing is also part of this work.
 
 ---
 
