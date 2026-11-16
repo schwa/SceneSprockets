@@ -9504,7 +9504,7 @@ Map node categories to SwiftJolt `CollisionLayers` (fixed when the world is crea
 status: new
 priority: low
 kind: feature
-labels: area:physics,effort:s
+labels: area:physics, effort:s
 depends: 410
 created: 2026-11-16T23:34:12Z
 +++
@@ -9513,6 +9513,24 @@ SceneGraph.PhysicsBody only has type, shape, mass, friction and restitution. Lin
 
 ## Proposed fix (per schwa)
 Pass SwiftJolt's `BodyOptions` (linearDamping, angularDamping, gravityFactor, allowSleeping, motionQuality: .linearCast, maxLinearVelocity) from makeBody.
+
+---
+
+## 414: Physics bodies cannot be limited to some axes
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:physics,effort:s
+depends: 410
+created: 2026-11-16T23:34:12Z
++++
+
+There is no way to lock a body's rotation or keep it in a plane (SceneKit angularVelocityFactor / velocityFactor). 2D-style scenes and upright characters need this.
+
+## Proposed fix (per schwa)
+Use SwiftJolt's `BodyOptions.allowedDegreesOfFreedom` (e.g. `.plane2D`, or translation only).
 
 ---
 
