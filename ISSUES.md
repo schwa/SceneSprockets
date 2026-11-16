@@ -9324,13 +9324,14 @@ Actual: odd strip triangles are hit only from their back side.
 ## 404: Hit testing ignores primitive restart in triangle strips
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:scenegraph, effort:s
 milestone: M001-Correctness
 created: 2026-11-16T20:06:43Z
-updated: 2026-11-16T20:12:42Z
+updated: 2026-11-16T21:55:08Z
+closed: 2026-11-16T21:55:08Z
 +++
 
 SceneGraph.hitTest does not handle primitive restart indices (0xFFFF / 0xFFFFFFFF) in triangle strip submeshes. Triangles that span a restart are skipped only by the out-of-range index guard, not handled as strip breaks.

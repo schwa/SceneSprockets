@@ -160,6 +160,34 @@ func viewportFromCameraCastsTheProjectionsRays(_ depthMode: PerspectiveProjectio
     }
 }
 
+// #404: a primitive restart starts a new strip, whose winding counts from its own first triangle.
+@Test(arguments: [MTLIndexType.uint32, .uint16])
+func stripsRestartAtPrimitiveRestartIndices(indexType: MTLIndexType) throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    // Two unit quads facing +z, at x 0...1 and x 2...3; the second strip starts at index 5, an odd position.
+    let positions: [SIMD3<Float>] = [[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [2, 0, 0], [3, 0, 0], [2, 1, 0], [3, 1, 0]]
+    let restart: UInt32 = indexType == .uint16 ? 0xFFFF : 0xFFFF_FFFF
+    let indices: [UInt32] = [0, 1, 2, 3, restart, 4, 5, 6, 7]
+    // Index buffer made here: MetalMesh's array initializer reads every index as a vertex.
+    var mesh = MetalMesh(device: device, attributes: [.positions(positions)], submeshes: [.init(indices: Array(0..<8), primitiveType: .triangleStrip)])
+    let buffer = try #require(indexType == .uint16
+        ? device.makeBuffer(bytes: indices.map { UInt16(truncatingIfNeeded: $0) }, length: indices.count * 2)
+        : device.makeBuffer(bytes: indices, length: indices.count * 4))
+    mesh.submeshes[0] = MetalMesh.Submesh(indexBuffer: buffer, indexCount: indices.count, indexType: indexType, primitiveType: .triangleStrip)
+    let root = SceneGraph.Node()
+    root.addChild(SceneGraph.Node(content: .mesh(mesh, material: material())))
+    let sceneGraph = SceneGraph(root: root)
+    let options = SceneGraph.HitTestOptions(backFaceCulling: true)
+    for point: SIMD2<Float> in [[0.2, 0.2], [0.8, 0.8], [2.2, 0.2], [2.8, 0.8]] {
+        let front = sceneGraph.hitTest(Ray3D(origin: [point.x, point.y, 1], direction: [0, 0, -1]), options: options)
+        let back = sceneGraph.hitTest(Ray3D(origin: [point.x, point.y, -1], direction: [0, 0, 1]), options: options)
+        #expect(front.count == 1, "front at \(point)")
+        #expect(back.isEmpty, "back at \(point)")
+    }
+    // Nothing between the quads, where a triangle across the restart would be.
+    #expect(sceneGraph.hitTest(Ray3D(origin: [1.5, 0.5, 1], direction: [0, 0, -1])).isEmpty)
+}
+
 // #403: odd triangles of a strip have reversed index order, so their front face follows the even triangles'.
 @Test
 func backFaceCullingKeepsFrontFacesOfEveryStripTriangle() throws {

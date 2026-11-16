@@ -135,14 +135,24 @@ extension SceneGraph {
             }
             let indices = submesh.indices
             let triangleCount = submesh.primitiveType == .triangle ? indices.count / 3 : max(indices.count - 2, 0)
+            // Strips break at the primitive restart index, and each piece keeps its own winding (#404).
+            let restartIndex: UInt32 = submesh.indexType == .uint16 ? 0xFFFF : 0xFFFF_FFFF
+            var stripStart = 0
             for triangle in 0..<triangleCount {
-                // Odd strip triangles swap their first two vertices to keep the strip's winding (#403).
-                let (a, b, c): (UInt32, UInt32, UInt32) = if submesh.primitiveType == .triangle {
-                    (indices[triangle * 3], indices[triangle * 3 + 1], indices[triangle * 3 + 2])
-                } else if triangle.isMultiple(of: 2) {
-                    (indices[triangle], indices[triangle + 1], indices[triangle + 2])
+                let (a, b, c): (UInt32, UInt32, UInt32)
+                if submesh.primitiveType == .triangle {
+                    (a, b, c) = (indices[triangle * 3], indices[triangle * 3 + 1], indices[triangle * 3 + 2])
                 } else {
-                    (indices[triangle + 1], indices[triangle], indices[triangle + 2])
+                    if indices[triangle] == restartIndex {
+                        stripStart = triangle + 1
+                    }
+                    guard indices[triangle + 1] != restartIndex, indices[triangle + 2] != restartIndex, indices[triangle] != restartIndex else {
+                        continue
+                    }
+                    // Odd strip triangles swap their first two vertices to keep the strip's winding (#403).
+                    (a, b, c) = (triangle - stripStart).isMultiple(of: 2)
+                        ? (indices[triangle], indices[triangle + 1], indices[triangle + 2])
+                        : (indices[triangle + 1], indices[triangle], indices[triangle + 2])
                 }
                 guard Int(max(a, b, c)) < positions.count,
                       let triangleHit = localRay.intersect(triangle: positions[Int(a)], positions[Int(b)], positions[Int(c)], cullBackFaces: options.backFaceCulling)
