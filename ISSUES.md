@@ -9425,6 +9425,26 @@ Unknown (not verified here): whether the SSAO texture produced in #136 is expose
 
 ---
 
+## 409: No check that PBR and Blinn-Phong materials respond the same way to every rendering technique
+
++++
+status: new
+priority: medium
+kind: task
+created: 2026-11-16T23:06:43Z
++++
+
+SceneSprockets applies many scene-wide techniques to meshes: shadows, fog, ambient occlusion, node opacity and fades, transparency sorting, transmission backdrops, color adjustment and vignette, soft particles, debug views, material channels, stereo and immersive rendering, GPU deformation, and others. Each material renderer implements its part of these on its own. Nothing checks that a PBR material and a Blinn-Phong material get the same treatment. Differences show up one at a time as bugs.
+
+Known differences found so far:
+- Faded closed meshes: Blinn-Phong draws depth first so the mesh blends once (#327); PBR and ShaderMaterial do not.
+- Transmission backdrop: glass leaves out other meshes of its own renderer, so faded PBR objects behind PBR glass are missing (#327).
+- Ambient occlusion: Blinn-Phong darkens only ambient light, PBR only image-based light (#136, #408). These are comparable but not the same term.
+
+Missing: a list of each technique with how each renderer handles it, and tests that render the same scene with both material families and compare the effect of each technique.
+
+---
+
 ## Milestone: M001-Correctness
 
 +++
