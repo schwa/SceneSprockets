@@ -9302,13 +9302,14 @@ SceneGraph.hitTest copies positions out of the vertex buffers on each call (and 
 ## 403: Back-face culling in hit tests is wrong for odd triangles in strips
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:scenegraph, effort:s
 milestone: M001-Correctness
 created: 2026-11-16T20:06:43Z
-updated: 2026-11-16T20:12:42Z
+updated: 2026-11-16T21:53:49Z
+closed: 2026-11-16T21:53:49Z
 +++
 
 In SceneGraph.hitTest, triangle strip triangle i uses indices (i, i+1, i+2) for every i. Odd triangles in a strip have reversed winding, so with HitTestOptions.backFaceCulling they are culled from the wrong side.

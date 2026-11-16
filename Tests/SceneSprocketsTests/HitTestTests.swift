@@ -159,3 +159,22 @@ func viewportFromCameraCastsTheProjectionsRays(_ depthMode: PerspectiveProjectio
         #expect(simd_distance(simd_normalize(ray.direction), simd_normalize(expected.direction)) < 1e-4)
     }
 }
+
+// #403: odd triangles of a strip have reversed index order, so their front face follows the even triangles'.
+@Test
+func backFaceCullingKeepsFrontFacesOfEveryStripTriangle() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    // A unit quad facing +z as one strip: triangle 0 is (0, 1, 2), triangle 1 is (2, 1, 3) in winding order.
+    let positions: [SIMD3<Float>] = [[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0]]
+    let mesh = MetalMesh(device: device, attributes: [.positions(positions)], submeshes: [.init(indices: [0, 1, 2, 3], primitiveType: .triangleStrip)])
+    let root = SceneGraph.Node()
+    root.addChild(SceneGraph.Node(content: .mesh(mesh, material: material())))
+    let sceneGraph = SceneGraph(root: root)
+    let options = SceneGraph.HitTestOptions(backFaceCulling: true)
+    for point: SIMD2<Float> in [[0.2, 0.2], [0.8, 0.8]] {
+        let front = sceneGraph.hitTest(Ray3D(origin: [point.x, point.y, 1], direction: [0, 0, -1]), options: options)
+        let back = sceneGraph.hitTest(Ray3D(origin: [point.x, point.y, -1], direction: [0, 0, 1]), options: options)
+        #expect(front.count == 1, "front at \(point)")
+        #expect(back.isEmpty, "back at \(point)")
+    }
+}

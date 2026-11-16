@@ -136,9 +136,14 @@ extension SceneGraph {
             let indices = submesh.indices
             let triangleCount = submesh.primitiveType == .triangle ? indices.count / 3 : max(indices.count - 2, 0)
             for triangle in 0..<triangleCount {
-                let (a, b, c): (UInt32, UInt32, UInt32) = submesh.primitiveType == .triangle
-                    ? (indices[triangle * 3], indices[triangle * 3 + 1], indices[triangle * 3 + 2])
-                    : (indices[triangle], indices[triangle + 1], indices[triangle + 2])
+                // Odd strip triangles swap their first two vertices to keep the strip's winding (#403).
+                let (a, b, c): (UInt32, UInt32, UInt32) = if submesh.primitiveType == .triangle {
+                    (indices[triangle * 3], indices[triangle * 3 + 1], indices[triangle * 3 + 2])
+                } else if triangle.isMultiple(of: 2) {
+                    (indices[triangle], indices[triangle + 1], indices[triangle + 2])
+                } else {
+                    (indices[triangle + 1], indices[triangle], indices[triangle + 2])
+                }
                 guard Int(max(a, b, c)) < positions.count,
                       let triangleHit = localRay.intersect(triangle: positions[Int(a)], positions[Int(b)], positions[Int(c)], cullBackFaces: options.backFaceCulling)
                 else {
