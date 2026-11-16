@@ -87,7 +87,8 @@ public protocol ViewManipulator: AnyObject {
     /// Returns an element to draw after the scene, or `nil` to draw nothing.
     ///
     /// The element draws in its own render pass. The pass loads the scene's color and clears depth to 1, for standard
-    /// depth.
+    /// depth. SceneView calls this on the main actor once per frame and draws the element on the render thread, so the
+    /// element's `body` must use only values captured here, not the manipulator's state (#394).
     func overlay(viewport: Viewport) throws -> AnyElement?
     /// Returns whether a drag that starts at a point belongs to the manipulator. The method can update hover state.
     func hitTest(_ point: SIMD2<Float>, viewport: Viewport) -> Bool

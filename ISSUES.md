@@ -9122,19 +9122,22 @@ Move the per-frame work off the main thread, so the main thread only edits the s
 ## 394: SceneView's per-frame element closures assume they run on the main actor
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: effort:m, area:ui
 milestone: M001-Correctness
 depends: 393
 created: 2026-11-14T21:37:01Z
-updated: 2026-11-16T20:12:42Z
+updated: 2026-11-16T21:52:47Z
+closed: 2026-11-16T21:52:47Z
 +++
 
 SceneView calls some closures every frame to build elements: sceneOverlay, sceneDecorations and ViewManipulator.overlay(viewport:). They run inside RenderView's content closure, which today is on the main thread, so callers read main-actor state (models, selection, gizmo state) from them freely.
 
 If frame building moves off the main thread (#393, MetalSprockets #560), these closures run on the render thread. Their current signatures and callers do not account for that: reading main-actor or scene graph state from them would be a data race, and ViewManipulator is @MainActor-isolated.
+
+- `2026-11-16T21:52:47Z`: No unit test: the change is to closure isolation (compile-checked) and docs. Frame building already calls these closures on the main actor in SceneView.step (#393); the returned elements in SceneSprocketsGizmos (TransformGizmo, SelectionOutline) capture values eagerly, so their bodies do not touch live state on the render thread.
 
 ---
 

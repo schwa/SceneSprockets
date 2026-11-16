@@ -78,12 +78,12 @@ public struct SceneView: View {
     private var onFrameTimingID: AnyHashable?
     private var hitTestOptions = SceneGraph.HitTestOptions()
     private var manipulator: (any ViewManipulator)?
-    private var decorations: ((RenderContext, SIMD2<Float>) throws -> AnyElement?)?
+    private var decorations: (@MainActor (RenderContext, SIMD2<Float>) throws -> AnyElement?)?
     private var decorationsID: AnyHashable?
     private var defaultCamera: Camera = .default
     private var cameraOverride: Camera?
     private var cameraTarget: SIMD3<Float>?
-    private var overlay: ((Viewport) throws -> AnyElement?)?
+    private var overlay: (@MainActor (Viewport) throws -> AnyElement?)?
     private var overlayID: AnyHashable?
     private var debugMode: DebugMode?
     private var materialChannel: MaterialChannel?
@@ -635,7 +635,11 @@ public extension SceneView {
 
     /// Draws extra content in the scene pass after the meshes, with the scene's reversed depth (compare `.greater`),
     /// given the frame's context and drawable size in pixels. For editor aids such as grids that objects should hide.
-    func sceneDecorations(id: AnyHashable? = nil, _ decorations: ((RenderContext, SIMD2<Float>) throws -> AnyElement?)?) -> Self {
+    ///
+    /// The closure runs on the main actor once per frame, so it can read the scene graph and app state. The element it
+    /// returns is drawn on the render thread (#393, #394): its `body` must use only values captured when it was made,
+    /// not the live scene graph or other main-actor state.
+    func sceneDecorations(id: AnyHashable? = nil, _ decorations: (@MainActor (RenderContext, SIMD2<Float>) throws -> AnyElement?)?) -> Self {
         with {
             $0.decorations = decorations
             $0.decorationsID = id
@@ -645,7 +649,10 @@ public extension SceneView {
     /// Passes after the scene and before the manipulator, such as selection outlines. They see the finished color and
     /// can load the scene depth (reversed: nearer is greater). Start passes that read the drawable with a barrier.
     /// Nil removes the overlay; an overlay makes the view keep its depth texture.
-    func sceneOverlay(id: AnyHashable? = nil, _ overlay: ((Viewport) throws -> AnyElement?)?) -> Self {
+    ///
+    /// The closure runs on the main actor once per frame. The element it returns is drawn on the render thread: its
+    /// `body` must use only values captured when it was made (#394).
+    func sceneOverlay(id: AnyHashable? = nil, _ overlay: (@MainActor (Viewport) throws -> AnyElement?)?) -> Self {
         with {
             $0.overlay = overlay
             $0.overlayID = id
