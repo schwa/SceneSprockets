@@ -322,6 +322,25 @@ private struct BlinnPhongBatchesElement: Element {
             // Unculled transparent meshes draw back faces first, then front faces. In one pass the faces blend in index
             // order, so back faces can land on top of front faces (#120).
             let isTransparent = isTransparent
+            // A faded mesh (node opacity on an otherwise opaque material) blends as one surface: a depth-only draw,
+            // then color only where its nearest face is (#327).
+            func isFaded(_ batch: InstanceBatch) -> Bool {
+                let state = batch.material.renderState
+                return isTransparent && !batch.material.isTransparent && state.fillMode == .fill && state.readsFromDepthBuffer && state.writesToDepthBuffer
+            }
+            // Consecutive batches that are all faded or all not, in draw order.
+            func runs(_ batches: [InstanceBatch]) -> [(isFaded: Bool, batches: [InstanceBatch])] {
+                var result: [(isFaded: Bool, batches: [InstanceBatch])] = []
+                for batch in batches {
+                    let faded = isFaded(batch)
+                    if let last = result.indices.last, result[last].isFaded == faded {
+                        result[last].batches.append(batch)
+                    } else {
+                        result.append((faded, [batch]))
+                    }
+                }
+                return result
+            }
             func passes(_ batches: [InstanceBatch]) -> [(batch: InstanceBatch, cullMode: MTLCullMode)] {
                 batches.flatMap { batch -> [(batch: InstanceBatch, cullMode: MTLCullMode)] in
                     guard isTransparent, batch.material.renderState.cullMode == .none, batch.material.renderState.fillMode == .fill else {
@@ -377,15 +396,36 @@ private struct BlinnPhongBatchesElement: Element {
             let viewCount = stereoViews?.count ?? 1
             return ForEach(Array(groups.enumerated()), id: \.offset) { _, group in
                 let layout = blinnPhongVertexLayout(group.key.vertexDescriptor)
-                if !group.single.isEmpty {
-                    try RenderPipeline(label: "Blinn-Phong", vertexShader: layout.hasColors ? shaders.coloredVertex : shaders.vertex, fragmentShader: fragmentShader) {
-                        ForEach(Array(passes(group.single).enumerated()), id: \.offset) { _, pass in
-                            draw(pass.batch, cullMode: pass.cullMode, instanced: false)
+                let vertexShader = layout.hasColors ? shaders.coloredVertex : shaders.vertex
+                ForEach(Array(runs(group.single).enumerated()), id: \.offset) { _, run in
+                    if run.isFaded {
+                        ForEach(Array(run.batches.enumerated()), id: \.offset) { _, batch in
+                            try RenderPipeline(label: "Blinn-Phong Faded Depth", vertexShader: vertexShader, fragmentShader: fragmentShader) {
+                                draw(batch, cullMode: batch.material.renderState.cullMode, instanced: false)
+                            }
+                            .vertexDescriptor(layout.descriptor)
+                            .depthCompare(function: .greater, writes: true)
+                            .renderPipelineDescriptorTransformer { descriptor in
+                                descriptor.colorAttachments[0].writeMask = []
+                            }
+                            .vertexAmplification(count: viewCount)
+                            try RenderPipeline(label: "Blinn-Phong Faded", vertexShader: vertexShader, fragmentShader: fragmentShader) {
+                                draw(batch, cullMode: batch.material.renderState.cullMode, instanced: false)
+                            }
+                            .vertexDescriptor(layout.descriptor)
+                            .materialRenderState(group.key.renderState, isTransparent: true, writesBlendedDepth: stereoViews != nil, depthFunction: .greaterEqual)
+                            .vertexAmplification(count: viewCount)
                         }
+                    } else {
+                        try RenderPipeline(label: "Blinn-Phong", vertexShader: vertexShader, fragmentShader: fragmentShader) {
+                            ForEach(Array(passes(run.batches).enumerated()), id: \.offset) { _, pass in
+                                draw(pass.batch, cullMode: pass.cullMode, instanced: false)
+                            }
+                        }
+                        .vertexDescriptor(layout.descriptor)
+                        .materialRenderState(group.key.renderState, isTransparent: isTransparent, writesBlendedDepth: stereoViews != nil)
+                        .vertexAmplification(count: viewCount)
                     }
-                    .vertexDescriptor(layout.descriptor)
-                    .materialRenderState(group.key.renderState, isTransparent: isTransparent, writesBlendedDepth: stereoViews != nil)
-                    .vertexAmplification(count: viewCount)
                 }
                 if !group.instanced.isEmpty {
                     try RenderPipeline(label: "Blinn-Phong Instanced", vertexShader: layout.hasColors ? shaders.coloredInstancedVertex : shaders.instancedVertex, fragmentShader: fragmentShader) {

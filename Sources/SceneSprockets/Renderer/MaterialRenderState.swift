@@ -72,9 +72,9 @@ public struct MaterialRenderState: Sendable, Hashable {
 extension Element {
     /// Reversed depth. `isTransparent` draws do not write depth and blend by alpha unless the blend mode says otherwise.
     /// `writesBlendedDepth` makes transparent draws write depth anyway: visionOS's compositor needs depth for every
-    /// pixel drawn, so pass `context.stereoViews != nil`.
-    public func materialRenderState(_ state: MaterialRenderState, isTransparent: Bool, writesBlendedDepth: Bool = false) -> some Element {
-        depthCompare(function: state.readsFromDepthBuffer ? .greater : .always, writes: state.writesToDepthBuffer && (!isTransparent || writesBlendedDepth))
+    /// pixel drawn, so pass `context.stereoViews != nil`. `depthFunction` replaces `.greater` when the state reads depth.
+    public func materialRenderState(_ state: MaterialRenderState, isTransparent: Bool, writesBlendedDepth: Bool = false, depthFunction: MTLCompareFunction = .greater) -> some Element {
+        depthCompare(function: state.readsFromDepthBuffer ? depthFunction : .always, writes: state.writesToDepthBuffer && (!isTransparent || writesBlendedDepth))
             .renderPipelineDescriptorTransformer { descriptor in
                 let attachment: MTL4RenderPipelineColorAttachmentDescriptor = descriptor.colorAttachments[0]
                 attachment.writeMask = state.colorWriteMask

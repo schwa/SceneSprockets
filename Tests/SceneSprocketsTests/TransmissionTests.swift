@@ -12,7 +12,8 @@ import Testing
 // #123: a smooth glass quad in front of an emissive green quad, or nothing. Returns the center pixel (BGRA).
 // `blinnPhong` (#129) makes the green quad Blinn-Phong instead of PBR.
 @MainActor
-private func glass(behind: Bool, blinnPhong: Bool = false) throws -> SIMD4<UInt8> {
+// `greenOpacity` (#327) fades the green quad's node.
+private func glass(behind: Bool, blinnPhong: Bool = false, greenOpacity: Float = 1) throws -> SIMD4<UInt8> {
     let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
     let root = SceneGraph.Node()
     root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
@@ -21,11 +22,11 @@ private func glass(behind: Bool, blinnPhong: Bool = false) throws -> SIMD4<UInt8
     root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: glass)))
     if behind, blinnPhong {
         let green = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0, 1, 0]))
-        root.addChild(SceneGraph.Node(content: .mesh(quad, material: green)))
+        root.addChild(SceneGraph.Node(content: .mesh(quad, material: green))).opacity = greenOpacity
     } else if behind {
         let green = PBRSceneMaterial(baseColor: [0, 0, 0])
         green.pbrMaterial.uniforms.emissiveFactor = [0, 1, 0]
-        root.addChild(SceneGraph.Node(content: .mesh(quad, material: green)))
+        root.addChild(SceneGraph.Node(content: .mesh(quad, material: green))).opacity = greenOpacity
     }
     let graph = SceneGraph(root: root)
     let element = SceneGraphElement(sceneGraph: graph, aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: .zero), PBRMaterialRenderer()])
@@ -74,6 +75,15 @@ func glassShowsBlinnPhongBehindIt() throws {
     let green = try glass(behind: true, blinnPhong: true)
     #expect(Int(green.y) > Int(empty.y) + 60)
     #expect(Int(green.y) > Int(green.x) + 60)
+}
+
+// #327: faded entries of other renderers are in the transmission backdrop.
+@Test(.enabled(if: deviceSupportsMetal4))
+@MainActor
+func glassShowsFadedBlinnPhongBehindIt() throws {
+    let empty = try glass(behind: false)
+    let green = try glass(behind: true, blinnPhong: true, greenOpacity: 0.5)
+    #expect(Int(green.y) > Int(empty.y) + 30)
 }
 
 @Test(.enabled(if: deviceSupportsMetal4))

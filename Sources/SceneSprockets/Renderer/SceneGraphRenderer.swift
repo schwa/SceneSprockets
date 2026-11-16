@@ -74,8 +74,8 @@ public protocol BackgroundRenderer {
 
 /// A renderer that needs its own passes before the scene pass, such as one that draws what is behind glass.
 /// `entries` are all of this renderer's entries; `makeElement` is called after this for each batch.
-/// `otherOpaqueContent` makes the other renderers' opaque batches, for a pass that needs the rest of the scene; nil
-/// when there are none.
+/// `otherOpaqueContent` makes the other renderers' batches, opaque then transparent and faded (#327), for a pass that
+/// needs the rest of the scene; nil when there are none.
 public protocol PrePassRenderer {
     func makePrePassElement(entries: [SceneGraph.MeshEntry], context: RenderContext, viewSize: (width: Int, height: Int), otherOpaqueContent: () throws -> AnyElement?) throws -> AnyElement?
 }
@@ -355,10 +355,11 @@ public struct SceneGraphElement: Element {
         }
     }
 
-    // Opaque batches of every renderer except the one for `excluding`, with reversed depth.
+    // Batches of every renderer except the one for `excluding`, in draw order, with reversed depth. Transparent and
+    // faded entries are included, so glass still shows a scene that is fading (#327).
     private func makeOpaqueContent(entries: [SceneGraph.MeshEntry], context: RenderContext, excluding: any SceneMaterial.Type) throws -> AnyElement? {
         var elements: [AnyElement] = []
-        for batch in renderBatches(entries.filter { !$0.isTransparent }, context: context) {
+        for batch in renderBatches(entries, context: context) {
             let partitions = partitionMeshEntries(batch.entries, renderers: renderers)
             for (renderer, entries) in zip(renderers, partitions) where !entries.isEmpty && ObjectIdentifier(renderer.materialType) != ObjectIdentifier(excluding) {
                 elements.append(try renderer.makeElement(entries: entries, context: batch.context))

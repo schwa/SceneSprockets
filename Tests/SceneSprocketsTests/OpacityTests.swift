@@ -8,6 +8,7 @@ import MetalSprocketsPBR
 @testable import SceneSprocketsPBR
 @testable import SceneSprocketsShaderMaterial
 import simd
+import SwiftMesh
 import Testing
 
 // #76
@@ -89,6 +90,26 @@ func pbrOpacityChangeReusesTheModel() throws {
     first.fader.opacity = 0.3
     let changed = first.graph.meshEntries().filter { $0.material is PBRSceneMaterial }
     #expect(try first.renderer.model(for: changed, structureRevision: first.graph.revision.structure) === model)
+}
+
+// #327: a faded closed Blinn-Phong box blends as one surface, like a faded quad, not back faces then front faces.
+@Test(.enabled(if: deviceSupportsMetal4))
+@MainActor
+func fadedClosedMeshBlendsOnce() throws {
+    func red(_ mesh: MetalMesh) throws -> UInt8 {
+        let root = SceneGraph.Node()
+        root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 4]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
+        let material = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([1, 0, 0]))
+        root.addChild(SceneGraph.Node(content: .mesh(mesh, material: material))).opacity = 0.5
+        let element = SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: .zero)])
+        let texture = try OffscreenRenderer(size: CGSize(width: 16, height: 16)).render(element).texture
+        var value = SIMD4<UInt8>.zero
+        texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(8, 8, 1, 1), mipmapLevel: 0)
+        return value.z
+    }
+    let box = try red(SceneGraph.Shape.box(width: 1, height: 1, length: 1).metalMesh())
+    let quad = try red(SceneGraph.Shape.plane(width: 1, height: 1).metalMesh())
+    #expect(abs(Int(box) - Int(quad)) < 6)
 }
 
 // A half-opaque red quad (opacity from its parent node) in front of an opaque blue quad: both colors show.

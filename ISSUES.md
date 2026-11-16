@@ -7313,13 +7313,14 @@ Actual: the look changes abruptly partway through. Unverified guesses: shadows s
 ## 327: Keynote Glass slide looks wrong while transitioning in and out
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:demo, effort:s
 milestone: M001-Correctness
 created: 2026-11-07T17:55:57Z
-updated: 2026-11-16T20:12:42Z
+updated: 2026-11-16T21:40:40Z
+closed: 2026-11-16T21:40:40Z
 +++
 
 The Glass slide in the keynote demo does odd things while it fades in and while it fades out. Cause not investigated.
