@@ -9583,7 +9583,7 @@ Use SwiftJolt's `Shape.scaled` (with `isValidScale` / `validScale(closestTo:)`) 
 status: new
 priority: low
 kind: enhancement
-labels: area:physics,effort:xs
+labels: area:physics, effort:xs
 depends: 410
 created: 2026-11-16T23:34:12Z
 +++
@@ -9592,6 +9592,24 @@ SceneGraphPhysicsWorld.node(of:) does a linear search over all entries. The slid
 
 ## Proposed fix (per schwa)
 Store an index or key in SwiftJolt body user data (`BodyOptions.userData` / `userData(of:)`) or keep a BodyID→node dictionary.
+
+---
+
+## 418: Slider constraint sweeps against every body and filters afterwards
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:physics,effort:s
+depends: 410
+created: 2026-11-16T23:34:12Z
++++
+
+sliderConstraint casts against all bodies with castShapeAll and then discards hits on the node itself, its descendants and nodes outside categoryBitMask in Swift. Every excluded hit is still computed and allocated.
+
+## Proposed fix (per schwa)
+Pass a SwiftJolt `QueryFilter` (excludedBodies, shouldInclude, layers) to castShapeAll so Jolt skips them.
 
 ---
 
