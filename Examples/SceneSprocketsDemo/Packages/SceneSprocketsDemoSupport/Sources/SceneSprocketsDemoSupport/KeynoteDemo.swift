@@ -24,14 +24,15 @@ import SwiftUI
 public final class KeynoteDemo: DemoScene {
     private static let spacing: Float = 24
     // Basics first, then looks, animation and particles together, then the nerdier features, and UI, picking and
-    // debugging last (#310). Slides are built by title, so reordering only means editing this list.
+    // debugging, then add-ons (#310). Slides are built by title, so reordering only means editing this list.
     public static let titles = [
         "SceneSprockets", "SceneView", "Scene Graph", "Shapes", "Materials", "Lights",
         "Shadows", "Fog", "Opacity & Fades", "Blend Modes", "Glass", "PBR Extensions", "Custom Shaders", "Video Textures", "glTF & Model I/O",
         "Actions", "Implicit Animation", "Constraints", "Animation Blending", "Deformation",
-        "Particles", "Mesh Emitters", "Point Clouds", "Terrain",
+        "Particles", "Mesh Emitters",
         "Physics", "Post-Processing", "Level of Detail", "Performance", "SwiftECS World",
         "Hit Testing", "Gizmos", "Debug Views",
+        "Point Clouds", "Terrain",
         "Thank You"
     ]
 
