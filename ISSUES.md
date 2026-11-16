@@ -9451,7 +9451,7 @@ Missing: a list of each technique with how each renderer handles it, and tests t
 status: new
 priority: medium
 kind: task
-labels: area:physics,effort:s
+labels: area:physics, effort:s
 created: 2026-11-16T23:33:44Z
 +++
 
@@ -9459,6 +9459,24 @@ Package.swift depends on SwiftJolt `.upToNextMinor(from: "0.0.1")`. SwiftJolt ha
 
 ## Proposed fix (per schwa)
 Release a new SwiftJolt version and raise the dependency.
+
+---
+
+## 411: Physics bodies cannot be triggers
+
++++
+status: new
+priority: medium
+kind: feature
+labels: area:physics,effort:s
+depends: 410
+created: 2026-11-16T23:34:11Z
++++
+
+SceneGraph.PhysicsBody has no way to make a body detect overlaps without colliding (a trigger volume, like SceneKit contact-only bodies). Every body blocks every other body.
+
+## Proposed fix (per schwa)
+Use SwiftJolt's `BodyOptions.isSensor` / `PhysicsWorld.setIsSensor` together with its contact listener.
 
 ---
 
