@@ -140,42 +140,17 @@ public struct BlinnPhongMaterialRenderer: MaterialRenderer, Equatable {
 
     // swiftlint:disable:next unneeded_throws_rethrows
     public func makeElement(entries: [SceneGraph.MeshEntry], context: RenderContext) throws -> AnyElement {
-        let cameraPosition = context.cameraMatrix.columns.3.xyz
         // The shader works in camera-relative space (#253): the camera is at the origin, and lights and model
         // matrices are shifted by the camera position in Double.
-        let lights = blinnPhongLights(context.lights, shadowSlices: context.shadow == nil ? [] : context.lightShadowSlices).map { light in
-            var light = light
-            light.position = cameraRelative(light.position, to: cameraPosition)
-            return light
-        }
-        var frame = BlinnPhongFrame()
-        frame.ambientLightColor = ambientLightColor
-        frame.lightCount = Int32(lights.count)
-        frame.materialChannel = context.materialChannel?.rawValue ?? 0
-        // Per view (#379). Stereo eyes sit around the render origin (the center camera), so their positions are not zero.
-        let viewProjections = context.stereoViews?.relativeViewProjections(origin: cameraPosition) ?? [context.projectionMatrix * context.viewMatrix.rotationOnlyView]
-        let eyePositions = context.stereoViews?.cameraPositions.map { $0 - cameraPosition } ?? [.zero]
-        withUnsafeMutableBytes(of: &frame.viewProjections) { buffer in
-            let slots = buffer.bindMemory(to: simd_float4x4.self)
-            for index in 0 ..< slots.count {
-                slots[index] = viewProjections[min(index, viewProjections.count - 1)]
-            }
-        }
-        withUnsafeMutableBytes(of: &frame.cameraPositions) { buffer in
-            let slots = buffer.bindMemory(to: SIMD3<Float>.self)
-            for index in 0 ..< slots.count {
-                slots[index] = eyePositions[min(index, eyePositions.count - 1)]
-            }
-        }
-        // An empty array cannot be bound; the shader reads none of it when lightCount is 0.
-        let lightValues = lights.isEmpty ? [BlinnPhongLight()] : lights
+        let shading = BlinnPhongShading(context: context, ambientLightColor: ambientLightColor)
+        let cameraPosition = shading.cameraPosition
         // The shader has no morph or skin inputs, so SceneGraphElement deforms those meshes in a GPU pre-pass (#298). They skip culling because
         // their node bounds do not cover the deformation.
         // SceneGraphElement batches opaque and transparent entries apart, transparent ones sorted farthest first.
         let isTransparent = entries.first?.isTransparent ?? false
         let inFrustum = meshEntriesInFrustum(entries, projectionMatrix: context.projectionMatrix, cameraMatrix: context.cameraMatrix)
         if !isTransparent, let groups = cachedOpaqueGroups(entries: entries, inFrustum: inFrustum, context: context, cameraPosition: cameraPosition) {
-            return BlinnPhongBatchesElement(groups: groups, frame: frame, lights: lightValues, shadow: context.shadow, ambientOcclusion: context.ambientOcclusion, cameraPosition: cameraPosition, isTransparent: false, stereoViews: context.stereoViews).eraseToAnyElement()
+            return BlinnPhongBatchesElement(groups: groups, shading: shading, ambientOcclusion: context.ambientOcclusion, isTransparent: false, stereoViews: context.stereoViews).eraseToAnyElement()
         }
         // One pass, with capacity reserved: this runs every frame over every entry, so copies add up.
         var items: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, modelMatrix: simd_float4x4, material: BlinnPhongSceneMaterial)] = []
@@ -233,7 +208,7 @@ public struct BlinnPhongMaterialRenderer: MaterialRenderer, Equatable {
                 return (key: group.key, single: sortedSingle, instanced: batches.filter { $0.modelMatrices.count > 1 })
             }
         }
-        return BlinnPhongBatchesElement(groups: groups, frame: frame, lights: lightValues, shadow: context.shadow, ambientOcclusion: context.ambientOcclusion, cameraPosition: cameraPosition, isTransparent: isTransparent, stereoViews: context.stereoViews).eraseToAnyElement()
+        return BlinnPhongBatchesElement(groups: groups, shading: shading, ambientOcclusion: context.ambientOcclusion, isTransparent: isTransparent, stereoViews: context.stereoViews).eraseToAnyElement()
     }
 
     // Opaque batching depends on structure, opacity and mirroring, not on where things are, so it is cached and only
@@ -283,12 +258,9 @@ public struct BlinnPhongMaterialRenderer: MaterialRenderer, Equatable {
 // in flight).
 private struct BlinnPhongBatchesElement: Element {
     var groups: [(key: PipelineKey, single: [InstanceBatch], instanced: [InstanceBatch])]
-    var frame: BlinnPhongFrame
-    var lights: [BlinnPhongLight]
-    var shadow: Shadows.Sampling?
+    // Its camera position shifts model matrices and shadow lookups.
+    var shading: BlinnPhongShading
     var ambientOcclusion: MTLTexture?
-    // World-space camera position; model matrices and shadow lookups are shifted by it.
-    var cameraPosition: SIMD3<Float>
     // Blends and does not write depth.
     var isTransparent: Bool
     var stereoViews: StereoViews?
@@ -298,27 +270,14 @@ private struct BlinnPhongBatchesElement: Element {
 
     var body: some Element {
         get throws {
-            let frame = frame
-            let lightValues = lights
+            let frame = shading.frame
+            let lightValues = shading.lights
+            let cameraPosition = shading.cameraPosition
             let shaders = try BlinnPhongShaders.shared()
-            let fragmentShader = shadow == nil ? shaders.fragment : shaders.shadowedFragment
+            let fragmentShader = shading.shadow == nil ? shaders.fragment : shaders.shadowedFragment
             let placeholder = try BlinnPhongShaders.placeholderTexture()
             let defaultSampler = try BlinnPhongShaders.defaultSampler()
-            let shadowBinding: (texture: MTLTexture, sampler: MTLSamplerState, uniforms: BlinnPhongShadowUniforms)? = shadow.map { shadow in
-                var uniforms = BlinnPhongShadowUniforms()
-                uniforms.mapSize = Float(shadow.shadowMap.resolution)
-                uniforms.intensity = shadow.intensity
-                uniforms.color = shadow.color
-                uniforms.radius = Int32(max(shadow.softness, 0))
-                withUnsafeMutableBytes(of: &uniforms.sliceViewProjections) { buffer in
-                    let slices = buffer.bindMemory(to: simd_float4x4.self)
-                    // Both the slices and the shading positions are camera-relative.
-                    for (index, matrix) in shadow.shadowMap.lightViewProjectionMatrices.prefix(slices.count).enumerated() {
-                        slices[index] = matrix
-                    }
-                }
-                return (shadow.shadowMap.depthTexture(forSubmission: submissionIndex), shadow.shadowMap.sampler, uniforms)
-            }
+            let shadowBinding = shading.shadowBinding(submissionIndex: submissionIndex)
 
             // Unculled transparent meshes draw back faces first, then front faces. In one pass the faces blend in index
             // order, so back faces can land on top of front faces (#120).
@@ -491,7 +450,27 @@ extension BlinnPhongSceneMaterial {
         let specular = split(self.specular)
         let emission = split(self.emission)
         let normal = normalMap.map(split)
-        let uniforms = BlinnPhongMaterialUniforms(
+        let uniforms = resolvedUniforms()
+        let samplerDescriptor = diffuse.sampler ?? ambient.sampler ?? specular.sampler ?? emission.sampler
+        let sampler = samplerDescriptor.flatMap { try? BlinnPhongShaders.samplerState(for: $0) } ?? defaultSampler
+        return Resolved(uniforms: uniforms, ambientTexture: ambient.texture ?? placeholder, diffuseTexture: diffuse.texture ?? placeholder, specularTexture: specular.texture ?? placeholder, emissionTexture: emission.texture ?? placeholder, normalTexture: normal?.texture ?? placeholder, sampler: sampler)
+    }
+
+    func resolvedUniforms() -> BlinnPhongMaterialUniforms {
+        func split(_ source: Source) -> (color: SIMD3<Float>, texture: MTLTexture?) {
+            switch source {
+            case .color(let color):
+                (color, nil)
+            case let .texture(texture, _, tint):
+                (tint, texture)
+            }
+        }
+        let ambient = split(self.ambient)
+        let diffuse = split(self.diffuse)
+        let specular = split(self.specular)
+        let emission = split(self.emission)
+        let normal = normalMap.map(split)
+        return BlinnPhongMaterialUniforms(
             ambient: ambient.color,
             diffuse: diffuse.color,
             specular: specular.color,
@@ -508,9 +487,6 @@ extension BlinnPhongSceneMaterial {
             normal: normal?.color ?? [0, 0, 1],
             hasNormalTexture: normal?.texture == nil ? 0 : 1
         )
-        let samplerDescriptor = diffuse.sampler ?? ambient.sampler ?? specular.sampler ?? emission.sampler
-        let sampler = samplerDescriptor.flatMap { try? BlinnPhongShaders.samplerState(for: $0) } ?? defaultSampler
-        return Resolved(uniforms: uniforms, ambientTexture: ambient.texture ?? placeholder, diffuseTexture: diffuse.texture ?? placeholder, specularTexture: specular.texture ?? placeholder, emissionTexture: emission.texture ?? placeholder, normalTexture: normal?.texture ?? placeholder, sampler: sampler)
     }
 }
 

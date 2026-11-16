@@ -1,6 +1,7 @@
 #pragma once
 
 #import "BlinnPhong.h"
+#import "BlinnPhongLighting.h"
 #import "Deformation.h"
 #import "Fog.h"
 #import "ShaderMaterial.h"

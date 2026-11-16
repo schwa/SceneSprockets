@@ -17,6 +17,8 @@ let package = Package(
         .library(name: "SceneSprocketsShaderMaterial", targets: ["SceneSprocketsShaderMaterial"]),
         .library(name: "SceneSprocketsAudio", targets: ["SceneSprocketsAudio"]),
         .library(name: "SceneSprocketsGizmos", targets: ["SceneSprocketsGizmos"]),
+        // For other packages' shaders that use the scene's lighting headers, such as BlinnPhongLighting.h.
+        .library(name: "SceneSprocketsShaders", targets: ["SceneSprocketsShaders"]),
     ],
     dependencies: [
         .package(url: "https://github.com/schwa/GeometryLite3D", .upToNextMinor(from: "0.3.1")),
