@@ -12,6 +12,7 @@ import SceneSprocketsGizmos
 import SceneSprocketsPBR
 import SceneSprocketsPhysics
 import SceneSprocketsShaderMaterial
+import SceneSprocketsTerrain
 import simd
 import SwiftMesh
 import SwiftUI
@@ -28,7 +29,7 @@ public final class KeynoteDemo: DemoScene {
         "SceneSprockets", "SceneView", "Scene Graph", "Shapes", "Materials", "Lights",
         "Shadows", "Fog", "Opacity & Fades", "Blend Modes", "Glass", "PBR Extensions", "Custom Shaders", "Video Textures", "glTF & Model I/O",
         "Actions", "Implicit Animation", "Constraints", "Animation Blending", "Deformation",
-        "Particles", "Mesh Emitters", "Point Clouds",
+        "Particles", "Mesh Emitters", "Point Clouds", "Terrain",
         "Physics", "Post-Processing", "Level of Detail", "Performance", "SwiftECS World",
         "Hit Testing", "Gizmos", "Debug Views",
         "Thank You"
@@ -102,7 +103,7 @@ public final class KeynoteDemo: DemoScene {
         root.addChild(cameraNode)
         super.init(
             sceneGraph: SceneGraph(root: root),
-            renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0.05, 0.05, 0.07]), PBRMaterialRenderer(), ShaderMaterialRenderer(), PointCloudRenderer()],
+            renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0.05, 0.05, 0.07]), PBRMaterialRenderer(), ShaderMaterialRenderer(), PointCloudRenderer(), TerrainRenderer()],
             cameraMatrix: .camera(eye: Self.eye(for: 0), target: Self.target(for: 0)),
             parameters: [.choice("Slide", Self.titles), .toggle("Auto-advance", default: false), .slider("Seconds per Slide", 2...15, default: 6)]
         )
@@ -284,6 +285,12 @@ public final class KeynoteDemo: DemoScene {
         • An add-on, not built in: import SceneSprocketsAddOns and add PointCloudRenderer.
         • Points are rasterized with compute shaders (MetalSprocketsAddOns), nearest point per pixel.
         • They depth-test against the rest of the scene like any mesh.
+        """,
+        "Terrain": """
+        • An add-on: import SceneSprocketsTerrain and add TerrainRenderer.
+        • The Golden Gate from USGS elevation data, 16 km square, tessellated on the GPU every frame.
+        • A concurrent binary tree splits triangles near the camera and merges them far away.
+        • Lit by the scene's directional light; heights are exaggerated here.
         """,
         "Physics": """
         • Rigid body physics: give a node a physics body and step the world.
@@ -695,6 +702,16 @@ public final class KeynoteDemo: DemoScene {
             scene.root.addChild(try galaxy.makeNode(device: device))
             SceneView(scene, renderers: renderers + [PointCloudRenderer()])
             """, to: slide)
+        case "Terrain":
+            terrainSlide(slide)
+            addTag("Add-On", below: 4, to: slide)
+            addCode("""
+            import SceneSprocketsTerrain
+
+            let terrain = try Terrain(device: device, heightSource: .sanFranciscoBay())
+            scene.root.addChild(terrain.makeNode())
+            SceneView(scene, renderers: renderers + [TerrainRenderer()])
+            """, to: slide)
         case "Mesh Emitters":
             meshEmittersSlide(slide)
             addCode("""
@@ -883,6 +900,22 @@ public final class KeynoteDemo: DemoScene {
         let holder = slide.addChild(SceneGraph.Node(label: "Galaxy", transform: .init(translation: [0, 1.4, 0], rotation: simd_quatf(angle: 0.45, axis: [1, 0, 0]))))
         holder.addChild(galaxy)
         galaxy.run(.repeatForever(.rotate(by: 2 * .pi, around: [0, 1, 0], duration: 40)))
+    }
+
+    // The Golden Gate, 16 km of real elevation shrunk to a tabletop and turning slowly.
+    private func terrainSlide(_ slide: SceneGraph.Node) {
+        guard let source = try? HeightSource.sanFranciscoBay(), let terrain = try? Terrain(device: demoDevice, heightSource: source) else {
+            return
+        }
+        var settings = TerrainSettings()
+        settings.heightExaggeration = 3
+        settings.style = .coastal
+        let scale = 6 / terrain.worldSize
+        let holder = slide.addChild(SceneGraph.Node(label: "Terrain", transform: .init(translation: [0, 1.2, 0], rotation: simd_quatf(angle: 0.5, axis: [1, 0, 0]), scale: SIMD3(repeating: scale))))
+        let node = holder.addChild(terrain.makeNode(settings: settings))
+        node.run(.repeatForever(.rotate(by: 2 * .pi, around: [0, 1, 0], duration: 60)))
+        let sun = slide.addChild(SceneGraph.Node(label: "Sun", transform: .init(translation: [3, 4, 2]), content: .light(Light(type: .directional, color: [1, 0.95, 0.85], intensity: 3))))
+        sun.look(at: .zero)
     }
 
     // A code panel below the slide's live content, tilted a little toward the camera.
