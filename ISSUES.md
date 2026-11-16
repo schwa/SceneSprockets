@@ -9540,7 +9540,7 @@ Use SwiftJolt's `BodyOptions.allowedDegreesOfFreedom` (e.g. `.plane2D`, or trans
 status: new
 priority: low
 kind: bug
-labels: area:physics,effort:m
+labels: area:physics, effort:m
 depends: 410
 created: 2026-11-16T23:34:12Z
 +++
@@ -9556,6 +9556,24 @@ Expected: the body keeps its velocity; only the changed property changes.
 
 ## Proposed fix (per schwa)
 Update the existing body with SwiftJolt's `setFriction`, `setRestitution`, `setMotionType(of:to:)`, `setShape(of:to:)`, `setMass`, rebuilding only when nothing else works.
+
+---
+
+## 416: Scaled and off-center shapes are approximated by rebuilding their geometry
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:physics,effort:s
+depends: 410
+created: 2026-11-16T23:34:12Z
++++
+
+joltShape bakes the node's scale into each shape: spheres use the largest scale axis, capsules and cylinders mix X/Z scale, mesh and hull vertices are copied and scaled, and an off-center bounding box becomes a one-child compound. Non-uniform scale of round shapes is not exact, and scaled meshes duplicate vertex data.
+
+## Proposed fix (per schwa)
+Use SwiftJolt's `Shape.scaled` (with `isValidScale` / `validScale(closestTo:)`) and `Shape.rotatedTranslated`.
 
 ---
 
