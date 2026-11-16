@@ -600,9 +600,10 @@ Add format-neutral skin data: joint node references, inverse bind matrices, and 
 status: open
 priority: low
 kind: feature
-labels: effort:xl, area:assets, deferred
+labels: effort:xl, area:assets
+milestone: M003-Features
 created: 2026-10-11T21:31:43Z
-updated: 2026-10-13T21:08:07Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 Long-term goal: import USD/USDZ into a SceneGraph (via ModelIO or USD bindings), getting the same rendering and animation as glTF. Depends on the scene graph staying format-neutral. Split from #16.
@@ -903,9 +904,10 @@ Want: fog settings on the scene, used by Blinn-Phong and PBR.
 status: open
 priority: low
 kind: feature
-labels: area:renderer, effort:l, deferred
+labels: area:renderer, effort:l
+milestone: M003-Features
 created: 2026-10-13T20:20:23Z
-updated: 2026-10-15T21:19:52Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 Cameras have only a projection. SceneKit cameras have HDR, exposure, bloom, depth of field, motion blur, SSAO, vignette and color grading.
@@ -1204,8 +1206,9 @@ status: open
 priority: medium
 kind: bug
 labels: area:renderer, effort:m
+milestone: M001-Correctness
 created: 2026-10-14T01:11:25Z
-updated: 2026-11-12T04:34:48Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 In the Imported Assets demo, shadowed pixels sometimes flash unshadowed for a frame. It is mostly the fox's self-shadowed side. It happens with the camera still and the animation paused (speed 0). The flashes are random and rare. They are clearly less frequent with the inspector sidebar closed, so they likely depend on frame timing.
@@ -1659,9 +1662,10 @@ Missing SceneKit equivalents: eulerAngles; settable worldPosition/worldOrientati
 status: open
 priority: low
 kind: enhancement
-labels: effort:m, area:scenegraph, deferred
+labels: effort:m, area:scenegraph
+milestone: M003-Features
 created: 2026-10-15T02:28:07Z
-updated: 2026-10-15T21:19:11Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 SceneGraph.Shape has no segment counts, no box chamferRadius, no sphere isGeodesic, and no plane corner radius. SCNText's chamfer, flatness, container frame and wrapping are missing too. Needs SwiftMesh support for some of these. See docs/SceneKitComparison.md.
@@ -1681,6 +1685,8 @@ closed: 2026-10-24T15:07:59Z
 +++
 
 SceneKit has SCNTube, SCNPyramid, SCNFloor (infinite, with optional reflections) and SCNShape (an extruded Bézier path). Shape has none of them. See docs/SceneKitComparison.md.
+
+- `2026-11-16T20:14:04Z`: Related: #407 (path and spline nodes) could share the same spline type.
 
 ---
 
@@ -1748,9 +1754,10 @@ SceneKit materials have blendMode (alpha, add, subtract, multiply, screen, repla
 status: open
 priority: low
 kind: feature
-labels: effort:xl, area:renderer, deferred
+labels: effort:xl, area:renderer
+milestone: M999-Nice-to-have
 created: 2026-10-15T02:28:07Z
-updated: 2026-10-15T21:19:12Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 SceneKit shader modifiers inject code at geometry, surface, lighting and fragment entry points of the built-in materials. ShaderMaterial (like SCNProgram) replaces the whole shader. Want a way to tweak the built-in Blinn-Phong/PBR shading without rewriting it. See docs/SceneKitComparison.md.
@@ -1763,9 +1770,10 @@ SceneKit shader modifiers inject code at geometry, surface, lighting and fragmen
 status: open
 priority: low
 kind: feature
-labels: effort:l, area:renderer, deferred
+labels: effort:l, area:renderer
+milestone: M003-Features
 created: 2026-10-15T02:28:07Z
-updated: 2026-10-15T21:19:12Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 Missing SceneKit equivalents: an ambient light type as a node (today it is per renderer: BlinnPhongMaterialRenderer.ambientLightColor), attenuationStartDistance and attenuationFalloffExponent, color temperature, and IES, area and probe lights. See docs/SceneKitComparison.md.
@@ -1799,9 +1807,10 @@ GeometryLite3D only has PerspectiveProjection, so there is no orthographic camer
 status: open
 priority: low
 kind: enhancement
-labels: effort:l, area:renderer, deferred
+labels: effort:l, area:renderer
+milestone: M003-Features
 created: 2026-10-15T02:28:07Z
-updated: 2026-10-15T21:19:41Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 SceneGraphShadows is one global setting. Missing: shadowColor (today only intensity toward black), soft shadows (shadowRadius, shadowSampleCount), cascades, and per-light castsShadow, resolution and bias. See docs/SceneKitComparison.md.
@@ -1920,9 +1929,10 @@ Missing SceneKit renderer APIs: projectPoint, unprojectPoint (Ray(viewPoint:) co
 status: open
 priority: low
 kind: enhancement
-labels: effort:l, area:renderer, deferred
+labels: effort:l, area:renderer
+milestone: M003-Features
 created: 2026-10-15T02:28:08Z
-updated: 2026-10-15T21:19:12Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 SceneView/SceneGraphElement have no multisampling, no debug overlays or statistics, and no way to build pipelines/PBR models ahead of time (like SCNSceneRenderer.prepare). SceneViewDelegate has only two callbacks: there are none for constraints applied or will/did render. See docs/SceneKitComparison.md.
@@ -2695,9 +2705,10 @@ Blocked on MetalSprocketsPBR#16 (PBRTransmissionPass from existing renderers).
 status: open
 priority: medium
 kind: feature
-labels: effort:l, area:renderer, deferred
+labels: effort:l, area:renderer
+milestone: M003-Features
 created: 2026-10-16T02:37:54Z
-updated: 2026-10-20T02:27:43Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 Add an optional debug info overlay to the scene view, like SceneKit's showsStatistics.
@@ -2786,8 +2797,9 @@ status: open
 priority: medium
 kind: feature
 labels: effort:l, area:scenegraph
+milestone: M003-Features
 created: 2026-10-17T12:50:07Z
-updated: 2026-11-12T04:34:48Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 The only way to draw many copies of a mesh is one Node per copy. Renderers then discover the repeats each frame (implicit instancing): flatten the tree into one MeshEntry per node, cull each entry, and group entries back into instance batches. Even with the cached batching from #134, the per-node cost remains: node traversal and world transforms, one MeshEntry and one frustum test per copy, and gathering one model matrix per copy every frame.
@@ -2808,8 +2820,9 @@ status: blocked
 priority: medium
 kind: bug
 labels: effort:m, area:renderer
+milestone: M001-Correctness
 created: 2026-10-17T13:09:48Z
-updated: 2026-11-12T03:34:31Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 Screen-space ambient occlusion is configured as SceneGraph.PostProcessing.ambientOcclusion, next to exposure, contrast, saturation and vignette, and runs as a post pass (ambient_occlusion in PostProcessing.metal) that multiplies the final rendered color.
@@ -3830,9 +3843,10 @@ Blocked on Interaction3D #38. Related: #154.
 status: open
 priority: low
 kind: task
-labels: area:ui, deferred, effort:l
+labels: area:ui, effort:l
+milestone: M999-Nice-to-have
 created: 2026-10-22T22:00:05Z
-updated: 2026-10-23T13:22:40Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 TransformGizmo (SceneSprocketsGizmos, #154) is mostly not about scene graphs: handle layout, picking, drag math along axes, planes and rings, snapping, and screen-size scaling. Other MetalSprockets apps could use it. Interaction3D is the home for 3D interaction (camera controls, rotation widget), so move the gizmo there, and keep a thin SceneSprockets adapter.
@@ -3952,9 +3966,10 @@ Follow-up to #154. On iOS and visionOS: pinch to scale and two-finger rotate to 
 status: open
 priority: medium
 kind: feature
-labels: area:document, effort:l, deferred
+labels: area:document, effort:l
+milestone: M003-Features
 created: 2026-10-23T13:53:20Z
-updated: 2026-10-24T11:44:52Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 Split from #161 (constraints are done there).
@@ -4055,8 +4070,9 @@ status: open
 priority: low
 kind: task
 labels: investigate, area:composer, effort:s
+milestone: M001-Correctness
 created: 2026-10-24T14:09:41Z
-updated: 2026-10-24T14:18:19Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 With the Studio environment as background, the grid looks like it runs past and under the environment's walls, so the environment seems nearer than the grid.
@@ -5494,9 +5510,10 @@ To get a sky gradient, TreeAppreciator draws an inside-out sphere mesh with an e
 status: open
 priority: low
 kind: feature
-labels: effort:l, area:ui, deferred
+labels: effort:l, area:ui
+milestone: M003-Features
 created: 2026-10-30T14:40:29Z
-updated: 2026-11-10T17:37:51Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 Comparing two scenes side by side (TreeAppreciator shows two trees with a shared camera) needs two SceneViews. Each one makes its own RenderView, drawable, shadow maps, particle runtimes and pipeline setup, so a new pair pays the setup cost twice.
@@ -5627,9 +5644,10 @@ Provide camera-relative transforms to materials: subtract the camera position fr
 status: open
 priority: low
 kind: enhancement
-labels: area:scenegraph, effort:l, large-worlds, deferred
+labels: area:scenegraph, effort:l, large-worlds
+milestone: M999-Nice-to-have
 created: 2026-11-04T20:42:33Z
-updated: 2026-11-10T17:37:50Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 Times, durations and delta times are plain `Float` across the public API: `Action` durations, `advanceActions(by:)`, `applyConstraints(deltaTime:)`, `Transaction.animate(duration:)`, particle `time` and `advanceParticles(by:)`, animation clip time and blending, `SceneView`, and physics stepping (~70 sites in Action, Animation, AnimationBlending, Particles, Constraint, Transaction, SceneView, SceneGraphPhysicsWorld, ModelIOSceneGraph).
@@ -5700,10 +5718,11 @@ Expected: PBR surfaces near a camera far from the origin render like the same sc
 status: open
 priority: low
 kind: feature
-labels: area:scenegraph, effort:xl, umbrella, large-worlds, deferred
+labels: area:scenegraph, effort:xl, umbrella, large-worlds
+milestone: M999-Nice-to-have
 depends: 256, 257, 258, 259, 260, 261, 253, 254, 252, 262
 created: 2026-11-04T21:06:11Z
-updated: 2026-11-10T17:37:50Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 Node transforms and accumulated world transforms are simd_float4x4. Float32 resolves about 4-8 mm at 100 km and about 1 km at 1e10 m, so worlds at solar-system scale (Kerbal Space Program style; see #251 comments) cannot be represented, even though the renderers can now draw camera-relative (#251).
@@ -5737,9 +5756,10 @@ Blocked or big: #256 (core refactor); #259 and #260 build on #256 and #258; #261
 status: open
 priority: low
 kind: feature
-labels: area:scenegraph, effort:xl, subtask, large-worlds, deferred
+labels: area:scenegraph, effort:xl, subtask, large-worlds
+milestone: M999-Nice-to-have
 created: 2026-11-04T21:10:37Z
-updated: 2026-11-10T17:37:50Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 Node local transforms and accumulated world transforms (SceneGraph.visit/traverse, MeshEntry.worldTransform, bounds, hit testing) are simd_float4x4. Float32 resolves about 4-8 mm at 100 km and about 1 km at 1e10 m, so positions in very large worlds cannot be stored.
@@ -5802,9 +5822,10 @@ For #259 the alternative needs no SwiftJolt change: keep Jolt in float and simul
 status: open
 priority: low
 kind: feature
-labels: area:physics, effort:l, subtask, large-worlds, deferred
+labels: area:physics, effort:l, subtask, large-worlds
+milestone: M999-Nice-to-have
 created: 2026-11-04T21:10:37Z
-updated: 2026-11-10T17:37:50Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 SceneSprocketsPhysics hands world-space Float positions to Jolt. Far from the origin, simulation near the active area loses precision. There is no floating origin or local physics frame around the active area.
@@ -5821,9 +5842,10 @@ Part of #255.
 status: open
 priority: low
 kind: feature
-labels: area:physics, effort:m, subtask, large-worlds, deferred
+labels: area:physics, effort:m, subtask, large-worlds
+milestone: M999-Nice-to-have
 created: 2026-11-04T21:10:37Z
-updated: 2026-11-10T17:37:50Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 At orbital speeds (several km/s) the active object's coordinates change by kilometers per second, so precision near it degrades and rendering and physics jitter. There is no reference frame that keeps the active object near rest (KSP's Krakensbane).
@@ -5840,9 +5862,10 @@ Part of #255.
 status: open
 priority: low
 kind: feature
-labels: area:renderer, effort:l, subtask, large-worlds, deferred
+labels: area:renderer, effort:l, subtask, large-worlds
+milestone: M999-Nice-to-have
 created: 2026-11-04T21:10:38Z
-updated: 2026-11-10T17:37:50Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 Reverse-Z Float depth cannot resolve both nearby parts and very distant bodies in one pass. There is no scaled-space pass or multi-range (nested frusta) rendering. Related: #248 (several viewports/passes in one view).
@@ -5860,9 +5883,10 @@ Part of #255.
 status: open
 priority: low
 kind: bug
-labels: area:renderer, effort:m, subtask, large-worlds, deferred
+labels: area:renderer, effort:m, subtask, large-worlds
+milestone: M999-Nice-to-have
 created: 2026-11-04T21:19:04Z
-updated: 2026-11-10T17:37:51Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 Left over from #257. Particle simulation and drawing (SceneParticleSystem simulate(view:) and runtime render(projection:view:), MetalSprocketsParticles) and the transform gizmo (TransformGizmo, GraphicsContext3DRenderPipeline with projection * view) still work in world-space Float, so far from the origin they jitter or misplace like the other paths did before #251/#253/#257. Particle positions live in MetalSprocketsParticles buffers, so a fix spans that package.
@@ -6081,9 +6105,10 @@ status: blocked
 priority: low
 kind: enhancement
 labels: area:scenegraph, effort:m, subtask
+milestone: M002-Performance
 depends: 265
 created: 2026-11-05T18:22:50Z
-updated: 2026-11-11T16:15:02Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 Part of #250. After #265, nodes under a SceneGraph's root read transform and content through the World. Release build, 100k nodes, best of 5 (noisy machine): attached transform read ~64 ns vs ~34 ns before; attached write ~220 ns vs ~180 ns; detached read ~38 ns vs ~28 ns. Each attached read registers observation on both the Node and the World and takes a column lock. Traversal measured 75-153 ns per node vs ~102 ns before; the noise is too high to say more.
@@ -6670,9 +6695,10 @@ The PBR renderer deforms morph targets and skins on the GPU. Blinn-Phong and Sha
 status: open
 priority: low
 kind: enhancement
-labels: area:renderer, effort:m, deferred
+labels: area:renderer, effort:m
+milestone: M003-Features
 created: 2026-11-07T15:41:12Z
-updated: 2026-11-12T02:09:41Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 SceneGraphShadows has 8 shadow map slices: a directional or spot light takes one, a point light six. Lights that do not fit cast no shadow; SceneGraphShadows.droppedLightCount counts them (#68). A scene with two point lights already loses one light's shadows. Listed under Limitations in the README.
@@ -7230,9 +7256,10 @@ Starting point: the FLIP Fluid example in MetalSprocketsExamples (3D PIC/FLIP si
 status: open
 priority: low
 kind: feature
-labels: area:renderer, effort:m, deferred
+labels: area:renderer, effort:m
+milestone: M003-Features
 created: 2026-11-07T17:54:10Z
-updated: 2026-11-10T17:37:51Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 The renderer always uses reverse-Z (projection multiplied by .reverseZ, with a matching depth compare and clear value). There is no way to switch a view between reverse-Z and normal Z, and no automatic choice. Code that reads or writes depth (shadow maps, hit testing, depth debug views, post-processing, custom shader materials, gizmos, the sky background) assumes one convention, so changing it in one place gives wrong results somewhere else.
@@ -7277,8 +7304,9 @@ status: open
 priority: medium
 kind: bug
 labels: area:demo, effort:s
+milestone: M001-Correctness
 created: 2026-11-07T17:55:57Z
-updated: 2026-11-12T04:34:48Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 The Glass slide in the keynote demo does odd things while it fades in and while it fades out. Cause not investigated.
@@ -7518,9 +7546,10 @@ SceneGraph.Shape has no teapot. The Utah teapot is the usual test object in 3D g
 status: open
 priority: low
 kind: feature
-labels: area:scenegraph, effort:l, deferred
+labels: area:scenegraph, effort:l
+milestone: M002-Performance
 created: 2026-11-07T18:39:49Z
-updated: 2026-11-10T17:37:51Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 SceneSprockets has no spatial acceleration structure (for example a bounding volume hierarchy, octree or grid). Work that asks "what is near here?" or "what does this ray or frustum touch?" goes through every node or every triangle:
@@ -7534,6 +7563,7 @@ This costs more as scenes grow (thousands of nodes, high-poly meshes).
 Open question (per schwa): where should this live? Candidates: SceneSprockets (node-level structure that follows the scene graph and its change tracking), SwiftMesh (per-mesh triangle structure, reusable outside SceneSprockets), or a separate package. A split is also possible: per-mesh triangle structures in SwiftMesh, node-level structure in SceneSprockets.
 
 - `2026-11-07T18:39:49Z`: Question 1 (decision): Where should the spatial acceleration structure live: SceneSprockets, SwiftMesh, a separate package, or split (triangles in SwiftMesh, nodes in SceneSprockets)?
+- `2026-11-16T20:08:31Z`: Related: #402 (positions re-read per hit test call).
 
 ---
 
@@ -7722,9 +7752,10 @@ Expected: a list, per slide, of what is data and what needs code, and the archiv
 status: open
 priority: low
 kind: feature
-labels: area:scenegraph, effort:xl, deferred
+labels: area:scenegraph, effort:xl
+milestone: M999-Nice-to-have
 created: 2026-11-07T18:54:15Z
-updated: 2026-11-10T17:37:51Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 All scene behavior (reacting to taps, per-frame updates, custom actions, game logic) must be written in Swift and compiled into the app. There is no way to attach logic to a scene as data, for example in a stored scene file or from a tool like Composer, without rebuilding.
@@ -7764,9 +7795,10 @@ Related: #337 (spatial acceleration structure; Metal acceleration structures cou
 status: open
 priority: low
 kind: feature
-labels: area:ui, effort:m, deferred
+labels: area:ui, effort:m
+milestone: M003-Features
 created: 2026-11-07T19:00:30Z
-updated: 2026-11-10T17:37:52Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 SceneView's camera control (configured with SceneCameraControl, #312) stops as soon as a drag or scroll ends: there is no inertia (the camera does not keep moving and slow down). It also has no fly or pan-only interaction modes, which SCNCameraController offers. Interaction3D, which SceneView uses for camera control, has neither.
@@ -8168,8 +8200,9 @@ status: open
 priority: low
 kind: task
 labels: effort:s, area:ui, research
+milestone: M999-Nice-to-have
 created: 2026-11-10T18:37:12Z
-updated: 2026-11-11T15:58:23Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 SceneView takes most of its configuration as initializer arguments and an `Options` option set:
@@ -8195,8 +8228,9 @@ status: open
 priority: low
 kind: task
 labels: effort:m, area:scenegraph, research
+milestone: M999-Nice-to-have
 created: 2026-11-10T18:39:06Z
-updated: 2026-11-11T15:58:23Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 Building a hierarchy today means making each node and attaching it to its parent one at a time:
@@ -8799,9 +8833,10 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, area:renderer
+milestone: M003-Features
 depends: 380
 created: 2026-11-12T19:17:30Z
-updated: 2026-11-12T19:31:56Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 Passes that read or write screen-space textures (outline via JumpFlood/SilhouetteMask, post effects, anything sampling depth) assume one non-layered target. A stereo drawable is a layered texture (one slice per eye) so these passes would break or only cover one eye.
@@ -8815,9 +8850,10 @@ status: open
 priority: low
 kind: feature
 labels: effort:s, area:renderer
+milestone: M003-Features
 depends: 380
 created: 2026-11-12T19:17:30Z
-updated: 2026-11-12T19:31:56Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 Frustum culling and back-to-front transparency sorting are computed from a single camera. In stereo, objects visible to only one eye could be culled, and sort order should be consistent across both eyes.
@@ -8850,13 +8886,14 @@ Once MetalSprockets ships a shared StereoViews (#MetalSprockets#558) in a tagged
 ## 385: Demo has no way to view a scene in a visionOS immersive space
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
 labels: area:demo, effort:m
+milestone: M003-Features
 depends: 386
 created: 2026-11-12T21:05:10Z
-updated: 2026-11-12T21:24:48Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 SceneImmersiveElement (#381) exists but no app uses it. SceneSprocketsDemo has no ImmersiveSpace scene and no control to open one, so stereo rendering has never run on a device.
@@ -8866,6 +8903,7 @@ The visionOS build of SceneSprocketsDemo also fails: CodeSign of SceneSprocketsD
 - `2026-11-12T21:24:48Z`: The immersive space and toggle are written (uncommitted) but crash when the window edits the scene while immersive; blocked on #386.
 - `2026-11-12T21:25:34Z`: Immersive space and toolbar toggle committed. Known: crashes when the window edits the scene while immersive (data race, #386). Leave open until #386 lands.
 - `2026-11-12T21:46:10Z`: #386 is fixed: the demo's immersive space now renders ScenePresenter snapshots. Needs a device check: open immersive, then use the window (keynote slides) while immersive.
+- `2026-11-16T19:43:27Z`: Related: #392 (particle crash seen in a session that used the immersive space).
 
 ---
 
@@ -9001,11 +9039,13 @@ SceneImmersiveElement advances and reads the live graph on the render thread. Do
 ## 392: Crash (EXC_BAD_ACCESS) in ParticleSystemRuntime.planFrame while the window's SceneView simulates particles (visionOS demo)
 
 +++
-status: new
+status: open
 priority: high
 kind: bug
-labels: area:renderer, crash
+labels: area:renderer, crash, effort:m
+milestone: M001-Correctness
 created: 2026-11-12T22:24:08Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 Seen on Apple Vision Pro in SceneSprocketsDemo. Exact steps not recorded; the session used the immersive space (#385). Not yet known whether the immersive space was open, opening or closing at the time.
@@ -9029,6 +9069,8 @@ Actual: EXC_BAD_ACCESS (code=1, address=0x51e39e5388717e50) on the main thread, 
 The caller is the window's SceneView (RenderView/MTKView display link, element tree SceneGraphElement + overlay + ManipulatorOverlayPass), not the immersive render loop. A freed object is released inside planFrame, which suggests memory corruption.
 
 Possibly related (unverified): each SceneParticleSystem has one GPU ParticleSystemRuntime. With #391, the immersive render loop simulates it off the main thread. If the window's SceneView and the immersive space ever render the same scene at once (for example while the space opens or closes, or if the window is not blanked), two threads would drive the same runtime.
+
+- `2026-11-16T19:43:27Z`: Related: #385 (demo immersive space).
 
 ---
 
@@ -9061,12 +9103,14 @@ Move the per-frame work off the main thread, so the main thread only edits the s
 ## 394: SceneView's per-frame element closures assume they run on the main actor
 
 +++
-status: new
+status: open
 priority: medium
 kind: task
-labels: effort:m
+labels: effort:m, area:ui
+milestone: M001-Correctness
 depends: 393
 created: 2026-11-14T21:37:01Z
+updated: 2026-11-16T20:12:42Z
 +++
 
 SceneView calls some closures every frame to build elements: sceneOverlay, sceneDecorations and ViewManipulator.overlay(viewport:). They run inside RenderView's content closure, which today is on the main thread, so callers read main-actor state (models, selection, gizmo state) from them freely.
@@ -9124,5 +9168,244 @@ Expected: the frame timing panel is visible below the bar, or the app can place 
 Actual: the top of the panel is under the bar.
 
 Seen in TinyTorii (wander mode) with SceneSprockets 0.1.0.
+
+---
+
+## 397: No projected decals
+
++++
+status: open
+priority: low
+kind: feature
+labels: effort:m
+milestone: M003-Features
+created: 2026-11-16T20:03:49Z
+updated: 2026-11-16T20:12:42Z
++++
+
+There is no way to project an image onto existing meshes, for example bullet holes, footprints or road markings.
+
+Moved from SceneSprocketsAddOns #24.
+
+---
+
+## 398: No screen-space reflections
+
++++
+status: open
+priority: low
+kind: feature
+labels: effort:m
+milestone: M003-Features
+created: 2026-11-16T20:03:49Z
+updated: 2026-11-16T20:12:42Z
++++
+
+Shiny surfaces reflect only the environment map. They do not reflect other objects in the scene.
+
+Moved from SceneSprocketsAddOns #25.
+
+---
+
+## 399: No bloom, depth of field or motion blur
+
++++
+status: open
+priority: low
+kind: feature
+labels: effort:m
+milestone: M003-Features
+created: 2026-11-16T20:03:49Z
+updated: 2026-11-16T20:12:42Z
++++
+
+Post-processing has exposure, contrast, saturation, vignette and ambient occlusion. It has no bloom, depth of field or motion blur.
+
+Moved from SceneSprocketsAddOns #26.
+
+---
+
+## 400: No billboard imposters for distant meshes
+
++++
+status: open
+priority: low
+kind: feature
+labels: effort:m
+milestone: M999-Nice-to-have
+created: 2026-11-16T20:03:49Z
+updated: 2026-11-16T20:12:42Z
++++
+
+Distant meshes are drawn as full geometry or a lower LOD. They cannot be replaced by billboard imposters (pre-rendered views).
+
+Moved from SceneSprocketsAddOns #33.
+
+---
+
+## 401: No GPU timing overlay per pass
+
++++
+status: open
+priority: low
+kind: feature
+labels: effort:s
+milestone: M003-Features
+created: 2026-11-16T20:03:49Z
+updated: 2026-11-16T20:12:42Z
++++
+
+There is no overlay that shows how much GPU time each pass (shadows, the scene pass, post-processing, pre-passes) takes.
+
+Moved from SceneSprocketsAddOns #38.
+
+---
+
+## 402: Hit testing re-reads vertex positions on every call
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:scenegraph, effort:s
+milestone: M002-Performance
+created: 2026-11-16T20:06:43Z
+updated: 2026-11-16T20:12:42Z
++++
+
+SceneGraph.hitTest copies positions out of the vertex buffers on each call (and float2 UVs on each textureCoordinates call). The positions cache lives only for one call. Repeated hit tests, e.g. hover every frame, redo this work for static meshes. Related: #337.
+
+---
+
+## 403: Back-face culling in hit tests is wrong for odd triangles in strips
+
++++
+status: open
+priority: low
+kind: bug
+labels: area:scenegraph, effort:s
+milestone: M001-Correctness
+created: 2026-11-16T20:06:43Z
+updated: 2026-11-16T20:12:42Z
++++
+
+In SceneGraph.hitTest, triangle strip triangle i uses indices (i, i+1, i+2) for every i. Odd triangles in a strip have reversed winding, so with HitTestOptions.backFaceCulling they are culled from the wrong side.
+
+Expected: front faces of every strip triangle are hit.
+Actual: odd strip triangles are hit only from their back side.
+
+- `2026-11-16T20:08:31Z`: Related: #404 (both in triangle strip handling in SceneGraph.hitTest).
+
+---
+
+## 404: Hit testing ignores primitive restart in triangle strips
+
++++
+status: open
+priority: low
+kind: bug
+labels: area:scenegraph, effort:s
+milestone: M001-Correctness
+created: 2026-11-16T20:06:43Z
+updated: 2026-11-16T20:12:42Z
++++
+
+SceneGraph.hitTest does not handle primitive restart indices (0xFFFF / 0xFFFFFFFF) in triangle strip submeshes. Triangles that span a restart are skipped only by the out-of-range index guard, not handled as strip breaks.
+
+- `2026-11-16T20:08:32Z`: Related: #403.
+
+---
+
+## 405: Hit testing only reads float3 positions and float2 texture coordinates
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:scenegraph, effort:m
+milestone: M003-Features
+created: 2026-11-16T20:06:43Z
+updated: 2026-11-16T20:12:42Z
++++
+
+MetalMesh.float3Values / float2Values return nil for any other format (half, packed, float4). Meshes with such positions give no hits; meshes with such UVs give nil from Hit.textureCoordinates. Line and point primitives are also never hit.
+
+---
+
+## 406: No editor gizmos (grid, axes, light and camera icons, bounds)
+
++++
+status: open
+priority: low
+kind: feature
+labels: effort:m
+created: 2026-11-16T20:13:10Z
++++
+
+There is no ready-made set of editor aids: a ground grid, axes, icons for lights and cameras, and bounding boxes.
+
+Moved from SceneSprocketsAddOns #35.
+
+---
+
+## 407: No path or spline nodes
+
++++
+status: open
+priority: low
+kind: feature
+labels: effort:m
+created: 2026-11-16T20:14:04Z
++++
+
+There are no spline paths in the scene, and nothing that moves cameras or objects along a path.
+
+Related: #81 (extruded Bézier path shape) could share the same spline type. Constraints (Constraint.swift) have no follow-path kind.
+
+Moved from SceneSprocketsAddOns #36.
+
+---
+
+## Milestone: M001-Correctness
+
++++
+status: open
+created: 2026-11-16T20:12:42Z
++++
+
+Bugs and wrong behavior.
+
+---
+
+## Milestone: M002-Performance
+
++++
+status: open
+created: 2026-11-16T20:12:42Z
++++
+
+Speed and memory.
+
+---
+
+## Milestone: M003-Features
+
++++
+status: open
+created: 2026-11-16T20:12:42Z
++++
+
+New capabilities and missing API.
+
+---
+
+## Milestone: M999-Nice-to-have
+
++++
+status: open
+created: 2026-11-16T20:12:42Z
++++
+
+Out of sequence. Large or speculative work.
 
 ---
