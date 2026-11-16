@@ -9486,7 +9486,7 @@ Use SwiftJolt's `BodyOptions.isSensor` / `PhysicsWorld.setIsSensor` together wit
 status: new
 priority: medium
 kind: feature
-labels: area:physics,effort:m
+labels: area:physics, effort:m
 depends: 410
 created: 2026-11-16T23:34:11Z
 +++
@@ -9495,6 +9495,24 @@ All bodies in SceneGraphPhysicsWorld collide with all others (except static vs s
 
 ## Proposed fix (per schwa)
 Map node categories to SwiftJolt `CollisionLayers` (fixed when the world is created) and/or `CollisionGroup` + `CollisionGroupFilter`.
+
+---
+
+## 413: PhysicsBody has no damping, gravity, sleep or continuous-collision options
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:physics,effort:s
+depends: 410
+created: 2026-11-16T23:34:12Z
++++
+
+SceneGraph.PhysicsBody only has type, shape, mass, friction and restitution. Linear/angular damping, a gravity factor (or not affected by gravity), whether the body may sleep, and continuous collision for fast bodies cannot be set. SceneKit exposes damping, isAffectedByGravity, allowsResting and continuousCollisionDetectionThreshold.
+
+## Proposed fix (per schwa)
+Pass SwiftJolt's `BodyOptions` (linearDamping, angularDamping, gravityFactor, allowSleeping, motionQuality: .linearCast, maxLinearVelocity) from makeBody.
 
 ---
 
