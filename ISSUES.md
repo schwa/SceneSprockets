@@ -4101,6 +4101,8 @@ To investigate:
 - `2026-11-07T16:54:09Z`: Autonomous run: still waiting on the 2026-11-04 question (OK to add a distance fade to GridShader in MetalSprocketsAddOns?). Not changed.
 - `2026-11-07T16:59:57Z`: Question 1 (decision): OK to add a distance fade to GridShader in MetalSprocketsAddOns and use it for the Composer grid?
 - `2026-11-11T16:30:23Z`: Answer 1: yes
+- `2026-11-16T21:55:32Z`: Auto-fixer run: punted again. Per Answer 1 the fix is a distance fade in MetalSprocketsAddOns' GridShader (still none as of 0.3.1: fragment_main has no fade input). SceneSprockets and the Composer take AddOns from GitHub (.upToNextMinor(from: "0.3.0")), so using it needs an AddOns commit, a pushed tag (0.3.2) and a version bump here; I have no permission to push or tag. Also still unverified whether the fade fixes the look (perceptual; needs a check in the running Composer with Studio and an outdoor HDR). Unblocker: OK to commit the GridShader fade in MetalSprocketsAddOns locally so you can tag and push it, then bump here?
+- `2026-11-16T22:14:33Z`: Filed upstream as MetalSprocketsAddOns #127 (GridShader has no distance fade).
 
 ---
 
