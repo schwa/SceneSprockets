@@ -136,3 +136,24 @@ func hiddenNodesStopEmitting() throws {
     _ = try centerPixel(sceneGraph, frames: 1)
     #expect(runtime.emitters.allSatisfy { $0.isEmitting })
 }
+
+// #392: a window's SceneView and a visionOS immersive space can render the same scene at once, on two threads.
+@Test(.enabled(if: deviceSupportsMetal4))
+@MainActor
+func twoThreadsCanSimulateTheSameSystem() async throws {
+    let system = SceneParticleSystem(glowSystem(), seed: 3)
+    system.advance(by: 1.0 / 60.0, worldTransform: matrix_identity_float4x4, isHidden: false)
+    let frame = system.makeFrame()
+    _ = try system.simulate(frame, view: matrix_identity_float4x4)
+    nonisolated(unsafe) let unsafeSystem = system
+    nonisolated(unsafe) let unsafeFrame = frame
+    await withTaskGroup(of: Void.self) { group in
+        for _ in 0..<4 {
+            group.addTask {
+                for _ in 0..<500 {
+                    _ = try? unsafeSystem.simulate(unsafeFrame, view: matrix_identity_float4x4)
+                }
+            }
+        }
+    }
+}

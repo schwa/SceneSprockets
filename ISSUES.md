@@ -9055,13 +9055,14 @@ SceneImmersiveElement advances and reads the live graph on the render thread. Do
 ## 392: Crash (EXC_BAD_ACCESS) in ParticleSystemRuntime.planFrame while the window's SceneView simulates particles (visionOS demo)
 
 +++
-status: open
+status: closed
 priority: high
 kind: bug
 labels: area:renderer, crash, effort:m
 milestone: M001-Correctness
 created: 2026-11-12T22:24:08Z
-updated: 2026-11-16T20:12:42Z
+updated: 2026-11-16T21:38:02Z
+closed: 2026-11-16T21:38:02Z
 +++
 
 Seen on Apple Vision Pro in SceneSprocketsDemo. Exact steps not recorded; the session used the immersive space (#385). Not yet known whether the immersive space was open, opening or closing at the time.

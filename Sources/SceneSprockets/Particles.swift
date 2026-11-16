@@ -1,3 +1,4 @@
+import Foundation
 import Metal
 import MetalSprockets
 import MetalSprocketsParticles
@@ -31,7 +32,9 @@ public final class SceneParticleSystem {
     private var isHidden = false
     private var pendingRestart = false
 
-    // Rendering side.
+    // Rendering side. A window and a visionOS immersive space can render the same scene at once, on two threads (#392);
+    // the lock keeps them from planning the runtime's frame together.
+    private let renderLock = NSLock()
     private var storedRuntime: ParticleSystemRuntime?
     private var appliedGeneration = 0
     private var appliedHidden = false
@@ -68,7 +71,9 @@ public final class SceneParticleSystem {
     ///
     /// - Throws: An error if the runtime's buffers or pipelines cannot be created.
     public func runtime() throws -> ParticleSystemRuntime {
-        try runtime(description: system, generation: generation)
+        try renderLock.withLock {
+            try runtime(description: system, generation: generation)
+        }
     }
 
     private func runtime(description: ParticleSystem, generation: Int) throws -> ParticleSystemRuntime {
@@ -116,6 +121,12 @@ public final class SceneParticleSystem {
 
     // Rendering side: applies `frame` and simulates one step. Place before the render pass.
     func simulate(_ frame: Frame, view: simd_float4x4) throws -> some Element {
+        try renderLock.withLock {
+            try lockedSimulate(frame, view: view)
+        }
+    }
+
+    private func lockedSimulate(_ frame: Frame, view: simd_float4x4) throws -> some Element {
         let runtime = try runtime(description: frame.description, generation: frame.generation)
         if frame.restarts {
             time = 0

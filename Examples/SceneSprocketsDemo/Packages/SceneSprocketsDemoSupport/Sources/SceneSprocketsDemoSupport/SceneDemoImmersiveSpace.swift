@@ -120,13 +120,17 @@ struct ImmersiveSceneToggle: View {
                     presenter.update = { [scene] time, deltaTime in
                         scene.update(time: time, deltaTime: deltaTime)
                     }
+                    // Blank the window first so it and the space never draw the scene at once (#392).
+                    isImmersive = true
                     presenter.start()
                     ImmersiveSceneBox.shared.show(.init(presenter: presenter, renderers: scene.renderers))
-                    if case .opened = await openImmersiveSpace(id: SceneDemoImmersiveSpace.id) {
-                        isImmersive = true
-                    } else {
+                    switch await openImmersiveSpace(id: SceneDemoImmersiveSpace.id) {
+                    case .opened:
+                        break
+                    default:
                         presenter.stop()
                         ImmersiveSceneBox.shared.show(nil)
+                        isImmersive = false
                     }
                 }
                 isTransitioning = false
