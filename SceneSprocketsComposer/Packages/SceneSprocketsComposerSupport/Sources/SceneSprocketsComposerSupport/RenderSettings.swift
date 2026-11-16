@@ -51,8 +51,12 @@ struct RenderSettings: Hashable {
     var farClip: Float = 1_000
 
     static let gridColor: SIMD4<Float> = [1, 1, 1, 0.25]
-    // World units from the camera.
-    static let gridFadeDistance: ClosedRange<Float> = 10...40
+    // World units from the camera. Scaled by the camera's height above the grid, so zooming out does not fade the
+    // whole grid.
+    static func gridFadeDistance(cameraHeight: Float) -> ClosedRange<Float> {
+        let scale = max(cameraHeight, 1)
+        return (10 * scale)...(40 * scale)
+    }
 
     var camera: Camera {
         Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(fieldOfView), depthMode: .standard(zClip: nearClip ... max(farClip, nearClip * 2))))
@@ -79,7 +83,7 @@ struct RenderSettings: Hashable {
                     blendsWithBackground: true,
                     // Fades out with distance instead of running to the horizon, which made environment backgrounds
                     // look nearer than the grid (#184).
-                    fadeDistance: Self.gridFadeDistance
+                    fadeDistance: Self.gridFadeDistance(cameraHeight: abs(context.cameraMatrix.columns.3.y))
                 )
             }
             if showsAxes, !axes.isEmpty {
