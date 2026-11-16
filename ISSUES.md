@@ -9619,7 +9619,7 @@ Pass a SwiftJolt `QueryFilter` (excludedBodies, shouldInclude, layers) to castSh
 status: new
 priority: low
 kind: enhancement
-labels: area:physics,effort:xs
+labels: area:physics, effort:xs
 depends: 410
 created: 2026-11-16T23:34:12Z
 +++
@@ -9628,6 +9628,24 @@ step() writes the pose of every dynamic body to its node every step. Sleeping bo
 
 ## Proposed fix (per schwa)
 Write only awake bodies, e.g. via SwiftJolt's `PhysicsWorld.activeBodies` or `isActive(_:)`.
+
+---
+
+## 420: No way to apply forces every physics sub-step
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:physics,effort:m
+depends: 410
+created: 2026-11-16T23:34:13Z
++++
+
+Custom forces (wind, buoyancy, magnets, SceneKit-style physics fields) can only be applied once per step() call. With collisionSteps > 1 they are not re-applied per sub-step, and there is no hook that runs inside the simulation.
+
+## Proposed fix (per schwa)
+Expose SwiftJolt's `StepListener` (`addStepListener`) through SceneGraphPhysicsWorld.
 
 ---
 
