@@ -9468,7 +9468,7 @@ Release a new SwiftJolt version and raise the dependency.
 status: new
 priority: medium
 kind: feature
-labels: area:physics,effort:s
+labels: area:physics, effort:s
 depends: 410
 created: 2026-11-16T23:34:11Z
 +++
@@ -9477,6 +9477,24 @@ SceneGraph.PhysicsBody has no way to make a body detect overlaps without collidi
 
 ## Proposed fix (per schwa)
 Use SwiftJolt's `BodyOptions.isSensor` / `PhysicsWorld.setIsSensor` together with its contact listener.
+
+---
+
+## 412: Nodes cannot choose which other nodes their bodies collide with
+
++++
+status: new
+priority: medium
+kind: feature
+labels: area:physics,effort:m
+depends: 410
+created: 2026-11-16T23:34:11Z
++++
+
+All bodies in SceneGraphPhysicsWorld collide with all others (except static vs static). There is no equivalent of SceneKit's collisionBitMask, and no way to make, for example, debris pass through characters or parts of one ragdoll ignore each other.
+
+## Proposed fix (per schwa)
+Map node categories to SwiftJolt `CollisionLayers` (fixed when the world is created) and/or `CollisionGroup` + `CollisionGroupFilter`.
 
 ---
 
