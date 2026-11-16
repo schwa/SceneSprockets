@@ -9522,7 +9522,7 @@ Pass SwiftJolt's `BodyOptions` (linearDamping, angularDamping, gravityFactor, al
 status: new
 priority: low
 kind: feature
-labels: area:physics,effort:s
+labels: area:physics, effort:s
 depends: 410
 created: 2026-11-16T23:34:12Z
 +++
@@ -9531,6 +9531,31 @@ There is no way to lock a body's rotation or keep it in a plane (SceneKit angula
 
 ## Proposed fix (per schwa)
 Use SwiftJolt's `BodyOptions.allowedDegreesOfFreedom` (e.g. `.plane2D`, or translation only).
+
+---
+
+## 415: Changing a node's physicsBody throws away the body's motion
+
++++
+status: new
+priority: low
+kind: bug
+labels: area:physics,effort:m
+depends: 410
+created: 2026-11-16T23:34:12Z
++++
+
+When a node's physicsBody description changes (e.g. friction, type or shape), sync() removes the Jolt body and adds a new one. The new body starts at rest, so a moving object stops dead, and contacts reset.
+
+Repro:
+1. Give a node a dynamic physicsBody and set a velocity.
+2. Change its friction during the simulation.
+3. Step: the node's velocity is now zero.
+
+Expected: the body keeps its velocity; only the changed property changes.
+
+## Proposed fix (per schwa)
+Update the existing body with SwiftJolt's `setFriction`, `setRestitution`, `setMotionType(of:to:)`, `setShape(of:to:)`, `setMass`, rebuilding only when nothing else works.
 
 ---
 
