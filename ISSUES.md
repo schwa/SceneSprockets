@@ -11031,17 +11031,21 @@ Found by the swift-concurrency-pro review (#476).
 ## 484: ComposerDocument never removes its undo notification observers
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:composer, effort:xs
 milestone: M002-Performance
 created: 2026-11-17T06:39:06Z
+updated: 2026-11-17T13:23:00Z
+closed: 2026-11-17T13:23:00Z
 +++
 
 ComposerDocument.attach adds three NotificationCenter block observers (undo group closed, undo, redo) and stores the tokens in undoObservers, but nothing removes them. The blocks capture self weakly, so they do nothing after the document goes away, but each opened document leaves three observers registered for the life of the app, and each runs on every undo notification from any document.
 
 Found by the swift-concurrency-pro review (#476).
+
+- `2026-11-17T13:23:00Z`: Fixed. New NotificationObservers holds block observers and removes them when it is freed or replaced. ComposerDocument and DisplayFrameRate (4 observers per EditorModel, the same leak) use it. Test observersAreRemovedWithTheirOwner covers the helper. No failing test first for the document itself: its blocks capture self weakly, so a leaked observer has no effect a test can see.
 
 ---
 

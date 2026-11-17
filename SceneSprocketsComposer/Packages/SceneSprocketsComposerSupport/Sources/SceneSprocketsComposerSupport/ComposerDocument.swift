@@ -51,7 +51,7 @@ public final class ComposerDocument: ReferenceFileDocument, @unchecked Sendable 
     private let savedSceneLock = OSAllocatedUnfairLock<Archive.Capture?>(initialState: nil)
     @MainActor private let textureCache = Archive.TextureCache()
     @MainActor private var isSceneCapturePending = false
-    @MainActor private var undoObservers: [any NSObjectProtocol] = []
+    @MainActor private var undoObservers: NotificationObservers?
 
     // Copies the editor state now and again whenever its inputs change, instead of on every view update (#232).
     // Captures the scene now and after every undoable change, for saving off the main actor (#227).
@@ -60,15 +60,14 @@ public final class ComposerDocument: ReferenceFileDocument, @unchecked Sendable 
         editorModel = model
         trackEditorState()
         captureScene()
-        undoObservers = [Notification.Name.NSUndoManagerDidCloseUndoGroup, .NSUndoManagerDidUndoChange, .NSUndoManagerDidRedoChange].map { name in
-            NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] notification in
-                let sender = (notification.object as? UndoManager).map(ObjectIdentifier.init)
-                MainActor.assumeIsolated {
-                    guard let self, let undoManager = self.editorModel?.undoManager, sender == ObjectIdentifier(undoManager) else {
-                        return
-                    }
-                    self.scheduleSceneCapture()
+        // Replacing the old observers removes them, as does freeing the document (#484).
+        undoObservers = NotificationObservers(names: [.NSUndoManagerDidCloseUndoGroup, .NSUndoManagerDidUndoChange, .NSUndoManagerDidRedoChange], queue: .main) { [weak self] notification in
+            let sender = (notification.object as? UndoManager).map(ObjectIdentifier.init)
+            MainActor.assumeIsolated {
+                guard let self, let undoManager = self.editorModel?.undoManager, sender == ObjectIdentifier(undoManager) else {
+                    return
                 }
+                self.scheduleSceneCapture()
             }
         }
     }

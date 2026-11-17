@@ -12,7 +12,8 @@ import AppKit
 final class DisplayFrameRate {
     private(set) var maximumFramesPerSecond = 60
     private(set) var isLowPowerModeEnabled = false
-    @ObservationIgnored private var observers: [any NSObjectProtocol] = []
+    // Removed when this object goes away (#484).
+    @ObservationIgnored private var observers: NotificationObservers?
 
     init() {
         update()
@@ -20,11 +21,9 @@ final class DisplayFrameRate {
         #if canImport(AppKit)
         names += [NSApplication.didChangeScreenParametersNotification, NSWindow.didChangeScreenNotification, NSWindow.didBecomeKeyNotification]
         #endif
-        observers = names.map { name in
-            NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
-                MainActor.assumeIsolated {
-                    self?.update()
-                }
+        observers = NotificationObservers(names: names, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.update()
             }
         }
     }
