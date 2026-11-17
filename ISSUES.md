@@ -9783,6 +9783,214 @@ Expected: state for removed nodes is dropped.
 
 ---
 
+## 428: Physics shapes lack height fields, planes, tapered cylinders and empty shapes
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:physics
+depends: 410
+created: 2026-11-17T01:03:57Z
++++
+
+PhysicsBody.Shape only offers box, sphere, capsule, cylinder, boundingBox, convexHull and mesh. Terrain has to use a triangle mesh, ground planes need a large box, and there is no shape for a body that only exists to be jointed or moved.
+
+Context: SwiftJolt now has Shape.heightField (with block size / bits-per-sample options), .plane, .taperedCylinder and .empty.
+
+---
+
+## 429: Physics surfaces cannot be tagged with a material
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:physics
+depends: 410
+created: 2026-11-17T01:03:57Z
++++
+
+There is no way to tag a node's collision surface (or individual mesh triangles) and find out which surface a ray or contact hit, e.g. to choose footstep sounds or decals.
+
+Context: SwiftJolt now has PhysicsMaterial on plane/tapered-cylinder shapes, per-triangle user data on mesh shapes, and lookups from a hit's sub-shape (physicsMaterial(of:at:), triangleUserData(of:at:)).
+
+---
+
+## 430: Physics contacts report no impact strength
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:physics
+depends: 410
+created: 2026-11-17T01:03:57Z
++++
+
+Nothing tells the app how hard two bodies hit, so impact sounds, damage and particles can't be scaled by force.
+
+Related: #423 (contacts are not reported at all).
+
+Context: SwiftJolt now has Contact.estimateResponse (predicted impulses and velocities) and per-constraint applied impulses.
+
+---
+
+## 431: No debug visualization of physics bodies
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:physics
+depends: 410
+created: 2026-11-17T01:03:57Z
++++
+
+There is no way to see collision shapes, bounding boxes, velocities or constraint limits drawn over the scene, which makes physics setups hard to debug.
+
+Context: SwiftJolt's debugDraw now supports a body filter, constraint limits/frames, and a DebugDrawer with arrows, boxes, spheres, cones, etc.
+
+---
+
+## 432: Nodes cannot be joined with physics joints
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:physics
+depends: 410
+created: 2026-11-17T01:03:57Z
++++
+
+Two nodes' bodies cannot be connected with hinges, sliders, ball joints, fixed welds, swing-twist or six-DOF joints, and there is no way to break a joint when the load gets too high.
+
+Context: SwiftJolt wraps these constraints, and now exposes motor/limit accessors and the impulse each joint applied per step.
+
+---
+
+## 433: No character controller for nodes
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:physics
+depends: 410
+created: 2026-11-17T01:03:57Z
++++
+
+There is no way to drive a player or NPC node with a character controller (walking, slopes, stairs, standing on moving platforms); only plain rigid bodies.
+
+Context: SwiftJolt has Character and VirtualCharacter, now including ground material/user data, slope checks, shape swapping (crouch) and full transform accessors.
+
+---
+
+## 434: No vehicle support for scene nodes
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:physics
+depends: 410
+created: 2026-11-17T01:03:57Z
++++
+
+Cars, motorcycles and tracked vehicles cannot be built from scene nodes (body node + wheel nodes that follow the simulated wheels).
+
+Context: SwiftJolt has wheeled, motorcycle and tracked vehicles, now with anti-roll bars, selectable wheel collision testers, wheel world/local transforms and detailed wheel state.
+
+---
+
+## 435: No ragdolls or animation-driven physics for skinned characters
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:physics
+depends: 410
+created: 2026-11-17T01:03:57Z
++++
+
+A skinned character cannot go limp into a ragdoll, or have its bodies follow a keyframed animation.
+
+Context: SwiftJolt has Ragdoll, Skeleton, SkeletonPose, SkeletonMapper and now SkeletalAnimation (sampling keyframes into a pose to drive ragdoll motors).
+
+---
+
+## 436: Bodies cannot float in water
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:physics
+depends: 410
+created: 2026-11-17T01:03:57Z
++++
+
+There is no water/fluid volume, so floating objects need hand-written forces.
+
+Context: SwiftJolt now exposes Jolt's buoyancy impulse (applyBuoyancyImpulse) on PhysicsWorld and LockedBody.
+
+---
+
+## 437: No cloth or soft bodies
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:physics
+depends: 410
+created: 2026-11-17T01:03:57Z
++++
+
+Nodes cannot be simulated as cloth or other soft bodies.
+
+Context: SwiftJolt has soft bodies (now with object layer, collision group and bulk face creation). Reading back simulated vertices is still missing upstream (SwiftJolt #52).
+
+---
+
+## 438: Physics worker threads cannot be configured
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:physics
+depends: 410
+created: 2026-11-17T01:03:57Z
++++
+
+SceneGraphPhysicsWorld always uses SwiftJolt's default job system and thread count; an app can't limit physics threads (e.g. on low-power devices) or pick Jolt's own pool.
+
+Context: PhysicsWorld.init now takes jobSystem: JobSystemKind (user-interactive pool or Jolt's pool, with a thread count).
+
+---
+
+## 439: Physics bodies cannot be woken or put to sleep on demand
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:physics
+depends: 410
+created: 2026-11-17T01:03:57Z
++++
+
+There is no API to wake a sleeping body, put one to sleep, or wake everything in a region (e.g. after an explosion or when a level section becomes active).
+
+Related: #413 (sleep options).
+
+Context: SwiftJolt now has activate/deactivate for one or many bodies and activateBodies(inBoxFrom:to:).
+
+---
+
 ## Milestone: M001-Correctness
 
 +++
