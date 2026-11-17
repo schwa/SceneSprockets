@@ -134,6 +134,9 @@ extension SceneGraph.Presentation {
 
 extension SceneParticleSystem.Frame {
     func withStepTaken() -> Self {
-        Self(system: system, description: description, generation: generation, deltaTime: 0, placement: placement, isHidden: isHidden, restarts: false)
+        var copy = self
+        copy.deltaTime = 0
+        copy.restarts = false
+        return copy
     }
 }

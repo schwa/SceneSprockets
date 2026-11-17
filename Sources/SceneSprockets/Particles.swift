@@ -11,7 +11,9 @@ import simd
 /// Two sides use it: the thread that edits the scene graph (``system``, ``restart()``, `advanceParticles(by:)`) and the
 /// thread that renders it, which alone touches the GPU runtime. ``SceneGraph/presentation()`` hands the edits over as
 /// a ``Frame`` (#390). ``runtime()`` and ``time`` belong to the rendering side. `SceneView` and visionOS immersive
-/// spaces render on another thread, so do not use them from the editing thread there.
+/// spaces render on another thread, so do not use them from the editing thread there. To turn single emitters on and
+/// off or to emit from a mesh, use ``setEmitting(_:forEmitterAt:)`` and
+/// ``setEmitterMesh(_:deformedPositions:offset:stride:)``.
 public final class SceneParticleSystem {
     /// The MetalSprocketsParticles description of the emitters. Changes apply on the next frame.
     public var system: ParticleSystem {
@@ -31,6 +33,8 @@ public final class SceneParticleSystem {
     private var worldTransform = matrix_identity_float4x4
     private var isHidden = false
     private var pendingRestart = false
+    private var emitting: [Int: Bool] = [:]
+    private var meshEmission: Frame.MeshEmission?
 
     // Rendering side. A window and a visionOS immersive space can render the same scene at once, on two threads (#392);
     // the lock keeps them from planning the runtime's frame together.
@@ -40,16 +44,30 @@ public final class SceneParticleSystem {
     private var appliedHidden = false
     // Each emitter's isEmitting from before the node was hidden.
     private var emittingBeforeHidden: [Bool] = []
+    // What applyEmitterState set last, so it can undo an override that was removed.
+    private var appliedEmitting: Set<Int> = []
+    private var appliedMesh = false
 
     /// What one frame hands from the editing side to the rendering side.
     public struct Frame {
+        // The mesh every emitter emits from, and its current positions.
+        struct MeshEmission {
+            var mesh: EmitterMesh
+            var deformedPositions: MTLBuffer?
+            var offset: Int
+            var stride: Int
+        }
+
         let system: SceneParticleSystem
         let description: ParticleSystem
         let generation: Int
-        let deltaTime: Float
+        var deltaTime: Float
         let placement: simd_float4x4
         let isHidden: Bool
-        let restarts: Bool
+        var restarts: Bool
+        // Emitters by index whose isEmitting the editing side set.
+        var emitting: [Int: Bool] = [:]
+        var meshEmission: MeshEmission?
 
         // Whether any emitter fades into scene geometry (SpriteModule.softness), which needs the scene's depth.
         var isSoft: Bool {
@@ -95,7 +113,32 @@ public final class SceneParticleSystem {
 
     // Rendering side: the runtime made by `simulate`, without applying edits.
     var renderRuntime: ParticleSystemRuntime? {
-        storedRuntime
+        renderLock.withLock { storedRuntime }
+    }
+
+    /// Turns one emitter on or off, from the next frame. The value holds until you change it, also when a new
+    /// ``system`` replaces the emitters.
+    ///
+    /// - Parameters:
+    ///   - isEmitting: Whether the emitter makes new particles. Nil: as its description says.
+    ///   - index: The index of the emitter in the system's layers.
+    public func setEmitting(_ isEmitting: Bool?, forEmitterAt index: Int) {
+        emitting[index] = isEmitting
+    }
+
+    /// Makes every emitter with a mesh shape emit from `mesh`, from the next frame.
+    ///
+    /// Call it again each time the positions change, with a buffer that later frames do not write to: the simulation
+    /// reads the buffer when it runs.
+    ///
+    /// - Parameters:
+    ///   - mesh: The triangles to emit from. Nil: the emitters have no mesh.
+    ///   - deformedPositions: The current positions, as packed `float3` values. Nil: the positions the mesh was made
+    ///     with.
+    ///   - offset: The offset of the first position in `deformedPositions`, in bytes.
+    ///   - stride: The distance between positions in `deformedPositions`, in bytes.
+    public func setEmitterMesh(_ mesh: EmitterMesh?, deformedPositions: MTLBuffer? = nil, offset: Int = 0, stride: Int = 12) {
+        meshEmission = mesh.map { Frame.MeshEmission(mesh: $0, deformedPositions: deformedPositions, offset: offset, stride: stride) }
     }
 
     /// Removes every particle and restarts the clock, on the next frame.
@@ -117,7 +160,7 @@ public final class SceneParticleSystem {
         let deltaTime = min(pendingDeltaTime, ParticleSystemRuntime.maximumStep)
         pendingDeltaTime = 0
         defer { pendingRestart = false }
-        return Frame(system: self, description: system, generation: generation, deltaTime: deltaTime, placement: usesNodeTransform ? worldTransform : matrix_identity_float4x4, isHidden: isHidden, restarts: pendingRestart)
+        return Frame(system: self, description: system, generation: generation, deltaTime: deltaTime, placement: usesNodeTransform ? worldTransform : matrix_identity_float4x4, isHidden: isHidden, restarts: pendingRestart, emitting: emitting, meshEmission: meshEmission)
     }
 
     // Rendering side: applies `frame` and simulates one step. Place before the render pass.
@@ -146,10 +189,38 @@ public final class SceneParticleSystem {
                 }
             }
         }
+        applyEmitterState(frame, to: runtime)
         time += frame.deltaTime * max(runtime.speedFactor, 0)
         let transforms = frame.description.transforms(at: time).map { frame.placement * $0 }
         let colliders = frame.description.colliders(at: time).map { $0.transformed(by: frame.placement) }
         return try runtime.simulate(deltaTime: frame.deltaTime, colliders: colliders, transforms: transforms, view: view)
+    }
+
+    // What the editing side set for single emitters (#480). Applied every frame, because a new description rebuilds
+    // the emitters and drops what was set on them.
+    private func applyEmitterState(_ frame: Frame, to runtime: ParticleSystemRuntime) {
+        let descriptions = frame.description.layers
+        for (index, emitter) in runtime.emitters.enumerated() {
+            // Hidden systems do not emit.
+            if !frame.isHidden {
+                if let isEmitting = frame.emitting[index] {
+                    emitter.isEmitting = isEmitting
+                } else if appliedEmitting.contains(index), descriptions.indices.contains(index) {
+                    // The override was removed: back to what the description says.
+                    emitter.isEmitting = descriptions[index].isEmitting
+                }
+            }
+            if emitter.mesh !== frame.meshEmission?.mesh, frame.meshEmission != nil || appliedMesh {
+                emitter.mesh = frame.meshEmission?.mesh
+            }
+        }
+        if !frame.isHidden {
+            appliedEmitting = Set(frame.emitting.keys)
+        }
+        appliedMesh = frame.meshEmission != nil
+        if let meshEmission = frame.meshEmission {
+            meshEmission.mesh.setDeformedPositions(meshEmission.deformedPositions, offset: meshEmission.offset, stride: meshEmission.stride)
+        }
     }
 }
 

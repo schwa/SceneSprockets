@@ -153,6 +153,42 @@ func olderFrameDoesNotReapplyAnOlderDescription() throws {
     #expect(try system.runtime().emitters.first === emitter)
 }
 
+// #480: single emitters are turned on and off, and given a mesh, from the editing side. The values go to the render
+// side with each frame, so they also hold after a new description rebuilds the emitters.
+@Test(.enabled(if: deviceSupportsMetal4))
+@MainActor
+func emitterStateIsSetFromTheEditingSide() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let system = SceneParticleSystem(glowSystem(), seed: 3)
+    let mesh = try EmitterMesh(device: device, positions: [[0, 0, 0], [1, 0, 0], [0, 1, 0]], indices: [0, 1, 2])
+    func step() throws {
+        system.advance(by: 1.0 / 60.0, worldTransform: matrix_identity_float4x4, isHidden: false)
+        _ = try system.simulate(system.makeFrame(), view: matrix_identity_float4x4)
+    }
+    try step()
+    #expect(try system.runtime().emitters[0].isEmitting)
+    #expect(try system.runtime().emitters[0].mesh == nil)
+
+    system.setEmitting(false, forEmitterAt: 0)
+    system.setEmitterMesh(mesh)
+    try step()
+    #expect(try !system.runtime().emitters[0].isEmitting)
+    #expect(try system.runtime().emitters[0].mesh === mesh)
+
+    // New emitter ids rebuild the emitters.
+    system.system = glowSystem()
+    try step()
+    #expect(try !system.runtime().emitters[0].isEmitting)
+    #expect(try system.runtime().emitters[0].mesh === mesh)
+
+    system.setEmitting(nil, forEmitterAt: 0)
+    system.setEmitterMesh(nil)
+    system.system = glowSystem()
+    try step()
+    #expect(try system.runtime().emitters[0].isEmitting)
+    #expect(try system.runtime().emitters[0].mesh == nil)
+}
+
 // #392: a window's SceneView and a visionOS immersive space can render the same scene at once, on two threads.
 @Test(.enabled(if: deviceSupportsMetal4))
 @MainActor

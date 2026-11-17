@@ -10944,12 +10944,14 @@ Question: which way should live material changes go?
 ## 480: SceneParticleSystem.runtime() is used on the editing thread while the render thread simulates
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:renderer, effort:m
 milestone: M002-Performance
 created: 2026-11-17T06:39:06Z
+updated: 2026-11-17T07:17:15Z
+closed: 2026-11-17T07:17:15Z
 +++
 
 SceneParticleSystem.runtime() is public and returns the GPU runtime that the render thread simulates and draws. The lock inside only covers fetching it. BurningFox (keynote Mesh Emitters slide) calls it on the main thread every frame and then sets emitter.isEmitting and emitter.mesh, and calls EmitterMesh.setDeformedPositions, while SceneView's render thread runs runtime.simulate and runtime.render on the same emitters.
@@ -10961,6 +10963,8 @@ There is no editing-side way to turn single emitters on and off or to give an em
 Related: #474 (fox particles did not start reliably).
 
 Found by the swift-concurrency-pro review (#476).
+
+- `2026-11-17T07:17:15Z`: Fixed. SceneParticleSystem has two editing-side calls, setEmitting(_:forEmitterAt:) and setEmitterMesh(_:deformedPositions:offset:stride:). Their values travel with each frame and the render thread applies them under its lock, every frame, so they also hold when a new description rebuilds the emitters (the loss behind #474). renderRuntime now takes the lock. BurningFox uses the new calls and no longer touches the runtime. Test emitterStateIsSetFromTheEditingSide; it could not compile before, because the API did not exist. Not run under the thread sanitizer with a live view. runtime() is still public and still belongs to the render side.
 
 ---
 

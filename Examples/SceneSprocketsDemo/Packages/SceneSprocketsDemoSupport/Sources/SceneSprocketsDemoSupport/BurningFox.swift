@@ -17,6 +17,7 @@ final class BurningFox {
     static let cyclePhase: Float = 4
     // Emitter order in the system: flames and embers, then sparks.
     private static let fireEmitters = 0..<2
+    private static let emitterCount = 3
 
     let node: SceneGraph.Node
     private let fox: SceneGraph.Node
@@ -65,25 +66,26 @@ final class BurningFox {
         player?.time = 0
         particles.restart()
         particles.system = Self.system(scale: scale, isEmitting: false)
-        emitterMesh = nil
+        for index in 0..<Self.emitterCount {
+            particles.setEmitting(nil, forEmitterAt: index)
+        }
     }
 
     func update(sceneGraph: SceneGraph, deltaTime: Float) {
         player?.advance(by: deltaTime)
         elapsed += deltaTime
         if !isBurning, elapsed >= Self.ignitionDelay {
-            // New emitter ids rebuild the emitters, so they need the mesh again; nothing had been emitted yet.
             isBurning = true
             particles.system = Self.system(scale: scale, isEmitting: true)
-            emitterMesh = nil
         }
         updateEmitterMesh(sceneGraph: sceneGraph)
         let burnTime = elapsed - Self.ignitionDelay
         let flamesOn = Int(max(burnTime, 0) / Self.cyclePhase).isMultiple(of: 2)
-        // Emitters turn on and off instead of swapping systems, so old particles finish their lives.
-        if isBurning, let runtime = try? particles.runtime() {
-            for (index, emitter) in runtime.emitters.enumerated() {
-                emitter.isEmitting = Self.fireEmitters.contains(index) == flamesOn
+        // Emitters turn on and off instead of swapping systems, so old particles finish their lives. Set through the
+        // particle system, not its runtime: the render thread owns the runtime (#480).
+        if isBurning {
+            for index in 0..<Self.emitterCount {
+                particles.setEmitting(Self.fireEmitters.contains(index) == flamesOn, forEmitterAt: index)
             }
         }
         fireAmount += ((flamesOn ? 1 : 0) - fireAmount) * min(deltaTime * 3, 1)
@@ -97,14 +99,13 @@ final class BurningFox {
         }
     }
 
-    // Gives every emitter the fox's skinned triangles, then each frame its current positions.
+    // Gives the particle system the fox's skinned triangles, then each frame its current positions.
     private func updateEmitterMesh(sceneGraph: SceneGraph) {
         guard let skinned = Self.descendants(of: fox).first(where: { $0.skin != nil }),
               let entry = sceneGraph.meshEntries().first(where: { $0.node === skinned }),
               let deformed = entry.deformed(revision: sceneGraph.revision),
               let position = deformed.mesh.vertexDescriptor.attributes.first(where: { $0.semantic == .position }),
-              let buffer = deformed.mesh.vertexBuffers[position.bufferIndex],
-              let runtime = try? particles.runtime()
+              let buffer = deformed.mesh.vertexBuffers[position.bufferIndex]
         else {
             return
         }
@@ -120,12 +121,8 @@ final class BurningFox {
             let indices = deformed.mesh.submeshes.filter { $0.primitiveType == .triangle }.flatMap(\.indices)
             emitterMesh = try? EmitterMesh(device: demoDevice, positions: positions, indices: indices)
         }
-        // Every frame: emitters rebuilt since (#474) need the mesh again.
-        for emitter in runtime.emitters where emitter.mesh !== emitterMesh {
-            emitter.mesh = emitterMesh
-        }
         // A fresh buffer each revision, so frames in flight keep theirs.
-        emitterMesh?.setDeformedPositions(buffer, offset: offset, stride: stride)
+        particles.setEmitterMesh(emitterMesh, deformedPositions: buffer, offset: offset, stride: stride)
     }
 
     private static func descendants(of node: SceneGraph.Node) -> [SceneGraph.Node] {
