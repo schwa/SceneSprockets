@@ -9638,20 +9638,23 @@ Store an index or key in SwiftJolt body user data (`BodyOptions.userData` / `use
 ## 418: Slider constraint sweeps against every body and filters afterwards
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:physics, effort:s
 milestone: M002-Performance
 depends: 410
 created: 2026-11-16T23:34:12Z
-updated: 2026-11-17T06:04:51Z
+updated: 2026-11-17T14:12:47Z
+closed: 2026-11-17T14:12:47Z
 +++
 
 sliderConstraint casts against all bodies with castShapeAll and then discards hits on the node itself, its descendants and nodes outside categoryBitMask in Swift. Every excluded hit is still computed and allocated.
 
 ## Proposed fix (per schwa)
 Pass a SwiftJolt `QueryFilter` (excludedBodies, shouldInclude, layers) to castShapeAll so Jolt skips them.
+
+- `2026-11-17T14:12:47Z`: Fixed for the node and its descendants: the sweep passes their bodies to Jolt as QueryFilter.excludedBodies, found by walking the node's subtree, so Jolt never computes hits on them. Bodies outside categoryBitMask are still filtered after the sweep: excluding them up front would mean walking every body each call, or keeping a per-body category map in step with the nodes. New test sliderConstraintIgnoresItsOwnBodies (a node with a body on itself and on a child slides through them to the wall); it also passes without the change, since behavior is the same. Not measured.
 
 ---
 

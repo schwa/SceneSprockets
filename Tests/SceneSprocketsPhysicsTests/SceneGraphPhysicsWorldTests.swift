@@ -320,6 +320,27 @@ func sliderConstraintStopsAtWallAndSlides() throws {
     #expect(abs(mover.transform.translation.x + 5) < 0.05)
 }
 
+// #418: the sweep skips the node's own bodies and its descendants'; they do not block it.
+@Test
+func sliderConstraintIgnoresItsOwnBodies() throws {
+    let root = SceneGraph.Node()
+    let mover = root.addChild(SceneGraph.Node())
+    mover.physicsBody = .init(type: .kinematic, shape: .box(size: [1, 1, 1]))
+    let child = mover.addChild(SceneGraph.Node(transform: .init(translation: [1, 0, 0])))
+    child.physicsBody = .init(type: .kinematic, shape: .box(size: [1, 1, 1]))
+    let wall = root.addChild(SceneGraph.Node(transform: .init(translation: [6.5, 0, 0])))
+    wall.physicsBody = .init(type: .static, shape: .box(size: [1, 10, 10]))
+    let sceneGraph = SceneGraph(root: root)
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: sceneGraph)
+    physics.sync()
+    mover.constraints = [physics.sliderConstraint(radius: 0.5)]
+    sceneGraph.applyConstraints(pointOfView: matrix_identity_float4x4)
+    // Through its own child's box, then up to the wall's face at x = 6.
+    mover.transform.translation = [10, 0, 0]
+    sceneGraph.applyConstraints(pointOfView: matrix_identity_float4x4)
+    #expect(abs(mover.transform.translation.x - 5.5) < 0.05, "at \(mover.transform.translation)")
+}
+
 // #427: the slider constraint drops what it stored for nodes that no longer exist.
 @Test
 func sliderConstraintForgetsRemovedNodes() throws {

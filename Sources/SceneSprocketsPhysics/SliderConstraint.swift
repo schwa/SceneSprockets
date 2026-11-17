@@ -39,21 +39,29 @@ extension SceneGraphPhysicsWorld {
         let skin: Float = 1e-3
         var position = start
         var target = goal
+        // Jolt skips the bodies of the node and its descendants instead of the sweep computing hits that are thrown
+        // away (#418). Found by walking the subtree, so the cost does not grow with the rest of the scene.
+        var excluded: Set<BodyID> = []
+        func exclude(_ node: SceneGraph.Node) {
+            if let body = body(of: node) {
+                excluded.insert(body)
+            }
+            node.children.forEach(exclude)
+        }
+        exclude(node)
+        let filter = QueryFilter(excludedBodies: excluded)
         // Three passes: hit one surface, slide, maybe hit a second (a corner), slide again.
         for _ in 0..<3 {
             let motion = target - position
             guard simd_length(motion) > 1e-6 else {
                 break
             }
-            let hit = world.castShapeAll(.sphere(radius: radius), position: position, direction: motion).first { hit in
-                // Moving away from (or along) a surface it already touches is fine.
-                guard simd_dot(hit.normal, motion) < 0 else {
+            // Moving away from (or along) a surface it already touches is fine.
+            let hit = world.castShapeAll(.sphere(radius: radius), position: position, direction: motion, filter: filter).first { hit in
+                guard simd_dot(hit.normal, motion) < 0, let other = self.node(of: hit.body) else {
                     return false
                 }
-                guard let other = self.node(of: hit.body) else {
-                    return false
-                }
-                return other.categoryBitMask & categoryBitMask != 0 && other !== node && !node.isAncestor(of: other)
+                return other.categoryBitMask & categoryBitMask != 0
             }
             guard let hit else {
                 position = target
