@@ -9691,7 +9691,7 @@ Install SwiftJolt's `JoltEngine.setTraceHandler` and forward to the package logg
 status: new
 priority: medium
 kind: feature
-labels: area:physics,effort:m
+labels: area:physics, effort:m
 depends: 410
 created: 2026-11-16T23:34:13Z
 +++
@@ -9700,6 +9700,86 @@ There is no way to learn that two nodes' bodies started or stopped touching (Sce
 
 ## Proposed fix (per schwa)
 Wrap SwiftJolt's `ContactListener` (and `wereBodiesInContact`), map BodyIDs to nodes (user data), and deliver events on the caller's thread after step().
+
+---
+
+## 424: Hiding a node throws away its physics body's motion
+
++++
+status: new
+priority: low
+kind: bug
+labels: area:physics
+created: 2026-11-17T01:02:42Z
++++
+
+SceneGraphPhysicsWorld.sync() only visits visible nodes, so hiding a node (or an ancestor) removes and destroys its Jolt body. Showing it again creates a new body at rest. Velocity, sleep state and contacts are lost.
+
+Repro:
+1. Give a node a dynamic physicsBody and set a velocity.
+2. Hide the node, step, then show it again and step.
+3. The node's velocity is now zero.
+
+Expected: a hidden node's body is paused and resumes with its previous motion.
+
+Related: #415 (same loss of motion when the physicsBody description changes).
+
+---
+
+## 425: A .mesh physics shape on a dynamic body is not rejected
+
++++
+status: new
+priority: low
+kind: bug
+labels: area:physics
+created: 2026-11-17T01:02:42Z
++++
+
+SceneGraph.PhysicsBody accepts shape .mesh with type .dynamic. Jolt only supports triangle-mesh shapes on static and kinematic bodies (SwiftJolt documents this on Shape.mesh). SceneGraphPhysicsWorld passes the combination straight to Jolt.
+
+Behaviour of the resulting body is not verified; Jolt treats it as invalid, so expect wrong mass/inertia or a Jolt assert in debug builds.
+
+Expected: the combination is reported clearly (error, warning or documented fallback) instead of reaching Jolt.
+
+---
+
+## 426: Degenerate .convexHull meshes crash physics sync
+
++++
+status: new
+priority: low
+kind: bug
+labels: area:physics
+created: 2026-11-17T01:02:42Z
++++
+
+For shape .convexHull, SceneGraphPhysicsWorld only checks that the mesh has at least 4 positions. If the points cannot form a hull (for example all identical or all on one line), SwiftJolt's Shape.convexHull stops the process with a precondition failure: "Could not build a convex hull from N points".
+
+Repro:
+1. Give a node a mesh whose positions are all the same point (or collinear), at least 4 of them.
+2. Give it physicsBody shape .convexHull.
+3. Call sync() or step(deltaTime:): the process traps.
+
+Expected: the node gets no body (like an unusable mesh does today) or a reported error, not a crash.
+
+---
+
+## 427: Slider constraint keeps state for nodes that no longer exist
+
++++
+status: new
+priority: low
+kind: bug
+labels: area:physics
+created: 2026-11-17T01:02:42Z
++++
+
+sliderConstraint(radius:categoryBitMask:) stores the last position of every node it runs on in a dictionary keyed by ObjectIdentifier. Entries are never removed, so the dictionary grows as nodes come and go.
+
+Because the key is ObjectIdentifier, a new node allocated at a freed node's address can also pick up the old node's stored position and sweep from there on its first run.
+
+Expected: state for removed nodes is dropped.
 
 ---
 
