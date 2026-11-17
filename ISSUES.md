@@ -11611,6 +11611,146 @@ Not measured: how much of this is Debug-only (unoptimized Swift loops over pixel
 
 ---
 
+## 516: No GPU-driven rendering
+
++++
+status: new
+priority: medium
+kind: feature
+labels: area:renderer
+created: 2026-11-17T14:12:10Z
++++
+
+Draw selection, culling, and draw arguments are produced on the CPU. GPU-driven rendering would do this with compute and indirect commands.
+
+---
+
+## 517: Draws are not encoded with indirect command buffers
+
++++
+status: new
+priority: medium
+kind: feature
+labels: area:renderer
+created: 2026-11-17T14:12:10Z
++++
+
+Draw commands are encoded on the CPU each frame. MTLIndirectCommandBuffer would let them be encoded once or on the GPU.
+
+---
+
+## 518: No mesh shading
+
++++
+status: new
+priority: medium
+kind: feature
+labels: area:renderer
+created: 2026-11-17T14:12:10Z
++++
+
+Object and mesh shaders are not used for geometry amplification, culling, or LOD.
+
+---
+
+## 519: No clustered Forward+ light assignment
+
++++
+status: new
+priority: medium
+kind: feature
+labels: area:renderer
+created: 2026-11-17T14:12:10Z
++++
+
+Lights are not assigned to visible regions with compute shaders. Related: #514.
+
+---
+
+## 520: No GPU-driven occlusion culling
+
++++
+status: new
+priority: medium
+kind: feature
+labels: area:renderer
+created: 2026-11-17T14:12:10Z
++++
+
+Hidden objects are still drawn. There is no depth pyramid + compute pass to cull them.
+
+---
+
+## 521: GPU particles do not use indirect draws
+
++++
+status: new
+priority: medium
+kind: feature
+labels: area:renderer
+created: 2026-11-17T14:12:10Z
++++
+
+Particle simulation and draw counts are not driven by compute + indirect draws.
+
+---
+
+## 522: No GPU LOD selection
+
++++
+status: new
+priority: medium
+kind: feature
+labels: area:renderer
+created: 2026-11-17T14:12:10Z
++++
+
+Mesh detail per object is not chosen on the GPU with compute + indirect commands.
+
+---
+
+## 523: No visibility buffer rendering
+
++++
+status: new
+priority: medium
+kind: feature
+labels: area:renderer
+created: 2026-11-17T14:12:10Z
++++
+
+There is no path that writes primitive IDs and evaluates materials afterwards with compute.
+
+---
+
+## 524: No tile-based deferred shading
+
++++
+status: new
+priority: medium
+kind: feature
+labels: area:renderer
+created: 2026-11-17T14:12:10Z
++++
+
+Lighting is not done in tile memory with imageblocks / tile shaders. Related: #513.
+
+---
+
+## 525: No GPU render graph execution
+
++++
+status: new
+priority: medium
+kind: feature
+labels: area:renderer
+created: 2026-11-17T14:12:10Z
++++
+
+Workload scheduling and dependencies are not driven on the GPU with indirect dispatch and GPU synchronization.
+
+---
+
 ## Milestone: M001-Correctness
 
 +++
