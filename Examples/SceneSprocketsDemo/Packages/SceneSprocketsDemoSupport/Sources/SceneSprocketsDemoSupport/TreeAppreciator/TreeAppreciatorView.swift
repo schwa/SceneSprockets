@@ -4,44 +4,44 @@ import SceneSprocketsBlinnPhong
 import simd
 import SwiftUI
 
+// Each part of the screen is its own view, so a score or caption change updates that part, not both scenes (#493).
 public struct TreeAppreciatorView: View {
     @State private var model = GameModel()
     @State private var leftShadows = Shadows(intensity: 0.55, softness: 2)
     @State private var rightShadows = Shadows(intensity: 0.55, softness: 2)
-    // The overlay's sizes, scaled with the user's text size (#492).
-    @ScaledMetric(relativeTo: .largeTitle) private var introTitleSize = 54
-    @ScaledMetric(relativeTo: .title) private var endTitleSize = 32
-    @ScaledMetric(relativeTo: .title2) private var captionSize = 28
-    @ScaledMetric(relativeTo: .body) private var dotSize = 11
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     public init() {}
 
     public var body: some View {
         HStack(spacing: 1) {
-            treeView(side: .left)
-            treeView(side: .right)
+            TreeSceneView(model: model, side: .left, shadows: leftShadows)
+            TreeSceneView(model: model, side: .right, shadows: rightShadows)
         }
         .background(.white.opacity(0.7))
         .ignoresSafeArea()
-        .overlay(alignment: .top) { hud }
-        .overlay(alignment: .bottom) { captionView }
-        .overlay(alignment: .bottomTrailing) { buttons }
-        .overlay { intro }
-        .overlay(alignment: .bottom) { endCard }
+        .overlay(alignment: .top) { TreeHUD(model: model) }
+        .overlay(alignment: .bottom) { TreeCaption(model: model) }
+        .overlay(alignment: .bottomTrailing) { TreeButtonBar(model: model) }
+        .overlay { TreeIntroCard(model: model) }
+        .overlay(alignment: .bottom) { TreeEndCard(model: model) }
         .animation(.easeInOut(duration: 0.6), value: model.showsIntro)
         .animation(.easeInOut(duration: 0.6), value: model.isComplete)
         .animation(.easeInOut(duration: 0.8), value: model.caption)
         .fontDesign(.serif)
     }
+}
 
-    @ViewBuilder
-    private func treeView(side: Side) -> some View {
+private struct TreeSceneView: View {
+    @Bindable var model: GameModel
+    let side: Side
+    let shadows: Shadows
+
+    var body: some View {
         if let world = side == .left ? model.left : model.right {
             SceneView(world.sceneGraph, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: model.season.ambient)])
                 .sceneCameraControl()
                 .sceneDelegate(model.swayDriver)
-                .sceneShadows(side == .left ? leftShadows : rightShadows)
+                .sceneShadows(shadows)
                 .sceneCamera(matrix: $model.cameraMatrix, target: model.cameraTarget)
                 .sceneDefaultCamera(.perspective(zClip: 0.1 ... 1_000))
                 .onSceneTap(id: model.levelID) { point, viewport, _ in
@@ -58,8 +58,15 @@ public struct TreeAppreciatorView: View {
             }
         }
     }
+}
 
-    private var hud: some View {
+private struct TreeHUD: View {
+    let model: GameModel
+    // Scaled with the user's text size (#492).
+    @ScaledMetric(relativeTo: .body) private var dotSize = 11
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
         HStack(spacing: 18) {
             Text("\(model.season.name) · \(model.season.treeKind) · \(GameModel.levelNames[model.level % GameModel.levelNames.count])")
                 .pill()
@@ -84,13 +91,17 @@ public struct TreeAppreciatorView: View {
         }
         .padding(.top, 14)
     }
+}
 
-    @ViewBuilder
-    private var captionView: some View {
+private struct TreeCaption: View {
+    let model: GameModel
+    @ScaledMetric(relativeTo: .title2) private var size = 28
+
+    var body: some View {
         if let caption = model.caption {
             Text(caption)
                 .italic()
-                .font(.system(size: captionSize, design: .serif))
+                .font(.system(size: size, design: .serif))
                 .foregroundStyle(.white)
                 .shadow(color: .black.opacity(0.55), radius: 10)
                 .padding(.bottom, 70)
@@ -98,30 +109,40 @@ public struct TreeAppreciatorView: View {
                 .id(caption)
         }
     }
+}
 
-    private var buttons: some View {
+private struct TreeButtonBar: View {
+    @Bindable var model: GameModel
+
+    var body: some View {
         HStack(spacing: 8) {
-            Button("Hint") { model.hint() }
-            Button(model.isMuted ? "Sound: off" : "Sound: on") { model.isMuted.toggle() }
-            Button("New pair") { model.skipPair() }
+            Button("Hint", action: model.hint)
+            Button(model.isMuted ? "Sound: off" : "Sound: on") {
+                model.isMuted.toggle()
+            }
+            Button("New pair", action: model.skipPair)
         }
         .buttonStyle(PillButtonStyle())
         .padding(16)
     }
+}
 
-    @ViewBuilder
-    private var intro: some View {
+private struct TreeIntroCard: View {
+    let model: GameModel
+    @ScaledMetric(relativeTo: .largeTitle) private var titleSize = 54
+
+    var body: some View {
         if model.showsIntro {
             VStack(spacing: 14) {
                 Text("Tree Appreciator")
-                    .font(.system(size: introTitleSize, design: .serif))
+                    .font(.system(size: titleSize, design: .serif))
                 Text("Two trees grew from the same seed.\nThey are almost the same, but not quite.\n\nFind the places where they differ. Tap the spot on either tree.")
                     .multilineTextAlignment(.center)
                     .font(.title3)
                 Text("Drag to walk around. Scroll or pinch to step closer.")
                     .italic()
                     .font(.title3)
-                Button("Begin appreciating") { model.begin() }
+                Button("Begin appreciating", action: model.begin)
                     .buttonStyle(PillButtonStyle())
                     .padding(.top, 8)
             }
@@ -129,28 +150,37 @@ public struct TreeAppreciatorView: View {
             .transition(.opacity)
         }
     }
+}
 
-    @ViewBuilder
-    private var endCard: some View {
+private struct TreeEndCard: View {
+    let model: GameModel
+    @ScaledMetric(relativeTo: .title) private var titleSize = 32
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
         if model.isComplete {
             VStack(spacing: 10) {
                 Text("\(model.season.name) pair appreciated")
-                    .font(.system(size: endTitleSize, design: .serif))
+                    .font(.system(size: titleSize, design: .serif))
                 Text("\(model.differences.count) differences · \(model.squints) squints · \(model.hints) hints")
                 Text("+\(model.completionBonus) attentiveness")
                 Text(model.verdict).italic()
                 Text("Take a moment. Drag to admire them.")
                     .font(.callout)
-                Button("Next pair") {
-                    withAnimation { model.nextPair() }
-                }
-                .buttonStyle(PillButtonStyle())
-                .padding(.top, 6)
+                Button("Next pair", action: nextPair)
+                    .buttonStyle(PillButtonStyle())
+                    .padding(.top, 6)
             }
             .font(.title3)
             .card()
             .padding(.bottom, 110)
             .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom)))
+        }
+    }
+
+    private func nextPair() {
+        withAnimation {
+            model.nextPair()
         }
     }
 }

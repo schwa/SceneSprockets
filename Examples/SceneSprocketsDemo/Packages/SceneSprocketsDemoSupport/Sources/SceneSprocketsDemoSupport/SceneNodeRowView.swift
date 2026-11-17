@@ -9,19 +9,26 @@ struct SceneNodeRowView: View {
 
     var body: some View {
         if node.children.isEmpty {
-            row
+            SceneNodeRowLabel(node: node, scene: scene, selectedNodeID: $selectedNodeID)
         } else {
             DisclosureGroup {
                 ForEach(node.children) { child in
                     Self(node: child, scene: scene, selectedNodeID: $selectedNodeID)
                 }
             } label: {
-                row
+                SceneNodeRowLabel(node: node, scene: scene, selectedNodeID: $selectedNodeID)
             }
         }
     }
+}
 
-    private var row: some View {
+// The row itself: name, selection and the visibility button. Used in two places (#493).
+private struct SceneNodeRowLabel: View {
+    var node: SceneGraph.Node
+    var scene: DemoScene
+    @Binding var selectedNodeID: SceneGraph.Node.ID?
+
+    var body: some View {
         HStack {
             Button {
                 selectedNodeID = selectedNodeID == node.id ? nil : node.id

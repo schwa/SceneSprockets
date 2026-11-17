@@ -21,8 +21,8 @@ struct SceneTreeView: View {
                     Label(model.displayName(of: node), systemImage: node.systemImage)
                         .opacity(model.isHidden(node) ? 0.45 : 1)
                     Spacer()
-                    visibilityButton(node)
-                    lockButton(node)
+                    SceneTreeVisibilityButton(model: model, node: node)
+                    SceneTreeLockButton(model: model, node: node)
                 }
                 .tag(TreeItem.node(node.id))
                 // Drag a row onto a group to move it inside, or onto any other row to move it before that row (#222).
@@ -68,32 +68,38 @@ struct SceneTreeView: View {
         }
         #endif
     }
+}
 
-    // Faint when visible.
-    private func visibilityButton(_ node: SceneGraph.Node) -> some View {
+// Faint when visible. Its own view, so a visibility change updates this button, not the whole row (#493).
+private struct SceneTreeVisibilityButton: View {
+    let model: EditorModel
+    let node: SceneGraph.Node
+
+    var body: some View {
         let isVisible = model.isVisible(node)
-        return Button {
+        Button(isVisible ? "Hide" : "Show", systemImage: isVisible ? "eye" : "eye.slash") {
             model.setVisible(!isVisible, node)
-        } label: {
-            Image(systemName: isVisible ? "eye" : "eye.slash")
-                .foregroundStyle(isVisible ? .tertiary : .primary)
-                .accessibilityLabel(isVisible ? "Hide" : "Show")
         }
+        .labelStyle(.iconOnly)
+        .foregroundStyle(isVisible ? .tertiary : .primary)
         .buttonStyle(.plain)
         .help(isVisible ? "Hide" : "Show")
     }
+}
 
-    // Faint when unlocked, or when only an ancestor is locked.
-    private func lockButton(_ node: SceneGraph.Node) -> some View {
+// Faint when unlocked, or when only an ancestor is locked.
+private struct SceneTreeLockButton: View {
+    let model: EditorModel
+    let node: SceneGraph.Node
+
+    var body: some View {
         let isLockedItself = model.lockedNodes.contains(node.id)
         let isLocked = model.isLocked(node)
-        return Button {
+        Button(isLockedItself ? "Unlock" : "Lock", systemImage: isLocked ? "lock.fill" : "lock.open") {
             model.setLocked(!isLockedItself, node)
-        } label: {
-            Image(systemName: isLocked ? "lock.fill" : "lock.open")
-                .foregroundStyle(isLockedItself ? .primary : .tertiary)
-                .accessibilityLabel(isLockedItself ? "Unlock" : "Lock")
         }
+        .labelStyle(.iconOnly)
+        .foregroundStyle(isLockedItself ? .primary : .tertiary)
         .buttonStyle(.plain)
         .help(isLockedItself ? "Unlock" : "Lock")
     }

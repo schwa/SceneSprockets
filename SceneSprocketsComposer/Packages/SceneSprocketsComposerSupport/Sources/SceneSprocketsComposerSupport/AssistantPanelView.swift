@@ -92,15 +92,18 @@ struct AssistantPanelView: View {
                     .foregroundStyle(.secondary)
                 }
                 .collaborationMissingCredentialsPlaceholder {
-                    missingCredentials
+                    AssistantSignInPlaceholder()
                 }
                 .collaborationSessionCommands(store: store)
         } else {
-            missingCredentials
+            AssistantSignInPlaceholder()
         }
     }
+}
 
-    private var missingCredentials: some View {
+// Shown when no assistant is signed in; used in two places (#493).
+private struct AssistantSignInPlaceholder: View {
+    var body: some View {
         ContentUnavailableView {
             Label("Sign In to Use the Assistant", systemImage: "key.horizontal")
         } description: {

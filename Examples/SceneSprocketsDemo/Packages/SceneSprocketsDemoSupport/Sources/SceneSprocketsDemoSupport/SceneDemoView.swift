@@ -60,7 +60,7 @@ struct SceneDemoContentView: View {
     }
 
     var body: some View {
-        sceneContent
+        DemoSceneContent(scene: scene, delegate: delegate, isImmersive: isImmersive, isPaused: isPaused, cameraMatrix: $cameraMatrix, gizmo: gizmo, selectionOutline: selectionOutline)
         .onFrameTimingChange { frameTiming.statistics = $0 }
         .onChange(of: scene.selectedNodeID, initial: true) {
             gizmo.target = scene.selectedNode
@@ -114,10 +114,20 @@ struct SceneDemoContentView: View {
             DemoInspectorView(scene: scene)
         }
     }
+}
 
-    // While the immersive space shows the scene (#385), the window draws nothing, so the scene is drawn once.
-    @ViewBuilder
-    private var sceneContent: some View {
+// The demo's SceneView. While the immersive space shows the scene (#385), the window draws nothing, so the scene is
+// drawn once. Its own view, not a property of SceneDemoContentView (#493).
+private struct DemoSceneContent: View {
+    let scene: DemoScene
+    let delegate: DemoSceneDelegate
+    let isImmersive: Bool
+    let isPaused: Bool
+    @Binding var cameraMatrix: simd_float4x4?
+    let gizmo: TransformGizmo
+    let selectionOutline: SelectionOutline
+
+    var body: some View {
         if isImmersive {
             ContentUnavailableView("Showing in Immersive Space", systemImage: "visionpro", description: Text("Exit Immersive to see the scene here."))
         } else {

@@ -11311,12 +11311,14 @@ Found by the SwiftUI review (#475).
 ## 493: View sections written as computed properties or functions instead of View types
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:ui, effort:m
 milestone: M002-Performance
 created: 2026-11-17T06:52:28Z
+updated: 2026-11-17T14:21:03Z
+closed: 2026-11-17T14:21:03Z
 +++
 
 House rule (swiftui-house-rules, swiftui-specialist structure): a fragment with its own inputs or behavior, or one used twice, is a View struct, because a computed property or helper function shares its parent's update boundary. Remaining cases:
@@ -11330,6 +11332,8 @@ House rule (swiftui-house-rules, swiftui-specialist structure): a fragment with 
 MaterialSectionView is #488.
 
 Found by the SwiftUI review (#475).
+
+- `2026-11-17T14:21:03Z`: Done for every case the issue listed: TreeAppreciatorView's six sections are views (TreeSceneView, TreeHUD, TreeCaption, TreeButtonBar, TreeIntroCard, TreeEndCard), each with its own scaled sizes; SceneTreeView's eye and lock buttons are views and now use Button(_:systemImage:) with .labelStyle(.iconOnly); SceneNodeRowView's row, AssistantPanelView's sign-in placeholder and SceneDemoView's scene content are views. No test: structure only. The demo app, demo package and Composer build; Composer tests pass. Not checked in the running apps.
 
 ---
 
