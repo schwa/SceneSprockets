@@ -103,3 +103,28 @@ func skinnedMeshFollowsJointsAndIgnoresNodeTransform() throws {
     deformed = try #require(sceneGraph.meshEntries()[0].deformed(revision: sceneGraph.revision))
     #expect(deformed.mesh.positionBounds()?.min.y == 6.5)
 }
+
+// #476: hit testing (main thread) and rendering (render thread) both ask a morphed mesh for its CPU-deformed copy,
+// which is cached on the node.
+@Test
+func deformedIsSafeFromSeveralThreads() async throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let box = MetalMesh(mesh: .box(), device: device)
+    let node = SceneGraph.Node(content: .mesh(box, material: material))
+    node.morphTargets = [SceneGraph.MorphTarget(positionDeltas: Array(repeating: [0.3, 0, 0], count: box.vertexCount))]
+    node.morphWeights = [1]
+    let sceneGraph = SceneGraph(root: node)
+    nonisolated(unsafe) let entry = try #require(sceneGraph.meshEntries().first)
+    await withTaskGroup(of: Void.self) { group in
+        for thread in 0..<4 {
+            group.addTask {
+                for index in 0..<2_000 {
+                    // A new revision each time, so every call replaces the cached mesh.
+                    let revision = SceneGraph.Revision(structure: thread, transform: index)
+                    _ = entry.deformed(revision: revision)
+                }
+            }
+        }
+    }
+    #expect(entry.deformed(revision: SceneGraph.Revision(structure: 0, transform: 0)) != nil)
+}

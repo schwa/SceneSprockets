@@ -38,6 +38,8 @@ final class GameModel {
 
     private var streak = 0
     private var captionTask: Task<Void, Never>?
+    // Finishes the pair a moment after the last difference is found, unless a new pair starts first.
+    private var completionTask: Task<Void, Never>?
     @ObservationIgnored let clockStart = CACurrentMediaTime()
     @ObservationIgnored let swayDriver = SwayDriver()
 
@@ -68,6 +70,8 @@ final class GameModel {
     }
 
     func newPair() {
+        completionTask?.cancel()
+        completionTask = nil
         let seed = UInt32.random(in: 0...UInt32.max)
         let season = Season.all[(firstSeason + level) % Season.all.count].dressed(seed: seed)
         self.season = season
@@ -139,9 +143,11 @@ final class GameModel {
             line = line.replacingOccurrences(of: "{w}", with: season.tintWord)
             show(caption: line)
             if foundCount == differences.count {
-                Task {
+                completionTask = Task {
                     try? await Task.sleep(for: .seconds(1.4))
-                    complete()
+                    if !Task.isCancelled {
+                        complete()
+                    }
                 }
             }
         } else {

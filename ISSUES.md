@@ -10815,17 +10815,31 @@ Expected: a review of all SwiftUI code; each finding fixed or filed as its own i
 ## 476: Swift concurrency has not been reviewed against the swift-concurrency-pro skill
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: area:scenegraph, effort:m
 milestone: M002-Performance
 created: 2026-11-17T06:04:19Z
+updated: 2026-11-17T06:39:14Z
+closed: 2026-11-17T06:39:14Z
 +++
 
 Concurrency in the package (ScenePresenter, the main-actor scene graph, rendering on other threads, particle runtime locking, nonisolated(unsafe) uses, physics worker threads) has not had a review with the swift-concurrency-pro skill. Data races and isolation mistakes are found one at a time as bugs (for example #474, #442).
 
 Expected: a review of the package and demo code; each finding fixed or filed as its own issue.
+
+\- `2026-11-17T06:39:14Z`: Review done with the swift-concurrency-pro skill over Sources, the demo package and app, the tutorials and SceneSprocketsComposer.
+
+Fixed in this change:
+- NodeRenderCache.deformation was read and written from the main thread (hit testing, public MeshEntry.deformed) and the render thread (shadow casters, CPU fallback) with no lock; test deformedIsSafeFromSeveralThreads crashed with SIGSEGV 3 of 3 runs before the fix. Now locked.
+- Keynote Glass and PBR Extensions slide controls changed live PBR materials in place; they now replace the node's material.
+- TreeAppreciator GameModel: the delayed 'complete' task could fire after a new pair started; it is now cancelled.
+- SceneParticleSystem doc said only immersive spaces render off the main thread; SceneView does too.
+
+Filed: #478 (Shadows), #479 (PBR materials and renderer), #480 (particle runtime on the editing thread), #481 (two views on one scene), #482 (unchecked Sendable by convention), #483 (Swift 5 mode app targets), #484 (ComposerDocument observers). Already tracked: #442 (creating physics worlds on two threads).
+
+Checked and found sound: the 22 nonisolated(unsafe) static caches (all lock-guarded), BatchPlanCache, SceneTextMeshCache, CPUReadableCache, SceneViewFrames, ScenePresenter.Shared, ComposerDocument's off-main snapshot path, MissingRendererWarning, Revision's atomic counter, VideoTexture, the Presentation snapshot (values copied from nodes, #387/#389). No actors, continuations, AsyncStreams, DispatchQueues or MainActor.run in the code; Task.detached only in tests.
 
 ---
 
@@ -10843,6 +10857,153 @@ created: 2026-11-17T06:04:19Z
 The codebase has not had an architecture review with the improve-codebase-architecture skill. Coupling, shallow modules and logic spread over many places (for example demos listed twice, #115; each material renderer handling scene-wide techniques on its own, #409) are found only one at a time.
 
 Expected: a review that lists architecture problems; each one filed as its own issue.
+
+---
+
+## 478: Shadows object is changed on the main thread while the render thread uses it
+
++++
+status: open
+priority: medium
+kind: bug
+labels: area:renderer, effort:m
+milestone: M002-Performance
+created: 2026-11-17T06:39:06Z
++++
+
+Shadows is a class with public settings (intensity, softness, color, resolution, depthBias, ...) and private caches (shadow map, position and influence buffers, receiver masks, droppedLightCount). SceneView draws on a render thread (#393) and hands it the same Shadows instance the app holds. Nothing synchronizes the two sides.
+
+- The app changes settings on the main thread while Shadows.prepare reads them on the render thread. ShadowsDemo does this every frame (shadowRenderer.intensity, .softness, .color).
+- prepare writes droppedLightCount and the caches on the render thread; droppedLightCount is public and read on the main thread.
+
+Expected: changing shadow settings, or reading droppedLightCount, while a view renders is not a data race.
+
+Found by the swift-concurrency-pro review (#476).
+
+---
+
+## 479: Changing a PBR material or PBRMaterialRenderer property while SceneView renders is a data race
+
++++
+status: open
+priority: medium
+kind: bug
+labels: area:renderer, effort:m
+milestone: M002-Performance
+created: 2026-11-17T06:39:06Z
++++
+
+PBRSceneMaterial and PBRMaterial are classes, and mesh entries in a Presentation share them with the live scene. SceneView draws on a render thread (#393), which reads material.uniforms, renderState and textureTransforms every frame. An app that changes them in place on the main thread (for example material.pbrMaterial.uniforms.roughnessFactor = x) races that read. ScenePresenter's documentation says so, but there is no other way to change one parameter of a PBR material than to build a new material and replace the node's content, which rebuilds the PBR model.
+
+PBRMaterialRenderer has the same problem: environment, environmentIntensity and exposure are public vars read on the render thread, and its caches (cachedModels, fadedMaterials, transmission targets) are written there with no lock.
+
+Blinn-Phong, toon and shader materials are structs, copied into the snapshot, and do not have this problem.
+
+The keynote's Glass and PBR Extensions slide controls did this; they now replace the material instead.
+
+Expected: a supported, race-free way to change PBR material parameters and renderer settings while a view renders.
+
+Found by the swift-concurrency-pro review (#476).
+
+---
+
+## 480: SceneParticleSystem.runtime() is used on the editing thread while the render thread simulates
+
++++
+status: open
+priority: medium
+kind: bug
+labels: area:renderer, effort:m
+milestone: M002-Performance
+created: 2026-11-17T06:39:06Z
++++
+
+SceneParticleSystem.runtime() is public and returns the GPU runtime that the render thread simulates and draws. The lock inside only covers fetching it. BurningFox (keynote Mesh Emitters slide) calls it on the main thread every frame and then sets emitter.isEmitting and emitter.mesh, and calls EmitterMesh.setDeformedPositions, while SceneView's render thread runs runtime.simulate and runtime.render on the same emitters.
+
+Also, renderRuntime reads storedRuntime without the lock that runtime() takes when it creates it.
+
+There is no editing-side way to turn single emitters on and off or to give an emitter a mesh, so a demo that needs either has to reach into the runtime.
+
+Related: #474 (fox particles did not start reliably).
+
+Found by the swift-concurrency-pro review (#476).
+
+---
+
+## 481: Two views that render the same scene, or share a renderer object, race on shared caches
+
++++
+status: open
+priority: low
+kind: bug
+labels: area:renderer, effort:l
+milestone: M002-Performance
+created: 2026-11-17T06:39:06Z
++++
+
+Each SceneView has its own render thread, and a visionOS immersive space has another (#392). When two of them draw the same scene graph, or are given the same renderer objects, at the same time, these are written from two threads with no synchronization:
+
+- NodeRenderCache.gpuDeformation and GPUDeformationState.current, per node. Both renderers also pick the output slot from their own submission index, so they can write the same vertex buffers in the same frame.
+- PBRMaterialRenderer's caches and Shadows' caches, when the same instance is given to both views.
+- AmbientOcclusionTargets and the particle scene-depth texture, which are shared process-wide by size, so two views of the same size write the same textures.
+
+SceneParticleSystem already has a lock for this case (#392). The demo avoids the case by blanking its window while the immersive space is open.
+
+Found by the swift-concurrency-pro review (#476).
+
+---
+
+## 482: Transaction.Recorder and ArchiveContext are @unchecked Sendable with no synchronization
+
++++
+status: open
+priority: low
+kind: bug
+labels: area:scenegraph, effort:s
+milestone: M002-Performance
+created: 2026-11-17T06:39:06Z
++++
+
+Both types have mutable properties and no lock; each is safe only by a rule in a comment.
+
+- SceneGraph.Transaction.Recorder is a task-local value. A Task created inside Transaction.animate's body inherits it. If that task changes a node later, while any transaction is active, it appends to the old recorder from another thread, and the change is recorded but never animated.
+- ArchiveContext is public and documented as 'one write or read, on one thread'. Nothing enforces it for material and mesh coders that receive it.
+
+Found by the swift-concurrency-pro review (#476).
+
+---
+
+## 483: Demo and tutorial app targets build in Swift 5 language mode
+
++++
+status: open
+priority: low
+kind: task
+labels: area:build, effort:xs
+milestone: M002-Performance
+created: 2026-11-17T06:39:06Z
++++
+
+SceneSprocketsDemo.xcodeproj and SceneSprocketTutorials.xcodeproj set SWIFT_VERSION = 5.0 (with SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor). The packages and SceneSprocketsComposer build in Swift 6 mode. In Swift 5 mode, data-race diagnostics in the app targets' own code are warnings at most, so the tutorials that users copy from are not checked the way the rest of the repo is.
+
+Found by the swift-concurrency-pro review (#476).
+
+---
+
+## 484: ComposerDocument never removes its undo notification observers
+
++++
+status: open
+priority: low
+kind: bug
+labels: area:composer, effort:xs
+milestone: M002-Performance
+created: 2026-11-17T06:39:06Z
++++
+
+ComposerDocument.attach adds three NotificationCenter block observers (undo group closed, undo, redo) and stores the tokens in undoObservers, but nothing removes them. The blocks capture self weakly, so they do nothing after the document goes away, but each opened document leaves three observers registered for the life of the app, and each runs on every undo notification from any document.
+
+Found by the swift-concurrency-pro review (#476).
 
 ---
 

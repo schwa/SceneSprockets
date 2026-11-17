@@ -25,6 +25,7 @@ extension SceneGraph.MeshEntry {
         if let cache = renderCache.deformation, cache.revision == revision {
             return Deformed(mesh: cache.mesh, modelMatrix: modelMatrix)
         }
+        // Outside the lock: two threads may both deform the mesh, and the last one's copy is kept.
         guard let deformedMesh = mesh.deformed(morphTargets: hasMorphs ? morphTargets : [], weights: morphWeights, jointMatrices: skin?.jointMatrices(), skinVertices: skinVertices) else {
             return nil
         }
@@ -33,10 +34,19 @@ extension SceneGraph.MeshEntry {
     }
 }
 
-// Deformation results that only rendering reads and writes, one per node.
+// Deformation results, one per node.
 final class NodeRenderCache {
-    var deformation: (revision: SceneGraph.Revision, mesh: MetalMesh)?
-    // See GPUDeformation.swift.
+    private let lock = NSLock()
+    private var storedDeformation: (revision: SceneGraph.Revision, mesh: MetalMesh)?
+
+    // The CPU-deformed mesh. Locked: hit testing asks for it on the thread that edits the scene while the render
+    // thread asks for it too (#476).
+    var deformation: (revision: SceneGraph.Revision, mesh: MetalMesh)? {
+        get { lock.withLock { storedDeformation } }
+        set { lock.withLock { storedDeformation = newValue } }
+    }
+
+    // See GPUDeformation.swift. Only the render thread reads and writes it.
     var gpuDeformation: GPUDeformationState?
 }
 

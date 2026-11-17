@@ -115,8 +115,9 @@ public final class KeynoteDemo: DemoScene {
     private var colorLightPivots: [SceneGraph.Node] = []
     private var shadowSun: SceneGraph.Node?
     private var alphaDisc: SceneGraph.Node?
-    private var glassMaterials: [(material: PBRSceneMaterial, roughness: Float)] = []
-    private var pbrExtensionMaterials: [(material: PBRSceneMaterial, base: PBRMaterialUniforms)] = []
+    // Each node with the material it was built with, which the slide's controls copy and change.
+    private var glassPieces: [(node: SceneGraph.Node, base: PBRMaterial)] = []
+    private var pbrExtensionBases: [(node: SceneGraph.Node, base: PBRMaterial)] = []
     private var rimNodes: [SceneGraph.Node] = []
     private var fireflyTrails: [(node: SceneGraph.Node, system: SceneParticleSystem)] = []
     private var hopCubes: [SceneGraph.Node] = []
@@ -817,19 +818,31 @@ public final class KeynoteDemo: DemoScene {
             }
         case "Glass":
             if changed("Frosting", "Thickness", "Transmission") {
-                for (material, roughness) in glassMaterials {
-                    material.pbrMaterial.uniforms.roughnessFactor = min(roughness + self[value: "Frosting"], 1)
-                    material.pbrMaterial.uniforms.thicknessFactor = self[value: "Thickness"]
-                    material.pbrMaterial.uniforms.transmissionFactor = self[value: "Transmission"]
+                for (node, base) in glassPieces {
+                    setMaterial(of: node, from: base) { uniforms in
+                        uniforms.roughnessFactor = min(uniforms.roughnessFactor + self[value: "Frosting"], 1)
+                        uniforms.thicknessFactor = self[value: "Thickness"]
+                        uniforms.transmissionFactor = self[value: "Transmission"]
+                    }
                 }
             }
         case "PBR Extensions":
             if changed("Sheen", "Diffuse Transmission", "Clearcoat", "Iridescence") {
-                for (material, base) in pbrExtensionMaterials {
-                    material.pbrMaterial.uniforms.sheenColorFactor = self[flag: "Sheen"] ? base.sheenColorFactor : .zero
-                    material.pbrMaterial.uniforms.diffuseTransmissionFactor = self[flag: "Diffuse Transmission"] ? base.diffuseTransmissionFactor : 0
-                    material.pbrMaterial.uniforms.clearcoatFactor = self[flag: "Clearcoat"] ? base.clearcoatFactor : 0
-                    material.pbrMaterial.uniforms.iridescenceFactor = self[flag: "Iridescence"] ? base.iridescenceFactor : 0
+                for (node, base) in pbrExtensionBases {
+                    setMaterial(of: node, from: base) { uniforms in
+                        if !self[flag: "Sheen"] {
+                            uniforms.sheenColorFactor = .zero
+                        }
+                        if !self[flag: "Diffuse Transmission"] {
+                            uniforms.diffuseTransmissionFactor = 0
+                        }
+                        if !self[flag: "Clearcoat"] {
+                            uniforms.clearcoatFactor = 0
+                        }
+                        if !self[flag: "Iridescence"] {
+                            uniforms.iridescenceFactor = 0
+                        }
+                    }
                 }
             }
         case "Custom Shaders":
@@ -884,6 +897,21 @@ public final class KeynoteDemo: DemoScene {
         default:
             break
         }
+    }
+
+    // Gives the node a copy of `base` with changed uniforms. A material that is being drawn must not change in place:
+    // the render thread reads it (#476).
+    private func setMaterial(of node: SceneGraph.Node, from base: PBRMaterial, _ change: (inout PBRMaterialUniforms) -> Void) {
+        guard case let .mesh(mesh, _, castsShadow, receivesShadow) = node.content else {
+            return
+        }
+        var uniforms = base.uniforms
+        change(&uniforms)
+        guard let material = try? PBRMaterial(name: base.name, uniforms: uniforms, doubleSided: base.doubleSided, textureBindings: base.textureBindings, device: demoDevice) else {
+            return
+        }
+        material.renderState = base.renderState
+        node.content = .mesh(mesh, materials: [PBRSceneMaterial(material)], castsShadow: castsShadow, receivesShadow: receivesShadow)
     }
 
     // Scales every light under `node` from its built intensity, and sets their range if given.
@@ -1697,8 +1725,8 @@ public final class KeynoteDemo: DemoScene {
             let glass = PBRSceneMaterial(baseColor: [1, 1, 1], metallic: 0, roughness: roughness)
             glass.pbrMaterial.uniforms.transmissionFactor = 1
             glass.pbrMaterial.uniforms.thicknessFactor = 0.6
-            glassMaterials.append((glass, roughness))
             let node = slide.addChild(SceneGraph.Node(shape: shape, material: glass, transform: .init(translation: [x, 1.6, 1])))
+            glassPieces.append((node, glass.pbrMaterial))
             node.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([0.3, 1, 0]), duration: 10)))
         }
     }
@@ -2093,12 +2121,9 @@ public final class KeynoteDemo: DemoScene {
             (bean, pearl, [3.6, 1.4, 0])
         ]
         var generator = SystemRandomNumberGenerator()
-        // The pearl is shared by two pieces; its controls should change it once.
-        for material in [pieces[0].1, pieces[1].1, pieces[2].1] {
-            pbrExtensionMaterials.append((material, material.pbrMaterial.uniforms))
-        }
         for (mesh, material, position) in pieces {
             let node = slide.addChild(SceneGraph.Node(label: material.pbrMaterial.name, transform: .init(translation: position), content: .mesh(mesh, material: material)))
+            pbrExtensionBases.append((node, material.pbrMaterial))
             let axis = simd_normalize(SIMD3<Float>(.random(in: -1...1, using: &generator), .random(in: -1...1, using: &generator), .random(in: -1...1, using: &generator)))
             pbrExtensionPieces.append((node, axis, .random(in: 0.2...0.5, using: &generator)))
         }

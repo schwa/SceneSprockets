@@ -10,8 +10,8 @@ import simd
 ///
 /// Two sides use it: the thread that edits the scene graph (``system``, ``restart()``, `advanceParticles(by:)`) and the
 /// thread that renders it, which alone touches the GPU runtime. ``SceneGraph/presentation()`` hands the edits over as
-/// a ``Frame`` (#390). ``runtime()`` and ``time`` belong to the rendering side: when rendering on another thread, as in
-/// a visionOS immersive space, do not use them from the editing thread.
+/// a ``Frame`` (#390). ``runtime()`` and ``time`` belong to the rendering side. `SceneView` and visionOS immersive
+/// spaces render on another thread, so do not use them from the editing thread there.
 public final class SceneParticleSystem {
     /// The MetalSprocketsParticles description of the emitters. Changes apply on the next frame.
     public var system: ParticleSystem {
