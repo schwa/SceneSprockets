@@ -65,3 +65,26 @@ func multipleChangesAnimateFromFirstOldValue() {
     graph.advanceActions(by: 0.5)
     #expect(simd_distance(node.transform.translation, [1, 0, 0]) < 1e-4)
 }
+
+// #482: a Task made inside the transaction's body inherits its recorder. Its changes run on another thread while the
+// body still records; the race on the recorder only shows with the thread sanitizer (--sanitize=thread).
+@Test
+func transactionRecorderIsSafeFromATaskStartedInItsBody() async {
+    let nodes = (0..<200).map { _ in SceneGraph.Node() }
+    let others = (0..<200).map { _ in SceneGraph.Node() }
+    nonisolated(unsafe) let unsafeOthers = others
+    var task: Task<Void, Never>?
+    SceneGraph.Transaction.animate(duration: 1) {
+        task = Task {
+            for node in unsafeOthers {
+                node.transform.translation = [1, 0, 0]
+            }
+        }
+        for node in nodes {
+            node.transform.translation = [2, 0, 0]
+        }
+    }
+    await task?.value
+    // Changes the recorder sees after the transaction started apply at once.
+    #expect(others.allSatisfy { $0.transform.translation == [1, 0, 0] })
+}

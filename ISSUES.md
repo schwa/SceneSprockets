@@ -10994,12 +10994,14 @@ Found by the swift-concurrency-pro review (#476).
 ## 482: Transaction.Recorder and ArchiveContext are @unchecked Sendable with no synchronization
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:scenegraph, effort:s
 milestone: M002-Performance
 created: 2026-11-17T06:39:06Z
+updated: 2026-11-17T13:33:58Z
+closed: 2026-11-17T13:33:58Z
 +++
 
 Both types have mutable properties and no lock; each is safe only by a rule in a comment.
@@ -11008,6 +11010,8 @@ Both types have mutable properties and no lock; each is safe only by a rule in a
 - ArchiveContext is public and documented as 'one write or read, on one thread'. Nothing enforces it for material and mesh coders that receive it.
 
 Found by the swift-concurrency-pro review (#476).
+
+- `2026-11-17T13:33:58Z`: Fixed. Transaction.Recorder records only on the thread that runs the transaction's body and only until the animation starts; its state is behind a lock. A Task started in the body (it inherits the task-local recorder) no longer has its changes reset and re-animated by the transaction: they apply at once. Test transactionRecorderIsSafeFromATaskStartedInItsBody: before the fix it failed its expectation, and --sanitize=thread reported races in recordTransform. ArchiveContext keeps its one-thread rule (it is Sendable only because coders carry it in user info); debug builds now assert it in warn and addFile. No test for that assertion: it would trap the test process.
 
 ---
 

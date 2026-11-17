@@ -1,3 +1,4 @@
+import Foundation
 import GeometryLite3D
 import simd
 import Synchronization
@@ -55,27 +56,51 @@ extension SceneGraph {
 }
 
 extension SceneGraph.Transaction {
-    // Collects the first old value of each changed property. Only used on the thread that runs the transaction.
+    // Collects the first old value of each changed property made by the transaction's body. A Task started in the body
+    // inherits the recorder (it is a task-local value) but runs on another thread; its changes are not recorded and
+    // apply at once (#482).
     final class Recorder: @unchecked Sendable {
+        // The thread that runs the body. Only it records; set in init, then only read.
+        private let thread = Thread.current
+        private let lock = NSLock()
+        private var isStarted = false
         private var transforms: [(node: SceneGraph.Node, from: Transform3D)] = []
         private var morphWeights: [(node: SceneGraph.Node, from: [Float])] = []
 
+        private var isRecordingHere: Bool {
+            Thread.current == thread
+        }
+
         func recordTransform(of node: SceneGraph.Node, oldValue: Transform3D) {
-            guard !transforms.contains(where: { $0.node === node }) else {
+            guard isRecordingHere else {
                 return
             }
-            transforms.append((node, oldValue))
+            lock.withLock {
+                guard !isStarted, !transforms.contains(where: { $0.node === node }) else {
+                    return
+                }
+                transforms.append((node, oldValue))
+            }
         }
 
         func recordMorphWeights(of node: SceneGraph.Node, oldValue: [Float]) {
-            guard !morphWeights.contains(where: { $0.node === node }) else {
+            guard isRecordingHere else {
                 return
             }
-            morphWeights.append((node, oldValue))
+            lock.withLock {
+                guard !isStarted, !morphWeights.contains(where: { $0.node === node }) else {
+                    return
+                }
+                morphWeights.append((node, oldValue))
+            }
         }
 
         // Puts every changed property back to its old value and animates it to the new one.
         func start(duration: Float, timingMode: SceneGraph.Action.TimingMode, completion: (() -> Void)?) {
+            let (transforms, morphWeights) = lock.withLock {
+                isStarted = true
+                return (self.transforms, self.morphWeights)
+            }
             let total = transforms.count + morphWeights.count
             guard total > 0 else {
                 completion?()

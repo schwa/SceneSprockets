@@ -295,8 +295,17 @@ private extension Optional {
 ///
 /// The context holds the archive's types, the textures that are already written or read, the package files, and the
 /// warnings. Materials and other coded values get it from their coder's ``Swift/Encoder/sceneArchive`` or
-/// ``Swift/Decoder/sceneArchive``. A context exists for one write or read, on one thread.
+/// ``Swift/Decoder/sceneArchive``. A context exists for one write or read, on one thread: the thread that made it.
+/// Debug builds stop with an assertion when it is changed on another thread.
 public final class ArchiveContext: @unchecked Sendable {
+    // Unchecked Sendable because coders carry it in their user info, which must be Sendable. It has no lock: the rule
+    // is one thread, checked in debug builds (#482).
+    private let thread = Thread.current
+
+    private func assertOwningThread() {
+        assert(Thread.current == thread, "ArchiveContext is used on another thread than the one that made it")
+    }
+
     // Where to read from; nil while capturing, which only encodes.
     let directory: URL?
     let archive: Archive
@@ -315,6 +324,7 @@ public final class ArchiveContext: @unchecked Sendable {
 
     /// Adds a file to the package at a path.
     public func addFile(_ path: String, data: Data) {
+        assertOwningThread()
         files[path] = data
     }
 
@@ -428,6 +438,7 @@ public final class ArchiveContext: @unchecked Sendable {
 
     /// Adds a message to ``warnings``.
     public func warn(_ message: String) {
+        assertOwningThread()
         warnings.append(message)
     }
 
