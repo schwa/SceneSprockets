@@ -499,8 +499,30 @@ public final class EditorModel {
         return true
     }
 
-    // The node being dragged in the scene tree. Drag payloads are strings, so the node itself stays here.
-    @ObservationIgnored weak var draggedNode: SceneGraph.Node?
+    // The node being dragged in the scene tree, and the payload its drag carries. Drag payloads are strings, so the
+    // node itself stays here. A drag that is cancelled leaves them set, so a drop moves the node only when it carries
+    // this exact payload, not any text (#490).
+    @ObservationIgnored private weak var draggedNode: SceneGraph.Node?
+    @ObservationIgnored private var dragPayload: String?
+
+    // Starts a tree drag of `node` and returns its payload.
+    func beginTreeDrag(_ node: SceneGraph.Node) -> String {
+        let payload = "scenesprockets-node:\(UUID().uuidString)"
+        draggedNode = node
+        dragPayload = payload
+        return payload
+    }
+
+    // A drop of `items` on a tree row. True when it was this model's drag and the node moved.
+    @discardableResult
+    func dropTreeItems(_ items: [String], onto target: SceneGraph.Node) -> Bool {
+        guard let dragPayload, items.contains(dragPayload), let node = draggedNode else {
+            return false
+        }
+        draggedNode = nil
+        self.dragPayload = nil
+        return drop(node, onto: target)
+    }
 
     // A tree drop on `target` (#222): into it when it is a group (an empty node with children), otherwise just before
     // it.

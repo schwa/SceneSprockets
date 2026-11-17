@@ -11194,12 +11194,14 @@ Found by the SwiftUI review (#475).
 ## 490: Composer: a cancelled drag in the scene tree leaves a node that the next text drop moves
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:composer, effort:s
 milestone: M002-Performance
 created: 2026-11-17T06:52:28Z
+updated: 2026-11-17T13:46:38Z
+closed: 2026-11-17T13:46:38Z
 +++
 
 SceneTreeView drags a row by putting the node in EditorModel.draggedNode and using the node's display name (a String) as the drag payload. The drop handler takes any String and moves model.draggedNode. draggedNode is cleared only by a drop on a row.
@@ -11212,6 +11214,8 @@ Expected: nothing moves.
 Actual, from the code: the node from step 1 is moved to the row.
 
 Found by the SwiftUI review (#475).
+
+- `2026-11-17T13:46:38Z`: Fixed. Each tree drag carries a unique payload (scenesprockets-node:<UUID>), and EditorModel.dropTreeItems(_:onto:) moves the dragged node only when the dropped strings contain that payload. Other text, or a drop after a cancelled drag, moves nothing. Test dropOfOtherTextMovesNothing could not compile before (new API). The drop still accepts any String type, so dropping other text onto the tree is accepted by SwiftUI and then ignored. Not checked in the running app.
 
 ---
 
