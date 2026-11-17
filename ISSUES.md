@@ -1814,12 +1814,13 @@ kind: enhancement
 labels: effort:l, area:renderer
 milestone: M003-Rendering
 created: 2026-10-15T02:28:07Z
-updated: 2026-11-17T18:07:08Z
+updated: 2026-11-17T18:25:50Z
 +++
 
 SceneGraphShadows is one global setting. Missing: shadowColor (today only intensity toward black), soft shadows (shadowRadius, shadowSampleCount), cascades, and per-light castsShadow, resolution and bias. See docs/SceneKitComparison.md.
 
 - `2026-10-15T03:04:56Z`: Done: SceneGraphShadows.color (shadow tint) and softness (PCF radius). Left: cascades and per-light castsShadow/resolution/bias (ties into the #71 decision).
+- `2026-11-17T18:25:51Z`: From #502 (closed): when adding cascades, check cascade transitions (blend or seam between cascades) and that bias and PCF softness scale per cascade, since texel size changes between cascades.
 
 ---
 
@@ -1936,12 +1937,13 @@ kind: enhancement
 labels: effort:l, area:renderer
 milestone: M003-Rendering
 created: 2026-10-15T02:28:08Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-17T18:26:19Z
 +++
 
 SceneView/SceneGraphElement have no multisampling, no debug overlays or statistics, and no way to build pipelines/PBR models ahead of time (like SCNSceneRenderer.prepare). SceneViewDelegate has only two callbacks: there are none for constraints applied or will/did render. See docs/SceneKitComparison.md.
 
 - `2026-10-15T03:09:12Z`: Done: SceneViewDelegate.sceneView(didApplyConstraintsAtTime:), SceneView.Options.showsStatistics overlay, SceneGraph.statistics. Not verified on screen (did not run the app). Left: MSAA (the shadow and fog passes read depth, so they would need resolved or multisample-aware depth) and a prepare step.
+- `2026-11-17T18:26:19Z`: From #503 (closed): when adding MSAA, verify the resolve with transparent draws, alpha-to-coverage for alpha-masked materials, and that depth-reading passes (shadow mask, fog, AO, soft particles) use resolved or multisample-aware depth.
 
 ---
 
@@ -10153,9 +10155,9 @@ status: open
 priority: medium
 kind: bug
 labels: area:physics, effort:m, investigate, deferred
-milestone: M001-Correctness
+milestone: M006-Physics-and-Scene
 created: 2026-11-17T01:25:42Z
-updated: 2026-11-17T18:08:50Z
+updated: 2026-11-17T18:31:53Z
 +++
 
 The physics test process sometimes crashes on CI. The crash is intermittent: the next CI run passed, and 3 local runs passed.
@@ -10188,6 +10190,8 @@ Bad pointer dereference at 0x9, Thread 3:
 4 changingPhysicsBodyKeepsItsMotion() (the test that happened to be creating a world)
 
 Likely cause: joltc keeps a process-wide map from JPH::PhysicsSystem* to JPH_PhysicsSystem*, and JPH_PhysicsSystem_Create inserts into it without a lock. Swift Testing runs tests in parallel, so two tests creating physics worlds at once race on the map. Any app creating physics worlds on more than one thread would hit the same race. joltc ships as a binary in SwiftJolt, so the map itself was not inspected.
+
+- `2026-11-17T18:31:53Z`: Root cause is in SwiftJolt/joltc: filed SwiftJolt#104 (concurrent JPH_PhysicsSystem_Create). Moved to M006 to wait for it.
 
 ---
 
@@ -10973,6 +10977,8 @@ Question: which way should live material changes go?
 (a) The editing thread captures changed uniforms each frame into the Presentation and the PBR renderer passes them as pose.materialUniforms (needs a way to mark a material changed, for example an update method on PBRSceneMaterial that apps and the glTF animation use instead of writing pbrMaterial.uniforms), or
 (b) PBRMaterial itself becomes safe to change (a lock or versioned values in MetalSprocketsPBR).
 
+- `2026-11-17T18:35:26Z`: Auto-fixer run (M002): re-checked, still punting. Unblocker: pick (a) per-frame captured materialUniforms via an update method on PBRSceneMaterial, or (b) make PBRMaterial thread-safe in MetalSprocketsPBR.
+
 ---
 
 ## 480: SceneParticleSystem.runtime() is used on the editing thread while the render thread simulates
@@ -11431,18 +11437,20 @@ Glass, liquids, transparent solids. (Moved from SceneSprocketsAddOns #60.)
 ## 499: Alpha masking, alpha blending, and double-sided materials
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:renderer, effort:m
 milestone: M001-Correctness
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-17T18:10:56Z
+updated: 2026-11-17T18:25:50Z
+closed: 2026-11-17T18:25:50Z
 +++
 
 Alpha masking, alpha blending, and double-sided materials are not all handled correctly. (Moved from SceneSprocketsAddOns #62.)
 
 - `2026-11-17T18:10:56Z`: Audited: PBR alpha modes and doubleSided (MetalSprocketsPBR PBRDrawPlan: cull none for doubleSided, back-face pre-pass for transmissive), Blinn-Phong transparency (front/back two-pass for cullMode none), ShaderMaterial blending, and the shadow pass. Found one concrete defect, filed as #541: shadow casters ignore alpha, so masked and transparent materials cast solid shadows. Punting the rest: the issue names no specific failure for blending or double-sided. Unblocker: a scene or asset that renders wrong, or a list of the cases that should be checked.
+- `2026-11-17T18:25:50Z`: Closing: audit found no blending or double-sided defects beyond #541 (shadows ignore alpha) and the Blinn-Phong back-face lighting fixed in #500.
 
 ---
 
@@ -11486,48 +11494,60 @@ HDR rendering, exposure, tone mapping, and color-space correctness. (Moved from 
 ## 502: Shadow bias, cascade transitions, and shadow filtering
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:renderer, effort:m
 milestone: M001-Correctness
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-17T18:02:34Z
+updated: 2026-11-17T18:25:50Z
+closed: 2026-11-17T18:25:50Z
 +++
 
 Shadow bias, cascade transitions, and shadow filtering. (Moved from SceneSprocketsAddOns #65.)
+
+- `2026-11-17T18:22:43Z`: Audited: shadow bias (depthBias, slope scale scaled by PCF softness per #366, orthographic texel depth offset), PCF filtering in sliceShadow (box kernel, outside-map and outside-depth-range return lit), and multi-slice point-light shadows. No concrete defect found. There are no cascades yet (tracked in #88), so cascade transitions cannot be checked. Punting. Unblocker: a scene showing acne, peter-panning or filtering artifacts, or decide this waits for #88 and depends on it.
+- `2026-11-17T18:25:50Z`: Closing: audit found no bias or filtering defects. Cascade transitions moved to #88.
 
 ---
 
 ## 503: MSAA resolve behavior with transparency and alpha-to-coverage
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:renderer, effort:m
 milestone: M001-Correctness
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-17T18:02:34Z
+updated: 2026-11-17T18:26:19Z
+closed: 2026-11-17T18:26:19Z
 +++
 
 MSAA resolve behavior, including transparency and alpha-to-coverage. (Moved from SceneSprocketsAddOns #66.)
+
+- `2026-11-17T18:22:58Z`: Audited: SceneView and SceneGraphElement have no MSAA path (the only resolve handling is the soft-particle guard in SceneGraphRenderer that skips when a resolve texture exists, and AO/selection passes that clear resolve targets). With no multisampling, MSAA resolve and alpha-to-coverage behavior cannot be checked. Punting; now depends on #95 (which tracks adding MSAA). Unblocker: land MSAA in #95, then this becomes the verification pass.
+- `2026-11-17T18:26:19Z`: Closing: there is no MSAA yet. Verification moved to #95.
 
 ---
 
 ## 504: Texture mipmapping, anisotropic filtering, and compressed formats
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:renderer, effort:m
 milestone: M001-Correctness
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-17T18:02:34Z
+updated: 2026-11-17T18:27:51Z
+closed: 2026-11-17T18:27:51Z
 +++
 
 Texture mipmapping, anisotropic filtering, and compressed texture formats. (Moved from SceneSprocketsAddOns #67.)
+
+- `2026-11-17T18:23:23Z`: Audited: image textures load with generateMipmaps (MaterialTexture, ModelIOSceneGraph) and the default samplers use linear mip filtering; archives keep all mip levels for raw/compressed (.bin, BC/ASTC block layouts) and regenerate mips for PNG. Found no broken behavior. Gap: no sampler anywhere sets maxAnisotropy (Blinn-Phong default sampler, ModelIOSceneGraph, MetalSprocketsPBR PBRMaterial/PBRRenderer, MetalSprocketsGLTF), so surfaces at grazing angles blur. Punting because turning it on is a quality/performance default across three packages. Unblocker: decide the default (e.g. 8 or 16) and whether it should be a renderer setting.
+- `2026-11-17T18:27:52Z`: Closing for now: mipmaps and compressed formats work; only anisotropic filtering is missing, which mainly shows on large ground textures at grazing angles. Reopen if it bites (e.g. terrain in M005-Big-World).
 
 ---
 
@@ -12165,11 +12185,12 @@ Fog does not scatter light through participating media. (Moved from SceneSprocke
 
 +++
 status: open
-priority: medium
+priority: low
 kind: bug
 labels: area:renderer, effort:l
-milestone: M001-Correctness
+milestone: M003-Rendering
 created: 2026-11-17T18:10:56Z
+updated: 2026-11-17T18:28:40Z
 +++
 
 Shadow casters are drawn as position-only geometry (Shadows.swift, caster(for:)), with no texture coordinates and no material alpha. So a PBR material with alphaMode MASK (foliage, fences) or BLEND, or a Blinn-Phong material with opacity < 1 or diffuse-texture alpha, casts a solid shadow of its whole mesh.
@@ -12183,14 +12204,17 @@ Actual: the whole mesh casts a solid shadow.
 
 Found while auditing #499.
 
+- `2026-11-17T18:25:50Z`: Split out of #499 (closed).
+
 ---
 
 ## Milestone: M001-Correctness
 
 +++
-status: open
+status: closed
 created: 2026-11-16T20:12:42Z
-updated: 2026-11-17T18:08:04Z
+updated: 2026-11-17T18:32:37Z
+closed: 2026-11-17T18:32:37Z
 +++
 
 Bugs and wrong behavior.
