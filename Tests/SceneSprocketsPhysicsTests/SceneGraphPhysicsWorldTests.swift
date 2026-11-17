@@ -62,6 +62,35 @@ func stepOnlyChangesTransformRevision() throws {
     #expect(graph.revision.transform != before.transform)
 }
 
+// #417: node(of:) finds a body's node through an index, kept in step as bodies are made, rebuilt and removed.
+@Test
+func nodeOfBodyFollowsTheGraph() throws {
+    let root = SceneGraph.Node()
+    let a = root.addChild(SceneGraph.Node())
+    a.physicsBody = .init(type: .dynamic, shape: .sphere(radius: 0.5))
+    let b = root.addChild(SceneGraph.Node(transform: .init(translation: [3, 0, 0])))
+    b.physicsBody = .init(type: .static, shape: .box(size: [1, 1, 1]))
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+    physics.sync()
+    #expect(physics.node(of: try #require(physics.body(of: a))) === a)
+    #expect(physics.node(of: try #require(physics.body(of: b))) === b)
+
+    // Static to dynamic rebuilds the body.
+    let oldB = try #require(physics.body(of: b))
+    b.physicsBody?.type = .dynamic
+    physics.sync()
+    let newB = try #require(physics.body(of: b))
+    #expect(physics.node(of: newB) === b)
+    if newB != oldB {
+        #expect(physics.node(of: oldB) == nil)
+    }
+
+    let bodyA = try #require(physics.body(of: a))
+    a.removeFromParent()
+    physics.sync()
+    #expect(physics.node(of: bodyA) == nil || physics.node(of: bodyA) === b)
+}
+
 @Test
 func bodiesFollowTheGraph() throws {
     let root = SceneGraph.Node()

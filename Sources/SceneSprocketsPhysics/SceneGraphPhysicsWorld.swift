@@ -31,6 +31,8 @@ public final class SceneGraphPhysicsWorld {
     }
 
     private(set) var entries: [ObjectIdentifier: Entry] = [:]
+    // The key in `entries` of each body, so finding a body's node does not scan every entry (#417).
+    private(set) var entryKeysByBody: [BodyID: ObjectIdentifier] = [:]
     // Nodes already warned about, so a rejected body is reported once, not every step.
     private var warnedNodes: Set<SceneGraph.Node.ID> = []
 
@@ -151,6 +153,7 @@ public final class SceneGraphPhysicsWorld {
             // Hidden nodes get their body when they first show.
             if isVisible, let body = makeBody(for: node, description: description) {
                 entries[key] = Entry(node: node, body: body, description: description)
+                entryKeysByBody[body] = key
             }
         }
         for (key, entry) in entries where !seen.contains(key) {
@@ -221,6 +224,7 @@ public final class SceneGraphPhysicsWorld {
     }
 
     private func destroy(_ entry: Entry) {
+        entryKeysByBody[entry.body] = nil
         if world.isAdded(entry.body) {
             world.removeBody(entry.body)
         } else {

@@ -6,7 +6,7 @@ import simd
 extension SceneGraphPhysicsWorld {
     /// The node of a Jolt body, if this world created it.
     public func node(of body: BodyID) -> SceneGraph.Node? {
-        entries.values.first { $0.body == body }?.node
+        entryKeysByBody[body].flatMap { entries[$0]?.node }
     }
 
     /// Keeps a node from moving into physics bodies, like SCNSliderConstraint. The node is a sphere of `radius`. Each

@@ -9609,20 +9609,23 @@ Use SwiftJolt's `Shape.scaled` (with `isValidScale` / `validScale(closestTo:)`) 
 ## 417: Finding the node of a physics body scans every entry
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:physics, effort:xs
 milestone: M002-Performance
 depends: 410
 created: 2026-11-16T23:34:12Z
-updated: 2026-11-17T06:04:51Z
+updated: 2026-11-17T13:47:36Z
+closed: 2026-11-17T13:47:36Z
 +++
 
 SceneGraphPhysicsWorld.node(of:) does a linear search over all entries. The slider constraint calls it for every sweep hit, every frame, so cost grows with scene size.
 
 ## Proposed fix (per schwa)
 Store an index or key in SwiftJolt body user data (`BodyOptions.userData` / `userData(of:)`) or keep a BodyID→node dictionary.
+
+- `2026-11-17T13:47:36Z`: Fixed. SceneGraphPhysicsWorld keeps an index from BodyID to its entry, updated where bodies are made and destroyed; node(of:) uses it instead of scanning every entry. Test nodeOfBodyFollowsTheGraph covers made, rebuilt (static to dynamic) and removed bodies; the existing slider constraint test also goes through node(of:). Not measured.
 
 ---
 
@@ -10989,7 +10992,7 @@ SceneParticleSystem already has a lock for this case (#392). The demo avoids the
 
 Found by the swift-concurrency-pro review (#476).
 
-- `2026-11-17T13:46:56Z`: Looked at it; punting. Locks alone do not fix it: the worst parts are GPU-side. Two render threads write the same per-node deformation vertex buffers (slot chosen from each renderer's own submission index) and the same process-wide ambient occlusion and particle scene-depth textures (cached by size), so even serialized CPU code leaves two command buffers writing one resource in the same frame. The fix needs per-view storage that the renderers can reach: SceneGraphElement/RenderContext would carry a per-view owner, and NodeRenderCache.gpuDeformation, AmbientOcclusionTargets, ParticleDepthShaders.sceneDepthTexture, and possibly Shadows and PBRMaterialRenderer state would be keyed by it. That touches the element, the context, every renderer that reads deformed meshes, and the immersive element.
+\- `2026-11-17T13:46:56Z`: Looked at it; punting. Locks alone do not fix it: the worst parts are GPU-side. Two render threads write the same per-node deformation vertex buffers (slot chosen from each renderer's own submission index) and the same process-wide ambient occlusion and particle scene-depth textures (cached by size), so even serialized CPU code leaves two command buffers writing one resource in the same frame. The fix needs per-view storage that the renderers can reach: SceneGraphElement/RenderContext would carry a per-view owner, and NodeRenderCache.gpuDeformation, AmbientOcclusionTargets, ParticleDepthShaders.sceneDepthTexture, and possibly Shadows and PBRMaterialRenderer state would be keyed by it. That touches the element, the context, every renderer that reads deformed meshes, and the immersive element.
 
 Question: should two views drawing one scene at once be supported (then per-view storage as above), or should it be documented as unsupported, with one Shadows and one PBRMaterialRenderer per view, as the demo already does by blanking its window while the immersive space is open?
 
