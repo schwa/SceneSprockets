@@ -89,7 +89,9 @@ func keynoteSlideControlsFollowTheSlide() throws {
     #expect(keynote[flag: "Auto-roll"])
     keynote.show(slide: try #require(KeynoteDemo.titles.firstIndex(of: "Metaballs")))
     #expect(keynote.contextActions.isEmpty)
-    #expect(keynote.contextParameters.map(\.name) == ["Metaball Count", "Metaball Size", "Smoothing"])
+    #expect(keynote.contextParameters.map(\.name) == ["Metaball Count", "Metaball Size", "Smoothing", "Metaball Lighting"])
+    keynote.show(slide: try #require(KeynoteDemo.titles.firstIndex(of: "Voxels")))
+    #expect(keynote.contextParameters.map(\.name) == ["Voxel Lighting"])
     keynote.show(slide: 0)
     #expect(keynote.contextParameters.isEmpty)
 }
