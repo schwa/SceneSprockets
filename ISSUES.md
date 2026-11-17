@@ -10674,12 +10674,13 @@ The slide has no controls in the inspector's per-slide section (#441), so the pr
 ## 474: Keynote Mesh Emitters slide: fox particles do not start reliably
 
 +++
-status: new
+status: closed
 priority: medium
 kind: bug
 labels: area:demo
 created: 2026-11-17T05:19:17Z
-updated: 2026-11-17T05:21:40Z
+updated: 2026-11-17T05:32:07Z
+closed: 2026-11-17T05:32:07Z
 +++
 
 On the keynote's Mesh Emitters slide, the fox's surface particles (flames, then sparks) often do not start when the slide is shown. It appeared before the per-slide controls work (#446–#473).
@@ -10691,6 +10692,8 @@ Steps:
 
 Expected: the fox catches fire shortly after the slide shows, every time.
 Actual: often no particles appear. It is not known yet which ways of reaching the slide fail.
+
+- `2026-11-17T05:32:07Z`: Cause (likely; not reproduced in the live app): ScenePresenter steps at 90 Hz and the renderer draws the latest snapshot on its own schedule. A snapshot made before the fox's ignition could be drawn after BurningFox applied the new description and set the emitter mesh. SceneParticleSystem.runtime(description:generation:) then re-applied the older description, which rebuilt the emitters without a mesh, and BurningFox never set it again. Fix: only apply newer generations (test olderFrameDoesNotReapplyAnOlderDescription), and BurningFox re-attaches the mesh to any emitter that lacks it.
 
 ---
 

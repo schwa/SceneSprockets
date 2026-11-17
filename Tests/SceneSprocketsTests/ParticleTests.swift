@@ -137,6 +137,22 @@ func hiddenNodesStopEmitting() throws {
     #expect(runtime.emitters.allSatisfy { $0.isEmitting })
 }
 
+// #474: ScenePresenter publishes snapshots that a renderer may draw after a newer edit was applied. An older frame must
+// not apply its older description again, which rebuilt the emitters and dropped what was set on them.
+@Test(.enabled(if: deviceSupportsMetal4))
+@MainActor
+func olderFrameDoesNotReapplyAnOlderDescription() throws {
+    let system = SceneParticleSystem(glowSystem(), seed: 3)
+    system.advance(by: 1.0 / 60.0, worldTransform: matrix_identity_float4x4, isHidden: false)
+    let older = system.makeFrame()
+    _ = try system.simulate(older, view: matrix_identity_float4x4)
+    // New emitter ids, so applying either description rebuilds the emitters.
+    system.system = glowSystem()
+    let emitter = try #require(try system.runtime().emitters.first)
+    _ = try system.simulate(older, view: matrix_identity_float4x4)
+    #expect(try system.runtime().emitters.first === emitter)
+}
+
 // #392: a window's SceneView and a visionOS immersive space can render the same scene at once, on two threads.
 @Test(.enabled(if: deviceSupportsMetal4))
 @MainActor

@@ -78,7 +78,8 @@ public final class SceneParticleSystem {
 
     private func runtime(description: ParticleSystem, generation: Int) throws -> ParticleSystemRuntime {
         if let storedRuntime {
-            if appliedGeneration != generation {
+            // Only newer: a snapshot drawn after a newer edit was applied must not put its older description back (#474).
+            if generation > appliedGeneration {
                 try storedRuntime.apply(description)
                 appliedGeneration = generation
             }

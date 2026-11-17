@@ -119,9 +119,10 @@ final class BurningFox {
             }
             let indices = deformed.mesh.submeshes.filter { $0.primitiveType == .triangle }.flatMap(\.indices)
             emitterMesh = try? EmitterMesh(device: demoDevice, positions: positions, indices: indices)
-            for emitter in runtime.emitters {
-                emitter.mesh = emitterMesh
-            }
+        }
+        // Every frame: emitters rebuilt since (#474) need the mesh again.
+        for emitter in runtime.emitters where emitter.mesh !== emitterMesh {
+            emitter.mesh = emitterMesh
         }
         // A fresh buffer each revision, so frames in flight keep theirs.
         emitterMesh?.setDeformedPositions(buffer, offset: offset, stride: stride)
