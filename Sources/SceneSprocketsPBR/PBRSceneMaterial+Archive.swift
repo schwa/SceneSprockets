@@ -59,15 +59,22 @@ extension PBRSceneMaterial: ArchivableMaterial {
                 bindings[index] = try .init(texture: try context.texture(for: reference), samplerDescriptor: sampler, device: device)
             }
         }
-        let material = try PBRMaterial(name: try container.decodeIfPresent(String.self, forKey: .name), uniforms: uniforms, doubleSided: try container.decode(Bool.self, forKey: .doubleSided), textureBindings: bindings, device: device)
-        material.renderState = PBRRenderState(
+        let renderState = PBRRenderState(
             blendMode: try container.decodeIfPresent(String.self, forKey: .blendMode).flatMap(Self.blendMode),
             depthTest: try container.decode(Bool.self, forKey: .depthTest),
             depthWrite: Self.depthWrite(try container.decode(String.self, forKey: .depthWrite)),
             colorWriteMask: PBRRenderState.ColorWriteMask(rawValue: try container.decode(UInt8.self, forKey: .colorWriteMask)),
             fillMode: try container.decode(String.self, forKey: .fillMode) == "lines" ? .lines : .fill
         )
-        material.textureTransforms = try Self.decodeTextureTransforms(container, context: context)
+        let material = try PBRMaterial(
+            name: try container.decodeIfPresent(String.self, forKey: .name),
+            uniforms: uniforms,
+            doubleSided: try container.decode(Bool.self, forKey: .doubleSided),
+            renderState: renderState,
+            textureTransforms: try Self.decodeTextureTransforms(container, context: context),
+            textureBindings: bindings,
+            device: device
+        )
         self.init(material)
     }
 

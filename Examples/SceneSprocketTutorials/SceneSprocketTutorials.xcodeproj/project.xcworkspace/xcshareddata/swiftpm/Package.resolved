@@ -69,8 +69,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsGLTF",
       "state" : {
-        "revision" : "2396218482e40be8aa10042ce3cb1eb1cf0f5e08",
-        "version" : "0.1.0"
+        "revision" : "45d538e914112d79babc2fc2dec640bd7d56a152",
+        "version" : "0.1.1"
       }
     },
     {
@@ -87,8 +87,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsPBR",
       "state" : {
-        "revision" : "4240e1ab75f008a1efa2a0591a24c3b03dc6a785",
-        "version" : "0.2.5"
+        "revision" : "fe94269280db3793a2b165d51dd31e8fd420d94f",
+        "version" : "0.2.6"
       }
     },
     {

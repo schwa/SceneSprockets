@@ -899,19 +899,14 @@ public final class KeynoteDemo: DemoScene {
         }
     }
 
-    // Gives the node a copy of `base` with changed uniforms. A material that is being drawn must not change in place:
-    // the render thread reads it (#476).
+    // Gives the node a copy of `base` with changed uniforms.
     private func setMaterial(of node: SceneGraph.Node, from base: PBRMaterial, _ change: (inout PBRMaterialUniforms) -> Void) {
         guard case let .mesh(mesh, _, castsShadow, receivesShadow) = node.content else {
             return
         }
         var uniforms = base.uniforms
         change(&uniforms)
-        guard let material = try? PBRMaterial(name: base.name, uniforms: uniforms, doubleSided: base.doubleSided, textureBindings: base.textureBindings, device: demoDevice) else {
-            return
-        }
-        material.renderState = base.renderState
-        node.content = .mesh(mesh, materials: [PBRSceneMaterial(material)], castsShadow: castsShadow, receivesShadow: receivesShadow)
+        node.content = .mesh(mesh, materials: [PBRSceneMaterial(base.with(uniforms: uniforms))], castsShadow: castsShadow, receivesShadow: receivesShadow)
     }
 
     // Scales every light under `node` from its built intensity, and sets their range if given.
@@ -1072,7 +1067,7 @@ public final class KeynoteDemo: DemoScene {
             glassSlide(slide)
             addCode("""
             let glass = PBRSceneMaterial(roughness: 0)
-            glass.pbrMaterial.uniforms.transmissionFactor = 1
+            glass.uniforms.transmissionFactor = 1
             // Blinn-Phong and PBR objects behind it are refracted alike.
             """, to: slide)
         case "Shadows":
@@ -1579,8 +1574,8 @@ public final class KeynoteDemo: DemoScene {
             let plastic = PBRSceneMaterial(baseColor: plastics[column], metallic: 0, roughness: 0.8 - smoothness * 0.7)
             // The glossiest plastics get a clear coat, like car paint.
             if column >= 4 {
-                plastic.pbrMaterial.uniforms.clearcoatFactor = 1
-                plastic.pbrMaterial.uniforms.clearcoatRoughnessFactor = 0.05
+                plastic.uniforms.clearcoatFactor = 1
+                plastic.uniforms.clearcoatRoughnessFactor = 0.05
             }
             materials.append(plastic)
             for (row, material) in materials.enumerated() {
@@ -1723,8 +1718,8 @@ public final class KeynoteDemo: DemoScene {
         ]
         for (shape, x, roughness) in shapes {
             let glass = PBRSceneMaterial(baseColor: [1, 1, 1], metallic: 0, roughness: roughness)
-            glass.pbrMaterial.uniforms.transmissionFactor = 1
-            glass.pbrMaterial.uniforms.thicknessFactor = 0.6
+            glass.uniforms.transmissionFactor = 1
+            glass.uniforms.thicknessFactor = 0.6
             let node = slide.addChild(SceneGraph.Node(shape: shape, material: glass, transform: .init(translation: [x, 1.6, 1])))
             glassPieces.append((node, glass.pbrMaterial))
             node.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([0.3, 1, 0]), duration: 10)))
@@ -1824,8 +1819,8 @@ public final class KeynoteDemo: DemoScene {
         ring.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 8)))
         for index in 0..<6 {
             let candy = PBRSceneMaterial(baseColor: colors[index % 3], metallic: 0.8, roughness: 0.2)
-            candy.pbrMaterial.uniforms.clearcoatFactor = 1
-            candy.pbrMaterial.uniforms.clearcoatRoughnessFactor = 0.03
+            candy.uniforms.clearcoatFactor = 1
+            candy.uniforms.clearcoatRoughnessFactor = 0.03
             let angle = Float(index) * 2 * .pi / 6
             ring.addChild(SceneGraph.Node(shape: .sphere(radius: 0.45), material: candy, transform: .init(translation: [cos(angle) * 4.6, 0, sin(angle) * 2])))
         }
@@ -1839,8 +1834,8 @@ public final class KeynoteDemo: DemoScene {
         for (index, (shape, position, isGlass)) in props.enumerated() {
             let material = PBRSceneMaterial(baseColor: isGlass ? [1, 1, 1] : [1, 0.8, 0.4], metallic: isGlass ? 0 : 1, roughness: isGlass ? 0 : 0.15)
             if isGlass {
-                material.pbrMaterial.uniforms.transmissionFactor = 1
-                material.pbrMaterial.uniforms.thicknessFactor = 0.6
+                material.uniforms.transmissionFactor = 1
+                material.uniforms.thicknessFactor = 0.6
             }
             let node = finale.addChild(SceneGraph.Node(shape: shape, material: material, transform: .init(translation: position)))
             node.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([0.4, 1, 0.3]), duration: 3 + Float(index))))

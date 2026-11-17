@@ -95,7 +95,7 @@ func ambientOcclusionLeavesEmissionAlone() throws {
 @MainActor
 func pbrAmbientOcclusionLeavesEmissionAlone() throws {
     let material = PBRSceneMaterial(baseColor: [0, 0, 0], roughness: 1)
-    material.pbrMaterial.uniforms.emissiveFactor = [0.8, 0.8, 0.8]
+    material.uniforms.emissiveFactor = [0.8, 0.8, 0.8]
     let renderers: [any MaterialRenderer] = [PBRMaterialRenderer(environmentIntensity: 0)]
     let (sceneGraph, plain) = try render(nil, material: material, renderers: renderers)
     let (_, occluded) = try render(nil, ambientOcclusion: strongOcclusion, material: material, renderers: renderers)

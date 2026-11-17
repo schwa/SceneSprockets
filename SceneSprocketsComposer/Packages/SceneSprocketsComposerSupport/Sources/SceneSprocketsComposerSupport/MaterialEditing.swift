@@ -135,9 +135,7 @@ extension EditorModel {
         let original = material.pbrMaterial
         var uniforms = original.uniforms
         change(&uniforms)
-        let copy = try PBRMaterial(name: original.name, uniforms: uniforms, doubleSided: doubleSided ?? original.doubleSided, textureBindings: original.textureBindings, device: _MTLCreateSystemDefaultDevice())
-        copy.textureTransforms = original.textureTransforms
-        copy.renderState = original.renderState
+        let copy = try PBRMaterial(name: original.name, uniforms: uniforms, doubleSided: doubleSided ?? original.doubleSided, renderState: original.renderState, textureTransforms: original.textureTransforms, textureBindings: original.textureBindings, device: _MTLCreateSystemDefaultDevice())
         return PBRSceneMaterial(copy)
     }
 }

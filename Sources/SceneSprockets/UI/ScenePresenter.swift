@@ -6,8 +6,9 @@ import simd
 ///
 /// Each step runs ``update``, advances actions and particles, applies constraints and publishes a
 /// ``SceneGraph/presentation()``. A renderer on any thread draws the latest one with ``takePresentation()``. Edit the
-/// scene graph only on the main actor. Meshes and materials in a snapshot are shared references: changing a material's
-/// properties while another thread renders it is still a race.
+/// scene graph only on the main actor. Meshes and materials in a snapshot are shared references. Value-type materials
+/// (Blinn-Phong, toon, shader) are copied into the snapshot, and `PBRSceneMaterial` can be changed while another
+/// thread renders it; other material classes must not be changed while a frame draws them.
 @MainActor
 public final class ScenePresenter {
     /// The scene this presenter updates.

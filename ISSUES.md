@@ -10944,13 +10944,14 @@ Found by the swift-concurrency-pro review (#476).
 ## 479: Changing a PBR material in place while SceneView renders is a data race
 
 +++
-status: blocked
+status: closed
 priority: medium
 kind: bug
 labels: area:renderer, effort:m
 milestone: M002-Performance
 created: 2026-11-17T06:39:06Z
-updated: 2026-11-17T19:17:21Z
+updated: 2026-11-17T19:58:58Z
+closed: 2026-11-17T19:58:58Z
 +++
 
 PBRSceneMaterial and PBRMaterial are classes, and mesh entries in a Presentation share them with the live scene. SceneView draws on a render thread (#393), which reads material.uniforms, renderState and textureTransforms every frame. An app that changes them in place on the main thread (for example material.pbrMaterial.uniforms.roughnessFactor = x) races that read. ScenePresenter's documentation says so, but there is no other way to change one parameter of a PBR material than to build a new material and replace the node's content, which rebuilds the PBR model.
@@ -10985,6 +10986,7 @@ Question: which way should live material changes go?
 - `2026-11-17T19:07:52Z`: Answer 1: Make thread-safe in dep lib. File issue.
 - `2026-11-17T19:17:21Z`: Per answer to Q1: PBRMaterial will be made thread-safe in MetalSprocketsPBR. Filed MetalSprocketsPBR#36. Blocked until that lands; then switch glTF material animation and docs over and close this.
 - `2026-11-17T19:36:22Z`: MetalSprocketsPBR#36 fixed in 0.2.6 (PBRMaterial immutable; use PBRPose.materialUniforms or with(uniforms:...) + MaterialOverrides). Not adopted yet: 0.2.6 breaks MetalSprocketsGLTF 0.1.0 (GLTFMaterialResource.swift:47 assigns the now-let textureTransforms), so SceneSprockets cannot resolve to it until MetalSprocketsGLTF is updated and released. Still blocked.
+- `2026-11-17T19:58:58Z`: Fixed on MetalSprocketsPBR 0.2.6 + MetalSprocketsGLTF 0.1.1. PBRSceneMaterial guards its PBRMaterial with a lock and exposes uniforms/renderState/textureTransforms setters that swap in an immutable copy. PBRMaterialRenderer reads each entry's material once per frame and draws a replaced material through MaterialOverrides (rebuilds only if canOverride fails). glTF material animation goes through one shared PBRSceneMaterial per asset material. Tests: pbrMaterialChangesShowOnTheNextFrame (fails before the renderer change: stays red), pbrMaterialCanChangeWhileAFrameReadsIt (TSan clean).
 
 ---
 

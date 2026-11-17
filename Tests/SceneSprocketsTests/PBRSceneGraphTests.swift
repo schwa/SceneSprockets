@@ -121,7 +121,7 @@ func pbrRenderStateIsApplied() throws {
         let root = SceneGraph.Node()
         root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
         let material = PBRSceneMaterial(baseColor: [0, 0, 0])
-        material.pbrMaterial.uniforms.emissiveFactor = [1, 0, 0]
+        material.uniforms.emissiveFactor = [1, 0, 0]
         material.renderState = renderState
         root.addChild(SceneGraph.Node(content: .mesh(quad, material: material)))
         let graph = SceneGraph(root: root)
@@ -138,7 +138,7 @@ func pbrRenderStateIsApplied() throws {
     let additive = PBRSceneMaterial()
     additive.renderState = PBRRenderState(blendMode: .additive)
     #expect(additive.isTransparent)
-    let faded = try additive.faded(0.5)
+    let faded = PBRSceneMaterial.faded(additive.pbrMaterial, opacity: 0.5)
     #expect(faded.renderState == additive.renderState)
 }
 
@@ -175,6 +175,60 @@ func pbrRendererSettingsCanChangeWhileAFrameIsLit() async throws {
     }
     await rendering.value
     #expect(renderer.exposure == Float(1_999 % 4))
+}
+
+// #479: changing a live material's uniforms shows on the next frame, without a structure change. A change that moves
+// it to another pass (opaque to blended) rebuilds the model.
+@Test(.enabled(if: deviceSupportsMetal4))
+@MainActor
+func pbrMaterialChangesShowOnTheNextFrame() throws {
+    let root = SceneGraph.Node()
+    root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
+    let material = PBRSceneMaterial(baseColor: [0, 0, 0])
+    material.uniforms.emissiveFactor = [1, 0, 0]
+    root.addChild(SceneGraph.Node(content: .mesh(SceneGraph.Shape.plane(width: 2, height: 2).metalMesh(), material: material)))
+    let graph = SceneGraph(root: root)
+    graph.environment.background = .color([0, 0, 0, 1])
+    let renderer = PBRMaterialRenderer(environmentIntensity: 0)
+    let offscreen = try OffscreenRenderer(size: CGSize(width: 16, height: 16))
+    func centerPixel() throws -> SIMD4<UInt8> {
+        let texture = try offscreen.render(SceneGraphElement(sceneGraph: graph, aspectRatio: 1, renderers: [renderer])).texture
+        var value = SIMD4<UInt8>.zero
+        texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(8, 8, 1, 1), mipmapLevel: 0)
+        return value
+    }
+    let red = try centerPixel()
+    let revision = graph.revision.structure
+    material.uniforms.emissiveFactor = [0, 1, 0]
+    #expect(graph.revision.structure == revision)
+    let green = try centerPixel()
+    #expect(red.z > 200 && red.y < 50, "\(red)")
+    #expect(green.y > 200 && green.z < 50, "\(green)")
+
+    var blended = material.uniforms
+    blended.alphaMode = .blend
+    blended.emissiveFactor = [0, 0, 1]
+    material.uniforms = blended
+    #expect(material.isTransparent)
+    let blue = try centerPixel()
+    #expect(blue.x > 200 && blue.y < 50, "\(blue)")
+}
+
+// #479: an app can change a PBR material on one thread while a render thread reads it. Run with --sanitize=thread.
+@Test(.enabled(if: deviceSupportsMetal4))
+func pbrMaterialCanChangeWhileAFrameReadsIt() async {
+    let material = PBRSceneMaterial(baseColor: [1, 1, 1])
+    let rendering = Task.detached {
+        for _ in 0..<2_000 {
+            _ = material.pbrMaterial.isBlended
+        }
+    }
+    for index in 0..<2_000 {
+        material.uniforms.roughnessFactor = Float(index % 10) / 10
+        material.renderState = index.isMultiple(of: 2) ? PBRRenderState() : PBRRenderState(blendMode: .additive)
+    }
+    await rendering.value
+    #expect(material.uniforms.roughnessFactor == 0.9)
 }
 
 // #375: PBRSceneMaterial wraps a shared PBRMaterial, so it is a class: assigning shares it, visibly.

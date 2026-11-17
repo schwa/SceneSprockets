@@ -8,6 +8,21 @@ import simd
 import SwiftGLTF
 import SwiftMesh
 
+// One scene material per glTF material, so every node and animation channel that uses a material changes the same one,
+// also after switching variants. Keyed by the asset's material, which the asset keeps alive.
+final class GLTFSceneMaterials {
+    private var materials: [ObjectIdentifier: PBRSceneMaterial] = [:]
+
+    func material(for source: PBRMaterial) -> PBRSceneMaterial {
+        if let existing = materials[ObjectIdentifier(source)] {
+            return existing
+        }
+        let created = PBRSceneMaterial(source)
+        materials[ObjectIdentifier(source)] = created
+        return created
+    }
+}
+
 /// A glTF scene converted to a scene graph.
 ///
 /// The conversion keeps the hierarchy, meshes with PBR materials, cameras, lights, skins, morph targets and
@@ -31,6 +46,7 @@ struct GLTFImport {
     let asset: GLTFAsset
     // Every scene node showing a glTF mesh, with that mesh's index.
     let meshNodes: [(node: SceneGraph.Node, mesh: Int)]
+    let sceneMaterials: GLTFSceneMaterials
 
     /// Swaps every mesh node's materials for variant `index` (into variantNames; nil for the default materials).
     /// Node state and animation players are kept. Throws for an out-of-range index.
@@ -41,7 +57,7 @@ struct GLTFImport {
                 continue
             }
             if materials[meshIndex] == nil {
-                materials[meshIndex] = try asset.meshes[meshIndex].map { PBRSceneMaterial(try asset.material(for: $0, variant: index)) }
+                materials[meshIndex] = try asset.meshes[meshIndex].map { sceneMaterials.material(for: try asset.material(for: $0, variant: index)) }
             }
             node.content = .mesh(mesh, materials: materials[meshIndex] ?? [], castsShadow: castsShadow, receivesShadow: receivesShadow)
         }
@@ -71,12 +87,13 @@ private struct GLTFSceneGraphBuilder {
         var warnings: [String] = []
         let materials = materialsByPrimitive()
         let defaultMaterial = PBRSceneMaterial()
+        let sceneMaterials = GLTFSceneMaterials()
         var meshes: [Int: ConvertedMesh?] = [:]
         func mesh(_ index: Int) throws -> ConvertedMesh? {
             if let cached = meshes[index] {
                 return cached
             }
-            let converted = try convertMesh(index, materials: materials, defaultMaterial: defaultMaterial)
+            let converted = try convertMesh(index, materials: materials, sceneMaterials: sceneMaterials, defaultMaterial: defaultMaterial)
             meshes[index] = converted
             return converted
         }
@@ -196,7 +213,7 @@ private struct GLTFSceneGraphBuilder {
             if let existing = animatedMaterials[index] {
                 return existing
             }
-            let created = AnimatedMaterial(asset.materials[index])
+            let created = AnimatedMaterial(sceneMaterials.material(for: asset.materials[index]))
             animatedMaterials[index] = created
             return created
         }
@@ -215,13 +232,13 @@ private struct GLTFSceneGraphBuilder {
                 case let .visibility(index):
                     targets = node(index).map { ($0, .property(.visibility)) }
                 case let .light(index, name):
-                    targets = SceneGraph.AnimationClip.Property.gltfLight(name).map { property in lightNodes[index, default: []].map { ($0, .property(property)) } } ?? []
+                    targets = SceneGraph.AnimationClip.Property.gltfLight(name.rawValue).map { property in lightNodes[index, default: []].map { ($0, .property(property)) } } ?? []
                 case let .camera(index, name):
-                    targets = SceneGraph.AnimationClip.Property.gltfCamera(name).map { property in cameraNodes[index, default: []].map { ($0, .property(property)) } } ?? []
-                case let .material(index, name):
+                    targets = SceneGraph.AnimationClip.Property.gltfCamera(name.rawValue).map { property in cameraNodes[index, default: []].map { ($0, .property(property)) } } ?? []
+                case let .material(index, pointer):
                     // Materials are shared, not per node, so the channel targets the root.
-                    if let material = animatedMaterial(index), let property = GLTFAnimationPointer.MaterialProperty(name) {
-                        targets = [(root, .property(.gltfMaterial(material, index: index, name: name, property: property)))]
+                    if let material = animatedMaterial(index) {
+                        targets = [(root, .property(.gltfMaterial(material, index: index, name: pointer.path, property: pointer.property)))]
                     } else {
                         targets = []
                     }
@@ -230,8 +247,8 @@ private struct GLTFSceneGraphBuilder {
                     let pointer = switch channel.target {
                     case let .node(index, property): "/nodes/\(index) (\(property))"
                     case let .visibility(index): "/nodes/\(index)/extensions/KHR_node_visibility/visible"
-                    case let .light(index, name): "/extensions/KHR_lights_punctual/lights/\(index)/\(name)"
-                    case let .camera(index, name): "/cameras/\(index)/\(name)"
+                    case let .light(index, name): "/extensions/KHR_lights_punctual/lights/\(index)/\(name.rawValue)"
+                    case let .camera(index, name): "/cameras/\(index)/\(name.rawValue)"
                     case let .material(index, name): "/materials/\(index)/\(name)"
                     }
                     skippedPointers.append(pointer)
@@ -261,7 +278,7 @@ private struct GLTFSceneGraphBuilder {
         } catch {
             warnings.append("Image-based light skipped: \(error)")
         }
-        return GLTFImport(sceneGraph: sceneGraph, animations: animations, nodes: nodes, variantNames: asset.variantNames, warnings: asset.warnings + warnings, asset: asset, meshNodes: meshNodeList)
+        return GLTFImport(sceneGraph: sceneGraph, animations: animations, nodes: nodes, variantNames: asset.variantNames, warnings: asset.warnings + warnings, asset: asset, meshNodes: meshNodeList, sceneMaterials: sceneMaterials)
     }
 
     // The asset resolves each primitive's material (including variants); instances carry the result.
@@ -274,7 +291,7 @@ private struct GLTFSceneGraphBuilder {
     }
 
     // One MetalMesh per glTF mesh, one submesh per primitive.
-    func convertMesh(_ index: Int, materials: [PBRModel.Primitive.Key: PBRMaterial], defaultMaterial: PBRSceneMaterial) throws -> ConvertedMesh? {
+    func convertMesh(_ index: Int, materials: [PBRModel.Primitive.Key: PBRMaterial], sceneMaterials: GLTFSceneMaterials, defaultMaterial: PBRSceneMaterial) throws -> ConvertedMesh? {
         guard asset.meshes.indices.contains(index), !asset.meshes[index].isEmpty else {
             return nil
         }
@@ -340,7 +357,7 @@ private struct GLTFSceneGraphBuilder {
         let label = document.meshes[index].name
         let mesh = MetalMesh(device: device, attributes: attributes, submeshes: submeshes, label: label)
         let meshMaterials: [any SceneMaterial] = primitives.map { primitive in
-            materials[primitive.key].map { PBRSceneMaterial($0) } ?? defaultMaterial
+            materials[primitive.key].map(sceneMaterials.material(for:)) ?? defaultMaterial
         }
         return ConvertedMesh(mesh: mesh, materials: meshMaterials, skinVertices: skinVertices, morphTargets: morphTargets, defaultWeights: defaultWeights)
     }
@@ -408,12 +425,12 @@ private func floats<T>(_ attribute: MetalMesh.VertexAttributeData, as _: T.Type)
 // A glTF material and its animated uniforms, shared by every channel that targets it.
 // Not Sendable: animation applies it from one thread at a time (#228).
 final class AnimatedMaterial {
-    let material: PBRMaterial
+    let material: PBRSceneMaterial
     var state: PBRMaterial.AnimatedState
 
-    init(_ material: PBRMaterial) {
+    init(_ material: PBRSceneMaterial) {
         self.material = material
-        state = material.animatedState()
+        state = material.pbrMaterial.animatedState()
     }
 }
 

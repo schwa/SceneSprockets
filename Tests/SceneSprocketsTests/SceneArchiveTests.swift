@@ -506,7 +506,7 @@ struct SceneArchiveTests {
         uniforms.normal.enabled = 1
         uniforms.normal.texCoord = 1
         uniforms.normal.transform = simd_float3x3(columns: ([2, 0, 0], [0, 3, 0], [0.5, 0.25, 1]))
-        material.pbrMaterial.uniforms = uniforms
+        material.uniforms = uniforms
         let root = SceneGraph.Node()
         root.addChild(SceneGraph.Node(label: "Sphere", shape: .sphere(), material: material))
         return (SceneGraph(root: root), material.pbrMaterial.uniforms)
@@ -609,7 +609,7 @@ struct SceneArchiveTests {
             Issue.record("expected a PBR mesh")
             return
         }
-        pbr.pbrMaterial.textureTransforms = ["normalTexture": .init(slot: \.normal, offset: [0.25, 0.5], rotation: 0.3, scale: [2, 3])]
+        pbr.textureTransforms = ["normalTexture": .init(slot: \.normal, offset: [0.25, 0.5], rotation: 0.3, scale: [2, 3])]
         let warnings = try archive.write(scene, to: url)
         #expect(!warnings.contains { $0.contains("texture transform") })
         let (loaded, _) = try archive.read(from: url)

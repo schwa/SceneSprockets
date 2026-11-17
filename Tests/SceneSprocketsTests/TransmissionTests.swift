@@ -18,14 +18,14 @@ private func glass(behind: Bool, blinnPhong: Bool = false, greenOpacity: Float =
     let root = SceneGraph.Node()
     root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
     let glass = PBRSceneMaterial(baseColor: [1, 1, 1], roughness: 0)
-    glass.pbrMaterial.uniforms.transmissionFactor = 1
+    glass.uniforms.transmissionFactor = 1
     root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: glass)))
     if behind, blinnPhong {
         let green = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0, 1, 0]))
         root.addChild(SceneGraph.Node(content: .mesh(quad, material: green))).opacity = greenOpacity
     } else if behind {
         let green = PBRSceneMaterial(baseColor: [0, 0, 0])
-        green.pbrMaterial.uniforms.emissiveFactor = [0, 1, 0]
+        green.uniforms.emissiveFactor = [0, 1, 0]
         root.addChild(SceneGraph.Node(content: .mesh(quad, material: green))).opacity = greenOpacity
     }
     let graph = SceneGraph(root: root)
@@ -44,7 +44,7 @@ private func glassOverLitQuad(lightReachesQuad: Bool) throws -> SIMD4<UInt8> {
     let root = SceneGraph.Node()
     root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
     let glass = PBRSceneMaterial(baseColor: [1, 1, 1], roughness: 0)
-    glass.pbrMaterial.uniforms.transmissionFactor = 1
+    glass.uniforms.transmissionFactor = 1
     root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 0.5]), content: .mesh(quad, material: glass)))
     let quadNode = root.addChild(SceneGraph.Node(content: .mesh(quad, material: PBRSceneMaterial(baseColor: [1, 1, 1], roughness: 1))))
     quadNode.categoryBitMask = 2

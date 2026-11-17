@@ -41,7 +41,7 @@ final class ShadowsDemo: DemoScene {
         }
         let glow: SIMD3<Float> = [1, 0.45, 0.15]
         let emissivePBR = PBRSceneMaterial(baseColor: .zero, roughness: 1)
-        emissivePBR.pbrMaterial.uniforms.emissiveFactor = glow
+        emissivePBR.uniforms.emissiveFactor = glow
         let emissiveBlinnPhong = BlinnPhongSceneMaterial(color: .zero, emission: glow)
         let emissive = root.addChild(SceneGraph.Node(label: "Emissive", shape: .sphere(radius: 0.4), material: emissiveBlinnPhong, transform: .init(translation: [-1.2, 0.4, 1.5])))
         materialSets.append((emissive, emissiveBlinnPhong, emissivePBR))
