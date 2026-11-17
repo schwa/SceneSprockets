@@ -9750,13 +9750,14 @@ Wrap SwiftJolt's `ContactListener` (and `wereBodiesInContact`), map BodyIDs to n
 ## 424: Hiding a node throws away its physics body's motion
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:physics, effort:m
 milestone: M001-Correctness
 created: 2026-11-17T01:02:42Z
-updated: 2026-11-17T06:04:50Z
+updated: 2026-11-17T06:17:45Z
+closed: 2026-11-17T06:17:45Z
 +++
 
 SceneGraphPhysicsWorld.sync() only visits visible nodes, so hiding a node (or an ancestor) removes and destroys its Jolt body. Showing it again creates a new body at rest. Velocity, sleep state and contacts are lost.

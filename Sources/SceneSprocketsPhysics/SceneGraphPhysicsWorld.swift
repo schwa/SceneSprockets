@@ -9,7 +9,7 @@ import SwiftMesh
 ///
 /// Each ``step(deltaTime:collisionSteps:)`` does these things in order:
 ///
-/// - It adds bodies for new nodes, and removes the bodies of removed or hidden nodes.
+/// - It adds bodies for new nodes, removes the bodies of removed nodes, and pauses the bodies of hidden nodes.
 /// - It rebuilds the bodies whose `physicsBody` changed.
 /// - It moves kinematic bodies to their nodes.
 /// - It advances the simulation.
@@ -26,6 +26,8 @@ public final class SceneGraphPhysicsWorld {
         var node: SceneGraph.Node
         var body: BodyID
         var description: SceneGraph.PhysicsBody
+        // Velocities from when the node was hidden: Jolt zeroes them when it takes a body out of the simulation.
+        var pausedVelocity: (linear: SIMD3<Float>, angular: SIMD3<Float>)?
     }
 
     private(set) var entries: [ObjectIdentifier: Entry] = [:]
@@ -99,12 +101,12 @@ public final class SceneGraphPhysicsWorld {
             return
         }
         sync()
-        for entry in entries.values where entry.description.type == .kinematic {
+        for entry in entries.values where entry.description.type == .kinematic && world.isAdded(entry.body) {
             let pose = Transform3D(nearestTo: entry.node.worldTransform)
             world.moveKinematic(entry.body, to: pose.translation, rotation: pose.rotation.quaternion, deltaTime: deltaTime)
         }
         world.update(deltaTime: deltaTime, collisionSteps: collisionSteps)
-        for entry in entries.values where entry.description.type == .dynamic {
+        for entry in entries.values where entry.description.type == .dynamic && world.isAdded(entry.body) {
             var pose = Transform3D(nearestTo: entry.node.worldTransform)
             pose.translation = world.position(of: entry.body)
             pose.rotation = Rotation3D(world.rotation(of: entry.body))
@@ -112,32 +114,75 @@ public final class SceneGraphPhysicsWorld {
         }
     }
 
-    /// Adds, removes and rebuilds bodies to match the visible nodes that have a `physicsBody`.
+    /// Adds, removes and rebuilds bodies to match the nodes that have a `physicsBody`.
+    ///
+    /// Hiding a node (or an ancestor) takes its body out of the simulation without destroying it, so the body keeps its
+    /// motion and resumes when the node shows again.
     ///
     /// ``step(deltaTime:collisionSteps:)`` calls this method. Call it yourself to get the body of a new node before
     /// the next step.
     public func sync() {
-        var seen: Set<ObjectIdentifier> = []
+        var visible: Set<ObjectIdentifier> = []
         sceneGraph.visit { node, _ in
+            if node.physicsBody != nil {
+                visible.insert(ObjectIdentifier(node))
+            }
+        }
+        var seen: Set<ObjectIdentifier> = []
+        sceneGraph.visit(includeHidden: true) { node, _ in
             guard let description = node.physicsBody else {
                 return
             }
             let key = ObjectIdentifier(node)
+            let isVisible = visible.contains(key)
             seen.insert(key)
-            if let entry = entries[key] {
-                guard entry.description != description else {
+            if var entry = entries[key] {
+                if entry.description == description {
+                    setInWorld(&entry, isVisible)
+                    entries[key] = entry
                     return
                 }
-                world.removeBody(entry.body)
+                destroy(entry)
                 entries[key] = nil
             }
-            if let body = makeBody(for: node, description: description) {
+            // Hidden nodes get their body when they first show.
+            if isVisible, let body = makeBody(for: node, description: description) {
                 entries[key] = Entry(node: node, body: body, description: description)
             }
         }
         for (key, entry) in entries where !seen.contains(key) {
-            world.removeBody(entry.body)
+            destroy(entry)
             entries[key] = nil
+        }
+    }
+
+    // Pauses or resumes a body with its node's visibility (#424). A node moved while hidden takes its body along.
+    private func setInWorld(_ entry: inout Entry, _ isVisible: Bool) {
+        let isAdded = world.isAdded(entry.body)
+        if isVisible, !isAdded {
+            let pose = Transform3D(nearestTo: entry.node.worldTransform)
+            if simd_distance(pose.translation, world.position(of: entry.body)) > 1e-5 {
+                world.setPositionAndRotation(of: entry.body, position: pose.translation, rotation: pose.rotation.quaternion, activate: false)
+            }
+            world.addToWorld(entry.body)
+            if let velocity = entry.pausedVelocity {
+                world.setLinearVelocity(of: entry.body, to: velocity.linear)
+                world.setAngularVelocity(of: entry.body, to: velocity.angular)
+                entry.pausedVelocity = nil
+            }
+        } else if !isVisible, isAdded {
+            if entry.description.type == .dynamic {
+                entry.pausedVelocity = (world.linearVelocity(of: entry.body), world.angularVelocity(of: entry.body))
+            }
+            world.removeFromWorld(entry.body)
+        }
+    }
+
+    private func destroy(_ entry: Entry) {
+        if world.isAdded(entry.body) {
+            world.removeBody(entry.body)
+        } else {
+            world.destroyBody(entry.body)
         }
     }
 

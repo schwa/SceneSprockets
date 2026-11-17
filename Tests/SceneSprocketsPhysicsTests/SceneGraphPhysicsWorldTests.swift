@@ -71,9 +71,11 @@ func bodiesFollowTheGraph() throws {
     physics.sync()
     #expect(physics.body(of: ball) != nil)
     #expect(physics.world.bodyCount == 1)
+    // Hidden: the body is kept but out of the simulation (#424).
     ball.isVisible = false
     physics.sync()
-    #expect(physics.body(of: ball) == nil)
+    let body = try #require(physics.body(of: ball))
+    #expect(!physics.world.isAdded(body))
     ball.isVisible = true
     ball.removeFromParent()
     physics.sync()
@@ -93,6 +95,26 @@ func velocityLaunchesANode() throws {
     physics.setVelocity([3, 0, 0], of: ball)
     run(physics, seconds: 1)
     #expect(abs(ball.worldPosition.x - 3) < 0.1)
+}
+
+// #424: hiding a node pauses its body; showing it again resumes the same motion.
+@Test
+func hiddenNodeKeepsItsBodysMotion() throws {
+    let root = SceneGraph.Node()
+    let ball = root.addChild(SceneGraph.Node())
+    ball.physicsBody = .init(type: .dynamic, shape: .sphere(radius: 0.5))
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root), gravity: .zero)
+    physics.setVelocity([3, 0, 0], of: ball)
+    let body = try #require(physics.body(of: ball))
+    ball.isVisible = false
+    run(physics, seconds: 0.5)
+    // Paused while hidden: it does not move.
+    #expect(abs(ball.worldPosition.x) < 1e-4)
+    ball.isVisible = true
+    physics.step(deltaTime: 1 / 60)
+    #expect(physics.body(of: ball) == body)
+    let velocity = try #require(physics.velocity(of: ball))
+    #expect(abs(velocity.x - 3) < 0.01, "velocity \(velocity)")
 }
 
 @Test
