@@ -11303,6 +11303,312 @@ Found by the SwiftUI review (#475).
 
 ---
 
+## 494: Order-independent transparency
+
++++
+status: new
+priority: high
+kind: feature
+created: 2026-11-17T14:09:41Z
++++
+
+Weighted blended OIT is a practical starting point. (Moved from SceneSprocketsAddOns #47.)
+
+---
+
+## 495: Contact shadows
+
++++
+status: new
+priority: high
+kind: feature
+created: 2026-11-17T14:09:41Z
++++
+
+Small-scale shadows that conventional shadow maps miss. (Moved from SceneSprocketsAddOns #52.)
+
+---
+
+## 496: Temporal anti-aliasing
+
++++
+status: new
+priority: high
+kind: feature
+created: 2026-11-17T14:09:41Z
++++
+
+Stabilizes geometry, specular highlights, and fine detail. (Moved from SceneSprocketsAddOns #53.)
+
+---
+
+## 497: Light cookies / IES
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-11-17T14:09:41Z
++++
+
+Projected lighting patterns and realistic light distributions. (Moved from SceneSprocketsAddOns #57.)
+
+---
+
+## 498: Transmission / refraction
+
++++
+status: new
+priority: high
+kind: feature
+created: 2026-11-17T14:09:41Z
++++
+
+Glass, liquids, transparent solids. (Moved from SceneSprocketsAddOns #60.)
+
+---
+
+## 499: Alpha masking, alpha blending, and double-sided materials
+
++++
+status: new
+priority: medium
+kind: task
+created: 2026-11-17T14:09:41Z
++++
+
+Alpha masking, alpha blending, and double-sided materials are not all handled correctly. (Moved from SceneSprocketsAddOns #62.)
+
+---
+
+## 500: Normal mapping, tangent generation, and mirrored UVs
+
++++
+status: new
+priority: medium
+kind: task
+created: 2026-11-17T14:09:41Z
++++
+
+Normal mapping, tangent generation, and mirrored UVs need correct handling. (Moved from SceneSprocketsAddOns #63.)
+
+---
+
+## 501: HDR rendering, exposure, tone mapping, and color-space correctness
+
++++
+status: new
+priority: medium
+kind: task
+created: 2026-11-17T14:09:41Z
++++
+
+HDR rendering, exposure, tone mapping, and color-space correctness. (Moved from SceneSprocketsAddOns #64.)
+
+---
+
+## 502: Shadow bias, cascade transitions, and shadow filtering
+
++++
+status: new
+priority: medium
+kind: task
+created: 2026-11-17T14:09:41Z
++++
+
+Shadow bias, cascade transitions, and shadow filtering. (Moved from SceneSprocketsAddOns #65.)
+
+---
+
+## 503: MSAA resolve behavior with transparency and alpha-to-coverage
+
++++
+status: new
+priority: medium
+kind: task
+created: 2026-11-17T14:09:41Z
++++
+
+MSAA resolve behavior, including transparency and alpha-to-coverage. (Moved from SceneSprocketsAddOns #66.)
+
+---
+
+## 504: Texture mipmapping, anisotropic filtering, and compressed formats
+
++++
+status: new
+priority: medium
+kind: task
+created: 2026-11-17T14:09:41Z
++++
+
+Texture mipmapping, anisotropic filtering, and compressed texture formats. (Moved from SceneSprocketsAddOns #67.)
+
+---
+
+## 505: Instancing, frustum culling, and depth prepasses
+
++++
+status: new
+priority: medium
+kind: task
+created: 2026-11-17T14:09:41Z
++++
+
+Instancing, frustum culling, and depth prepasses where beneficial. (Moved from SceneSprocketsAddOns #68.)
+
+---
+
+## 506: Image-based lighting (IBL)
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-11-17T14:09:41Z
++++
+
+Good-looking materials without placing lights. Complexity: low–medium. (Moved from SceneSprocketsAddOns #69.)
+
+---
+
+## 507: Automatic environment lighting
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-11-17T14:09:41Z
++++
+
+Sensible default illumination for any scene. Complexity: low. (Moved from SceneSprocketsAddOns #70.)
+
+---
+
+## 508: Automatic exposure
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-11-17T14:09:42Z
++++
+
+Avoid manually tuning brightness for every scene. Complexity: low–medium. (Moved from SceneSprocketsAddOns #76.)
+
+---
+
+## 509: Area lights / LTC
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-11-17T14:09:42Z
++++
+
+Softer, more natural illumination from large sources. Complexity: medium. (Moved from SceneSprocketsAddOns #77.)
+
+---
+
+## 510: Renderer does not expose normal, velocity, or G-buffer targets
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-11-17T14:09:42Z
++++
+
+Effects such as SSR, SSGI, motion blur, decals, and contact shadows need per-pixel normals, motion vectors, or other G-buffer data. The renderer does not produce or expose them. Needed by several SceneSprocketsAddOns issues.
+
+---
+
+## 511: No copy of scene color before transparent objects are drawn
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-11-17T14:09:42Z
++++
+
+Refraction, transmission, and screen-space effects need the opaque scene color as a texture. The renderer does not provide one.
+
+---
+
+## 512: No extension points for injecting render passes or lighting terms
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-11-17T14:09:42Z
++++
+
+Add-on packages cannot insert passes at defined stages (after opaque, before transparent, post-process) or contribute indirect lighting (probes, lightmaps) to built-in materials.
+
+---
+
+## 513: No deferred rendering path
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-11-17T14:09:59Z
++++
+
+The renderer is forward-only. There is no deferred path that writes a G-buffer (albedo, normal, roughness/metalness, depth) and shades in a separate pass. Related: #510.
+
+---
+
+## 514: No deferred or clustered lighting for many lights
+
++++
+status: new
+priority: medium
+kind: feature
+created: 2026-11-17T14:09:59Z
++++
+
+Lighting cost scales with lights × objects in the forward pass. Scenes with many local lights need deferred lighting (light volumes) or tiled/clustered light culling.
+
+---
+
+## 515: Demo package unit tests take over 3 minutes
+
++++
+status: open
+priority: medium
+kind: task
+labels: area:demo, area:testing, effort:m
+milestone: M002-Performance
+created: 2026-11-17T14:10:26Z
+updated: 2026-11-17T14:10:26Z
++++
+
+Running the SceneSprocketsDemoSupport tests (xcb test in Examples/SceneSprocketsDemo/Packages/SceneSprocketsDemoSupport, Debug) takes about 208 s wall clock for 27 tests. The other suites are fast:
+
+| Suite | Wall clock (xcb test) | Swift Testing run time |
+|---|---|---|
+| SceneSprockets (root) | 12 s | 2.3 s for 387 tests |
+| SceneSprocketsComposerSupport | 13 s | 2.1 s for 59 tests |
+| SceneSprocketsDemoSupport | 208 s | 200 s for 27 tests |
+
+Measured on an Apple silicon Mac, Xcode 27.2, Debug, 2026-11-17. The demo tests are @MainActor, so they run one at a time; per-test durations in the output overlap and are not useful.
+
+Where the time goes (measured with temporary timing code):
+- Building a KeynoteDemo takes about 12.5 s. Its 36 slides take about 12.6 s together: most take 0.3 to 0.7 s each, and the Debug Views slide 3.6 s because it builds a D20 die.
+- Building a die's geometry (DiceGeometry, per kind: mesh, number mask, normal map) takes about 2.8 s per kind. The six kinds take about 17 s. They are cached for the life of the process, so this is paid once per test run, by the first test that shows the Physics slide or builds the dice demo.
+- A die material takes about 0.13 to 0.18 s per kind and style.
+- The test suite builds a new KeynoteDemo many times: 4 tests call KeynoteDemo() directly, 8 go through keynoteShowing(_:), 5 golden-image cases render the keynote, and demoBuildsUpdatesAndRenders and demoParametersHaveDefaults build every catalog demo, including the keynote.
+- keynoteSlidePickerSwitchesInstantly alone takes about 28 s: 12.5 s to build the keynote and 16 s for one update that shows the Physics slide, almost all of it building the six dice.
+
+Not measured: how much of this is Debug-only (unoptimized Swift loops over pixels and vertices) and how long a Release build of the tests takes.
+
+---
+
 ## Milestone: M001-Correctness
 
 +++
