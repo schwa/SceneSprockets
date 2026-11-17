@@ -9592,20 +9592,23 @@ Update the existing body with SwiftJolt's `setFriction`, `setRestitution`, `setM
 ## 416: Scaled and off-center shapes are approximated by rebuilding their geometry
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:physics, effort:s
 milestone: M002-Performance
 depends: 410
 created: 2026-11-16T23:34:12Z
-updated: 2026-11-17T06:04:51Z
+updated: 2026-11-17T14:11:45Z
+closed: 2026-11-17T14:11:45Z
 +++
 
 joltShape bakes the node's scale into each shape: spheres use the largest scale axis, capsules and cylinders mix X/Z scale, mesh and hull vertices are copied and scaled, and an off-center bounding box becomes a one-child compound. Non-uniform scale of round shapes is not exact, and scaled meshes duplicate vertex data.
 
 ## Proposed fix (per schwa)
 Use SwiftJolt's `Shape.scaled` (with `isValidScale` / `validScale(closestTo:)`) and `Shape.rotatedTranslated`.
+
+- `2026-11-17T14:11:45Z`: Fixed what Jolt can do exactly: an off-center bounding box is a RotatedTranslated shape instead of a one-child compound, and a scaled triangle mesh is a Scaled shape over the unscaled vertices instead of copied, scaled vertices. Left as they were, on purpose: spheres take the largest scale axis and capsules and cylinders mix X and Z, because Jolt only scales those uniformly (or uniformly in XZ), so a Scaled shape would be the same approximation (validScale(closestTo:)). Convex hulls are still built from scaled points, so the convex radius stays in world units; with a Scaled hull it would scale with the node (dice are scaled 0.0625). New test scaledMeshFloorCatchesABoxNearItsEdge; the existing boundingBoxAndMeshShapesComeFromTheMesh covers the off-center box. Behavior is meant to be the same, so both tests also pass without the change.
 
 ---
 
@@ -11585,7 +11588,6 @@ kind: task
 labels: area:demo, area:testing, effort:m
 milestone: M002-Performance
 created: 2026-11-17T14:10:26Z
-updated: 2026-11-17T14:10:26Z
 +++
 
 Running the SceneSprocketsDemoSupport tests (xcb test in Examples/SceneSprocketsDemo/Packages/SceneSprocketsDemoSupport, Debug) takes about 208 s wall clock for 27 tests. The other suites are fast:

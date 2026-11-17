@@ -278,7 +278,7 @@ public final class SceneGraphPhysicsWorld {
             }
             let center = bounds.center * scale
             let boxShape = box(halfExtents: bounds.size * scale / 2)
-            return simd_length(center) < 1e-6 ? boxShape : .compound([CompoundChild(boxShape, position: center)])
+            return simd_length(center) < 1e-6 ? boxShape : .rotatedTranslated(boxShape, position: center)
         case .convexHull:
             let points = meshPositions(node).map { $0 * scale }
             return Self.spansVolume(points) ? .convexHull(points: points) : nil
@@ -290,7 +290,9 @@ public final class SceneGraphPhysicsWorld {
             guard !indices.isEmpty else {
                 return nil
             }
-            return .mesh(vertices: mesh.positions().map { $0 * scale }, indices: indices)
+            // Jolt scales triangle meshes exactly, so the vertices are not copied to scale them (#416).
+            let shape = Shape.mesh(vertices: mesh.positions(), indices: indices)
+            return scale == .one ? shape : .scaled(shape, scale: scale)
         }
     }
 

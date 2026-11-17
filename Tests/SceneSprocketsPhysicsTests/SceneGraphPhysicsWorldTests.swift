@@ -62,6 +62,21 @@ func stepOnlyChangesTransformRevision() throws {
     #expect(graph.revision.transform != before.transform)
 }
 
+// #416: a scaled mesh shape collides at its scaled size; Jolt scales the triangles instead of copied vertices.
+@Test
+func scaledMeshFloorCatchesABoxNearItsEdge() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let root = SceneGraph.Node()
+    // A 2 x 2 quad scaled to 20 x 20.
+    let floor = root.addChild(SceneGraph.Node(transform: .init(rotation: simd_quatf(angle: -.pi / 2, axis: [1, 0, 0]), scale: [10, 10, 10]), content: .mesh(MetalMesh(mesh: .quad(extents: [2, 2]), device: device), material: Unlit())))
+    floor.physicsBody = .init(type: .static, shape: .mesh)
+    let box = root.addChild(SceneGraph.Node(transform: .init(translation: [8, 2, 8])))
+    box.physicsBody = .init(type: .dynamic, shape: .box(size: [1, 1, 1]))
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+    run(physics, seconds: 3)
+    #expect(abs(box.worldPosition.y - 0.5) < 0.05, "box at \(box.worldPosition)")
+}
+
 // #419: a body that has come to rest and gone to sleep does not write its node each step.
 @Test
 func sleepingBodiesDoNotWriteTheirNodes() throws {
