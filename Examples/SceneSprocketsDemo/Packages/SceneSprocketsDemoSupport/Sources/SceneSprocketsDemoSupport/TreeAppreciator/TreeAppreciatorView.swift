@@ -8,6 +8,12 @@ public struct TreeAppreciatorView: View {
     @State private var model = GameModel()
     @State private var leftShadows = Shadows(intensity: 0.55, softness: 2)
     @State private var rightShadows = Shadows(intensity: 0.55, softness: 2)
+    // The overlay's sizes, scaled with the user's text size (#492).
+    @ScaledMetric(relativeTo: .largeTitle) private var introTitleSize = 54
+    @ScaledMetric(relativeTo: .title) private var endTitleSize = 32
+    @ScaledMetric(relativeTo: .title2) private var captionSize = 28
+    @ScaledMetric(relativeTo: .body) private var dotSize = 11
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     public init() {}
 
@@ -62,12 +68,14 @@ public struct TreeAppreciatorView: View {
                     Circle()
                         .fill(difference.found ? Color(red: 0.88, green: 0.66, blue: 0.23) : .clear)
                         .stroke(Color(red: 0.42, green: 0.35, blue: 0.23), lineWidth: difference.found ? 0 : 1.5)
-                        .frame(width: 11, height: 11)
-                        .scaleEffect(difference.found ? 1.25 : 1)
+                        .frame(width: dotSize, height: dotSize)
+                        .scaleEffect(difference.found && !reduceMotion ? 1.25 : 1)
                         .shadow(color: difference.found ? .yellow : .clear, radius: 5)
-                        .animation(.spring(duration: 0.5), value: difference.found)
+                        .animation(reduceMotion ? nil : .spring(duration: 0.5), value: difference.found)
                 }
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(model.foundCount) of \(model.differences.count) differences found")
             .pill()
             Text("\(model.score) appreciation")
                 .contentTransition(.numericText())
@@ -82,7 +90,7 @@ public struct TreeAppreciatorView: View {
         if let caption = model.caption {
             Text(caption)
                 .italic()
-                .font(.system(size: 28, design: .serif))
+                .font(.system(size: captionSize, design: .serif))
                 .foregroundStyle(.white)
                 .shadow(color: .black.opacity(0.55), radius: 10)
                 .padding(.bottom, 70)
@@ -106,7 +114,7 @@ public struct TreeAppreciatorView: View {
         if model.showsIntro {
             VStack(spacing: 14) {
                 Text("Tree Appreciator")
-                    .font(.system(size: 54, design: .serif))
+                    .font(.system(size: introTitleSize, design: .serif))
                 Text("Two trees grew from the same seed.\nThey are almost the same, but not quite.\n\nFind the places where they differ. Tap the spot on either tree.")
                     .multilineTextAlignment(.center)
                     .font(.title3)
@@ -127,7 +135,7 @@ public struct TreeAppreciatorView: View {
         if model.isComplete {
             VStack(spacing: 10) {
                 Text("\(model.season.name) pair appreciated")
-                    .font(.system(size: 32, design: .serif))
+                    .font(.system(size: endTitleSize, design: .serif))
                 Text("\(model.differences.count) differences · \(model.squints) squints · \(model.hints) hints")
                 Text("+\(model.completionBonus) attentiveness")
                 Text(model.verdict).italic()
@@ -142,27 +150,39 @@ public struct TreeAppreciatorView: View {
             .font(.title3)
             .card()
             .padding(.bottom, 110)
-            .transition(.opacity.combined(with: .move(edge: .bottom)))
+            .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom)))
         }
     }
 }
 
 private struct PillButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 17, design: .serif))
+        PillButtonLabel(label: configuration.label, isPressed: configuration.isPressed)
+    }
+}
+
+// The pill button's look; a view so its text size can scale with the user's setting (#492).
+private struct PillButtonLabel<Label: View>: View {
+    let label: Label
+    let isPressed: Bool
+    @ScaledMetric(relativeTo: .body) private var fontSize = 17
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        label
+            .font(.system(size: fontSize, design: .serif))
             .foregroundStyle(Color(red: 0.17, green: 0.16, blue: 0.15))
             .padding(.horizontal, 16)
             .padding(.vertical, 7)
             .background(Color(red: 1, green: 0.98, blue: 0.94).opacity(0.85), in: .capsule)
             .shadow(color: .black.opacity(0.15), radius: 9, y: 4)
-            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .scaleEffect(isPressed && !reduceMotion ? 0.96 : 1)
     }
 }
 
 private extension View {
     func pill() -> some View {
-        font(.system(size: 18, design: .serif))
+        modifier(PillFont())
             .foregroundStyle(Color(red: 0.17, green: 0.16, blue: 0.15))
             .padding(.horizontal, 16)
             .padding(.vertical, 6)
@@ -177,5 +197,14 @@ private extension View {
             .frame(maxWidth: 560)
             .background(.regularMaterial, in: .rect(cornerRadius: 18))
             .shadow(color: .black.opacity(0.25), radius: 30, y: 20)
+    }
+}
+
+// The HUD pills' text size, scaled with the user's setting (#492).
+private struct PillFont: ViewModifier {
+    @ScaledMetric(relativeTo: .title3) private var size = 18
+
+    func body(content: Content) -> some View {
+        content.font(.system(size: size, design: .serif))
     }
 }

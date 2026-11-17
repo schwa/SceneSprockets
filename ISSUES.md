@@ -11266,12 +11266,14 @@ Found by the SwiftUI review (#475).
 ## 492: Tree Appreciator overlay ignores Dynamic Type and has no accessibility labels
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:demo, effort:s
 milestone: M002-Performance
 created: 2026-11-17T06:52:28Z
+updated: 2026-11-17T14:15:06Z
+closed: 2026-11-17T14:15:06Z
 +++
 
 TreeAppreciatorView:
@@ -11281,6 +11283,8 @@ TreeAppreciatorView:
 - 19 hard-coded padding and spacing values.
 
 Found by the SwiftUI review (#475).
+
+- `2026-11-17T14:15:06Z`: Fixed. The six fixed font sizes now use @ScaledMetric, so they keep their size at the default text size and follow Dynamic Type; the pill font is a ViewModifier and the pill button's label a small view so they can hold one. The progress dots are one accessibility element labelled 'N of M differences found'. With Reduce Motion on, the dots and buttons do not scale and the end card fades instead of sliding in. Left as they are: the hard-coded padding (pills, card), which are the design idioms the house rules allow. No test: view-only change; the demo package and app build. Not checked in the running app (the Tree Appreciator is not in the CLI's renderable catalog).
 
 ---
 
