@@ -189,7 +189,7 @@ public final class SceneGraphPhysicsWorld {
             return simd_length(center) < 1e-6 ? boxShape : .compound([CompoundChild(boxShape, position: center)])
         case .convexHull:
             let points = meshPositions(node).map { $0 * scale }
-            return points.count >= 4 ? .convexHull(points: points) : nil
+            return Self.spansVolume(points) ? .convexHull(points: points) : nil
         case .mesh:
             guard case let .mesh(mesh, _, _, _) = node.content else {
                 return nil
@@ -200,6 +200,29 @@ public final class SceneGraphPhysicsWorld {
             }
             return .mesh(vertices: mesh.positions().map { $0 * scale }, indices: indices)
         }
+    }
+
+    // Jolt's hull builder traps unless the points span a volume: not all the same, on one line or on one plane (#426).
+    static func spansVolume(_ points: [SIMD3<Float>]) -> Bool {
+        guard points.count >= 4, let first = points.first else {
+            return false
+        }
+        let farthest = points.max { simd_distance($0, first) < simd_distance($1, first) } ?? first
+        let length = simd_distance(farthest, first)
+        let tolerance = max(length * 1e-3, 1e-6)
+        guard length > tolerance else {
+            return false
+        }
+        let axis = (farthest - first) / length
+        func distanceFromLine(_ point: SIMD3<Float>) -> Float {
+            simd_length(simd_cross(point - first, axis))
+        }
+        let third = points.max { distanceFromLine($0) < distanceFromLine($1) } ?? first
+        guard distanceFromLine(third) > tolerance else {
+            return false
+        }
+        let normal = simd_normalize(simd_cross(farthest - first, third - first))
+        return points.contains { abs(simd_dot($0 - first, normal)) > tolerance }
     }
 
     // Jolt boxes need half extents larger than the convex radius.

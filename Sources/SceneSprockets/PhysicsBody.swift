@@ -28,7 +28,8 @@ extension SceneGraph {
             case cylinder(height: Float, radius: Float)
             /// The bounding box of the node's mesh.
             case boundingBox
-            /// The convex hull of the node's mesh positions.
+            /// The convex hull of the node's mesh positions. Positions that do not span a volume (all the same, on one
+            /// line or on one plane) give no body.
             case convexHull
             /// The node's triangles. Only static and kinematic bodies can use this shape; a dynamic body with it is not
             /// created, and a warning is logged.

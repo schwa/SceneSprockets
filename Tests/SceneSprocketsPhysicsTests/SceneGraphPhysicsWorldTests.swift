@@ -131,6 +131,34 @@ func boundingBoxAndMeshShapesComeFromTheMesh() throws {
 
 private struct Unlit: SceneMaterial {}
 
+// #426: points that do not span a volume cannot make a convex hull; Jolt's hull builder trapped on them.
+@Test
+func degenerateConvexHullGetsNoBody() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    func mesh(_ positions: [SIMD3<Float>]) -> MetalMesh {
+        MetalMesh(device: device, attributes: [.positions(positions)], submeshes: [MetalMesh.SubmeshIndices(label: "Points", indices: positions.indices.map { UInt32($0) }, primitiveType: .point)], label: "Degenerate")
+    }
+    let cases: [[SIMD3<Float>]] = [
+        Array(repeating: [1, 2, 3], count: 6),
+        (0..<6).map { [Float($0), Float($0) * 2, 0] },
+        [[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0.5, 0.5, 0]]
+    ]
+    let root = SceneGraph.Node()
+    let nodes = cases.map { positions in
+        let node = root.addChild(SceneGraph.Node(content: .mesh(mesh(positions), material: Unlit())))
+        node.physicsBody = .init(type: .dynamic, shape: .convexHull)
+        return node
+    }
+    let solid = root.addChild(SceneGraph.Node(content: .mesh(MetalMesh(mesh: Mesh.box(extents: [1, 1, 1]), device: device), material: Unlit())))
+    solid.physicsBody = .init(type: .dynamic, shape: .convexHull)
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+    physics.sync()
+    for node in nodes {
+        #expect(physics.body(of: node) == nil)
+    }
+    #expect(physics.body(of: solid) != nil)
+}
+
 // #425: Jolt supports triangle-mesh shapes only on static and kinematic bodies.
 @Test
 func dynamicMeshShapeGetsNoBody() throws {

@@ -9795,13 +9795,14 @@ Expected: the combination is reported clearly (error, warning or documented fall
 ## 426: Degenerate .convexHull meshes crash physics sync
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:physics, effort:xs
 milestone: M001-Correctness
 created: 2026-11-17T01:02:42Z
-updated: 2026-11-17T06:04:50Z
+updated: 2026-11-17T06:13:26Z
+closed: 2026-11-17T06:13:26Z
 +++
 
 For shape .convexHull, SceneGraphPhysicsWorld only checks that the mesh has at least 4 positions. If the points cannot form a hull (for example all identical or all on one line), SwiftJolt's Shape.convexHull stops the process with a precondition failure: "Could not build a convex hull from N points".
