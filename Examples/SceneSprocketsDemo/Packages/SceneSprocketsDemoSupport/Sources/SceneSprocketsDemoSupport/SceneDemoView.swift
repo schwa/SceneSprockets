@@ -13,7 +13,7 @@ public struct SceneDemoView: View {
     @State private var delegate: DemoSceneDelegate
     @State private var cameraMatrix: simd_float4x4?
     @State private var isPaused = false
-    @State private var frameTimingStatistics: FrameTimingStatistics?
+    @State private var frameTiming = FrameTimingModel()
     // Moves, rotates and scales the selected node (#154).
     @State private var gizmo = TransformGizmo()
     @State private var gizmoMode = TransformGizmo.Mode.translate
@@ -32,7 +32,7 @@ public struct SceneDemoView: View {
 
     public var body: some View {
         sceneContent
-        .onFrameTimingChange { frameTimingStatistics = $0 }
+        .onFrameTimingChange { frameTiming.statistics = $0 }
         .onChange(of: scene.selectedNodeID, initial: true) {
             gizmo.target = scene.selectedNode
         }
@@ -48,23 +48,14 @@ public struct SceneDemoView: View {
             gizmo.space = gizmoSpace
         }
         .overlay(alignment: .topTrailing) {
-            if let frameTimingStatistics {
-                FrameTimingView(statistics: frameTimingStatistics, options: .all)
-                    .padding()
-            }
+            FrameTimingBadge(model: frameTiming)
         }
         .toolbar {
             ForEach(scene.actions) { action in
-                if let shortcut = action.shortcut {
-                    Button(action.name, systemImage: action.systemImage) {
-                        action.perform()
-                    }
-                    .keyboardShortcut(shortcut, modifiers: [])
-                } else {
-                    Button(action.name, systemImage: action.systemImage) {
-                        action.perform()
-                    }
+                Button(action.name, systemImage: action.systemImage) {
+                    action.perform()
                 }
+                .keyboardShortcut(action.shortcut.map { KeyboardShortcut($0, modifiers: []) })
             }
             Picker("Gizmo", selection: $gizmoMode) {
                 Label("Move", systemImage: "arrow.up.and.down.and.arrow.left.and.right").tag(TransformGizmo.Mode.translate)
@@ -116,6 +107,25 @@ public struct SceneDemoView: View {
                 .sceneOverlay(scene.showsSelectionOutline ? { @MainActor @Sendable [scene, selectionOutline] viewport in
                     try selectionOutline.element(nodes: scene.selectedNode.map { [$0] } ?? [], sceneGraph: scene.sceneGraph, viewport: viewport)
                 } : nil)
+        }
+    }
+}
+
+// Frame timing changes every frame. It lives in an object, so only the badge that reads it updates, not the whole
+// demo view (#475).
+@MainActor
+@Observable
+final class FrameTimingModel {
+    var statistics: FrameTimingStatistics?
+}
+
+struct FrameTimingBadge: View {
+    let model: FrameTimingModel
+
+    var body: some View {
+        if let statistics = model.statistics {
+            FrameTimingView(statistics: statistics, options: .all)
+                .padding()
         }
     }
 }

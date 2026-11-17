@@ -10798,17 +10798,30 @@ Actual: often no particles appear. It is not known yet which ways of reaching th
 ## 475: SwiftUI code has not been reviewed against the swiftui-pro and swiftui-house-rules skills
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: area:ui, effort:m
 milestone: M002-Performance
 created: 2026-11-17T06:04:19Z
+updated: 2026-11-17T06:52:40Z
+closed: 2026-11-17T06:52:40Z
 +++
 
 The SwiftUI code (SceneView and other UI in Sources, the demo app, SceneSprocketsComposer) has not had a review with the swiftui-pro, swiftui-house-rules and swiftui-specialist skills. Possible problems such as deprecated APIs, state management, view identity and performance are not known.
 
 Expected: a review of all SwiftUI code; each finding fixed or filed as its own issue.
+
+\- `2026-11-17T06:52:40Z`: Review done with swiftui-pro, swiftui-house-rules and swiftui-specialist over the 51 files with SwiftUI code: SceneView and the UI in Sources, the demo package and app, the tutorials and SceneSprocketsComposer.
+
+Fixed in this change (demo):
+- SceneDemoView stored frame timing in its own @State every frame, which re-evaluated the whole view (SceneView, toolbar, inspector) every frame. It now lives in an @Observable object read only by a small badge view.
+- SceneDemoView toolbar: one Button with an optional keyboard shortcut instead of two branches.
+- Demo NodeInspectorView: FormatStyle instead of String(format:) and '%.2f' specifiers; fill + stroke instead of the deprecated overlay(_:).
+
+Filed: #485 (SceneView body depends on every node), #486 (selected node lookup walks the scene), #487 (BlinnPhongMaterialRenderer made in a body), #488 (MaterialSectionView update boundary), #489 (models built in view init), #490 (stale dragged node), #491 (swallowed material edit errors), #492 (Tree Appreciator accessibility), #493 (computed view sections).
+
+Checked and clean: no closure-based Binding initializers, ObservableObject family, NavigationView, foregroundColor, cornerRadius, tabItem, one-parameter onChange, PreviewProvider, AnyView in views, GeometryReader, EnvironmentKey types (uses @Entry), DispatchQueue. Every @State is private. Every app-level @Observable class is @MainActor. SceneGraph and SceneGraph.Node are @Observable without @MainActor on purpose: they are library types used off the main actor (see #476 findings).
 
 ---
 
@@ -11004,6 +11017,219 @@ created: 2026-11-17T06:39:06Z
 ComposerDocument.attach adds three NotificationCenter block observers (undo group closed, undo, redo) and stores the tokens in undoObservers, but nothing removes them. The blocks capture self weakly, so they do nothing after the document goes away, but each opened document leaves three observers registered for the life of the app, and each runs on every undo notification from any document.
 
 Found by the swift-concurrency-pro review (#476).
+
+---
+
+## 485: SceneView's body depends on every node's transform when the view has no free camera
+
++++
+status: open
+priority: medium
+kind: enhancement
+labels: area:ui, effort:m
+milestone: M002-Performance
+created: 2026-11-17T06:52:28Z
++++
+
+SceneView.body reads viewpoint (Sources/SceneSprockets/UI/SceneView.swift, in the CameraControlModifier target and in onChange(of: cameraMatrix ?? viewpoint.matrix)). viewpoint calls sceneGraph.bounds and sceneGraph.cameraNodes(). Both read every node's transform, so the body's observation tracking includes every node.
+
+The reads are skipped once cameraMatrix and orbitTarget are set, which is the case with camera control or an external camera matrix. Without either (a scene drawn through its own camera node, like the keynote), the body evaluates viewpoint on every pass.
+
+Verified with withObservationTracking: reading sceneGraph.bounds or sceneGraph.cameraNodes() and then moving any node fires the change handler. sceneGraph.statistics does the same (the statistics overlay). Not measured: how often the body runs in a running app. From how Observation works, it is invalidated whenever any node moves, which in an animated scene is every frame, and each pass walks the scene for bounds and cameras on the main thread.
+
+Related: with sceneFrameTiming(true), SceneView stores the statistics in its own @State every frame, which also re-evaluates the whole body every frame.
+
+Expected: SceneView's body does not re-run because a node moved.
+
+Found by the SwiftUI review (#475).
+
+---
+
+## 486: Looking up the selected node walks the whole scene on every read
+
++++
+status: open
+priority: medium
+kind: enhancement
+labels: area:composer, effort:s
+milestone: M002-Performance
+created: 2026-11-17T06:52:28Z
++++
+
+There is no way to get a node from its ID, so code that keeps a selection as an ID finds the node with sceneGraph.nodesWithWorldTransforms(includeHidden: true).first { ... }. That visits every node and computes every world transform, and in a view body it makes the view depend on every node's transform.
+
+- Composer: EditorModel.selectedNode and selectedNodes (EditorModel.swift). InspectorProperties.swift reads selectedNode in about 15 properties (label, visible, active, locked, transform, light, ...), so one pass of the inspector walks the scene once per field. ComposerCommands reads it for the Scene menu.
+- Demo: DemoScene.selectedNode (Demo.swift) and DemoInspectorView.selectedNode. With a node selected in an animated demo, the whole inspector form depends on every node's transform.
+
+EditorModel already avoids this trap elsewhere (containsShownLight, #223).
+
+Expected: getting the selected node costs the same for a scene of 10 nodes and of 10,000, and does not make a view depend on unrelated nodes.
+
+Found by the SwiftUI review (#475).
+
+---
+
+## 487: BlinnPhongMaterialRenderer made in a view body gets a new cache each pass and never compares equal
+
++++
+status: open
+priority: low
+kind: bug
+labels: area:renderer, effort:s
+milestone: M002-Performance
+created: 2026-11-17T06:52:28Z
++++
+
+BlinnPhongMaterialRenderer's documentation says 'Copies share one cache, so a SwiftUI view can re-create the renderer each update.' That holds for copies of one value, but not for the pattern every tutorial uses:
+
+SceneView(sceneGraph, renderers: [BlinnPhongMaterialRenderer()])
+
+Each body pass calls init, which makes a new BatchPlanCache, and == compares the cache by identity. So:
+- the batch plan cache is thrown away whenever the parent's body runs;
+- the new SceneView never equals the old one, so .equatable() on it has no effect.
+
+Seen in: all five tutorials and their DocC code files, TreeAppreciatorView (which also passes a changing ambientLightColor), and two code panels in the keynote.
+
+Expected: either the inline pattern keeps its cache and compares equal, or the documentation and tutorials show keeping the renderer in @State (as PBRMaterialRenderer's documentation says).
+
+Found by the SwiftUI review (#475).
+
+---
+
+## 488: Composer: changing one material value re-evaluates the whole material section
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:composer, effort:m
+milestone: M002-Performance
+created: 2026-11-17T06:52:28Z
++++
+
+MaterialSectionView builds a material's whole inspector section in one body, through five helper functions that return some View (blinnPhongFields, sourceRow, pbrFields, pbrGroup, scalarRow). Helper functions do not make their own update boundary, so dragging one slider re-evaluates every row of the section: for a PBR material that is every scalar, color and toggle in PBRParameters, each rebuilding its binding.
+
+pbrGroup also filters PBRParameters.scalars, .colors and .toggles by group inside three ForEach initializers, for every group, on every pass.
+
+Not measured.
+
+Expected: editing one value updates that row.
+
+Found by the SwiftUI review (#475).
+
+---
+
+## 489: Views build their model in init, so it is built again every time the view is initialized
+
++++
+status: open
+priority: low
+kind: bug
+labels: area:composer, effort:s
+milestone: M002-Performance
+created: 2026-11-17T06:52:28Z
++++
+
+ComposerView.init and QuickLookPreviewView.init create an EditorModel and pass it to State(initialValue:). SwiftUI keeps only the first one, but init runs each time the parent makes the view again, and each run does the full work: EditorModel.init computes sceneGraph.bounds twice, makes the renderers, Shadows, a SelectionOutline and a DisplayFrameRate, which adds four NotificationCenter observers that are never removed; ComposerView then applies the saved editor state to the throwaway model.
+
+SceneDemoView.init has the same shape with demo.make(), which builds the whole demo scene (for the keynote: 36 slides, model files, a video player, a physics world, and it publishes slide 1 to the shared presenter notes). Today its parents are stateless wrapper views, so it should run once per demo; nothing enforces that.
+
+Not measured: how often DocumentGroup re-runs the editor closure.
+
+Expected: the model is built once per document or demo.
+
+Found by the SwiftUI review (#475).
+
+---
+
+## 490: Composer: a cancelled drag in the scene tree leaves a node that the next text drop moves
+
++++
+status: open
+priority: low
+kind: bug
+labels: area:composer, effort:s
+milestone: M002-Performance
+created: 2026-11-17T06:52:28Z
++++
+
+SceneTreeView drags a row by putting the node in EditorModel.draggedNode and using the node's display name (a String) as the drag payload. The drop handler takes any String and moves model.draggedNode. draggedNode is cleared only by a drop on a row.
+
+Steps (from the code; not run):
+1. Start dragging a row and cancel the drag, or drop it outside the tree.
+2. Drag any text onto a tree row, for example from another app.
+
+Expected: nothing moves.
+Actual, from the code: the node from step 1 is moved to the row.
+
+Found by the SwiftUI review (#475).
+
+---
+
+## 491: Composer: material preset and color edits that fail are ignored silently
+
++++
+status: open
+priority: low
+kind: bug
+labels: area:composer, effort:xs
+milestone: M002-Performance
+created: 2026-11-17T06:52:28Z
++++
+
+User actions call editMaterials with try? and drop the error:
+- MaterialSectionView: the Presets menu buttons.
+- EditorModel.setBaseColor (MultipleSelectionSectionView.swift), used by the multiple-selection color picker.
+
+When the edit throws, nothing changes and nothing tells the user.
+
+Found by the SwiftUI review (#475).
+
+---
+
+## 492: Tree Appreciator overlay ignores Dynamic Type and has no accessibility labels
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:demo, effort:s
+milestone: M002-Performance
+created: 2026-11-17T06:52:28Z
++++
+
+TreeAppreciatorView:
+- Six fixed font sizes (.system(size: 17/18/28/32/54, design: .serif)), so text does not follow the user's text size. The view already sets .fontDesign(.serif) at the root.
+- The progress dots in the HUD are plain circles: VoiceOver gets no 'found 3 of 5'.
+- The intro, caption and end card move and scale with no Reduce Motion alternative.
+- 19 hard-coded padding and spacing values.
+
+Found by the SwiftUI review (#475).
+
+---
+
+## 493: View sections written as computed properties or functions instead of View types
+
++++
+status: open
+priority: low
+kind: task
+labels: area:ui, effort:m
+milestone: M002-Performance
+created: 2026-11-17T06:52:28Z
++++
+
+House rule (swiftui-house-rules, swiftui-specialist structure): a fragment with its own inputs or behavior, or one used twice, is a View struct, because a computed property or helper function shares its parent's update boundary. Remaining cases:
+
+- TreeAppreciatorView: treeView(side:), hud, captionView, buttons, intro, endCard. Any score or caption change re-evaluates both SceneViews.
+- SceneTreeView: visibilityButton(_:), lockButton(_:), built with an image-only label.
+- SceneNodeRowView.row (used twice).
+- AssistantPanelView.missingCredentials (used twice). The same file also holds ComposerAssistant and its system prompt.
+- SceneDemoView.sceneContent.
+
+MaterialSectionView is #488.
+
+Found by the SwiftUI review (#475).
 
 ---
 

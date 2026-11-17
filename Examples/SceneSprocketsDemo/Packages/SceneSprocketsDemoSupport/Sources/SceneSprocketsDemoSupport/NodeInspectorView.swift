@@ -123,9 +123,9 @@ private struct VectorRowView: View {
     var body: some View {
         LabeledContent(label) {
             HStack {
-                Text("X \(value.x, specifier: "%.2f")")
-                Text("Y \(value.y, specifier: "%.2f")")
-                Text("Z \(value.z, specifier: "%.2f")")
+                Text("X \(value.x, format: .number.precision(.fractionLength(2)))")
+                Text("Y \(value.y, format: .number.precision(.fractionLength(2)))")
+                Text("Z \(value.z, format: .number.precision(.fractionLength(2)))")
             }
             .monospacedDigit()
             .font(.caption)
@@ -142,9 +142,10 @@ private struct ColorRowView: View {
             HStack {
                 RoundedRectangle(cornerRadius: 3)
                     .fill(Color(red: Double(value.x), green: Double(value.y), blue: Double(value.z)))
+                    .stroke(.tertiary, lineWidth: 0.5)
                     .frame(width: 16, height: 16)
-                    .overlay(RoundedRectangle(cornerRadius: 3).stroke(.tertiary, lineWidth: 0.5))
-                Text(String(format: "(%.2f, %.2f, %.2f)", value.x, value.y, value.z))
+                    .accessibilityHidden(true)
+                Text(verbatim: "(" + [value.x, value.y, value.z].map { $0.formatted(.number.precision(.fractionLength(2))) }.joined(separator: ", ") + ")")
                     .monospacedDigit()
                     .font(.caption)
             }
