@@ -18,6 +18,9 @@ final class KeynoteBoids {
     private final class Neighbors {
         var positions: [SIMD3<Float>] = []
         var velocities: [SIMD3<Float>] = []
+        var cohesion: Float = 0.6
+        var alignment: Float = 0.8
+        var separation: Float = 0.35
     }
 
     private let world: SwiftECS.World
@@ -30,18 +33,28 @@ final class KeynoteBoids {
     // Below the title.
     static let upper: SIMD3<Float> = [5, 2.6, 2]
 
+    var cohesion: Float {
+        get { neighbors.cohesion }
+        set { neighbors.cohesion = newValue }
+    }
+
+    var alignment: Float {
+        get { neighbors.alignment }
+        set { neighbors.alignment = newValue }
+    }
+
+    var separation: Float {
+        get { neighbors.separation }
+        set { neighbors.separation = newValue }
+    }
+
     init(sceneGraph: SceneGraph, parent: SceneGraph.Node, count: Int = 120) {
         world = sceneGraph.world
         let mesh = MetalMesh(mesh: .cone(segments: 8, height: 0.32, radius: 0.09), device: demoDevice)
-        var generator = SystemRandomNumberGenerator()
         for index in 0..<count {
             let hue = Float(index % 3)
             let color: SIMD3<Float> = hue == 0 ? [0.95, 0.55, 0.3] : hue == 1 ? [0.4, 0.75, 0.95] : [0.95, 0.85, 0.4]
-            let position = SIMD3<Float>(.random(in: Self.lower.x...Self.upper.x, using: &generator), .random(in: Self.lower.y...Self.upper.y, using: &generator), .random(in: Self.lower.z...Self.upper.z, using: &generator))
-            let node = parent.addChild(SceneGraph.Node(label: "Boid \(index)", transform: .init(translation: position), content: .mesh(mesh, material: BlinnPhongSceneMaterial.plastic(color, shininess: 24))))
-            let direction = simd_normalize(SIMD3<Float>(.random(in: -1...1, using: &generator), .random(in: -0.3...0.3, using: &generator), .random(in: -1...1, using: &generator)))
-            sceneGraph.world[node.id]?.set(BoidVelocity(value: direction * 2))
-            nodes.append(node)
+            nodes.append(parent.addChild(SceneGraph.Node(label: "Boid \(index)", content: .mesh(mesh, material: BlinnPhongSceneMaterial.plastic(color, shininess: 24)))))
         }
         let neighbors = neighbors
         flock = System("flock")
@@ -66,9 +79,9 @@ final class KeynoteBoids {
                 }
                 var steering = SIMD3<Float>.zero
                 if count > 0 {
-                    steering += (cohesion / count - position) * 0.6
-                    steering += (alignment / count - velocity.value.value) * 0.8
-                    steering += separation * 0.35
+                    steering += (cohesion / count - position) * neighbors.cohesion
+                    steering += (alignment / count - velocity.value.value) * neighbors.alignment
+                    steering += separation * neighbors.separation
                 }
                 // Turn back toward the box near its walls.
                 steering += simd_clamp(Self.lower + 0.6 - position, .zero, SIMD3(repeating: 10)) * 4
@@ -80,6 +93,17 @@ final class KeynoteBoids {
                 // Cones point along +Y; turn each one to fly along its velocity.
                 transform.value.value = .init(translation: position + newVelocity * deltaTime, rotation: simd_quatf(from: [0, 1, 0], to: simd_normalize(newVelocity)))
             }
+        scatter()
+    }
+
+    // Random positions and headings in the box.
+    func scatter() {
+        var generator = SystemRandomNumberGenerator()
+        for node in nodes {
+            node.transform = .init(translation: SIMD3<Float>(.random(in: Self.lower.x...Self.upper.x, using: &generator), .random(in: Self.lower.y...Self.upper.y, using: &generator), .random(in: Self.lower.z...Self.upper.z, using: &generator)))
+            let direction = simd_normalize(SIMD3<Float>(.random(in: -1...1, using: &generator), .random(in: -0.3...0.3, using: &generator), .random(in: -1...1, using: &generator)))
+            world[node.id]?.set(BoidVelocity(value: direction * 2))
+        }
     }
 
     func step(deltaTime: Float) {

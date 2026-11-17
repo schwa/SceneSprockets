@@ -10111,6 +10111,589 @@ Seen in SceneSprocketsAddOns #41 (SDF shapes) and #45 (voxel grids). Needs Metal
 
 ---
 
+## 446: Keynote Scene Graph slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:30Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Useful controls: orbit speed (time scale), pause orbits, toggle orbit paths.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 447: Keynote Materials slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:30Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Useful controls: pause rotation, light intensity/direction, toggle between Blinn-Phong/PBR rows only.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 448: Keynote Lights slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:30Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Useful controls: number of lights, light intensity, light range, orbit speed, toggle each colored light.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 449: Keynote Shadows slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:30Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Useful controls: sun direction (angle slider), toggle shadows on/off for comparison, pause the torus.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 450: Keynote Fog slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:30Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Useful controls: fog start and end distance, fog color, toggle fog on/off.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 451: Keynote Opacity & Fades slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:30Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Useful controls: restart the staggered fade sequence, fade duration, a fixed opacity slider instead of the loop.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 452: Keynote Blend Modes slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:30Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Useful controls: disc color, alpha-mode opacity, pause the sliding stripe wall.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 453: Keynote Glass slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:30Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Useful controls: glass roughness, thickness, transmission amount, pause rotation.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 454: Keynote PBR Extensions slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:30Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Useful controls: toggle sheen, clearcoat, diffuse transmission and iridescence individually; pause rotation; back light intensity.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 455: Keynote Custom Shaders slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:30Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Useful controls: rim color, pick shader per shape, pause rotation.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 456: Keynote Video Textures slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:30Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Useful actions: play/pause and restart the video.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 457: Keynote glTF & Model I/O slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:30Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Useful controls: pause/restart the imported animation, playback speed, toggle firefly trails.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 458: Keynote Actions slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:30Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Useful controls: restart the staggered hops so they line up again, hop duration.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 459: Keynote Implicit Animation slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:30Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Shuffles run on a fixed 1.6 s timer. Useful: a Shuffle action, auto-shuffle toggle, transaction duration and timing mode.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 460: Keynote Constraints slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:31Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Useful controls: orbit speed, pause the ball, number of cones, toggle the look-at constraint to show the difference.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 461: Keynote Animation Blending slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:31Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+The blend weight sweeps on a sine. Useful: a manual blend weight slider (bounce to sway) with an auto-sweep toggle, playback speed.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 462: Keynote Deformation slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:31Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Weights and bend follow sines. Useful: manual sliders for the two morph weights and the tube bend, with an animate toggle.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 463: Keynote Particles slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:31Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Useful: restart all emitters, toggle campfire/geyser/fireworks individually, emission rate scale.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 464: Keynote Mesh Emitters slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:31Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+The fox restarts only on slide arrival. Useful: a Restart action, choose flames or sparks, emission rate.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 465: Keynote Post-Processing slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:31Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Grades cycle on a timer. Useful: pick a grade, auto-cycle toggle, and exposure/contrast/saturation/vignette sliders.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 466: Keynote Level of Detail slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:31Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Useful: manual distance slider instead of the sine motion, LOD switch distances, a toggle to show which level is active (e.g. tint).
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 467: Keynote Performance slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:31Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Crate count is fixed (crateGridSize). Useful: crate count slider, pause the wave, show frame time.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 468: Keynote SwiftECS World slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:31Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Useful: boid count, separation/alignment/cohesion weights, a Scatter/Reset action.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 469: Keynote Gizmos slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:31Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Gizmo mode cycles every 2.5 s. Useful: pick translate/rotate/scale, auto-cycle toggle, Reset Box action.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 470: Keynote Debug Views slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:31Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Modes cycle every 2 s. Useful: pick a debug mode, auto-cycle toggle.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 471: Keynote Point Clouds slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:31Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Useful: point count, point size, rotation speed.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 472: Keynote Terrain slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:31Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+Useful: height exaggeration, terrain style, sun direction, rotation speed.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 473: Keynote Thank You slide has no per-slide controls
+
++++
+status: closed
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T05:01:31Z
+updated: 2026-11-17T05:19:04Z
+closed: 2026-11-17T05:19:04Z
++++
+
+The finale starts only on slide arrival. Useful: a Replay Finale action.
+
+The slide has no controls in the inspector's per-slide section (#441), so the presenter cannot change it while it is shown.
+
+- `2026-11-17T05:19:04Z`: Implemented: slide controls in KeynoteDemo.slideParameters(for:)/slideActions(for:), applied in updateSlideControls.
+
+---
+
+## 474: Keynote Mesh Emitters slide: fox particles do not start reliably
+
++++
+status: new
+priority: medium
+kind: bug
+labels: area:demo
+created: 2026-11-17T05:19:17Z
+updated: 2026-11-17T05:21:40Z
++++
+
+On the keynote's Mesh Emitters slide, the fox's surface particles (flames, then sparks) often do not start when the slide is shown. It appeared before the per-slide controls work (#446–#473).
+
+Steps:
+1. Run the demo app and open the Keynote demo.
+2. Go to the Mesh Emitters slide, by arrow keys or the Slide picker.
+3. Wait for the fox to catch fire.
+
+Expected: the fox catches fire shortly after the slide shows, every time.
+Actual: often no particles appear. It is not known yet which ways of reaching the slide fail.
+
+---
+
 ## Milestone: M001-Correctness
 
 +++

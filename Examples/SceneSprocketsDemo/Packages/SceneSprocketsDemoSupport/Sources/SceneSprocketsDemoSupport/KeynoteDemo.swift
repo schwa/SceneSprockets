@@ -5,6 +5,8 @@ import Metal
 import MetalSprocketsGLTF
 import MetalSprocketsParticles
 import MetalSprocketsParticlesSamples
+import MetalSprocketsPBR
+import MetalSprocketsPBRShaders
 import SceneSprockets
 import SceneSprocketsAddOns
 import SceneSprocketsBlinnPhong
@@ -106,6 +108,25 @@ public final class KeynoteDemo: DemoScene {
     private var monument: SceneGraph.Node?
     // Toon slide: each shape and its base material, restyled by the Bands and Outline Width controls.
     private var toonShapes: [(node: SceneGraph.Node, material: ToonMaterial)] = []
+    // Slide controls (#446–#473). `appliedValues` holds the last value each control was applied with.
+    private var appliedValues: [String: Float] = [:]
+    private var baseLightIntensities: [ObjectIdentifier: Float] = [:]
+    private var orbitPaths: [SceneGraph.Node] = []
+    private var colorLightPivots: [SceneGraph.Node] = []
+    private var shadowSun: SceneGraph.Node?
+    private var alphaDisc: SceneGraph.Node?
+    private var glassMaterials: [(material: PBRSceneMaterial, roughness: Float)] = []
+    private var pbrExtensionMaterials: [(material: PBRSceneMaterial, base: PBRMaterialUniforms)] = []
+    private var rimNodes: [SceneGraph.Node] = []
+    private var fireflyTrails: [(node: SceneGraph.Node, system: SceneParticleSystem)] = []
+    private var hopCubes: [SceneGraph.Node] = []
+    private var fadeSpheres: [SceneGraph.Node] = []
+    private var lookAtCones: [(node: SceneGraph.Node, constraint: SceneGraph.Constraint)] = []
+    private var slideEmitters: [String: (node: SceneGraph.Node, system: SceneParticleSystem)] = [:]
+    private var crateCountLabel: SceneGraph.Node?
+    private var crateGrid: SceneGraph.Node?
+    private var galaxy: SceneGraph.Node?
+    private var terrainNode: SceneGraph.Node?
 
     init() {
         let root = SceneGraph.Node(label: "Root")
@@ -127,6 +148,11 @@ public final class KeynoteDemo: DemoScene {
             slide.opacity = index == 0 ? 1 : 0
             slide.isVisible = index == 0
             slides.append(slide)
+        }
+        // Every slide's controls get their defaults now, so update code can read them before a slide is shown and
+        // values given on the command line are kept.
+        for parameter in Self.titles.flatMap(Self.slideParameters(for:)) where values[parameter.name] == nil {
+            values[parameter.name] = parameter.defaultValue
         }
         // Only the physics slide steps it. Gravity points down the tilted tray, so the dice fall as in a flat tray seen
         // at an angle.
@@ -375,27 +401,117 @@ public final class KeynoteDemo: DemoScene {
     // Shows the current slide's own controls in the inspector (#441).
     private func publishSlideControls() {
         contextTitle = "Slide: \(currentTitle)"
-        switch currentTitle {
+        contextParameters = Self.slideParameters(for: currentTitle)
+        contextActions = slideActions(for: currentTitle)
+    }
+
+    // Slides share one value dictionary, so every name here must be unique across the deck.
+    static func slideParameters(for title: String) -> [DemoParameter] {
+        switch title {
+        case "Scene Graph":
+            [.slider("Orbit Speed", 0...3, default: 1), .toggle("Orbit Paths", default: true)]
+        case "Materials":
+            [.slider("Material Spin", 0...3, default: 1), .slider("Materials Lighting", 0...2, default: 1)]
+        case "Lights":
+            [.slider("Light Orbit Speed", 0...3, default: 1), .slider("Light Intensity", 0...3, default: 1), .slider("Light Range", 1...14, default: 14),
+             .toggle("Red Light", default: true), .toggle("Green Light", default: true), .toggle("Blue Light", default: true)]
+        case "Shadows":
+            [.toggle("Cast Shadows", default: true), .slider("Sun Angle", -90...90, default: 0), .slider("Shadow Spin", 0...3, default: 1)]
+        case "Fog":
+            [.toggle("Fog", default: true), .slider("Fog Start", 0...40, default: 12), .slider("Fog End", 5...80, default: 34)]
+        case "Opacity & Fades":
+            [.slider("Fade Speed", 0...3, default: 1)]
+        case "Blend Modes":
+            [.slider("Wall Speed", 0...3, default: 1), .slider("Alpha Opacity", 0...1, default: 0.5)]
+        case "Glass":
+            [.slider("Frosting", 0...1, default: 0), .slider("Thickness", 0...3, default: 0.6), .slider("Transmission", 0.05...1, default: 1), .slider("Glass Spin", 0...3, default: 1)]
+        case "PBR Extensions":
+            [.toggle("Sheen", default: true), .toggle("Diffuse Transmission", default: true), .toggle("Clearcoat", default: true), .toggle("Iridescence", default: true),
+             .slider("Piece Spin", 0...3, default: 1)]
+        case "Custom Shaders":
+            [.choice("Rim Colors", rimColorPairs.map(\.name)), .slider("Shader Spin", 0...3, default: 1)]
+        case "glTF & Model I/O":
+            [.slider("Animation Speed", 0...3, default: 1), .toggle("Firefly Trails", default: true)]
+        case "Actions":
+            [.slider("Hop Speed", 0...3, default: 1)]
+        case "Implicit Animation":
+            [.toggle("Auto-shuffle", default: true), .slider("Shuffle Duration", 0.1...3, default: 0.8)]
+        case "Constraints":
+            [.toggle("Look At", default: true), .slider("Ball Speed", 0...3, default: 1)]
+        case "Animation Blending":
+            [.toggle("Auto Blend", default: true), .slider("Blend", 0...1, default: 0.5), .slider("Clip Speed", 0...3, default: 1)]
+        case "Deformation":
+            [.toggle("Animate Deformation", default: true), .slider("Bumps", 0...1, default: 0.5), .slider("Squash", 0...1, default: 0), .slider("Bend", -1.4...1.4, default: 0.7)]
+        case "Particles":
+            [.toggle("Campfire", default: true), .toggle("Geyser", default: true), .toggle("Fireworks", default: true)]
+        case "Post-Processing":
+            [.choice("Grade", ["Cycle"] + grades.map(\.name) + ["Custom"]), .slider("Exposure", -2...2, default: 0), .slider("Contrast", 0...2, default: 1),
+             .slider("Saturation", 0...3, default: 1), .slider("Vignette", 0...1, default: 0)]
+        case "Level of Detail":
+            [.toggle("Animate Distance", default: true), .slider("Distance", 11...27, default: 15)]
+        case "Performance":
+            [.toggle("Wave", default: true), .slider("Crate Grid", 1...Float(crateGridSize), default: Float(crateGridSize))]
+        case "SwiftECS World":
+            [.slider("Cohesion", 0...2, default: 0.6), .slider("Alignment", 0...2, default: 0.8), .slider("Separation", 0...1, default: 0.35)]
+        case "Gizmos":
+            [.choice("Gizmo Mode", ["Cycle", "Translate", "Rotate", "Scale"])]
+        case "Debug Views":
+            [.choice("Debug View", ["Cycle"] + debugModes.map { $0?.name ?? "Materials" })]
+        case "Point Clouds":
+            [.slider("Galaxy Speed", 0...5, default: 1), .slider("Point Size", 1...8, default: 2)]
+        case "Terrain":
+            [.slider("Terrain Speed", 0...5, default: 1), .slider("Height Exaggeration", 0...8, default: 3), .choice("Terrain Style", terrainStyles.map(\.name), default: 3)]
         case "Physics":
-            contextParameters = [.toggle("Auto-roll", default: true)]
-            contextActions = [DemoAction("Roll Dice", systemImage: "dice") { [weak self] in self?.resetPhysics() }]
+            [.toggle("Auto-roll", default: true)]
         case "Metaballs":
-            contextParameters = [.slider("Metaball Count", 1...16, default: 7), .slider("Metaball Size", 0.15...0.7, default: 0.38), .slider("Smoothing", 0.05...1.5, default: 0.7), .choice("Metaball Lighting", Self.lightingModels, default: 0)]
-            contextActions = []
+            [.slider("Metaball Count", 1...16, default: 7), .slider("Metaball Size", 0.15...0.7, default: 0.38), .slider("Smoothing", 0.05...1.5, default: 0.7), .choice("Metaball Lighting", lightingModels, default: 0)]
         case "Voxels":
-            contextParameters = [.choice("Voxel Lighting", Self.lightingModels, default: 1)]
-            contextActions = []
+            [.choice("Voxel Lighting", lightingModels, default: 1)]
         case "Toon":
-            contextParameters = [.slider("Bands", 1...5, default: 2), .slider("Outline Width", 0...8, default: 3)]
-            contextActions = []
+            [.slider("Bands", 1...5, default: 2), .slider("Outline Width", 0...8, default: 3)]
         default:
-            contextParameters = []
-            contextActions = []
+            []
+        }
+    }
+
+    private func slideActions(for title: String) -> [DemoAction] {
+        func action(_ name: String, _ image: String, _ perform: @escaping (KeynoteDemo) -> Void) -> DemoAction {
+            DemoAction(name, systemImage: image) { [weak self] in
+                if let self {
+                    perform(self)
+                }
+            }
+        }
+        return switch title {
+        case "Opacity & Fades":
+            [action("Restart Fades", "arrow.counterclockwise") { $0.startFades() }]
+        case "Video Textures":
+            [action("Play/Pause", "playpause") { $0.toggleVideo() }, action("Restart Video", "arrow.counterclockwise") { $0.restartVideo() }]
+        case "glTF & Model I/O":
+            [action("Restart Animation", "arrow.counterclockwise") { $0.importedPlayer?.time = 0 }]
+        case "Actions":
+            [action("Restart Hops", "arrow.counterclockwise") { $0.startHops() }]
+        case "Implicit Animation":
+            [action("Shuffle", "shuffle") { $0.shuffle() }]
+        case "Particles":
+            [action("Restart Particles", "arrow.counterclockwise") { $0.restartParticles() }]
+        case "Mesh Emitters":
+            [action("Restart Fox", "arrow.counterclockwise") { $0.burningFox?.restart() }]
+        case "SwiftECS World":
+            [action("Scatter Boids", "sparkles") { $0.boids?.scatter() }]
+        case "Gizmos":
+            [action("Reset Box", "arrow.counterclockwise") { $0.resetGizmoTarget() }]
+        case "Physics":
+            [action("Roll Dice", "dice") { $0.resetPhysics() }]
+        case "Thank You":
+            [action("Replay Finale", "party.popper") { $0.startFinale(after: 0) }]
+        default:
+            []
         }
     }
 
     private func updateFog(deltaTime: Float) {
-        let target: Float = currentTitle == "Fog" ? 1 : 0
+        let target: Float = currentTitle == "Fog" && self[flag: "Fog"] ? 1 : 0
         fogAmount += min(max(target - fogAmount, -deltaTime), deltaTime)
         guard fogAmount > 0 else {
             sceneGraph.fog = nil
@@ -403,49 +519,63 @@ public final class KeynoteDemo: DemoScene {
         }
         // Pushes the fog out of sight as the amount drops.
         let distance = (1 - fogAmount) * 300
-        sceneGraph.fog = SceneGraph.Fog(color: [0.05, 0.06, 0.1, 1], startDistance: 12 + distance, endDistance: 34 + distance)
+        let start = self[value: "Fog Start"]
+        let end = max(self[value: "Fog End"], start + 0.1)
+        sceneGraph.fog = SceneGraph.Fog(color: [0.05, 0.06, 0.1, 1], startDistance: start + distance, endDistance: end + distance)
     }
 
     private func updateSlide(time: Float, deltaTime: Float) {
         updateFog(deltaTime: deltaTime)
         updateTumblingLetters(deltaTime: deltaTime)
+        updateSlideControls()
         switch currentTitle {
         case "Implicit Animation":
             sinceShuffle += deltaTime
-            if sinceShuffle >= 1.6 {
-                sinceShuffle = 0
+            if self[flag: "Auto-shuffle"], sinceShuffle >= 0.8 + self[value: "Shuffle Duration"] {
                 shuffle()
             }
         case "Animation Blending":
             guard var controller = blendController, let blendMixer else {
                 return
             }
-            // The blend weight sweeps from bounce to sway and back.
-            controller.blend([0, 1], parameter: (sin(time * 0.8) + 1) / 2)
-            controller.advance(by: deltaTime)
+            // The blend weight sweeps from bounce to sway and back, unless the Blend control sets it.
+            if self[flag: "Auto Blend"] {
+                self[value: "Blend"] = (sin(time * 0.8) + 1) / 2
+            }
+            controller.blend([0, 1], parameter: self[value: "Blend"])
+            controller.advance(by: deltaTime * self[value: "Clip Speed"])
             blendMixer.apply(controller.layers)
             blendController = controller
         case "PBR Extensions":
             for piece in pbrExtensionPieces {
-                piece.node.transform.rotation = Rotation3D(simd_normalize(simd_quatf(angle: deltaTime * piece.speed, axis: piece.axis) * piece.node.transform.rotation.quaternion))
+                piece.node.transform.rotation = Rotation3D(simd_normalize(simd_quatf(angle: deltaTime * piece.speed * self[value: "Piece Spin"], axis: piece.axis) * piece.node.transform.rotation.quaternion))
             }
         case "Deformation":
-            let weights = [(sin(time * 1.3) + 1) / 2, max(0, sin(time * 0.7))]
+            if self[flag: "Animate Deformation"] {
+                self[value: "Bumps"] = (sin(time * 1.3) + 1) / 2
+                self[value: "Squash"] = max(0, sin(time * 0.7))
+                self[value: "Bend"] = sin(time * 1.5) * 1.4
+            }
+            let weights = [self[value: "Bumps"], self[value: "Squash"]]
             for node in morphed {
                 node.morphWeights = weights
             }
-            // The same total bend as before (1.4 radians at the tip), shared by every bending joint.
-            let rotation = simd_quatf(angle: sin(time * 1.5) * 1.4 / Float(Self.tubeJointCount - 1), axis: [0, 0, 1])
+            // The total bend at the tip, shared by every bending joint.
+            let rotation = simd_quatf(angle: self[value: "Bend"] / Float(Self.tubeJointCount - 1), axis: [0, 0, 1])
             for joint in bendingJoints {
                 joint.transform.rotation = Rotation3D(rotation)
             }
         case "Level of Detail":
-            // Out of phase, 11 to 27 units from the camera, so each crosses both switch distances.
+            // Out of phase, 11 to 27 units from the camera, so each crosses both switch distances. Without animation,
+            // all sit at the Distance control's distance (z = 13 is the camera).
+            let animates = self[flag: "Animate Distance"]
             for (index, node) in detailed.enumerated() {
-                node.transform.translation.z = -6 + sin(time * 0.8 + Float(index) * 2.1) * 8
+                node.transform.translation.z = animates ? -6 + sin(time * 0.8 + Float(index) * 2.1) * 8 : 13 - self[value: "Distance"]
             }
         case "Performance":
-            waveCrates(time: time)
+            if self[flag: "Wave"] {
+                waveCrates(time: time)
+            }
         case "Post-Processing":
             updateGrade(deltaTime: deltaTime)
         case "Debug Views":
@@ -454,7 +584,8 @@ public final class KeynoteDemo: DemoScene {
             boids?.step(deltaTime: deltaTime)
         case "Gizmos":
             let modes: [TransformGizmo.Mode] = [.translate, .rotate, .scale]
-            gizmoMode = modes[Int(time / 2.5) % modes.count]
+            let picked = Int(self[value: "Gizmo Mode"])
+            gizmoMode = picked == 0 ? modes[Int(time / 2.5) % modes.count] : modes[min(picked - 1, modes.count - 1)]
         case "Metaballs":
             updateMetaballs(time: time)
         case "Voxels":
@@ -464,7 +595,7 @@ public final class KeynoteDemo: DemoScene {
         case "Video Textures":
             videoTexture?.update()
         case "glTF & Model I/O":
-            importedPlayer?.advance(by: deltaTime)
+            importedPlayer?.advance(by: deltaTime * self[value: "Animation Speed"])
         case "Particles":
             flickerCampfire(time: time)
         case "Mesh Emitters":
@@ -483,7 +614,8 @@ public final class KeynoteDemo: DemoScene {
 
     // Shadows and fog apply to the whole scene, so they are switched on only for their slides.
     private func applySceneSettings() {
-        shadows = Self.shadowedTitles.contains(currentTitle) ? shadowRenderer : nil
+        let castsShadows = currentTitle != "Shadows" || self[flag: "Cast Shadows"]
+        shadows = Self.shadowedTitles.contains(currentTitle) && castsShadows ? shadowRenderer : nil
         // The Gizmos slide selects its box; other slides show no selection.
         let showsGizmo = currentTitle == "Gizmos"
         showsSelectionOutline = showsGizmo
@@ -605,6 +737,207 @@ public final class KeynoteDemo: DemoScene {
 
     public var slideCount: Int {
         slides.count
+    }
+
+    // MARK: - Slide controls
+
+    // Each slide's speed control, which scales the speed of every action on the slide.
+    private static let speedControls: [String: String] = [
+        "Scene Graph": "Orbit Speed", "Materials": "Material Spin", "Lights": "Light Orbit Speed", "Shadows": "Shadow Spin",
+        "Opacity & Fades": "Fade Speed", "Blend Modes": "Wall Speed", "Glass": "Glass Spin", "Custom Shaders": "Shader Spin",
+        "Actions": "Hop Speed", "Constraints": "Ball Speed", "Point Clouds": "Galaxy Speed", "Terrain": "Terrain Speed"
+    ]
+    private static let rimColorPairs: [(name: String, colors: [SIMD3<Float>])] = [
+        ("Cyan & Pink", [[0.3, 0.8, 1], [1, 0.4, 0.7]]),
+        ("Gold & Green", [[1, 0.75, 0.2], [0.4, 1, 0.4]]),
+        ("White & Red", [[1, 1, 1], [1, 0.25, 0.2]])
+    ]
+    // The built-in styles; the maps demo style needs data the keynote does not load.
+    private static let terrainStyles = Array(TerrainStyle.presets.prefix(4))
+
+    // True if any of the controls changed since the last call that named them.
+    private func changed(_ names: String...) -> Bool {
+        var result = false
+        for name in names where appliedValues[name] != self[value: name] {
+            appliedValues[name] = self[value: name]
+            result = true
+        }
+        return result
+    }
+
+    private static func descendants(of node: SceneGraph.Node) -> [SceneGraph.Node] {
+        node.children.flatMap { [$0] + descendants(of: $0) }
+    }
+
+    // Applies the current slide's controls that change the scene, when they change.
+    private func updateSlideControls() {
+        let title = currentTitle
+        // Only the slide's contents: the slide node runs its own fade.
+        if let name = Self.speedControls[title], changed(name) {
+            Self.descendants(of: slides[current]).forEach { $0.actionSpeed = self[value: name] }
+        }
+        switch title {
+        case "Scene Graph":
+            if changed("Orbit Paths") {
+                orbitPaths.forEach { $0.isVisible = self[flag: "Orbit Paths"] }
+            }
+        case "Materials":
+            if changed("Materials Lighting") {
+                adjustLights(in: slides[current], scale: self[value: "Materials Lighting"])
+            }
+        case "Lights":
+            if changed("Light Intensity", "Light Range") {
+                for pivot in colorLightPivots {
+                    adjustLights(in: pivot, scale: self[value: "Light Intensity"], range: self[value: "Light Range"])
+                }
+            }
+            if changed("Red Light", "Green Light", "Blue Light") {
+                for (pivot, name) in zip(colorLightPivots, ["Red Light", "Green Light", "Blue Light"]) {
+                    pivot.isVisible = self[flag: name]
+                }
+            }
+        case "Shadows":
+            if changed("Sun Angle"), let shadowSun {
+                let angle = self[value: "Sun Angle"] * .pi / 180
+                shadowSun.transform = Transform3D(position: simd_quatf(angle: angle, axis: [0, 1, 0]).act([3, 6, 4]), lookingAt: .zero)
+            }
+            if changed("Cast Shadows") {
+                shadows = self[flag: "Cast Shadows"] ? shadowRenderer : nil
+            }
+        case "Blend Modes":
+            if changed("Alpha Opacity"), let alphaDisc, case let .mesh(mesh, materials, castsShadow, receivesShadow) = alphaDisc.content, var material = materials.first as? BlinnPhongSceneMaterial {
+                material.opacity = self[value: "Alpha Opacity"]
+                alphaDisc.content = .mesh(mesh, materials: [material], castsShadow: castsShadow, receivesShadow: receivesShadow)
+            }
+        case "Glass":
+            if changed("Frosting", "Thickness", "Transmission") {
+                for (material, roughness) in glassMaterials {
+                    material.pbrMaterial.uniforms.roughnessFactor = min(roughness + self[value: "Frosting"], 1)
+                    material.pbrMaterial.uniforms.thicknessFactor = self[value: "Thickness"]
+                    material.pbrMaterial.uniforms.transmissionFactor = self[value: "Transmission"]
+                }
+            }
+        case "PBR Extensions":
+            if changed("Sheen", "Diffuse Transmission", "Clearcoat", "Iridescence") {
+                for (material, base) in pbrExtensionMaterials {
+                    material.pbrMaterial.uniforms.sheenColorFactor = self[flag: "Sheen"] ? base.sheenColorFactor : .zero
+                    material.pbrMaterial.uniforms.diffuseTransmissionFactor = self[flag: "Diffuse Transmission"] ? base.diffuseTransmissionFactor : 0
+                    material.pbrMaterial.uniforms.clearcoatFactor = self[flag: "Clearcoat"] ? base.clearcoatFactor : 0
+                    material.pbrMaterial.uniforms.iridescenceFactor = self[flag: "Iridescence"] ? base.iridescenceFactor : 0
+                }
+            }
+        case "Custom Shaders":
+            if changed("Rim Colors") {
+                let pair = Self.rimColorPairs[min(Int(self[value: "Rim Colors"]), Self.rimColorPairs.count - 1)]
+                for (node, color) in zip(rimNodes, pair.colors) {
+                    if case let .mesh(mesh, _, castsShadow, receivesShadow) = node.content {
+                        node.content = .mesh(mesh, materials: [ShaderMaterial.rim(color: color)], castsShadow: castsShadow, receivesShadow: receivesShadow)
+                    }
+                }
+            }
+        case "glTF & Model I/O":
+            if changed("Firefly Trails") {
+                for (node, system) in fireflyTrails {
+                    node.particleSystems = self[flag: "Firefly Trails"] ? [system] : []
+                }
+            }
+        case "Constraints":
+            if changed("Look At") {
+                for (cone, constraint) in lookAtCones {
+                    cone.constraints = self[flag: "Look At"] ? [constraint] : []
+                    if !self[flag: "Look At"] {
+                        cone.transform.rotation = Rotation3D(simd_quatf(ix: 0, iy: 0, iz: 0, r: 1))
+                    }
+                }
+            }
+        case "Particles":
+            if changed("Campfire", "Geyser", "Fireworks") {
+                for (name, emitter) in slideEmitters {
+                    emitter.node.particleSystems = self[flag: name] ? [emitter.system] : []
+                }
+            }
+        case "Performance":
+            if changed("Crate Grid") {
+                setCrateCount(Int(self[value: "Crate Grid"].rounded()))
+            }
+        case "SwiftECS World":
+            boids?.cohesion = self[value: "Cohesion"]
+            boids?.alignment = self[value: "Alignment"]
+            boids?.separation = self[value: "Separation"]
+        case "Point Clouds":
+            if changed("Point Size"), let galaxy, case let .mesh(mesh, materials, castsShadow, receivesShadow) = galaxy.content, var material = materials.first as? PointCloudMaterial {
+                material.pointSize = self[value: "Point Size"]
+                galaxy.content = .mesh(mesh, materials: [material], castsShadow: castsShadow, receivesShadow: receivesShadow)
+            }
+        case "Terrain":
+            if changed("Height Exaggeration", "Terrain Style"), let terrainNode, case let .mesh(mesh, materials, castsShadow, receivesShadow) = terrainNode.content, var material = materials.first as? TerrainSceneMaterial {
+                material.settings.heightExaggeration = self[value: "Height Exaggeration"]
+                material.settings.style = Self.terrainStyles[min(Int(self[value: "Terrain Style"]), Self.terrainStyles.count - 1)].style
+                terrainNode.content = .mesh(mesh, materials: [material], castsShadow: castsShadow, receivesShadow: receivesShadow)
+            }
+        default:
+            break
+        }
+    }
+
+    // Scales every light under `node` from its built intensity, and sets their range if given.
+    private func adjustLights(in node: SceneGraph.Node, scale: Float, range: Float? = nil) {
+        for light in [node] + Self.descendants(of: node) {
+            guard case var .light(settings) = light.content else {
+                continue
+            }
+            let base = baseLightIntensities[ObjectIdentifier(light)] ?? settings.intensity
+            baseLightIntensities[ObjectIdentifier(light)] = base
+            settings.intensity = base * scale
+            if let range {
+                settings.range = range
+            }
+            light.content = .light(settings)
+        }
+    }
+
+    // Shows the first `size` × `size` crates of the grid, and says how many show.
+    private func setCrateCount(_ size: Int) {
+        let full = Self.crateGridSize
+        for (index, crate) in crates.enumerated() {
+            crate.isVisible = index / full < size && index % full < size
+        }
+        guard let crateCountLabel else {
+            return
+        }
+        crateCountLabel.removeAllChildren()
+        addTitle("\(size * size) crates, 3 draw calls", size: 0.35, y: 3, color: [0.6, 0.65, 0.75], to: crateCountLabel)
+        // While building, the slide is not in `slides` yet; init tags it afterwards.
+        if let index = Self.titles.firstIndex(of: "Performance"), slides.indices.contains(index) {
+            Self.isolateLights(of: slides[index], index: index)
+            hierarchyDidChange()
+        }
+    }
+
+    private func toggleVideo() {
+        guard let player = videoTexture?.player else {
+            return
+        }
+        if player.timeControlStatus == .playing {
+            player.pause()
+        } else {
+            player.play()
+        }
+    }
+
+    private func restartVideo() {
+        videoTexture?.player.seek(to: .zero)
+        videoTexture?.player.play()
+    }
+
+    private func restartParticles() {
+        for emitter in slideEmitters.values {
+            emitter.system.restart()
+        }
+    }
+
+    private func resetGizmoTarget() {
+        gizmoTarget?.transform = .init(translation: [0, 0.9, 0], rotation: simd_quatf(angle: 0.5, axis: [0, 1, 0]))
     }
 
     // MARK: - Slides
@@ -990,6 +1323,7 @@ public final class KeynoteDemo: DemoScene {
         }
         let holder = slide.addChild(SceneGraph.Node(label: "Galaxy", transform: .init(translation: [0, 1.4, 0], rotation: simd_quatf(angle: 0.45, axis: [1, 0, 0]))))
         holder.addChild(galaxy)
+        self.galaxy = galaxy
         galaxy.run(.repeatForever(.rotate(by: 2 * .pi, around: [0, 1, 0], duration: 40)))
     }
 
@@ -1004,6 +1338,7 @@ public final class KeynoteDemo: DemoScene {
         let scale = 6 / terrain.worldSize
         let holder = slide.addChild(SceneGraph.Node(label: "Terrain", transform: .init(translation: [0, 1.2, 0], rotation: simd_quatf(angle: 0.5, axis: [1, 0, 0]), scale: SIMD3(repeating: scale))))
         let node = holder.addChild(terrain.makeNode(settings: settings))
+        terrainNode = node
         node.run(.repeatForever(.rotate(by: 2 * .pi, around: [0, 1, 0], duration: 60)))
         let sun = slide.addChild(SceneGraph.Node(label: "Sun", transform: .init(translation: [3, 4, 2]), content: .light(Light(type: .directional, color: [1, 0.95, 0.85], intensity: 3))))
         sun.look(at: .zero)
@@ -1152,7 +1487,7 @@ public final class KeynoteDemo: DemoScene {
         // (radius, size, period, color, roughness)
         let planets: [(Float, Float, Float, SIMD3<Float>, Float)] = [(1.6, 0.18, 5, [0.75, 0.45, 0.3], 0.9), (3.2, 0.4, 8, [0.3, 0.55, 1], 0.35), (4.3, 0.3, 13, [0.9, 0.78, 0.55], 0.6)]
         for (index, (radius, size, period, color, roughness)) in planets.enumerated() {
-            sun.addChild(SceneGraph.Node(label: "Orbit Path", shape: .torus(ringRadius: radius, pipeRadius: 0.004), material: pathMaterial))
+            orbitPaths.append(sun.addChild(SceneGraph.Node(label: "Orbit Path", shape: .torus(ringRadius: radius, pipeRadius: 0.004), material: pathMaterial)))
             // Parented to the sun, as the code panel shows; the sun does not turn, so only the orbit spins the planet.
             let orbit = sun.addChild(SceneGraph.Node(label: "Planet Orbit", transform: .init(rotation: simd_quatf(angle: Float(index) * 2.1, axis: [0, 1, 0]))))
             orbit.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: period)))
@@ -1230,6 +1565,7 @@ public final class KeynoteDemo: DemoScene {
         for (index, color) in colors.enumerated() {
             let pivot = slide.addChild(SceneGraph.Node(label: "Light Orbit", transform: .init(rotation: simd_quatf(angle: Float(index) * 2 * .pi / 3, axis: [0, 1, 0]))))
             pivot.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 6)))
+            colorLightPivots.append(pivot)
             addLight(to: pivot, at: [3, 1.5, 0], color: color, intensity: 25)
             pivot.addChild(SceneGraph.Node(shape: .sphere(radius: 0.1), material: BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color(color)), transform: .init(translation: [3, 1.5, 0])))
         }
@@ -1237,10 +1573,18 @@ public final class KeynoteDemo: DemoScene {
 
     private func actionsSlide(_ slide: SceneGraph.Node) {
         addLight(to: slide, at: [0, 6, 6], intensity: 70)
-        // The same hop with each timing mode, started one after another.
+        hopCubes = (0..<4).map { _ in
+            slide.addChild(SceneGraph.Node(shape: .box(width: 0.8, height: 0.8, length: 0.8), material: BlinnPhongSceneMaterial.plastic([0.4, 0.7, 1], shininess: 32)))
+        }
+        startHops()
+    }
+
+    // The same hop with each timing mode, started one after another.
+    private func startHops() {
         let modes: [SceneGraph.Action.TimingMode] = [.linear, .easeIn, .easeOut, .easeInEaseOut]
-        for (index, mode) in modes.enumerated() {
-            let cube = slide.addChild(SceneGraph.Node(shape: .box(width: 0.8, height: 0.8, length: 0.8), material: BlinnPhongSceneMaterial.plastic([0.4, 0.7, 1], shininess: 32), transform: .init(translation: [Float(index) * 2 - 3, 0.4, 0])))
+        for (index, (cube, mode)) in zip(hopCubes, modes).enumerated() {
+            cube.removeAllActions()
+            cube.transform = .init(translation: [Float(index) * 2 - 3, 0.4, 0])
             var up = SceneGraph.Action.move(by: [0, 2, 0], duration: 0.6)
             up.timingMode = mode
             var down = SceneGraph.Action.move(by: [0, -2, 0], duration: 0.6)
@@ -1257,7 +1601,9 @@ public final class KeynoteDemo: DemoScene {
         // Cones that always point their tips (+Y) at the ball.
         for index in 0..<5 {
             let cone = slide.addChild(SceneGraph.Node(shape: .cone(bottomRadius: 0.3, height: 0.9), material: BlinnPhongSceneMaterial.plastic([0.5, 0.9, 0.9], shininess: 32), transform: .init(translation: [Float(index) * 2 - 4, 0, 2])))
-            cone.constraints = [.lookAt(target: ball, localFront: [0, 1, 0])]
+            let constraint = SceneGraph.Constraint.lookAt(target: ball, localFront: [0, 1, 0])
+            cone.constraints = [constraint]
+            lookAtCones.append((cone, constraint))
         }
     }
 
@@ -1268,7 +1614,15 @@ public final class KeynoteDemo: DemoScene {
             let material: any SceneMaterial = index.isMultiple(of: 2)
                 ? BlinnPhongSceneMaterial.plastic([0.95, 0.4, 0.6], shininess: 48)
                 : PBRSceneMaterial(baseColor: [0.4, 0.6, 1], metallic: 0, roughness: 0.3)
-            let sphere = slide.addChild(SceneGraph.Node(shape: .sphere(radius: 0.6), material: material, transform: .init(translation: [Float(index) * 1.6 - 4, 1.2, 0])))
+            fadeSpheres.append(slide.addChild(SceneGraph.Node(shape: .sphere(radius: 0.6), material: material, transform: .init(translation: [Float(index) * 1.6 - 4, 1.2, 0]))))
+        }
+        startFades()
+    }
+
+    private func startFades() {
+        for (index, sphere) in fadeSpheres.enumerated() {
+            sphere.removeAllActions()
+            sphere.opacity = 1
             // Eased, with a pause while invisible: linear fades that turn around at once look abrupt (#340).
             let fadeOut = SceneGraph.Action.fadeOut(duration: 1.2).timingMode(.easeInEaseOut)
             let fadeIn = SceneGraph.Action.fadeIn(duration: 1.2).timingMode(.easeInEaseOut)
@@ -1296,7 +1650,10 @@ public final class KeynoteDemo: DemoScene {
             let x = Float(index) * 1.6 - 4
             // Alpha blends only when the material is see-through.
             let material = glow([1, 0.55, 0.15], opacity: mode == .alpha ? 0.5 : 1, blendMode: mode)
-            slide.addChild(SceneGraph.Node(label: "Blend \(name)", shape: .cylinder(radius: 0.6, height: 0.02), material: material, transform: .init(translation: [x, 1.6, 0], rotation: simd_quatf(angle: .pi / 2, axis: [1, 0, 0]))))
+            let disc = slide.addChild(SceneGraph.Node(label: "Blend \(name)", shape: .cylinder(radius: 0.6, height: 0.02), material: material, transform: .init(translation: [x, 1.6, 0], rotation: simd_quatf(angle: .pi / 2, axis: [1, 0, 0]))))
+            if mode == .alpha {
+                alphaDisc = disc
+            }
             let label = addTitle(".\(name)", size: 0.3, y: 0, color: [0.85, 0.85, 0.9], to: slide)
             label.transform.translation.x = x
         }
@@ -1334,6 +1691,7 @@ public final class KeynoteDemo: DemoScene {
             let glass = PBRSceneMaterial(baseColor: [1, 1, 1], metallic: 0, roughness: roughness)
             glass.pbrMaterial.uniforms.transmissionFactor = 1
             glass.pbrMaterial.uniforms.thicknessFactor = 0.6
+            glassMaterials.append((glass, roughness))
             let node = slide.addChild(SceneGraph.Node(shape: shape, material: glass, transform: .init(translation: [x, 1.6, 1])))
             node.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([0.3, 1, 0]), duration: 10)))
         }
@@ -1343,7 +1701,7 @@ public final class KeynoteDemo: DemoScene {
         // Tilted toward the camera so the shadows on the floor show.
         let stage = slide.addChild(SceneGraph.Node(label: "Stage", transform: .init(translation: [0, 0.8, -2.5], rotation: simd_quatf(angle: 0.35, axis: [1, 0, 0]))))
         let slide = stage
-        slide.addChild(SceneGraph.Node(label: "Sun", transform: Transform3D(position: [3, 6, 4], lookingAt: .zero), content: .light(Light(type: .directional, color: [1, 0.95, 0.9], intensity: 1.5))))
+        shadowSun = slide.addChild(SceneGraph.Node(label: "Sun", transform: Transform3D(position: [3, 6, 4], lookingAt: .zero), content: .light(Light(type: .directional, color: [1, 0.95, 0.9], intensity: 1.5))))
         slide.addChild(SceneGraph.Node(label: "Floor", shape: .box(width: 12, height: 0.1, length: 6), material: BlinnPhongSceneMaterial.plastic([0.7, 0.7, 0.75], shininess: 8), transform: .init(translation: [0, -0.05, 0])))
         let torus = slide.addChild(SceneGraph.Node(shape: .torus(ringRadius: 0.8, pipeRadius: 0.25), material: BlinnPhongSceneMaterial.plastic([0.95, 0.75, 0.3], shininess: 48), transform: .init(translation: [0, 1.8, 0])))
         torus.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([1, 0.5, 0]), duration: 6)))
@@ -1509,7 +1867,8 @@ public final class KeynoteDemo: DemoScene {
 
     // Plain property changes inside a transaction animate instead of jumping.
     private func shuffle() {
-        SceneGraph.Transaction.animate(duration: 0.8, timingMode: .easeInEaseOut) {
+        sinceShuffle = 0
+        SceneGraph.Transaction.animate(duration: self[value: "Shuffle Duration"], timingMode: .easeInEaseOut) {
             for cube in shuffleCubes {
                 cube.transform.translation = [Float.random(in: -4...4), Float.random(in: 0.4...3), Float.random(in: -1...1)]
                 cube.transform.rotation = Rotation3D(simd_quatf(angle: Float.random(in: 0...(2 * .pi)), axis: simd_normalize(SIMD3<Float>.random(in: -1...1) + [0, 0.01, 0])))
@@ -1575,7 +1934,9 @@ public final class KeynoteDemo: DemoScene {
                             SpriteModule(blendMode: .additive)
                         }
                     }
-                    firefly.particleSystems = [SceneParticleSystem(trail, seed: 3)]
+                    let system = SceneParticleSystem(trail, seed: 3)
+                    firefly.particleSystems = [system]
+                    fireflyTrails.append((firefly, system))
                 }
                 importedPlayer = plant.animations.first.map { SceneGraph.AnimationPlayer(clip: $0) }
             }
@@ -1678,6 +2039,9 @@ public final class KeynoteDemo: DemoScene {
         for (index, (shape, material)) in zip(shapes, materials).enumerated() {
             let node = slide.addChild(SceneGraph.Node(shape: shape, material: material, transform: .init(translation: [Float(index) * 3 - 3, 1.4, 0])))
             node.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([0.4, 1, 0.2]), duration: 7 + Float(index))))
+            if index > 0 {
+                rimNodes.append(node)
+            }
         }
     }
 
@@ -1723,6 +2087,10 @@ public final class KeynoteDemo: DemoScene {
             (bean, pearl, [3.6, 1.4, 0])
         ]
         var generator = SystemRandomNumberGenerator()
+        // The pearl is shared by two pieces; its controls should change it once.
+        for material in [pieces[0].1, pieces[1].1, pieces[2].1] {
+            pbrExtensionMaterials.append((material, material.pbrMaterial.uniforms))
+        }
         for (mesh, material, position) in pieces {
             let node = slide.addChild(SceneGraph.Node(label: material.pbrMaterial.name, transform: .init(translation: position), content: .mesh(mesh, material: material)))
             let axis = simd_normalize(SIMD3<Float>(.random(in: -1...1, using: &generator), .random(in: -1...1, using: &generator), .random(in: -1...1, using: &generator)))
@@ -1751,6 +2119,7 @@ public final class KeynoteDemo: DemoScene {
 
         let campfire = slide.addChild(SceneGraph.Node(label: "Campfire", transform: .init(translation: [-2.6, 0, 0.8])))
         campfire.particleSystems = [SceneParticleSystem(.campfire, seed: 1)]
+        slideEmitters["Campfire"] = (campfire, campfire.particleSystems[0])
         // Logs where the preset's capsule colliders are, so embers land on wood.
         let bark = BlinnPhongSceneMaterial.plastic([0.3, 0.18, 0.1], shininess: 4)
         for (start, end) in [(SIMD3<Float>(-0.5, 0.08, -0.2), SIMD3<Float>(0.5, 0.08, 0.2)), ([-0.4, 0.08, 0.35], [0.4, 0.08, -0.35])] {
@@ -1763,9 +2132,11 @@ public final class KeynoteDemo: DemoScene {
 
         let geyser = slide.addChild(SceneGraph.Node(label: "Geyser", transform: .init(translation: [2.8, 0, -0.5])))
         geyser.particleSystems = [SceneParticleSystem(.geyser, seed: 2)]
+        slideEmitters["Geyser"] = (geyser, geyser.particleSystems[0])
         // Far back, so the bursts open above the title.
         let fireworks = slide.addChild(SceneGraph.Node(label: "Fireworks", transform: .init(translation: [0, 0, -9])))
         fireworks.particleSystems = [SceneParticleSystem(.fireworks, seed: 3)]
+        slideEmitters["Fireworks"] = (fireworks, fireworks.particleSystems[0])
     }
 
     // The campfire light flickers with layered sines.
@@ -1849,6 +2220,7 @@ public final class KeynoteDemo: DemoScene {
         let box = MetalMesh(mesh: .box(), device: demoDevice)
         let materials = [[0.8, 0.5, 0.2], [0.6, 0.3, 0.15], [0.7, 0.6, 0.3]].map { BlinnPhongSceneMaterial.plastic($0, shininess: 16) }
         let grid = slide.addChild(SceneGraph.Node(label: "Grid", transform: .init(translation: [0, 0.5, -3])))
+        crateGrid = grid
         let size = Self.crateGridSize
         let spacing: Float = 12 / Float(size)
         for row in 0..<size {
@@ -1857,7 +2229,8 @@ public final class KeynoteDemo: DemoScene {
                 crates.append(grid.addChild(SceneGraph.Node(label: "Crate", transform: trs, content: .mesh(box, material: materials[(row + column) % materials.count]))))
             }
         }
-        addTitle("\(size * size) crates, \(materials.count) draw calls", size: 0.35, y: 3, color: [0.6, 0.65, 0.75], to: slide)
+        crateCountLabel = slide.addChild(SceneGraph.Node(label: "Crate Count"))
+        setCrateCount(size)
     }
 
     private func waveCrates(time: Float) {
@@ -1925,10 +2298,16 @@ public final class KeynoteDemo: DemoScene {
     }
 
     private func updateDebugView(deltaTime: Float) {
-        sinceDebugMode += deltaTime
-        if sinceDebugMode >= 2 {
+        let picked = Int(self[value: "Debug View"])
+        if picked > 0 {
+            debugIndex = min(picked - 1, Self.debugModes.count - 1)
             sinceDebugMode = 0
-            debugIndex = (debugIndex + 1) % Self.debugModes.count
+        } else {
+            sinceDebugMode += deltaTime
+            if sinceDebugMode >= 2 {
+                sinceDebugMode = 0
+                debugIndex = (debugIndex + 1) % Self.debugModes.count
+            }
         }
         if debugMode != Self.debugModes[debugIndex] {
             debugMode = Self.debugModes[debugIndex]
@@ -1949,6 +2328,21 @@ public final class KeynoteDemo: DemoScene {
 
     // Holds each grade, then eases into the next over `blendTime`.
     private func updateGrade(deltaTime: Float) {
+        let picked = Int(self[value: "Grade"])
+        if picked > 0 {
+            let custom = SceneGraph.PostProcessing(
+                exposure: self[value: "Exposure"],
+                contrast: self[value: "Contrast"],
+                saturation: self[value: "Saturation"],
+                vignetteIntensity: self[value: "Vignette"]
+            )
+            let index = picked - 1
+            sceneGraph.postProcessing = Self.grades.indices.contains(index) ? Self.grades[index].settings : custom
+            for (labelIndex, label) in gradeLabels.enumerated() where label.isVisible != (labelIndex == index) {
+                label.isVisible = labelIndex == index
+            }
+            return
+        }
         let holdTime: Float = 2.2
         let blendTime: Float = 0.6
         sinceGrade += deltaTime

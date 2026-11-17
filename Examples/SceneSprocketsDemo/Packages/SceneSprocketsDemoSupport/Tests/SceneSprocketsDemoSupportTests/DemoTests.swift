@@ -30,6 +30,14 @@ func demoBuildsUpdatesAndRenders(demo: Demo) throws {
     #expect(litPixels > 40, "\(demo.title) rendered almost nothing")
 }
 
+// Keynote slides share one value dictionary, so two slides with a control of the same name would share its value.
+@Test
+@MainActor
+func keynoteSlideControlNamesAreUnique() {
+    let names = KeynoteDemo.titles.flatMap(KeynoteDemo.slideParameters(for:)).map(\.name) + ["Slide", "Auto-advance", "Seconds per Slide"]
+    #expect(Set(names).count == names.count, "\(Dictionary(grouping: names) { $0 }.filter { $0.value.count > 1 }.keys)")
+}
+
 // #158: the dice demo's generated dice and gears are saved as glTF and read back as meshes.
 @Test
 @MainActor
