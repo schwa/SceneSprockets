@@ -109,7 +109,7 @@ public struct SceneView: View {
     // move far away (for example a body falling forever).
     @State private var orbitTarget: SIMD3<Float>?
     @State private var frames = SceneViewFrames()
-    @State private var frameTimingStatistics: FrameTimingStatistics?
+    @State private var frameTiming = FrameTimingHolder()
 
     /// Creates a view that shows a scene graph.
     ///
@@ -174,12 +174,12 @@ public struct SceneView: View {
         .metalFramebufferOnly(!needsPostPasses && !keepsDrawableReadable)
         .metalDepthStencilAttachmentTextureUsage(needsPostPasses ? [.renderTarget, .shaderRead] : [.renderTarget])
         .metalDepthStencilStorageMode(needsPostPasses || overlay != nil ? .private : .memoryless)
-        .modifier(CameraControlModifier(isEnabled: allowsCameraControl, cameraMatrix: $controlledCameraMatrix, target: cameraTarget ?? orbitTarget ?? viewpoint.target, configuration: cameraControl))
+        // The body must not read the scene's nodes (`viewpoint` does): it would run again every time a node moves
+        // (#485). The orbit target is set when the view appears.
+        .modifier(CameraControlModifier(isEnabled: allowsCameraControl, cameraMatrix: $controlledCameraMatrix, target: cameraTarget ?? orbitTarget ?? .zero, configuration: cameraControl))
         // Camera control edits a stable @State; these keep it and the source in step (#231).
-        .onChange(of: cameraMatrix ?? viewpoint.matrix, initial: true) { _, newValue in
-            if controlledCameraMatrix != newValue {
-                controlledCameraMatrix = newValue
-            }
+        .onChange(of: cameraMatrix, initial: true) {
+            syncControlledCamera()
         }
         .onChange(of: controlledCameraMatrix) { _, newValue in
             guard newValue != (cameraMatrix ?? viewpoint.matrix) else {
@@ -224,14 +224,13 @@ public struct SceneView: View {
         .onFrameTimingChange { statistics in
             // Only stored while shown; otherwise every frame would update the view.
             if showsFrameTiming {
-                frameTimingStatistics = statistics
+                frameTiming.statistics = statistics
             }
             onFrameTiming?(statistics)
         }
         .overlay(alignment: .topTrailing) {
-            if showsFrameTiming, let frameTimingStatistics {
-                FrameTimingView(statistics: frameTimingStatistics, options: .all)
-                    .padding()
+            if showsFrameTiming {
+                FrameTimingOverlay(holder: frameTiming)
             }
         }
         .overlay(alignment: .bottomLeading) {
@@ -253,6 +252,7 @@ public struct SceneView: View {
     // One frame's main-thread work: delegate callbacks, actions, particles, constraints and audio, then the snapshot
     // and the elements that read the live scene graph, for the render thread to draw.
     private func step(frameTime: Float, drawableSize: CGSize) {
+        followViewpoint()
         let presenter = frames.presenter(for: sceneGraph)
         presenter.isPlaying = isPlaying
         presenter.update = { [weak delegate] time, deltaTime in delegate?.sceneView(updateAtTime: time, deltaTime: deltaTime) }
@@ -291,6 +291,29 @@ public struct SceneView: View {
             overlay: overlayElement,
             manipulatorOverlay: manipulatorOverlay(drawableSize: drawableSize)
         ))
+    }
+
+    // Sets the matrix camera control edits to the camera the view draws from.
+    private func syncControlledCamera() {
+        let matrix = cameraMatrix ?? viewpoint.matrix
+        frames.lastViewpoint = cameraMatrix == nil ? matrix : nil
+        if controlledCameraMatrix != matrix {
+            controlledCameraMatrix = matrix
+        }
+    }
+
+    // Until the user moves the camera, camera control starts from the scene's viewpoint, which can move (a camera
+    // node, or the scene's bounds). Checked each step instead of in the body (#485). A matrix the user already changed
+    // is left alone.
+    private func followViewpoint() {
+        guard allowsCameraControl, cameraMatrix == nil, let last = frames.lastViewpoint, controlledCameraMatrix == last else {
+            return
+        }
+        let matrix = viewpoint.matrix
+        if matrix != last {
+            frames.lastViewpoint = matrix
+            controlledCameraMatrix = matrix
+        }
     }
 
     private func reportTap(at location: CGPoint) {
@@ -485,6 +508,8 @@ final class SceneViewFrames: @unchecked Sendable {
     // Main thread only; the methods that touch them are main-actor isolated.
     private var step: (@MainActor (Float, CGSize) -> Void)?
     private var presenter: ScenePresenter?
+    // The viewpoint that camera control was last set to; nil when the camera comes from somewhere else.
+    @MainActor var lastViewpoint: simd_float4x4?
 
     @MainActor
     func setStep(_ step: @escaping @MainActor (Float, CGSize) -> Void) {
@@ -528,6 +553,25 @@ final class SceneViewFrames: @unchecked Sendable {
             return (self.frameTime, self.drawableSize)
         }
         step?(frameTime, drawableSize)
+    }
+}
+
+// Frame timing changes every frame. It lives in an object, so only the overlay that reads it updates, not the whole
+// SceneView (#485).
+@MainActor
+@Observable
+final class FrameTimingHolder {
+    var statistics: FrameTimingStatistics?
+}
+
+private struct FrameTimingOverlay: View {
+    let holder: FrameTimingHolder
+
+    var body: some View {
+        if let statistics = holder.statistics {
+            FrameTimingView(statistics: statistics, options: .all)
+                .padding()
+        }
     }
 }
 

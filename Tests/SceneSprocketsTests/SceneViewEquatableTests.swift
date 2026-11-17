@@ -56,4 +56,24 @@ struct SceneViewEquatableTests {
         #expect(options.backFaceCulling)
         #expect(options.rootNode === root)
     }
+
+    // #485: the body must not read the scene's nodes, or SwiftUI evaluates it again every time a node moves.
+    @Test(arguments: [false, true])
+    func bodyDoesNotDependOnNodes(cameraControl: Bool) {
+        let root = SceneGraph.Node()
+        root.addChild(SceneGraph.Node(content: .camera(Camera.default)))
+        let box = root.addChild(SceneGraph.Node(shape: .box(), material: BlinnPhongSceneMaterial(color: [1, 1, 1])))
+        let view = SceneView(SceneGraph(root: root), renderers: [BlinnPhongMaterialRenderer()])
+            .sceneCameraControl(cameraControl)
+            .sceneStatistics(true)
+            .sceneFrameTiming(true)
+        nonisolated(unsafe) var fired = false
+        withObservationTracking {
+            _ = view.body
+        } onChange: {
+            fired = true
+        }
+        box.transform.translation.x += 1
+        #expect(!fired)
+    }
 }

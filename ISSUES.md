@@ -11048,12 +11048,14 @@ Found by the swift-concurrency-pro review (#476).
 ## 485: SceneView's body depends on every node's transform when the view has no free camera
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: area:ui, effort:m
 milestone: M002-Performance
 created: 2026-11-17T06:52:28Z
+updated: 2026-11-17T07:31:27Z
+closed: 2026-11-17T07:31:27Z
 +++
 
 SceneView.body reads viewpoint (Sources/SceneSprockets/UI/SceneView.swift, in the CameraControlModifier target and in onChange(of: cameraMatrix ?? viewpoint.matrix)). viewpoint calls sceneGraph.bounds and sceneGraph.cameraNodes(). Both read every node's transform, so the body's observation tracking includes every node.
@@ -11067,6 +11069,8 @@ Related: with sceneFrameTiming(true), SceneView stores the statistics in its own
 Expected: SceneView's body does not re-run because a node moved.
 
 Found by the SwiftUI review (#475).
+
+- `2026-11-17T07:31:27Z`: Fixed. SceneView.body no longer calls viewpoint: the camera-control target falls back to zero until onAppear sets it, and the controlled camera matrix is synced from onChange(of: cameraMatrix) and, while the user has not moved the camera, from each step when the viewpoint itself moved. Frame timing is kept in an object read only by a small overlay view, so showing it no longer re-evaluates the body every frame. Test bodyDoesNotDependOnNodes evaluates the body under withObservationTracking and moves a node: it fired before the fix both without and with camera control (wider than this issue said: with camera control the body read the viewpoint until the user first moved the camera), and does not fire now. Not checked in a live window: camera control and the initial camera after this change.
 
 ---
 
