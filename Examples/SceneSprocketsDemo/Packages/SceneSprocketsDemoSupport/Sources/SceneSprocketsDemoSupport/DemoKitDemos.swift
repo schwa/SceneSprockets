@@ -9,6 +9,7 @@ public enum SceneGraphDemos {
             KeynoteDemoView.self,
             SceneKitFeaturesDemoView.self,
             ShadowsDemoView.self,
+            MetaballsDemoView.self,
             DiceDemoView.self,
             GearsDemoView.self
         ]
@@ -76,6 +77,10 @@ struct TreeAppreciatorDemoView: DemoView {
     var body: some View {
         TreeAppreciatorView()
     }
+}
+
+struct MetaballsDemoView: CatalogDemoView {
+    nonisolated static let demo = Demo(id: "metaballs", title: "Metaballs", systemImage: "circle.hexagongrid", section: .basics, summary: "Raymarched signed distance blobs that merge smoothly as they move, lit and depth-tested like meshes.") { MetaballsDemo() }
 }
 
 struct ShadowsDemoView: CatalogDemoView {
