@@ -59,7 +59,11 @@ public final class PBRSceneMaterial: SceneMaterial, SamplesShadowsInShader {
     ///   - roughness: The roughness, from 0 (smooth) to 1 (rough).
     public init(baseColor: SIMD3<Float> = [1, 1, 1], opacity: Float = 1, metallic: Float = 0, roughness: Float = 0.5) {
         let device = _MTLCreateSystemDefaultDevice()
-        let uniforms = PBRMaterialUniforms.defaults(baseColor: SIMD4(baseColor, opacity), metallic: metallic, roughness: roughness)
+        var uniforms = PBRMaterialUniforms.defaults(baseColor: SIMD4(baseColor, opacity), metallic: metallic, roughness: roughness)
+        // Opaque materials ignore alpha, so opacity below 1 blends, as it does for Blinn-Phong (#409).
+        if opacity < 1 {
+            uniforms.alphaMode = .blend
+        }
         do {
             pbrMaterial = try PBRMaterial(uniforms: uniforms, placeholder: PBRMaterial.placeholderBinding(device: device), device: device)
         } catch {

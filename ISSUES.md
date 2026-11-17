@@ -9433,13 +9433,14 @@ Unknown (not verified here): whether the SSAO texture produced in #136 is expose
 ## 409: No check that PBR and Blinn-Phong materials respond the same way to every rendering technique
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: area:renderer, effort:l
 milestone: M001-Correctness
 created: 2026-11-16T23:06:43Z
-updated: 2026-11-17T06:04:50Z
+updated: 2026-11-17T06:10:00Z
+closed: 2026-11-17T06:10:00Z
 +++
 
 SceneSprockets applies many scene-wide techniques to meshes: shadows, fog, ambient occlusion, node opacity and fades, transparency sorting, transmission backdrops, color adjustment and vignette, soft particles, debug views, material channels, stereo and immersive rendering, GPU deformation, and others. Each material renderer implements its part of these on its own. Nothing checks that a PBR material and a Blinn-Phong material get the same treatment. Differences show up one at a time as bugs.
@@ -9450,6 +9451,8 @@ Known differences found so far:
 - Ambient occlusion: Blinn-Phong darkens only ambient light, PBR only image-based light (#136, #408). These are comparable but not the same term.
 
 Missing: a list of each technique with how each renderer handles it, and tests that render the same scene with both material families and compare the effect of each technique.
+
+- `2026-11-17T06:10:00Z`: Added MaterialParity.md (DocC) listing each scene-wide technique and how Blinn-Phong, PBR and shader materials handle it, and MaterialParityTests rendering the same scene with Blinn-Phong and PBR for baseline, hidden node, material opacity, fog, saturation, every debug view and morph targets. The tests found that PBRSceneMaterial(opacity:) left alphaMode opaque, so opacity had no effect; fixed. Not yet tested with both families: node fades, shadows, AO, transmission, material channels, stereo, soft particles (listed in the doc).
 
 ---
 
