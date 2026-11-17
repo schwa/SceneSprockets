@@ -10989,6 +10989,10 @@ SceneParticleSystem already has a lock for this case (#392). The demo avoids the
 
 Found by the swift-concurrency-pro review (#476).
 
+- `2026-11-17T13:46:56Z`: Looked at it; punting. Locks alone do not fix it: the worst parts are GPU-side. Two render threads write the same per-node deformation vertex buffers (slot chosen from each renderer's own submission index) and the same process-wide ambient occlusion and particle scene-depth textures (cached by size), so even serialized CPU code leaves two command buffers writing one resource in the same frame. The fix needs per-view storage that the renderers can reach: SceneGraphElement/RenderContext would carry a per-view owner, and NodeRenderCache.gpuDeformation, AmbientOcclusionTargets, ParticleDepthShaders.sceneDepthTexture, and possibly Shadows and PBRMaterialRenderer state would be keyed by it. That touches the element, the context, every renderer that reads deformed meshes, and the immersive element.
+
+Question: should two views drawing one scene at once be supported (then per-view storage as above), or should it be documented as unsupported, with one Shadows and one PBRMaterialRenderer per view, as the demo already does by blanking its window while the immersive space is open?
+
 ---
 
 ## 482: Transaction.Recorder and ArchiveContext are @unchecked Sendable with no synchronization
