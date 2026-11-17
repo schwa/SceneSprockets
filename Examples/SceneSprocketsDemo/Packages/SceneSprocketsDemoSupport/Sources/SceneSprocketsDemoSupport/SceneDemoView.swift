@@ -6,11 +6,42 @@ import SceneSprocketsGizmos
 import simd
 import SwiftUI
 
-// Renders one demo in a SceneView with playback controls, frame timing and an inspector.
+// Renders one demo. The demo's scene is built the first time the body runs, not in init (#489).
 public struct SceneDemoView: View {
     let demo: Demo
-    @State private var scene: DemoScene
-    @State private var delegate: DemoSceneDelegate
+    @State private var session = LazyState<DemoSession>()
+
+    public init(demo: Demo) {
+        self.demo = demo
+    }
+
+    // The scene, if the body has run.
+    var builtScene: DemoScene? {
+        session.builtValue?.scene
+    }
+
+    public var body: some View {
+        let session = session.value { DemoSession(demo: demo) }
+        SceneDemoContentView(scene: session.scene, delegate: session.delegate)
+    }
+}
+
+// A demo's scene and what forwards SceneView's updates to it.
+@MainActor
+struct DemoSession {
+    let scene: DemoScene
+    let delegate: DemoSceneDelegate
+
+    init(demo: Demo) {
+        scene = demo.make()
+        delegate = DemoSceneDelegate(scene: scene)
+    }
+}
+
+// One demo in a SceneView with playback controls, frame timing and an inspector.
+struct SceneDemoContentView: View {
+    let scene: DemoScene
+    let delegate: DemoSceneDelegate
     @State private var cameraMatrix: simd_float4x4?
     @State private var isPaused = false
     @State private var frameTiming = FrameTimingModel()
@@ -22,15 +53,13 @@ public struct SceneDemoView: View {
     // The scene is also drawn in the immersive space (#385); this view pauses so it is advanced only once per frame.
     @State private var isImmersive = false
 
-    public init(demo: Demo) {
-        self.demo = demo
-        let scene = demo.make()
-        _scene = State(initialValue: scene)
-        _delegate = State(initialValue: DemoSceneDelegate(scene: scene))
+    init(scene: DemoScene, delegate: DemoSceneDelegate) {
+        self.scene = scene
+        self.delegate = delegate
         _cameraMatrix = State(initialValue: scene.initialCameraMatrix)
     }
 
-    public var body: some View {
+    var body: some View {
         sceneContent
         .onFrameTimingChange { frameTiming.statistics = $0 }
         .onChange(of: scene.selectedNodeID, initial: true) {

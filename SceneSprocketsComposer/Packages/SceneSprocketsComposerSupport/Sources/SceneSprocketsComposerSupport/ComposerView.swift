@@ -7,10 +7,39 @@ import SwiftUI
 
 private let insertLogger = Logger(subsystem: "io.schwa.SceneSprocketsComposer", category: "Insert")
 
-// Three panes: scene graph tree, preview, inspector.
+// The editor for one document. The model is built the first time the body runs, not in init (#489).
 public struct ComposerView: View {
-    @State private var model: EditorModel
     private let document: ComposerDocument
+    @State private var model = LazyState<EditorModel>()
+
+    public init(document: ComposerDocument) {
+        self.document = document
+    }
+
+    // The model, if the body has run.
+    var builtModel: EditorModel? {
+        model.builtValue
+    }
+
+    public var body: some View {
+        ComposerEditorView(document: document, model: model.value { EditorModel(document: document) })
+    }
+}
+
+extension EditorModel {
+    // A model for `document`, with the editor state saved in it.
+    convenience init(document: ComposerDocument) {
+        self.init(sceneGraph: document.sceneGraph)
+        if let state = document.editorState {
+            apply(state)
+        }
+    }
+}
+
+// Three panes: scene graph tree, preview, inspector.
+struct ComposerEditorView: View {
+    @Bindable var model: EditorModel
+    let document: ComposerDocument
     @AppStorage(GizmoSize.storageKey)
     private var gizmoSize = GizmoSize.small
     @Environment(CollaborationCredentials.self)
@@ -29,13 +58,9 @@ public struct ComposerView: View {
     @Environment(\.undoManager)
     private var undoManager
 
-    public init(document: ComposerDocument) {
-        let model = EditorModel(sceneGraph: document.sceneGraph)
-        if let state = document.editorState {
-            model.apply(state)
-        }
+    init(document: ComposerDocument, model: EditorModel) {
         self.document = document
-        _model = State(initialValue: model)
+        self.model = model
     }
 
     private func externalFiles(_ url: URL) throws -> [String] {
@@ -64,7 +89,7 @@ public struct ComposerView: View {
         }
     }
 
-    public var body: some View {
+    var body: some View {
         NavigationSplitView(columnVisibility: $model.sidebarVisibility) {
             VStack(spacing: 0) {
                 Picker("Sidebar", selection: $model.sidebarTab) {

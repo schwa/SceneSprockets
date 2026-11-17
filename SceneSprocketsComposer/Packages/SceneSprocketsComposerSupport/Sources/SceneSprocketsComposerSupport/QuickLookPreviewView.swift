@@ -1,14 +1,15 @@
 import SwiftUI
 
-// Read-only scene preview for the Quick Look extension.
+// Read-only scene preview for the Quick Look extension. The model is built the first time the body runs (#489).
 public struct QuickLookPreviewView: View {
-    @State private var model: EditorModel
+    private let document: ComposerDocument
+    @State private var model = LazyState<EditorModel>()
 
     public init(document: ComposerDocument) {
-        _model = State(initialValue: EditorModel(sceneGraph: document.sceneGraph))
+        self.document = document
     }
 
     public var body: some View {
-        ScenePreviewView(model: model)
+        ScenePreviewView(model: model.value { EditorModel(sceneGraph: document.sceneGraph) })
     }
 }

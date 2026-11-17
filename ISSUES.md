@@ -11167,12 +11167,14 @@ Found by the SwiftUI review (#475).
 ## 489: Views build their model in init, so it is built again every time the view is initialized
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:composer, effort:s
 milestone: M002-Performance
 created: 2026-11-17T06:52:28Z
+updated: 2026-11-17T13:45:38Z
+closed: 2026-11-17T13:45:38Z
 +++
 
 ComposerView.init and QuickLookPreviewView.init create an EditorModel and pass it to State(initialValue:). SwiftUI keeps only the first one, but init runs each time the parent makes the view again, and each run does the full work: EditorModel.init computes sceneGraph.bounds twice, makes the renderers, Shadows, a SelectionOutline and a DisplayFrameRate, which adds four NotificationCenter observers that are never removed; ComposerView then applies the saved editor state to the throwaway model.
@@ -11184,6 +11186,8 @@ Not measured: how often DocumentGroup re-runs the editor closure.
 Expected: the model is built once per document or demo.
 
 Found by the SwiftUI review (#475).
+
+- `2026-11-17T13:45:38Z`: Fixed. ComposerView, QuickLookPreviewView and SceneDemoView keep a LazyState in @State and build their model (EditorModel, or the demo's scene and delegate) the first time the body runs. The rest of each view moved into an inner view (ComposerEditorView, SceneDemoContentView) that takes the built model. Tests: lazyStateBuildsItsValueOnce, composerViewInitBuildsNoModel, sceneDemoViewInitBuildsNoScene. The two init tests could not compile before (new properties). LazyState is copied in the Composer and demo packages, which do not share a target. Not checked in the running apps.
 
 ---
 

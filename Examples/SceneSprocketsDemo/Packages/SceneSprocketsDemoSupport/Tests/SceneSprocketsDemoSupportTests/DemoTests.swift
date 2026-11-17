@@ -38,6 +38,15 @@ func keynoteSlideControlNamesAreUnique() {
     #expect(Set(names).count == names.count, "\(Dictionary(grouping: names) { $0 }.filter { $0.value.count > 1 }.keys)")
 }
 
+// #489: initializing SceneDemoView, as a parent's body does, does not build the demo's scene.
+@Test
+@MainActor
+func sceneDemoViewInitBuildsNoScene() throws {
+    let demo = try #require(DemoCatalog.demos.first { $0.id == "keynote" })
+    let view = SceneDemoView(demo: demo)
+    #expect(view.builtScene == nil)
+}
+
 // #158: the dice demo's generated dice and gears are saved as glTF and read back as meshes.
 @Test
 @MainActor
