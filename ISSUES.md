@@ -10144,6 +10144,17 @@ Tests run in parallel, so the crashing test is not known.
 - One run with --sanitize=address: passed, no ASan reports.
 Cause still unknown. A crash report (.ips from ~/Library/Logs/DiagnosticReports) from a failing CI run would identify the crashing thread.
 
+- `2026-11-17T06:23:38Z`: Reproduced locally (about 1 in 15 runs of SceneSprocketsPhysicsTests, SwiftJolt 0.0.3). Backtrace with SWIFT_BACKTRACE:
+
+Bad pointer dereference at 0x9, Thread 3:
+0 JPH::HashTable<JPH::PhysicsSystem*, pair<JPH::PhysicsSystem*, JPH_PhysicsSystem*>, ...>::InsertKey<false>
+1 JPH_PhysicsSystem_Create + 600
+2 PhysicsWorld.init(engine:gravity:...) (SwiftJolt JoltPhysics.swift:438)
+3 SceneGraphPhysicsWorld.init(sceneGraph:gravity:) (SceneGraphPhysicsWorld.swift:45)
+4 changingPhysicsBodyKeepsItsMotion() (the test that happened to be creating a world)
+
+Likely cause: joltc keeps a process-wide map from JPH::PhysicsSystem* to JPH_PhysicsSystem*, and JPH_PhysicsSystem_Create inserts into it without a lock. Swift Testing runs tests in parallel, so two tests creating physics worlds at once race on the map. Any app creating physics worlds on more than one thread would hit the same race. joltc ships as a binary in SwiftJolt, so the map itself was not inspected.
+
 ---
 
 ## 443: Standalone demos duplicate or sit outside the keynote
