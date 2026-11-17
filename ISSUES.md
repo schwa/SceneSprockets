@@ -7584,10 +7584,10 @@ This costs more as scenes grow (thousands of nodes, high-poly meshes).
 
 Open question (per schwa): where should this live? Candidates: SceneSprockets (node-level structure that follows the scene graph and its change tracking), SwiftMesh (per-mesh triangle structure, reusable outside SceneSprockets), or a separate package. A split is also possible: per-mesh triangle structures in SwiftMesh, node-level structure in SceneSprockets.
 
-- `2026-11-07T18:39:49Z`: Question 1 (decision): Where should the spatial acceleration structure live: SceneSprockets, SwiftMesh, a separate package, or split (triangles in SwiftMesh, nodes in SceneSprockets)?
-- `2026-11-16T20:08:31Z`: Related: #402 (positions re-read per hit test call).
-- `2026-11-16T21:26:58Z`: Answer 1: SwiftMesh seems correct
-- `2026-11-17T14:17:38Z`: Looked at it; punting on a scope decision.
+\- `2026-11-07T18:39:49Z`: Question 1 (decision): Where should the spatial acceleration structure live: SceneSprockets, SwiftMesh, a separate package, or split (triangles in SwiftMesh, nodes in SceneSprockets)?
+\- `2026-11-16T20:08:31Z`: Related: #402 (positions re-read per hit test call).
+\- `2026-11-16T21:26:58Z`: Answer 1: SwiftMesh seems correct
+\- `2026-11-17T14:17:38Z`: Looked at it; punting on a scope decision.
 
 Found: SwiftMesh already has a triangle BVH (TriangleBVH, also in the 0.1.0 release SceneSprockets uses) with closestPoint(to:) and intersect(ray:cullBackFaces:). intersect returns only the nearest hit. SceneGraph.hitTest returns every hit, nearest first, unless firstFoundOnly, so the BVH can replace the per-triangle loop only for nearest-hit queries; returning every hit needs a new 'all hits' query in SwiftMesh and a SwiftMesh release.
 
@@ -11049,17 +11049,21 @@ Found by the swift-concurrency-pro review (#476).
 ## 483: Demo and tutorial app targets build in Swift 5 language mode
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:build, effort:xs
 milestone: M002-Performance
 created: 2026-11-17T06:39:06Z
+updated: 2026-11-17T14:19:03Z
+closed: 2026-11-17T14:19:03Z
 +++
 
 SceneSprocketsDemo.xcodeproj and SceneSprocketTutorials.xcodeproj set SWIFT_VERSION = 5.0 (with SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor). The packages and SceneSprocketsComposer build in Swift 6 mode. In Swift 5 mode, data-race diagnostics in the app targets' own code are warnings at most, so the tutorials that users copy from are not checked the way the rest of the repo is.
 
 Found by the swift-concurrency-pro review (#476).
+
+- `2026-11-17T14:19:03Z`: Fixed. Both app targets' shared xcconfigs now set SWIFT_VERSION = 6.0 (they keep SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor). Both build with no errors: SceneSprocketsDemo, and SceneSprocketTutorials with -skipMacroValidation, because Xcode wants the MetalSprockets macro package approved again after it changed (unrelated to this change; approve it once in Xcode). No test: build setting only.
 
 ---
 
