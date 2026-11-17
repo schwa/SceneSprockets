@@ -10877,12 +10877,14 @@ Expected: a review that lists architecture problems; each one filed as its own i
 ## 478: Shadows object is changed on the main thread while the render thread uses it
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:renderer, effort:m
 milestone: M002-Performance
 created: 2026-11-17T06:39:06Z
+updated: 2026-11-17T07:05:50Z
+closed: 2026-11-17T07:05:50Z
 +++
 
 Shadows is a class with public settings (intensity, softness, color, resolution, depthBias, ...) and private caches (shadow map, position and influence buffers, receiver masks, droppedLightCount). SceneView draws on a render thread (#393) and hands it the same Shadows instance the app holds. Nothing synchronizes the two sides.
@@ -10893,6 +10895,8 @@ Shadows is a class with public settings (intensity, softness, color, resolution,
 Expected: changing shadow settings, or reading droppedLightCount, while a view renders is not a data race.
 
 Found by the swift-concurrency-pro review (#476).
+
+- `2026-11-17T07:05:50Z`: Fixed: the settings and droppedLightCount are now behind a lock, and prepare takes one copy of the settings per frame. The caches (shadow map, position and influence buffers, receiver masks) are still used without a lock by the thread that draws; two views sharing one Shadows object is #481. Test settingsCanChangeWhileAFrameIsPrepared: the race is on plain values, so it only fails with --sanitize=thread (2 data races in Shadows.prepare before the fix, none after); in a normal run it passes either way.
 
 ---
 

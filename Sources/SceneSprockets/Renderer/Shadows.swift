@@ -56,31 +56,94 @@ public extension SamplesShadowsInShader {
 /// `receivesShadow: false` receive none.
 /// The view's color texture needs `.shaderWrite` and its depth texture `.shaderRead` usage (see
 /// `requiredColorUsage`); otherwise no shadows are drawn.
+///
+/// You can change the settings and read ``droppedLightCount`` on one thread while a view draws with the object on its
+/// render thread.
 public final class Shadows {
     /// Usage the view's color texture needs: the shadow and post-processing passes write it from compute.
     public static let requiredColorUsage: MTLTextureUsage = [.renderTarget, .shaderRead, .shaderWrite]
     /// Usage the view's depth texture needs: the passes sample it.
     public static let requiredDepthUsage: MTLTextureUsage = [.renderTarget, .shaderRead]
 
+    // What the app sets and the render thread reads, and the count that goes the other way.
+    struct Settings {
+        var intensity: Float
+        var color: SIMD3<Float>
+        var softness: Int
+        var resolution: Int
+        var depthBias: Float
+        var slopeScale: Float
+        var depthOffsetTexels: Float
+        var droppedLightCount = 0
+    }
+
+    // Guards `storedSettings`: the app changes settings on one thread while a view's render thread reads them (#478).
+    private let lock = NSLock()
+    private var storedSettings: Settings
+
+    // A consistent copy of every setting, for one frame.
+    var settings: Settings {
+        lock.withLock { storedSettings }
+    }
+
+    private func read<Value>(_ keyPath: KeyPath<Settings, Value>) -> Value {
+        lock.withLock { storedSettings[keyPath: keyPath] }
+    }
+
+    private func write<Value>(_ keyPath: WritableKeyPath<Settings, Value>, _ value: Value) {
+        lock.withLock { storedSettings[keyPath: keyPath] = value }
+    }
+
     /// 0 leaves shadowed pixels unchanged, 1 multiplies them by `color`.
-    public var intensity: Float
+    public var intensity: Float {
+        get { read(\.intensity) }
+        set { write(\.intensity, newValue) }
+    }
+
     /// Linear RGB multiplied into shadowed pixels, like SCNLight.shadowColor; black darkens.
-    public var color: SIMD3<Float>
+    public var color: SIMD3<Float> {
+        get { read(\.color) }
+        set { write(\.color, newValue) }
+    }
+
     /// Soft-shadow filter half-size in shadow map texels, like SCNLight.shadowRadius: 1 filters 3x3, 0 is hard.
     /// Cost grows with (2 * softness + 1)^2 per light.
-    public var softness: Int
+    public var softness: Int {
+        get { read(\.softness) }
+        set { write(\.softness, newValue) }
+    }
+
     /// The width and height of each shadow map slice, in texels.
-    public var resolution: Int
+    public var resolution: Int {
+        get { read(\.resolution) }
+        set { write(\.resolution, newValue) }
+    }
+
     /// The constant depth bias when the shadow map is drawn.
-    public var depthBias: Float
+    public var depthBias: Float {
+        get { read(\.depthBias) }
+        set { write(\.depthBias, newValue) }
+    }
+
     /// The depth bias that increases with the slope of the surface, per texel of `softness`.
-    public var slopeScale: Float
+    public var slopeScale: Float {
+        get { read(\.slopeScale) }
+        set { write(\.slopeScale, newValue) }
+    }
+
     /// World-space push of directional-light casters away from the light, in shadow map texels. The hardware
     /// constant bias is tiny with depth32Float, so this is what stops acne on lit faces (#60).
-    public var depthOffsetTexels: Float
-    /// Lights that cast no shadow in the last frame because their views did not fit in the 8 slices.
-    public private(set) var droppedLightCount = 0
+    public var depthOffsetTexels: Float {
+        get { read(\.depthOffsetTexels) }
+        set { write(\.depthOffsetTexels, newValue) }
+    }
 
+    /// Lights that cast no shadow in the last frame because their views did not fit in the 8 slices.
+    public var droppedLightCount: Int {
+        read(\.droppedLightCount)
+    }
+
+    // The caches below belong to the thread that draws with this object.
     private var shadowMap: SceneGraphShadowMap?
     private var positionBuffers: [PositionKey: MTLBuffer] = [:]
     private var influenceBuffers: [InfluenceKey: MTLBuffer] = [:]
@@ -89,13 +152,7 @@ public final class Shadows {
 
     /// Creates shadow settings. Keep one instance for each view, because it keeps the shadow map between frames.
     public init(intensity: Float = 0.6, color: SIMD3<Float> = .zero, softness: Int = 1, resolution: Int = 2_048, depthBias: Float = 2, slopeScale: Float = 2, depthOffsetTexels: Float = 1.5) {
-        self.depthOffsetTexels = depthOffsetTexels
-        self.intensity = intensity
-        self.color = color
-        self.softness = softness
-        self.resolution = resolution
-        self.depthBias = depthBias
-        self.slopeScale = slopeScale
+        storedSettings = Settings(intensity: intensity, color: color, softness: softness, resolution: resolution, depthBias: depthBias, slopeScale: slopeScale, depthOffsetTexels: depthOffsetTexels)
     }
 
     /// What an in-shader renderer needs to sample the shadow map.
@@ -149,7 +206,9 @@ public final class Shadows {
         let relativeBounds = BoundingBox3D(min: cameraRelative(bounds.min, to: cameraPosition), max: cameraRelative(bounds.max, to: cameraPosition))
         let relativeLights = context.lights.map { (worldTransform: $0.worldTransform.cameraRelative(to: cameraPosition), light: $0.light) }
         let (views, dropped, slices) = shadowViewsAndDroppedLights(lights: relativeLights, bounds: relativeBounds)
-        droppedLightCount = dropped
+        write(\.droppedLightCount, dropped)
+        // One copy for the whole frame, so a change in the middle does not mix old and new values.
+        let settings = self.settings
         guard !views.isEmpty else {
             return nil
         }
@@ -206,19 +265,19 @@ public final class Shadows {
             return nil
         }
 
-        if shadowMap?.lightCount != views.count || shadowMap?.resolution != resolution {
-            shadowMap = try SceneGraphShadowMap(resolution: resolution, lightCount: views.count)
+        if shadowMap?.lightCount != views.count || shadowMap?.resolution != settings.resolution {
+            shadowMap = try SceneGraphShadowMap(resolution: settings.resolution, lightCount: views.count)
         }
         guard var shadowMap else {
             return nil
         }
-        shadowMap.depthBias = depthBias
+        shadowMap.depthBias = settings.depthBias
         // The PCF kernel compares one receiver depth against texels up to `softness` away, so a sloped receiver needs a
         // slope bias that grows with it, or it shadows itself (#366).
-        shadowMap.slopeScale = slopeScale * Float(max(softness, 1))
+        shadowMap.slopeScale = settings.slopeScale * Float(max(settings.softness, 1))
         shadowMap.lightViewProjectionMatrices = views
         self.shadowMap = shadowMap
-        let casterViews = views.map(casterViewProjection)
+        let casterViews = views.map { casterViewProjection($0, settings: settings) }
         guard !nonReceivers.isEmpty, let viewSize else {
             return Frame(shadowMap: shadowMap, casters: casters, customCasters: customCasters, renderOrigin: cameraPosition, casterViewProjections: casterViews, lightSlices: slices, masksEverything: masksEverything)
         }
@@ -227,7 +286,10 @@ public final class Shadows {
 
     // `view` with caster depth pushed `depthOffsetTexels` texels away from the light. Only orthographic (directional)
     // views; perspective views are returned unchanged and rely on the hardware bias.
-    func casterViewProjection(_ view: simd_float4x4) -> simd_float4x4 {
+    func casterViewProjection(_ view: simd_float4x4, settings: Settings? = nil) -> simd_float4x4 {
+        let settings = settings ?? self.settings
+        let depthOffsetTexels = settings.depthOffsetTexels
+        let resolution = settings.resolution
         let rowW = SIMD3(view[0][3], view[1][3], view[2][3])
         guard simd_length(rowW) < 1e-6, depthOffsetTexels != 0 else {
             return view

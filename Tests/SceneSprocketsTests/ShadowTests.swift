@@ -94,6 +94,34 @@ func skinnedCasterIsSkinnedOnGPU() throws {
     #expect(frame.casters.contains { if case .skinned = $0.placement { true } else { false } })
 }
 
+// #478: an app changes shadow settings on the main thread while SceneView's render thread prepares the frame. The
+// race is on plain values, so it only shows with the thread sanitizer (--sanitize=thread).
+@Test(.enabled(if: deviceSupportsMetal4))
+@MainActor
+func settingsCanChangeWhileAFrameIsPrepared() async throws {
+    let (sceneGraph, _) = try makeScene()
+    let shadows = Shadows(intensity: 0.8)
+    let context = try #require(makeRenderContext(sceneGraph: sceneGraph, camera: nil, cameraMatrix: nil, aspectRatio: 1))
+    nonisolated(unsafe) let entries = sceneGraph.meshEntries()
+    nonisolated(unsafe) let unsafeContext = context
+    nonisolated(unsafe) let unsafeShadows = shadows
+    let bounds = sceneGraph.bounds
+    let rendering = Task.detached {
+        for _ in 0..<200 {
+            _ = try? unsafeShadows.prepare(entries: entries, context: unsafeContext, bounds: bounds)
+        }
+    }
+    for index in 0..<200 {
+        shadows.intensity = Float(index % 10) / 10
+        shadows.softness = index % 3
+        shadows.color = SIMD3(repeating: Float(index % 2))
+        shadows.depthBias = Float(index % 4)
+        _ = shadows.droppedLightCount
+    }
+    await rendering.value
+    #expect(shadows.softness == 199 % 3)
+}
+
 @Test(.enabled(if: deviceSupportsMetal4), arguments: [Light.Kind.spot, .point])
 @MainActor
 func spotAndPointLightsCastShadows(light: Light.Kind) throws {
