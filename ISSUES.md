@@ -9774,13 +9774,14 @@ Related: #415 (same loss of motion when the physicsBody description changes).
 ## 425: A .mesh physics shape on a dynamic body is not rejected
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:physics, effort:xs
 milestone: M001-Correctness
 created: 2026-11-17T01:02:42Z
-updated: 2026-11-17T06:04:50Z
+updated: 2026-11-17T06:12:11Z
+closed: 2026-11-17T06:12:11Z
 +++
 
 SceneGraph.PhysicsBody accepts shape .mesh with type .dynamic. Jolt only supports triangle-mesh shapes on static and kinematic bodies (SwiftJolt documents this on Shape.mesh). SceneGraphPhysicsWorld passes the combination straight to Jolt.

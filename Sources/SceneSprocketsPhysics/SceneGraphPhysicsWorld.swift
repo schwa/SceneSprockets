@@ -1,5 +1,6 @@
 import GeometryLite3D
 import JoltPhysics
+import os
 import SceneSprockets
 import simd
 import SwiftMesh
@@ -28,6 +29,8 @@ public final class SceneGraphPhysicsWorld {
     }
 
     private(set) var entries: [ObjectIdentifier: Entry] = [:]
+    // Nodes already warned about, so a rejected body is reported once, not every step.
+    private var warnedNodes: Set<SceneGraph.Node.ID> = []
 
     /// Creates a physics world for a scene graph.
     ///
@@ -138,7 +141,17 @@ public final class SceneGraphPhysicsWorld {
         }
     }
 
+    private static let logger = Logger(subsystem: "io.schwa.SceneSprockets", category: "Physics")
+
     private func makeBody(for node: SceneGraph.Node, description: SceneGraph.PhysicsBody) -> BodyID? {
+        // Jolt supports triangle-mesh shapes only on static and kinematic bodies (#425).
+        if description.type == .dynamic, description.shape == .mesh {
+            guard warnedNodes.insert(node.id).inserted else {
+                return nil
+            }
+            Self.logger.warning("Node \(node.label ?? "(unlabeled)", privacy: .public) has a dynamic physics body with shape .mesh, which Jolt does not support; it gets no body. Use .convexHull instead.")
+            return nil
+        }
         let pose = Transform3D(nearestTo: node.worldTransform)
         guard let shape = joltShape(description.shape, node: node, scale: simd_abs(pose.scale)) else {
             return nil

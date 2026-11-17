@@ -131,6 +131,22 @@ func boundingBoxAndMeshShapesComeFromTheMesh() throws {
 
 private struct Unlit: SceneMaterial {}
 
+// #425: Jolt supports triangle-mesh shapes only on static and kinematic bodies.
+@Test
+func dynamicMeshShapeGetsNoBody() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let root = SceneGraph.Node()
+    let mesh = MetalMesh(mesh: Mesh.box(extents: [1, 1, 1]), device: device)
+    let dynamic = root.addChild(SceneGraph.Node(content: .mesh(mesh, material: Unlit())))
+    dynamic.physicsBody = .init(type: .dynamic, shape: .mesh)
+    let kinematic = root.addChild(SceneGraph.Node(content: .mesh(mesh, material: Unlit())))
+    kinematic.physicsBody = .init(type: .kinematic, shape: .mesh)
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+    physics.sync()
+    #expect(physics.body(of: dynamic) == nil)
+    #expect(physics.body(of: kinematic) != nil)
+}
+
 // #125: the slider constraint stops a node at physics bodies and lets it slide along them.
 @Test
 func sliderConstraintStopsAtWallAndSlides() throws {

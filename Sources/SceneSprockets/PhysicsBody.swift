@@ -30,7 +30,8 @@ extension SceneGraph {
             case boundingBox
             /// The convex hull of the node's mesh positions.
             case convexHull
-            /// The node's triangles. Only static and kinematic bodies can use this shape.
+            /// The node's triangles. Only static and kinematic bodies can use this shape; a dynamic body with it is not
+            /// created, and a warning is logged.
             case mesh
         }
 
