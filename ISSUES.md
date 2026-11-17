@@ -7587,6 +7587,18 @@ Open question (per schwa): where should this live? Candidates: SceneSprockets (n
 - `2026-11-07T18:39:49Z`: Question 1 (decision): Where should the spatial acceleration structure live: SceneSprockets, SwiftMesh, a separate package, or split (triangles in SwiftMesh, nodes in SceneSprockets)?
 - `2026-11-16T20:08:31Z`: Related: #402 (positions re-read per hit test call).
 - `2026-11-16T21:26:58Z`: Answer 1: SwiftMesh seems correct
+- `2026-11-17T14:17:38Z`: Looked at it; punting on a scope decision.
+
+Found: SwiftMesh already has a triangle BVH (TriangleBVH, also in the 0.1.0 release SceneSprockets uses) with closestPoint(to:) and intersect(ray:cullBackFaces:). intersect returns only the nearest hit. SceneGraph.hitTest returns every hit, nearest first, unless firstFoundOnly, so the BVH can replace the per-triangle loop only for nearest-hit queries; returning every hit needs a new 'all hits' query in SwiftMesh and a SwiftMesh release.
+
+The other two parts of this issue (frustum culling and region or nearest-node queries) are about nodes, not triangles. SwiftMesh does not know about scene graph nodes, so a node-level structure that follows node changes would live in SceneSprockets.
+
+Proposed split for your decision:
+1. SwiftMesh: an all-hits ray query on TriangleBVH (needs a SwiftMesh change and release).
+2. SceneSprockets: build a TriangleBVH per mesh (cached like HitTestGeometryCache, #402) and use it in hitTest.
+3. SceneSprockets: a node-level bounds hierarchy for culling and region queries, rebuilt or refit from the scene's change tracking.
+
+Should I go ahead with that split, and may I work in the SwiftMesh repo for step 1?
 
 ---
 
