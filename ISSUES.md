@@ -5869,6 +5869,7 @@ At orbital speeds (several km/s) the active object's coordinates change by kilom
 Part of #255.
 
 - `2026-11-07T16:30:16Z`: Autonomous run: not changed. A Krakensbane-style moving reference frame (subtract the active object's velocity from the whole world each step, keep the object near rest) needs a world-space origin that can shift, which is #259 (physics far from the origin, floating origin) and #256 (Double transforms, effort:xl). Without those, the frame offset just moves the precision loss elsewhere. Punting: depends on #259 and #256 and on the #255 design for how origin shifts reach physics, rendering and node transforms. Unblocker: settle #255's origin-shift design (or do #259 first).
+- `2026-11-17T06:02:51Z`: Related: #413 (continuous collision / motion quality option for fast bodies).
 
 ---
 
@@ -9428,10 +9429,12 @@ Unknown (not verified here): whether the SSAO texture produced in #136 is expose
 ## 409: No check that PBR and Blinn-Phong materials respond the same way to every rendering technique
 
 +++
-status: new
+status: open
 priority: medium
 kind: task
+labels: area:renderer, effort:l
 created: 2026-11-16T23:06:43Z
+updated: 2026-11-17T06:02:44Z
 +++
 
 SceneSprockets applies many scene-wide techniques to meshes: shadows, fog, ambient occlusion, node opacity and fades, transparency sorting, transmission backdrops, color adjustment and vignette, soft particles, debug views, material channels, stereo and immersive rendering, GPU deformation, and others. Each material renderer implements its part of these on its own. Nothing checks that a PBR material and a Blinn-Phong material get the same treatment. Differences show up one at a time as bugs.
@@ -9448,11 +9451,12 @@ Missing: a list of each technique with how each renderer handles it, and tests t
 ## 410: SwiftJolt dependency is pinned to 0.0.1, so newer SwiftJolt APIs are unavailable
 
 +++
-status: new
+status: open
 priority: medium
 kind: task
 labels: area:physics, effort:s
 created: 2026-11-16T23:33:44Z
+updated: 2026-11-17T06:02:44Z
 +++
 
 Package.swift depends on SwiftJolt `.upToNextMinor(from: "0.0.1")`. SwiftJolt has since added body options, sensors, collision layers and groups, query filters, user data, step listeners, physics settings, shape decorators, trace handlers and more (SwiftJolt issues #65–#98). None of these are released yet, so SceneSprocketsPhysics cannot use them.
@@ -9465,12 +9469,13 @@ Release a new SwiftJolt version and raise the dependency.
 ## 411: Physics bodies cannot be triggers
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
 labels: area:physics, effort:s
 depends: 410
 created: 2026-11-16T23:34:11Z
+updated: 2026-11-17T06:02:44Z
 +++
 
 SceneGraph.PhysicsBody has no way to make a body detect overlaps without colliding (a trigger volume, like SceneKit contact-only bodies). Every body blocks every other body.
@@ -9483,12 +9488,13 @@ Use SwiftJolt's `BodyOptions.isSensor` / `PhysicsWorld.setIsSensor` together wit
 ## 412: Nodes cannot choose which other nodes their bodies collide with
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
 labels: area:physics, effort:m
 depends: 410
 created: 2026-11-16T23:34:11Z
+updated: 2026-11-17T06:02:44Z
 +++
 
 All bodies in SceneGraphPhysicsWorld collide with all others (except static vs static). There is no equivalent of SceneKit's collisionBitMask, and no way to make, for example, debris pass through characters or parts of one ragdoll ignore each other.
@@ -9501,12 +9507,13 @@ Map node categories to SwiftJolt `CollisionLayers` (fixed when the world is crea
 ## 413: PhysicsBody has no damping, gravity, sleep or continuous-collision options
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
 labels: area:physics, effort:s
 depends: 410
 created: 2026-11-16T23:34:12Z
+updated: 2026-11-17T06:02:44Z
 +++
 
 SceneGraph.PhysicsBody only has type, shape, mass, friction and restitution. Linear/angular damping, a gravity factor (or not affected by gravity), whether the body may sleep, and continuous collision for fast bodies cannot be set. SceneKit exposes damping, isAffectedByGravity, allowsResting and continuousCollisionDetectionThreshold.
@@ -9514,17 +9521,20 @@ SceneGraph.PhysicsBody only has type, shape, mass, friction and restitution. Lin
 ## Proposed fix (per schwa)
 Pass SwiftJolt's `BodyOptions` (linearDamping, angularDamping, gravityFactor, allowSleeping, motionQuality: .linearCast, maxLinearVelocity) from makeBody.
 
+- `2026-11-17T06:02:51Z`: Related: #260 (fast-moving objects jitter).
+
 ---
 
 ## 414: Physics bodies cannot be limited to some axes
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
 labels: area:physics, effort:s
 depends: 410
 created: 2026-11-16T23:34:12Z
+updated: 2026-11-17T06:02:44Z
 +++
 
 There is no way to lock a body's rotation or keep it in a plane (SceneKit angularVelocityFactor / velocityFactor). 2D-style scenes and upright characters need this.
@@ -9537,12 +9547,13 @@ Use SwiftJolt's `BodyOptions.allowedDegreesOfFreedom` (e.g. `.plane2D`, or trans
 ## 415: Changing a node's physicsBody throws away the body's motion
 
 +++
-status: new
+status: open
 priority: low
 kind: bug
 labels: area:physics, effort:m
 depends: 410
 created: 2026-11-16T23:34:12Z
+updated: 2026-11-17T06:02:44Z
 +++
 
 When a node's physicsBody description changes (e.g. friction, type or shape), sync() removes the Jolt body and adds a new one. The new body starts at rest, so a moving object stops dead, and contacts reset.
@@ -9562,12 +9573,13 @@ Update the existing body with SwiftJolt's `setFriction`, `setRestitution`, `setM
 ## 416: Scaled and off-center shapes are approximated by rebuilding their geometry
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
 labels: area:physics, effort:s
 depends: 410
 created: 2026-11-16T23:34:12Z
+updated: 2026-11-17T06:02:44Z
 +++
 
 joltShape bakes the node's scale into each shape: spheres use the largest scale axis, capsules and cylinders mix X/Z scale, mesh and hull vertices are copied and scaled, and an off-center bounding box becomes a one-child compound. Non-uniform scale of round shapes is not exact, and scaled meshes duplicate vertex data.
@@ -9580,12 +9592,13 @@ Use SwiftJolt's `Shape.scaled` (with `isValidScale` / `validScale(closestTo:)`) 
 ## 417: Finding the node of a physics body scans every entry
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
 labels: area:physics, effort:xs
 depends: 410
 created: 2026-11-16T23:34:12Z
+updated: 2026-11-17T06:02:44Z
 +++
 
 SceneGraphPhysicsWorld.node(of:) does a linear search over all entries. The slider constraint calls it for every sweep hit, every frame, so cost grows with scene size.
@@ -9598,12 +9611,13 @@ Store an index or key in SwiftJolt body user data (`BodyOptions.userData` / `use
 ## 418: Slider constraint sweeps against every body and filters afterwards
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
 labels: area:physics, effort:s
 depends: 410
 created: 2026-11-16T23:34:12Z
+updated: 2026-11-17T06:02:44Z
 +++
 
 sliderConstraint casts against all bodies with castShapeAll and then discards hits on the node itself, its descendants and nodes outside categoryBitMask in Swift. Every excluded hit is still computed and allocated.
@@ -9616,12 +9630,13 @@ Pass a SwiftJolt `QueryFilter` (excludedBodies, shouldInclude, layers) to castSh
 ## 419: Every dynamic node's transform is written each step, even when asleep
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
 labels: area:physics, effort:xs
 depends: 410
 created: 2026-11-16T23:34:12Z
+updated: 2026-11-17T06:02:44Z
 +++
 
 step() writes the pose of every dynamic body to its node every step. Sleeping bodies don't move, but their nodes are still written, which bumps the transform revision and costs time in large scenes.
@@ -9634,12 +9649,13 @@ Write only awake bodies, e.g. via SwiftJolt's `PhysicsWorld.activeBodies` or `is
 ## 420: No way to apply forces every physics sub-step
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
 labels: area:physics, effort:m
 depends: 410
 created: 2026-11-16T23:34:13Z
+updated: 2026-11-17T06:02:44Z
 +++
 
 Custom forces (wind, buoyancy, magnets, SceneKit-style physics fields) can only be applied once per step() call. With collisionSteps > 1 they are not re-applied per sub-step, and there is no hook that runs inside the simulation.
@@ -9647,17 +9663,20 @@ Custom forces (wind, buoyancy, magnets, SceneKit-style physics fields) can only 
 ## Proposed fix (per schwa)
 Expose SwiftJolt's `StepListener` (`addStepListener`) through SceneGraphPhysicsWorld.
 
+- `2026-11-17T06:02:51Z`: Related: #436 (buoyancy).
+
 ---
 
 ## 421: Physics solver and sleep settings cannot be tuned
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
 labels: area:physics, effort:xs
 depends: 410
 created: 2026-11-16T23:34:13Z
+updated: 2026-11-17T06:02:45Z
 +++
 
 SceneGraphPhysicsWorld has no way to change solver iterations, baumgarte, penetration slop, sleep time or other world-wide settings. Stacks and joints that need more iterations cannot be fixed from SceneSprockets.
@@ -9670,12 +9689,13 @@ Expose SwiftJolt's `PhysicsWorld.settings` (`PhysicsSettings`).
 ## 422: Jolt diagnostic messages go to stdout
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
 labels: area:physics, effort:xs
 depends: 410
 created: 2026-11-16T23:34:13Z
+updated: 2026-11-17T06:02:45Z
 +++
 
 Jolt prints its trace messages to stdout. They don't reach os.Logger, so they are missing from Console and unified logging, unlike the rest of SceneSprockets.
@@ -9688,12 +9708,13 @@ Install SwiftJolt's `JoltEngine.setTraceHandler` and forward to the package logg
 ## 423: Physics contacts are not reported to the scene graph
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
 labels: area:physics, effort:m
 depends: 410
 created: 2026-11-16T23:34:13Z
+updated: 2026-11-17T06:02:45Z
 +++
 
 There is no way to learn that two nodes' bodies started or stopped touching (SceneKit's SCNPhysicsContactDelegate). Games need this for hits, pickups and sounds; the Jolt world's contact listener is only reachable through `world` and reports BodyIDs, not nodes.
@@ -9706,11 +9727,12 @@ Wrap SwiftJolt's `ContactListener` (and `wereBodiesInContact`), map BodyIDs to n
 ## 424: Hiding a node throws away its physics body's motion
 
 +++
-status: new
+status: open
 priority: low
 kind: bug
-labels: area:physics
+labels: area:physics, effort:m
 created: 2026-11-17T01:02:42Z
+updated: 2026-11-17T06:02:45Z
 +++
 
 SceneGraphPhysicsWorld.sync() only visits visible nodes, so hiding a node (or an ancestor) removes and destroys its Jolt body. Showing it again creates a new body at rest. Velocity, sleep state and contacts are lost.
@@ -9729,11 +9751,12 @@ Related: #415 (same loss of motion when the physicsBody description changes).
 ## 425: A .mesh physics shape on a dynamic body is not rejected
 
 +++
-status: new
+status: open
 priority: low
 kind: bug
-labels: area:physics
+labels: area:physics, effort:xs
 created: 2026-11-17T01:02:42Z
+updated: 2026-11-17T06:02:45Z
 +++
 
 SceneGraph.PhysicsBody accepts shape .mesh with type .dynamic. Jolt only supports triangle-mesh shapes on static and kinematic bodies (SwiftJolt documents this on Shape.mesh). SceneGraphPhysicsWorld passes the combination straight to Jolt.
@@ -9747,11 +9770,12 @@ Expected: the combination is reported clearly (error, warning or documented fall
 ## 426: Degenerate .convexHull meshes crash physics sync
 
 +++
-status: new
+status: open
 priority: low
 kind: bug
-labels: area:physics
+labels: area:physics, effort:xs
 created: 2026-11-17T01:02:42Z
+updated: 2026-11-17T06:02:45Z
 +++
 
 For shape .convexHull, SceneGraphPhysicsWorld only checks that the mesh has at least 4 positions. If the points cannot form a hull (for example all identical or all on one line), SwiftJolt's Shape.convexHull stops the process with a precondition failure: "Could not build a convex hull from N points".
@@ -9768,11 +9792,12 @@ Expected: the node gets no body (like an unusable mesh does today) or a reported
 ## 427: Slider constraint keeps state for nodes that no longer exist
 
 +++
-status: new
+status: open
 priority: low
 kind: bug
-labels: area:physics
+labels: area:physics, effort:xs
 created: 2026-11-17T01:02:42Z
+updated: 2026-11-17T06:02:45Z
 +++
 
 sliderConstraint(radius:categoryBitMask:) stores the last position of every node it runs on in a dictionary keyed by ObjectIdentifier. Entries are never removed, so the dictionary grows as nodes come and go.
@@ -9786,12 +9811,13 @@ Expected: state for removed nodes is dropped.
 ## 428: Physics shapes lack height fields, planes, tapered cylinders and empty shapes
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
-labels: area:physics
+labels: area:physics, effort:m
 depends: 410
 created: 2026-11-17T01:03:57Z
+updated: 2026-11-17T06:02:45Z
 +++
 
 PhysicsBody.Shape only offers box, sphere, capsule, cylinder, boundingBox, convexHull and mesh. Terrain has to use a triangle mesh, ground planes need a large box, and there is no shape for a body that only exists to be jointed or moved.
@@ -9803,12 +9829,13 @@ Context: SwiftJolt now has Shape.heightField (with block size / bits-per-sample 
 ## 429: Physics surfaces cannot be tagged with a material
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
-labels: area:physics
+labels: area:physics, effort:m
 depends: 410
 created: 2026-11-17T01:03:57Z
+updated: 2026-11-17T06:02:45Z
 +++
 
 There is no way to tag a node's collision surface (or individual mesh triangles) and find out which surface a ray or contact hit, e.g. to choose footstep sounds or decals.
@@ -9820,12 +9847,13 @@ Context: SwiftJolt now has PhysicsMaterial on plane/tapered-cylinder shapes, per
 ## 430: Physics contacts report no impact strength
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
-labels: area:physics
+labels: area:physics, effort:s
 depends: 410
 created: 2026-11-17T01:03:57Z
+updated: 2026-11-17T06:02:45Z
 +++
 
 Nothing tells the app how hard two bodies hit, so impact sounds, damage and particles can't be scaled by force.
@@ -9839,12 +9867,13 @@ Context: SwiftJolt now has Contact.estimateResponse (predicted impulses and velo
 ## 431: No debug visualization of physics bodies
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
-labels: area:physics
+labels: area:physics, effort:m
 depends: 410
 created: 2026-11-17T01:03:57Z
+updated: 2026-11-17T06:02:45Z
 +++
 
 There is no way to see collision shapes, bounding boxes, velocities or constraint limits drawn over the scene, which makes physics setups hard to debug.
@@ -9856,12 +9885,13 @@ Context: SwiftJolt's debugDraw now supports a body filter, constraint limits/fra
 ## 432: Nodes cannot be joined with physics joints
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
-labels: area:physics
+labels: area:physics, effort:l
 depends: 410
 created: 2026-11-17T01:03:57Z
+updated: 2026-11-17T06:02:45Z
 +++
 
 Two nodes' bodies cannot be connected with hinges, sliders, ball joints, fixed welds, swing-twist or six-DOF joints, and there is no way to break a joint when the load gets too high.
@@ -9873,12 +9903,13 @@ Context: SwiftJolt wraps these constraints, and now exposes motor/limit accessor
 ## 433: No character controller for nodes
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
-labels: area:physics
+labels: area:physics, effort:l
 depends: 410
 created: 2026-11-17T01:03:57Z
+updated: 2026-11-17T06:02:45Z
 +++
 
 There is no way to drive a player or NPC node with a character controller (walking, slopes, stairs, standing on moving platforms); only plain rigid bodies.
@@ -9890,12 +9921,13 @@ Context: SwiftJolt has Character and VirtualCharacter, now including ground mate
 ## 434: No vehicle support for scene nodes
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
-labels: area:physics
+labels: area:physics, effort:xl
 depends: 410
 created: 2026-11-17T01:03:57Z
+updated: 2026-11-17T06:02:45Z
 +++
 
 Cars, motorcycles and tracked vehicles cannot be built from scene nodes (body node + wheel nodes that follow the simulated wheels).
@@ -9907,12 +9939,13 @@ Context: SwiftJolt has wheeled, motorcycle and tracked vehicles, now with anti-r
 ## 435: No ragdolls or animation-driven physics for skinned characters
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
-labels: area:physics
+labels: area:physics, effort:xl
 depends: 410
 created: 2026-11-17T01:03:57Z
+updated: 2026-11-17T06:02:45Z
 +++
 
 A skinned character cannot go limp into a ragdoll, or have its bodies follow a keyframed animation.
@@ -9924,29 +9957,33 @@ Context: SwiftJolt has Ragdoll, Skeleton, SkeletonPose, SkeletonMapper and now S
 ## 436: Bodies cannot float in water
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
-labels: area:physics
+labels: area:physics, effort:s
 depends: 410
 created: 2026-11-17T01:03:57Z
+updated: 2026-11-17T06:02:45Z
 +++
 
 There is no water/fluid volume, so floating objects need hand-written forces.
 
 Context: SwiftJolt now exposes Jolt's buoyancy impulse (applyBuoyancyImpulse) on PhysicsWorld and LockedBody.
 
+- `2026-11-17T06:02:51Z`: Related: #420 (per-sub-step forces would be the natural place to apply buoyancy).
+
 ---
 
 ## 437: No cloth or soft bodies
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
-labels: area:physics
+labels: area:physics, effort:xl
 depends: 410
 created: 2026-11-17T01:03:57Z
+updated: 2026-11-17T06:02:45Z
 +++
 
 Nodes cannot be simulated as cloth or other soft bodies.
@@ -9958,12 +9995,13 @@ Context: SwiftJolt has soft bodies (now with object layer, collision group and b
 ## 438: Physics worker threads cannot be configured
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
-labels: area:physics
+labels: area:physics, effort:xs
 depends: 410
 created: 2026-11-17T01:03:57Z
+updated: 2026-11-17T06:02:45Z
 +++
 
 SceneGraphPhysicsWorld always uses SwiftJolt's default job system and thread count; an app can't limit physics threads (e.g. on low-power devices) or pick Jolt's own pool.
@@ -9975,12 +10013,13 @@ Context: PhysicsWorld.init now takes jobSystem: JobSystemKind (user-interactive 
 ## 439: Physics bodies cannot be woken or put to sleep on demand
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
-labels: area:physics
+labels: area:physics, effort:xs
 depends: 410
 created: 2026-11-17T01:03:57Z
+updated: 2026-11-17T06:02:45Z
 +++
 
 There is no API to wake a sleeping body, put one to sleep, or wake everything in a region (e.g. after an explosion or when a level section becomes active).
@@ -10032,11 +10071,12 @@ Expected: each slide can declare its own settings/actions, and the presenter can
 ## 442: SceneSprocketsPhysicsTests intermittently crash with SIGSEGV on CI
 
 +++
-status: new
+status: open
 priority: medium
 kind: bug
-labels: area:physics
+labels: area:physics, effort:m, investigate
 created: 2026-11-17T01:25:42Z
+updated: 2026-11-17T06:02:45Z
 +++
 
 The physics test process sometimes crashes on CI. The crash is intermittent: the next CI run passed, and 3 local runs passed.
@@ -10064,11 +10104,12 @@ Cause still unknown. A crash report (.ips from ~/Library/Logs/DiagnosticReports)
 ## 443: Standalone demos duplicate or sit outside the keynote
 
 +++
-status: new
+status: open
 priority: low
 kind: task
-labels: area:demo
+labels: area:demo, effort:m
 created: 2026-11-17T02:19:23Z
+updated: 2026-11-17T06:02:45Z
 +++
 
 The demo app has standalone demos besides the keynote (Shadows, Gears, Dice, Metaballs, SceneKit Features, and others). Some show features the keynote already covers; others show features the keynote does not cover at all. Two places to maintain the same showcases.
