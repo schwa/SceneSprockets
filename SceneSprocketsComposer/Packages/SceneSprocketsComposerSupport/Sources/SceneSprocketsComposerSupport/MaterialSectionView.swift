@@ -39,9 +39,9 @@ struct MaterialSectionView: View {
                     }
                     switch material {
                     case let blinnPhong as BlinnPhongSceneMaterial:
-                        blinnPhongFields(blinnPhong)
+                        BlinnPhongFieldsView(model: model, index: index, material: blinnPhong)
                     case let pbr as PBRSceneMaterial:
-                        pbrFields(pbr)
+                        PBRFieldsView(model: model, index: index, uniforms: pbr.pbrMaterial.uniforms)
                     default:
                         EmptyView()
                     }
@@ -54,41 +54,63 @@ struct MaterialSectionView: View {
             .disabled(isLocked)
         }
     }
+}
 
-    @ViewBuilder
-    private func blinnPhongFields(_ material: BlinnPhongSceneMaterial) -> some View {
-        sourceRow("Diffuse", material.diffuse, \.diffuse)
-        sourceRow("Ambient", material.ambient, \.ambient)
-        sourceRow("Specular", material.specular, \.specular)
+// Each row is its own view with only the values it shows, so editing one value updates that row, not the whole
+// section (#488).
+private struct BlinnPhongFieldsView: View {
+    @Bindable var model: EditorModel
+    let index: Int
+    let material: BlinnPhongSceneMaterial
+
+    var body: some View {
+        BlinnPhongSourceRow(model: model, index: index, title: "Diffuse", isColor: material.diffuse.isColor, keyPath: \.diffuse)
+        BlinnPhongSourceRow(model: model, index: index, title: "Ambient", isColor: material.ambient.isColor, keyPath: \.ambient)
+        BlinnPhongSourceRow(model: model, index: index, title: "Specular", isColor: material.specular.isColor, keyPath: \.specular)
         LabeledContent("Shininess") {
             Slider(value: $model[blinnPhong: index, actionName: "Shininess"].shininess, in: 1 ... 256)
         }
-        sourceRow("Emission", material.emission, \.emission)
+        BlinnPhongSourceRow(model: model, index: index, title: "Emission", isColor: material.emission.isColor, keyPath: \.emission)
     }
+}
 
-    @ViewBuilder
-    private func sourceRow(_ title: String, _ source: BlinnPhongSceneMaterial.Source, _ keyPath: WritableKeyPath<BlinnPhongSceneMaterial, BlinnPhongSceneMaterial.Source>) -> some View {
-        switch source {
-        case .color:
+private struct BlinnPhongSourceRow: View {
+    @Bindable var model: EditorModel
+    let index: Int
+    let title: String
+    let isColor: Bool
+    let keyPath: WritableKeyPath<BlinnPhongSceneMaterial, BlinnPhongSceneMaterial.Source>
+
+    var body: some View {
+        if isColor {
             ColorPicker(title, selection: $model[blinnPhong: index, actionName: title][dynamicMember: keyPath].color.linearColor, supportsOpacity: false)
-
-        case .texture:
+        } else {
             LabeledContent(title, value: "Texture")
         }
     }
+}
 
-    // Every PBR value (#208): Base open, the other groups collapsed. Values that are not plain floats, colors or flags
-    // (base color with alpha, alpha mode, double-sided, attenuation distance) are handled here; the rest come from
-    // PBRParameters.
-    @ViewBuilder
-    private func pbrFields(_ material: PBRSceneMaterial) -> some View {
-        let uniforms = material.pbrMaterial.uniforms
+extension BlinnPhongSceneMaterial.Source {
+    var isColor: Bool {
+        if case .color = self { true } else { false }
+    }
+}
+
+// Every PBR value (#208): Base open, the other groups collapsed. Values that are not plain floats, colors or flags
+// (base color with alpha, alpha mode, double-sided, attenuation distance) are handled here; the rest come from
+// PBRParameters.
+private struct PBRFieldsView: View {
+    let model: EditorModel
+    let index: Int
+    let uniforms: PBRMaterialUniforms
+
+    var body: some View {
         ForEach(PBRParameters.Group.allCases) { group in
             if group.isExpandedByDefault {
-                pbrGroup(group, uniforms: uniforms)
+                PBRGroupView(model: model, index: index, group: group, uniforms: uniforms)
             } else {
                 DisclosureGroup(group.rawValue) {
-                    pbrGroup(group, uniforms: uniforms)
+                    PBRGroupView(model: model, index: index, group: group, uniforms: uniforms)
                 }
             }
         }
@@ -97,51 +119,64 @@ struct MaterialSectionView: View {
                 .foregroundStyle(.secondary)
         }
     }
+}
+
+private struct PBRGroupView: View {
+    @Bindable var model: EditorModel
+    let index: Int
+    let group: PBRParameters.Group
+    let uniforms: PBRMaterialUniforms
 
     // `actionName` names the undo step.
-    private func uniforms(_ actionName: String) -> Binding<PBRMaterialUniforms> {
+    private func binding(_ actionName: String) -> Binding<PBRMaterialUniforms> {
         $model[pbrUniforms: index, actionName: actionName]
     }
 
-    @ViewBuilder
-    private func pbrGroup(_ group: PBRParameters.Group, uniforms: PBRMaterialUniforms) -> some View {
+    var body: some View {
         switch group {
         case .base:
-            ColorPicker("Base Color", selection: self.uniforms("Base Color").baseColorFactor.linearColor)
+            ColorPicker("Base Color", selection: binding("Base Color").baseColorFactor.linearColor)
         case .alpha:
-            Picker("Alpha Mode", selection: self.uniforms("Alpha Mode").alphaMode) {
+            Picker("Alpha Mode", selection: binding("Alpha Mode").alphaMode) {
                 Text("Opaque").tag(PBRAlphaMode.opaque)
                 Text("Mask").tag(PBRAlphaMode.mask)
                 Text("Blend").tag(PBRAlphaMode.blend)
             }
             Toggle("Double Sided", isOn: $model[pbrDoubleSided: index])
         case .transmission:
-            Toggle("Absorbs Light", isOn: self.uniforms("Attenuation Distance").absorbsLight)
+            Toggle("Absorbs Light", isOn: binding("Attenuation Distance").absorbsLight)
                 .help("Off: the volume does not absorb (attenuation distance is infinite)")
             if uniforms.attenuationDistance.isFinite {
-                scalarRow(PBRParameters.Scalar(name: "Attenuation Distance", keyPath: \.attenuationDistance, range: 0.01 ... 100, group: .transmission), uniforms: uniforms)
+                PBRScalarRow(model: model, index: index, parameter: Self.attenuationDistance, value: uniforms.attenuationDistance)
             }
         default:
             EmptyView()
         }
-        ForEach(PBRParameters.scalars.filter { $0.group == group }, id: \.name) { parameter in
-            scalarRow(parameter, uniforms: uniforms)
+        ForEach(PBRParameters.scalars(in: group), id: \.name) { parameter in
+            PBRScalarRow(model: model, index: index, parameter: parameter, value: uniforms[keyPath: parameter.keyPath])
         }
-        ForEach(PBRParameters.colors.filter { $0.group == group }, id: \.name) { parameter in
-            ColorPicker(parameter.name, selection: self.uniforms(parameter.name)[dynamicMember: parameter.keyPath].linearColor, supportsOpacity: false)
+        ForEach(PBRParameters.colors(in: group), id: \.name) { parameter in
+            ColorPicker(parameter.name, selection: binding(parameter.name)[dynamicMember: parameter.keyPath].linearColor, supportsOpacity: false)
         }
-        ForEach(PBRParameters.toggles.filter { $0.group == group }, id: \.name) { parameter in
-            Toggle(parameter.name, isOn: self.uniforms(parameter.name)[dynamicMember: parameter.keyPath].isOn)
+        ForEach(PBRParameters.toggles(in: group), id: \.name) { parameter in
+            Toggle(parameter.name, isOn: binding(parameter.name)[dynamicMember: parameter.keyPath].isOn)
         }
     }
 
-    @ViewBuilder
-    private func scalarRow(_ parameter: PBRParameters.Scalar, uniforms: PBRMaterialUniforms) -> some View {
-        let scale: Float = parameter.isAngle ? 180 / .pi : 1
+    private static let attenuationDistance = PBRParameters.Scalar(name: "Attenuation Distance", keyPath: \.attenuationDistance, range: 0.01 ... 100, group: .transmission)
+}
+
+private struct PBRScalarRow: View {
+    @Bindable var model: EditorModel
+    let index: Int
+    let parameter: PBRParameters.Scalar
+    let value: Float
+
+    var body: some View {
         LabeledContent(parameter.name) {
             HStack {
-                Slider(value: self.uniforms(parameter.name)[dynamicMember: parameter.keyPath], in: parameter.range)
-                Text((uniforms[keyPath: parameter.keyPath] * scale).formatted(.number.precision(.fractionLength(2))))
+                Slider(value: $model[pbrUniforms: index, actionName: parameter.name][dynamicMember: parameter.keyPath], in: parameter.range)
+                Text((value * (parameter.isAngle ? 180 / .pi : 1)).formatted(.number.precision(.fractionLength(2))))
                     .monospacedDigit()
                     .frame(minWidth: 44, alignment: .trailing)
             }

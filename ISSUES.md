@@ -11163,12 +11163,14 @@ Found by the SwiftUI review (#475).
 ## 488: Composer: changing one material value re-evaluates the whole material section
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:composer, effort:m
 milestone: M002-Performance
 created: 2026-11-17T06:52:28Z
+updated: 2026-11-17T14:17:09Z
+closed: 2026-11-17T14:17:09Z
 +++
 
 MaterialSectionView builds a material's whole inspector section in one body, through five helper functions that return some View (blinnPhongFields, sourceRow, pbrFields, pbrGroup, scalarRow). Helper functions do not make their own update boundary, so dragging one slider re-evaluates every row of the section: for a PBR material that is every scalar, color and toggle in PBRParameters, each rebuilding its binding.
@@ -11180,6 +11182,8 @@ Not measured.
 Expected: editing one value updates that row.
 
 Found by the SwiftUI review (#475).
+
+- `2026-11-17T14:17:09Z`: Done, not measured. MaterialSectionView's five helper functions are now views (BlinnPhongFieldsView, BlinnPhongSourceRow, PBRFieldsView, PBRGroupView, PBRScalarRow), each taking only the values it shows, so SwiftUI can skip rows whose inputs did not change. Each group's scalars, colors and toggles come from lists made once (PBRParameters.scalars(in:) and the like) instead of three filters per group per pass; test parameterGroupsHoldEveryParameterOnce. Caveat: every row's binding reads the material through the model, which observes all content changes, so I do not know how many rows still update per edit. Checking that needs Instruments' SwiftUI template while dragging a slider.
 
 ---
 

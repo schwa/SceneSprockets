@@ -89,4 +89,21 @@ enum PBRParameters {
         Toggle(name: "Volume Scattering", keyPath: \.volumeScatter, group: .transmission),
         Toggle(name: "Specular-Glossiness", keyPath: \.specularGlossiness, group: .other)
     ]
+
+    // Each group's parameters, in list order, made once instead of filtered on every view update (#488).
+    private static let scalarsByGroup = Dictionary(grouping: scalars, by: \.group)
+    private static let colorsByGroup = Dictionary(grouping: colors, by: \.group)
+    private static let togglesByGroup = Dictionary(grouping: toggles, by: \.group)
+
+    static func scalars(in group: Group) -> [Scalar] {
+        scalarsByGroup[group] ?? []
+    }
+
+    static func colors(in group: Group) -> [Color] {
+        colorsByGroup[group] ?? []
+    }
+
+    static func toggles(in group: Group) -> [Toggle] {
+        togglesByGroup[group] ?? []
+    }
 }
