@@ -10061,6 +10061,22 @@ Cause still unknown. A crash report (.ips from ~/Library/Logs/DiagnosticReports)
 
 ---
 
+## 443: Standalone demos duplicate or sit outside the keynote
+
++++
+status: new
+priority: low
+kind: task
+labels: area:demo
+created: 2026-11-17T02:19:23Z
++++
+
+The demo app has standalone demos besides the keynote (Shadows, Gears, Dice, Metaballs, SceneKit Features, and others). Some show features the keynote already covers; others show features the keynote does not cover at all. Two places to maintain the same showcases.
+
+Expected: each standalone demo is either merged into the keynote as a slide (or slide controls), or removed if the keynote already covers it well.
+
+---
+
 ## Milestone: M001-Correctness
 
 +++
