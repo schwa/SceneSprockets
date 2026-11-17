@@ -10862,9 +10862,10 @@ Checked and found sound: the 22 nonisolated(unsafe) static caches (all lock-guar
 status: open
 priority: medium
 kind: task
-labels: area:scenegraph, effort:m
+labels: deferred, area:scenegraph, effort:m
 milestone: M002-Performance
 created: 2026-11-17T06:04:19Z
+updated: 2026-11-17T07:00:51Z
 +++
 
 The codebase has not had an architecture review with the improve-codebase-architecture skill. Coupling, shallow modules and logic spread over many places (for example demos listed twice, #115; each material renderer handling scene-wide techniques on its own, #409) are found only one at a time.
