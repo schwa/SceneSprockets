@@ -1,3 +1,4 @@
+import Accelerate
 import CoreGraphics
 import CoreText
 import Foundation
@@ -323,40 +324,42 @@ struct DiceGeometry {
     private static func normalMap(height alpha: [Float]) -> CGImage {
         let size = atlasSize
         var height = alpha.map { -$0 }
+        // Two 3x3 box blurs with clamped edges, done through vImage: plain Swift loops take seconds in Debug (#515).
+        var scratch = [Float](repeating: 0, count: size * size)
         for _ in 0..<2 {
-            var blurred = height
-            for y in 0..<size {
-                for x in 0..<size {
-                    var sum: Float = 0
-                    for dy in -1...1 {
-                        for dx in -1...1 {
-                            sum += height[min(max(y + dy, 0), size - 1) * size + min(max(x + dx, 0), size - 1)]
-                        }
-                    }
-                    blurred[y * size + x] = sum / 9
+            height.withUnsafeMutableBytes { heightBytes in
+                scratch.withUnsafeMutableBytes { scratchBytes in
+                    let rowBytes = size * MemoryLayout<Float>.stride
+                    var source = vImage_Buffer(data: heightBytes.baseAddress, height: vImagePixelCount(size), width: vImagePixelCount(size), rowBytes: rowBytes)
+                    var destination = vImage_Buffer(data: scratchBytes.baseAddress, height: vImagePixelCount(size), width: vImagePixelCount(size), rowBytes: rowBytes)
+                    let kernel = [Float](repeating: 1.0 / 9, count: 9)
+                    vImageConvolve_PlanarF(&source, &destination, nil, 0, 0, kernel, 3, 3, 0, vImage_Flags(kvImageEdgeExtend))
                 }
             }
-            height = blurred
+            swap(&height, &scratch)
         }
         let strength: Float = 6
         let context = CGContext(data: nil, width: size, height: size, bitsPerComponent: 8, bytesPerRow: size * 4, space: CGColorSpace(name: CGColorSpace.linearSRGB)!, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
         let pixels = context.data!.assumingMemoryBound(to: UInt8.self)
         // `height` is in bitmap memory order (rows top down), like this bitmap, so rows map one to one. Image y runs
         // down, so the slope in y is negated.
-        for row in 0..<size {
-            let y = row
-            for x in 0..<size {
-                func at(_ px: Int, _ py: Int) -> Float {
-                    height[min(max(py, 0), size - 1) * size + min(max(px, 0), size - 1)]
+        height.withUnsafeBufferPointer { height in
+            for row in 0..<size {
+                let up = max(row - 1, 0) * size
+                let down = min(row + 1, size - 1) * size
+                let center = row * size
+                for x in 0..<size {
+                    let left = max(x - 1, 0)
+                    let right = min(x + 1, size - 1)
+                    let dx = (height[center + right] - height[center + left]) * strength
+                    let dy = (height[up + x] - height[down + x]) * strength
+                    let normal = simd_normalize(SIMD3<Float>(-dx, -dy, 1))
+                    let offset = (center + x) * 4
+                    pixels[offset] = UInt8((normal.x * 0.5 + 0.5) * 255)
+                    pixels[offset + 1] = UInt8((normal.y * 0.5 + 0.5) * 255)
+                    pixels[offset + 2] = UInt8((normal.z * 0.5 + 0.5) * 255)
+                    pixels[offset + 3] = 255
                 }
-                let dx = (at(x + 1, y) - at(x - 1, y)) * strength
-                let dy = (at(x, y - 1) - at(x, y + 1)) * strength
-                let normal = simd_normalize(SIMD3<Float>(-dx, -dy, 1))
-                let offset = (row * size + x) * 4
-                pixels[offset] = UInt8((normal.x * 0.5 + 0.5) * 255)
-                pixels[offset + 1] = UInt8((normal.y * 0.5 + 0.5) * 255)
-                pixels[offset + 2] = UInt8((normal.z * 0.5 + 0.5) * 255)
-                pixels[offset + 3] = 255
             }
         }
         return context.makeImage()!

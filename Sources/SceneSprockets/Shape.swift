@@ -9,7 +9,7 @@ import SwiftUI
 extension SceneGraph {
     /// Parametric geometry, like SceneKit's SCNBox, SCNSphere, SCNText and so on. Sizes are full extents, centered on
     /// the origin, except text (baseline on y = 0, starting at x = 0, extruded towards +z) and plane (XY).
-    public enum Shape: Sendable, Equatable, Codable {
+    public enum Shape: Sendable, Hashable, Codable {
         case box(width: Float = 1, height: Float = 1, length: Float = 1)
         case sphere(radius: Float = 0.5)
         case plane(width: Float = 1, height: Float = 1)
@@ -103,7 +103,18 @@ extension SceneGraph {
         }
 
         /// Always has texture coordinates (renderers such as Blinn-Phong need them); text gets a planar XY mapping.
+        ///
+        /// Equal shapes share one mesh: building one, text especially, is slow (#515).
         public func metalMesh() -> MetalMesh {
+            if let mesh = ShapeMeshCache.shared[self] {
+                return mesh
+            }
+            let mesh = makeMetalMesh()
+            ShapeMeshCache.shared[self] = mesh
+            return mesh
+        }
+
+        private func makeMetalMesh() -> MetalMesh {
             let device = _MTLCreateSystemDefaultDevice()
             let metalMesh = MetalMesh(mesh: mesh(), device: device, label: label)
             guard !metalMesh.vertexDescriptor.attributes.contains(where: { $0.semantic == .texcoord(0) }) else {
@@ -172,6 +183,29 @@ extension SceneGraph.Node {
             if subdivisionLevel > 0 {
                 subdivisionBase = nil
                 applySubdivision()
+            }
+        }
+    }
+}
+
+// Built shape meshes, shared by every node with an equal shape.
+final class ShapeMeshCache: @unchecked Sendable {
+    static let shared = ShapeMeshCache()
+    // Dropped wholesale past this many entries, so changing shapes cannot grow it forever.
+    private static let limit = 256
+    private let lock = NSLock()
+    private var meshes: [SceneGraph.Shape: MetalMesh] = [:]
+
+    subscript(shape: SceneGraph.Shape) -> MetalMesh? {
+        get {
+            lock.withLock { meshes[shape] }
+        }
+        set {
+            lock.withLock {
+                if meshes.count >= Self.limit {
+                    meshes.removeAll()
+                }
+                meshes[shape] = newValue
             }
         }
     }

@@ -64,6 +64,21 @@ func floorFacesUp() throws {
     #expect(normals.allSatisfy { simd_distance($0, [0, 1, 0]) < 1e-4 })
 }
 
+// #515: building shape meshes, text especially, is slow, so equal shapes share one mesh.
+@Test
+func equalShapesShareOneMesh() {
+    let first = SceneGraph.Node(shape: .text("Shared", fontSize: 0.5), material: material)
+    let second = SceneGraph.Node(shape: .text("Shared", fontSize: 0.5), material: material)
+    let other = SceneGraph.Node(shape: .text("Other", fontSize: 0.5), material: material)
+    guard case let .mesh(firstMesh, _, _, _) = first.content, case let .mesh(secondMesh, _, _, _) = second.content, case let .mesh(otherMesh, _, _, _) = other.content else {
+        Issue.record("Shape nodes have no mesh")
+        return
+    }
+    #expect(firstMesh.hasSameBuffers(as: secondMesh))
+    #expect(!firstMesh.hasSameBuffers(as: otherMesh))
+    #expect(second.shape == .text("Shared", fontSize: 0.5))
+}
+
 @Test
 func newShapesRoundTripThroughCodable() throws {
     for shape in [SceneGraph.Shape.tube(), .pyramid(), .floor(), .extrudedPath("0 0 m 1 0 l 0 1 l h")] {

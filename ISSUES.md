@@ -11716,12 +11716,14 @@ Lighting cost scales with lights × objects in the forward pass. Scenes with man
 ## 515: Demo package unit tests take over 3 minutes
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: area:demo, area:testing, effort:m
 milestone: M002-Performance
 created: 2026-11-17T14:10:26Z
+updated: 2026-11-17T18:59:01Z
+closed: 2026-11-17T18:59:01Z
 +++
 
 Running the SceneSprocketsDemoSupport tests (xcb test in Examples/SceneSprocketsDemo/Packages/SceneSprocketsDemoSupport, Debug) takes about 208 s wall clock for 27 tests. The other suites are fast:
@@ -11742,6 +11744,8 @@ Where the time goes (measured with temporary timing code):
 - keynoteSlidePickerSwitchesInstantly alone takes about 28 s: 12.5 s to build the keynote and 16 s for one update that shows the Physics slide, almost all of it building the six dice.
 
 Not measured: how much of this is Debug-only (unoptimized Swift loops over pixels and vertices) and how long a Release build of the tests takes.
+
+- `2026-11-17T18:59:01Z`: Demo tests now ~90 s (from 306-341 s measured this run). Equal SceneGraph.Shape values share one cached MetalMesh (titles were rebuilt every KeynoteDemo build); dice normal map blur uses vImage and pointer loops (dice test 32 s -> 7 s). First KeynoteDemo build is still ~12 s; remaining time is slide building repeated across tests.
 
 ---
 
