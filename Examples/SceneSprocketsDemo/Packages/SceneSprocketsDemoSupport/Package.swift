@@ -44,6 +44,7 @@ let package = Package(
                 .product(name: "SceneSprocketsAddOns", package: "SceneSprocketsAddOns"),
                 .product(name: "SceneSprocketsTerrain", package: "SceneSprocketsAddOns"),
                 .product(name: "SceneSprocketsVoxels", package: "SceneSprocketsAddOns"),
+                .product(name: "SceneSprocketsToon", package: "SceneSprocketsAddOns"),
                 .product(name: "DemoKit", package: "DemoKit"),
                 .product(name: "Interaction3D", package: "Interaction3D"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),

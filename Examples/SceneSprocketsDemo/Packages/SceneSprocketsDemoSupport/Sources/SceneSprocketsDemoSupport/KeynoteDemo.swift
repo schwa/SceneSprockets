@@ -13,6 +13,7 @@ import SceneSprocketsPBR
 import SceneSprocketsPhysics
 import SceneSprocketsShaderMaterial
 import SceneSprocketsTerrain
+import SceneSprocketsToon
 import SceneSprocketsVoxels
 import simd
 import SwiftMesh
@@ -33,7 +34,7 @@ public final class KeynoteDemo: DemoScene {
         "Particles", "Mesh Emitters",
         "Physics", "Post-Processing", "Level of Detail", "Performance", "SwiftECS World",
         "Hit Testing", "Gizmos", "Debug Views",
-        "Point Clouds", "Terrain", "Metaballs", "Voxels",
+        "Point Clouds", "Terrain", "Metaballs", "Voxels", "Toon",
         "Thank You"
     ]
 
@@ -46,7 +47,7 @@ public final class KeynoteDemo: DemoScene {
 
     // Per-slide state: each is used only while its slide is showing.
     private let shadowRenderer = Shadows(intensity: 0.75, softness: 2)
-    private static let shadowedTitles: Set<String> = ["Shadows", "Metaballs", "Voxels"]
+    private static let shadowedTitles: Set<String> = ["Shadows", "Metaballs", "Voxels", "Toon"]
     private var shuffleCubes: [SceneGraph.Node] = []
     private var sinceShuffle: Float = 0
     private var blendMixer: SceneGraph.AnimationMixer?
@@ -103,6 +104,8 @@ public final class KeynoteDemo: DemoScene {
     private var metaballs: SceneGraph.Node?
     // Voxels slide: the monument, whose surface follows the Voxel Lighting control.
     private var monument: SceneGraph.Node?
+    // Toon slide: each shape and its base material, restyled by the Bands and Outline Width controls.
+    private var toonShapes: [(node: SceneGraph.Node, material: ToonMaterial)] = []
 
     init() {
         let root = SceneGraph.Node(label: "Root")
@@ -112,7 +115,7 @@ public final class KeynoteDemo: DemoScene {
         root.addChild(cameraNode)
         super.init(
             sceneGraph: SceneGraph(root: root),
-            renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0.05, 0.05, 0.07]), pbr, ShaderMaterialRenderer(), PointCloudRenderer(), TerrainRenderer(), SignedDistanceRenderer(ambientLightColor: [0.05, 0.05, 0.07], pbr: pbr), VoxelRenderer(ambientLightColor: [0.15, 0.15, 0.18], pbr: pbr)],
+            renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0.05, 0.05, 0.07]), pbr, ShaderMaterialRenderer(), PointCloudRenderer(), TerrainRenderer(), SignedDistanceRenderer(ambientLightColor: [0.05, 0.05, 0.07], pbr: pbr), VoxelRenderer(ambientLightColor: [0.15, 0.15, 0.18], pbr: pbr), ToonRenderer()],
             cameraMatrix: .camera(eye: Self.eye(for: 0), target: Self.target(for: 0)),
             parameters: [.choice("Slide", Self.titles), .toggle("Auto-advance", default: false), .slider("Seconds per Slide", 2...15, default: 6)]
         )
@@ -313,6 +316,12 @@ public final class KeynoteDemo: DemoScene {
         • Voxels write depth and cast shadows, on the floor and on themselves.
         • Model: "monu10" from MagicaVoxel's samples by @ephtracy, after Monument Valley.
         """,
+        "Toon": """
+        • An add-on: import SceneSprocketsToon and add ToonRenderer.
+        • Cel shading: each light's N·L is cut into flat bands, with a hard highlight and a rim light.
+        • Outlines are the mesh's back faces pushed out a fixed number of pixels (an inverted hull).
+        • Toon meshes cast and receive shadows like any other mesh.
+        """,
         "Physics": """
         • Rigid body physics: give a node a physics body and step the world.
         • Each die uses a convex hull collision shape. They land on real faces.
@@ -375,6 +384,9 @@ public final class KeynoteDemo: DemoScene {
             contextActions = []
         case "Voxels":
             contextParameters = [.choice("Voxel Lighting", Self.lightingModels, default: 1)]
+            contextActions = []
+        case "Toon":
+            contextParameters = [.slider("Bands", 1...5, default: 2), .slider("Outline Width", 0...8, default: 3)]
             contextActions = []
         default:
             contextParameters = []
@@ -447,6 +459,8 @@ public final class KeynoteDemo: DemoScene {
             updateMetaballs(time: time)
         case "Voxels":
             updateVoxelLighting()
+        case "Toon":
+            updateToonMaterials()
         case "Video Textures":
             videoTexture?.update()
         case "glTF & Model I/O":
@@ -768,6 +782,16 @@ public final class KeynoteDemo: DemoScene {
             SceneView(scene, renderers: renderers + [VoxelRenderer()])
                 .sceneShadows(Shadows())
             """, to: slide)
+        case "Toon":
+            toonSlide(slide)
+            addTag("Add-On", below: 4, to: slide)
+            addCode("""
+            import SceneSprocketsToon
+
+            let material = ToonMaterial(color: orange, bands: 2, outlineWidth: 3)
+            let teapot = SceneGraph.Node(shape: .teapot(), material: material)
+            SceneView(scene, renderers: renderers + [ToonRenderer()])
+            """, to: slide)
         case "Metaballs":
             metaballsSlide(slide)
             addTag("Add-On", below: 4, to: slide)
@@ -1004,6 +1028,42 @@ public final class KeynoteDemo: DemoScene {
         tilt.addChild(SceneGraph.Node(label: "Floor", shape: .cylinder(radius: 1.9, height: 0.08), material: BlinnPhongSceneMaterial.plastic([0.25, 0.25, 0.28], shininess: 8), transform: .init(translation: [0, -height / 2 - 0.04, 0])))
         tilt.addChild(SceneGraph.Node(label: "Sun", transform: .init(position: [-4, 3, 1.5], lookingAt: .zero), content: .light(Light(type: .directional, color: [1, 0.95, 0.85], intensity: 1.5))))
         addLight(to: slide, at: [3, 2, 3], color: [0.6, 0.7, 1], intensity: 8, castsShadow: false)
+    }
+
+    // A teapot between a sphere, a torus and a capsule on a toon floor, turning slowly.
+    private func toonSlide(_ slide: SceneGraph.Node) {
+        let stage = slide.addChild(SceneGraph.Node(label: "Toon Stage", transform: .init(translation: [0, 0.5, -0.8], rotation: simd_quatf(angle: 0.3, axis: [1, 0, 0]), scale: [1.6, 1.6, 1.6])))
+        let floor = ToonMaterial(color: [0.35, 0.55, 0.3], highlightSize: 0, outlineWidth: 0)
+        stage.addChild(SceneGraph.Node(label: "Floor", shape: .cylinder(radius: 2.1, height: 0.08), material: floor, transform: .init(translation: [0, -0.04, 0])))
+        let turntable = stage.addChild(SceneGraph.Node(label: "Turntable"))
+        turntable.run(.repeatForever(.rotate(by: 2 * .pi, around: [0, 1, 0], duration: 30)))
+        let shapes: [(SceneGraph.Shape, SIMD3<Float>, ToonMaterial)] = [
+            (.teapot(diameter: 1.6), [0, 0.6, 0], ToonMaterial(color: [0.95, 0.45, 0.15])),
+            (.sphere(radius: 0.45), [-1.4, 0.45, 0.4], ToonMaterial(color: [0.85, 0.2, 0.3], rimColor: [0.35, 0.35, 0.45])),
+            (.torus(ringRadius: 0.4, pipeRadius: 0.16), [1.4, 0.56, 0.4], ToonMaterial(color: [0.95, 0.8, 0.2])),
+            (.capsule(capRadius: 0.25, height: 1.2), [0, 0.6, -1.3], ToonMaterial(color: [0.3, 0.5, 0.95]))
+        ]
+        toonShapes = shapes.map { shape, position, material in
+            (turntable.addChild(SceneGraph.Node(shape: shape, material: material, transform: .init(translation: position))), material)
+        }
+        stage.addChild(SceneGraph.Node(label: "Sun", transform: .init(position: [-3, 5, 3], lookingAt: .zero), content: .light(Light(type: .directional, color: [1, 0.97, 0.9], intensity: 1.3))))
+    }
+
+    private func updateToonMaterials() {
+        let bands = max(Int((values["Bands"] ?? 2).rounded()), 1)
+        let outlineWidth = values["Outline Width"] ?? 3
+        for (node, base) in toonShapes {
+            guard case let .mesh(mesh, materials, castsShadow, receivesShadow) = node.content, let current = materials.first as? ToonMaterial else {
+                continue
+            }
+            guard current.bands != bands || current.outlineWidth != outlineWidth else {
+                continue
+            }
+            var material = base
+            material.bands = bands
+            material.outlineWidth = outlineWidth
+            node.content = .mesh(mesh, materials: [material], castsShadow: castsShadow, receivesShadow: receivesShadow)
+        }
     }
 
     private static let lightingModels = ["PBR", "Blinn-Phong"]
