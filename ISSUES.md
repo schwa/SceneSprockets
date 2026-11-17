@@ -9561,14 +9561,15 @@ Use SwiftJolt's `BodyOptions.allowedDegreesOfFreedom` (e.g. `.plane2D`, or trans
 ## 415: Changing a node's physicsBody throws away the body's motion
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:physics, effort:m
 milestone: M001-Correctness
 depends: 410
 created: 2026-11-16T23:34:12Z
-updated: 2026-11-17T06:04:50Z
+updated: 2026-11-17T06:23:38Z
+closed: 2026-11-17T06:23:38Z
 +++
 
 When a node's physicsBody description changes (e.g. friction, type or shape), sync() removes the Jolt body and adds a new one. The new body starts at rest, so a moving object stops dead, and contacts reset.

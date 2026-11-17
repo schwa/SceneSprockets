@@ -137,6 +137,9 @@ public final class SceneGraphPhysicsWorld {
             let isVisible = visible.contains(key)
             seen.insert(key)
             if var entry = entries[key] {
+                if entry.description != description, update(entry, to: description) {
+                    entry.description = description
+                }
                 if entry.description == description {
                     setInWorld(&entry, isVisible)
                     entries[key] = entry
@@ -176,6 +179,45 @@ public final class SceneGraphPhysicsWorld {
             }
             world.removeFromWorld(entry.body)
         }
+    }
+
+    // Changes the existing body to match `description`, so it keeps its motion and contacts (#415). False when the
+    // body has to be rebuilt instead.
+    private func update(_ entry: Entry, to description: SceneGraph.PhysicsBody) -> Bool {
+        let old = entry.description
+        // A body created static cannot become moving, and a static body has no motion to keep.
+        guard old.type == description.type || (old.type != .static && description.type != .static) else {
+            return false
+        }
+        // A mass that goes back to nil needs the shape's own mass, which only a new body computes.
+        guard description.mass != nil || old.mass == nil else {
+            return false
+        }
+        if description.type == .dynamic, description.shape == .mesh {
+            return false
+        }
+        let body = entry.body
+        if description.shape != old.shape {
+            let scale = simd_abs(Transform3D(nearestTo: entry.node.worldTransform).scale)
+            guard let shape = joltShape(description.shape, node: entry.node, scale: scale) else {
+                return false
+            }
+            world.setShape(of: body, to: shape, activate: world.isAdded(body))
+        }
+        if description.type != old.type {
+            world.setMotionType(of: body, to: description.type == .dynamic ? .dynamic : .kinematic, activate: world.isAdded(body))
+        }
+        if description.friction != old.friction {
+            world.setFriction(of: body, to: description.friction)
+        }
+        if description.restitution != old.restitution {
+            world.setRestitution(of: body, to: description.restitution)
+        }
+        // A new shape recomputed the mass, so set it again.
+        if description.type == .dynamic, let mass = description.mass, mass != old.mass || description.shape != old.shape {
+            world.setMass(of: body, to: mass)
+        }
+        return true
     }
 
     private func destroy(_ entry: Entry) {

@@ -97,6 +97,33 @@ func velocityLaunchesANode() throws {
     #expect(abs(ball.worldPosition.x - 3) < 0.1)
 }
 
+// #415: changing a node's physicsBody updates the same body, so it keeps moving.
+@Test
+func changingPhysicsBodyKeepsItsMotion() throws {
+    let root = SceneGraph.Node()
+    let ball = root.addChild(SceneGraph.Node())
+    ball.physicsBody = .init(type: .dynamic, shape: .sphere(radius: 0.5))
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root), gravity: .zero)
+    physics.setVelocity([3, 0, 0], of: ball)
+    let changes: [(inout SceneGraph.PhysicsBody) -> Void] = [
+        { $0.friction = 0.9 },
+        { $0.restitution = 0.8 },
+        { $0.mass = 4 },
+        { $0.shape = .box(size: [1, 1, 1]) }
+    ]
+    for change in changes {
+        var description = try #require(ball.physicsBody)
+        change(&description)
+        ball.physicsBody = description
+        physics.step(deltaTime: 1 / 60)
+        let velocity = try #require(physics.velocity(of: ball))
+        #expect(abs(velocity.x - 3) < 0.01, "after \(description): velocity \(velocity)")
+    }
+    let body = try #require(physics.body(of: ball))
+    #expect(abs(physics.world.friction(of: body) - 0.9) < 1e-5)
+    #expect(abs(physics.world.mass(of: body) - 4) < 1e-3)
+}
+
 // #424: hiding a node pauses its body; showing it again resumes the same motion.
 @Test
 func hiddenNodeKeepsItsBodysMotion() throws {
