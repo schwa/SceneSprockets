@@ -60,8 +60,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprockets",
       "state" : {
-        "revision" : "8a5839d7874fa3d7bc4b3a50fdb45835de516873",
-        "version" : "0.3.2"
+        "revision" : "b0ad954b00a75153adcb4518159476b3174cdc64",
+        "version" : "0.3.3"
       }
     },
     {
