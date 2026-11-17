@@ -10119,9 +10119,9 @@ status: open
 priority: medium
 kind: bug
 labels: area:physics, effort:m, investigate
-milestone: M001-Correctness
+milestone: M999-Nice-to-have
 created: 2026-11-17T01:25:42Z
-updated: 2026-11-17T06:04:51Z
+updated: 2026-11-17T06:26:25Z
 +++
 
 The physics test process sometimes crashes on CI. The crash is intermittent: the next CI run passed, and 3 local runs passed.
@@ -10144,7 +10144,7 @@ Tests run in parallel, so the crashing test is not known.
 - One run with --sanitize=address: passed, no ASan reports.
 Cause still unknown. A crash report (.ips from ~/Library/Logs/DiagnosticReports) from a failing CI run would identify the crashing thread.
 
-- `2026-11-17T06:23:38Z`: Reproduced locally (about 1 in 15 runs of SceneSprocketsPhysicsTests, SwiftJolt 0.0.3). Backtrace with SWIFT_BACKTRACE:
+\- `2026-11-17T06:23:38Z`: Reproduced locally (about 1 in 15 runs of SceneSprocketsPhysicsTests, SwiftJolt 0.0.3). Backtrace with SWIFT_BACKTRACE:
 
 Bad pointer dereference at 0x9, Thread 3:
 0 JPH::HashTable<JPH::PhysicsSystem*, pair<JPH::PhysicsSystem*, JPH_PhysicsSystem*>, ...>::InsertKey<false>
@@ -10849,8 +10849,10 @@ Expected: a review that lists architecture problems; each one filed as its own i
 ## Milestone: M001-Correctness
 
 +++
-status: open
+status: closed
 created: 2026-11-16T20:12:42Z
+updated: 2026-11-17T06:26:28Z
+closed: 2026-11-17T06:26:28Z
 +++
 
 Bugs and wrong behavior.
