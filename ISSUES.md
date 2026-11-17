@@ -8925,10 +8925,10 @@ status: open
 priority: medium
 kind: feature
 labels: area:demo, effort:m
-milestone: M003-Features
+milestone: M004-VisionOS
 depends: 386
 created: 2026-11-12T21:05:10Z
-updated: 2026-11-16T20:12:42Z
+updated: 2026-11-17T17:28:56Z
 +++
 
 SceneImmersiveElement (#381) exists but no app uses it. SceneSprocketsDemo has no ImmersiveSpace scene and no control to open one, so stereo rendering has never run on a device.
@@ -11341,9 +11341,11 @@ Found by the SwiftUI review (#475).
 
 +++
 status: new
-priority: high
+priority: medium
 kind: feature
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:09:41Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Weighted blended OIT is a practical starting point. (Moved from SceneSprocketsAddOns #47.)
@@ -11354,9 +11356,11 @@ Weighted blended OIT is a practical starting point. (Moved from SceneSprocketsAd
 
 +++
 status: new
-priority: high
+priority: medium
 kind: feature
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:09:41Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Small-scale shadows that conventional shadow maps miss. (Moved from SceneSprocketsAddOns #52.)
@@ -11367,9 +11371,11 @@ Small-scale shadows that conventional shadow maps miss. (Moved from SceneSprocke
 
 +++
 status: new
-priority: high
+priority: medium
 kind: feature
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:09:41Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Stabilizes geometry, specular highlights, and fine detail. (Moved from SceneSprocketsAddOns #53.)
@@ -11382,7 +11388,9 @@ Stabilizes geometry, specular highlights, and fine detail. (Moved from SceneSpro
 status: new
 priority: medium
 kind: feature
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:09:41Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Projected lighting patterns and realistic light distributions. (Moved from SceneSprocketsAddOns #57.)
@@ -11393,9 +11401,11 @@ Projected lighting patterns and realistic light distributions. (Moved from Scene
 
 +++
 status: new
-priority: high
+priority: medium
 kind: feature
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:09:41Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Glass, liquids, transparent solids. (Moved from SceneSprocketsAddOns #60.)
@@ -11408,7 +11418,9 @@ Glass, liquids, transparent solids. (Moved from SceneSprocketsAddOns #60.)
 status: new
 priority: medium
 kind: task
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:09:41Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Alpha masking, alpha blending, and double-sided materials are not all handled correctly. (Moved from SceneSprocketsAddOns #62.)
@@ -11421,7 +11433,9 @@ Alpha masking, alpha blending, and double-sided materials are not all handled co
 status: new
 priority: medium
 kind: task
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:09:41Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Normal mapping, tangent generation, and mirrored UVs need correct handling. (Moved from SceneSprocketsAddOns #63.)
@@ -11434,7 +11448,9 @@ Normal mapping, tangent generation, and mirrored UVs need correct handling. (Mov
 status: new
 priority: medium
 kind: task
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:09:41Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 HDR rendering, exposure, tone mapping, and color-space correctness. (Moved from SceneSprocketsAddOns #64.)
@@ -11447,7 +11463,9 @@ HDR rendering, exposure, tone mapping, and color-space correctness. (Moved from 
 status: new
 priority: medium
 kind: task
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:09:41Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Shadow bias, cascade transitions, and shadow filtering. (Moved from SceneSprocketsAddOns #65.)
@@ -11460,7 +11478,9 @@ Shadow bias, cascade transitions, and shadow filtering. (Moved from SceneSprocke
 status: new
 priority: medium
 kind: task
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:09:41Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 MSAA resolve behavior, including transparency and alpha-to-coverage. (Moved from SceneSprocketsAddOns #66.)
@@ -11473,7 +11493,9 @@ MSAA resolve behavior, including transparency and alpha-to-coverage. (Moved from
 status: new
 priority: medium
 kind: task
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:09:41Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Texture mipmapping, anisotropic filtering, and compressed texture formats. (Moved from SceneSprocketsAddOns #67.)
@@ -11486,7 +11508,9 @@ Texture mipmapping, anisotropic filtering, and compressed texture formats. (Move
 status: new
 priority: medium
 kind: task
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:09:41Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Instancing, frustum culling, and depth prepasses where beneficial. (Moved from SceneSprocketsAddOns #68.)
@@ -11499,7 +11523,9 @@ Instancing, frustum culling, and depth prepasses where beneficial. (Moved from S
 status: new
 priority: medium
 kind: feature
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:09:41Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Good-looking materials without placing lights. Complexity: low–medium. (Moved from SceneSprocketsAddOns #69.)
@@ -11512,7 +11538,9 @@ Good-looking materials without placing lights. Complexity: low–medium. (Moved 
 status: new
 priority: medium
 kind: feature
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:09:41Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Sensible default illumination for any scene. Complexity: low. (Moved from SceneSprocketsAddOns #70.)
@@ -11525,7 +11553,9 @@ Sensible default illumination for any scene. Complexity: low. (Moved from SceneS
 status: new
 priority: medium
 kind: feature
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:09:42Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Avoid manually tuning brightness for every scene. Complexity: low–medium. (Moved from SceneSprocketsAddOns #76.)
@@ -11538,7 +11568,9 @@ Avoid manually tuning brightness for every scene. Complexity: low–medium. (Mov
 status: new
 priority: medium
 kind: feature
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:09:42Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Softer, more natural illumination from large sources. Complexity: medium. (Moved from SceneSprocketsAddOns #77.)
@@ -11551,7 +11583,9 @@ Softer, more natural illumination from large sources. Complexity: medium. (Moved
 status: new
 priority: medium
 kind: feature
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:09:42Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Effects such as SSR, SSGI, motion blur, decals, and contact shadows need per-pixel normals, motion vectors, or other G-buffer data. The renderer does not produce or expose them. Needed by several SceneSprocketsAddOns issues.
@@ -11564,7 +11598,9 @@ Effects such as SSR, SSGI, motion blur, decals, and contact shadows need per-pix
 status: new
 priority: medium
 kind: feature
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:09:42Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Refraction, transmission, and screen-space effects need the opaque scene color as a texture. The renderer does not provide one.
@@ -11577,7 +11613,9 @@ Refraction, transmission, and screen-space effects need the opaque scene color a
 status: new
 priority: medium
 kind: feature
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:09:42Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Add-on packages cannot insert passes at defined stages (after opaque, before transparent, post-process) or contribute indirect lighting (probes, lightmaps) to built-in materials.
@@ -11590,7 +11628,9 @@ Add-on packages cannot insert passes at defined stages (after opaque, before tra
 status: new
 priority: medium
 kind: feature
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:09:59Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 The renderer is forward-only. There is no deferred path that writes a G-buffer (albedo, normal, roughness/metalness, depth) and shades in a separate pass. Related: #510.
@@ -11603,7 +11643,9 @@ The renderer is forward-only. There is no deferred path that writes a G-buffer (
 status: new
 priority: medium
 kind: feature
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:09:59Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Lighting cost scales with lights × objects in the forward pass. Scenes with many local lights need deferred lighting (light volumes) or tiled/clustered light culling.
@@ -11649,7 +11691,9 @@ status: new
 priority: medium
 kind: feature
 labels: area:renderer
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:12:10Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Draw selection, culling, and draw arguments are produced on the CPU. GPU-driven rendering would do this with compute and indirect commands.
@@ -11663,7 +11707,9 @@ status: new
 priority: medium
 kind: feature
 labels: area:renderer
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:12:10Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Draw commands are encoded on the CPU each frame. MTLIndirectCommandBuffer would let them be encoded once or on the GPU.
@@ -11677,7 +11723,9 @@ status: new
 priority: medium
 kind: feature
 labels: area:renderer
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:12:10Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Object and mesh shaders are not used for geometry amplification, culling, or LOD.
@@ -11691,7 +11739,9 @@ status: new
 priority: medium
 kind: feature
 labels: area:renderer
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:12:10Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Lights are not assigned to visible regions with compute shaders. Related: #514.
@@ -11705,7 +11755,9 @@ status: new
 priority: medium
 kind: feature
 labels: area:renderer
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:12:10Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Hidden objects are still drawn. There is no depth pyramid + compute pass to cull them.
@@ -11719,7 +11771,9 @@ status: new
 priority: medium
 kind: feature
 labels: area:renderer
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:12:10Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Particle simulation and draw counts are not driven by compute + indirect draws.
@@ -11733,7 +11787,9 @@ status: new
 priority: medium
 kind: feature
 labels: area:renderer
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:12:10Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Mesh detail per object is not chosen on the GPU with compute + indirect commands.
@@ -11747,7 +11803,9 @@ status: new
 priority: medium
 kind: feature
 labels: area:renderer
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:12:10Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 There is no path that writes primitive IDs and evaluates materials afterwards with compute.
@@ -11761,7 +11819,9 @@ status: new
 priority: medium
 kind: feature
 labels: area:renderer
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:12:10Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Lighting is not done in tile memory with imageblocks / tile shaders. Related: #513.
@@ -11775,7 +11835,9 @@ status: new
 priority: medium
 kind: feature
 labels: area:renderer
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:12:10Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Workload scheduling and dependencies are not driven on the GPU with indirect dispatch and GPU synchronization.
@@ -11789,7 +11851,9 @@ status: new
 priority: medium
 kind: feature
 labels: materials
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:23:29Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 Custom materials can't be written as composable Swift expressions that build a shader.
@@ -11810,9 +11874,10 @@ status: new
 priority: medium
 kind: feature
 labels: materials
+milestone: M999-Nice-to-have
 depends: 526
 created: 2026-11-17T14:23:29Z
-updated: 2026-11-17T14:23:36Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 There is no visual node-based editor for building materials.
@@ -11831,7 +11896,9 @@ Related: ISSUES.md Materials list, "Shader modifiers / node-based material graph
 status: new
 priority: medium
 kind: feature
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:27:02Z
+updated: 2026-11-17T17:12:16Z
 +++
 
 SceneSprockets can't load or render MaterialX (.mtlx) materials. Assets authored with MaterialX (Substance, GPUOpen MaterialX Library, ambientCG, OpenUSD pipelines) have to be converted by hand to the existing PBR or Blinn-Phong materials.
@@ -11841,6 +11908,19 @@ Expected: a MaterialX material can be loaded and attached to mesh nodes like the
 References:
 - https://materialx.org
 - https://github.com/AcademySoftwareFoundation/MaterialX
+
+---
+
+## 529: Metalballs Demo -> SDF Demo
+
++++
+status: new
+priority: none
+kind: none
+milestone: M999-Nice-to-have
+created: 2026-11-17T17:11:50Z
+updated: 2026-11-17T17:12:16Z
++++
 
 ---
 
@@ -11887,5 +11967,14 @@ created: 2026-11-16T20:12:42Z
 +++
 
 Out of sequence. Large or speculative work.
+
+---
+
+## Milestone: M004-VisionOS
+
++++
+status: open
+created: 2026-11-17T17:28:41Z
++++
 
 ---

@@ -25,7 +25,6 @@
 		457C0F0530816E2500878743 /* Exceptions for "Packages" folder in "SceneSprocketsDemo" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				SceneSprocketsDemos,
 				SceneSprocketsDemoSupport,
 			);
 			target = 45C80D302E84475800136D6D /* SceneSprocketsDemo */;
