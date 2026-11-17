@@ -1,3 +1,4 @@
+import Observation
 @testable import SceneSprockets
 import Testing
 
@@ -112,4 +113,45 @@ func cycleDetection() {
     #expect(!root.canAddChild(root))
     #expect(!grandchild.canAddChild(root))
     #expect(root.canAddChild(SceneGraph.Node()))
+}
+
+// #486: a node is found from its ID without walking the scene.
+@Test
+func nodeIsFoundByID() {
+    let root = SceneGraph.Node()
+    let child = root.addChild(SceneGraph.Node())
+    let hidden = child.addChild(SceneGraph.Node())
+    hidden.isVisible = false
+    let sceneGraph = SceneGraph(root: root)
+    #expect(sceneGraph.node(withID: root.id) === root)
+    #expect(sceneGraph.node(withID: hidden.id) === hidden)
+
+    // Added and removed after the graph was made.
+    let late = child.addChild(SceneGraph.Node())
+    #expect(sceneGraph.node(withID: late.id) === late)
+    late.removeFromParent()
+    #expect(sceneGraph.node(withID: late.id) == nil)
+
+    // Not in this graph.
+    let other = SceneGraph.Node()
+    _ = SceneGraph(root: other)
+    #expect(sceneGraph.node(withID: other.id) == nil)
+    #expect(sceneGraph.node(withID: SceneGraph.Node().id) == nil)
+}
+
+// #486: a view that looks up a node must not depend on the other nodes.
+@Test
+func lookupByIDDoesNotObserveOtherNodes() {
+    let root = SceneGraph.Node()
+    let selected = root.addChild(SceneGraph.Node())
+    let other = root.addChild(SceneGraph.Node())
+    let sceneGraph = SceneGraph(root: root)
+    nonisolated(unsafe) var fired = false
+    withObservationTracking {
+        _ = sceneGraph.node(withID: selected.id)
+    } onChange: {
+        fired = true
+    }
+    other.transform.translation.x += 1
+    #expect(!fired)
 }

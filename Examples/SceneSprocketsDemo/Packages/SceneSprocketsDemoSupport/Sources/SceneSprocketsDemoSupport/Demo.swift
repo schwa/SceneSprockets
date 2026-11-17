@@ -155,10 +155,7 @@ open class DemoScene {
 
     // Selects the hit node (nil clears the selection), then calls `didPick`.
     public var selectedNode: SceneGraph.Node? {
-        guard let selectedNodeID else {
-            return nil
-        }
-        return sceneGraph.nodesWithWorldTransforms(includeHidden: true).first { $0.node.id == selectedNodeID }?.node
+        selectedNodeID.flatMap(sceneGraph.node(withID:))
     }
 
     public func pick(_ hit: SceneGraph.Hit?) {

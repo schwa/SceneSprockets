@@ -81,6 +81,13 @@ public class SceneGraph {
         return result
     }
 
+    /// Returns the node with an ID, if it is in this graph: the root or one of its descendants, hidden or not.
+    ///
+    /// The lookup does not walk the scene, and reads no node properties.
+    public func node(withID id: Node.ID) -> Node? {
+        store.nodes[id]?.node
+    }
+
     // Every node except inactive subtrees, hidden or not, for simulation: actions, constraints and particles (#196).
     func visitActive(_ visitor: (Node, float4x4) throws -> Void) rethrows {
         try traverse(includeHidden: true) { node, worldTransform in

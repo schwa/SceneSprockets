@@ -40,6 +40,33 @@ import Testing
     #expect(changed)
 }
 
+// #486: reading the selected node must not make a view depend on every node's transform.
+@MainActor
+@Test func selectedNodeIgnoresOtherNodesMoving() {
+    let model = EditorModel(sceneGraph: SceneGraph.empty())
+    model.addShape(.box(), label: "A")
+    model.addShape(.sphere(), label: "B")
+    let nodes = model.sceneGraph.root.children
+    model.select(nodes.map(\.id), primary: nodes[0].id)
+    nonisolated(unsafe) var changed = false
+    withObservationTracking {
+        _ = model.selectedNode
+        _ = model.selectedNodes
+    } onChange: {
+        changed = true
+    }
+    nodes[1].transform = .init(translation: [1, 0, 0])
+    #expect(!changed)
+    #expect(model.selectedNode === nodes[0])
+    #expect(model.selectedNodes.map(\.id) == nodes.map(\.id))
+
+    // Deleting the node still reaches readers.
+    model.delete(nodes[0])
+    #expect(changed)
+    #expect(model.selectedNode !== nodes[0])
+    #expect(!model.selectedNodes.contains { $0 === nodes[0] })
+}
+
 // #215: what a gizmo drag costs on the main thread each frame, outside SwiftUI. Reports milliseconds per call so the
 // expensive parts stand out; the bound is generous and only catches regressions.
 @MainActor

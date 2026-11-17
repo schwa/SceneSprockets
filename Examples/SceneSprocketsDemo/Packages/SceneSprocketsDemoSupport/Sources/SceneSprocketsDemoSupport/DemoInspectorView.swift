@@ -31,18 +31,11 @@ struct DemoInspectorView: View {
                 let _ = scene.outlineRevision
                 SceneNodeRowView(node: scene.sceneGraph.root, scene: scene, selectedNodeID: $scene.selectedNodeID)
             }
-            if let node = selectedNode {
+            if let node = scene.selectedNode {
                 NodeInspectorView(node: node)
             }
         }
         .formStyle(.grouped)
-    }
-
-    private var selectedNode: SceneGraph.Node? {
-        guard let selectedNodeID = scene.selectedNodeID else {
-            return nil
-        }
-        return scene.sceneGraph.nodesWithWorldTransforms(includeHidden: true).first { $0.node.id == selectedNodeID }?.node
     }
 }
 

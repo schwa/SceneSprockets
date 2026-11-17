@@ -11073,12 +11073,14 @@ Found by the SwiftUI review (#475).
 ## 486: Looking up the selected node walks the whole scene on every read
 
 +++
-status: open
+status: closed
 priority: medium
 kind: enhancement
 labels: area:composer, effort:s
 milestone: M002-Performance
 created: 2026-11-17T06:52:28Z
+updated: 2026-11-17T07:24:48Z
+closed: 2026-11-17T07:24:48Z
 +++
 
 There is no way to get a node from its ID, so code that keeps a selection as an ID finds the node with sceneGraph.nodesWithWorldTransforms(includeHidden: true).first { ... }. That visits every node and computes every world transform, and in a view body it makes the view depend on every node's transform.
@@ -11091,6 +11093,8 @@ EditorModel already avoids this trap elsewhere (containsShownLight, #223).
 Expected: getting the selected node costs the same for a scene of 10 nodes and of 10,000, and does not make a view depend on unrelated nodes.
 
 Found by the SwiftUI review (#475).
+
+- `2026-11-17T07:24:48Z`: Fixed. New SceneGraph.node(withID:) returns a node of the graph from its ID without walking the scene or reading node properties. EditorModel.selectedNode, DemoScene.selectedNode and the demo inspector use it. EditorModel.selectedNodes finds the nodes by ID; with more than one selected it still walks the hierarchy for tree order, without computing transforms, and stops when all are found. Tests: nodeIsFoundByID, lookupByIDDoesNotObserveOtherNodes, and selectedNodeIgnoresOtherNodesMoving in the Composer. Not measured before and after; dragFrameCosts reports selectedNodes at 0.044 ms for 3 of 500 nodes now.
 
 ---
 

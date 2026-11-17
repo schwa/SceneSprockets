@@ -79,10 +79,24 @@ public final class EditorModel {
 
     // The selected nodes in tree order.
     var selectedNodes: [SceneGraph.Node] {
-        guard !selectedIDs.isEmpty else {
-            return []
+        // Found by ID, not by walking the scene (#486). Structure changes can remove a node or change the order.
+        observe(.structure)
+        let nodes = selectedIDs.compactMap(sceneGraph.node(withID:))
+        guard nodes.count > 1 else {
+            return nodes
         }
-        return sceneGraph.nodesWithWorldTransforms(includeHidden: true).map(\.node).filter { selectedIDs.contains($0.id) }
+        // Tree order needs a walk, but only of the hierarchy, and only until every selected node is found.
+        var ordered: [SceneGraph.Node] = []
+        func collect(_ node: SceneGraph.Node) {
+            if selectedIDs.contains(node.id) {
+                ordered.append(node)
+            }
+            for child in node.children where ordered.count < nodes.count {
+                collect(child)
+            }
+        }
+        collect(sceneGraph.root)
+        return ordered
     }
     // Locked nodes and their descendants cannot be picked in the viewport, moved or edited (#192). Editor state, saved
     // in editor.json.
@@ -704,10 +718,10 @@ public final class EditorModel {
     }
 
     public var selectedNode: SceneGraph.Node? {
-        guard let selection else {
-            return nil
-        }
-        return sceneGraph.nodesWithWorldTransforms(includeHidden: true).first { $0.node.id == selection }?.node
+        // Found by ID, not by walking the scene (#486). A removed node is no longer found; observing structure tells
+        // views when that happens.
+        observe(.structure)
+        return selection.flatMap(sceneGraph.node(withID:))
     }
 }
 
