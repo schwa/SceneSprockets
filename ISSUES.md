@@ -11801,12 +11801,19 @@ updated: 2026-11-17T19:36:22Z
 
 Draw commands are encoded on the CPU each frame. MTLIndirectCommandBuffer would let them be encoded once or on the GPU.
 
-- `2026-11-17T18:59:59Z`: Auto-fixer (M002): punting. MetalSprockets has no indirect-draw or MTLIndirectCommandBuffer support (only indirect compute dispatch), so this first needs new API in the MetalSprockets repo, and every material renderer (Blinn-Phong, PBR, shader, toon, voxel...) encodes its own draws, so blast radius is the whole renderer. Part of the #516 GPU-driven umbrella (effort:xl). Unblocker: OK to design ICB/indirect-draw elements in MetalSprockets first, and which renderer to pilot (Blinn-Phong instanced batches seem simplest)?
-- `2026-11-17T19:05:44Z`: Question 1 (decision): May I add indirect-draw / indirect command buffer support to MetalSprockets first, piloting with Blinn-Phong instanced batches? Recommended: Yes
-- `2026-11-17T19:09:28Z`: Answer 1: File issues on MetalSprockets first
-- `2026-11-17T19:14:03Z`: Correction to earlier comments: MetalSprockets can already issue indirect draws through a raw Draw closure; what it lacks is first-class support. Filed MetalSprockets#575 (Draw initializers for indirect draws) and MetalSprockets#576 (indirect command buffers). Under umbrella #544.
-- `2026-11-17T19:17:22Z`: Per Q1 answer: filed MetalSprockets#575 (indirect Draw initializers) and MetalSprockets#576 (indirect command buffers). Blocked until those land.
-- `2026-11-17T19:36:22Z`: MetalSprockets#575 and #576 shipped in 0.3.3; Package.resolved files updated. Unblocked.
+\- `2026-11-17T18:59:59Z`: Auto-fixer (M002): punting. MetalSprockets has no indirect-draw or MTLIndirectCommandBuffer support (only indirect compute dispatch), so this first needs new API in the MetalSprockets repo, and every material renderer (Blinn-Phong, PBR, shader, toon, voxel...) encodes its own draws, so blast radius is the whole renderer. Part of the #516 GPU-driven umbrella (effort:xl). Unblocker: OK to design ICB/indirect-draw elements in MetalSprockets first, and which renderer to pilot (Blinn-Phong instanced batches seem simplest)?
+\- `2026-11-17T19:05:44Z`: Question 1 (decision): May I add indirect-draw / indirect command buffer support to MetalSprockets first, piloting with Blinn-Phong instanced batches? Recommended: Yes
+\- `2026-11-17T19:09:28Z`: Answer 1: File issues on MetalSprockets first
+\- `2026-11-17T19:14:03Z`: Correction to earlier comments: MetalSprockets can already issue indirect draws through a raw Draw closure; what it lacks is first-class support. Filed MetalSprockets#575 (Draw initializers for indirect draws) and MetalSprockets#576 (indirect command buffers). Under umbrella #544.
+\- `2026-11-17T19:17:22Z`: Per Q1 answer: filed MetalSprockets#575 (indirect Draw initializers) and MetalSprockets#576 (indirect command buffers). Blocked until those land.
+\- `2026-11-17T19:36:22Z`: MetalSprockets#575 and #576 shipped in 0.3.3; Package.resolved files updated. Unblocked.
+\- `2026-11-17T20:00:47Z`: Looked at implementing this now that MetalSprockets 0.3.3 has indirect command buffers. Findings:
+- makeRenderIndirectCommandBuffer inherits pipeline state and buffers (argument tables) from the enclosing Draw, so commands in one ICB can only differ in draw arguments (index range, instance count, base instance).
+- Blinn-Phong binds a separate mesh (vertex/index buffers) and material (uniforms, textures) per batch. ICB render commands cannot carry per-draw textures, so Blinn-Phong cannot use these ICBs without merging meshes into shared buffers and moving materials into argument buffers (a renderer rewrite).
+- PBR already has that shape: MetalSprocketsPBR merges static geometry into shared buffers and selects materials per instance (PBRMergedGeometry, PBRDrawPlan.MergedDraw). Each merged range could be one ICB command, encoded once per model and later filled by GPU culling/LOD (#520, #522). That code lives in MetalSprocketsPBR, not here.
+So the first real ICB user is the PBR merged-geometry path in MetalSprocketsPBR; nothing to change in SceneSprockets until that exists.
+
+- `2026-11-17T20:04:16Z`: Correction to the previous comment: merged geometry is not required. The MetalSprockets helper (makeRenderIndirectCommandBuffer) sets inheritBuffers = true, but that is the helper's choice, not a Metal limit; indirect render commands can set their own vertex buffers. What ICB commands cannot do is bind textures per draw, so the real prerequisite is bindless materials (each draw finds its material and textures through a buffer index, as PBRMaterialResources already does), plus per-command or addressable vertex data and one pipeline per command group. Blinn-Phong needs bindless materials, not a merge. Whether PBR should keep merging at all is tracked in MetalSprocketsPBR#37.
 
 ---
 
