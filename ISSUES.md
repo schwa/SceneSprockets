@@ -11449,16 +11449,19 @@ Alpha masking, alpha blending, and double-sided materials are not all handled co
 ## 500: Normal mapping, tangent generation, and mirrored UVs
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:renderer, effort:m
 milestone: M001-Correctness
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-17T18:02:34Z
+updated: 2026-11-17T18:22:22Z
+closed: 2026-11-17T18:22:22Z
 +++
 
 Normal mapping, tangent generation, and mirrored UVs need correct handling. (Moved from SceneSprocketsAddOns #63.)
+
+- `2026-11-17T18:22:22Z`: Audited: Flatten transforms tangents with the linear matrix and flips w under mirroring; Blinn-Phong builds its tangent frame from screen-space derivatives (handles mirrored UVs, no tangent attribute needed); MetalSprocketsPBR uses vertex tangents with a derivative fallback. Fixed: Blinn-Phong lit back faces of two-sided materials with the front normal, so they went dark when seen from behind. The fragment shader now flips the normal for back faces, and materialDraw always sets the winding (it fell back to Metal's clockwise default without culling, which would invert front_facing). Test: backFacesOfTwoSidedMaterialsAreLit (fails before fix for the flipped cases).
 
 ---
 

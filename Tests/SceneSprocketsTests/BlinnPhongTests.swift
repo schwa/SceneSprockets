@@ -237,3 +237,21 @@ func blinnPhongFromOneColor() {
     #expect(material.shininess == 8)
     #expect(material.opacity == 0.25)
 }
+
+// #500: a two-sided quad seen from behind, lit from the camera side, is lit like its front.
+@Test(.enabled(if: deviceSupportsMetal4), arguments: [false, true], [false, true])
+@MainActor
+func backFacesOfTwoSidedMaterialsAreLit(flipped: Bool, mirrored: Bool) throws {
+    let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
+    let root = SceneGraph.Node()
+    root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
+    root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .light(Light(type: .point, color: [1, 1, 1], intensity: 5))))
+    let material = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color([1, 1, 1]), specular: .color(0), shininess: 1)
+    let rotation = flipped ? simd_quatf(angle: .pi, axis: [0, 1, 0]) : simd_quatf(angle: 0, axis: [0, 1, 0])
+    root.addChild(SceneGraph.Node(transform: .init(rotation: rotation, scale: mirrored ? [-1, 1, 1] : [1, 1, 1]), content: .mesh(quad, material: material)))
+    let renderer = try OffscreenRenderer(size: CGSize(width: 16, height: 16))
+    let texture = try renderer.render(SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0, 0, 0])])).texture
+    var value = SIMD4<UInt8>.zero
+    texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(8, 8, 1, 1), mipmapLevel: 0)
+    #expect(value.x > 20 && value.y > 20 && value.z > 20)
+}

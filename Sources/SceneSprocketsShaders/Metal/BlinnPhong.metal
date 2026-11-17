@@ -92,6 +92,7 @@ namespace BlinnPhong {
 
     [[fragment]] float4 fragment_main(
         Fragment in [[stage_in]],
+        bool frontFacing [[front_facing]],
         constant BlinnPhongFrame &frame [[buffer(0)]],
         constant BlinnPhongLight *lights [[buffer(1)]],
         constant BlinnPhongMaterialUniforms &material [[buffer(2)]],
@@ -129,6 +130,10 @@ namespace BlinnPhong {
         float3 normal;
         if (length_squared(in.normal) > 1e-8) {
             normal = normalize(in.normal);
+            // Two-sided materials: back faces are lit as seen from their own side (#500).
+            if (!frontFacing) {
+                normal = -normal;
+            }
         } else {
             normal = normalize(cross(dfdx(in.worldPosition), dfdy(in.worldPosition)));
             if (dot(normal, frame.cameraPositions[in.view] - in.worldPosition) < 0) {
