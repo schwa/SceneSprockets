@@ -1,5 +1,5 @@
 {
-  "originHash" : "0cb4f3ec0764ca5da662c1e21bd42c7fb9ceddd65ec7f7b45584babbdee70430",
+  "originHash" : "c76dc8542a39ee7e9d7d60aca5892fa62fb8ea1c752d6413fdf94a852f7e1e4c",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -213,8 +213,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/SwiftJolt.git",
       "state" : {
-        "revision" : "4cd5a89121e49f9803c926554e7751ac0e9fd0bf",
-        "version" : "0.0.1"
+        "revision" : "e044cf48c7e262b0a33d8a57fd9ebe8be60190df",
+        "version" : "0.0.3"
       }
     },
     {

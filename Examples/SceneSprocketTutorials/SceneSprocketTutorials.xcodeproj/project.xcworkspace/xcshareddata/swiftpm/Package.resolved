@@ -195,8 +195,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/SwiftJolt.git",
       "state" : {
-        "revision" : "4cd5a89121e49f9803c926554e7751ac0e9fd0bf",
-        "version" : "0.0.1"
+        "revision" : "e044cf48c7e262b0a33d8a57fd9ebe8be60190df",
+        "version" : "0.0.3"
       }
     },
     {

@@ -9459,13 +9459,14 @@ Missing: a list of each technique with how each renderer handles it, and tests t
 ## 410: SwiftJolt dependency is pinned to 0.0.1, so newer SwiftJolt APIs are unavailable
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: area:physics, effort:s
 milestone: M003-Features
 created: 2026-11-16T23:33:44Z
-updated: 2026-11-17T06:04:51Z
+updated: 2026-11-17T06:14:47Z
+closed: 2026-11-17T06:14:47Z
 +++
 
 Package.swift depends on SwiftJolt `.upToNextMinor(from: "0.0.1")`. SwiftJolt has since added body options, sensors, collision layers and groups, query filters, user data, step listeners, physics settings, shape decorators, trace handlers and more (SwiftJolt issues #65–#98). None of these are released yet, so SceneSprocketsPhysics cannot use them.
