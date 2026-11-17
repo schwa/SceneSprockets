@@ -151,6 +151,32 @@ func pbrSceneMaterialFromRGBAndOpacity() {
     #expect(PBRSceneMaterial().pbrMaterial.uniforms.baseColorFactor == SIMD4<Float>(1, 1, 1, 1))
 }
 
+// #479: an app changes the renderer's settings on the main thread while SceneView's render thread reads them. The
+// race is on plain values, so it only shows with the thread sanitizer (--sanitize=thread).
+@Test(.enabled(if: deviceSupportsMetal4))
+@MainActor
+func pbrRendererSettingsCanChangeWhileAFrameIsLit() async throws {
+    let root = SceneGraph.Node()
+    root.addChild(SceneGraph.Node(content: .camera(Camera.default)))
+    root.addChild(SceneGraph.Node(content: .light(Light(type: .directional, intensity: 1))))
+    let context = try #require(makeRenderContext(sceneGraph: SceneGraph(root: root), camera: nil, cameraMatrix: nil, aspectRatio: 1))
+    let renderer = PBRMaterialRenderer()
+    nonisolated(unsafe) let unsafeRenderer = renderer
+    nonisolated(unsafe) let unsafeContext = context
+    let rendering = Task.detached {
+        for _ in 0..<2_000 {
+            _ = unsafeRenderer.lighting(context: unsafeContext)
+        }
+    }
+    for index in 0..<2_000 {
+        renderer.exposure = Float(index % 4)
+        renderer.environmentIntensity = Float(index % 3)
+        renderer.environment = .studio
+    }
+    await rendering.value
+    #expect(renderer.exposure == Float(1_999 % 4))
+}
+
 // #375: PBRSceneMaterial wraps a shared PBRMaterial, so it is a class: assigning shares it, visibly.
 @Test(.enabled(if: deviceSupportsMetal4))
 func pbrSceneMaterialHasReferenceSemantics() {

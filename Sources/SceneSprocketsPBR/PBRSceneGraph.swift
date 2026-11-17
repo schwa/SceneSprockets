@@ -1,3 +1,4 @@
+import Foundation
 import Metal
 import MetalSprockets
 import MetalSprocketsPBR
@@ -247,17 +248,48 @@ public struct PBRSceneGraphModelBuilder {
 /// The renderer caches its model and rebuilds it only when the scene structure changes. Keep one instance across frames,
 /// for example in `@State`. Instances are equal only to themselves, because `SceneView` only needs to know whether the
 /// renderer is the same.
+///
+/// You can change ``environment``, ``environmentIntensity`` and ``exposure`` on one thread while a view draws with
+/// the renderer on its render thread.
 public final class PBRMaterialRenderer: MaterialRenderer, Equatable {
     public static func == (lhs: PBRMaterialRenderer, rhs: PBRMaterialRenderer) -> Bool {
         lhs === rhs
     }
 
+    struct Settings {
+        var environment: PBREnvironment
+        var environmentIntensity: Float
+        var exposure: Float
+    }
+
+    // Guards `storedSettings`: the app changes settings on one thread while a view's render thread reads them (#479).
+    private let lock = NSLock()
+    private var storedSettings: Settings
+
+    // A consistent copy of every setting.
+    var settings: Settings {
+        lock.withLock { storedSettings }
+    }
+
     /// The image-based lighting that the renderer uses when the scene graph's environment has no map.
-    public var environment: PBREnvironment
+    public var environment: PBREnvironment {
+        get { lock.withLock { storedSettings.environment } }
+        set { lock.withLock { storedSettings.environment = newValue } }
+    }
+
     /// The strength of ``environment``.
-    public var environmentIntensity: Float
+    public var environmentIntensity: Float {
+        get { lock.withLock { storedSettings.environmentIntensity } }
+        set { lock.withLock { storedSettings.environmentIntensity = newValue } }
+    }
+
     /// The exposure, as a multiplier of the light before tone mapping.
-    public var exposure: Float
+    public var exposure: Float {
+        get { lock.withLock { storedSettings.exposure } }
+        set { lock.withLock { storedSettings.exposure = newValue } }
+    }
+
+    // The caches below belong to the thread that draws with this renderer.
     // One model per entry set (SceneGraphElement may split entries into batches), for the current structure.
     private var cachedModels: [EntrySetKey: (model: PBRModel, keys: [PBRModel.Primitive.Key?])] = [:]
     private var cachedRevision: Int?
@@ -275,9 +307,7 @@ public final class PBRMaterialRenderer: MaterialRenderer, Equatable {
     ///   - environmentIntensity: The strength of `environment`.
     ///   - exposure: The exposure, as a multiplier of the light before tone mapping.
     public init(environment: PBREnvironment = .studio, environmentIntensity: Float = 1, exposure: Float = 1) {
-        self.environment = environment
-        self.environmentIntensity = environmentIntensity
-        self.exposure = exposure
+        storedSettings = Settings(environment: environment, environmentIntensity: environmentIntensity, exposure: exposure)
     }
 
     public var materialType: any SceneMaterial.Type {
@@ -500,6 +530,7 @@ extension PBRMaterialRenderer: BackgroundRenderer {
     /// ``environment``), exposure and screen-space occlusion. Light positions are relative to `cameraPosition`.
     /// `shadows` is nil; set it from `context.shadow` with `Shadows.Sampling.pbrShadows(submissionIndex:)`.
     public func lighting(context: RenderContext, cameraPosition: SIMD3<Float> = .zero) -> PBRLighting {
+        let settings = self.settings
         var lighting = PBRLighting(
             lights: context.lights.enumerated().map { index, light in
                 var result = pbrLight(worldTransform: light.worldTransform.cameraRelative(to: cameraPosition), light: light.light)
@@ -511,9 +542,9 @@ extension PBRMaterialRenderer: BackgroundRenderer {
                 }
                 return result
             },
-            environment: context.environment.map as? PBREnvironment ?? environment,
-            environmentIntensity: environmentIntensity * context.environment.intensity,
-            exposure: exposure
+            environment: context.environment.map as? PBREnvironment ?? settings.environment,
+            environmentIntensity: settings.environmentIntensity * context.environment.intensity,
+            exposure: settings.exposure
         )
         lighting.environmentRotation = context.environment.rotation
         // Darkens only image-based light (#408). The visibility already includes the setting's intensity.

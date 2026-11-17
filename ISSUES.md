@@ -10900,7 +10900,7 @@ Found by the swift-concurrency-pro review (#476).
 
 ---
 
-## 479: Changing a PBR material or PBRMaterialRenderer property while SceneView renders is a data race
+## 479: Changing a PBR material in place while SceneView renders is a data race
 
 +++
 status: open
@@ -10909,6 +10909,7 @@ kind: bug
 labels: area:renderer, effort:m
 milestone: M002-Performance
 created: 2026-11-17T06:39:06Z
+updated: 2026-11-17T07:09:43Z
 +++
 
 PBRSceneMaterial and PBRMaterial are classes, and mesh entries in a Presentation share them with the live scene. SceneView draws on a render thread (#393), which reads material.uniforms, renderState and textureTransforms every frame. An app that changes them in place on the main thread (for example material.pbrMaterial.uniforms.roughnessFactor = x) races that read. ScenePresenter's documentation says so, but there is no other way to change one parameter of a PBR material than to build a new material and replace the node's content, which rebuilds the PBR model.
@@ -10922,6 +10923,21 @@ The keynote's Glass and PBR Extensions slide controls did this; they now replace
 Expected: a supported, race-free way to change PBR material parameters and renderer settings while a view renders.
 
 Found by the swift-concurrency-pro review (#476).
+
+\- `2026-11-17T07:09:43Z`: Partly fixed. PBRMaterialRenderer's settings (environment, environmentIntensity, exposure) are now behind a lock, with a test (pbrRendererSettingsCanChangeWhileAFrameIsLit: 2 data races under --sanitize=thread before, none after). Its caches are still used unlocked by the drawing thread (#481).
+
+Punting the material half: it needs a design decision that crosses into MetalSprocketsPBR.
+
+What I found:
+- The library does this itself: glTF material animation (GLTFSceneGraph.swift, Property.gltfMaterial) writes material.uniforms on the editing thread every frame while the render thread reads it.
+- MetalSprocketsPBR already has the per-frame route for material values: PBRPose.materialUniforms, read by pose.uniforms(of:). SceneSprockets does not fill it; PBRNodeLayout.pose passes only world matrices.
+- For merged geometry, MetalSprocketsPBR uses the prebuilt material buffer unless pose.materialUniforms is not empty or there are overrides (PBRMergedGeometry.materials). So an in-place uniforms change after the model is built may not show at all on that path. Not verified in a running view.
+- Filling pose.materialUniforms for every PBR material every frame would be race-free, but turns off that fast path and copies every material's uniforms each frame. Filling it only for changed materials needs to know what changed, and writes go straight to PBRMaterial.uniforms, a public var in the other package, so SceneSprockets cannot see them.
+- isBlended, isTransmissive, renderState and textureTransforms are also read live on the render thread, and the first two decide which pass a primitive is in, which is fixed when the model is built.
+
+Question: which way should live material changes go?
+(a) The editing thread captures changed uniforms each frame into the Presentation and the PBR renderer passes them as pose.materialUniforms (needs a way to mark a material changed, for example an update method on PBRSceneMaterial that apps and the glTF animation use instead of writing pbrMaterial.uniforms), or
+(b) PBRMaterial itself becomes safe to change (a lock or versioned values in MetalSprocketsPBR).
 
 ---
 
