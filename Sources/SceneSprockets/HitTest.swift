@@ -85,7 +85,7 @@ extension SceneGraph {
     public func hitTest(_ ray: Ray3D, options: HitTestOptions = HitTestOptions()) -> [Hit] {
         let revision = self.revision
         var hits: [Hit] = []
-        var positionsCache: [PositionsKey: [SIMD3<Float>]] = [:]
+        let geometry = HitTestGeometryCache.shared
         let entries = meshEntries().filter { entry in
             guard entry.node.categoryBitMask & options.categoryBitMask != 0 else {
                 return false
@@ -127,13 +127,11 @@ extension SceneGraph {
                 hits.append(Hit(node: entry.node, submeshIndex: entry.submeshIndex, triangleIndex: -1, distance: distance, position: position, normal: simd_normalize((inverse.transpose * SIMD4(boxHit.normal, 0)).xyz), localPosition: localPosition, barycentric: .zero, vertexIndices: .zero, mesh: nil))
                 continue
             }
-            let key = PositionsKey(buffers: mesh.vertexBuffers.values.map { ObjectIdentifier($0) }.sorted { $0.hashValue < $1.hashValue }, offsets: mesh.vertexBufferOffsets, vertexCount: mesh.vertexCount)
-            let positions = positionsCache[key] ?? mesh.positions()
-            positionsCache[key] = positions
+            let positions = geometry.positions(of: mesh)
             guard !positions.isEmpty else {
                 continue
             }
-            let indices = submesh.indices
+            let indices = geometry.indices(of: submesh)
             let triangleCount = submesh.primitiveType == .triangle ? indices.count / 3 : max(indices.count - 2, 0)
             // Strips break at the primitive restart index, and each piece keeps its own winding (#404).
             let restartIndex: UInt32 = submesh.indexType == .uint16 ? 0xFFFF : 0xFFFF_FFFF
@@ -178,12 +176,6 @@ extension SceneGraph {
         }
         return hits.sorted { $0.distance < $1.distance }
     }
-}
-
-private struct PositionsKey: Hashable {
-    var buffers: [ObjectIdentifier]
-    var offsets: [Int: Int]
-    var vertexCount: Int
 }
 
 extension MetalMesh {

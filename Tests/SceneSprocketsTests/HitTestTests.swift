@@ -10,6 +10,28 @@ private func material() -> BlinnPhongSceneMaterial {
     BlinnPhongSceneMaterial(ambient: .color(0.1), diffuse: .color([1, 1, 1]), specular: .color(0), shininess: 1)
 }
 
+// #402: hit tests read a mesh's positions and indices once and keep them while the buffers live.
+@Test
+func hitTestGeometryIsReadOnce() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let cache = HitTestGeometryCache()
+    // The pool releases Metal's autoreleased references, so the buffers go when the mesh does.
+    try autoreleasepool {
+        let box = MetalMesh(mesh: .box(), device: device)
+        let first = cache.positions(of: box)
+        let second = cache.positions(of: box)
+        #expect(first.count == box.vertexCount)
+        #expect(first.withUnsafeBufferPointer { $0.baseAddress } == second.withUnsafeBufferPointer { $0.baseAddress })
+        let submesh = try #require(box.submeshes.first)
+        let indices = cache.indices(of: submesh)
+        #expect(indices == submesh.indices)
+        #expect(indices.withUnsafeBufferPointer { $0.baseAddress } == cache.indices(of: submesh).withUnsafeBufferPointer { $0.baseAddress })
+        #expect(cache.count == 2)
+    }
+    // Entries go with their buffers.
+    #expect(cache.isEmpty)
+}
+
 @Test
 func hitTestFindsNearestBoxFirst() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())

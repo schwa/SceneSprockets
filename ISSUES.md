@@ -9291,16 +9291,19 @@ Moved from SceneSprocketsAddOns #38.
 ## 402: Hit testing re-reads vertex positions on every call
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:scenegraph, effort:s
 milestone: M002-Performance
 created: 2026-11-16T20:06:43Z
-updated: 2026-11-16T20:12:42Z
+updated: 2026-11-17T13:57:44Z
+closed: 2026-11-17T13:57:44Z
 +++
 
 SceneGraph.hitTest copies positions out of the vertex buffers on each call (and float2 UVs on each textureCoordinates call). The positions cache lives only for one call. Repeated hit tests, e.g. hover every frame, redo this work for static meshes. Related: #337.
+
+- `2026-11-17T13:57:44Z`: Fixed. New HitTestGeometryCache keeps the positions and indices that hit tests read, keyed weakly by MTLBuffer, so repeated hit tests on static meshes read them once and entries go with their buffers. CPU-deformed meshes get new buffers each revision, so they get new entries. A buffer whose contents change in place keeps its old values. Test hitTestGeometryIsReadOnce checks one read per buffer and that entries go with the buffers (inside an autoreleasepool, since Metal buffers are autoreleased). UV reads (textureCoordinates) are not cached. Not measured.
 
 ---
 
