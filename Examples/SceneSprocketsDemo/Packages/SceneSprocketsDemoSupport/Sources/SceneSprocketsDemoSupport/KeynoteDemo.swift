@@ -101,6 +101,8 @@ public final class KeynoteDemo: DemoScene {
     private static let crateGridSize = 22
     // Metaballs slide: the signed distance node, reshaped every frame.
     private var metaballs: SceneGraph.Node?
+    // Voxels slide: the monument, whose surface follows the Voxel Lighting control.
+    private var monument: SceneGraph.Node?
 
     init() {
         let root = SceneGraph.Node(label: "Root")
@@ -369,7 +371,10 @@ public final class KeynoteDemo: DemoScene {
             contextParameters = [.toggle("Auto-roll", default: true)]
             contextActions = [DemoAction("Roll Dice", systemImage: "dice") { [weak self] in self?.resetPhysics() }]
         case "Metaballs":
-            contextParameters = [.slider("Metaball Count", 1...16, default: 7), .slider("Metaball Size", 0.15...0.7, default: 0.38), .slider("Smoothing", 0.05...1.5, default: 0.7)]
+            contextParameters = [.slider("Metaball Count", 1...16, default: 7), .slider("Metaball Size", 0.15...0.7, default: 0.38), .slider("Smoothing", 0.05...1.5, default: 0.7), .choice("Metaball Lighting", Self.lightingModels, default: 0)]
+            contextActions = []
+        case "Voxels":
+            contextParameters = [.choice("Voxel Lighting", Self.lightingModels, default: 1)]
             contextActions = []
         default:
             contextParameters = []
@@ -440,6 +445,8 @@ public final class KeynoteDemo: DemoScene {
             gizmoMode = modes[Int(time / 2.5) % modes.count]
         case "Metaballs":
             updateMetaballs(time: time)
+        case "Voxels":
+            updateVoxelLighting()
         case "Video Textures":
             videoTexture?.update()
         case "glTF & Model I/O":
@@ -991,11 +998,29 @@ public final class KeynoteDemo: DemoScene {
         let tilt = slide.addChild(SceneGraph.Node(label: "Monument Tilt", transform: .init(translation: [0, 1.2, 0], rotation: simd_quatf(angle: 0.35, axis: [1, 0, 0]))))
         let holder = tilt.addChild(SceneGraph.Node(label: "Monument"))
         try? holder.setVoxels(grid, voxelSize: voxelSize, device: demoDevice)
+        monument = holder
         holder.run(.repeatForever(.rotate(by: 2 * .pi, around: [0, 1, 0], duration: 40)))
         // A floor under the turning model catches its shadow; the sun casts it, the fill light does not.
         tilt.addChild(SceneGraph.Node(label: "Floor", shape: .cylinder(radius: 1.9, height: 0.08), material: BlinnPhongSceneMaterial.plastic([0.25, 0.25, 0.28], shininess: 8), transform: .init(translation: [0, -height / 2 - 0.04, 0])))
         tilt.addChild(SceneGraph.Node(label: "Sun", transform: .init(position: [-4, 3, 1.5], lookingAt: .zero), content: .light(Light(type: .directional, color: [1, 0.95, 0.85], intensity: 1.5))))
         addLight(to: slide, at: [3, 2, 3], color: [0.6, 0.7, 1], intensity: 8, castsShadow: false)
+    }
+
+    private static let lightingModels = ["PBR", "Blinn-Phong"]
+    private let voxelPBRMaterial = PBRSceneMaterial(roughness: 0.75)
+
+    // Swaps the monument's surface when the Voxel Lighting control changes; the voxel texture is kept.
+    private func updateVoxelLighting() {
+        guard let monument, case let .mesh(_, materials, _, _) = monument.content, var material = materials.first as? VoxelMaterial else {
+            return
+        }
+        let usesPBR = (values["Voxel Lighting"] ?? 1) == 0
+        let isPBR = if case .pbr = material.surface { true } else { false }
+        guard usesPBR != isPBR else {
+            return
+        }
+        material.surface = usesPBR ? .pbr(voxelPBRMaterial) : .blinnPhong(BlinnPhongSceneMaterial(color: [1, 1, 1]))
+        monument.setVoxels(material, device: demoDevice)
     }
 
     // Blobs orbiting a pillar; the shape is set in updateMetaballs.
@@ -1030,7 +1055,7 @@ public final class KeynoteDemo: DemoScene {
             )
             return .sphere(radius: radius + 0.1 * sin(phase * 3 + time), transform: .init(translation: position))
         }
-        try? metaballs.setSignedDistanceShape(.smoothUnion(spheres, smoothing: smoothing), surface: .pbr(metaballMaterial), device: demoDevice)
+        try? metaballs.setSignedDistanceShape(.smoothUnion(spheres, smoothing: smoothing), surface: (values["Metaball Lighting"] ?? 0) == 0 ? .pbr(metaballMaterial) : .blinnPhong(.plastic([0.3, 0.55, 0.95], shininess: 48)), device: demoDevice)
     }
 
     // A code panel below the slide's live content, tilted a little toward the camera.
