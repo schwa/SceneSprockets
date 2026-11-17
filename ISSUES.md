@@ -9368,7 +9368,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:m
+milestone: M999-Nice-to-have
 created: 2026-11-16T20:13:10Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 There is no ready-made set of editor aids: a ground grid, axes, icons for lights and cameras, and bounding boxes.
@@ -9384,7 +9386,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:m
+milestone: M999-Nice-to-have
 created: 2026-11-16T20:14:04Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 There are no spline paths in the scene, and nothing that moves cameras or objects along a path.
@@ -9433,8 +9437,9 @@ status: open
 priority: medium
 kind: task
 labels: area:renderer, effort:l
+milestone: M001-Correctness
 created: 2026-11-16T23:06:43Z
-updated: 2026-11-17T06:02:44Z
+updated: 2026-11-17T06:04:50Z
 +++
 
 SceneSprockets applies many scene-wide techniques to meshes: shadows, fog, ambient occlusion, node opacity and fades, transparency sorting, transmission backdrops, color adjustment and vignette, soft particles, debug views, material channels, stereo and immersive rendering, GPU deformation, and others. Each material renderer implements its part of these on its own. Nothing checks that a PBR material and a Blinn-Phong material get the same treatment. Differences show up one at a time as bugs.
@@ -9455,8 +9460,9 @@ status: open
 priority: medium
 kind: task
 labels: area:physics, effort:s
+milestone: M003-Features
 created: 2026-11-16T23:33:44Z
-updated: 2026-11-17T06:02:44Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 Package.swift depends on SwiftJolt `.upToNextMinor(from: "0.0.1")`. SwiftJolt has since added body options, sensors, collision layers and groups, query filters, user data, step listeners, physics settings, shape decorators, trace handlers and more (SwiftJolt issues #65–#98). None of these are released yet, so SceneSprocketsPhysics cannot use them.
@@ -9473,9 +9479,10 @@ status: open
 priority: medium
 kind: feature
 labels: area:physics, effort:s
+milestone: M003-Features
 depends: 410
 created: 2026-11-16T23:34:11Z
-updated: 2026-11-17T06:02:44Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 SceneGraph.PhysicsBody has no way to make a body detect overlaps without colliding (a trigger volume, like SceneKit contact-only bodies). Every body blocks every other body.
@@ -9492,9 +9499,10 @@ status: open
 priority: medium
 kind: feature
 labels: area:physics, effort:m
+milestone: M003-Features
 depends: 410
 created: 2026-11-16T23:34:11Z
-updated: 2026-11-17T06:02:44Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 All bodies in SceneGraphPhysicsWorld collide with all others (except static vs static). There is no equivalent of SceneKit's collisionBitMask, and no way to make, for example, debris pass through characters or parts of one ragdoll ignore each other.
@@ -9511,9 +9519,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:s
+milestone: M003-Features
 depends: 410
 created: 2026-11-16T23:34:12Z
-updated: 2026-11-17T06:02:44Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 SceneGraph.PhysicsBody only has type, shape, mass, friction and restitution. Linear/angular damping, a gravity factor (or not affected by gravity), whether the body may sleep, and continuous collision for fast bodies cannot be set. SceneKit exposes damping, isAffectedByGravity, allowsResting and continuousCollisionDetectionThreshold.
@@ -9532,9 +9541,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:s
+milestone: M003-Features
 depends: 410
 created: 2026-11-16T23:34:12Z
-updated: 2026-11-17T06:02:44Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 There is no way to lock a body's rotation or keep it in a plane (SceneKit angularVelocityFactor / velocityFactor). 2D-style scenes and upright characters need this.
@@ -9551,9 +9561,10 @@ status: open
 priority: low
 kind: bug
 labels: area:physics, effort:m
+milestone: M001-Correctness
 depends: 410
 created: 2026-11-16T23:34:12Z
-updated: 2026-11-17T06:02:44Z
+updated: 2026-11-17T06:04:50Z
 +++
 
 When a node's physicsBody description changes (e.g. friction, type or shape), sync() removes the Jolt body and adds a new one. The new body starts at rest, so a moving object stops dead, and contacts reset.
@@ -9577,9 +9588,10 @@ status: open
 priority: low
 kind: enhancement
 labels: area:physics, effort:s
+milestone: M002-Performance
 depends: 410
 created: 2026-11-16T23:34:12Z
-updated: 2026-11-17T06:02:44Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 joltShape bakes the node's scale into each shape: spheres use the largest scale axis, capsules and cylinders mix X/Z scale, mesh and hull vertices are copied and scaled, and an off-center bounding box becomes a one-child compound. Non-uniform scale of round shapes is not exact, and scaled meshes duplicate vertex data.
@@ -9596,9 +9608,10 @@ status: open
 priority: low
 kind: enhancement
 labels: area:physics, effort:xs
+milestone: M002-Performance
 depends: 410
 created: 2026-11-16T23:34:12Z
-updated: 2026-11-17T06:02:44Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 SceneGraphPhysicsWorld.node(of:) does a linear search over all entries. The slider constraint calls it for every sweep hit, every frame, so cost grows with scene size.
@@ -9615,9 +9628,10 @@ status: open
 priority: low
 kind: enhancement
 labels: area:physics, effort:s
+milestone: M002-Performance
 depends: 410
 created: 2026-11-16T23:34:12Z
-updated: 2026-11-17T06:02:44Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 sliderConstraint casts against all bodies with castShapeAll and then discards hits on the node itself, its descendants and nodes outside categoryBitMask in Swift. Every excluded hit is still computed and allocated.
@@ -9634,9 +9648,10 @@ status: open
 priority: low
 kind: enhancement
 labels: area:physics, effort:xs
+milestone: M002-Performance
 depends: 410
 created: 2026-11-16T23:34:12Z
-updated: 2026-11-17T06:02:44Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 step() writes the pose of every dynamic body to its node every step. Sleeping bodies don't move, but their nodes are still written, which bumps the transform revision and costs time in large scenes.
@@ -9653,9 +9668,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:m
+milestone: M003-Features
 depends: 410
 created: 2026-11-16T23:34:13Z
-updated: 2026-11-17T06:02:44Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 Custom forces (wind, buoyancy, magnets, SceneKit-style physics fields) can only be applied once per step() call. With collisionSteps > 1 they are not re-applied per sub-step, and there is no hook that runs inside the simulation.
@@ -9674,9 +9690,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:xs
+milestone: M003-Features
 depends: 410
 created: 2026-11-16T23:34:13Z
-updated: 2026-11-17T06:02:45Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 SceneGraphPhysicsWorld has no way to change solver iterations, baumgarte, penetration slop, sleep time or other world-wide settings. Stacks and joints that need more iterations cannot be fixed from SceneSprockets.
@@ -9693,9 +9710,10 @@ status: open
 priority: low
 kind: enhancement
 labels: area:physics, effort:xs
+milestone: M999-Nice-to-have
 depends: 410
 created: 2026-11-16T23:34:13Z
-updated: 2026-11-17T06:02:45Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 Jolt prints its trace messages to stdout. They don't reach os.Logger, so they are missing from Console and unified logging, unlike the rest of SceneSprockets.
@@ -9712,9 +9730,10 @@ status: open
 priority: medium
 kind: feature
 labels: area:physics, effort:m
+milestone: M003-Features
 depends: 410
 created: 2026-11-16T23:34:13Z
-updated: 2026-11-17T06:02:45Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 There is no way to learn that two nodes' bodies started or stopped touching (SceneKit's SCNPhysicsContactDelegate). Games need this for hits, pickups and sounds; the Jolt world's contact listener is only reachable through `world` and reports BodyIDs, not nodes.
@@ -9731,8 +9750,9 @@ status: open
 priority: low
 kind: bug
 labels: area:physics, effort:m
+milestone: M001-Correctness
 created: 2026-11-17T01:02:42Z
-updated: 2026-11-17T06:02:45Z
+updated: 2026-11-17T06:04:50Z
 +++
 
 SceneGraphPhysicsWorld.sync() only visits visible nodes, so hiding a node (or an ancestor) removes and destroys its Jolt body. Showing it again creates a new body at rest. Velocity, sleep state and contacts are lost.
@@ -9755,8 +9775,9 @@ status: open
 priority: low
 kind: bug
 labels: area:physics, effort:xs
+milestone: M001-Correctness
 created: 2026-11-17T01:02:42Z
-updated: 2026-11-17T06:02:45Z
+updated: 2026-11-17T06:04:50Z
 +++
 
 SceneGraph.PhysicsBody accepts shape .mesh with type .dynamic. Jolt only supports triangle-mesh shapes on static and kinematic bodies (SwiftJolt documents this on Shape.mesh). SceneGraphPhysicsWorld passes the combination straight to Jolt.
@@ -9774,8 +9795,9 @@ status: open
 priority: low
 kind: bug
 labels: area:physics, effort:xs
+milestone: M001-Correctness
 created: 2026-11-17T01:02:42Z
-updated: 2026-11-17T06:02:45Z
+updated: 2026-11-17T06:04:50Z
 +++
 
 For shape .convexHull, SceneGraphPhysicsWorld only checks that the mesh has at least 4 positions. If the points cannot form a hull (for example all identical or all on one line), SwiftJolt's Shape.convexHull stops the process with a precondition failure: "Could not build a convex hull from N points".
@@ -9796,8 +9818,9 @@ status: open
 priority: low
 kind: bug
 labels: area:physics, effort:xs
+milestone: M001-Correctness
 created: 2026-11-17T01:02:42Z
-updated: 2026-11-17T06:02:45Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 sliderConstraint(radius:categoryBitMask:) stores the last position of every node it runs on in a dictionary keyed by ObjectIdentifier. Entries are never removed, so the dictionary grows as nodes come and go.
@@ -9815,9 +9838,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:m
+milestone: M003-Features
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-17T06:02:45Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 PhysicsBody.Shape only offers box, sphere, capsule, cylinder, boundingBox, convexHull and mesh. Terrain has to use a triangle mesh, ground planes need a large box, and there is no shape for a body that only exists to be jointed or moved.
@@ -9833,9 +9857,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:m
+milestone: M999-Nice-to-have
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-17T06:02:45Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 There is no way to tag a node's collision surface (or individual mesh triangles) and find out which surface a ray or contact hit, e.g. to choose footstep sounds or decals.
@@ -9851,9 +9876,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:s
+milestone: M003-Features
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-17T06:02:45Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 Nothing tells the app how hard two bodies hit, so impact sounds, damage and particles can't be scaled by force.
@@ -9871,9 +9897,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:m
+milestone: M999-Nice-to-have
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-17T06:02:45Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 There is no way to see collision shapes, bounding boxes, velocities or constraint limits drawn over the scene, which makes physics setups hard to debug.
@@ -9889,9 +9916,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:l
+milestone: M003-Features
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-17T06:02:45Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 Two nodes' bodies cannot be connected with hinges, sliders, ball joints, fixed welds, swing-twist or six-DOF joints, and there is no way to break a joint when the load gets too high.
@@ -9907,9 +9935,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:l
+milestone: M999-Nice-to-have
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-17T06:02:45Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 There is no way to drive a player or NPC node with a character controller (walking, slopes, stairs, standing on moving platforms); only plain rigid bodies.
@@ -9925,9 +9954,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:xl
+milestone: M999-Nice-to-have
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-17T06:02:45Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 Cars, motorcycles and tracked vehicles cannot be built from scene nodes (body node + wheel nodes that follow the simulated wheels).
@@ -9943,9 +9973,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:xl
+milestone: M999-Nice-to-have
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-17T06:02:45Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 A skinned character cannot go limp into a ragdoll, or have its bodies follow a keyframed animation.
@@ -9961,9 +9992,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:s
+milestone: M999-Nice-to-have
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-17T06:02:45Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 There is no water/fluid volume, so floating objects need hand-written forces.
@@ -9981,9 +10013,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:xl
+milestone: M999-Nice-to-have
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-17T06:02:45Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 Nodes cannot be simulated as cloth or other soft bodies.
@@ -9999,9 +10032,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:xs
+milestone: M999-Nice-to-have
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-17T06:02:45Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 SceneGraphPhysicsWorld always uses SwiftJolt's default job system and thread count; an app can't limit physics threads (e.g. on low-power devices) or pick Jolt's own pool.
@@ -10017,9 +10051,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:xs
+milestone: M003-Features
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-17T06:02:45Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 There is no API to wake a sleeping body, put one to sleep, or wake everything in a region (e.g. after an explosion or when a level section becomes active).
@@ -10075,8 +10110,9 @@ status: open
 priority: medium
 kind: bug
 labels: area:physics, effort:m, investigate
+milestone: M001-Correctness
 created: 2026-11-17T01:25:42Z
-updated: 2026-11-17T06:02:45Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 The physics test process sometimes crashes on CI. The crash is intermittent: the next CI run passed, and 3 local runs passed.
@@ -10108,8 +10144,9 @@ status: open
 priority: low
 kind: task
 labels: area:demo, effort:m
+milestone: M999-Nice-to-have
 created: 2026-11-17T02:19:23Z
-updated: 2026-11-17T06:02:45Z
+updated: 2026-11-17T06:04:51Z
 +++
 
 The demo app has standalone demos besides the keynote (Shadows, Gears, Dice, Metaballs, SceneKit Features, and others). Some show features the keynote already covers; others show features the keynote does not cover at all. Two places to maintain the same showcases.
@@ -10735,6 +10772,57 @@ Expected: the fox catches fire shortly after the slide shows, every time.
 Actual: often no particles appear. It is not known yet which ways of reaching the slide fail.
 
 - `2026-11-17T05:32:07Z`: Cause (likely; not reproduced in the live app): ScenePresenter steps at 90 Hz and the renderer draws the latest snapshot on its own schedule. A snapshot made before the fox's ignition could be drawn after BurningFox applied the new description and set the emitter mesh. SceneParticleSystem.runtime(description:generation:) then re-applied the older description, which rebuilt the emitters without a mesh, and BurningFox never set it again. Fix: only apply newer generations (test olderFrameDoesNotReapplyAnOlderDescription), and BurningFox re-attaches the mesh to any emitter that lacks it.
+
+---
+
+## 475: SwiftUI code has not been reviewed against the swiftui-pro and swiftui-house-rules skills
+
++++
+status: open
+priority: medium
+kind: task
+labels: area:ui, effort:m
+milestone: M002-Performance
+created: 2026-11-17T06:04:19Z
++++
+
+The SwiftUI code (SceneView and other UI in Sources, the demo app, SceneSprocketsComposer) has not had a review with the swiftui-pro, swiftui-house-rules and swiftui-specialist skills. Possible problems such as deprecated APIs, state management, view identity and performance are not known.
+
+Expected: a review of all SwiftUI code; each finding fixed or filed as its own issue.
+
+---
+
+## 476: Swift concurrency has not been reviewed against the swift-concurrency-pro skill
+
++++
+status: open
+priority: medium
+kind: task
+labels: area:scenegraph, effort:m
+milestone: M002-Performance
+created: 2026-11-17T06:04:19Z
++++
+
+Concurrency in the package (ScenePresenter, the main-actor scene graph, rendering on other threads, particle runtime locking, nonisolated(unsafe) uses, physics worker threads) has not had a review with the swift-concurrency-pro skill. Data races and isolation mistakes are found one at a time as bugs (for example #474, #442).
+
+Expected: a review of the package and demo code; each finding fixed or filed as its own issue.
+
+---
+
+## 477: Codebase architecture has not been reviewed with the improve-codebase-architecture skill
+
++++
+status: open
+priority: medium
+kind: task
+labels: area:scenegraph, effort:m
+milestone: M002-Performance
+created: 2026-11-17T06:04:19Z
++++
+
+The codebase has not had an architecture review with the improve-codebase-architecture skill. Coupling, shallow modules and logic spread over many places (for example demos listed twice, #115; each material renderer handling scene-wide techniques on its own, #409) are found only one at a time.
+
+Expected: a review that lists architecture problems; each one filed as its own issue.
 
 ---
 
