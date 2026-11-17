@@ -11113,12 +11113,14 @@ Found by the SwiftUI review (#475).
 ## 487: BlinnPhongMaterialRenderer made in a view body gets a new cache each pass and never compares equal
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:renderer, effort:s
 milestone: M002-Performance
 created: 2026-11-17T06:52:28Z
+updated: 2026-11-17T13:39:43Z
+closed: 2026-11-17T13:39:43Z
 +++
 
 BlinnPhongMaterialRenderer's documentation says 'Copies share one cache, so a SwiftUI view can re-create the renderer each update.' That holds for copies of one value, but not for the pattern every tutorial uses:
@@ -11134,6 +11136,8 @@ Seen in: all five tutorials and their DocC code files, TreeAppreciatorView (whic
 Expected: either the inline pattern keeps its cache and compares equal, or the documentation and tutorials show keeping the renderer in @State (as PBRMaterialRenderer's documentation says).
 
 Found by the SwiftUI review (#475).
+
+- `2026-11-17T13:39:43Z`: Fixed. BlinnPhongMaterialRenderer's == compares only ambientLightColor, not the cache's identity. So SceneView(sceneGraph, renderers: [BlinnPhongMaterialRenderer()]) made again in a body compares equal, .equatable() skips the update, and the view keeps drawing with the renderer (and cache) it has. Test inlineBlinnPhongRenderersCompareEqual failed before. changesMakeThemUnequal asserted the old behavior (a new renderer made the view unequal); it now uses a renderer with another ambient color. Not changed: when SceneView is not equal for another reason, the new renderer still starts with an empty cache.
 
 ---
 

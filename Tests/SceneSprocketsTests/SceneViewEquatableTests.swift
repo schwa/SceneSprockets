@@ -38,7 +38,8 @@ struct SceneViewEquatableTests {
         #expect(view().sceneDefaultLighting() != view())
         #expect(view(shadows: Shadows()) != view(shadows: Shadows()))
         #expect(view(cameraMatrix: .constant(.init(diagonal: [2, 1, 1, 1]))) != view(cameraMatrix: .constant(.init(diagonal: [1, 1, 1, 1]))))
-        #expect(view(renderers: [BlinnPhongMaterialRenderer()]) != view())
+        // A renderer with other settings; a new one with the same settings is equal (#487).
+        #expect(view(renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [1, 0, 0])]) != view())
         // A closure added on one side only.
         #expect(view().sceneOverlay(id: "a") { _ in nil } != view())
         #expect(view().onSceneFrameTimingChange(id: "a") { _ in } != view())
@@ -55,6 +56,17 @@ struct SceneViewEquatableTests {
         #expect(options.categoryBitMask == 0b0010)
         #expect(options.backFaceCulling)
         #expect(options.rootNode === root)
+    }
+
+    // #487: the tutorials write `renderers: [BlinnPhongMaterialRenderer()]` in a body, so each pass makes a new
+    // renderer. Two of them with the same settings are the same renderer, so SceneView compares equal.
+    @Test
+    func inlineBlinnPhongRenderersCompareEqual() {
+        #expect(BlinnPhongMaterialRenderer() == BlinnPhongMaterialRenderer())
+        #expect(BlinnPhongMaterialRenderer(ambientLightColor: [1, 0, 0]) != BlinnPhongMaterialRenderer())
+        let first = SceneView(sceneGraph, renderers: [BlinnPhongMaterialRenderer()])
+        let second = SceneView(sceneGraph, renderers: [BlinnPhongMaterialRenderer()])
+        #expect(first == second)
     }
 
     // #485: the body must not read the scene's nodes, or SwiftUI evaluates it again every time a node moves.

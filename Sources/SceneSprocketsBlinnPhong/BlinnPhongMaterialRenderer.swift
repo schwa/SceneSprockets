@@ -114,17 +114,18 @@ public struct BlinnPhongSceneMaterial: SceneMaterial, SamplesShadowsInShader, Dr
 
 /// The renderer that draws every mesh with a ``BlinnPhongSceneMaterial``.
 ///
-/// The renderer draws repeated meshes with automatic instancing. Copies share one cache, so a SwiftUI view can
-/// re-create the renderer each update. The type is `Equatable` so that `SceneView` can find an unchanged renderer
-/// list.
+/// The renderer draws repeated meshes with automatic instancing. Renderers with the same settings are equal, so a
+/// `SceneView` made again with a new renderer, for example `renderers: [BlinnPhongMaterialRenderer()]` in a view body,
+/// compares equal and keeps drawing with the renderer it has.
 public struct BlinnPhongMaterialRenderer: MaterialRenderer, Equatable {
     /// The color of the ambient light, in linear RGB. It lights the ambient term of each material.
     public var ambientLightColor: SIMD3<Float>
-    // Shared by copies of the renderer, so SwiftUI re-creating the struct keeps the cache.
+    // Shared by copies of the renderer.
     private let batchPlans = BatchPlanCache()
 
+    // The cache is not compared: it does not change what the renderer draws (#487).
     public static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.ambientLightColor == rhs.ambientLightColor && lhs.batchPlans === rhs.batchPlans
+        lhs.ambientLightColor == rhs.ambientLightColor
     }
 
     /// Creates a Blinn-Phong renderer.
