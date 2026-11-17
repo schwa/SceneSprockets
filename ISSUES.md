@@ -9820,13 +9820,14 @@ Expected: the node gets no body (like an unusable mesh does today) or a reported
 ## 427: Slider constraint keeps state for nodes that no longer exist
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:physics, effort:xs
 milestone: M001-Correctness
 created: 2026-11-17T01:02:42Z
-updated: 2026-11-17T06:04:51Z
+updated: 2026-11-17T06:16:06Z
+closed: 2026-11-17T06:16:06Z
 +++
 
 sliderConstraint(radius:categoryBitMask:) stores the last position of every node it runs on in a dictionary keyed by ObjectIdentifier. Entries are never removed, so the dictionary grows as nodes come and go.

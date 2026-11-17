@@ -1,7 +1,7 @@
 import GeometryLite3D
 import Metal
 import SceneSprockets
-import SceneSprocketsPhysics
+@testable import SceneSprocketsPhysics
 import simd
 import SwiftMesh
 import Testing
@@ -207,6 +207,29 @@ func sliderConstraintStopsAtWallAndSlides() throws {
     mover.transform.translation = [-5, 0, 3]
     sceneGraph.applyConstraints(pointOfView: matrix_identity_float4x4)
     #expect(abs(mover.transform.translation.x + 5) < 0.05)
+}
+
+// #427: the slider constraint drops what it stored for nodes that no longer exist.
+@Test
+func sliderConstraintForgetsRemovedNodes() throws {
+    let root = SceneGraph.Node()
+    let sceneGraph = SceneGraph(root: root)
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: sceneGraph)
+    let state = SliderState()
+    let constraint = physics.sliderConstraint(radius: 0.5, state: state)
+    // Kept alive, so no new node reuses a removed node's address.
+    var removed: [SceneGraph.Node] = []
+    for _ in 0..<5 {
+        let node = root.addChild(SceneGraph.Node())
+        node.constraints = [constraint]
+        sceneGraph.applyConstraints(pointOfView: matrix_identity_float4x4)
+        node.removeFromParent()
+        removed.append(node)
+    }
+    let survivor = root.addChild(SceneGraph.Node())
+    survivor.constraints = [constraint]
+    sceneGraph.applyConstraints(pointOfView: matrix_identity_float4x4)
+    #expect(state.positions.count == 1)
 }
 
 // A scaled, tumbling body must keep its scale: each step writes the body's pose back into the node's transform.

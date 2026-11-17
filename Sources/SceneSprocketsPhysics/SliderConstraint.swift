@@ -14,18 +14,21 @@ extension SceneGraphPhysicsWorld {
     /// node is in `categoryBitMask` it stops and slides along the surface. Bodies of the node itself and its
     /// descendants are ignored. Call sync() or step(deltaTime:) first so the bodies exist.
     public func sliderConstraint(radius: Float, categoryBitMask: UInt = .max) -> SceneGraph.Constraint {
-        let state = SliderState()
-        return .transform { [weak self] node, world in
+        sliderConstraint(radius: radius, categoryBitMask: categoryBitMask, state: SliderState())
+    }
+
+    func sliderConstraint(radius: Float, categoryBitMask: UInt = .max, state: SliderState) -> SceneGraph.Constraint {
+        .transform { [weak self] node, world in
             guard let self else {
                 return world
             }
-            let key = ObjectIdentifier(node)
-            guard let start = state.positions[key] else {
-                state.positions[key] = world.translation
+            state.removeNodes(notIn: sceneGraph)
+            guard let start = state.positions[node.id]?.position else {
+                state.positions[node.id] = .init(node: node, position: world.translation)
                 return world
             }
             let position = slide(from: start, to: world.translation, radius: radius, node: node, categoryBitMask: categoryBitMask)
-            state.positions[key] = position
+            state.positions[node.id] = .init(node: node, position: position)
             var result = world
             result.translation = position
             return result
@@ -64,6 +67,23 @@ extension SceneGraphPhysicsWorld {
     }
 }
 
-private final class SliderState {
-    var positions: [ObjectIdentifier: SIMD3<Float>] = [:]
+// Where the constraint last left each node. Keyed by node ID, which is never reused, unlike an object address (#427).
+final class SliderState {
+    struct Entry {
+        weak var node: SceneGraph.Node?
+        var position: SIMD3<Float>
+    }
+
+    var positions: [SceneGraph.Node.ID: Entry] = [:]
+
+    // Drops nodes that were freed or removed from the scene graph.
+    func removeNodes(notIn sceneGraph: SceneGraph) {
+        let root = sceneGraph.root
+        positions = positions.filter { _, entry in
+            guard let node = entry.node else {
+                return false
+            }
+            return node === root || root.isAncestor(of: node)
+        }
+    }
 }
