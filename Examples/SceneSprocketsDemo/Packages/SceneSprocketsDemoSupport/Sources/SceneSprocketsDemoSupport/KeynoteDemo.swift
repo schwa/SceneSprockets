@@ -46,6 +46,7 @@ public final class KeynoteDemo: DemoScene {
 
     // Per-slide state: each is used only while its slide is showing.
     private let shadowRenderer = Shadows(intensity: 0.75, softness: 2)
+    private static let shadowedTitles: Set<String> = ["Shadows", "Metaballs", "Voxels"]
     private var shuffleCubes: [SceneGraph.Node] = []
     private var sinceShuffle: Float = 0
     private var blendMixer: SceneGraph.AnimationMixer?
@@ -103,11 +104,13 @@ public final class KeynoteDemo: DemoScene {
 
     init() {
         let root = SceneGraph.Node(label: "Root")
+        // Shared so raymarched PBR surfaces use the same environment as PBR meshes.
+        let pbr = PBRMaterialRenderer()
         cameraNode = .camera(.perspective(fieldOfView: .degrees(40), zClip: 0.01 ... 100), label: "Camera", transform: .init(position: Self.eye(for: 0), lookingAt: Self.target(for: 0)))
         root.addChild(cameraNode)
         super.init(
             sceneGraph: SceneGraph(root: root),
-            renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0.05, 0.05, 0.07]), PBRMaterialRenderer(), ShaderMaterialRenderer(), PointCloudRenderer(), TerrainRenderer(), SignedDistanceRenderer(ambientLightColor: [0.05, 0.05, 0.07]), VoxelRenderer(ambientLightColor: [0.15, 0.15, 0.18])],
+            renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0.05, 0.05, 0.07]), pbr, ShaderMaterialRenderer(), PointCloudRenderer(), TerrainRenderer(), SignedDistanceRenderer(ambientLightColor: [0.05, 0.05, 0.07], pbr: pbr), VoxelRenderer(ambientLightColor: [0.15, 0.15, 0.18], pbr: pbr)],
             cameraMatrix: .camera(eye: Self.eye(for: 0), target: Self.target(for: 0)),
             parameters: [.choice("Slide", Self.titles), .toggle("Auto-advance", default: false), .slider("Seconds per Slide", 2...15, default: 6)]
         )
@@ -299,12 +302,13 @@ public final class KeynoteDemo: DemoScene {
         "Metaballs": """
         • An add-on: import SceneSprocketsAddOns and add SignedDistanceRenderer.
         • Spheres in a smooth union merge as they move, raymarched on the GPU every frame.
-        • They are lit like Blinn-Phong meshes, write depth, and receive shadows.
+        • Lit like PBR (or Blinn-Phong) meshes; they write depth, and cast and receive shadows.
         """,
         "Voxels": """
         • An add-on: import SceneSprocketsVoxels and add VoxelRenderer.
         • A MagicaVoxel .vox file loads into a 3D texture; the GPU ray-marches the grid, no meshes.
-        • Voxels write depth, receive shadows, and are lit like Blinn-Phong meshes.
+        • A .vox scene graph places every model; voxels are lit like PBR or Blinn-Phong meshes.
+        • Voxels write depth and cast shadows, on the floor and on themselves.
         • Model: "monu10" from MagicaVoxel's samples by @ephtracy, after Monument Valley.
         """,
         "Physics": """
@@ -458,7 +462,7 @@ public final class KeynoteDemo: DemoScene {
 
     // Shadows and fog apply to the whole scene, so they are switched on only for their slides.
     private func applySceneSettings() {
-        shadows = currentTitle == "Shadows" ? shadowRenderer : nil
+        shadows = Self.shadowedTitles.contains(currentTitle) ? shadowRenderer : nil
         // The Gizmos slide selects its box; other slides show no selection.
         let showsGizmo = currentTitle == "Gizmos"
         showsSelectionOutline = showsGizmo
@@ -522,7 +526,7 @@ public final class KeynoteDemo: DemoScene {
         let previous = slides[current]
         // Shadows stay on while the Shadows slide is on screen, so they do not pop in or out (#326). Light masks keep the
         // sun's shadows off the other slide.
-        if Self.titles[current] == "Shadows" || Self.titles[next] == "Shadows" {
+        if Self.shadowedTitles.contains(Self.titles[current]) || Self.shadowedTitles.contains(Self.titles[next]) {
             shadows = shadowRenderer
         }
         // Leaving the title slide, its flat titles break into 3D letters that fall and tumble out of frame, then the
@@ -752,9 +756,10 @@ public final class KeynoteDemo: DemoScene {
             addCode("""
             import SceneSprocketsVoxels
 
-            let grid = try VoxelGrid.magicaVoxelModels(data: Data(contentsOf: url))[0]
-            try node.setVoxels(grid, voxelSize: 0.03, device: device)
+            let vox = try MagicaVoxelScene(contentsOf: url)
+            let node = try vox.makeNode(voxelSize: 0.03, device: device)
             SceneView(scene, renderers: renderers + [VoxelRenderer()])
+                .sceneShadows(Shadows())
             """, to: slide)
         case "Metaballs":
             metaballsSlide(slide)
@@ -763,8 +768,9 @@ public final class KeynoteDemo: DemoScene {
             import SceneSprocketsAddOns
 
             let blobs = SignedDistanceShape.smoothUnion(spheres, smoothing: 0.7)
-            try node.setSignedDistanceShape(blobs, surface: .blinnPhong(material), device: device)
-            SceneView(scene, renderers: renderers + [SignedDistanceRenderer()])
+            try node.setSignedDistanceShape(blobs, surface: .pbr(material), device: device)
+            SceneView(scene, renderers: renderers + [SignedDistanceRenderer(pbr: pbr)])
+                .sceneShadows(Shadows())
             """, to: slide)
         case "Mesh Emitters":
             meshEmittersSlide(slide)
@@ -986,18 +992,26 @@ public final class KeynoteDemo: DemoScene {
         let holder = tilt.addChild(SceneGraph.Node(label: "Monument"))
         try? holder.setVoxels(grid, voxelSize: voxelSize, device: demoDevice)
         holder.run(.repeatForever(.rotate(by: 2 * .pi, around: [0, 1, 0], duration: 40)))
-        addLight(to: slide, at: [3, 5, 4], intensity: 70)
-        addLight(to: slide, at: [-3, 2, 3], color: [0.6, 0.7, 1], intensity: 20)
+        // A floor under the turning model catches its shadow; the sun casts it, the fill light does not.
+        tilt.addChild(SceneGraph.Node(label: "Floor", shape: .cylinder(radius: 1.9, height: 0.08), material: BlinnPhongSceneMaterial.plastic([0.25, 0.25, 0.28], shininess: 8), transform: .init(translation: [0, -height / 2 - 0.04, 0])))
+        tilt.addChild(SceneGraph.Node(label: "Sun", transform: .init(position: [-4, 3, 1.5], lookingAt: .zero), content: .light(Light(type: .directional, color: [1, 0.95, 0.85], intensity: 1.5))))
+        addLight(to: slide, at: [3, 2, 3], color: [0.6, 0.7, 1], intensity: 8, castsShadow: false)
     }
 
     // Blobs orbiting a pillar; the shape is set in updateMetaballs.
     private func metaballsSlide(_ slide: SceneGraph.Node) {
-        slide.addChild(SceneGraph.Node(label: "Pillar", shape: .cylinder(radius: 0.12, height: 2.6), material: BlinnPhongSceneMaterial.plastic([0.9, 0.5, 0.3]), transform: .init(translation: [0, 0.3, 0])))
-        metaballs = slide.addChild(SceneGraph.Node(label: "Metaballs"))
-        addLight(to: slide, at: [2.5, 4, 4], intensity: 30)
-        addLight(to: slide, at: [-3, 1, 3], color: [0.5, 0.6, 1], intensity: 10)
+        // Tilted toward the camera so the blobs' shadows on the floor show.
+        let stage = slide.addChild(SceneGraph.Node(label: "Metaballs Stage", transform: .init(translation: [0, 0.4, 0], rotation: simd_quatf(angle: 0.35, axis: [1, 0, 0]))))
+        stage.addChild(SceneGraph.Node(label: "Pillar", shape: .cylinder(radius: 0.12, height: 2.6), material: BlinnPhongSceneMaterial.plastic([0.9, 0.5, 0.3]), transform: .init(translation: [0, 0.3, 0])))
+        stage.addChild(SceneGraph.Node(label: "Floor", shape: .cylinder(radius: 1.8, height: 0.08), material: BlinnPhongSceneMaterial.plastic([0.25, 0.25, 0.28], shininess: 8), transform: .init(translation: [0, -1.04, 0])))
+        metaballs = stage.addChild(SceneGraph.Node(label: "Metaballs"))
+        stage.addChild(SceneGraph.Node(label: "Sun", transform: .init(position: [2, 6, 3], lookingAt: [0, 0, 0]), content: .light(Light(type: .directional, color: [1, 0.95, 0.9], intensity: 1.2))))
+        addLight(to: slide, at: [-3, 1, 3], color: [0.5, 0.6, 1], intensity: 6, castsShadow: false)
         updateMetaballs(time: 0)
     }
+
+    // Made once: the shape is replaced every frame.
+    private let metaballMaterial = PBRSceneMaterial(baseColor: [0.3, 0.55, 0.95], metallic: 0.2, roughness: 0.25)
 
     private func updateMetaballs(time: Float) {
         guard let metaballs else {
@@ -1016,7 +1030,7 @@ public final class KeynoteDemo: DemoScene {
             )
             return .sphere(radius: radius + 0.1 * sin(phase * 3 + time), transform: .init(translation: position))
         }
-        try? metaballs.setSignedDistanceShape(.smoothUnion(spheres, smoothing: smoothing), surface: .blinnPhong(.plastic([0.3, 0.55, 0.95], shininess: 48)), device: demoDevice)
+        try? metaballs.setSignedDistanceShape(.smoothUnion(spheres, smoothing: smoothing), surface: .pbr(metaballMaterial), device: demoDevice)
     }
 
     // A code panel below the slide's live content, tilted a little toward the camera.
@@ -1030,8 +1044,8 @@ public final class KeynoteDemo: DemoScene {
 
     // Lights reach only their own slide.
     @discardableResult
-    private func addLight(to parent: SceneGraph.Node, at position: SIMD3<Float>, color: SIMD3<Float> = [1, 1, 1], intensity: Float) -> SceneGraph.Node {
-        var light = Light(type: .point, color: color, intensity: intensity)
+    private func addLight(to parent: SceneGraph.Node, at position: SIMD3<Float>, color: SIMD3<Float> = [1, 1, 1], intensity: Float, castsShadow: Bool = true) -> SceneGraph.Node {
+        var light = Light(type: .point, color: color, intensity: intensity, castsShadow: castsShadow)
         light.range = 14
         return parent.addChild(SceneGraph.Node(label: "Light", transform: .init(translation: position), content: .light(light)))
     }
