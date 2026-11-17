@@ -92,7 +92,9 @@ extension EditorModel {
     // The main color of each of the node's materials: Blinn-Phong diffuse or PBR base color. Textured channels keep
     // their texture.
     func setBaseColor(_ color: SIMD3<Float>, of node: SceneGraph.Node) {
-        try? editMaterials(of: node, actionName: "Color", [.baseColor(color)])
+        reportingMaterialEditErrors("Color") {
+            try editMaterials(of: node, actionName: "Color", [.baseColor(color)])
+        }
     }
 }
 

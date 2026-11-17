@@ -121,6 +121,15 @@ extension EditorModel {
         }
     }
 
+    // Runs a material edit the user made and reports a failure in `materialEditError` instead of dropping it (#491).
+    func reportingMaterialEditErrors(_ actionName: String, _ edit: () throws -> Void) {
+        do {
+            try edit()
+        } catch {
+            materialEditError = MaterialEditError(actionName: actionName, message: error.localizedDescription)
+        }
+    }
+
     // A copy with changed uniforms that keeps the textures and render state, so the original stays untouched.
     static func editedPBR(_ material: PBRSceneMaterial, doubleSided: Bool? = nil, _ change: (inout PBRMaterialUniforms) -> Void = { _ in }) throws -> PBRSceneMaterial {
         let original = material.pbrMaterial

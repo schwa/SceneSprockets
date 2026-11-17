@@ -125,7 +125,9 @@ extension EditorModel {
         get { self[material: index] as? BlinnPhongSceneMaterial ?? BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0.8), specular: .color(0), shininess: 32) }
         set {
             if let node = selectedNode {
-                try? editMaterials(of: node, at: index, actionName: actionName, [.blinnPhong { $0 = newValue }])
+                reportingMaterialEditErrors(actionName) {
+                    try editMaterials(of: node, at: index, actionName: actionName, [.blinnPhong { $0 = newValue }])
+                }
             }
         }
     }
@@ -134,7 +136,9 @@ extension EditorModel {
         get { (self[material: index] as? PBRSceneMaterial)?.pbrMaterial.uniforms ?? .defaults(baseColor: [1, 1, 1, 1]) }
         set {
             if let node = selectedNode {
-                try? editMaterials(of: node, at: index, actionName: actionName, [.uniforms { $0 = newValue }])
+                reportingMaterialEditErrors(actionName) {
+                    try editMaterials(of: node, at: index, actionName: actionName, [.uniforms { $0 = newValue }])
+                }
             }
         }
     }
@@ -143,7 +147,9 @@ extension EditorModel {
         get { (self[material: index] as? PBRSceneMaterial)?.pbrMaterial.doubleSided ?? false }
         set {
             if let node = selectedNode {
-                try? editMaterials(of: node, at: index, actionName: "Double Sided", [.doubleSided(newValue)])
+                reportingMaterialEditErrors("Double Sided") {
+                    try editMaterials(of: node, at: index, actionName: "Double Sided", [.doubleSided(newValue)])
+                }
             }
         }
     }
@@ -152,7 +158,9 @@ extension EditorModel {
         get { self[material: index].flatMap(MaterialKind.init) ?? .blinnPhong }
         set {
             if let node = selectedNode {
-                try? editMaterials(of: node, at: index, actionName: "Material Type", [.kind(newValue)])
+                reportingMaterialEditErrors("Material Type") {
+                    try editMaterials(of: node, at: index, actionName: "Material Type", [.kind(newValue)])
+                }
             }
         }
     }

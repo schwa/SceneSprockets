@@ -11206,12 +11206,14 @@ Found by the SwiftUI review (#475).
 ## 491: Composer: material preset and color edits that fail are ignored silently
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:composer, effort:xs
 milestone: M002-Performance
 created: 2026-11-17T06:52:28Z
+updated: 2026-11-17T13:25:00Z
+closed: 2026-11-17T13:25:00Z
 +++
 
 User actions call editMaterials with try? and drop the error:
@@ -11221,6 +11223,8 @@ User actions call editMaterials with try? and drop the error:
 When the edit throws, nothing changes and nothing tells the user.
 
 Found by the SwiftUI review (#475).
+
+- `2026-11-17T13:25:00Z`: Fixed. EditorModel.reportingMaterialEditErrors(_:_:) runs a material edit and stores a failure in materialEditError; the node inspector shows it as an alert. All user-facing material edits use it: the Presets menu, the multiple-selection color, and the material type, Blinn-Phong, PBR uniforms and double-sided inspector fields (the last four were also try?). Tests: failedMaterialEditIsReported, materialEditsStillApply. Not checked: the alert in a running app; I found no way to make a real material build fail on demand.
 
 ---
 

@@ -111,6 +111,8 @@ public final class EditorModel {
     }
     var camera = EditorCamera()
     var renderSettings = RenderSettings()
+    // A material edit that failed; the inspector shows it as an alert.
+    var materialEditError: MaterialEditError?
     var isInspectorPresented = true
     var sidebarVisibility = NavigationSplitViewVisibility.automatic
     var sidebarTab = SidebarTab.scene
@@ -766,6 +768,11 @@ extension EditorModel {
         get { camera.matrix }
         set { camera.matrix = newValue ?? camera.matrix }
     }
+}
+
+struct MaterialEditError: Equatable {
+    var actionName: String
+    var message: String
 }
 
 enum EditorItem: Hashable {

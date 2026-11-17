@@ -60,6 +60,13 @@ struct NodeInspectorView: View {
             }
             .formStyle(.grouped)
             .cameraControlStyle(.compact)
+            .alert("Could Not Change the Material", isPresented: $model.materialEditError.isPresent, presenting: model.materialEditError) { _ in
+                Button("OK") {
+                    model.materialEditError = nil
+                }
+            } message: { error in
+                Text("\(error.actionName): \(error.message)")
+            }
         } else if model.editorItem == .defaultCamera {
             DefaultCameraInspectorView(model: model)
         } else if model.editorItem == .defaultLighting {

@@ -27,7 +27,10 @@ struct MaterialSectionView: View {
                             ForEach(MaterialPreset.allCases) { preset in
                                 Button(preset.rawValue) {
                                     if let node = model.selectedNode {
-                                        try? model.editMaterials(of: node, at: index, actionName: "\(preset.rawValue) Material", [.preset(preset)])
+                                        let actionName = "\(preset.rawValue) Material"
+                                        model.reportingMaterialEditErrors(actionName) {
+                                            try model.editMaterials(of: node, at: index, actionName: actionName, [.preset(preset)])
+                                        }
                                     }
                                 }
                             }
