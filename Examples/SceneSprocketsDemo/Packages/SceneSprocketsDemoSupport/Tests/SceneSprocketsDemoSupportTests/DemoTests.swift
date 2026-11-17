@@ -80,6 +80,20 @@ func keynoteSlidePickerSwitchesInstantly() throws {
     #expect(keynote[value: "Slide"] == Float(index))
 }
 
+// #441: slides publish their own controls, and only while they show.
+@Test
+@MainActor
+func keynoteSlideControlsFollowTheSlide() throws {
+    let keynote = try keynoteShowing("Physics")
+    #expect(keynote.contextActions.map(\.name) == ["Roll Dice"])
+    #expect(keynote[flag: "Auto-roll"])
+    keynote.show(slide: try #require(KeynoteDemo.titles.firstIndex(of: "Metaballs")))
+    #expect(keynote.contextActions.isEmpty)
+    #expect(keynote.contextParameters.map(\.name) == ["Metaball Count", "Metaball Size", "Smoothing"])
+    keynote.show(slide: 0)
+    #expect(keynote.contextParameters.isEmpty)
+}
+
 // #331: the presenter notes model follows the keynote's slide.
 @Test
 @MainActor

@@ -93,6 +93,17 @@ open class DemoScene {
     public let parameters: [DemoParameter]
     public var values: [String: Float]
     @ObservationIgnored public var actions: [DemoAction] = []
+    // Controls that change with the demo's state, such as the keynote's current slide (#441). Values share `values`;
+    // a new parameter starts at its default unless it already has a value.
+    public var contextTitle = ""
+    public var contextParameters: [DemoParameter] = [] {
+        didSet {
+            for parameter in contextParameters where values[parameter.name] == nil {
+                values[parameter.name] = parameter.defaultValue
+            }
+        }
+    }
+    public var contextActions: [DemoAction] = []
     // Set to draw shadows from directional lights.
     // Observed: the view needs different texture settings with and without shadows.
     public var shadows: Shadows?

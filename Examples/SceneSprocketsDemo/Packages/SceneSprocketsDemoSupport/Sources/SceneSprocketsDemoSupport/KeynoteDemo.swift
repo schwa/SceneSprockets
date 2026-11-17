@@ -347,6 +347,23 @@ public final class KeynoteDemo: DemoScene {
         model.title = currentTitle
         model.notes = Self.notes[currentTitle] ?? ""
         model.nextTitle = current + 1 < Self.titles.count ? Self.titles[current + 1] : nil
+        publishSlideControls()
+    }
+
+    // Shows the current slide's own controls in the inspector (#441).
+    private func publishSlideControls() {
+        contextTitle = "Slide: \(currentTitle)"
+        switch currentTitle {
+        case "Physics":
+            contextParameters = [.toggle("Auto-roll", default: true)]
+            contextActions = [DemoAction("Roll Dice", systemImage: "dice") { [weak self] in self?.resetPhysics() }]
+        case "Metaballs":
+            contextParameters = [.slider("Metaball Count", 1...16, default: 7), .slider("Metaball Size", 0.15...0.7, default: 0.38), .slider("Smoothing", 0.05...1.5, default: 0.7)]
+            contextActions = []
+        default:
+            contextParameters = []
+            contextActions = []
+        }
     }
 
     private func updateFog(deltaTime: Float) {
@@ -422,7 +439,7 @@ public final class KeynoteDemo: DemoScene {
             burningFox?.update(sceneGraph: sceneGraph, deltaTime: deltaTime)
         case "Physics":
             sincePhysicsReset += deltaTime
-            if sincePhysicsReset > 5 {
+            if self[flag: "Auto-roll"], sincePhysicsReset > 5 {
                 resetPhysics()
             }
             // As in DiceDemo: small fixed steps keep fast, small dice from passing through the walls.
@@ -951,7 +968,10 @@ public final class KeynoteDemo: DemoScene {
         guard let metaballs else {
             return
         }
-        let count = 7
+        // The slide's controls have no values until the slide is first shown.
+        let count = max(Int((values["Metaball Count"] ?? 7).rounded()), 1)
+        let radius = values["Metaball Size"] ?? 0.38
+        let smoothing = values["Smoothing"] ?? 0.7
         let spheres = (0..<count).map { index -> SignedDistanceShape in
             let phase = Float(index) / Float(count) * 2 * .pi
             let position = SIMD3<Float>(
@@ -959,9 +979,9 @@ public final class KeynoteDemo: DemoScene {
                 1.6 + sin(phase * 2 + time * 1.3) * 0.6,
                 sin(phase + time * 0.9) * 1.1
             )
-            return .sphere(radius: 0.38 + 0.1 * sin(phase * 3 + time), transform: .init(translation: position))
+            return .sphere(radius: radius + 0.1 * sin(phase * 3 + time), transform: .init(translation: position))
         }
-        try? metaballs.setSignedDistanceShape(.smoothUnion(spheres, smoothing: 0.7), surface: .blinnPhong(.plastic([0.3, 0.55, 0.95], shininess: 48)), device: demoDevice)
+        try? metaballs.setSignedDistanceShape(.smoothUnion(spheres, smoothing: smoothing), surface: .blinnPhong(.plastic([0.3, 0.55, 0.95], shininess: 48)), device: demoDevice)
     }
 
     // A code panel below the slide's live content, tilted a little toward the camera.

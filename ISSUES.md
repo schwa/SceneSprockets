@@ -10009,11 +10009,13 @@ The keynote demo (KeynoteDemo.swift) shows add-ons such as point clouds and terr
 ## 441: Keynote slides have no per-slide settings to tweak during a demo
 
 +++
-status: new
+status: closed
 priority: low
 kind: feature
 labels: area:demo
 created: 2026-11-17T01:15:37Z
+updated: 2026-11-17T02:08:52Z
+closed: 2026-11-17T02:08:52Z
 +++
 
 Keynote slides have no way to expose slide-specific settings or actions. The deck settings are global only.
@@ -10051,7 +10053,7 @@ Tests that had started but not reported a result at the time of the crash includ
 
 Tests run in parallel, so the crashing test is not known.
 
-- `2026-11-17T01:55:34Z`: Could not reproduce locally (Apple silicon Mac, commit 7ec3f209):
+\- `2026-11-17T01:55:34Z`: Could not reproduce locally (Apple silicon Mac, commit 7ec3f209):
 - 60 consecutive runs of SceneSprocketsPhysicsTests (11 tests, parallel): all passed, no crashes.
 - One run with --sanitize=thread: passed, no TSan reports.
 - One run with --sanitize=address: passed, no ASan reports.

@@ -14,6 +14,18 @@ struct DemoInspectorView: View {
                     }
                 }
             }
+            if !scene.contextParameters.isEmpty || !scene.contextActions.isEmpty {
+                Section(scene.contextTitle) {
+                    ForEach(scene.contextParameters) { parameter in
+                        DemoParameterView(parameter: parameter, value: $scene[value: parameter.name])
+                    }
+                    ForEach(scene.contextActions) { action in
+                        Button(action.name, systemImage: action.systemImage) {
+                            action.perform()
+                        }
+                    }
+                }
+            }
             Section("Scene") {
                 // Reading the revision refreshes the outline when the demo changes the hierarchy or visibility.
                 let _ = scene.outlineRevision
