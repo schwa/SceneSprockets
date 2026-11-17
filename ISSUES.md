@@ -1772,10 +1772,10 @@ SceneKit shader modifiers inject code at geometry, surface, lighting and fragmen
 status: open
 priority: low
 kind: feature
-labels: effort:l, area:renderer
+labels: effort:l, area:renderer, subtask, lighting
 milestone: M003-Rendering
 created: 2026-10-15T02:28:07Z
-updated: 2026-11-17T18:07:08Z
+updated: 2026-11-17T19:13:15Z
 +++
 
 Missing SceneKit equivalents: an ambient light type as a node (today it is per renderer: BlinnPhongMaterialRenderer.ambientLightColor), attenuationStartDistance and attenuationFalloffExponent, color temperature, and IES, area and probe lights. See docs/SceneKitComparison.md.
@@ -7573,10 +7573,10 @@ SceneGraph.Shape has no teapot. The Utah teapot is the usual test object in 3D g
 status: open
 priority: low
 kind: feature
-labels: area:scenegraph, effort:l
+labels: area:scenegraph, effort:l, subtask, bounds
 milestone: M002-Performance
 created: 2026-11-07T18:39:49Z
-updated: 2026-11-16T20:12:42Z
+updated: 2026-11-17T19:13:17Z
 +++
 
 SceneSprockets has no spatial acceleration structure (for example a bounding volume hierarchy, octree or grid). Work that asks "what is near here?" or "what does this ray or frustum touch?" goes through every node or every triangle:
@@ -7604,6 +7604,9 @@ Proposed split for your decision:
 3. SceneSprockets: a node-level bounds hierarchy for culling and region queries, rebuilt or refit from the scene's change tracking.
 
 Should I go ahead with that split, and may I work in the SwiftMesh repo for step 1?
+
+- `2026-11-17T18:59:44Z`: Auto-fixer (M002): still punting; waiting on the split question above (and permission to work in SwiftMesh for the all-hits query).
+- `2026-11-17T19:05:44Z`: Question 1 (decision): Go ahead with the 3-part split (all-hits query in SwiftMesh, per-mesh BVH in hitTest, node-level bounds hierarchy here), including work in the SwiftMesh repo? Recommended: Yes
 
 ---
 
@@ -8889,11 +8892,11 @@ Passes that read or write screen-space textures (outline via JumpFlood/Silhouett
 status: open
 priority: low
 kind: feature
-labels: effort:s, area:renderer
+labels: effort:s, area:renderer, subtask, bounds
 milestone: M004-VisionOS
 depends: 380
 created: 2026-11-12T19:17:30Z
-updated: 2026-11-17T18:01:23Z
+updated: 2026-11-17T19:13:17Z
 +++
 
 Frustum culling and back-to-front transparency sorting are computed from a single camera. In stereo, objects visible to only one eye could be culled, and sort order should be consistent across both eyes.
@@ -10941,13 +10944,13 @@ Found by the swift-concurrency-pro review (#476).
 ## 479: Changing a PBR material in place while SceneView renders is a data race
 
 +++
-status: open
+status: blocked
 priority: medium
 kind: bug
 labels: area:renderer, effort:m
 milestone: M002-Performance
 created: 2026-11-17T06:39:06Z
-updated: 2026-11-17T07:09:43Z
+updated: 2026-11-17T19:17:21Z
 +++
 
 PBRSceneMaterial and PBRMaterial are classes, and mesh entries in a Presentation share them with the live scene. SceneView draws on a render thread (#393), which reads material.uniforms, renderState and textureTransforms every frame. An app that changes them in place on the main thread (for example material.pbrMaterial.uniforms.roughnessFactor = x) races that read. ScenePresenter's documentation says so, but there is no other way to change one parameter of a PBR material than to build a new material and replace the node's content, which rebuilds the PBR model.
@@ -10978,6 +10981,10 @@ Question: which way should live material changes go?
 (b) PBRMaterial itself becomes safe to change (a lock or versioned values in MetalSprocketsPBR).
 
 - `2026-11-17T18:35:26Z`: Auto-fixer run (M002): re-checked, still punting. Unblocker: pick (a) per-frame captured materialUniforms via an update method on PBRSceneMaterial, or (b) make PBRMaterial thread-safe in MetalSprocketsPBR.
+- `2026-11-17T19:05:44Z`: Question 1 (decision): Should live PBR material changes go through an update method that copies changed uniforms each frame (rather than making PBRMaterial thread-safe in MetalSprocketsPBR)? Recommended: Yes, update method
+- `2026-11-17T19:07:52Z`: Answer 1: Make thread-safe in dep lib. File issue.
+- `2026-11-17T19:17:21Z`: Per answer to Q1: PBRMaterial will be made thread-safe in MetalSprocketsPBR. Filed MetalSprocketsPBR#36. Blocked until that lands; then switch glTF material animation and docs over and close this.
+- `2026-11-17T19:36:22Z`: MetalSprocketsPBR#36 fixed in 0.2.6 (PBRMaterial immutable; use PBRPose.materialUniforms or with(uniforms:...) + MaterialOverrides). Not adopted yet: 0.2.6 breaks MetalSprocketsGLTF 0.1.0 (GLTFMaterialResource.swift:47 assigns the now-let textureTransforms), so SceneSprockets cannot resolve to it until MetalSprocketsGLTF is updated and released. Still blocked.
 
 ---
 
@@ -11015,8 +11022,9 @@ status: open
 priority: low
 kind: bug
 labels: area:renderer, effort:l
-milestone: M002-Performance
+milestone: M999-Nice-to-have
 created: 2026-11-17T06:39:06Z
+updated: 2026-11-17T19:08:54Z
 +++
 
 Each SceneView has its own render thread, and a visionOS immersive space has another (#392). When two of them draw the same scene graph, or are given the same renderer objects, at the same time, these are written from two threads with no synchronization:
@@ -11032,6 +11040,9 @@ Found by the swift-concurrency-pro review (#476).
 \- `2026-11-17T13:46:56Z`: Looked at it; punting. Locks alone do not fix it: the worst parts are GPU-side. Two render threads write the same per-node deformation vertex buffers (slot chosen from each renderer's own submission index) and the same process-wide ambient occlusion and particle scene-depth textures (cached by size), so even serialized CPU code leaves two command buffers writing one resource in the same frame. The fix needs per-view storage that the renderers can reach: SceneGraphElement/RenderContext would carry a per-view owner, and NodeRenderCache.gpuDeformation, AmbientOcclusionTargets, ParticleDepthShaders.sceneDepthTexture, and possibly Shadows and PBRMaterialRenderer state would be keyed by it. That touches the element, the context, every renderer that reads deformed meshes, and the immersive element.
 
 Question: should two views drawing one scene at once be supported (then per-view storage as above), or should it be documented as unsupported, with one Shadows and one PBRMaterialRenderer per view, as the demo already does by blanking its window while the immersive space is open?
+
+- `2026-11-17T18:59:12Z`: Auto-fixer run (M002): re-checked, still punting. Unblocker: decide supported (per-view storage) vs documented-unsupported.
+- `2026-11-17T19:05:44Z`: Question 1 (decision): Should two views drawing one scene at once be supported with per-view storage (rather than documented as unsupported)? Recommended: No, document as unsupported
 
 ---
 
@@ -11406,10 +11417,10 @@ Stabilizes geometry, specular highlights, and fine detail. (Moved from SceneSpro
 status: open
 priority: low
 kind: feature
-labels: area:renderer, effort:m
+labels: area:renderer, effort:m, subtask, lighting
 milestone: M999-Nice-to-have
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-17T17:51:39Z
+updated: 2026-11-17T19:13:15Z
 +++
 
 Projected lighting patterns and realistic light distributions. (Moved from SceneSprocketsAddOns #57.)
@@ -11554,16 +11565,22 @@ Texture mipmapping, anisotropic filtering, and compressed texture formats. (Move
 ## 505: Instancing, frustum culling, and depth prepasses
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
-labels: area:renderer, effort:l
+labels: area:renderer, effort:l, subtask, bounds
 milestone: M002-Performance
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-17T18:02:34Z
+updated: 2026-11-17T19:17:22Z
+closed: 2026-11-17T19:17:22Z
 +++
 
 Instancing, frustum culling, and depth prepasses where beneficial. (Moved from SceneSprocketsAddOns #68.)
+
+- `2026-11-17T18:59:32Z`: Auto-fixer (M002): punting. Frustum culling exists (Renderer/Culling.swift, used by renderers) and automatic instancing exists (Blinn-Phong InstanceBatch; explicit API is #135). What's left is an opaque depth prepass for overdraw, but 'where beneficial' gives no measurable target. Unblocker: name a scene/benchmark and metric where a depth prepass should win, or close this as covered by #135/#337/#520.
+- `2026-11-17T19:05:44Z`: Question 1 (decision): Close this as covered by existing culling, implicit instancing, #135, #337 and #520? Recommended: Yes
+- `2026-11-17T19:09:11Z`: Answer 1: Yes
+- `2026-11-17T19:17:22Z`: Closing per Q1 answer: covered by existing frustum culling (Renderer/Culling.swift) and automatic instancing, plus #135 (explicit instancing), #337 / #543 (bounds hierarchy) and #520 (occlusion culling).
 
 ---
 
@@ -11573,10 +11590,10 @@ Instancing, frustum culling, and depth prepasses where beneficial. (Moved from S
 status: open
 priority: low
 kind: feature
-labels: area:renderer, effort:m
+labels: area:renderer, effort:m, subtask, lighting
 milestone: M003-Rendering
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-17T19:13:15Z
 +++
 
 Good-looking materials without placing lights. Complexity: low–medium. (Moved from SceneSprocketsAddOns #69.)
@@ -11589,10 +11606,10 @@ Good-looking materials without placing lights. Complexity: low–medium. (Moved 
 status: open
 priority: low
 kind: feature
-labels: area:renderer, effort:s
+labels: area:renderer, effort:s, subtask, lighting
 milestone: M003-Rendering
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-17T19:13:15Z
 +++
 
 Sensible default illumination for any scene. Complexity: low. (Moved from SceneSprocketsAddOns #70.)
@@ -11621,10 +11638,10 @@ Avoid manually tuning brightness for every scene. Complexity: low–medium. (Mov
 status: open
 priority: low
 kind: feature
-labels: area:renderer, effort:l
+labels: area:renderer, effort:l, subtask, lighting
 milestone: M999-Nice-to-have
 created: 2026-11-17T14:09:42Z
-updated: 2026-11-17T17:51:39Z
+updated: 2026-11-17T19:13:16Z
 +++
 
 Softer, more natural illumination from large sources. Complexity: medium. (Moved from SceneSprocketsAddOns #77.)
@@ -11671,10 +11688,10 @@ Refraction, transmission, and screen-space effects need the opaque scene color a
 status: open
 priority: low
 kind: feature
-labels: area:renderer, effort:l
+labels: area:renderer, effort:l, subtask, lighting
 milestone: M003-Rendering
 created: 2026-11-17T14:09:42Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-17T19:13:16Z
 +++
 
 Add-on packages cannot insert passes at defined stages (after opaque, before transparent, post-process) or contribute indirect lighting (probes, lightmaps) to built-in materials.
@@ -11703,10 +11720,10 @@ The renderer is forward-only. There is no deferred path that writes a G-buffer (
 status: open
 priority: low
 kind: feature
-labels: area:renderer, effort:xl
+labels: area:renderer, effort:xl, subtask, lighting
 milestone: M999-Nice-to-have
 created: 2026-11-17T14:09:59Z
-updated: 2026-11-17T17:51:38Z
+updated: 2026-11-17T19:13:16Z
 +++
 
 Lighting cost scales with lights × objects in the forward pass. Scenes with many local lights need deferred lighting (light volumes) or tiled/clustered light culling.
@@ -11764,6 +11781,7 @@ updated: 2026-11-17T18:02:34Z
 Draw selection, culling, and draw arguments are produced on the CPU. GPU-driven rendering would do this with compute and indirect commands.
 
 - `2026-11-17T17:51:39Z`: Umbrella-ish; related: #517, #518, #520, #521, #522, #523, #525.
+- `2026-11-17T19:14:03Z`: Related umbrella: #544 (indirect drawing), with MetalSprockets#575 and #576 as prerequisites.
 
 ---
 
@@ -11773,13 +11791,20 @@ Draw selection, culling, and draw arguments are produced on the CPU. GPU-driven 
 status: open
 priority: low
 kind: feature
-labels: area:renderer, effort:l
+labels: area:renderer, effort:l, subtask, indirect-drawing
 milestone: M002-Performance
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-17T18:02:34Z
+updated: 2026-11-17T19:36:22Z
 +++
 
 Draw commands are encoded on the CPU each frame. MTLIndirectCommandBuffer would let them be encoded once or on the GPU.
+
+- `2026-11-17T18:59:59Z`: Auto-fixer (M002): punting. MetalSprockets has no indirect-draw or MTLIndirectCommandBuffer support (only indirect compute dispatch), so this first needs new API in the MetalSprockets repo, and every material renderer (Blinn-Phong, PBR, shader, toon, voxel...) encodes its own draws, so blast radius is the whole renderer. Part of the #516 GPU-driven umbrella (effort:xl). Unblocker: OK to design ICB/indirect-draw elements in MetalSprockets first, and which renderer to pilot (Blinn-Phong instanced batches seem simplest)?
+- `2026-11-17T19:05:44Z`: Question 1 (decision): May I add indirect-draw / indirect command buffer support to MetalSprockets first, piloting with Blinn-Phong instanced batches? Recommended: Yes
+- `2026-11-17T19:09:28Z`: Answer 1: File issues on MetalSprockets first
+- `2026-11-17T19:14:03Z`: Correction to earlier comments: MetalSprockets can already issue indirect draws through a raw Draw closure; what it lacks is first-class support. Filed MetalSprockets#575 (Draw initializers for indirect draws) and MetalSprockets#576 (indirect command buffers). Under umbrella #544.
+- `2026-11-17T19:17:22Z`: Per Q1 answer: filed MetalSprockets#575 (indirect Draw initializers) and MetalSprockets#576 (indirect command buffers). Blocked until those land.
+- `2026-11-17T19:36:22Z`: MetalSprockets#575 and #576 shipped in 0.3.3; Package.resolved files updated. Unblocked.
 
 ---
 
@@ -11790,12 +11815,14 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:xl
-milestone: M002-Performance
+milestone: M003-Rendering
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-17T18:02:34Z
+updated: 2026-11-17T19:09:41Z
 +++
 
 Object and mesh shaders are not used for geometry amplification, culling, or LOD.
+
+- `2026-11-17T19:14:03Z`: Related: #544 (indirect drawing). Mesh shading is separate, but GPU-written draw arguments would feed it too.
 
 ---
 
@@ -11805,13 +11832,16 @@ Object and mesh shaders are not used for geometry amplification, culling, or LOD
 status: open
 priority: low
 kind: feature
-labels: area:renderer, effort:l
+labels: area:renderer, effort:l, subtask, lighting
 milestone: M002-Performance
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-17T18:02:34Z
+updated: 2026-11-17T19:13:16Z
 +++
 
 Lights are not assigned to visible regions with compute shaders. Related: #514.
+
+- `2026-11-17T19:00:13Z`: Auto-fixer (M002): punting. Each material renderer lights in its own shader: Blinn-Phong loops over all frame lights in this repo, but PBR lighting is in MetalSprocketsPBR (another repo), plus toon/voxel/SDF in SceneSprocketsAddOns. A shared cluster grid (compute pass building per-cluster light lists, bound to every lit shader) needs agreement across those packages, and no benchmark scene defines 'many lights'. Unblocker: OK to pilot clustering in Blinn-Phong only (with a many-lights demo scene for measurement) and follow up in MetalSprocketsPBR separately?
+- `2026-11-17T19:05:45Z`: Question 1 (decision): Pilot clustered light assignment in Blinn-Phong only, with a many-lights demo scene, and do MetalSprocketsPBR later? Recommended: Yes
 
 ---
 
@@ -11821,13 +11851,17 @@ Lights are not assigned to visible regions with compute shaders. Related: #514.
 status: open
 priority: low
 kind: feature
-labels: area:renderer, effort:l
+labels: area:renderer, effort:l, subtask, bounds, indirect-drawing
 milestone: M002-Performance
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-17T18:02:34Z
+updated: 2026-11-17T19:14:02Z
 +++
 
 Hidden objects are still drawn. There is no depth pyramid + compute pass to cull them.
+
+- `2026-11-17T19:00:22Z`: Auto-fixer (M002): punting. A Hi-Z pyramid plus compute cull only pays off if the GPU's visibility result decides the draws, which needs indirect draws or ICBs; MetalSprockets has neither (see #517). Reading results back to the CPU a frame late is possible but adds latency/popping and is a design call. Unblocker: land #517's indirect-draw support first, or approve a CPU-readback variant (one-frame-late visibility) as an interim.
+- `2026-11-17T19:05:45Z`: Question 1 (decision): Wait for #517 indirect draws instead of an interim one-frame-late CPU readback of visibility? Recommended: Yes, wait for #517
+- `2026-11-17T19:14:03Z`: Depends on MetalSprockets#575 (indirect Draw initializers) and MetalSprockets#576 (indirect command buffers). Under umbrella #544.
 
 ---
 
@@ -11837,13 +11871,17 @@ Hidden objects are still drawn. There is no depth pyramid + compute pass to cull
 status: open
 priority: low
 kind: feature
-labels: area:renderer, effort:l
+labels: area:renderer, effort:l, subtask, indirect-drawing
 milestone: M002-Performance
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-17T18:02:34Z
+updated: 2026-11-17T19:14:02Z
 +++
 
 Particle simulation and draw counts are not driven by compute + indirect draws.
+
+- `2026-11-17T19:00:38Z`: Auto-fixer (M002): punting. Particle simulation and drawing live in MetalSprocketsParticles (separate repo), and indirect draws need MetalSprockets support that doesn't exist yet (#517). Nothing to change in SceneSprockets alone. Unblocker: approve work in MetalSprockets (indirect draw element) and MetalSprocketsParticles, or move this issue to that repo's tracker.
+- `2026-11-17T19:05:45Z`: Question 1 (decision): Move this issue to the MetalSprocketsParticles tracker? Recommended: Yes
+- `2026-11-17T19:14:03Z`: Depends on MetalSprockets#575 (indirect Draw initializers) and MetalSprockets#576 (indirect command buffers). Under umbrella #544.
 
 ---
 
@@ -11853,13 +11891,17 @@ Particle simulation and draw counts are not driven by compute + indirect draws.
 status: open
 priority: low
 kind: feature
-labels: area:renderer, effort:l
+labels: area:renderer, effort:l, subtask, indirect-drawing
 milestone: M002-Performance
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-17T18:02:34Z
+updated: 2026-11-17T19:14:02Z
 +++
 
 Mesh detail per object is not chosen on the GPU with compute + indirect commands.
+
+- `2026-11-17T19:00:46Z`: Auto-fixer (M002): punting. CPU LOD selection already exists (Node.levelsOfDetail, chosen by camera distance). Moving the choice to the GPU only helps when the GPU also issues the draws, which needs indirect draws/ICBs that MetalSprockets lacks (#517). Unblocker: same as #517 (approve indirect-draw support in MetalSprockets first).
+- `2026-11-17T19:05:45Z`: Question 1 (decision): Keep this blocked on #517 (indirect draws in MetalSprockets)? Recommended: Yes
+- `2026-11-17T19:14:03Z`: Depends on MetalSprockets#575 (indirect Draw initializers) and MetalSprockets#576 (indirect command buffers). Under umbrella #544.
 
 ---
 
@@ -12053,10 +12095,10 @@ Objects do not receive indirect lighting appropriate to their location. (Moved f
 status: open
 priority: medium
 kind: feature
-labels: effort:xl, area:renderer
+labels: effort:xl, area:renderer, subtask, lighting
 milestone: M999-Nice-to-have
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-17T18:00:18Z
+updated: 2026-11-17T19:13:16Z
 +++
 
 No dynamic indirect lighting or color bleeding. (Moved from SceneSprocketsAddOns#72.)
@@ -12089,10 +12131,10 @@ No approximate bounced light from visible surfaces. (Moved from SceneSprocketsAd
 status: open
 priority: medium
 kind: feature
-labels: effort:l, area:renderer
+labels: effort:l, area:renderer, subtask, lighting
 milestone: M999-Nice-to-have
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-17T18:00:18Z
+updated: 2026-11-17T19:13:16Z
 +++
 
 Static scenes cannot use precomputed indirect lighting. (Moved from SceneSprocketsAddOns#74.)
@@ -12107,10 +12149,10 @@ Static scenes cannot use precomputed indirect lighting. (Moved from SceneSprocke
 status: open
 priority: medium
 kind: feature
-labels: effort:xl, area:renderer
+labels: effort:xl, area:renderer, subtask, lighting
 milestone: M999-Nice-to-have
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-17T18:00:18Z
+updated: 2026-11-17T19:13:16Z
 +++
 
 Lighting for static environments cannot be generated automatically. (Moved from SceneSprocketsAddOns#75.)
@@ -12209,6 +12251,100 @@ Actual: the whole mesh casts a solid shadow.
 Found while auditing #499.
 
 - `2026-11-17T18:25:50Z`: Split out of #499 (closed).
+
+---
+
+## 542: Umbrella: no shared lighting model across material renderers
+
++++
+status: new
+priority: medium
+kind: feature
+labels: umbrella, area:renderer, effort:xl, lighting
+milestone: M003-Rendering
+depends: 86, 497, 506, 507, 509, 512, 514, 519, 533, 535, 536
+created: 2026-11-17T19:13:03Z
+updated: 2026-11-17T19:13:15Z
++++
+
+Each material renderer has its own lighting: Blinn-Phong loops over the frame's lights in this repo, PBR lighting is in MetalSprocketsPBR, and toon, voxel and signed-distance lighting are in SceneSprocketsAddOns. There is no common light data layout, light list, or lighting entry point that all of them read.
+
+Every lighting feature must therefore be built once per renderer and across several packages, and most lighting issues stall on that (for example #519: clustered light assignment needs agreement between three packages).
+
+Affects: light types and parameters, environment and image-based lighting, light assignment for many lights, baked and indirect lighting, and lighting extension points.
+
+Sub-issues:
+- #86 Light gaps: ambient node, attenuation, temperature, IES and area lights
+- #497 Light cookies / IES
+- #506 Image-based lighting (IBL)
+- #507 Automatic environment lighting
+- #509 Area lights / LTC
+- #512 No extension points for injecting render passes or lighting terms
+- #514 No deferred or clustered lighting for many lights
+- #519 No clustered Forward+ light assignment
+- #533 No dynamic indirect illumination (light probes / DDGI)
+- #535 No lightmaps
+- #536 No light baking
+
+Not included: shadows (#88, #299, #495, #541) and exposure/tone mapping (#501, #508), which are separate systems.
+
+---
+
+## 543: Umbrella: no bounds hierarchy for culling, hit testing and spatial queries
+
++++
+status: new
+priority: medium
+kind: feature
+labels: umbrella, area:scenegraph, effort:xl, bounds
+milestone: M002-Performance
+depends: 337, 505, 520, 383
+created: 2026-11-17T19:13:08Z
+updated: 2026-11-17T19:13:15Z
++++
+
+SceneSprockets has no hierarchy of node bounds that follows scene changes. Every system that asks what a frustum, ray or region touches walks every node, and does its own bounds work:
+
+- Frustum culling tests every mesh entry each frame (Renderer/Culling.swift).
+- Hit testing walks every node, then every triangle.
+- There is no query for nodes in a box or sphere, or nearest to a point.
+- GPU occlusion culling has no node bounds on the GPU to test.
+- visionOS immersive culling uses one camera.
+
+Sub-issues:
+- #337 No spatial acceleration structure for culling, hit testing and queries
+- #505 Instancing, frustum culling, and depth prepasses
+- #520 No GPU-driven occlusion culling
+- #383 visionOS immersive: culling and transparency sorting use one camera
+
+---
+
+## 544: Umbrella: draws are never issued indirectly from GPU-written arguments
+
++++
+status: new
+priority: medium
+kind: feature
+labels: umbrella, area:renderer, effort:xl, indirect-drawing
+milestone: M002-Performance
+depends: 517, 520, 521, 522
+created: 2026-11-17T19:13:56Z
+updated: 2026-11-17T19:14:02Z
++++
+
+Every SceneSprockets draw is chosen and encoded on the CPU each frame. No renderer issues indirect draws or uses indirect command buffers, so the GPU cannot decide what to draw, how many instances, or which level of detail.
+
+Depends on MetalSprockets support that does not exist yet:
+- MetalSprockets#575 No Draw initializers for indirect draws
+- MetalSprockets#576 No support for indirect command buffers
+
+Sub-issues:
+- #517 Draws are not encoded with indirect command buffers
+- #520 No GPU-driven occlusion culling (also under #543, bounds)
+- #521 GPU particles do not use indirect draws (particles live in MetalSprocketsParticles)
+- #522 No GPU LOD selection
+
+Related: #516 No GPU-driven rendering (overlapping umbrella), #518 No mesh shading.
 
 ---
 
