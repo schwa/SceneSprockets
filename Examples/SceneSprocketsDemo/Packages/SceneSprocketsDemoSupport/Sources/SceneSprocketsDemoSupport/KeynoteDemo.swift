@@ -32,7 +32,7 @@ public final class KeynoteDemo: DemoScene {
         "Particles", "Mesh Emitters",
         "Physics", "Post-Processing", "Level of Detail", "Performance", "SwiftECS World",
         "Hit Testing", "Gizmos", "Debug Views",
-        "Point Clouds", "Terrain",
+        "Point Clouds", "Terrain", "Metaballs",
         "Thank You"
     ]
 
@@ -97,6 +97,8 @@ public final class KeynoteDemo: DemoScene {
     private var detailed: [SceneGraph.Node] = []
     private var crates: [SceneGraph.Node] = []
     private static let crateGridSize = 22
+    // Metaballs slide: the signed distance node, reshaped every frame.
+    private var metaballs: SceneGraph.Node?
 
     init() {
         let root = SceneGraph.Node(label: "Root")
@@ -104,7 +106,7 @@ public final class KeynoteDemo: DemoScene {
         root.addChild(cameraNode)
         super.init(
             sceneGraph: SceneGraph(root: root),
-            renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0.05, 0.05, 0.07]), PBRMaterialRenderer(), ShaderMaterialRenderer(), PointCloudRenderer(), TerrainRenderer()],
+            renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0.05, 0.05, 0.07]), PBRMaterialRenderer(), ShaderMaterialRenderer(), PointCloudRenderer(), TerrainRenderer(), SignedDistanceRenderer(ambientLightColor: [0.05, 0.05, 0.07])],
             cameraMatrix: .camera(eye: Self.eye(for: 0), target: Self.target(for: 0)),
             parameters: [.choice("Slide", Self.titles), .toggle("Auto-advance", default: false), .slider("Seconds per Slide", 2...15, default: 6)]
         )
@@ -293,6 +295,11 @@ public final class KeynoteDemo: DemoScene {
         • A concurrent binary tree splits triangles near the camera and merges them far away.
         • Lit by the scene's directional light; heights are exaggerated here.
         """,
+        "Metaballs": """
+        • An add-on: import SceneSprocketsAddOns and add SignedDistanceRenderer.
+        • Spheres in a smooth union merge as they move, raymarched on the GPU every frame.
+        • They are lit like Blinn-Phong meshes, write depth, and receive shadows.
+        """,
         "Physics": """
         • Rigid body physics: give a node a physics body and step the world.
         • Each die uses a convex hull collision shape. They land on real faces.
@@ -403,6 +410,8 @@ public final class KeynoteDemo: DemoScene {
         case "Gizmos":
             let modes: [TransformGizmo.Mode] = [.translate, .rotate, .scale]
             gizmoMode = modes[Int(time / 2.5) % modes.count]
+        case "Metaballs":
+            updateMetaballs(time: time)
         case "Video Textures":
             videoTexture?.update()
         case "glTF & Model I/O":
@@ -713,6 +722,16 @@ public final class KeynoteDemo: DemoScene {
             scene.root.addChild(terrain.makeNode())
             SceneView(scene, renderers: renderers + [TerrainRenderer()])
             """, to: slide)
+        case "Metaballs":
+            metaballsSlide(slide)
+            addTag("Add-On", below: 4, to: slide)
+            addCode("""
+            import SceneSprocketsAddOns
+
+            let blobs = SignedDistanceShape.smoothUnion(spheres, smoothing: 0.7)
+            try node.setSignedDistanceShape(blobs, surface: .blinnPhong(material), device: device)
+            SceneView(scene, renderers: renderers + [SignedDistanceRenderer()])
+            """, to: slide)
         case "Mesh Emitters":
             meshEmittersSlide(slide)
             addCode("""
@@ -917,6 +936,32 @@ public final class KeynoteDemo: DemoScene {
         node.run(.repeatForever(.rotate(by: 2 * .pi, around: [0, 1, 0], duration: 60)))
         let sun = slide.addChild(SceneGraph.Node(label: "Sun", transform: .init(translation: [3, 4, 2]), content: .light(Light(type: .directional, color: [1, 0.95, 0.85], intensity: 3))))
         sun.look(at: .zero)
+    }
+
+    // Blobs orbiting a pillar; the shape is set in updateMetaballs.
+    private func metaballsSlide(_ slide: SceneGraph.Node) {
+        slide.addChild(SceneGraph.Node(label: "Pillar", shape: .cylinder(radius: 0.12, height: 2.6), material: BlinnPhongSceneMaterial.plastic([0.9, 0.5, 0.3]), transform: .init(translation: [0, 0.3, 0])))
+        metaballs = slide.addChild(SceneGraph.Node(label: "Metaballs"))
+        addLight(to: slide, at: [2.5, 4, 4], intensity: 30)
+        addLight(to: slide, at: [-3, 1, 3], color: [0.5, 0.6, 1], intensity: 10)
+        updateMetaballs(time: 0)
+    }
+
+    private func updateMetaballs(time: Float) {
+        guard let metaballs else {
+            return
+        }
+        let count = 7
+        let spheres = (0..<count).map { index -> SignedDistanceShape in
+            let phase = Float(index) / Float(count) * 2 * .pi
+            let position = SIMD3<Float>(
+                cos(phase + time * 0.7) * 1.1,
+                1.6 + sin(phase * 2 + time * 1.3) * 0.6,
+                sin(phase + time * 0.9) * 1.1
+            )
+            return .sphere(radius: 0.38 + 0.1 * sin(phase * 3 + time), transform: .init(translation: position))
+        }
+        try? metaballs.setSignedDistanceShape(.smoothUnion(spheres, smoothing: 0.7), surface: .blinnPhong(.plastic([0.3, 0.55, 0.95], shininess: 48)), device: demoDevice)
     }
 
     // A code panel below the slide's live content, tilted a little toward the camera.

@@ -9991,6 +9991,68 @@ Context: SwiftJolt now has activate/deactivate for one or many bodies and activa
 
 ---
 
+## 440: Keynote demo has no metaballs slide
+
++++
+status: closed
+priority: low
+kind: feature
+created: 2026-11-17T01:08:26Z
+updated: 2026-11-17T01:21:27Z
+closed: 2026-11-17T01:21:27Z
++++
+
+The keynote demo (KeynoteDemo.swift) shows add-ons such as point clouds and terrain, but not the raymarched signed distance shapes from SceneSprocketsAddOns (SceneSprocketsAddOns#3). Metaballs appear only in the standalone Metaballs demo.
+
+---
+
+## 441: Keynote slides have no per-slide settings to tweak during a demo
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:demo
+created: 2026-11-17T01:15:37Z
++++
+
+Keynote slides have no way to expose slide-specific settings or actions. The deck settings are global only.
+
+Many demo slides would benefit from live controls while presenting, for example:
+- Physics/dice slide: a "roll dice" action
+- Metaballs slide (#440): add metaballs, change count or parameters
+- Other slides: toggle features, adjust parameters, trigger effects
+
+Expected: each slide can declare its own settings/actions, and the presenter can change them while the slide is shown.
+
+---
+
+## 442: SceneSprocketsPhysicsTests intermittently crash with SIGSEGV on CI
+
++++
+status: new
+priority: medium
+kind: bug
+labels: area:physics
+created: 2026-11-17T01:25:42Z
++++
+
+The physics test process sometimes crashes on CI. The crash is intermittent: the next CI run passed, and 3 local runs passed.
+
+Seen in GitHub Actions run 43992484310 (Swift workflow, 'Test (macOS)', Xcode 27.2, macOS 27.0.1, arm64e):
+
+```
+error: Process '.../swiftpm-testing-helper --test-bundle-path .../SceneSprocketsPhysicsTests.xctest/Contents/MacOS/SceneSprocketsPhysicsTests ... --testing-library swift-testing' exited with unexpected signal code 11
+Note: Some test targets reported failures:
+  - SceneSprocketsPhysicsTests (Swift Testing)
+```
+
+Tests that had started but not reported a result at the time of the crash include: kinematicBodyFollowsItsNodeAndPushes, boundingBoxAndMeshShapesComeFromTheMesh, bodiesFollowTheGraph, dynamicBoxFallsAndRestsOnStaticFloor, velocityLaunchesANode, tumblingScaledBodyKeepsItsScale, sliderConstraintStopsAtWallAndSlides, dynamicNodeUnderScaledParentKeepsItsScale.
+
+Tests run in parallel, so the crashing test is not known.
+
+---
+
 ## Milestone: M001-Correctness
 
 +++
