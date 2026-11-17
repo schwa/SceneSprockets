@@ -8,6 +8,30 @@ import SceneSprocketsShaders
 import simd
 import SwiftMesh
 
+/// A renderer whose entries are not drawn as their mesh, such as raymarched shapes, and that draws their depth into the
+/// shadow map itself. Entries with `castsShadow` are drawn by ``makeShadowCasterElement(entries:context:)`` instead of
+/// as their mesh.
+public protocol ShadowCasterRenderer: MaterialRenderer {
+    /// Returns an element that draws the entries' depth into one shadow map slice. It is called once per slice.
+    ///
+    /// The element draws inside a render pass with no color attachment and a `depth32Float` attachment. Depth is
+    /// reversed (near is 1); the pass sets a greater-equal depth test with writes and a hardware depth bias. Positions
+    /// are camera-relative, as in the scene pass.
+    func makeShadowCasterElement(entries: [SceneGraph.MeshEntry], context: ShadowCasterContext) throws -> AnyElement
+}
+
+/// What a ``ShadowCasterRenderer`` needs to draw one shadow map slice.
+public struct ShadowCasterContext {
+    /// Camera-relative world positions (world minus ``renderOrigin``) to the slice's clip space. Directional light
+    /// views already push depth away from the light. The hardware depth bias does not apply to depth written by a
+    /// fragment shader, so such shaders need their own bias for spot and point lights.
+    public var viewProjection: simd_float4x4
+    /// The world position that is the origin of camera-relative space: the camera position.
+    public var renderOrigin: SIMD3<Float>
+    /// The width and height of the slice, in texels.
+    public var resolution: Int
+}
+
 /// Materials whose renderer samples the shadow map per light while shading (Blinn-Phong, PBR, and shader materials that
 /// opt in). The screen-space mask skips their pixels.
 public protocol SamplesShadowsInShader {
@@ -101,6 +125,9 @@ public final class Shadows {
     struct Frame {
         var shadowMap: SceneGraphShadowMap
         var casters: [Caster]
+        // Entries that ShadowCasterRenderers draw themselves.
+        var customCasters: [(renderer: any ShadowCasterRenderer, entries: [SceneGraph.MeshEntry])] = []
+        var renderOrigin: SIMD3<Float> = .zero
         // Parallel to the shadow map's light view-projections, with the caster depth offset applied.
         var casterViewProjections: [simd_float4x4] = []
         // Meshes the screen-space mask skips (non-receivers and in-shader shadowing); nil when there are none.
@@ -112,7 +139,7 @@ public final class Shadows {
     }
 
     // Nil when nothing casts or there is no light.
-    func prepare(entries: [SceneGraph.MeshEntry], context: RenderContext, bounds: BoundingBox3D?, viewSize: (width: Int, height: Int)? = nil) throws -> Frame? {
+    func prepare(entries: [SceneGraph.MeshEntry], context: RenderContext, bounds: BoundingBox3D?, viewSize: (width: Int, height: Int)? = nil, renderers: [any MaterialRenderer] = []) throws -> Frame? {
         guard let bounds else {
             return nil
         }
@@ -158,8 +185,14 @@ public final class Shadows {
         // Materials that sample shadows themselves are kept out of the screen-space mask, like non-receivers.
         let skipsMask = { (entry: SceneGraph.MeshEntry) in !entry.receivesShadow || (entry.material as? any SamplesShadowsInShader)?.samplesShadowsInShader == true }
         let masksEverything = entries.allSatisfy(skipsMask)
+        let casterRenderers = renderers.compactMap { $0 as? any ShadowCasterRenderer }
+        var customEntries: [[SceneGraph.MeshEntry]] = Array(repeating: [], count: casterRenderers.count)
         for entry in entries {
-            if entry.castsShadow, let caster = caster(for: entry) {
+            if let index = casterRenderers.firstIndex(where: { ObjectIdentifier($0.materialType) == ObjectIdentifier(type(of: entry.material)) }) {
+                if entry.castsShadow {
+                    customEntries[index].append(entry)
+                }
+            } else if entry.castsShadow, let caster = caster(for: entry) {
                 casters.append(caster)
             }
             if !masksEverything, skipsMask(entry), let caster = caster(for: entry) {
@@ -168,7 +201,8 @@ public final class Shadows {
         }
         positionBuffers = positionBuffers.filter { usedKeys.contains($0.key) }
         influenceBuffers = influenceBuffers.filter { usedInfluences.contains($0.key) }
-        guard !casters.isEmpty else {
+        let customCasters = zip(casterRenderers, customEntries).filter { !$0.1.isEmpty }.map { (renderer: $0.0, entries: $0.1) }
+        guard !casters.isEmpty || !customCasters.isEmpty else {
             return nil
         }
 
@@ -186,9 +220,9 @@ public final class Shadows {
         self.shadowMap = shadowMap
         let casterViews = views.map(casterViewProjection)
         guard !nonReceivers.isEmpty, let viewSize else {
-            return Frame(shadowMap: shadowMap, casters: casters, casterViewProjections: casterViews, lightSlices: slices, masksEverything: masksEverything)
+            return Frame(shadowMap: shadowMap, casters: casters, customCasters: customCasters, renderOrigin: cameraPosition, casterViewProjections: casterViews, lightSlices: slices, masksEverything: masksEverything)
         }
-        return Frame(shadowMap: shadowMap, casters: casters, casterViewProjections: casterViews, nonReceivers: (nonReceivers, try receiverMasks(width: viewSize.width, height: viewSize.height, count: shadowMap.depthTextures.count)), lightSlices: slices, masksEverything: masksEverything)
+        return Frame(shadowMap: shadowMap, casters: casters, customCasters: customCasters, renderOrigin: cameraPosition, casterViewProjections: casterViews, nonReceivers: (nonReceivers, try receiverMasks(width: viewSize.width, height: viewSize.height, count: shadowMap.depthTextures.count)), lightSlices: slices, masksEverything: masksEverything)
     }
 
     // `view` with caster depth pushed `depthOffsetTexels` texels away from the light. Only orthographic (directional)
@@ -367,6 +401,15 @@ struct ShadowCasterDepthPass: Element {
                     }
                     if !skinnedCasters.isEmpty {
                         try pipeline("Skinned Shadow Casters", vertexShader: shaders.skinnedVertex, fragmentShader: shaders.fragment, vertexDescriptor: shaders.skinnedDescriptor, casters: skinnedCasters, lightViewProjection: lightViewProjection)
+                            .depthBias(depthBias, slopeScale: slopeScale)
+                            .depthCompare(function: .greaterEqual, writes: true)
+                    }
+                    let context = ShadowCasterContext(viewProjection: lightViewProjection, renderOrigin: frame.renderOrigin, resolution: shadowMap.resolution)
+                    ForEach(Array(frame.customCasters.enumerated()), id: \.offset) { _, custom in
+                        try custom.renderer.makeShadowCasterElement(entries: custom.entries, context: context)
+                            .renderPipelineDescriptorTransformer { descriptor in
+                                descriptor.colorAttachments[0].pixelFormat = .invalid
+                            }
                             .depthBias(depthBias, slopeScale: slopeScale)
                             .depthCompare(function: .greaterEqual, writes: true)
                     }

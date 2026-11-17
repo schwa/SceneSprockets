@@ -193,7 +193,7 @@ public struct SceneGraphElement: Element {
             }()
             // Prepared before the renderers, which sample it while shading.
             let shadowFrame = try postTargets.flatMap { targets in
-                try shadows?.prepare(entries: entries, context: context, bounds: presentation.bounds, viewSize: (targets.color.width, targets.color.height))
+                try shadows?.prepare(entries: entries, context: context, bounds: presentation.bounds, viewSize: (targets.color.width, targets.color.height), renderers: renderers)
             }
             if let shadows, let shadowFrame {
                 context.shadow = Shadows.Sampling(shadowMap: shadowFrame.shadowMap, intensity: shadows.intensity, color: shadows.color, softness: shadows.softness)

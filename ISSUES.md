@@ -10077,6 +10077,40 @@ Expected: each standalone demo is either merged into the keynote as a slide (or 
 
 ---
 
+## 444: Renderers cannot draw non-mesh content into the shadow map
+
++++
+status: closed
+priority: medium
+kind: feature
+created: 2026-11-17T02:32:02Z
+updated: 2026-11-17T02:55:51Z
+closed: 2026-11-17T02:55:51Z
++++
+
+Shadows.prepare only collects shadow casters from triangle meshes (MeshEntry positions). A MaterialRenderer whose content is not its mesh, such as a raymarched SDF shape or a voxel grid traced in the fragment shader, has no way to draw its own depth into the shadow map. Those objects receive shadows but never cast them.
+
+Seen in SceneSprocketsAddOns #40 (SDF shapes) and #46 (voxel grids).
+
+---
+
+## 445: Custom renderers cannot get the PBR renderer's lighting inputs
+
++++
+status: closed
+priority: medium
+kind: feature
+created: 2026-11-17T02:32:02Z
+updated: 2026-11-17T02:55:51Z
+closed: 2026-11-17T02:55:51Z
++++
+
+PBRMaterialRenderer.lighting(context:cameraPosition:) is internal. A renderer outside SceneSprocketsPBR that shades its own fragments with PBRLighting.h cannot build the same PBRLighting (lights with shadow slices, environment, intensity, exposure, rotation, ambient occlusion) as PBR meshes in the scene, so its surfaces do not match them.
+
+Seen in SceneSprocketsAddOns #41 (SDF shapes) and #45 (voxel grids). Needs MetalSprocketsPBR to expose its frame bindings too.
+
+---
+
 ## Milestone: M001-Correctness
 
 +++

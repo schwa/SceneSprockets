@@ -33,6 +33,8 @@ SceneSprockets stores node data in a SwiftECS `World`. Your app can query this w
 - ``MaterialRenderer``
 - ``RenderContext``
 - ``Shadows``
+- ``ShadowCasterRenderer``
+- ``ShadowCasterContext``
 - ``SceneGraph/Environment-swift.struct``
 - ``SceneGraph/Fog-swift.struct``
 - ``SceneGraph/PostProcessing-swift.struct``

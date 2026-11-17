@@ -96,8 +96,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsPBR",
       "state" : {
-        "revision" : "364746416aecc7d11edd76c095ba6020916b8f6b",
-        "version" : "0.2.1"
+        "revision" : "da45fe6cc916e944413bcb77b798dcee6ff2f3b3",
+        "version" : "0.2.3"
       }
     },
     {

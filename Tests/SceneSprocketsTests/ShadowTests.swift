@@ -334,3 +334,50 @@ func wideSoftShadowsDoNotSelfShadowFloor(light: Light.Kind, softness: Int) throw
     #expect(floorPixels.count > 1_000)
     #expect(darkened.count < floorPixels.count / 200, "\(darkened.count) of \(floorPixels.count) floor pixels self-shadowed")
 }
+
+// A material its renderer never draws in the scene pass, only into the shadow map, as a ShadowCasterRenderer.
+private struct InvisibleCasterMaterial: SceneMaterial {}
+
+private struct InvisibleCasterRenderer: ShadowCasterRenderer {
+    var materialType: any SceneMaterial.Type { InvisibleCasterMaterial.self }
+
+    // swiftlint:disable:next unneeded_throws_rethrows - the protocol requirement throws
+    func makeElement(entries _: [SceneGraph.MeshEntry], context _: RenderContext) throws -> AnyElement {
+        EmptyElement().eraseToAnyElement()
+    }
+
+    func makeShadowCasterElement(entries: [SceneGraph.MeshEntry], context: ShadowCasterContext) throws -> AnyElement {
+        let shaders = try ShadowCasterShaders.shared()
+        let casters = try entries.map { entry in
+            let positions = entry.mesh.positions().map(SceneSprockets.Packed3.init)
+            let buffer = try #require(entry.mesh.vertexBuffer.device.makeBuffer(bytes: positions, length: positions.count * MemoryLayout<SceneSprockets.Packed3>.stride))
+            var model = entry.worldTransform
+            model.columns.3 -= SIMD4(context.renderOrigin, 0)
+            return Shadows.Caster(positions: buffer, submesh: entry.mesh.submeshes[entry.submeshIndex], placement: .model(model))
+        }
+        return try casterPipeline("Invisible Casters", vertexShader: shaders.staticVertex, fragmentShader: shaders.fragment, vertexDescriptor: shaders.staticDescriptor, casters: casters, viewProjection: context.viewProjection, colorPixelFormat: .invalid)
+            .eraseToAnyElement()
+    }
+}
+
+@Test(.enabled(if: deviceSupportsMetal4))
+@MainActor
+func shadowCasterRendererDrawsItsOwnCasters() throws {
+    let (sceneGraph, pixel) = try makeScene()
+    let box = try #require(sceneGraph.root.children.first { $0.label == "Box" })
+    guard case let .mesh(mesh, _, _, _) = box.content else {
+        Issue.record("The box has no mesh")
+        return
+    }
+    box.content = .mesh(mesh, materials: [InvisibleCasterMaterial()], castsShadow: true)
+    let renderers: [any MaterialRenderer] = [BlinnPhongMaterialRenderer(), InvisibleCasterRenderer()]
+    let lit = try brightness(sceneGraph, at: pixel, shadows: nil, renderers: renderers)
+    let shadowed = try brightness(sceneGraph, at: pixel, shadows: Shadows(intensity: 0.8), renderers: renderers)
+    #expect(Double(shadowed) < Double(lit) * 0.6)
+
+    // The box is not also drawn as an ordinary mesh caster.
+    let context = try #require(makeRenderContext(sceneGraph: sceneGraph, camera: nil, cameraMatrix: nil, aspectRatio: 1))
+    let frame = try #require(try Shadows().prepare(entries: sceneGraph.meshEntries(), context: context, bounds: sceneGraph.bounds, renderers: renderers))
+    #expect(frame.customCasters.map(\.entries.count) == [1])
+    #expect(frame.casters.count == 1)
+}
