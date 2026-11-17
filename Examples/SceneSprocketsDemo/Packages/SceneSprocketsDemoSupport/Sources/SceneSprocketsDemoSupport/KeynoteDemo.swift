@@ -413,8 +413,10 @@ public final class KeynoteDemo: DemoScene {
         case "Materials":
             [.slider("Material Spin", 0...3, default: 1), .slider("Materials Lighting", 0...2, default: 1)]
         case "Lights":
-            [.slider("Light Orbit Speed", 0...3, default: 1), .slider("Light Intensity", 0...3, default: 1), .slider("Light Range", 1...14, default: 14),
-             .toggle("Red Light", default: true), .toggle("Green Light", default: true), .toggle("Blue Light", default: true)]
+            [
+                .slider("Light Orbit Speed", 0...3, default: 1), .slider("Light Intensity", 0...3, default: 1), .slider("Light Range", 1...14, default: 14),
+                .toggle("Red Light", default: true), .toggle("Green Light", default: true), .toggle("Blue Light", default: true)
+            ]
         case "Shadows":
             [.toggle("Cast Shadows", default: true), .slider("Sun Angle", -90...90, default: 0), .slider("Shadow Spin", 0...3, default: 1)]
         case "Fog":
@@ -426,8 +428,10 @@ public final class KeynoteDemo: DemoScene {
         case "Glass":
             [.slider("Frosting", 0...1, default: 0), .slider("Thickness", 0...3, default: 0.6), .slider("Transmission", 0.05...1, default: 1), .slider("Glass Spin", 0...3, default: 1)]
         case "PBR Extensions":
-            [.toggle("Sheen", default: true), .toggle("Diffuse Transmission", default: true), .toggle("Clearcoat", default: true), .toggle("Iridescence", default: true),
-             .slider("Piece Spin", 0...3, default: 1)]
+            [
+                .toggle("Sheen", default: true), .toggle("Diffuse Transmission", default: true), .toggle("Clearcoat", default: true), .toggle("Iridescence", default: true),
+                .slider("Piece Spin", 0...3, default: 1)
+            ]
         case "Custom Shaders":
             [.choice("Rim Colors", rimColorPairs.map(\.name)), .slider("Shader Spin", 0...3, default: 1)]
         case "glTF & Model I/O":
@@ -445,8 +449,10 @@ public final class KeynoteDemo: DemoScene {
         case "Particles":
             [.toggle("Campfire", default: true), .toggle("Geyser", default: true), .toggle("Fireworks", default: true)]
         case "Post-Processing":
-            [.choice("Grade", ["Cycle"] + grades.map(\.name) + ["Custom"]), .slider("Exposure", -2...2, default: 0), .slider("Contrast", 0...2, default: 1),
-             .slider("Saturation", 0...3, default: 1), .slider("Vignette", 0...1, default: 0)]
+            [
+                .choice("Grade", ["Cycle"] + grades.map(\.name) + ["Custom"]), .slider("Exposure", -2...2, default: 0), .slider("Contrast", 0...2, default: 1),
+                .slider("Saturation", 0...3, default: 1), .slider("Vignette", 0...1, default: 0)
+            ]
         case "Level of Detail":
             [.toggle("Animate Distance", default: true), .slider("Distance", 11...27, default: 15)]
         case "Performance":
