@@ -10051,6 +10051,12 @@ Tests that had started but not reported a result at the time of the crash includ
 
 Tests run in parallel, so the crashing test is not known.
 
+- `2026-11-17T01:55:34Z`: Could not reproduce locally (Apple silicon Mac, commit 7ec3f209):
+- 60 consecutive runs of SceneSprocketsPhysicsTests (11 tests, parallel): all passed, no crashes.
+- One run with --sanitize=thread: passed, no TSan reports.
+- One run with --sanitize=address: passed, no ASan reports.
+Cause still unknown. A crash report (.ips from ~/Library/Logs/DiagnosticReports) from a failing CI run would identify the crashing thread.
+
 ---
 
 ## Milestone: M001-Correctness
