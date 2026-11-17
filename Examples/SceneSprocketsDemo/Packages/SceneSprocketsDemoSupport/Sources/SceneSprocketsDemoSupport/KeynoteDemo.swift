@@ -13,6 +13,7 @@ import SceneSprocketsPBR
 import SceneSprocketsPhysics
 import SceneSprocketsShaderMaterial
 import SceneSprocketsTerrain
+import SceneSprocketsVoxels
 import simd
 import SwiftMesh
 import SwiftUI
@@ -32,7 +33,7 @@ public final class KeynoteDemo: DemoScene {
         "Particles", "Mesh Emitters",
         "Physics", "Post-Processing", "Level of Detail", "Performance", "SwiftECS World",
         "Hit Testing", "Gizmos", "Debug Views",
-        "Point Clouds", "Terrain", "Metaballs",
+        "Point Clouds", "Terrain", "Metaballs", "Voxels",
         "Thank You"
     ]
 
@@ -106,7 +107,7 @@ public final class KeynoteDemo: DemoScene {
         root.addChild(cameraNode)
         super.init(
             sceneGraph: SceneGraph(root: root),
-            renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0.05, 0.05, 0.07]), PBRMaterialRenderer(), ShaderMaterialRenderer(), PointCloudRenderer(), TerrainRenderer(), SignedDistanceRenderer(ambientLightColor: [0.05, 0.05, 0.07])],
+            renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0.05, 0.05, 0.07]), PBRMaterialRenderer(), ShaderMaterialRenderer(), PointCloudRenderer(), TerrainRenderer(), SignedDistanceRenderer(ambientLightColor: [0.05, 0.05, 0.07]), VoxelRenderer(ambientLightColor: [0.15, 0.15, 0.18])],
             cameraMatrix: .camera(eye: Self.eye(for: 0), target: Self.target(for: 0)),
             parameters: [.choice("Slide", Self.titles), .toggle("Auto-advance", default: false), .slider("Seconds per Slide", 2...15, default: 6)]
         )
@@ -299,6 +300,12 @@ public final class KeynoteDemo: DemoScene {
         • An add-on: import SceneSprocketsAddOns and add SignedDistanceRenderer.
         • Spheres in a smooth union merge as they move, raymarched on the GPU every frame.
         • They are lit like Blinn-Phong meshes, write depth, and receive shadows.
+        """,
+        "Voxels": """
+        • An add-on: import SceneSprocketsVoxels and add VoxelRenderer.
+        • A MagicaVoxel .vox file loads into a 3D texture; the GPU ray-marches the grid, no meshes.
+        • Voxels write depth, receive shadows, and are lit like Blinn-Phong meshes.
+        • Model: "monu10" from MagicaVoxel's samples by @ephtracy, after Monument Valley.
         """,
         "Physics": """
         • Rigid body physics: give a node a physics body and step the world.
@@ -739,6 +746,16 @@ public final class KeynoteDemo: DemoScene {
             scene.root.addChild(terrain.makeNode())
             SceneView(scene, renderers: renderers + [TerrainRenderer()])
             """, to: slide)
+        case "Voxels":
+            voxelsSlide(slide)
+            addTag("Add-On", below: 4, to: slide)
+            addCode("""
+            import SceneSprocketsVoxels
+
+            let grid = try VoxelGrid.magicaVoxelModels(data: Data(contentsOf: url))[0]
+            try node.setVoxels(grid, voxelSize: 0.03, device: device)
+            SceneView(scene, renderers: renderers + [VoxelRenderer()])
+            """, to: slide)
         case "Metaballs":
             metaballsSlide(slide)
             addTag("Add-On", below: 4, to: slide)
@@ -953,6 +970,24 @@ public final class KeynoteDemo: DemoScene {
         node.run(.repeatForever(.rotate(by: 2 * .pi, around: [0, 1, 0], duration: 60)))
         let sun = slide.addChild(SceneGraph.Node(label: "Sun", transform: .init(translation: [3, 4, 2]), content: .light(Light(type: .directional, color: [1, 0.95, 0.85], intensity: 3))))
         sun.look(at: .zero)
+    }
+
+    // A MagicaVoxel monument, turning slowly.
+    private func voxelsSlide(_ slide: SceneGraph.Node) {
+        guard let url = Bundle.module.url(forResource: "Monument", withExtension: "vox", subdirectory: "DemoAssets"),
+              let data = try? Data(contentsOf: url),
+              let grid = try? VoxelGrid.magicaVoxelModels(data: data).max(by: { $0.filledCount < $1.filledCount }) else {
+            return
+        }
+        let height: Float = 3.3
+        let voxelSize = height / Float(grid.size.y)
+        // Tilted toward the camera so the turning model shows its roofs.
+        let tilt = slide.addChild(SceneGraph.Node(label: "Monument Tilt", transform: .init(translation: [0, 1.2, 0], rotation: simd_quatf(angle: 0.35, axis: [1, 0, 0]))))
+        let holder = tilt.addChild(SceneGraph.Node(label: "Monument"))
+        try? holder.setVoxels(grid, voxelSize: voxelSize, device: demoDevice)
+        holder.run(.repeatForever(.rotate(by: 2 * .pi, around: [0, 1, 0], duration: 40)))
+        addLight(to: slide, at: [3, 5, 4], intensity: 70)
+        addLight(to: slide, at: [-3, 2, 3], color: [0.6, 0.7, 1], intensity: 20)
     }
 
     // Blobs orbiting a pillar; the shape is set in updateMetaballs.

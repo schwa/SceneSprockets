@@ -113,7 +113,7 @@ public struct SceneDemoView: View {
                 .onSceneTap { hit in
                     scene.pick(hit)
                 }
-                .sceneOverlay(scene.showsSelectionOutline ? { [scene, selectionOutline] viewport in
+                .sceneOverlay(scene.showsSelectionOutline ? { @MainActor @Sendable [scene, selectionOutline] viewport in
                     try selectionOutline.element(nodes: scene.selectedNode.map { [$0] } ?? [], sceneGraph: scene.sceneGraph, viewport: viewport)
                 } : nil)
         }
