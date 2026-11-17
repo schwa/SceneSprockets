@@ -1,5 +1,5 @@
 {
-  "originHash" : "3dc5923e87a1188e7bb7c573d899c5f95f041e42724042f8742aedc1d052aa23",
+  "originHash" : "ef5533ac3b621dec4d28fecb5ce5a3294eda945c79c103c83b5d2577e43c6dd7",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -105,8 +105,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsPBR",
       "state" : {
-        "revision" : "da45fe6cc916e944413bcb77b798dcee6ff2f3b3",
-        "version" : "0.2.3"
+        "revision" : "81376398d0405341e2a7164db74aba7500a4bf80",
+        "version" : "0.2.4"
       }
     },
     {

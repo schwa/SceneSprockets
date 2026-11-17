@@ -492,7 +492,7 @@ extension PBRSceneMaterial: AppliesAmbientOcclusionInShader {}
 
 extension PBRMaterialRenderer: BackgroundRenderer {
     /// The lighting PBR meshes get in `context`, for renderers whose shaders call `PBR::shade` themselves: lights
-    /// with their shadow slices, the environment (the scene's when it is a ``PBREnvironment``, otherwise
+    /// with their shadow slices, the environment (the scene's when it is a `PBREnvironment`, otherwise
     /// ``environment``), exposure and screen-space occlusion. Light positions are relative to `cameraPosition`.
     /// `shadows` is nil; set it from `context.shadow` with `Shadows.Sampling.pbrShadows(submissionIndex:)`.
     public func lighting(context: RenderContext, cameraPosition: SIMD3<Float> = .zero) -> PBRLighting {
