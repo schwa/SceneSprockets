@@ -11782,6 +11782,49 @@ Workload scheduling and dependencies are not driven on the GPU with indirect dis
 
 ---
 
+## 526: No code-based way to write custom material shaders (ShaderGraph DSL)
+
++++
+status: new
+priority: medium
+kind: feature
+labels: materials
+created: 2026-11-17T14:23:29Z
++++
+
+Custom materials can't be written as composable Swift expressions that build a shader.
+
+Prior art in ~/Projects:
+- MetalSprocketsShaderGraph/Packages/MetalSprocketsShaderGraphSupport: typed Node<T> expression DSL (`color * sin(time)`) compiled to a stitched MTLFunction via graph.makeFunction.
+- Copy in MetalSprocketsExamples/.../ExamplesShaderGraph.
+- MetalSprocketsParticles stitched modules (Documentation/Modules.md).
+
+Related: ISSUES.md Materials list, "Shader modifiers / node-based material graph" (RealityKit Shader Graph, three.js TSL, Babylon Node Material).
+
+---
+
+## 527: No visual node-graph editor for materials (ShaderGraph node graph)
+
++++
+status: new
+priority: medium
+kind: feature
+labels: materials
+depends: 526
+created: 2026-11-17T14:23:29Z
+updated: 2026-11-17T14:23:36Z
++++
+
+There is no visual node-based editor for building materials.
+
+Prior art in ~/Projects:
+- MetalSprockets/MetalSprocketsShaderGraph: PoC app combining SwiftNodeEditor UI with the ShaderGraph stitching backend; node palette, graph editor, live preview.
+- Current/SwiftNodeEditor: node graph editor UI library.
+
+Related: ISSUES.md Materials list, "Shader modifiers / node-based material graph"; the ShaderGraph DSL issue.
+
+---
+
 ## Milestone: M001-Correctness
 
 +++
