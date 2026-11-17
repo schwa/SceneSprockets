@@ -9652,20 +9652,23 @@ Pass a SwiftJolt `QueryFilter` (excludedBodies, shouldInclude, layers) to castSh
 ## 419: Every dynamic node's transform is written each step, even when asleep
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:physics, effort:xs
 milestone: M002-Performance
 depends: 410
 created: 2026-11-16T23:34:12Z
-updated: 2026-11-17T06:04:51Z
+updated: 2026-11-17T13:51:39Z
+closed: 2026-11-17T13:51:39Z
 +++
 
 step() writes the pose of every dynamic body to its node every step. Sleeping bodies don't move, but their nodes are still written, which bumps the transform revision and costs time in large scenes.
 
 ## Proposed fix (per schwa)
 Write only awake bodies, e.g. via SwiftJolt's `PhysicsWorld.activeBodies` or `isActive(_:)`.
+
+- `2026-11-17T13:51:39Z`: Fixed. step() writes poses only for dynamic bodies that are in the world and awake (PhysicsWorld.isActive). Test sleepingBodiesDoNotWriteTheirNodes: a box comes to rest and sleeps, then a step leaves graph.revision unchanged; it failed before the fix. A sleeping body's last pose was written on the step it fell asleep.
 
 ---
 

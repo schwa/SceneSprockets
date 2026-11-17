@@ -62,6 +62,24 @@ func stepOnlyChangesTransformRevision() throws {
     #expect(graph.revision.transform != before.transform)
 }
 
+// #419: a body that has come to rest and gone to sleep does not write its node each step.
+@Test
+func sleepingBodiesDoNotWriteTheirNodes() throws {
+    let root = SceneGraph.Node()
+    _ = makeFloor(in: root)
+    let box = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 2, 0])))
+    box.physicsBody = .init(type: .dynamic, shape: .box(size: [1, 1, 1]))
+    let graph = SceneGraph(root: root)
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: graph)
+    run(physics, seconds: 5)
+    let body = try #require(physics.body(of: box))
+    #expect(!physics.world.isActive(body))
+    let before = graph.revision
+    physics.step(deltaTime: 1 / 60)
+    #expect(graph.revision == before)
+    #expect(abs(box.worldPosition.y - 0.5) < 0.05)
+}
+
 // #417: node(of:) finds a body's node through an index, kept in step as bodies are made, rebuilt and removed.
 @Test
 func nodeOfBodyFollowsTheGraph() throws {

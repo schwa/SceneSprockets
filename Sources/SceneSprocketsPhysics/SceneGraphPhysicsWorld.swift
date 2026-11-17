@@ -13,7 +13,7 @@ import SwiftMesh
 /// - It rebuilds the bodies whose `physicsBody` changed.
 /// - It moves kinematic bodies to their nodes.
 /// - It advances the simulation.
-/// - It writes the world position and orientation of each dynamic body to its node. Scale does not change.
+/// - It writes the world position and orientation of each awake dynamic body to its node. Scale does not change.
 ///
 /// Writing poses changes only the transform revision of the scene graph.
 public final class SceneGraphPhysicsWorld {
@@ -108,7 +108,8 @@ public final class SceneGraphPhysicsWorld {
             world.moveKinematic(entry.body, to: pose.translation, rotation: pose.rotation.quaternion, deltaTime: deltaTime)
         }
         world.update(deltaTime: deltaTime, collisionSteps: collisionSteps)
-        for entry in entries.values where entry.description.type == .dynamic && world.isAdded(entry.body) {
+        // Sleeping bodies do not move; writing their nodes would only bump the transform revision (#419).
+        for entry in entries.values where entry.description.type == .dynamic && world.isAdded(entry.body) && world.isActive(entry.body) {
             var pose = Transform3D(nearestTo: entry.node.worldTransform)
             pose.translation = world.position(of: entry.body)
             pose.rotation = Rotation3D(world.rotation(of: entry.body))
