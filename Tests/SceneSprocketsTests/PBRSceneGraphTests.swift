@@ -169,12 +169,11 @@ func pbrRendererSettingsCanChangeWhileAFrameIsLit() async throws {
         }
     }
     for index in 0..<2_000 {
-        renderer.exposure = Float(index % 4)
         renderer.environmentIntensity = Float(index % 3)
         renderer.environment = .studio
     }
     await rendering.value
-    #expect(renderer.exposure == Float(1_999 % 4))
+    #expect(renderer.environmentIntensity == Float(1_999 % 3))
 }
 
 // #479: changing a live material's uniforms shows on the next frame, without a structure change. A change that moves

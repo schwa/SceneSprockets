@@ -1,6 +1,7 @@
 #pragma once
 
 #import <simd/simd.h>
+#import "MetalSprocketsLightingTypes.h"
 
 // Bound by name as `transforms` to a ShaderMaterial's vertex function (and fragment function, if it declares one).
 // Copy this layout, or include this header, in custom shaders.
@@ -39,12 +40,23 @@ struct ShaderMaterialLighting {
     int lightCount;
     // 0 when the frame has no shadows or the mesh does not receive them.
     int receivesShadow;
+    // The scene's exposure and tone mapping, which lit output should apply with Lighting::toneMap.
+    float exposure;
+    LightingShaderToneMapping toneMapping;
+    // 1 when the output must stay linear (an intermediate target); skip exposure and tone mapping then.
+    int linearOutput;
 };
 typedef struct ShaderMaterialLighting ShaderMaterialLighting;
 
 #ifdef __METAL_VERSION__
 #include <metal_stdlib>
 #include "MetalSprocketsLighting.h"
+#include "MetalSprocketsLightingToneMapping.h"
+
+// Lit linear color as display values: the scene's exposure and tone mapping, unless the output must stay linear.
+static inline metal::float3 shaderMaterialDisplayColor(constant ShaderMaterialLighting &lighting, metal::float3 color) {
+    return lighting.linearOutput ? color : Lighting::toneMap(color * lighting.exposure, lighting.toneMapping);
+}
 
 // What multiplies `light`'s radiance at a camera-relative position: 1 where lit, towards the shadow color where
 // shadowed. Each light's shadow dims only that light, as in Blinn-Phong and PBR.

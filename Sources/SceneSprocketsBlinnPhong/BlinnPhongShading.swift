@@ -31,6 +31,9 @@ public struct BlinnPhongShading {
         frame.ambientLightColor = ambientLightColor
         frame.lightCount = Int32(lights.count)
         frame.materialChannel = context.materialChannel?.rawValue ?? 0
+        frame.exposure = context.environment.exposure
+        frame.toneMapping = context.environment.toneMapping.shaderValue
+        frame.linearOutput = context.outputIsLinear ? 1 : 0
         // Per view (#379). Stereo eyes sit around the render origin (the center camera), so their positions are not zero.
         let viewProjections = context.stereoViews?.relativeViewProjections(origin: cameraPosition) ?? [context.projectionMatrix * context.viewMatrix.rotationOnlyView]
         let eyePositions = context.stereoViews?.cameraPositions.map { $0 - cameraPosition } ?? [.zero]

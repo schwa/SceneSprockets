@@ -1,5 +1,6 @@
 import Foundation
 import GeometryLite3D
+import MetalSprocketsLighting
 import SceneSprocketsAudio
 import simd
 
@@ -469,7 +470,7 @@ extension Camera: Codable {
 
 extension SceneGraph.Environment: Codable {
     enum ArchiveKeys: String, CodingKey {
-        case background, map, mapType, intensity, rotation, ambientOcclusion
+        case background, map, mapType, intensity, rotation, ambientOcclusion, exposure, toneMapping
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -478,6 +479,13 @@ extension SceneGraph.Environment: Codable {
         try container.encode(intensity, forKey: .intensity)
         try container.encode(rotation, forKey: .rotation)
         try container.encodeIfPresent(ambientOcclusion, forKey: .ambientOcclusion)
+        if exposure != 1 {
+            try container.encode(exposure, forKey: .exposure)
+        }
+        // By case name, so the archive does not depend on the enum's raw values.
+        if toneMapping != .pbrNeutral {
+            try container.encode(String(describing: toneMapping), forKey: .toneMapping)
+        }
         guard let map else {
             return
         }
@@ -500,6 +508,14 @@ extension SceneGraph.Environment: Codable {
                 context.warn("No registered environment map type \"\(name)\"; skipped")
             }
         }
-        self.init(background: try container.decode(Background.self, forKey: .background), map: map, intensity: try container.decode(Float.self, forKey: .intensity), rotation: try container.decode(Float.self, forKey: .rotation), ambientOcclusion: try container.decodeIfPresent(SceneGraph.AmbientOcclusion.self, forKey: .ambientOcclusion))
+        var toneMapping = LightingToneMapping.pbrNeutral
+        if let name = try container.decodeIfPresent(String.self, forKey: .toneMapping) {
+            if let named = LightingToneMapping.allCases.first(where: { String(describing: $0) == name }) {
+                toneMapping = named
+            } else {
+                try decoder.sceneArchive.warn("Unknown tone mapping \"\(name)\"; using PBR Neutral")
+            }
+        }
+        self.init(background: try container.decode(Background.self, forKey: .background), map: map, intensity: try container.decode(Float.self, forKey: .intensity), rotation: try container.decode(Float.self, forKey: .rotation), ambientOcclusion: try container.decodeIfPresent(SceneGraph.AmbientOcclusion.self, forKey: .ambientOcclusion), exposure: try container.decodeIfPresent(Float.self, forKey: .exposure) ?? 1, toneMapping: toneMapping)
     }
 }

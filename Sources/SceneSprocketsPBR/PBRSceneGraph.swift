@@ -275,7 +275,7 @@ public struct PBRSceneGraphModelBuilder {
 /// for example in `@State`. Instances are equal only to themselves, because `SceneView` only needs to know whether the
 /// renderer is the same.
 ///
-/// You can change ``environment``, ``environmentIntensity`` and ``exposure`` on one thread while a view draws with
+/// You can change ``environment`` and ``environmentIntensity`` on one thread while a view draws with
 /// the renderer on its render thread.
 public final class PBRMaterialRenderer: MaterialRenderer, Equatable {
     public static func == (lhs: PBRMaterialRenderer, rhs: PBRMaterialRenderer) -> Bool {
@@ -285,7 +285,6 @@ public final class PBRMaterialRenderer: MaterialRenderer, Equatable {
     struct Settings {
         var environment: LightingEnvironment
         var environmentIntensity: Float
-        var exposure: Float
     }
 
     // Guards `storedSettings`: the app changes settings on one thread while a view's render thread reads them (#479).
@@ -309,12 +308,6 @@ public final class PBRMaterialRenderer: MaterialRenderer, Equatable {
         set { lock.withLock { storedSettings.environmentIntensity = newValue } }
     }
 
-    /// The exposure, as a multiplier of the light before tone mapping.
-    public var exposure: Float {
-        get { lock.withLock { storedSettings.exposure } }
-        set { lock.withLock { storedSettings.exposure = newValue } }
-    }
-
     // The caches below belong to the thread that draws with this renderer.
     // One model per entry set (SceneGraphElement may split entries into batches), for the current structure.
     private var cachedModels: [EntrySetKey: BuiltPBRModel] = [:]
@@ -332,9 +325,10 @@ public final class PBRMaterialRenderer: MaterialRenderer, Equatable {
     /// - Parameters:
     ///   - environment: The lighting to use when the scene graph's environment has no map.
     ///   - environmentIntensity: The strength of `environment`.
-    ///   - exposure: The exposure, as a multiplier of the light before tone mapping.
-    public init(environment: LightingEnvironment = .studio, environmentIntensity: Float = 1, exposure: Float = 1) {
-        storedSettings = Settings(environment: environment, environmentIntensity: environmentIntensity, exposure: exposure)
+    ///
+    /// Exposure and tone mapping come from the scene graph's environment, the same for every renderer.
+    public init(environment: LightingEnvironment = .studio, environmentIntensity: Float = 1) {
+        storedSettings = Settings(environment: environment, environmentIntensity: environmentIntensity)
     }
 
     public var materialType: any SceneMaterial.Type {
@@ -598,7 +592,8 @@ extension PBRMaterialRenderer: BackgroundRenderer {
             },
             environment: context.environment.map as? LightingEnvironment ?? settings.environment,
             environmentIntensity: settings.environmentIntensity * context.environment.intensity,
-            exposure: settings.exposure
+            exposure: context.environment.exposure,
+            toneMapping: context.environment.toneMapping
         )
         lighting.environmentRotation = context.environment.rotation
         // Darkens only image-based light (#408). The visibility already includes the setting's intensity.

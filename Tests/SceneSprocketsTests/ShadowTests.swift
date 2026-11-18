@@ -51,7 +51,7 @@ private func makeScene(boxCastsShadow: Bool = true, skinned: Bool = false, light
     } else {
         root.addChild(SceneGraph.Node(label: "Box", transform: .init(translation: [0, 1.5, 0]), content: .mesh(box, material: material, castsShadow: boxCastsShadow)))
     }
-    let sceneGraph = SceneGraph(root: root)
+    let sceneGraph = SceneGraph(linearRoot: root)
 
     let context = try #require(makeRenderContext(sceneGraph: sceneGraph, camera: camera, cameraMatrix: nil, aspectRatio: 1))
     let clip = context.projectionMatrix * context.viewMatrix * SIMD4<Float>(-1, 0, 0, 1)
@@ -345,7 +345,7 @@ func wideSoftShadowsDoNotSelfShadowFloor(light: Light.Kind, softness: Int) throw
     root.addChild(SceneGraph.Node(transform: Transform3D(storing: pose(eye: [3, 7, 3], target: .zero)), content: .light(Light(type: light, intensity: light == .directional ? 1 : 80, range: 30, outerConeAngle: .pi / 4))))
     root.addChild(SceneGraph.Node(shape: .floor(width: 8, length: 8), material: material, transform: .init(translation: [0, -1, 0])))
     root.addChild(SceneGraph.Node(transform: Transform3D(storing: pose(eye: [0, 3, 8], target: [0, 0.5, 0])), content: .camera(Camera.default)))
-    let sceneGraph = SceneGraph(root: root)
+    let sceneGraph = SceneGraph(linearRoot: root)
 
     let side = 256
     func render(_ shadows: Shadows?) throws -> [SIMD4<UInt8>] {

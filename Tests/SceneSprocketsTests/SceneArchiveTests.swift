@@ -650,6 +650,20 @@ struct SceneArchiveTests {
         #expect(loaded.ior == 1.7 && loaded.alphaMode == .mask && loaded.normal.transform == uniforms.normal.transform)
     }
 
+    // #501
+    @Test
+    func exposureAndToneMappingRoundTrip() throws {
+        let url = temporaryURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let scene = SceneGraph(root: SceneGraph.Node())
+        scene.environment.exposure = 1.5
+        scene.environment.toneMapping = .agx
+        try archive.write(scene, to: url)
+        let (loaded, _) = try archive.read(from: url)
+        #expect(loaded.environment.exposure == 1.5)
+        #expect(loaded.environment.toneMapping == .agx)
+    }
+
     // Archives from before #136 kept ambient occlusion in post-processing.
     @Test
     func postProcessingAmbientOcclusionStillReads() throws {

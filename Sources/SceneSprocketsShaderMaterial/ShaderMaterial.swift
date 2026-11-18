@@ -192,7 +192,13 @@ struct ShaderMaterialDrawsElement: Element {
     }
 
     private func lighting(lightCount: Int32, receivesShadow: Bool) -> ShaderMaterialLighting {
-        ShaderMaterialLighting(lightCount: lightCount, receivesShadow: context.shadow != nil && receivesShadow ? 1 : 0)
+        ShaderMaterialLighting(
+            lightCount: lightCount,
+            receivesShadow: context.shadow != nil && receivesShadow ? 1 : 0,
+            exposure: context.environment.exposure,
+            toneMapping: context.environment.toneMapping.shaderValue,
+            linearOutput: context.outputIsLinear ? 1 : 0
+        )
     }
 
     // swiftlint:disable:next function_parameter_count

@@ -6,6 +6,7 @@
 
 #include <metal_stdlib>
 #include "MetalSprocketsLighting.h"
+#include "MetalSprocketsLightingToneMapping.h"
 #include "BlinnPhong.h"
 
 namespace BlinnPhong {
@@ -56,7 +57,8 @@ namespace BlinnPhong {
             diffuse += surface.diffuse * lambertian * radiance;
             specular += surface.specular * highlight * radiance;
         }
-        return metal::float4(frame.ambientLightColor * surface.ambient * occlusion + diffuse + specular + surface.emission, surface.alpha);
+        const metal::float3 color = frame.ambientLightColor * surface.ambient * occlusion + diffuse + specular + surface.emission;
+        return metal::float4(frame.linearOutput ? color : Lighting::toneMap(color * frame.exposure, frame.toneMapping), surface.alpha);
     }
 
     // Material channel views (#195), matching MaterialChannel; returns false for lit output. Blinn-Phong has no

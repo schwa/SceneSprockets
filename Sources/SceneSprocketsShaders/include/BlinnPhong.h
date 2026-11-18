@@ -34,6 +34,11 @@ struct BlinnPhongFrame {
     int lightCount;
     // MaterialChannel's raw value, or 0 for lit output.
     int materialChannel;
+    // Multiplies the lit color before tone mapping.
+    float exposure;
+    LightingShaderToneMapping toneMapping;
+    // 1 skips exposure and tone mapping, for intermediate targets that need linear light.
+    int linearOutput;
 };
 typedef struct BlinnPhongFrame BlinnPhongFrame;
 

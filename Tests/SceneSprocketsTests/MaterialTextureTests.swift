@@ -32,7 +32,7 @@ private func centerPixel(_ material: any SceneMaterial, renderer: any MaterialRe
     let root = SceneGraph.Node()
     root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
     root.addChild(SceneGraph.Node(content: .mesh(SceneGraph.Shape.plane(width: 2, height: 2).metalMesh(), material: material)))
-    let element = SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [renderer], materialChannel: channel)
+    let element = SceneGraphElement(sceneGraph: SceneGraph(linearRoot: root), aspectRatio: 1, renderers: [renderer], materialChannel: channel)
     let texture = try OffscreenRenderer(size: CGSize(width: 16, height: 16)).render(element).texture
     var value = SIMD4<UInt8>.zero
     texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(8, 8, 1, 1), mipmapLevel: 0)

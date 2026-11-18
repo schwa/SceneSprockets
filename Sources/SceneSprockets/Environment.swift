@@ -1,3 +1,4 @@
+import MetalSprocketsLighting
 import simd
 
 /// An environment image for image-based lighting and backgrounds. Renderer modules conform their own types
@@ -52,6 +53,10 @@ extension SceneGraph {
         public var rotation: Float
         /// Screen-space ambient occlusion; nil turns it off.
         public var ambientOcclusion: AmbientOcclusion?
+        /// Multiplies the light before tone mapping, for every renderer.
+        public var exposure: Float
+        /// How every renderer turns linear light into display values.
+        public var toneMapping: LightingToneMapping
 
         /// Creates an environment.
         ///
@@ -61,12 +66,16 @@ extension SceneGraph {
         ///   - intensity: The strength of the image-based lighting.
         ///   - rotation: The rotation of the map about +Y, in radians.
         ///   - ambientOcclusion: Screen-space ambient occlusion, or `nil` for none.
-        public init(background: Background = .none, map: (any EnvironmentMap)? = nil, intensity: Float = 1, rotation: Float = 0, ambientOcclusion: AmbientOcclusion? = nil) {
+        ///   - exposure: Multiplies the light before tone mapping.
+        ///   - toneMapping: How linear light becomes display values.
+        public init(background: Background = .none, map: (any EnvironmentMap)? = nil, intensity: Float = 1, rotation: Float = 0, ambientOcclusion: AmbientOcclusion? = nil, exposure: Float = 1, toneMapping: LightingToneMapping = .pbrNeutral) {
             self.background = background
             self.map = map
             self.intensity = intensity
             self.rotation = rotation
             self.ambientOcclusion = ambientOcclusion
+            self.exposure = exposure
+            self.toneMapping = toneMapping
         }
     }
 }

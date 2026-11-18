@@ -41,6 +41,9 @@ public struct RenderContext {
     /// ``projectionMatrix`` then describe one camera between the views, for culling, sorting and renderers without
     /// stereo support.
     public internal(set) var stereoViews: StereoViews?
+    /// Set for content drawn into an intermediate target that needs linear light, such as the scene behind PBR glass:
+    /// renderers skip ``SceneGraph/Environment/exposure`` and tone mapping then.
+    public internal(set) var outputIsLinear = false
 
     /// The number of views that each draw goes to: 1, or the stereo view count.
     public var viewCount: Int { stereoViews?.count ?? 1 }
@@ -236,7 +239,9 @@ public struct SceneGraphElement: Element {
                     let frameContext = context
                     let materialType = renderer.materialType
                     if let prePass = try prePassRenderer.makePrePassElement(entries: rendererEntries, context: frameContext, viewSize: (color.width, color.height), otherOpaqueContent: {
-                        try makeOpaqueContent(entries: entries, context: frameContext, excluding: materialType)
+                        var linearContext = frameContext
+                        linearContext.outputIsLinear = true
+                        return try makeOpaqueContent(entries: entries, context: linearContext, excluding: materialType)
                     }) {
                         prePasses.append(prePass)
                     }

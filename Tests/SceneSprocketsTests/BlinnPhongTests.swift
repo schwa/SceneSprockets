@@ -16,7 +16,7 @@ private func centerPixel(_ mesh: MetalMesh, _ material: BlinnPhongSceneMaterial,
     root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
     root.addChild(SceneGraph.Node(content: .mesh(mesh, material: material)))
     let renderer = try OffscreenRenderer(size: CGSize(width: 16, height: 16))
-    let texture = try renderer.render(SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: ambientLight)])).texture
+    let texture = try renderer.render(SceneGraphElement(sceneGraph: SceneGraph(linearRoot: root), aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: ambientLight)])).texture
     var value = SIMD4<UInt8>.zero
     texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(8, 8, 1, 1), mipmapLevel: 0)
     return value
@@ -49,7 +49,7 @@ private func quads(near: BlinnPhongSceneMaterial, far: BlinnPhongSceneMaterial, 
         root.addChild(node)
     }
     let renderer = try OffscreenRenderer(size: CGSize(width: 16, height: 16))
-    let texture = try renderer.render(SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [1, 1, 1])])).texture
+    let texture = try renderer.render(SceneGraphElement(sceneGraph: SceneGraph(linearRoot: root), aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [1, 1, 1])])).texture
     var value = SIMD4<UInt8>.zero
     texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(8, 8, 1, 1), mipmapLevel: 0)
     return value
@@ -114,7 +114,7 @@ func zeroNormalsFallBackToFaceNormals() throws {
     root.addChild(SceneGraph.Node(content: .light(Light(type: .directional, color: [1, 1, 1], intensity: 1))))
     root.addChild(SceneGraph.Node(content: .mesh(mesh, material: BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(1), specular: .color(0), shininess: 1))))
     let renderer = try OffscreenRenderer(size: CGSize(width: 16, height: 16))
-    let texture = try renderer.render(SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: .zero)])).texture
+    let texture = try renderer.render(SceneGraphElement(sceneGraph: SceneGraph(linearRoot: root), aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: .zero)])).texture
     var value = SIMD4<UInt8>.zero
     texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(8, 8, 1, 1), mipmapLevel: 0)
     #expect(value.x > 200 && value.y > 200 && value.z > 200)
@@ -122,14 +122,17 @@ func zeroNormalsFallBackToFaceNormals() throws {
 
 // #83: center pixel (BGRA) of a 2x2 quad at the origin, lit by a directional light shining down -Z, seen from +Z.
 @MainActor
-private func litQuadPixel(_ material: BlinnPhongSceneMaterial, quadRotation: simd_quatf = .identity) throws -> SIMD4<UInt8> {
+private func litQuadPixel(_ material: BlinnPhongSceneMaterial, quadRotation: simd_quatf = .identity, exposure: Float = 1, toneMapping: LightingToneMapping = .linear) throws -> SIMD4<UInt8> {
     let quad = SceneGraph.Shape.plane(width: 2, height: 2).metalMesh()
     let root = SceneGraph.Node()
     root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 3]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
     root.addChild(SceneGraph.Node(content: .light(Light(type: .directional, color: [1, 1, 1], intensity: 1))))
     root.addChild(SceneGraph.Node(transform: .init(rotation: quadRotation), content: .mesh(quad, material: material)))
+    let sceneGraph = SceneGraph(root: root)
+    sceneGraph.environment.exposure = exposure
+    sceneGraph.environment.toneMapping = toneMapping
     let renderer = try OffscreenRenderer(size: CGSize(width: 16, height: 16))
-    let texture = try renderer.render(SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: .zero)])).texture
+    let texture = try renderer.render(SceneGraphElement(sceneGraph: sceneGraph, aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: .zero)])).texture
     var value = SIMD4<UInt8>.zero
     texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(8, 8, 1, 1), mipmapLevel: 0)
     return value
@@ -149,6 +152,21 @@ func emissionAddsUnlitColor(usesTexture: Bool) throws {
     let emission: BlinnPhongSceneMaterial.Source = usesTexture ? .texture(try solidTexture([0, 255, 0, 255])) : .color([0, 1, 0])
     let value = try litQuadPixel(BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: emission))
     #expect(value.y > 250 && value.x < 5 && value.z < 5)
+}
+
+// #501: Blinn-Phong uses the scene's exposure and tone mapping, like PBR.
+@Test(.enabled(if: deviceSupportsMetal4))
+@MainActor
+func blinnPhongUsesTheScenesExposureAndToneMapping() throws {
+    let bright = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([3, 3, 3]))
+    // Linear clamps 3 to white; PBR Neutral compresses it below white; Reinhard maps 3 to 0.75.
+    #expect(try litQuadPixel(bright, toneMapping: .linear).x == 255)
+    let neutral = try litQuadPixel(bright, toneMapping: .pbrNeutral).x
+    #expect(neutral > 200 && neutral < 255)
+    let reinhard = try litQuadPixel(bright, toneMapping: .reinhard).x
+    #expect(reinhard < neutral)
+    // Exposure scales the light before tone mapping: 3 x 0.1 is no longer clamped.
+    #expect(try litQuadPixel(bright, exposure: 0.1).x < 200)
 }
 
 @Test(.enabled(if: deviceSupportsMetal4))
@@ -250,7 +268,7 @@ func backFacesOfTwoSidedMaterialsAreLit(flipped: Bool, mirrored: Bool) throws {
     let rotation = flipped ? simd_quatf(angle: .pi, axis: [0, 1, 0]) : simd_quatf(angle: 0, axis: [0, 1, 0])
     root.addChild(SceneGraph.Node(transform: .init(rotation: rotation, scale: mirrored ? [-1, 1, 1] : [1, 1, 1]), content: .mesh(quad, material: material)))
     let renderer = try OffscreenRenderer(size: CGSize(width: 16, height: 16))
-    let texture = try renderer.render(SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0, 0, 0])])).texture
+    let texture = try renderer.render(SceneGraphElement(sceneGraph: SceneGraph(linearRoot: root), aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0, 0, 0])])).texture
     var value = SIMD4<UInt8>.zero
     texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(8, 8, 1, 1), mipmapLevel: 0)
     #expect(value.x > 20 && value.y > 20 && value.z > 20)

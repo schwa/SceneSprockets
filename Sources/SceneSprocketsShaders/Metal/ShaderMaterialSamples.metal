@@ -62,7 +62,7 @@ namespace ShaderMaterialSamples {
                 diffuse += color.rgb * lambertian * incoming.radiance * shaderMaterialShadow(lighting, lights[index], in.cameraRelativePosition, shadow, shadowMap, shadowSampler);
             }
         }
-        return float4(diffuse, color.a * transforms.opacity);
+        return float4(shaderMaterialDisplayColor(lighting, diffuse), color.a * transforms.opacity);
     }
 
 }
