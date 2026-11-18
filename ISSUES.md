@@ -12357,6 +12357,29 @@ Related: #516 No GPU-driven rendering (overlapping umbrella), #518 No mesh shadi
 
 ---
 
+## 545: PBR draws opaque geometry through a merged path that may not be needed
+
++++
+status: new
+priority: high
+kind: task
+labels: area:renderer,area:performance,effort:l,investigate
+created: 2026-11-18T18:13:33Z
++++
+
+Tracking issue for MetalSprocketsPBR#37 (Investigate removing merged geometry), because SceneSprockets is the top-level project that ships it.
+
+MetalSprocketsPBR merges opaque, unmorphed primitives into shared buffers (PBRMergedGeometry) to work around MetalSprockets' per-element cost. That cost now runs on a render thread (#393), and MetalSprockets work such as subtree reuse (MetalSprockets#519) targets it directly. Merging may have been the wrong choice.
+
+How it affects SceneSprockets:
+- PBRMaterialRenderer needs material overrides and pass-change rebuilds for live material changes (#479).
+- GPU-driven work (#517, #520, #522, umbrella #544) would be built on either the merged layout or per-mesh draws; merging is not required for it.
+- Performance work should go into MetalSprockets, not into workarounds in SceneSprockets or its renderers.
+
+No measurements yet. The decision depends on the benchmarks described in MetalSprocketsPBR#37: render-thread CPU time against the frame budget, GPU time, memory and energy, merged versus per-primitive, at several scene sizes.
+
+---
+
 ## Milestone: M001-Correctness
 
 +++
