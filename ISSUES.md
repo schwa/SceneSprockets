@@ -11489,13 +11489,14 @@ Normal mapping, tangent generation, and mirrored UVs need correct handling. (Mov
 ## 501: HDR rendering, exposure, tone mapping, and color-space correctness
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:renderer, effort:l
 milestone: M003-Rendering
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-18T23:41:34Z
+closed: 2026-11-18T23:41:34Z
 +++
 
 HDR rendering, exposure, tone mapping, and color-space correctness. (Moved from SceneSprocketsAddOns #64.)
@@ -12450,6 +12451,7 @@ Part of #542.
 
 - `2026-11-18T19:26:02Z`: Adoption issues: SceneSprockets #548 (Blinn-Phong), #549 (shader materials), #550 (Shadows), #551 (SceneSprocketsPBR vs new PBR); SceneSprocketsAddOns#79 (voxel/SDF/toon); MetalSprocketsGLTF#197 (glTF lights).
 - `2026-11-18T22:41:20Z`: Progress: MetalSprocketsLighting 0.0.4 now holds lights, shadow sampling, environment/IBL, tone mapping (LightingToneMapping, Lighting::toneMap), ambient occlusion input (LightingAmbientOcclusion, Lighting::screenOcclusion) and LightingFrameResources. PBR 0.4.0, GLTF 0.3.0, SceneSprockets and AddOns use them; #548-#551 done. Remaining: Blinn-Phong reading LightingFrameResources instead of per-slot shadow map and AO bindings (#546), and exposure/tone mapping for non-PBR renderers (#501, a visual change). Later items in the design (#514, #519, #497, #509, reflection probes) build on this.
+- `2026-11-18T23:41:34Z`: Exposure and tone mapping now apply to every renderer from SceneGraph.Environment (#501, closed). Blinn-Phong uses LightingFrameResources and material argument buffers (#546, closed). The shared lighting package's planned contents are in place; remaining sub-issues of #542 (#514, #519, #497, #509, #506, #507, #533, #535, #536, #86, #512) build on it.
 
 ---
 
