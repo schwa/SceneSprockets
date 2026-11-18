@@ -12271,9 +12271,9 @@ priority: medium
 kind: feature
 labels: umbrella, area:renderer, effort:xl, lighting
 milestone: M003-Rendering
-depends: 86, 497, 506, 507, 509, 512, 514, 519, 533, 535, 536
+depends: 86, 497, 506, 507, 509, 512, 514, 519, 533, 535, 536, 547
 created: 2026-11-17T19:13:03Z
-updated: 2026-11-17T19:13:15Z
+updated: 2026-11-18T18:56:36Z
 +++
 
 Each material renderer has its own lighting: Blinn-Phong loops over the frame's lights in this repo, PBR lighting is in MetalSprocketsPBR, and toon, voxel and signed-distance lighting are in SceneSprocketsAddOns. There is no common light data layout, light list, or lighting entry point that all of them read.
@@ -12411,7 +12411,7 @@ Depends on: MetalSprockets#579 (no persistent argument buffers).
 status: new
 priority: medium
 kind: feature
-labels: area:renderer,effort:xl,lighting,subtask
+labels: area:renderer, effort:xl, lighting, subtask
 created: 2026-11-18T18:56:33Z
 +++
 
