@@ -1,5 +1,5 @@
 {
-  "originHash" : "0d3a26f213c235a7ee676901d05b4fa402313a1feff721a279124029160067db",
+  "originHash" : "6cb5fd3c2c79caeec040a086d618f3c1ab13bc4bab4d8b50240b89c9e0c864db",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -60,8 +60,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprockets",
       "state" : {
-        "revision" : "b0ad954b00a75153adcb4518159476b3174cdc64",
-        "version" : "0.3.3"
+        "revision" : "46749dd433b2bfc77d818b9c961bba060cf84767",
+        "version" : "0.3.4"
       }
     },
     {
@@ -78,8 +78,17 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsGLTF",
       "state" : {
-        "revision" : "45d538e914112d79babc2fc2dec640bd7d56a152",
-        "version" : "0.1.1"
+        "revision" : "45ec40a12c3202b6a7f24236fdca0dc61681dd06",
+        "version" : "0.2.0"
+      }
+    },
+    {
+      "identity" : "metalsprocketslighting",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/MetalSprocketsLighting",
+      "state" : {
+        "revision" : "d35c123f4316576d917657ca71abd59aac61860b",
+        "version" : "0.0.3"
       }
     },
     {
@@ -96,8 +105,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsPBR",
       "state" : {
-        "revision" : "fe94269280db3793a2b165d51dd31e8fd420d94f",
-        "version" : "0.2.6"
+        "revision" : "06aac65659179389379cebd032f38fd41e155951",
+        "version" : "0.3.0"
       }
     },
     {

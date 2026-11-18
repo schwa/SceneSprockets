@@ -304,7 +304,7 @@ public final class EditorModel {
             }
         }
         var updated = sceneGraph.environment
-        updated.map = try PBREnvironment(source: .equirectangular(url))
+        updated.map = try LightingEnvironment(source: .equirectangular(url))
         if case .none = updated.background {
             updated.background = .environment()
         }

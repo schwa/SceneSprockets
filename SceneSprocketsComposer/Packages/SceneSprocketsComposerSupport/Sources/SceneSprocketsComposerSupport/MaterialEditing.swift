@@ -131,11 +131,11 @@ extension EditorModel {
     }
 
     // A copy with changed uniforms that keeps the textures and render state, so the original stays untouched.
-    static func editedPBR(_ material: PBRSceneMaterial, doubleSided: Bool? = nil, _ change: (inout PBRMaterialUniforms) -> Void = { _ in }) throws -> PBRSceneMaterial {
+    static func editedPBR(_ material: PBRSceneMaterial, doubleSided: Bool? = nil, _ change: (inout PBRMaterialUniforms) -> Void = { _ in }) -> PBRSceneMaterial {
         let original = material.pbrMaterial
         var uniforms = original.uniforms
         change(&uniforms)
-        let copy = try PBRMaterial(name: original.name, uniforms: uniforms, doubleSided: doubleSided ?? original.doubleSided, renderState: original.renderState, textureTransforms: original.textureTransforms, textureBindings: original.textureBindings, device: _MTLCreateSystemDefaultDevice())
+        let copy = PBRMaterial(name: original.name, uniforms: uniforms, doubleSided: doubleSided ?? original.doubleSided, renderState: original.renderState, textureTransforms: original.textureTransforms, textureBindings: original.textureBindings, device: _MTLCreateSystemDefaultDevice())
         return PBRSceneMaterial(copy)
     }
 }

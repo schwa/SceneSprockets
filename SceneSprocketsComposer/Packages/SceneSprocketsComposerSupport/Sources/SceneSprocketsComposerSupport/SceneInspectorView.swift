@@ -80,9 +80,9 @@ private struct EnvironmentSectionView: View {
                     isImporting = true
                 }
                 Button("Use Studio") {
-                    model[environment: "Environment Image"].map = PBREnvironment.studio
+                    model[environment: "Environment Image"].map = LightingEnvironment.studio
                 }
-                .disabled(model.environment.map === PBREnvironment.studio)
+                .disabled(model.environment.map === LightingEnvironment.studio)
             }
             LabeledContent("Intensity") {
                 Slider(value: $model[environment: "Environment Intensity"].intensity, in: 0 ... 4)
@@ -98,7 +98,7 @@ private struct EnvironmentSectionView: View {
         case nil:
             "Default"
 
-        case let map as PBREnvironment where map === PBREnvironment.studio:
+        case let map as LightingEnvironment where map === LightingEnvironment.studio:
             "Studio"
 
         default:

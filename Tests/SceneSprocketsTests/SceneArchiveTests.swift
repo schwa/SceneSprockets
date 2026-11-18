@@ -17,7 +17,7 @@ import Testing
 @MainActor
 struct SceneArchiveTests {
     let device = MTLCreateSystemDefaultDevice()!
-    let archive = Archive(materialTypes: [BlinnPhongSceneMaterial.self, PBRSceneMaterial.self], environmentMapTypes: [PBREnvironment.self])
+    let archive = Archive(materialTypes: [BlinnPhongSceneMaterial.self, PBRSceneMaterial.self], environmentMapTypes: [LightingEnvironment.self])
 
     func temporaryURL() -> URL {
         FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension(Archive.pathExtension)
@@ -54,7 +54,7 @@ struct SceneArchiveTests {
         root.addChild(SceneGraph.Node(label: "Camera", content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40), depthMode: .reversed(zClip: 0.1 ... 50)), categoryBitMask: 7))))
         root.addChild(SceneGraph.Node(label: "Ortho", content: .camera(Camera(projection: OrthographicProjection(halfHeight: 3)))))
         let scene = SceneGraph(root: root)
-        scene.environment = .init(background: .color([0.1, 0.2, 0.3, 1]), map: PBREnvironment.studio, intensity: 0.8, rotation: 1.2, ambientOcclusion: .init(radius: 0.4, intensity: 0.7, sampleCount: 8))
+        scene.environment = .init(background: .color([0.1, 0.2, 0.3, 1]), map: LightingEnvironment.studio, intensity: 0.8, rotation: 1.2, ambientOcclusion: .init(radius: 0.4, intensity: 0.7, sampleCount: 8))
         scene.fog = .init(color: [0.5, 0.5, 0.6, 0.9], startDistance: 3, endDistance: 20, densityExponent: 2)
         scene.postProcessing = .init(exposure: 0.5, contrast: 1.1, saturation: 0.9, vignetteIntensity: 0.3)
         return scene
@@ -149,7 +149,7 @@ struct SceneArchiveTests {
         }
         #expect(mesh.vertexCount > 0)
         #expect(pbr.pbrMaterial.uniforms.baseColorFactor == [0.9, 0.7, 0.2, 1])
-        #expect(loaded.environment.map === PBREnvironment.studio)
+        #expect(loaded.environment.map === LightingEnvironment.studio)
         #expect(loaded.fog?.densityExponent == 2)
         #expect(loaded.environment.ambientOcclusion?.sampleCount == 8)
     }
@@ -378,7 +378,7 @@ struct SceneArchiveTests {
         bindings[Int(kPBRTextureBaseColor.rawValue)] = try .init(texture: makeTexture(), samplerDescriptor: nearestClampSampler(), device: device)
         var uniforms = PBRMaterialUniforms.defaults(baseColor: [1, 1, 1, 1], metallic: 0, roughness: 1)
         uniforms.baseColor.enabled = 1
-        let pbr = PBRSceneMaterial(try PBRMaterial(uniforms: uniforms, textureBindings: bindings, device: device))
+        let pbr = PBRSceneMaterial(PBRMaterial(uniforms: uniforms, textureBindings: bindings, device: device))
         root.addChild(SceneGraph.Node(label: "PBR", shape: .box(), material: pbr))
         let blinnPhong = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .texture(makeTexture(), sampler: nearestClampSampler()), specular: .color(0), shininess: 1)
         root.addChild(SceneGraph.Node(label: "BlinnPhong", shape: .box(), material: blinnPhong))

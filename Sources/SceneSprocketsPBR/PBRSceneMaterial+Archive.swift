@@ -66,7 +66,7 @@ extension PBRSceneMaterial: ArchivableMaterial {
             colorWriteMask: PBRRenderState.ColorWriteMask(rawValue: try container.decode(UInt8.self, forKey: .colorWriteMask)),
             fillMode: try container.decode(String.self, forKey: .fillMode) == "lines" ? .lines : .fill
         )
-        let material = try PBRMaterial(
+        let material = PBRMaterial(
             name: try container.decodeIfPresent(String.self, forKey: .name),
             uniforms: uniforms,
             doubleSided: try container.decode(Bool.self, forKey: .doubleSided),
@@ -166,7 +166,7 @@ extension PBRSceneMaterial: ArchivableMaterial {
 }
 
 // The shared studio is stored by name; other environments as their equirectangular source (level 0, half floats).
-extension PBREnvironment: ArchivableEnvironmentMap {
+extension LightingEnvironment: ArchivableEnvironmentMap {
     public static let archiveTypeName = "pbrEnvironment"
 
     enum ArchiveKeys: String, CodingKey {
@@ -194,6 +194,6 @@ extension PBREnvironment: ArchivableEnvironmentMap {
         }
         let data = try context.data(for: reference)
         let rgba = data.withUnsafeBytes { Array($0.bindMemory(to: Float16.self)) }
-        return try PBREnvironment(source: .equirectangularPixels(width: reference.width, height: reference.height, rgba: rgba), device: _MTLCreateSystemDefaultDevice())
+        return try LightingEnvironment(source: .equirectangularPixels(width: reference.width, height: reference.height, rgba: rgba), device: _MTLCreateSystemDefaultDevice())
     }
 }

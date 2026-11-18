@@ -1,7 +1,7 @@
 import simd
 
 /// An environment image for image-based lighting and backgrounds. Renderer modules conform their own types
-/// (for example PBREnvironment); renderers ignore maps they do not understand.
+/// (for example LightingEnvironment); renderers ignore maps they do not understand.
 public protocol EnvironmentMap: AnyObject {}
 
 extension SceneGraph {

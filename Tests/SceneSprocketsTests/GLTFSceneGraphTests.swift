@@ -422,7 +422,7 @@ func gltfImageBasedLightAndVariantNamesAreMapped() throws {
     try Data(json.utf8).write(to: url)
     let device = try #require(MTLCreateSystemDefaultDevice())
     let result = try GLTFAsset(url: url, device: device).importScene()
-    #expect(result.sceneGraph.environment.map is PBREnvironment)
+    #expect(result.sceneGraph.environment.map is LightingEnvironment)
     #expect(result.variantNames == ["Red", "Blue"])
 }
 

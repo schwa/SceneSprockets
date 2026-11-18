@@ -19,7 +19,7 @@ private func sceneWithCamera() -> SceneGraph {
 @Test
 func pbrLightingUsesSceneEnvironment() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
-    let map = try PBREnvironment(source: .uniform([0.5, 0.5, 0.5]), device: device, specularSize: 16, irradianceSize: 8)
+    let map = try LightingEnvironment(source: .uniform([0.5, 0.5, 0.5]), device: device, specularSize: 16, irradianceSize: 8)
     let sceneGraph = sceneWithCamera()
     sceneGraph.environment = SceneGraph.Environment(background: .environment(blur: 0.5), map: map, intensity: 2, rotation: 1)
     let renderer = PBRMaterialRenderer(environmentIntensity: 0.5)

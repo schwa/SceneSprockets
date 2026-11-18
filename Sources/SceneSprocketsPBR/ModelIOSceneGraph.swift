@@ -380,7 +380,7 @@ private struct ModelIOConverter {
             if baseColor.w < 1 {
                 uniforms.alphaMode = .blend
             }
-            result = PBRSceneMaterial(try PBRMaterial(name: source?.name, uniforms: uniforms, textureBindings: bindings, device: device))
+            result = PBRSceneMaterial(PBRMaterial(name: source?.name, uniforms: uniforms, textureBindings: bindings, device: device))
         case .blinnPhong:
             let diffuse: BlinnPhongSceneMaterial.Source = baseColorTexture.map { .texture($0, sampler: samplerDescriptor) } ?? .color(SIMD3(baseColor.x, baseColor.y, baseColor.z))
             let specular = color(source?.property(with: .specular)).map { SIMD3($0.x, $0.y, $0.z) } ?? [0.2, 0.2, 0.2]

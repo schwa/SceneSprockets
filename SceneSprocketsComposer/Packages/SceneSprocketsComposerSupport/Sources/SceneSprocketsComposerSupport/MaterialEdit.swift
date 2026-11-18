@@ -100,7 +100,7 @@ enum MaterialEdit {
         case let .blinnPhong(material):
             return material
         case let .pbr(base, uniforms, doubleSided):
-            return try EditorModel.editedPBR(base, doubleSided: doubleSided) { $0 = uniforms }
+            return EditorModel.editedPBR(base, doubleSided: doubleSided) { $0 = uniforms }
         case .other:
             return nil
         }

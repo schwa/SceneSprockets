@@ -186,7 +186,7 @@ public enum DemoSnapshot {
 
     // Generated meshes (dice, gears) are saved as glTF (#158).
     static var archive: Archive {
-        Archive(materialTypes: [BlinnPhongSceneMaterial.self, PBRSceneMaterial.self, ShaderMaterial.self], environmentMapTypes: [PBREnvironment.self], meshCodec: GLTFMeshCodec())
+        Archive(materialTypes: [BlinnPhongSceneMaterial.self, PBRSceneMaterial.self, ShaderMaterial.self], environmentMapTypes: [LightingEnvironment.self], meshCodec: GLTFMeshCodec())
     }
 
     public static func writePNG(_ image: CGImage, to url: URL) throws {

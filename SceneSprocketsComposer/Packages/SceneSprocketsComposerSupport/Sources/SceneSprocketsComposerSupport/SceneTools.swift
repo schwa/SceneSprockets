@@ -207,7 +207,7 @@ final class SceneTools {
             case "default":
                 environment.map = nil
             case "studio":
-                environment.map = PBREnvironment.studio
+                environment.map = LightingEnvironment.studio
             default:
                 throw ToolError("Unknown map \(map). Use default or studio; the user can choose an image in the scene inspector.")
             }
@@ -238,7 +238,7 @@ final class SceneTools {
         }
         if environment.map == nil {
             info.map = "default"
-        } else if let map = environment.map as? PBREnvironment, map === PBREnvironment.studio {
+        } else if let map = environment.map as? LightingEnvironment, map === LightingEnvironment.studio {
             info.map = "studio"
         }
         return info

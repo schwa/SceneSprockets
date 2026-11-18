@@ -661,7 +661,7 @@ struct SceneEditBoundaryTests {
         return
     }
     #expect(color == [0, 0, 1, 1])
-    #expect(model.environment.map === PBREnvironment.studio)
+    #expect(model.environment.map === LightingEnvironment.studio)
     #expect(model.environment.intensity == 2)
     #expect(abs(model.environment.rotation - .pi / 2) < 1e-5)
     #expect(try tools.query().contains(#""map":"studio""#))
@@ -805,20 +805,20 @@ struct SceneEditBoundaryTests {
     for parameter in PBRParameters.scalars {
         let before = original.pbrMaterial.uniforms[keyPath: parameter.keyPath]
         let value = parameter.range.lowerBound + (parameter.range.upperBound - parameter.range.lowerBound) * 0.37
-        let edited = try EditorModel.editedPBR(original) { $0[keyPath: parameter.keyPath] = value }
+        let edited = EditorModel.editedPBR(original) { $0[keyPath: parameter.keyPath] = value }
         #expect(edited.pbrMaterial.uniforms[keyPath: parameter.keyPath] == value, "\(parameter.name)")
         #expect(original.pbrMaterial.uniforms[keyPath: parameter.keyPath] == before, "\(parameter.name)")
         #expect(parameter.range.lowerBound < parameter.range.upperBound)
     }
     for parameter in PBRParameters.colors {
-        let edited = try EditorModel.editedPBR(original) { $0[keyPath: parameter.keyPath] = [0.1, 0.2, 0.3] }
+        let edited = EditorModel.editedPBR(original) { $0[keyPath: parameter.keyPath] = [0.1, 0.2, 0.3] }
         #expect(edited.pbrMaterial.uniforms[keyPath: parameter.keyPath] == [0.1, 0.2, 0.3], "\(parameter.name)")
     }
     for parameter in PBRParameters.toggles {
-        let edited = try EditorModel.editedPBR(original) { $0[keyPath: parameter.keyPath] = 1 }
+        let edited = EditorModel.editedPBR(original) { $0[keyPath: parameter.keyPath] = 1 }
         #expect(edited.pbrMaterial.uniforms[keyPath: parameter.keyPath] == 1, "\(parameter.name)")
     }
-    let doubleSided = try EditorModel.editedPBR(original, doubleSided: !original.pbrMaterial.doubleSided)
+    let doubleSided = EditorModel.editedPBR(original, doubleSided: !original.pbrMaterial.doubleSided)
     #expect(doubleSided.pbrMaterial.doubleSided != original.pbrMaterial.doubleSided)
     // Names are unique within the list, which the inspector's ForEach needs.
     let names = PBRParameters.scalars.map(\.name) + PBRParameters.colors.map(\.name) + PBRParameters.toggles.map(\.name)

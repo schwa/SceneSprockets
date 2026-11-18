@@ -12507,11 +12507,13 @@ Part of #547.
 ## 551: SceneSprocketsPBR builds PBRLight and PBREnvironment, which MetalSprocketsPBR removed
 
 +++
-status: new
+status: closed
 priority: medium
 kind: enhancement
 labels: area:renderer, lighting, subtask, effort:s
 created: 2026-11-18T19:25:51Z
+updated: 2026-11-18T19:37:16Z
+closed: 2026-11-18T19:37:16Z
 +++
 
 MetalSprocketsPBR (unreleased, next 0.3.0) replaced PBRLight, PBRShadowUniforms and PBREnvironment with MetalSprocketsLighting's LightingLight, LightingShadowUniforms and LightingEnvironment, and PBRMaterial's initializers no longer throw. SceneSprocketsPBR (PBRSceneGraph.pbrLight(worldTransform:light:), PBRMaterialRenderer's environment, PBRShadows use) and the demos do not build against that version.

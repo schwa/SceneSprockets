@@ -150,7 +150,7 @@ public final class PBRSceneMaterial: SceneMaterial, SamplesShadowsInShader, @unc
         if textures.emissive != nil {
             uniforms.emissiveFactor = [1, 1, 1]
         }
-        storedMaterial = try PBRMaterial(uniforms: uniforms, textureBindings: bindings, device: device)
+        storedMaterial = PBRMaterial(uniforms: uniforms, textureBindings: bindings, device: device)
     }
 }
 
@@ -283,7 +283,7 @@ public final class PBRMaterialRenderer: MaterialRenderer, Equatable {
     }
 
     struct Settings {
-        var environment: PBREnvironment
+        var environment: LightingEnvironment
         var environmentIntensity: Float
         var exposure: Float
     }
@@ -298,7 +298,7 @@ public final class PBRMaterialRenderer: MaterialRenderer, Equatable {
     }
 
     /// The image-based lighting that the renderer uses when the scene graph's environment has no map.
-    public var environment: PBREnvironment {
+    public var environment: LightingEnvironment {
         get { lock.withLock { storedSettings.environment } }
         set { lock.withLock { storedSettings.environment = newValue } }
     }
@@ -333,7 +333,7 @@ public final class PBRMaterialRenderer: MaterialRenderer, Equatable {
     ///   - environment: The lighting to use when the scene graph's environment has no map.
     ///   - environmentIntensity: The strength of `environment`.
     ///   - exposure: The exposure, as a multiplier of the light before tone mapping.
-    public init(environment: PBREnvironment = .studio, environmentIntensity: Float = 1, exposure: Float = 1) {
+    public init(environment: LightingEnvironment = .studio, environmentIntensity: Float = 1, exposure: Float = 1) {
         storedSettings = Settings(environment: environment, environmentIntensity: environmentIntensity, exposure: exposure)
     }
 
@@ -574,13 +574,13 @@ private struct FadeKey: Hashable {
     var opacity: Float
 }
 
-extension PBREnvironment: EnvironmentMap {}
+extension LightingEnvironment: EnvironmentMap {}
 
 extension PBRSceneMaterial: AppliesAmbientOcclusionInShader {}
 
 extension PBRMaterialRenderer: BackgroundRenderer {
     /// The lighting PBR meshes get in `context`, for renderers whose shaders call `PBR::shade` themselves: lights
-    /// with their shadow slices, the environment (the scene's when it is a `PBREnvironment`, otherwise
+    /// with their shadow slices, the environment (the scene's when it is a `LightingEnvironment`, otherwise
     /// ``environment``), exposure and screen-space occlusion. Light positions are relative to `cameraPosition`.
     /// `shadows` is nil; set it from `context.shadow` with `Shadows.Sampling.pbrShadows(submissionIndex:)`.
     public func lighting(context: RenderContext, cameraPosition: SIMD3<Float> = .zero) -> PBRLighting {
@@ -596,7 +596,7 @@ extension PBRMaterialRenderer: BackgroundRenderer {
                 }
                 return result
             },
-            environment: context.environment.map as? PBREnvironment ?? settings.environment,
+            environment: context.environment.map as? LightingEnvironment ?? settings.environment,
             environmentIntensity: settings.environmentIntensity * context.environment.intensity,
             exposure: settings.exposure
         )
@@ -656,8 +656,8 @@ func pbrPrimitiveInput(entry: SceneGraph.MeshEntry, attributes: [MetalMesh.Verte
 }
 
 // Lights point down the node's -Z axis.
-func pbrLight(worldTransform: simd_float4x4, light: Light) -> PBRLight {
-    var result = PBRLight()
+func pbrLight(worldTransform: simd_float4x4, light: Light) -> LightingLight {
+    var result = LightingLight()
     // Spelled out: MetalSprocketsPBR and GeometryLite3D both define SIMD4.xyz, which is ambiguous where both are imported.
     result.position = SIMD3(worldTransform.columns.3.x, worldTransform.columns.3.y, worldTransform.columns.3.z)
     let forward = -SIMD3(worldTransform.columns.2.x, worldTransform.columns.2.y, worldTransform.columns.2.z)

@@ -16,7 +16,7 @@ extension UTType {
 extension Archive {
     static var composer: Archive {
         // Imported glTF files are kept as they are (#157); other meshes that are not shapes are saved as glTF (#158).
-        Archive(materialTypes: [BlinnPhongSceneMaterial.self, PBRSceneMaterial.self], environmentMapTypes: [PBREnvironment.self], meshCodec: GLTFMeshCodec(), modelLoader: ModelFileLoader())
+        Archive(materialTypes: [BlinnPhongSceneMaterial.self, PBRSceneMaterial.self], environmentMapTypes: [LightingEnvironment.self], meshCodec: GLTFMeshCodec(), modelLoader: ModelFileLoader())
     }
 }
 
