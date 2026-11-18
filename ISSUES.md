@@ -12297,6 +12297,8 @@ Sub-issues:
 
 Not included: shadows (#88, #299, #495, #541) and exposure/tone mapping (#501, #508), which are separate systems.
 
+- `2026-11-18T18:56:37Z`: Design decided (per schwa): a new small lighting package on top of MetalSprockets, holding lights, shadow sampling, environment/IBL, per-frame lighting resources, ambient occlusion input, exposure and tone mapping. Renderers keep only their BRDFs. Breaking API changes are fine. Tracked as #547; the other sub-issues build on it.
+
 ---
 
 ## 543: Umbrella: no bounds hierarchy for culling, hit testing and spatial queries
