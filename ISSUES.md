@@ -12489,13 +12489,29 @@ Part of #547.
 status: new
 priority: medium
 kind: enhancement
-labels: area:renderer,lighting,subtask,effort:s
+labels: area:renderer, lighting, subtask, effort:s
 created: 2026-11-18T19:25:51Z
 +++
 
 Shadows / ShadowMap produce the shadow map and per-renderer uniforms (BlinnPhongShadowUniforms, PBR's former PBRShadowUniforms via PBRShadows, the shader-material and screen-space shadow-mask variants). MetalSprocketsLighting defines one LightingShadowUniforms layout and Lighting::shadow sampling that every renderer could read.
 
 Rendering the shadow map stays in SceneSprockets.
+
+Part of #547.
+
+---
+
+## 551: SceneSprocketsPBR builds PBRLight and PBREnvironment, which MetalSprocketsPBR removed
+
++++
+status: new
+priority: medium
+kind: enhancement
+labels: area:renderer,lighting,subtask,effort:s
+created: 2026-11-18T19:25:51Z
++++
+
+MetalSprocketsPBR (unreleased, next 0.3.0) replaced PBRLight, PBRShadowUniforms and PBREnvironment with MetalSprocketsLighting's LightingLight, LightingShadowUniforms and LightingEnvironment, and PBRMaterial's initializers no longer throw. SceneSprocketsPBR (PBRSceneGraph.pbrLight(worldTransform:light:), PBRMaterialRenderer's environment, PBRShadows use) and the demos do not build against that version.
 
 Part of #547.
 
