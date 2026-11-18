@@ -12382,6 +12382,29 @@ No measurements yet. The decision depends on the benchmarks described in MetalSp
 
 ---
 
+## 546: Blinn-Phong binds every material texture as a separate slot on every draw
+
++++
+status: new
+priority: medium
+kind: enhancement
+labels: area:renderer,area:performance,effort:m
+created: 2026-11-18T18:18:22Z
++++
+
+BlinnPhongMaterialRenderer binds the ambient, diffuse, specular, emission and normal textures, the ambient occlusion texture and the shadow map as separate parameters for each draw, every frame (BlinnPhongMaterialRenderer.swift:340-350). BlinnPhong.metal declares each as its own [[texture(n)]] slot.
+
+PBR materials do not do this: MetalSprocketsPBR writes each material's textures into an argument buffer once (PBRMaterialResources), and draws find them by index.
+
+Effects:
+- Per-draw CPU binding cost for every Blinn-Phong batch.
+- Blinn-Phong draws cannot be encoded into indirect command buffers, because those commands cannot bind textures (#517, #544).
+- Blinn-Phong and PBR keep materials in two different ways (#542).
+
+Depends on: MetalSprockets#579 (no persistent argument buffers).
+
+---
+
 ## Milestone: M001-Correctness
 
 +++
