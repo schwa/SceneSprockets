@@ -12412,7 +12412,9 @@ status: new
 priority: medium
 kind: feature
 labels: area:renderer, effort:xl, lighting, subtask
+milestone: M003-Rendering
 created: 2026-11-18T18:56:33Z
+updated: 2026-11-18T18:56:36Z
 +++
 
 Lighting inputs are defined several times across packages:
