@@ -12363,8 +12363,10 @@ Related: #516 No GPU-driven rendering (overlapping umbrella), #518 No mesh shadi
 status: new
 priority: high
 kind: task
-labels: area:renderer,area:performance,effort:l,investigate
+labels: area:renderer, area:performance, effort:l, investigate
+milestone: M002-Performance
 created: 2026-11-18T18:13:33Z
+updated: 2026-11-18T18:13:35Z
 +++
 
 Tracking issue for MetalSprocketsPBR#37 (Investigate removing merged geometry), because SceneSprockets is the top-level project that ships it.
