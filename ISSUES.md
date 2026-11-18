@@ -12446,6 +12446,8 @@ Stays in each renderer: its BRDF (PBR, Blinn-Phong, toon, shader materials), whi
 
 Part of #542.
 
+- `2026-11-18T19:26:02Z`: Adoption issues: SceneSprockets #548 (Blinn-Phong), #549 (shader materials), #550 (Shadows), #551 (SceneSprocketsPBR vs new PBR); SceneSprocketsAddOns#79 (voxel/SDF/toon); MetalSprocketsGLTF#197 (glTF lights).
+
 ---
 
 ## 548: Blinn-Phong defines its own lights, falloff and shadow sampling instead of MetalSprocketsLighting's
