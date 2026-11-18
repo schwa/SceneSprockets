@@ -48,18 +48,18 @@ namespace ShaderMaterialSamples {
         constant float4 &color [[buffer(0)]],
         constant ShaderMaterialTransforms &transforms [[buffer(10)]],
         constant ShaderMaterialLighting &lighting [[buffer(11)]],
-        constant ShaderMaterialLight *lights [[buffer(12)]],
+        constant LightingLight *lights [[buffer(12)]],
+        constant LightingShadowUniforms &shadow [[buffer(13)]],
         depth2d_array<float, access::sample> shadowMap [[texture(0)]],
         sampler shadowSampler [[sampler(0)]]
     ) {
         float3 normal = normalize(in.worldNormal);
         float3 diffuse = 0;
         for (int index = 0; index < lighting.lightCount; index++) {
-            float3 toLight;
-            float3 incoming = shaderMaterialIncomingLight(lights[index], in.cameraRelativePosition, toLight);
-            float lambertian = max(dot(toLight, normal), 0.0);
+            const Lighting::LightSample incoming = Lighting::sample(lights[index], in.cameraRelativePosition);
+            float lambertian = max(dot(incoming.toLight, normal), 0.0);
             if (lambertian > 0) {
-                diffuse += color.rgb * lambertian * incoming * shaderMaterialShadow(lighting, lights[index], in.cameraRelativePosition, shadowMap, shadowSampler);
+                diffuse += color.rgb * lambertian * incoming.radiance * shaderMaterialShadow(lighting, lights[index], in.cameraRelativePosition, shadow, shadowMap, shadowSampler);
             }
         }
         return float4(diffuse, color.a * transforms.opacity);

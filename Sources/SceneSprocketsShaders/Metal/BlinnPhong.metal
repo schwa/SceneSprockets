@@ -94,7 +94,7 @@ namespace BlinnPhong {
         Fragment in [[stage_in]],
         bool frontFacing [[front_facing]],
         constant BlinnPhongFrame &frame [[buffer(0)]],
-        constant BlinnPhongLight *lights [[buffer(1)]],
+        constant LightingLight *lights [[buffer(1)]],
         constant BlinnPhongMaterialUniforms &material [[buffer(2)]],
         texture2d<float> ambientTexture [[texture(0)]],
         texture2d<float> diffuseTexture [[texture(1)]],
@@ -106,7 +106,7 @@ namespace BlinnPhong {
         sampler textureSampler [[sampler(0)]],
         depth2d_array<float, access::sample> shadowMap [[texture(3), function_constant(HAS_SHADOWS)]],
         sampler shadowSampler [[sampler(1), function_constant(HAS_SHADOWS)]],
-        constant BlinnPhongShadowUniforms &shadow [[buffer(3), function_constant(HAS_SHADOWS)]]
+        constant LightingShadowUniforms &shadow [[buffer(3), function_constant(HAS_SHADOWS)]]
     ) {
         float3 ambientColor = material.ambient * in.color.rgb;
         float3 diffuseColor = material.diffuse * in.color.rgb;

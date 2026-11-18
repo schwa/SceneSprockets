@@ -12453,11 +12453,13 @@ Part of #542.
 ## 548: Blinn-Phong defines its own lights, falloff and shadow sampling instead of MetalSprocketsLighting's
 
 +++
-status: new
+status: closed
 priority: medium
 kind: enhancement
 labels: area:renderer, lighting, subtask, effort:m
 created: 2026-11-18T19:25:50Z
+updated: 2026-11-18T19:53:41Z
+closed: 2026-11-18T19:53:41Z
 +++
 
 Blinn-Phong has its own BlinnPhongLight and BlinnPhongShadowUniforms (BlinnPhong.h) and its own range falloff, spot cone and PCF code (BlinnPhongLighting.h). MetalSprocketsLighting now provides LightingLight, LightingShadowUniforms, Lighting::sample and Lighting::shadow, which PBR uses.
@@ -12471,11 +12473,13 @@ Part of #547.
 ## 549: Shader materials define their own light type, falloff and shadow sampling
 
 +++
-status: new
+status: closed
 priority: medium
 kind: enhancement
 labels: area:renderer, lighting, subtask, effort:s
 created: 2026-11-18T19:25:50Z
+updated: 2026-11-18T19:53:41Z
+closed: 2026-11-18T19:53:41Z
 +++
 
 ShaderMaterial.h has ShaderMaterialLight and ShaderMaterialLighting plus copies of the range falloff, spot cone and PCF code, separate from MetalSprocketsLighting's LightingLight, Lighting::sample and Lighting::shadow. Custom shader-material code written against ShaderMaterialLight would be affected by a change.
@@ -12489,11 +12493,13 @@ Part of #547.
 ## 550: Shadows writes renderer-specific shadow uniforms instead of LightingShadowUniforms
 
 +++
-status: new
+status: closed
 priority: medium
 kind: enhancement
 labels: area:renderer, lighting, subtask, effort:s
 created: 2026-11-18T19:25:51Z
+updated: 2026-11-18T19:53:41Z
+closed: 2026-11-18T19:53:41Z
 +++
 
 Shadows / ShadowMap produce the shadow map and per-renderer uniforms (BlinnPhongShadowUniforms, PBR's former PBRShadowUniforms via PBRShadows, the shader-material and screen-space shadow-mask variants). MetalSprocketsLighting defines one LightingShadowUniforms layout and Lighting::shadow sampling that every renderer could read.

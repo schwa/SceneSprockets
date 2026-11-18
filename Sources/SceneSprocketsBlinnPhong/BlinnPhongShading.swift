@@ -1,5 +1,6 @@
 import Metal
 import MetalSprockets
+@_exported import MetalSprocketsLighting
 import SceneSprockets
 import SceneSprocketsShaders
 import simd
@@ -12,7 +13,7 @@ public struct BlinnPhongShading {
     /// The per-frame uniforms, bound as `BlinnPhongFrame`.
     public var frame: BlinnPhongFrame
     /// The lights, never empty: an empty scene binds one unused light, since `frame.lightCount` is 0.
-    public var lights: [BlinnPhongLight]
+    public var lights: [LightingLight]
     /// The world-space render origin.
     public var cameraPosition: SIMD3<Float>
     /// The shadow map inputs, when shadows are on.
@@ -46,28 +47,16 @@ public struct BlinnPhongShading {
             }
         }
         self.frame = frame
-        self.lights = lights.isEmpty ? [BlinnPhongLight()] : lights
+        self.lights = lights.isEmpty ? [LightingLight()] : lights
         self.cameraPosition = cameraPosition
         self.shadow = context.shadow
     }
 
     /// The shadow map, its sampler and uniforms for a submission (`MSEnvironmentValues.submissionIndex`), or `nil`
     /// when shadows are off.
-    public func shadowBinding(submissionIndex: UInt64) -> (texture: MTLTexture, sampler: MTLSamplerState, uniforms: BlinnPhongShadowUniforms)? {
+    public func shadowBinding(submissionIndex: UInt64) -> (texture: MTLTexture, sampler: MTLSamplerState, uniforms: LightingShadowUniforms)? {
         shadow.map { shadow in
-            var uniforms = BlinnPhongShadowUniforms()
-            uniforms.mapSize = Float(shadow.shadowMap.resolution)
-            uniforms.intensity = shadow.intensity
-            uniforms.color = shadow.color
-            uniforms.radius = Int32(max(shadow.softness, 0))
-            withUnsafeMutableBytes(of: &uniforms.sliceViewProjections) { buffer in
-                let slices = buffer.bindMemory(to: simd_float4x4.self)
-                // Both the slices and the shading positions are camera-relative.
-                for (index, matrix) in shadow.shadowMap.lightViewProjectionMatrices.prefix(slices.count).enumerated() {
-                    slices[index] = matrix
-                }
-            }
-            return (shadow.shadowMap.depthTexture(forSubmission: submissionIndex), shadow.shadowMap.sampler, uniforms)
+            (shadow.shadowMap.depthTexture(forSubmission: submissionIndex), shadow.shadowMap.sampler, shadow.uniforms)
         }
     }
 }

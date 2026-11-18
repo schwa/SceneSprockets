@@ -2,6 +2,7 @@ import Foundation
 import GeometryLite3D
 import Metal
 import MetalSprockets
+import MetalSprocketsLighting
 import MetalSupport
 import SceneSprockets
 import SceneSprocketsShaders
@@ -18,8 +19,8 @@ import SwiftMesh
 /// as it is.
 ///
 /// With ``samplesShadows``, the renderer also binds the scene's lights and shadow map by name (`lighting`, `lights`,
-/// `shadowMap`, `shadowSampler`; see `ShaderMaterialLighting` in `ShaderMaterial.h`), and the fragment function shades
-/// each light with its own shadow, as Blinn-Phong and PBR do. Without it, shadows darken the mesh in screen space after
+/// `shadow`, `shadowMap`, `shadowSampler`; see `ShaderMaterialLighting` in `ShaderMaterial.h`), and the fragment
+/// function shades each light with its own shadow, as Blinn-Phong and PBR do. Without it, shadows darken the mesh in screen space after
 /// the scene pass, every light's shadow at once.
 public struct ShaderMaterial: SceneMaterial, SamplesShadowsInShader, DrawsDeformedVertices {
     /// A value to bind to a shader argument.
@@ -168,7 +169,7 @@ struct ShaderMaterialDrawsElement: Element {
     var items: [ShaderMaterialItem]
     var context: RenderContext
     var cameraPosition: SIMD3<Float>
-    var lights: [ShaderMaterialLight]
+    var lights: [LightingLight]
 
     @MSEnvironment(\.submissionIndex)
     private var submissionIndex
@@ -178,7 +179,7 @@ struct ShaderMaterialDrawsElement: Element {
             let context = context
             let cameraPosition = cameraPosition
             // An empty array cannot be bound; the shader reads none of it when lightCount is 0.
-            let lightValues = lights.isEmpty ? [ShaderMaterialLight()] : lights
+            let lightValues = lights.isEmpty ? [LightingLight()] : lights
             let lightCount = Int32(lights.count)
             let shadow = context.shadow
             let needsLighting = items.contains(where: \.material.samplesShadows)
@@ -191,28 +192,11 @@ struct ShaderMaterialDrawsElement: Element {
     }
 
     private func lighting(lightCount: Int32, receivesShadow: Bool) -> ShaderMaterialLighting {
-        var lighting = ShaderMaterialLighting()
-        lighting.lightCount = lightCount
-        guard let shadow = context.shadow else {
-            return lighting
-        }
-        lighting.receivesShadow = receivesShadow ? 1 : 0
-        lighting.shadowMapSize = Float(shadow.shadowMap.resolution)
-        lighting.shadowIntensity = shadow.intensity
-        lighting.shadowColor = shadow.color
-        lighting.shadowRadius = Int32(max(shadow.softness, 0))
-        withUnsafeMutableBytes(of: &lighting.shadowSliceViewProjections) { buffer in
-            let slices = buffer.bindMemory(to: simd_float4x4.self)
-            // Both the slices and the shading positions are camera-relative.
-            for (index, matrix) in shadow.shadowMap.lightViewProjectionMatrices.prefix(slices.count).enumerated() {
-                slices[index] = matrix
-            }
-        }
-        return lighting
+        ShaderMaterialLighting(lightCount: lightCount, receivesShadow: context.shadow != nil && receivesShadow ? 1 : 0)
     }
 
     // swiftlint:disable:next function_parameter_count
-    private func draw(_ item: ShaderMaterialItem, context: RenderContext, cameraPosition: SIMD3<Float>, lightValues: [ShaderMaterialLight], lightCount: Int32, shadowTexture: MTLTexture?, shadowSampler: MTLSamplerState?) throws -> some Element {
+    private func draw(_ item: ShaderMaterialItem, context: RenderContext, cameraPosition: SIMD3<Float>, lightValues: [LightingLight], lightCount: Int32, shadowTexture: MTLTexture?, shadowSampler: MTLSamplerState?) throws -> some Element {
         let transforms = ShaderMaterialTransforms(modelMatrix: item.modelMatrix, viewMatrix: context.viewMatrix, projectionMatrix: context.projectionMatrix, cameraPosition: cameraPosition, opacity: item.opacity, stereoViews: context.stereoViews)
         let lighting = lighting(lightCount: lightCount, receivesShadow: item.receivesShadow)
         let submesh = item.mesh.submeshes[item.submeshIndex]
@@ -224,6 +208,7 @@ struct ShaderMaterialDrawsElement: Element {
                 if item.material.samplesShadows, let shadowTexture, let shadowSampler {
                     parameters.set("lighting", value: lighting)
                     parameters.set("lights", values: lightValues)
+                    parameters.set("shadow", value: context.shadow?.uniforms ?? LightingShadowUniforms())
                     parameters.set("shadowMap", texture: shadowTexture)
                     parameters.set("shadowSampler", samplerState: shadowSampler)
                 }
@@ -249,24 +234,26 @@ struct ShaderMaterialDrawsElement: Element {
 
 // Lights point down their node's -Z axis. `shadowSlices` is parallel to `lights` (empty: no shadows). Positions are
 // camera-relative.
-func shaderMaterialLights(_ lights: [(worldTransform: simd_float4x4, light: Light)], shadowSlices: [Range<Int>], cameraPosition: SIMD3<Float>) -> [ShaderMaterialLight] {
+func shaderMaterialLights(_ lights: [(worldTransform: simd_float4x4, light: Light)], shadowSlices: [Range<Int>], cameraPosition: SIMD3<Float>) -> [LightingLight] {
     lights.enumerated().map { index, entry in
         let slices = index < shadowSlices.count ? shadowSlices[index] : 0..<0
         let transform = entry.worldTransform
         let forward = -transform.columns.2.xyz
-        let type: Int32 = switch entry.light.type {
-        case .directional: Int32(SHADER_MATERIAL_LIGHT_DIRECTIONAL)
-        case .spot: Int32(SHADER_MATERIAL_LIGHT_SPOT)
-        case .point: Int32(SHADER_MATERIAL_LIGHT_POINT)
+        let type: LightingLightType = switch entry.light.type {
+        case .directional: .directional
+        case .spot: .spot
+        case .point: .point
         }
-        return ShaderMaterialLight(
+        return LightingLight(
             position: cameraRelative(transform.columns.3.xyz, to: cameraPosition),
             direction: simd_length(forward) > 0 ? simd_normalize(forward) : [0, 0, -1],
-            color: entry.light.color * entry.light.intensity,
-            type: type,
-            range: entry.light.range,
+            color: entry.light.color,
+            intensity: entry.light.intensity,
+            // 0 is infinite in KHR_lights_punctual.
+            range: entry.light.range.isFinite ? entry.light.range : 0,
             innerConeCos: cos(entry.light.innerConeAngle),
             outerConeCos: cos(entry.light.outerConeAngle),
+            type: type,
             shadowSliceStart: Int32(slices.lowerBound),
             shadowSliceCount: Int32(slices.count)
         )

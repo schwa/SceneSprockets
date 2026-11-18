@@ -2,6 +2,7 @@ import Foundation
 import GeometryLite3D
 import Metal
 import MetalSprockets
+import MetalSprocketsLighting
 import MetalSupport
 import ModelIO
 import SceneSprocketsShaders
@@ -165,6 +166,24 @@ public final class Shadows {
         public internal(set) var color: SIMD3<Float>
         /// The filter half-size, in shadow map texels.
         public internal(set) var softness: Int
+
+        /// The shadow uniforms that every renderer's shaders read through `Lighting::shadow`. Slices are
+        /// camera-relative, like the shading positions.
+        public var uniforms: LightingShadowUniforms {
+            var uniforms = LightingShadowUniforms()
+            uniforms.enabled = 1
+            uniforms.mapSize = Float(shadowMap.resolution)
+            uniforms.intensity = intensity
+            uniforms.color = color
+            uniforms.radius = Int32(max(softness, 0))
+            withUnsafeMutableBytes(of: &uniforms.sliceViewProjections) { buffer in
+                let slices = buffer.bindMemory(to: simd_float4x4.self)
+                for (index, matrix) in shadowMap.lightViewProjectionMatrices.prefix(slices.count).enumerated() {
+                    slices[index] = matrix
+                }
+            }
+            return uniforms
+        }
     }
 
     struct Caster {
