@@ -12388,7 +12388,7 @@ No measurements yet. The decision depends on the benchmarks described in MetalSp
 status: new
 priority: medium
 kind: enhancement
-labels: area:renderer,area:performance,effort:m
+labels: area:renderer, area:performance, effort:m
 created: 2026-11-18T18:18:22Z
 +++
 
@@ -12402,6 +12402,44 @@ Effects:
 - Blinn-Phong and PBR keep materials in two different ways (#542).
 
 Depends on: MetalSprockets#579 (no persistent argument buffers).
+
+---
+
+## 547: No shared lighting package: lights, shadows and environment are defined separately in each renderer
+
++++
+status: new
+priority: medium
+kind: feature
+labels: area:renderer,effort:xl,lighting,subtask
+created: 2026-11-18T18:56:33Z
++++
+
+Lighting inputs are defined several times across packages:
+
+- Lights: PBRLight (MetalSprocketsPBR), BlinnPhongLight and ShaderMaterialLight (SceneSprockets) are near-identical structs; Voxel, SignedDistance and Toon shaders (SceneSprocketsAddOns) read PBRLight.
+- Shadow sampling: PBRShadowUniforms and BlinnPhongShadowUniforms are near twins, each with its own filtering code.
+- Environment and image-based lighting: PBREnvironment, the IBL prefilter and BRDF lookup shaders live in MetalSprocketsPBR; add-on renderers reach into PBR for them; Blinn-Phong has only an ambient color.
+- Per-frame lighting bindings: the PBRFrameResources argument buffer exists only for PBR and outside shaders that copy its layout.
+- Screen-space ambient occlusion input, exposure and tone mapping are applied differently per renderer.
+
+Every lighting feature must be built once per renderer and package.
+
+## Proposed design (per schwa)
+
+A new small package on top of MetalSprockets, used by MetalSprocketsPBR, SceneSprockets and SceneSprocketsAddOns. Breaking API changes in those packages are acceptable.
+
+In the package:
+- One light type, light list, attenuation and spot-cone functions.
+- One shadow-map layout, shadow uniforms, sampler and filtering function. Rendering shadow maps stays in SceneSprockets (Shadows), writing the shared format.
+- Environment and IBL: environment maps, prefiltering, BRDF lookup, rotation and intensity (moved from MetalSprocketsPBR).
+- Per-frame lighting resources as one argument buffer (generalized PBRFrameResources).
+- Ambient occlusion input, exposure and tone mapping (#501, #508).
+- Later: many-light assignment (#514, #519), light cookies, IES and area lights (#497, #509), reflection probes.
+
+Stays in each renderer: its BRDF (PBR, Blinn-Phong, toon, shader materials), which consumes the shared light, shadow and environment terms. This is the lighting-term extension point of #512.
+
+Part of #542.
 
 ---
 
