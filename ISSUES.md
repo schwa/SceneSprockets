@@ -12453,13 +12453,31 @@ Part of #542.
 status: new
 priority: medium
 kind: enhancement
-labels: area:renderer,lighting,subtask,effort:m
+labels: area:renderer, lighting, subtask, effort:m
 created: 2026-11-18T19:25:50Z
 +++
 
 Blinn-Phong has its own BlinnPhongLight and BlinnPhongShadowUniforms (BlinnPhong.h) and its own range falloff, spot cone and PCF code (BlinnPhongLighting.h). MetalSprocketsLighting now provides LightingLight, LightingShadowUniforms, Lighting::sample and Lighting::shadow, which PBR uses.
 
 Blinn-Phong's falloff differs from PBR's: falloff^2 / (d^2 + 1) with intensity premultiplied into color, versus KHR_lights_punctual's clamp(1 - (d/r)^4) / d^2 with a separate intensity. Per schwa, all renderers use the KHR model, so Blinn-Phong scenes will look different near lights; golden images and demo light intensities are affected.
+
+Part of #547.
+
+---
+
+## 549: Shader materials define their own light type, falloff and shadow sampling
+
++++
+status: new
+priority: medium
+kind: enhancement
+labels: area:renderer,lighting,subtask,effort:s
+created: 2026-11-18T19:25:50Z
++++
+
+ShaderMaterial.h has ShaderMaterialLight and ShaderMaterialLighting plus copies of the range falloff, spot cone and PCF code, separate from MetalSprocketsLighting's LightingLight, Lighting::sample and Lighting::shadow. Custom shader-material code written against ShaderMaterialLight would be affected by a change.
+
+Same falloff difference as Blinn-Phong (#548): per schwa, the KHR_lights_punctual model applies to all renderers.
 
 Part of #547.
 
