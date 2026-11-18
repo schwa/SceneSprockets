@@ -5,6 +5,21 @@
 // position), like everything the shader sees (#253).
 #import "MetalSprocketsLightingTypes.h"
 
+#ifdef __METAL_VERSION__
+#include <metal_stdlib>
+
+// A material's textures and sampler in one argument buffer, bound as `materialResources`. Missing textures are a
+// placeholder, flagged off in BlinnPhongMaterialUniforms.
+struct BlinnPhongMaterialResources {
+    metal::texture2d<float> ambientTexture;
+    metal::texture2d<float> diffuseTexture;
+    metal::texture2d<float> specularTexture;
+    metal::texture2d<float> emissionTexture;
+    metal::texture2d<float> normalTexture;
+    metal::sampler textureSampler;
+};
+#endif
+
 // Per-draw lighting state, shared by every mesh in a batch.
 // Views drawn at once: 1, or 2 for stereo, where vertex amplification draws each primitive once per view and
 // [[amplification_id]] picks the view's entry in the per-view arrays.

@@ -96,18 +96,18 @@ namespace BlinnPhong {
         constant BlinnPhongFrame &frame [[buffer(0)]],
         constant LightingLight *lights [[buffer(1)]],
         constant BlinnPhongMaterialUniforms &material [[buffer(2)]],
-        texture2d<float> ambientTexture [[texture(0)]],
-        texture2d<float> diffuseTexture [[texture(1)]],
-        texture2d<float> specularTexture [[texture(2)]],
-        texture2d<float> emissionTexture [[texture(4)]],
-        texture2d<float> normalTexture [[texture(5)]],
-        // Screen-space ambient visibility (#136); 1x1 white when off.
-        texture2d<float, access::read> ambientOcclusion [[texture(6)]],
-        sampler textureSampler [[sampler(0)]],
-        depth2d_array<float, access::sample> shadowMap [[texture(3), function_constant(HAS_SHADOWS)]],
-        sampler shadowSampler [[sampler(1), function_constant(HAS_SHADOWS)]],
+        // The shadow map and sampler, and screen-space ambient visibility (#136; 1x1 white when off).
+        constant LightingFrameResources &frameResources [[buffer(4)]],
+        constant BlinnPhongMaterialResources &materialResources [[buffer(5)]],
         constant LightingShadowUniforms &shadow [[buffer(3), function_constant(HAS_SHADOWS)]]
     ) {
+        const texture2d<float> ambientTexture = materialResources.ambientTexture;
+        const texture2d<float> diffuseTexture = materialResources.diffuseTexture;
+        const texture2d<float> specularTexture = materialResources.specularTexture;
+        const texture2d<float> emissionTexture = materialResources.emissionTexture;
+        const texture2d<float> normalTexture = materialResources.normalTexture;
+        const sampler textureSampler = materialResources.textureSampler;
+        const texture2d<float> ambientOcclusion = frameResources.ambientOcclusion;
         float3 ambientColor = material.ambient * in.color.rgb;
         float3 diffuseColor = material.diffuse * in.color.rgb;
         float3 specularColor = material.specular;
@@ -158,7 +158,7 @@ namespace BlinnPhong {
         }
         uint2 occlusionSize = uint2(ambientOcclusion.get_width(), ambientOcclusion.get_height());
         float occlusion = ambientOcclusion.read(min(uint2(in.position.xy), occlusionSize - 1)).r;
-        return shade(surface, in.worldPosition, normal, frame.cameraPositions[in.view], frame, lights, occlusion, HAS_SHADOWS, shadowMap, shadowSampler, shadow);
+        return shade(surface, in.worldPosition, normal, frame.cameraPositions[in.view], frame, lights, occlusion, HAS_SHADOWS, frameResources.shadowMap, frameResources.shadowSampler, shadow);
     }
 
 }

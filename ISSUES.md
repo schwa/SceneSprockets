@@ -12387,11 +12387,13 @@ No measurements yet. The decision depends on the benchmarks described in MetalSp
 ## 546: Blinn-Phong binds every material texture as a separate slot on every draw
 
 +++
-status: new
+status: closed
 priority: medium
 kind: enhancement
 labels: area:renderer, area:performance, effort:m
 created: 2026-11-18T18:18:22Z
+updated: 2026-11-18T23:08:12Z
+closed: 2026-11-18T23:08:12Z
 +++
 
 BlinnPhongMaterialRenderer binds the ambient, diffuse, specular, emission and normal textures, the ambient occlusion texture and the shadow map as separate parameters for each draw, every frame (BlinnPhongMaterialRenderer.swift:340-350). BlinnPhong.metal declares each as its own [[texture(n)]] slot.

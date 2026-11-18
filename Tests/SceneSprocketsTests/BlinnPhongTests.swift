@@ -255,3 +255,19 @@ func backFacesOfTwoSidedMaterialsAreLit(flipped: Bool, mirrored: Bool) throws {
     texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(8, 8, 1, 1), mipmapLevel: 0)
     #expect(value.x > 20 && value.y > 20 && value.z > 20)
 }
+
+// #546: materials that bind the same textures share one material argument buffer; different textures get their own.
+@Test
+func blinnPhongMaterialsShareResourceBuffers() throws {
+    let red = try solidTexture([255, 0, 0, 255])
+    let green = try solidTexture([0, 255, 0, 255])
+    let placeholder = try BlinnPhongShaders.placeholderTexture()
+    let sampler = try BlinnPhongShaders.defaultSampler()
+    let cache = MaterialResourcesCache()
+    func resources(_ texture: MTLTexture, shininess: Float) -> ArgumentBuffer {
+        cache.resources(for: BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .texture(texture), specular: .color(0), shininess: shininess).resolved(placeholder: placeholder, defaultSampler: sampler))
+    }
+    // Uniforms (shininess) are not part of the argument buffer.
+    #expect(resources(red, shininess: 1) === resources(red, shininess: 8))
+    #expect(resources(red, shininess: 1) !== resources(green, shininess: 1))
+}

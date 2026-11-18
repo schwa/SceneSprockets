@@ -122,6 +122,7 @@ public struct BlinnPhongMaterialRenderer: MaterialRenderer, Equatable {
     public var ambientLightColor: SIMD3<Float>
     // Shared by copies of the renderer.
     private let batchPlans = BatchPlanCache()
+    private let materialResources = MaterialResourcesCache()
 
     // The cache is not compared: it does not change what the renderer draws (#487).
     public static func == (lhs: Self, rhs: Self) -> Bool {
@@ -151,7 +152,7 @@ public struct BlinnPhongMaterialRenderer: MaterialRenderer, Equatable {
         let isTransparent = entries.first?.isTransparent ?? false
         let inFrustum = meshEntriesInFrustum(entries, projectionMatrix: context.projectionMatrix, cameraMatrix: context.cameraMatrix)
         if !isTransparent, let groups = cachedOpaqueGroups(entries: entries, inFrustum: inFrustum, context: context, cameraPosition: cameraPosition) {
-            return BlinnPhongBatchesElement(groups: groups, shading: shading, ambientOcclusion: context.ambientOcclusion, isTransparent: false, stereoViews: context.stereoViews).eraseToAnyElement()
+            return BlinnPhongBatchesElement(groups: groups, shading: shading, ambientOcclusion: context.ambientOcclusion, isTransparent: false, stereoViews: context.stereoViews, materialResources: materialResources).eraseToAnyElement()
         }
         // One pass, with capacity reserved: this runs every frame over every entry, so copies add up.
         var items: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, modelMatrix: simd_float4x4, material: BlinnPhongSceneMaterial)] = []
@@ -209,7 +210,7 @@ public struct BlinnPhongMaterialRenderer: MaterialRenderer, Equatable {
                 return (key: group.key, single: sortedSingle, instanced: batches.filter { $0.modelMatrices.count > 1 })
             }
         }
-        return BlinnPhongBatchesElement(groups: groups, shading: shading, ambientOcclusion: context.ambientOcclusion, isTransparent: isTransparent, stereoViews: context.stereoViews).eraseToAnyElement()
+        return BlinnPhongBatchesElement(groups: groups, shading: shading, ambientOcclusion: context.ambientOcclusion, isTransparent: isTransparent, stereoViews: context.stereoViews, materialResources: materialResources).eraseToAnyElement()
     }
 
     // Opaque batching depends on structure, opacity and mirroring, not on where things are, so it is cached and only
@@ -265,6 +266,7 @@ private struct BlinnPhongBatchesElement: Element {
     // Blends and does not write depth.
     var isTransparent: Bool
     var stereoViews: StereoViews?
+    var materialResources: MaterialResourcesCache
 
     @MSEnvironment(\.submissionIndex)
     private var submissionIndex
@@ -279,6 +281,13 @@ private struct BlinnPhongBatchesElement: Element {
             let placeholder = try BlinnPhongShaders.placeholderTexture()
             let defaultSampler = try BlinnPhongShaders.defaultSampler()
             let shadowBinding = shading.shadowBinding(submissionIndex: submissionIndex)
+            let materialResources = materialResources
+            // One per frame, shared by every draw: the shadow map (a placeholder when off) and ambient occlusion.
+            let shadowPlaceholder = try BlinnPhongShaders.shadowPlaceholder()
+            let frameResources = ArgumentBuffer(device: placeholder.device, label: "Blinn-Phong Frame Resources")
+            frameResources.set("shadowMap", texture: shadowBinding?.texture ?? shadowPlaceholder.map)
+            frameResources.set("shadowSampler", samplerState: shadowBinding?.sampler ?? shadowPlaceholder.sampler)
+            frameResources.set("ambientOcclusion", texture: ambientOcclusion ?? placeholder)
 
             // Unculled transparent meshes draw back faces first, then front faces. In one pass the faces blend in index
             // order, so back faces can land on top of front faces (#120).
@@ -337,18 +346,11 @@ private struct BlinnPhongBatchesElement: Element {
                     .parameter("frame", functionType: .fragment, value: frame)
                     .parameter("lights", functionType: .fragment, values: lightValues)
                     .parameter("material", functionType: .fragment, value: resolved.uniforms)
-                    .parameter("ambientTexture", texture: resolved.ambientTexture)
-                    .parameter("diffuseTexture", texture: resolved.diffuseTexture)
-                    .parameter("specularTexture", texture: resolved.specularTexture)
-                    .parameter("emissionTexture", texture: resolved.emissionTexture)
-                    .parameter("normalTexture", texture: resolved.normalTexture)
-                    .parameter("ambientOcclusion", texture: ambientOcclusion ?? placeholder)
-                    .parameter("textureSampler", samplerState: resolved.sampler)
+                    .parameter("frameResources", functionType: .fragment, argumentBuffer: frameResources)
+                    .parameter("materialResources", functionType: .fragment, argumentBuffer: materialResources.resources(for: resolved))
                     .eraseToAnyElement()
                 if let shadowBinding {
                     element = element
-                        .parameter("shadowMap", texture: shadowBinding.texture)
-                        .parameter("shadowSampler", samplerState: shadowBinding.sampler)
                         .parameter("shadow", functionType: .fragment, value: shadowBinding.uniforms)
                         .eraseToAnyElement()
                 }
@@ -562,6 +564,34 @@ final class BatchPlanCache: @unchecked Sendable {
     }
 }
 
+// One BlinnPhongMaterialResources argument buffer per set of textures and sampler. Materials are values, so the key is
+// the identities of what they bind; each buffer keeps its textures alive, so identifiers in the key are not reused.
+final class MaterialResourcesCache: @unchecked Sendable {
+    private let lock = NSLock()
+    private var buffers: [[ObjectIdentifier]: ArgumentBuffer] = [:]
+
+    func resources(for resolved: BlinnPhongSceneMaterial.Resolved) -> ArgumentBuffer {
+        let textures = [resolved.ambientTexture, resolved.diffuseTexture, resolved.specularTexture, resolved.emissionTexture, resolved.normalTexture]
+        let key = textures.map { ObjectIdentifier($0) } + [ObjectIdentifier(resolved.sampler)]
+        return lock.withLock {
+            if let buffer = buffers[key] {
+                return buffer
+            }
+            // Dropped wholesale past this many, so changing materials cannot grow it forever.
+            if buffers.count >= 256 {
+                buffers.removeAll()
+            }
+            let buffer = ArgumentBuffer(device: resolved.ambientTexture.device, label: "Blinn-Phong Material Resources")
+            for (name, texture) in zip(["ambientTexture", "diffuseTexture", "specularTexture", "emissionTexture", "normalTexture"], textures) {
+                buffer.set(name, texture: texture)
+            }
+            buffer.set("textureSampler", samplerState: resolved.sampler)
+            buffers[key] = buffer
+            return buffer
+        }
+    }
+}
+
 // Groups items that share vertex buffers, submesh and material, keeping first-seen order.
 func instanceBatches(_ items: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, modelMatrix: simd_float4x4, material: BlinnPhongSceneMaterial)]) -> [InstanceBatch] {
     instanceBatchMembers(items).map(\.batch)
@@ -695,6 +725,7 @@ struct BlinnPhongShaders {
     nonisolated(unsafe) private static var cached: Self?
     nonisolated(unsafe) private static var cachedPlaceholder: MTLTexture?
     nonisolated(unsafe) private static var cachedSampler: MTLSamplerState?
+    nonisolated(unsafe) private static var cachedShadowPlaceholder: (map: MTLTexture, sampler: MTLSamplerState)?
     // By descriptor identity, so a material's sampler state is made once.
     nonisolated(unsafe) private static var samplerStates: [ObjectIdentifier: (descriptor: MTLSamplerDescriptor, state: MTLSamplerState)] = [:]
     private static let lock = NSLock()
@@ -753,7 +784,10 @@ struct BlinnPhongShaders {
         if let cached = samplerStates[ObjectIdentifier(descriptor)] {
             return cached.state
         }
-        guard let state = _MTLCreateSystemDefaultDevice().makeSamplerState(descriptor: descriptor) else {
+        // Argument buffers (materialResources) need samplers made for them; the caller's descriptor is not changed.
+        let argumentBufferDescriptor = descriptor.copy() as! MTLSamplerDescriptor // swiftlint:disable:this force_cast
+        argumentBufferDescriptor.supportArgumentBuffers = true
+        guard let state = _MTLCreateSystemDefaultDevice().makeSamplerState(descriptor: argumentBufferDescriptor) else {
             throw MetalSupportError.resourceCreationFailure("Failed to create Blinn-Phong sampler")
         }
         // The descriptor is kept so its identifier is not reused.
@@ -773,11 +807,35 @@ struct BlinnPhongShaders {
         descriptor.mipFilter = .linear
         descriptor.sAddressMode = .repeat
         descriptor.tAddressMode = .repeat
+        descriptor.supportArgumentBuffers = true
         guard let sampler = _MTLCreateSystemDefaultDevice().makeSamplerState(descriptor: descriptor) else {
             throw MetalSupportError.resourceCreationFailure("Failed to create Blinn-Phong sampler")
         }
         cachedSampler = sampler
         return sampler
+    }
+
+    // A 1x1 depth array and comparison sampler for the frame resources when shadows are off; never sampled then.
+    static func shadowPlaceholder() throws -> (map: MTLTexture, sampler: MTLSamplerState) {
+        lock.lock()
+        defer { lock.unlock() }
+        if let cachedShadowPlaceholder {
+            return cachedShadowPlaceholder
+        }
+        let device = _MTLCreateSystemDefaultDevice()
+        let textureDescriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .depth32Float, width: 1, height: 1, mipmapped: false)
+        textureDescriptor.textureType = .type2DArray
+        textureDescriptor.usage = .shaderRead
+        textureDescriptor.storageMode = .private
+        let samplerDescriptor = MTLSamplerDescriptor()
+        samplerDescriptor.compareFunction = .greaterEqual
+        samplerDescriptor.supportArgumentBuffers = true
+        guard let map = device.makeTexture(descriptor: textureDescriptor), let sampler = device.makeSamplerState(descriptor: samplerDescriptor) else {
+            throw MetalSupportError.resourceCreationFailure("Failed to create Blinn-Phong shadow placeholder")
+        }
+        map.label = "Blinn-Phong Shadow Placeholder"
+        cachedShadowPlaceholder = (map, sampler)
+        return (map, sampler)
     }
 }
 
