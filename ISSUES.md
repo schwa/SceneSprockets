@@ -12447,6 +12447,24 @@ Part of #542.
 
 ---
 
+## 548: Blinn-Phong defines its own lights, falloff and shadow sampling instead of MetalSprocketsLighting's
+
++++
+status: new
+priority: medium
+kind: enhancement
+labels: area:renderer,lighting,subtask,effort:m
+created: 2026-11-18T19:25:50Z
++++
+
+Blinn-Phong has its own BlinnPhongLight and BlinnPhongShadowUniforms (BlinnPhong.h) and its own range falloff, spot cone and PCF code (BlinnPhongLighting.h). MetalSprocketsLighting now provides LightingLight, LightingShadowUniforms, Lighting::sample and Lighting::shadow, which PBR uses.
+
+Blinn-Phong's falloff differs from PBR's: falloff^2 / (d^2 + 1) with intensity premultiplied into color, versus KHR_lights_punctual's clamp(1 - (d/r)^4) / d^2 with a separate intensity. Per schwa, all renderers use the KHR model, so Blinn-Phong scenes will look different near lights; golden images and demo light intensities are affected.
+
+Part of #547.
+
+---
+
 ## Milestone: M001-Correctness
 
 +++
