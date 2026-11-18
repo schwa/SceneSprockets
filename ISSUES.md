@@ -12471,13 +12471,31 @@ Part of #547.
 status: new
 priority: medium
 kind: enhancement
-labels: area:renderer,lighting,subtask,effort:s
+labels: area:renderer, lighting, subtask, effort:s
 created: 2026-11-18T19:25:50Z
 +++
 
 ShaderMaterial.h has ShaderMaterialLight and ShaderMaterialLighting plus copies of the range falloff, spot cone and PCF code, separate from MetalSprocketsLighting's LightingLight, Lighting::sample and Lighting::shadow. Custom shader-material code written against ShaderMaterialLight would be affected by a change.
 
 Same falloff difference as Blinn-Phong (#548): per schwa, the KHR_lights_punctual model applies to all renderers.
+
+Part of #547.
+
+---
+
+## 550: Shadows writes renderer-specific shadow uniforms instead of LightingShadowUniforms
+
++++
+status: new
+priority: medium
+kind: enhancement
+labels: area:renderer,lighting,subtask,effort:s
+created: 2026-11-18T19:25:51Z
++++
+
+Shadows / ShadowMap produce the shadow map and per-renderer uniforms (BlinnPhongShadowUniforms, PBR's former PBRShadowUniforms via PBRShadows, the shader-material and screen-space shadow-mask variants). MetalSprocketsLighting defines one LightingShadowUniforms layout and Lighting::shadow sampling that every renderer could read.
+
+Rendering the shadow map stays in SceneSprockets.
 
 Part of #547.
 
