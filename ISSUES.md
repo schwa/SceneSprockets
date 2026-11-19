@@ -12860,7 +12860,7 @@ Each imported folder has a .swiftlint.yml that disables those 12 rules, so the c
 status: new
 priority: low
 kind: task
-labels: proposal,area:renderer,effort:m
+labels: proposal, area:renderer, effort:m
 created: 2026-11-19T02:43:31Z
 +++
 
@@ -12874,6 +12874,28 @@ Users of the scene graph have to know about and import both, and the names do no
 ## Proposed (per schwa; maybe, not decided)
 
 Merge them into one module. Trade-off: using the PBR renderer without the scene graph would then pull in SceneSprockets. Blinn-Phong is split the same way (shaders in SceneSprocketsShaders, renderer in SceneSprocketsBlinnPhong).
+
+---
+
+## 570: MetalSprocketsLighting, MetalSprocketsPBR and MetalSprocketsGLTF repositories are still live after the move
+
++++
+status: new
+priority: low
+kind: task
+labels: effort:s
+depends: 552
+created: 2026-11-19T02:45:09Z
++++
+
+#552 copies MetalSprocketsLighting, MetalSprocketsPBR and MetalSprocketsGLTF into this package. Their separate repositories still look active: their READMEs give their own install instructions, MetalSprocketsGLTF and MetalSprocketsPBR still list open issues (now re-filed here as #553-#567, and #545 for MetalSprocketsPBR#37), and nothing marks them as moved.
+
+SceneSprocketsAddOns still depends on the MetalSprocketsPBR repository; it has to use SceneSprockets' MetalSprocketsPBR product first.
+
+Expected, once #552 lands:
+- Each repository's README says it moved into SceneSprockets and shows the new product line.
+- Their open issues are closed with pointers to the re-filed issues here.
+- The repositories are archived on GitHub (read-only; existing tags such as PBR 0.4.0 and glTF 0.3.0 keep resolving).
 
 ---
 
