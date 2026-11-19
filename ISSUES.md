@@ -12854,6 +12854,29 @@ Each imported folder has a .swiftlint.yml that disables those 12 rules, so the c
 
 ---
 
+## 569: PBR is split across two modules, MetalSprocketsPBR and SceneSprocketsPBR
+
++++
+status: new
+priority: low
+kind: task
+labels: proposal,area:renderer,effort:m
+created: 2026-11-19T02:43:31Z
++++
+
+Since #552, both PBR modules live in this package:
+
+- MetalSprocketsPBR: the renderer (PBRMaterial, PBRModel, PBRRenderer, PBRScene, shaders), with no scene graph dependency. MetalSprocketsGLTF and the GLTFViewer example use it on its own.
+- SceneSprocketsPBR: the scene graph bridge (PBRSceneMaterial, PBRMaterialRenderer, glTF and Model I/O scene loaders, archive support).
+
+Users of the scene graph have to know about and import both, and the names do not say which is the engine and which is the adapter. The split dates from when they were separate repositories.
+
+## Proposed (per schwa; maybe, not decided)
+
+Merge them into one module. Trade-off: using the PBR renderer without the scene graph would then pull in SceneSprockets. Blinn-Phong is split the same way (shaders in SceneSprocketsShaders, renderer in SceneSprocketsBlinnPhong).
+
+---
+
 ## Milestone: M001-Correctness
 
 +++
