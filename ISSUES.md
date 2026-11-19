@@ -11866,8 +11866,9 @@ priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, bounds, indirect-drawing
 milestone: M002-Performance
+depends: 545
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-17T19:14:02Z
+updated: 2026-11-19T01:50:43Z
 +++
 
 Hidden objects are still drawn. There is no depth pyramid + compute pass to cull them.
