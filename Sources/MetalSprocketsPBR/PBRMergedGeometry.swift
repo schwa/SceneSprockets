@@ -8,11 +8,13 @@ import simd
 ///
 /// MetalSprockets' per-frame cost grows with the number of elements, not Metal draw calls. Meshes are not combined:
 /// records draw their own range of the asset's vertex and index buffers, which are not copied. The set copies each
-/// record's instances, material uniforms and material textures into its own buffers; each instance knows its record,
-/// and the shaders look up that record's material. One set holds static, skinned or transmissive batches; skinned ones
-/// also use the asset's skin-vertex buffer and read their joints from one per-frame palette of every skin.
+/// record's instances into one buffer; each instance knows its record, and each record its batch, whose material the
+/// shaders read from the renderer's material table. One set holds static, skinned or transmissive batches; skinned
+/// ones also use the asset's skin-vertex buffer and read their joints from one per-frame palette of every skin.
 public final class PBRMergedGeometry {
     public struct Record {
+        /// The opaque batch drawn, which is also its element in the renderer's material table.
+        public var batchID: Int
         public var indexStart: Int
         public var indexCount: Int
         public var baseVertex: Int
@@ -45,10 +47,8 @@ public final class PBRMergedGeometry {
     public let instanceBuffer: MTLBuffer
     /// The record index of each instance.
     public let instanceRecordBuffer: MTLBuffer
-    /// One `PBRMaterialUniforms` per record.
-    public let materialBuffer: MTLBuffer
-    /// One `PBRMaterialResources` element per record.
-    public let resources: ArgumentBuffer
+    /// The material table element of each record (its batch ID).
+    public let recordMaterialBuffer: MTLBuffer
     /// Skinned only: the asset's shared `PBRSkinVertex` values, parallel to the vertices.
     public let skinVertexBuffer: MTLBuffer?
     /// Skinned only: each record's first joint in the palette.
@@ -57,7 +57,7 @@ public final class PBRMergedGeometry {
     public let paletteSkins: [Int]
 
     public var allocations: [any MTLAllocation] {
-        [vertexBuffer, indexBuffer, instanceBuffer, instanceRecordBuffer, materialBuffer] + [skinVertexBuffer, recordJointOffsetBuffer].compactMap(\.self)
+        [vertexBuffer, indexBuffer, instanceBuffer, instanceRecordBuffer, recordMaterialBuffer] + [skinVertexBuffer, recordJointOffsetBuffer].compactMap(\.self)
     }
 
     /// Static and skinned primitives merge separately, and so do transmissive ones (the transmission pre-pass must draw
@@ -91,7 +91,6 @@ public final class PBRMergedGeometry {
         var paletteSize = 0
         var instances: [PBRInstance] = []
         var instanceRecords: [UInt32] = []
-        var materials: [PBRMaterialUniforms] = []
         var records: [Record] = []
         for batch in mergeable {
             let primitive = batch.primitive
@@ -112,8 +111,7 @@ public final class PBRMergedGeometry {
             instances.append(contentsOf: UnsafeBufferPointer(start: instancePointer, count: batch.instanceCount))
             instanceRecords.append(contentsOf: repeatElement(UInt32(records.count), count: batch.instanceCount))
 
-            materials.append(.resolved(batch.material, primitive: primitive, pose: nil))
-            records.append(Record(indexStart: primitive.indexStart, indexCount: primitive.indexCount, baseVertex: primitive.baseVertex, firstInstance: firstInstance, instanceCount: batch.instanceCount, doubleSided: batch.material.doubleSided, mirrored: batch.isMirrored, nodeIndices: batch.nodeIndices, instanceMatrices: batch.instanceMatrices, material: batch.material, primitiveKey: primitive.key, hasTangents: primitive.hasTangents, hasNormals: primitive.hasNormals, localBounds: primitive.bounds, worldBounds: batch.worldBounds, skinIndex: batch.skinIndex))
+            records.append(Record(batchID: batch.id, indexStart: primitive.indexStart, indexCount: primitive.indexCount, baseVertex: primitive.baseVertex, firstInstance: firstInstance, instanceCount: batch.instanceCount, doubleSided: batch.material.doubleSided, mirrored: batch.isMirrored, nodeIndices: batch.nodeIndices, instanceMatrices: batch.instanceMatrices, material: batch.material, primitiveKey: primitive.key, hasTangents: primitive.hasTangents, hasNormals: primitive.hasNormals, localBounds: primitive.bounds, worldBounds: batch.worldBounds, skinIndex: batch.skinIndex))
         }
 
         func buffer<T>(_ values: [T], label: String) throws -> MTLBuffer {
@@ -130,8 +128,7 @@ public final class PBRMergedGeometry {
         indexBuffer = geometry.indexBuffer
         instanceBuffer = try buffer(instances, label: "PBR Merged \(kind) Instances")
         instanceRecordBuffer = try buffer(instanceRecords, label: "PBR Merged \(kind) Instance Records")
-        materialBuffer = try buffer(materials, label: "PBR Merged \(kind) Materials")
-        resources = Self.resources(records.map(\.material), device: device, label: "PBR Merged \(kind) Material Resources")
+        recordMaterialBuffer = try buffer(records.map { UInt32($0.batchID) }, label: "PBR Merged \(kind) Record Materials")
         skinVertexBuffer = skinned ? geometry.skinBuffer : nil
         recordJointOffsetBuffer = skinned ? try buffer(jointOffsets, label: "PBR Merged Skinned Joint Offsets") : nil
         self.paletteSkins = paletteSkins
@@ -182,31 +179,9 @@ public final class PBRMergedGeometry {
         !overrides.isEmpty && records.contains { overrides[$0.primitiveKey] != nil }
     }
 
-    /// Each record's uniforms with `overrides` and `pose`'s animated materials applied, or nil when neither changes
-    /// anything (the prebuilt material buffer is then used).
-    public func materials(pose: PBRPose?, overrides: PBRModel.MaterialOverrides) -> [PBRMaterialUniforms]? { // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
-        guard pose?.materialUniforms.isEmpty == false || isOverridden(by: overrides) else {
-            return nil
-        }
-        return records.map { record in
-            let material = material(of: record, overrides: overrides)
-            return (pose?.uniforms(of: material) ?? material.uniforms).forPrimitive(hasTangents: record.hasTangents, hasNormals: record.hasNormals)
-        }
-    }
-
-    /// Each record's textures with `overrides` applied, or nil when none applies (``resources`` is then used).
-    public func resources(overrides: PBRModel.MaterialOverrides) -> ArgumentBuffer? {
-        guard isOverridden(by: overrides) else {
-            return nil
-        }
-        return Self.resources(records.map { material(of: $0, overrides: overrides) }, device: resources.device, label: "PBR Merged Overridden Material Resources")
-    }
-
-    private static func resources(_ materials: [PBRMaterial], device: MTLDevice, label: String) -> ArgumentBuffer {
-        let resources = ArgumentBuffer(device: device, count: max(materials.count, 1), label: label)
-        for (element, material) in materials.enumerated() {
-            resources.setMaterialResources(material.textureBindings, element: element)
-        }
-        return resources
+    /// A record's uniforms with `overrides` and `pose`'s animated materials applied.
+    public func uniforms(of record: Record, pose: PBRPose?, overrides: PBRModel.MaterialOverrides) -> PBRMaterialUniforms {
+        let material = material(of: record, overrides: overrides)
+        return (pose?.uniforms(of: material) ?? material.uniforms).forPrimitive(hasTangents: record.hasTangents, hasNormals: record.hasNormals)
     }
 }

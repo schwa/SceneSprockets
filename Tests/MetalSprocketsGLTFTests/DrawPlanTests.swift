@@ -23,7 +23,7 @@ struct DrawPlanTests {
         let asset = try GLTFAsset(url: makeTwoMaterialAnimatedFile())
         let merged = plan(asset)
         #expect(merged.mergedStatic?.visible == [true, true])
-        #expect(merged.mergedStatic?.instances == nil && merged.mergedStatic?.materials == nil)
+        #expect(merged.mergedStatic?.instances == nil)
         #expect(perBatchCount(merged) == 0)
         let separate = plan(asset, merging: false)
         #expect(separate.mergedStatic == nil)

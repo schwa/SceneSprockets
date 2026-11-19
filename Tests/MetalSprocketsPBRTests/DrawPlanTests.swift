@@ -77,7 +77,7 @@ struct DrawPlanTests {
         #expect(model.merged?.records.count == 2)
         let merged = plan(model)
         #expect(merged.mergedStatic?.visible == [true, true])
-        #expect(merged.mergedStatic?.instances == nil && merged.mergedStatic?.materials == nil)
+        #expect(merged.mergedStatic?.instances == nil)
         #expect(perBatchCount(merged) == 0)
         let separate = plan(model, merging: false)
         #expect(separate.mergedStatic == nil)
@@ -156,9 +156,11 @@ struct DrawPlanTests {
         let model = try twoOpaqueQuads()
         let replacement = models.material(color: [0, 0, 1, 1])
         let overrides = [models.quad.key: replacement]
-        let overridden = plan(model, overrides: overrides)
-        #expect(overridden.mergedStatic?.materials?.map(\.baseColorFactor) == [[0, 0, 1, 1], [0, 0, 1, 1]])
-        #expect(overridden.mergedStatic?.resources?.count == 2)
+        let merged = try #require(model.merged)
+        #expect(merged.isOverridden(by: overrides))
+        #expect(merged.records.map { merged.uniforms(of: $0, pose: nil, overrides: overrides).baseColorFactor } == [[0, 0, 1, 1], [0, 0, 1, 1]])
+        #expect(merged.records.allSatisfy { merged.material(of: $0, overrides: overrides) === replacement })
+        #expect(merged.records.map(\.batchID).sorted() == model.opaqueBatches.map(\.id).sorted())
     }
 
     @Test func transmissionStagesSelectBatches() throws {

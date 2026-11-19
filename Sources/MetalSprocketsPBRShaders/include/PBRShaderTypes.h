@@ -172,9 +172,10 @@ enum PBRMaterialTextureIndex {
     kPBRMaterialTextureCount
 };
 
-/// A material's textures and samplers in one argument buffer, so a draw binds them with one buffer.
-/// On the CPU each entry is the resource's `gpuResourceID`.
+/// A material's uniforms, textures and samplers: one element of an argument buffer, so a draw binds them with one
+/// buffer. On the CPU each texture and sampler entry is the resource's `gpuResourceID`.
 struct PBRMaterialResources {
+    PBRMaterialUniforms uniforms;
 #ifdef __METAL_VERSION__
     metal::array<metal::texture2d<float>, kPBRMaterialTextureCount> textures;
     metal::array<metal::sampler, kPBRMaterialTextureCount> samplers;

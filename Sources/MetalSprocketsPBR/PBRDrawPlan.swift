@@ -4,8 +4,8 @@ import MetalSprockets
 import MetalSprocketsPBRShaders
 import simd
 
-/// What ``PBRRenderer`` draws in one frame and how: which merged geometry sets (with posed instances, animated
-/// materials and per-record visibility), which batches go through per-batch pipelines, and the back-to-front runs of
+/// What ``PBRRenderer`` draws in one frame and how: which merged geometry sets (with posed instances and per-record
+/// visibility), which batches go through per-batch pipelines, and the back-to-front runs of
 /// blended batches. Planning is pure; the renderer only turns a plan into elements.
 struct PBRDrawPlan {
     /// A merged geometry set to draw with one element.
@@ -13,10 +13,6 @@ struct PBRDrawPlan {
         var geometry: PBRMergedGeometry
         /// Per-frame instances when posed; nil uses the rest-pose instance buffer.
         var instances: [PBRInstance]? // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
-        /// Per-record uniforms when the pose animates materials or overrides apply; nil uses the prebuilt buffer.
-        var materials: [PBRMaterialUniforms]? // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
-        /// Per-record textures when overrides apply; nil uses the prebuilt buffer.
-        var resources: ArgumentBuffer?
         /// Per-record double-sidedness of the material drawn.
         var doubleSided: [Bool]
         /// Which records to draw (frustum culling, and the back-face pre-pass's double-sided filter).
@@ -29,9 +25,6 @@ struct PBRDrawPlan {
     struct SkinnedMergedDraw {
         var geometry: PBRMergedGeometry
         var palette: [simd_float4x4]
-        // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
-        var materials: [PBRMaterialUniforms]?
-        var resources: ArgumentBuffer?
         var doubleSided: [Bool]
         /// Which records to draw (nil: all); a record whose node the pose hides is skipped.
         var visible: [Bool]? // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
@@ -154,7 +147,7 @@ struct PBRDrawPlan {
             let doubleSided = geometry.records.map { geometry.material(of: $0, overrides: materialOverrides).doubleSided }
             // The back-face pre-pass only draws double-sided transmissive surfaces.
             let visible = zip(geometry.visibility(frustums: frustums, modelMatrix: modelMatrix, pose: pose), doubleSided).map { $0 && (!backFaces || $1) }
-            return MergedDraw(geometry: geometry, instances: instances, materials: geometry.materials(pose: pose, overrides: materialOverrides), resources: geometry.resources(overrides: materialOverrides), doubleSided: doubleSided, visible: visible, backFaces: backFaces)
+            return MergedDraw(geometry: geometry, instances: instances, doubleSided: doubleSided, visible: visible, backFaces: backFaces)
         }
         mergedStatic = stage == .transmissiveBackFaces ? nil : mergedDraw(model.merged, backFaces: false)
         // Transmission as coverage draws transmissive batches blended, so not from merged geometry.
@@ -166,8 +159,6 @@ struct PBRDrawPlan {
             mergedSkinned = SkinnedMergedDraw(
                 geometry: geometry,
                 palette: geometry.jointPalette(skins: model.skins, pose: skinPose),
-                materials: geometry.materials(pose: pose, overrides: materialOverrides),
-                resources: geometry.resources(overrides: materialOverrides),
                 doubleSided: geometry.records.map { geometry.material(of: $0, overrides: materialOverrides).doubleSided },
                 visible: pose.flatMap { pose in pose.hidesNodes ? geometry.records.map { pose.isVisible($0.nodeIndices.first ?? -1) } : nil }
             )

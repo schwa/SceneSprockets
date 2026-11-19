@@ -59,6 +59,7 @@ public struct PBRRenderer: Element {
     /// The frame's lighting and view bindings, built once and shared by renderers of one frame (see
     /// ``sharingFrameBindings(_:)``). Nil builds them in `content()`. Cleared when the views or pre-pass stage change.
     var frameBindings: PBRFrameBindings?
+    @MSState private var materialTables = PBRMaterialTableCache()
 
     enum DrawPhase: Equatable {
         case all
@@ -122,7 +123,7 @@ public struct PBRRenderer: Element {
         bindings.view = PBRViewUniforms(viewProjectionMatrices: viewPair(viewProjections), modelMatrix: modelMatrix, modelNormalMatrix: modelMatrix.inverse.transpose)
 
         let plan = drawPlan(cameraPosition: views.centerPosition)
-        let context = PipelineContext(shaders: shaders, bindings: bindings, frameResources: bindings.makeFrameResources(), modelIsMirrored: modelMatrix.isMirroring)
+        let context = PipelineContext(shaders: shaders, bindings: bindings, frameResources: bindings.makeFrameResources(), modelIsMirrored: modelMatrix.isMirroring, materials: materialTables.table(for: model))
 
         return try Group {
             if transmissionScene != nil {
@@ -155,6 +156,7 @@ public struct PBRRenderer: Element {
         var bindings: PBRFrameBindings
         var frameResources: ArgumentBuffer
         var modelIsMirrored: Bool
+        var materials: PBRMaterialTable
     }
 
     @ElementBuilder
@@ -163,11 +165,11 @@ public struct PBRRenderer: Element {
         // per-draw tree small.
         if variant.morphed {
             try pipeline(label, draws, variant: variant, state: state, context: context) { draw in
-                morphedDraw(draw)
+                morphedDraw(draw, materials: context.materials)
             }
         } else {
             try pipeline(label, draws, variant: variant, state: state, context: context) { draw in
-                self.draw(draw)
+                self.draw(draw, materials: context.materials)
             }
         }
     }
@@ -240,7 +242,7 @@ public struct PBRRenderer: Element {
             .parameter("jointMatrices", values: plan.palette)
             // swiftlint:disable:next force_unwrapping - skinned merged geometry always has joint offsets
             .parameter("recordJointOffsets", buffer: merged.recordJointOffsetBuffer!)
-        return try mergedPipeline("PBR Opaque Skinned Merged", vertexShader: context.shaders.skinnedMergedVertex, vertexDescriptor: PBRModel.skinnedVertexDescriptor, merged: merged, materials: plan.materials, resources: plan.resources, context: context) {
+        return try mergedPipeline("PBR Opaque Skinned Merged", vertexShader: context.shaders.skinnedMergedVertex, vertexDescriptor: PBRModel.skinnedVertexDescriptor, merged: merged, context: context) {
             draw
         }
     }
@@ -250,19 +252,20 @@ public struct PBRRenderer: Element {
         let merged = plan.geometry
         let draw = mergedDrawCalls(merged, visible: plan.visible, doubleSided: plan.doubleSided, backFaces: plan.backFaces, modelIsMirrored: context.modelIsMirrored)
             .parameter("instances", values: plan.instances, else: merged.instanceBuffer)
-        return try mergedPipeline("PBR Opaque Merged", vertexShader: context.shaders.mergedVertex, vertexDescriptor: PBRModel.vertexDescriptor, merged: merged, materials: plan.materials, resources: plan.resources, context: context) {
+        return try mergedPipeline("PBR Opaque Merged", vertexShader: context.shaders.mergedVertex, vertexDescriptor: PBRModel.vertexDescriptor, merged: merged, context: context) {
             draw
         }
     }
 
-    /// A merged pipeline: the record inputs every merged draw shares, its record materials and textures (prebuilt, or
-    /// this frame's when given) and the frame's bindings, around `draw`.
-    private func mergedPipeline(_ label: String, vertexShader: VertexShader, vertexDescriptor: MTLVertexDescriptor, merged: PBRMergedGeometry, materials: [PBRMaterialUniforms]?, resources: ArgumentBuffer?, context: PipelineContext, draw: () -> some Element) throws -> some Element { // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
+    /// A merged pipeline: the record inputs every merged draw shares, the material table (with this frame's record
+    /// materials written) and the frame's bindings, around `draw`.
+    private func mergedPipeline(_ label: String, vertexShader: VertexShader, vertexDescriptor: MTLVertexDescriptor, merged: PBRMergedGeometry, context: PipelineContext, draw: () -> some Element) throws -> some Element {
+        context.materials.write(merged, pose: pose, overrides: materialOverrides)
         let content = draw()
             .vertexBuffer(merged.vertexBuffer, index: 0)
             .parameter("instanceRecords", buffer: merged.instanceRecordBuffer)
-            .parameter("recordMaterials", values: materials, else: merged.materialBuffer)
-            .parameter("recordResources", argumentBuffer: resources ?? merged.resources)
+            .parameter("recordMaterials", buffer: merged.recordMaterialBuffer)
+            .parameter("materials", argumentBuffer: context.materials.resources)
         return try RenderPipeline(label: label, vertexShader: vertexShader, fragmentShader: context.shaders.mergedFragment) {
             context.bindings.apply(to: content.parameter("view", value: context.bindings.view), frameResources: context.frameResources)
         }
@@ -271,10 +274,10 @@ public struct PBRRenderer: Element {
     }
 
     /// ``draw(_:)`` plus the morph target inputs, for batches with morph targets.
-    func morphedDraw(_ batchDraw: PBRDrawPlan.BatchDraw) -> some Element {
+    func morphedDraw(_ batchDraw: PBRDrawPlan.BatchDraw, materials: PBRMaterialTable) -> some Element {
         let primitive = batchDraw.batch.primitive
         let morph = PBRMorphUniforms(targetCount: UInt32(primitive.morphTargetCount), vertexCount: UInt32(primitive.vertexCount))
-        return draw(batchDraw)
+        return draw(batchDraw, materials: materials)
             .parameter("morph", value: morph)
             // swiftlint:disable:next force_unwrapping - morphed primitives always have a morph buffer
             .parameter("morphDeltas", buffer: primitive.morphBuffer!)
@@ -282,7 +285,7 @@ public struct PBRRenderer: Element {
     }
 
     /// One instanced draw per range of `batchDraw`.
-    func draw(_ batchDraw: PBRDrawPlan.BatchDraw) -> some Element {
+    func draw(_ batchDraw: PBRDrawPlan.BatchDraw, materials: PBRMaterialTable) -> some Element {
         let primitive = batchDraw.batch.primitive
         // The primitive's range of the model's shared buffers. Vertex buffers are bound at the primitive's first vertex
         // (baseVertex 0), so vertex_id stays local, as the per-primitive morph buffer expects.
@@ -317,8 +320,8 @@ public struct PBRRenderer: Element {
         .vertexBuffer(geometry.vertexBuffer, index: 0, offset: primitive.baseVertex * MemoryLayout<PBRVertex>.stride)
 
         return instances(of: batchDraw, on: draw)
-            .parameter("material", value: batchDraw.uniforms)
-            .parameter("materialResources", argumentBuffer: batchDraw.material.resources)
+            .parameter("materials", argumentBuffer: materials.resources)
+            .parameter("materialIndex", value: materials.write(batchDraw))
     }
 }
 

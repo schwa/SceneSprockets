@@ -47,9 +47,10 @@ struct ShaderParameterNameTests {
 
     @Test func everyArgumentBufferFieldIsAStructMember() throws {
         let swift = try sources(in: "Sources/MetalSprocketsPBR", extension: "swift")
-        let fields = try fragmentStructMembers("frameResources").union(fragmentStructMembers("materialResources"))
-        let names = Set(swift.matches(of: /[\s.]set\("(\w+)", (?:texture|textures|samplerState|samplerStates):/).map { String($0.output.1) })
-        #expect(names.count == 10, "Expected the LightingFrameResources and PBRMaterialResources fields, found \(names.sorted())")
+        let fields = try fragmentStructMembers("frameResources").union(fragmentStructMembers("materials"))
+        let names = Set(swift.matches(of: /[\s.]set\("(\w+)", (?:texture|textures|samplerState|samplerStates|value):/).map { String($0.output.1) })
+        #expect(names.contains("uniforms"), "Expected PBRMaterialTable to set the material uniforms, found \(names.sorted())")
+        #expect(names.count >= 11, "Expected the LightingFrameResources and PBRMaterialResources fields, found \(names.sorted())")
         #expect(names.subtracting(fields).isEmpty, "Set but not an argument buffer field: \(names.subtracting(fields).sorted())")
     }
 }

@@ -181,31 +181,32 @@ namespace PBR {
         Fragment in [[stage_in]],
         bool frontFacing [[front_facing]],
         float3 barycentric [[barycentric_coord]],
-        constant PBRMaterialUniforms &material [[buffer(0)]],
+        constant PBRMaterialResources *materials [[buffer(0)]],
         constant PBRFrameUniforms &frame [[buffer(1)]],
         constant LightingLight *lights [[buffer(2)]],
-        constant PBRMaterialResources &materialResources [[buffer(3)]],
+        constant uint &materialIndex [[buffer(3)]],
         constant LightingShadowUniforms &shadow [[buffer(4)]],
         constant LightingFrameResources &frameResources [[buffer(5)]]
     ) {
-        return withWireframe(shade(in, frontFacing, material, frame, lights, materialResources, shadow, frameResources), barycentric, frame, material);
+        constant PBRMaterialResources &material = materials[materialIndex];
+        return withWireframe(shade(in, frontFacing, material.uniforms, frame, lights, material, shadow, frameResources), barycentric, frame, material.uniforms);
     }
 
-    // Merged static geometry: each draw record has its own material, selected by the record index the vertex stage
-    // passes along.
+    // Merged geometry: each draw record has its own material, selected by the record index the vertex stage passes
+    // along.
     [[fragment]] float4 fragment_merged(
         Fragment in [[stage_in]],
         bool frontFacing [[front_facing]],
         float3 barycentric [[barycentric_coord]],
-        constant PBRMaterialUniforms *recordMaterials [[buffer(0)]],
+        constant PBRMaterialResources *materials [[buffer(0)]],
         constant PBRFrameUniforms &frame [[buffer(1)]],
         constant LightingLight *lights [[buffer(2)]],
-        constant PBRMaterialResources *recordResources [[buffer(3)]],
+        constant uint *recordMaterials [[buffer(3)]],
         constant LightingShadowUniforms &shadow [[buffer(4)]],
         constant LightingFrameResources &frameResources [[buffer(5)]]
     ) {
-        constant PBRMaterialUniforms &material = recordMaterials[in.record];
-        return withWireframe(shade(in, frontFacing, material, frame, lights, recordResources[in.record], shadow, frameResources), barycentric, frame, material);
+        constant PBRMaterialResources &material = materials[recordMaterials[in.record]];
+        return withWireframe(shade(in, frontFacing, material.uniforms, frame, lights, material, shadow, frameResources), barycentric, frame, material.uniforms);
     }
 
 } // namespace PBR
