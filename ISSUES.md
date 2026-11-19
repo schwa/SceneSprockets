@@ -12996,6 +12996,7 @@ RFC: RFCs/0001-pbr-performance.md option 1.
 
 - `2026-11-19T04:15:24Z`: Needs MetalSprockets#580 (field-level ArgumentBuffer updates).
 - `2026-11-19T05:41:45Z`: Implemented in cb29f2e8 (per-renderer PBRMaterialTable, both paths). Paused: AnimationPointerUVs merged is 2.34 -> 2.76 ms CPU from ArgumentBuffer's per-version cost; needs MetalSprockets#582. Static scenes unchanged. Measured with the local MetalSprockets (includes #581, unreleased).
+- `2026-11-19T06:06:31Z`: MetalSprockets#582 fixed locally (unreleased): AnimationPointerUVs merged 2.76 -> 2.47 ms CPU (2.34 before the table). Static scenes unchanged.
 
 ---
 
