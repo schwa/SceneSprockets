@@ -11854,6 +11854,7 @@ Lights are not assigned to visible regions with compute shaders. Related: #514.
 - `2026-11-17T19:00:13Z`: Auto-fixer (M002): punting. Each material renderer lights in its own shader: Blinn-Phong loops over all frame lights in this repo, but PBR lighting is in MetalSprocketsPBR (another repo), plus toon/voxel/SDF in SceneSprocketsAddOns. A shared cluster grid (compute pass building per-cluster light lists, bound to every lit shader) needs agreement across those packages, and no benchmark scene defines 'many lights'. Unblocker: OK to pilot clustering in Blinn-Phong only (with a many-lights demo scene for measurement) and follow up in MetalSprocketsPBR separately?
 - `2026-11-17T19:05:45Z`: Question 1 (decision): Pilot clustered light assignment in Blinn-Phong only, with a many-lights demo scene, and do MetalSprocketsPBR later? Recommended: Yes
 - `2026-11-19T01:50:43Z`: Q1 is superseded: lights are now shared through MetalSprocketsLighting (#547), so light assignment would naturally live there and serve every renderer, not start as a Blinn-Phong-only pilot. See Q2.
+- `2026-11-19T01:50:43Z`: Question 2 (decision): Build clustered light assignment in MetalSprocketsLighting (a compute pass producing per-cluster light lists that every renderer reads), measured with a many-lights demo scene? Recommended: Yes
 
 ---
 
