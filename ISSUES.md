@@ -12330,7 +12330,7 @@ Related: #516 No GPU-driven rendering (overlapping umbrella), #518 No mesh shadi
 
 ---
 
-## 545: PBR draws opaque geometry through a merged path that may not be needed
+## 545: PBR issues opaque draws from merged sets that may not be needed
 
 +++
 status: open
@@ -12340,43 +12340,19 @@ labels: area:renderer, area:performance, effort:l, investigate
 milestone: M007-PBR-Merged-Geometry
 depends: 572
 created: 2026-11-18T18:13:33Z
-updated: 2026-11-19T03:58:37Z
+updated: 2026-11-19T04:05:43Z
 +++
 
-MetalSprocketsPBR merges opaque, unmorphed triangle primitives into shared vertex, index, instance and material buffers (PBRMergedGeometry), so one draw element issues many Metal draws. Its reason: MetalSprockets' per-frame cost grows with the number of elements, not Metal draw calls. Merging works around MetalSprockets overhead; it does not address a GPU cost. Merging may have been the wrong choice.
+MetalSprocketsPBR draws eligible opaque batches from merged sets (PBRMergedGeometry): one element issues one Metal draw per batch, using the asset's own vertex and index buffers. Meshes are not combined; batches keep their own draw calls and instancing. Each set copies its batches' instances, material uniforms and material textures into shared buffers at build time. The reason: MetalSprockets' per-frame cost grows with the number of elements, not Metal draw calls.
 
-Costs of merging:
-- Two drawing paths, merged (opaque static and skinned) and per-batch (blended, morphed, transmissive), each with its own rules.
-- Live material changes need overrides, and pass changes need a model rebuild (#479).
-- Geometry is copied into the shared buffers and rebuilt with the model.
+Costs:
+- Two drawing paths, merged (static, skinned, transmissive opaque) and per-batch (blended, morphed, non-default render state), with different eligibility rules (PBRMergedGeometry.canMerge).
+- Material changes after the build are not seen without overrides or a rebuild (#479).
+- Animated materials and uniform overrides rebuild the whole set's uniform array every frame (#554); texture overrides build a new argument buffer for the set every frame.
 
-The overhead it avoids belongs in MetalSprockets, where it is tracked: MetalSprockets#476 (argument tables re-bound every draw), #513 (ParameterSet rebuilt every draw), #519 (draw subtrees never reused), #522 (no closure-free Draw). Merging is not required for GPU-driven rendering (#517, #520, #522, #544).
+The element overhead it avoids is tracked in MetalSprockets: MetalSprockets#476, #513, #519, #522.
 
-What is known (from MetalSprockets' issues, not re-measured): rendering runs on a render thread (#393), so the cost matters against the frame budget (8.3 ms at 120 Hz, 11.1 ms at 90 Hz) and for energy, not the main thread. The only profile (GLTFViewer) showed reconciliation as the hot spot, not argument-table binding. A static 1000-cube scene spends about 1.75 ms per frame in Update (Release). Not measured: tree building alone, scaling past 1000 draws, SceneSprockets' real scenes.
-
-Needed before deciding:
-- Benchmarks of merged versus per-primitive drawing at several primitive and material counts: render-thread CPU time, GPU time, memory and energy, in Debug and Release.
-- The same after MetalSprockets' per-element costs are reduced (MetalSprockets#519 targets reconciliation directly).
-
-Was also MetalSprocketsPBR#37 (merged here with the package, #552).
-
-\- `2026-11-19T03:52:54Z`: Benchmark: ms-gltf-render bench vs bench --no-merging (new flag), Release, M5 Max (Mac17,6), 1024², median of fastest of 3 rounds × 60 frames. CPU ms / GPU ms:
-
-| scene | merged | per-batch |
-|---|---|---|
-| ABeautifulGame | 1.33 / 0.89 | 2.45 / 0.80 |
-| Sponza | 1.34 / 0.25 | 4.50 / 0.40 |
-| NodePerformanceTest | 54.3 / 3.99 | 415.0 / 9.84 |
-| SimpleInstancing | 0.55 / 0.05 | 0.54 / 0.06 |
-| BrainStem | 0.85 / 0.14 | 5.14 / 0.35 |
-| RecursiveSkeletons | 1.17 / 0.13 | 4.78 / 0.16 |
-| Fox | 0.58 / 0.05 | 0.58 / 0.03 |
-| AnimationPointerUVs | 2.93 / 0.30 | 19.27 / 1.12 |
-| AlphaBlendModeTest | 0.73 / 0.08 | 0.92 / 0.06 |
-| TransmissionTest | 1.48 / 0.61 | 3.25 / 0.58 |
-| CarConcept | 2.42 / 0.60 | 9.21 / 1.35 |
-
-Per-batch drawing costs 2-8x more render-thread CPU on most multi-primitive scenes (NodePerformanceTest 7.6x, AnimationPointerUVs 6.6x), and up to ~3.7x GPU (AnimationPointerUVs, CarConcept 2.2x). Single-primitive scenes are equal. With today's MetalSprockets per-element costs, removing merging would put several scenes over the 8.3 ms 120 Hz budget. Not measured: memory, energy, Debug.
+Measurements and alternatives: RFCs/0001-pbr-performance.md. bench --no-merging (#572) compares the paths.
 
 - `2026-11-19T03:52:54Z`: Question 1 (decision): Keep the merged path for now and revisit #545 after MetalSprockets' per-element costs drop (MetalSprockets#519 etc.), re-running bench --no-merging then? Recommended: Yes: keep merging; lower #545 to Medium, label deferred, and re-measure after MetalSprockets#519.
 - `2026-11-19T03:58:37Z`: Related: #572 (bench --no-merging, used for the table above), #571 (NodePerformanceTest regression found in this benchmark).
