@@ -12940,6 +12940,12 @@ The slowdown happened between the baseline recording and #552; that history is i
 Repro: just bench-gltf NodePerformanceTest
 
 - `2026-11-19T03:58:37Z`: Found while benchmarking #545 with the tool from #572. Also see #554 (AnimationPointerUVs frame time).
+- `2026-11-19T05:04:49Z`: Cause: MetalSprockets#581. RecordingScope cast every retained allocation to MTLResource (slow Objective-C conformance check), and argument buffers (#579) pass shared textures many times per submission. ~61% of samples were in that cast.
+
+Fix (MetalSprockets 1fc95602, local; not released): retain each allocation once per submission. With it (local path build, Release, M5 Max), bench CPU / GPU ms:
+NodePerformanceTest 54.3/4.0 -> 10.4/1.6; CarConcept 2.42 -> 1.54; Sponza 1.34 -> 0.65; AnimationPointerUVs 2.93 -> 2.34; every scene faster.
+
+NodePerformanceTest is still +56% CPU over the Oct 6 baseline (6.7 ms). The rest of the profile is MetalSprockets per-element work (reconcile, draw binding); no single hot spot. Not closing until a MetalSprockets release with the fix is used here.
 
 ---
 
