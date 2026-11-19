@@ -6123,14 +6123,14 @@ My suggestions: 1 yes, but only after #271/#273 are decided; 2 strong; 3 yes; 4 
 ## 270: Node property access is slower for nodes in a graph
 
 +++
-status: blocked
+status: open
 priority: low
 kind: enhancement
 labels: area:scenegraph, effort:m, subtask
 milestone: M002-Performance
 depends: 265
 created: 2026-11-05T18:22:50Z
-updated: 2026-11-16T20:12:42Z
+updated: 2026-11-19T01:50:43Z
 +++
 
 Part of #250. After #265, nodes under a SceneGraph's root read transform and content through the World. Release build, 100k nodes, best of 5 (noisy machine): attached transform read ~64 ns vs ~34 ns before; attached write ~220 ns vs ~180 ns; detached read ~38 ns vs ~28 ns. Each attached read registers observation on both the Node and the World and takes a column lock. Traversal measured 75-153 ns per node vs ~102 ns before; the noise is too high to say more.
