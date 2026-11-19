@@ -12338,9 +12338,9 @@ priority: critical
 kind: task
 labels: area:renderer, area:performance, effort:l, investigate
 milestone: M007-PBR-Merged-Geometry
-depends: 572
+depends: 572, 573
 created: 2026-11-18T18:13:33Z
-updated: 2026-11-19T04:05:43Z
+updated: 2026-11-19T04:09:28Z
 +++
 
 MetalSprocketsPBR draws eligible opaque batches from merged sets (PBRMergedGeometry): one element issues one Metal draw per batch, using the asset's own vertex and index buffers. Meshes are not combined; batches keep their own draw calls and instancing. Each set copies its batches' instances, material uniforms and material textures into shared buffers at build time. The reason: MetalSprockets' per-frame cost grows with the number of elements, not Metal draw calls.
@@ -12571,8 +12571,9 @@ priority: low
 kind: bug
 labels: area:performance, effort:m, deferred, gltf
 milestone: M007-PBR-Merged-Geometry
+depends: 573
 created: 2026-11-19T02:12:55Z
-updated: 2026-11-19T03:27:32Z
+updated: 2026-11-19T04:09:28Z
 +++
 
 In GLTFViewer (Release, 120 Hz display) AnimationPointerUVs runs at ~90 fps with its animation playing. Headless (ms-gltf-render --benchmark 60 --orbit --animation 0, Release, M5 Max): ~4.8 ms CPU, <1 ms GPU per frame. The scene has 132 primitives, 82 materials (9 transmissive, 3 blended) and animates material texture transforms through KHR_animation_pointer, so each frame also pays for the transmission pre-passes, per-batch drawing of the 3 blended primitives, and per-frame material uniform arrays for the merged sets. Not yet profiled.
@@ -12957,6 +12958,32 @@ closed: 2026-11-19T03:58:37Z
 ms-gltf-render bench always drew with merged geometry: PBRRenderer.usesMergedGeometry was internal and PBRScene built its renderers with the default, so #545 had no way to measure per-batch drawing on real scenes.
 
 Fixed in 4be90eac: PBRScene.usesMergedGeometry (package) passes the setting to its renderers, and bench --no-merging uses it (never compares or records a baseline). Results are on #545.
+
+---
+
+## 573: PBR material data is copied per merged set and rebuilt whole when one material changes
+
++++
+status: new
+priority: medium
+kind: enhancement
+labels: area:renderer, area:performance, effort:l
+milestone: M007-PBR-Merged-Geometry
+created: 2026-11-19T04:09:28Z
++++
+
+Material uniforms and textures live in several places: each merged set copies its batches' uniforms into a material buffer and its textures into an ArgumentBuffer at build time (PBRMergedGeometry), and the per-batch path binds each batch's uniforms by value plus the material's own ArgumentBuffer.
+
+Effects:
+- A material changed after the model is built is not seen on the merged path unless an override or animation applies (#479).
+- One animated material rebuilds the uniform array of its whole merged set every frame (#554).
+- A texture override builds a new ArgumentBuffer for its whole merged set every frame.
+
+Expected: one material table per model, shared by both paths and referenced by index, where a change costs work in proportion to what changed, without racing frames the GPU is still reading.
+
+MetalSprockets' ArgumentBuffer (checked 0.3.4) is copy-on-write: any set() drops the built version, and the next bind allocates a new MTLBuffer and rewrites every element. Draws in flight keep their version, so it is race-free, but one changed field in a model-wide table still costs a full rebuild and an allocation each frame. Field-granular updates need a MetalSprockets change.
+
+RFC: RFCs/0001-pbr-performance.md option 1.
 
 ---
 
