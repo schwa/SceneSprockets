@@ -11836,10 +11836,10 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, bounds, indirect-drawing
-milestone: M002-Performance
+milestone: M007-PBR-Merged-Geometry
 depends: 545
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-19T01:50:43Z
+updated: 2026-11-19T03:27:32Z
 +++
 
 Hidden objects are still drawn: there is no depth pyramid and compute pass to cull them. A GPU culling result only saves work if the GPU also issues the draws (indirect draws, #517); otherwise visibility would be read back to the CPU a frame late. How draws are fed depends on #545. Part of #543 and #544.
