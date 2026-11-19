@@ -12337,9 +12337,9 @@ status: new
 priority: critical
 kind: task
 labels: area:renderer, area:performance, effort:l, investigate
-milestone: M002-Performance
+milestone: M007-PBR-Merged-Geometry
 created: 2026-11-18T18:13:33Z
-updated: 2026-11-19T01:55:29Z
+updated: 2026-11-19T03:27:31Z
 +++
 
 MetalSprocketsPBR merges opaque, unmorphed triangle primitives into shared vertex, index, instance and material buffers (PBRMergedGeometry), so one draw element issues many Metal draws. Its reason: MetalSprockets' per-frame cost grows with the number of elements, not Metal draw calls. Merging works around MetalSprockets overhead; it does not address a GPU cost. Merging may have been the wrong choice.
