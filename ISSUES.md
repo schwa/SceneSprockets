@@ -12939,6 +12939,26 @@ Expected, once #552 lands:
 
 ---
 
+## 571: NodePerformanceTest is 8x slower than its benchmark baseline
+
++++
+status: new
+priority: high
+kind: bug
+labels: area:performance, effort:m, gltf
+milestone: M007-PBR-Merged-Geometry
+created: 2026-11-19T03:53:06Z
+updated: 2026-11-19T03:53:09Z
++++
+
+ms-gltf-render bench (Release, M5 Max, Mac17,6, merging on) reports NodePerformanceTest at ~54.3 ms CPU / ~4.0 ms GPU per frame. The baseline in Benchmarks/glTF/Mac17,6.json (recorded 2026-10-06) is 6.7 ms CPU / 1.15 ms GPU. Reproduced on two runs. Other scenes are within or below their baselines (Sponza is noisy, +18% to +49%).
+
+The slowdown happened between the baseline recording and #552; that history is in the archived MetalSprocketsPBR/MetalSprocketsGLTF repos.
+
+Repro: just bench-gltf NodePerformanceTest
+
+---
+
 ## Milestone: M001-Correctness
 
 +++
