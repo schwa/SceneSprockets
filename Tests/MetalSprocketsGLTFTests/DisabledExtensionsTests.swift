@@ -4,7 +4,9 @@ import Testing
 
 private func clearcoatFile(required: Bool = false) throws -> URL {
     let url = try makeExtensionMaterialFile(#"{"KHR_materials_clearcoat": {"clearcoatFactor": 1}}"#, extensionsUsed: ["KHR_materials_clearcoat"])
-    guard required else { return url }
+    guard required else {
+        return url
+    }
     let json = try String(contentsOf: url, encoding: .utf8)
         .replacingOccurrences(of: #""extensionsUsed": ["#, with: #""extensionsRequired": ["KHR_materials_clearcoat"], "extensionsUsed": ["#)
     try json.write(to: url, atomically: true, encoding: .utf8)

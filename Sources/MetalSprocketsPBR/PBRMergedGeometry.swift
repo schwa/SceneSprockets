@@ -102,6 +102,7 @@ public final class PBRMergedGeometry {
                     paletteSkins.append(skinIndex)
                     paletteSize += skins[skinIndex].joints.count
                 }
+                // swiftlint:disable:next force_unwrapping - the offset was stored for this skin above
                 jointOffsets.append(UInt32(skinOffsets[skinIndex]!))
             }
 
@@ -115,6 +116,7 @@ public final class PBRMergedGeometry {
         }
 
         func buffer<T>(_ values: [T], label: String) throws -> MTLBuffer {
+            // swiftlint:disable:next force_unwrapping - max(count, 1) bytes are always allocated
             guard let buffer = values.withUnsafeBytes({ device.makeBuffer(bytes: $0.baseAddress!, length: max($0.count, 1), options: .storageModeShared) }) else {
                 throw PBRGeometryError.bufferAllocationFailed
             }
@@ -139,7 +141,7 @@ public final class PBRMergedGeometry {
 
     /// Every instance placed by `pose`, in instance order, or nil when the pose mirrors an instance differently from
     /// its record's rest winding (the merged draw has one winding per record).
-    public func instances(pose: PBRPose) -> [PBRInstance]? {
+    public func instances(pose: PBRPose) -> [PBRInstance]? { // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         var instances: [PBRInstance] = []
         instances.reserveCapacity(records.reduce(0) { $0 + $1.instanceCount })
         for record in records {
@@ -181,7 +183,7 @@ public final class PBRMergedGeometry {
 
     /// Each record's uniforms with `overrides` and `pose`'s animated materials applied, or nil when neither changes
     /// anything (the prebuilt material buffer is then used).
-    public func materials(pose: PBRPose?, overrides: PBRModel.MaterialOverrides) -> [PBRMaterialUniforms]? {
+    public func materials(pose: PBRPose?, overrides: PBRModel.MaterialOverrides) -> [PBRMaterialUniforms]? { // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         guard pose?.materialUniforms.isEmpty == false || isOverridden(by: overrides) else {
             return nil
         }

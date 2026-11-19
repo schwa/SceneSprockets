@@ -15,7 +15,9 @@ extension PBRMaterial {
                 factor.set(&uniforms, value)
 
             case let .textureTransform(texturePath, component):
-                guard var transform = textureTransforms[texturePath] else { return }
+                guard var transform = textureTransforms[texturePath] else {
+                    return
+                }
                 switch component {
                 case .offset where value.count == 2: transform.offset = SIMD2(value[0], value[1])
                 case .rotation where value.count == 1: transform.rotation = value[0]
@@ -29,13 +31,15 @@ extension PBRMaterial {
 
         /// The current value of a property below `/materials/N/`, in the shape ``apply(_:value:)`` takes. Nil for a
         /// texture transform of a texture this material lacks.
-        public func value(of property: GLTFAnimationPointer.MaterialProperty) -> [Float]? {
+        public func value(of property: GLTFAnimationPointer.MaterialProperty) -> [Float]? { // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
             switch property {
             case .factor(let factor):
                 return factor.get(uniforms)
 
             case let .textureTransform(texturePath, component):
-                guard let transform = textureTransforms[texturePath] else { return nil }
+                guard let transform = textureTransforms[texturePath] else {
+                    return nil
+                }
                 switch component {
                 case .offset: return [transform.offset.x, transform.offset.y]
                 case .rotation: return [transform.rotation]

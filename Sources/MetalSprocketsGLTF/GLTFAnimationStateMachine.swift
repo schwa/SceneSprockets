@@ -92,7 +92,9 @@ public struct GLTFAnimationStateMachine: Sendable {
     }
 
     private mutating func enter(_ name: String, fadeDuration: Float) {
-        guard let state = states[name] else { return }
+        guard let state = states[name] else {
+            return
+        }
         currentState = name
         stateTime = 0
         controller.play(state.animation, fadeDuration: fadeDuration, speed: state.speed, loops: state.loops, restarts: true)

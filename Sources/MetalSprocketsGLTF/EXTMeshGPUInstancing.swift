@@ -25,12 +25,15 @@ public struct EXTMeshGPUInstancing: GLTFExtension {
 extension Container {
     /// The node-relative matrix of each instance of `node`'s mesh, or nil when the node does not use
     /// EXT_mesh_gpu_instancing.
-    func instanceMatrices(for node: Node) throws -> [simd_float4x4]? {
+    func instanceMatrices(for node: Node) throws -> [simd_float4x4]? { // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         guard let instancing = try? node.extensionValue(EXTMeshGPUInstancing.self) else {
             return nil
         }
+        // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         func values(_ name: String, components: Int) throws -> [Float]? {
-            guard let index = instancing.attributes[name] else { return nil }
+            guard let index = instancing.attributes[name] else {
+                return nil
+            }
             guard document.accessors.indices.contains(index) else {
                 throw GLTFError.invalidDocument("EXT_mesh_gpu_instancing \(name) accessor \(index) is out of range")
             }

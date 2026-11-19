@@ -95,7 +95,7 @@ struct StereoTests {
         ]
 
         let viewport = MTLViewport(originX: 0, originY: 0, width: Double(size), height: Double(size), znear: 0, zfar: 1)
-        /// Each slice of a render of `views` together, with a stereo pre-pass.
+        // Each slice of a render of `views` together, with a stereo pre-pass.
         func render(_ views: [simd_float4x4], prePass usesPrePass: Bool = true) throws -> [[UInt8]] {
             let count = views.count
             let stereo = StereoViews(viewMatrices: views, projectionMatrices: Array(repeating: projection, count: count), viewports: Array(repeating: viewport, count: count))

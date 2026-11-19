@@ -23,6 +23,7 @@ public enum BundledHDRI: String, CaseIterable, Identifiable, Sendable {
     }
 
     var downloadURL: URL {
+        // swiftlint:disable:next force_unwrapping - a constant URL with an alphanumeric name
         URL(string: "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/\(rawValue)_1k.hdr")!
     }
 }
@@ -82,7 +83,9 @@ public final class EnvironmentLibrary {
 
     /// Starts building `choice` unless it is built, building or failed.
     func request(_ choice: ViewerEnvironment) {
-        guard choice != .studio, choice != .model, states[choice] == nil else { return }
+        guard choice != .studio, choice != .model, states[choice] == nil else {
+            return
+        }
         load(choice)
     }
 

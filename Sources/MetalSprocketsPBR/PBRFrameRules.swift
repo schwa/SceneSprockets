@@ -20,7 +20,9 @@ extension PBRPose {
     /// World bounds of `localBounds` placed at each visible instance.
     func bounds(of localBounds: BoundingBox3D, nodes: [Int], instanceMatrices: [simd_float4x4]) -> BoundingBox3D {
         zip(nodes, instanceMatrices).reduce(BoundingBox3D.empty) { result, instance in
-            guard isVisible(instance.0) else { return result }
+            guard isVisible(instance.0) else {
+                return result
+            }
             return result.union(localBounds.transformedKeepingEmpty(by: placement(node: instance.0, instanceMatrix: instance.1)))
         }
     }

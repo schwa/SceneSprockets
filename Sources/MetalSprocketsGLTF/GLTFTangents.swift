@@ -33,7 +33,9 @@ enum GLTFTangents {
             out?[1] = value.y
         }
         interface.m_setTSpaceBasic = { context, tangent, sign, face, corner in
-            guard let tangent else { return }
+            guard let tangent else {
+                return
+            }
             Input.from(context).tangents[Int(face) * 3 + Int(corner)] = SIMD4(tangent[0], tangent[1], tangent[2], sign)
         }
         withUnsafeMutablePointer(to: &interface) { interfacePointer in
@@ -90,6 +92,7 @@ enum GLTFTangents {
         }
 
         static func from(_ context: UnsafePointer<SMikkTSpaceContext>?) -> Input {
+            // swiftlint:disable:next force_unwrapping - MikkTSpace always passes the context it was given
             Unmanaged<Input>.fromOpaque(context!.pointee.m_pUserData).takeUnretainedValue()
         }
     }

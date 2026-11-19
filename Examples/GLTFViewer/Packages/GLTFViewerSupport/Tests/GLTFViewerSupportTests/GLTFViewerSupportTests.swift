@@ -1,3 +1,6 @@
+// JSON fixtures in multi-line strings keep JSON's usual 2-space indentation.
+// swiftlint:disable indentation_width
+
 import Foundation
 @testable import GLTFViewerSupport
 import Testing
@@ -69,3 +72,5 @@ func writeTemporary(_ contents: String, extension pathExtension: String) throws 
     #expect(model.matches("PBR"))
     #expect(!model.matches("duck"))
 }
+
+// swiftlint:enable indentation_width

@@ -26,6 +26,7 @@ public extension MTLTexture {
         }
         var pixels = [Float16](repeating: 0, count: width * height * 4)
         pixels.withUnsafeMutableBytes { bytes in
+            // swiftlint:disable:next force_unwrapping - the buffer was allocated for these bytes
             getBytes(bytes.baseAddress!, bytesPerRow: width * 8, from: MTLRegionMake2D(0, 0, width, height), mipmapLevel: 0)
         }
         return pixels
@@ -38,9 +39,17 @@ public extension MTLTexture {
         guard let provider = CGDataProvider(data: data),
               let colorSpace = CGColorSpace(name: CGColorSpace.extendedLinearSRGB),
               let image = CGImage(
-                width: width, height: height, bitsPerComponent: 16, bitsPerPixel: 64, bytesPerRow: width * 8, space: colorSpace,
+                width: width,
+                height: height,
+                bitsPerComponent: 16,
+                bitsPerPixel: 64,
+                bytesPerRow: width * 8,
+                space: colorSpace,
                 bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.floatComponents.rawValue | CGBitmapInfo.byteOrder16Little.rawValue),
-                provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent
+                provider: provider,
+                decode: nil,
+                shouldInterpolate: false,
+                intent: .defaultIntent
               )
         else {
             throw LightingEnvironmentError.resourceCreationFailed("HDR image")

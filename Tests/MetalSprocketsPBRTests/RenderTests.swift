@@ -91,7 +91,9 @@ struct RenderTests {
 
     @Test
     func upscaled() throws {
-        guard PBRUpscaling.isSupported(device: models.device) else { return }
+        guard PBRUpscaling.isSupported(device: models.device) else {
+            return
+        }
         for sampleCount in [1, 4] {
             var scene = scene(try models.model([(.zero, models.material())]))
             scene.upscaling = PBRUpscaling(scale: 0.5)

@@ -66,6 +66,7 @@ public enum PBRDebugView: Int32, CaseIterable, Identifiable, Sendable {
 
     /// The matching kPBRDebugView* value.
     public var shaderValue: PBRShaderDebugView {
+        // swiftlint:disable:next force_unwrapping - every case has a shader value
         PBRShaderDebugView(rawValue: rawValue)!
     }
 }

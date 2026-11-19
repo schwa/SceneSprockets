@@ -45,7 +45,9 @@ final class OpenedFile {
         let json = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any] ?? [:]
         let resources = (json["buffers"] as? [[String: Any]] ?? []) + (json["images"] as? [[String: Any]] ?? [])
         return resources.contains { resource in
-            guard let uri = resource["uri"] as? String else { return false }
+            guard let uri = resource["uri"] as? String else {
+                return false
+            }
             return !uri.hasPrefix("data:")
         }
     }

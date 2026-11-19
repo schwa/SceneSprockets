@@ -2,12 +2,12 @@ import MetalSprocketsPBRShaders
 import simd
 import SwiftGLTF
 
+// Immutable; @unchecked only because the texture slots hold key paths, which are not Sendable.
 /// Everything this package does with one material extension (or with core glTF materials): the uniforms it sets, with
 /// the spec defaults when a material lacks it, its texture slots, and the factors KHR_animation_pointer may animate.
 ///
 /// ``all`` is the single list. Material building, ``GLTFMaterialTextureSlot/all``, the animatable material factors and
 /// ``GLTFAsset/builtInExtensions`` come from it, so adding an extension means adding one entry here.
-// Immutable; @unchecked only because the texture slots hold key paths, which are not Sendable.
 struct GLTFMaterialFeature: @unchecked Sendable {
     typealias Factor = GLTFAnimationPointer.MaterialProperty.Factor
 
@@ -42,17 +42,31 @@ struct GLTFMaterialFeature: @unchecked Sendable {
     static let extensionNames: Set<String> = Set(all.compactMap(\.extensionName))
 
     static func scalar(_ keyPath: WritableKeyPath<PBRMaterialUniforms, Float> & Sendable) -> Factor {
-        Factor(get: { [$0[keyPath: keyPath]] }, set: { if let value = $1.first { $0[keyPath: keyPath] = value } })
+        Factor(get: { [$0[keyPath: keyPath]] }, set: {
+            if let value = $1.first {
+                $0[keyPath: keyPath] = value
+            }
+        })
     }
 
     static func vector3(_ keyPath: WritableKeyPath<PBRMaterialUniforms, SIMD3<Float>> & Sendable) -> Factor {
-        Factor(get: { let value = $0[keyPath: keyPath]; return [value.x, value.y, value.z] }, set: { if $1.count == 3 { $0[keyPath: keyPath] = SIMD3($1[0], $1[1], $1[2]) } })
+        Factor(get: { let value = $0[keyPath: keyPath]; return [value.x, value.y, value.z] }, set: {
+            if $1.count == 3 {
+                $0[keyPath: keyPath] = SIMD3($1[0], $1[1], $1[2])
+            }
+        })
     }
 
     static func vector4(_ keyPath: WritableKeyPath<PBRMaterialUniforms, SIMD4<Float>> & Sendable) -> Factor {
-        Factor(get: { let value = $0[keyPath: keyPath]; return [value.x, value.y, value.z, value.w] }, set: { if $1.count == 4 { $0[keyPath: keyPath] = SIMD4($1[0], $1[1], $1[2], $1[3]) } })
+        Factor(get: { let value = $0[keyPath: keyPath]; return [value.x, value.y, value.z, value.w] }, set: {
+            if $1.count == 4 {
+                $0[keyPath: keyPath] = SIMD4($1[0], $1[1], $1[2], $1[3])
+            }
+        })
     }
 
+    // One entry per extension, with its uniforms closure inline: the table reads better than one argument per line.
+    // swiftlint:disable multiline_arguments multiline_call_arguments
     /// In application order: specular-glossiness comes last because it overrides the metallic-roughness and specular
     /// uniforms.
     static let all: [Self] = [
@@ -78,7 +92,9 @@ struct GLTFMaterialFeature: @unchecked Sendable {
                 return material.pbrMetallicRoughness?.baseColorTexture.map { (GLTFMaterialTextureSlot.baseColorPath, $0) }
             },
             GLTFMaterialTextureSlot(index: kPBRTextureMetallicRoughness, uniform: \.metallicRoughness, sRGB: false, pointerPaths: ["pbrMetallicRoughness/metallicRoughnessTexture"]) { material in
-                guard material.specularGlossiness == nil else { return nil }
+                guard material.specularGlossiness == nil else {
+                    return nil
+                }
                 return material.pbrMetallicRoughness?.metallicRoughnessTexture.map { ("pbrMetallicRoughness/metallicRoughnessTexture", $0) }
             },
             .single(kPBRTextureNormal, \.normal, sRGB: false, path: "normalTexture") { $0.normalTexture },
@@ -128,7 +144,9 @@ struct GLTFMaterialFeature: @unchecked Sendable {
             uniforms.specularColorFactor = specular?.specularColorFactor ?? [1, 1, 1]
         }, textureSlots: [
             GLTFMaterialTextureSlot(index: kPBRTextureSpecular, uniform: \.specular, sRGB: false, pointerPaths: ["extensions/KHR_materials_specular/specularTexture"]) { material in
-                guard material.specularGlossiness == nil else { return nil }
+                guard material.specularGlossiness == nil else {
+                    return nil
+                }
                 return material.specular?.specularTexture.map { ("extensions/KHR_materials_specular/specularTexture", $0) }
             },
             GLTFMaterialTextureSlot(index: kPBRTextureSpecularColor, uniform: \.specularColor, sRGB: true, pointerPaths: ["extensions/KHR_materials_specular/specularColorTexture", GLTFMaterialTextureSlot.specularGlossinessPath]) { material in
@@ -220,7 +238,9 @@ struct GLTFMaterialFeature: @unchecked Sendable {
         // roughness from glossiness (the specular texture's alpha). Its textures are chosen by the core and specular
         // slots above.
         Self(extensionName: KHRMaterialsPBRSpecularGlossiness.extensionName) { material, uniforms in
-            guard let specularGlossiness = material?.specularGlossiness else { return }
+            guard let specularGlossiness = material?.specularGlossiness else {
+                return
+            }
             uniforms.specularGlossiness = 1
             uniforms.baseColorFactor = specularGlossiness.diffuseFactor
             uniforms.metallicFactor = 0
@@ -230,4 +250,5 @@ struct GLTFMaterialFeature: @unchecked Sendable {
             uniforms.specularColorFactor = specularGlossiness.specularFactor / 0.04
         }
     ]
+    // swiftlint:enable multiline_arguments multiline_call_arguments
 }

@@ -47,7 +47,9 @@ final class ImmersiveController {
     /// ARKit runs only while an immersive space is open, and background apps may not use the GPU (taking the headset
     /// off backgrounds the app), so room lighting runs only while open and active.
     func startRoomLighting() {
-        guard isOpen, roomLightingTask == nil else { return }
+        guard isOpen, roomLightingTask == nil else {
+            return
+        }
         let room = ImmersiveModelBox.shared.roomLighting
         roomLightingTask = Task { await room.run() }
     }

@@ -3,10 +3,10 @@ import MetalSprocketsPBRShaders
 import simd
 import SwiftGLTF
 
+// Immutable; @unchecked only because material rest states hold texture-slot key paths, which are not Sendable.
 /// Poses one scene of a document: samples and blends its animation clips into node transforms, morph weights,
 /// visibility, material uniforms, lights and camera parameters. Needs no GPU, so it can be built from a `Container`
 /// alone; ``GLTFAsset`` builds one per scene and forwards its posing calls here.
-// Immutable; @unchecked only because material rest states hold texture-slot key paths, which are not Sendable.
 struct GLTFPoser: @unchecked Sendable {
     /// A light of the scene: its definition, its index in the document's lights (for KHR_animation_pointer), and the
     /// node placing it.
@@ -43,7 +43,13 @@ struct GLTFPoser: @unchecked Sendable {
     /// `materials` are indexed like the document's materials; channels for materials not listed are ignored.
     init(document: Document, hierarchy: GLTFNodeHierarchy, animations: [GLTFAnimationClip], materials: [Material] = []) throws {
         let animatesVisibility = animations.contains { clip in
-            clip.channels.contains { if case .visibility = $0.target { true } else { false } }
+            clip.channels.contains {
+                if case .visibility = $0.target {
+                    true
+                } else {
+                    false
+                }
+            }
         }
         var lightSources: [LightSource] = []
         var cameraSources: [CameraSource] = []
@@ -111,7 +117,9 @@ struct GLTFPoser: @unchecked Sendable {
     /// applied.
     func lights(pose: PBRPose, properties: [Int: [GLTFAnimationPointer.LightProperty: [Float]]] = [:]) -> [LightingLight] {
         lightSources.compactMap { source in
-            guard pose.isVisible(source.node) else { return nil }
+            guard pose.isVisible(source.node) else {
+                return nil
+            }
             let world = pose.worldMatrices.indices.contains(source.node) ? pose.worldMatrices[source.node] : restPose.worldMatrices.indices.contains(source.node) ? restPose.worldMatrices[source.node] : matrix_identity_float4x4
             var light = LightingLight(source.light, worldMatrix: world)
             GLTFAnimationPointer.apply(properties[source.index] ?? [:], to: &light)
@@ -160,10 +168,14 @@ struct GLTFPoser: @unchecked Sendable {
     private func addDeltas(of layer: GLTFAnimationLayer, to values: inout [GLTFAnimationClip.Target: [Float]]) {
         let weight = layer.weight
         for channel in animations[layer.animation].channels {
-            guard case let .node(node, path) = channel.target, let rest = hierarchy.restValue(node: node, path: path) else { continue }
+            guard case let .node(node, path) = channel.target, let rest = hierarchy.restValue(node: node, path: path) else {
+                continue
+            }
             let sample = channel.keyframes.sample(at: layer.time, isRotation: path == .rotation)
             let base = values[channel.target] ?? rest
-            guard sample.count == rest.count, base.count == rest.count else { continue }
+            guard sample.count == rest.count, base.count == rest.count else {
+                continue
+            }
             switch path {
             case .rotation where rest.count == 4:
                 let restRotation = simd_quatf(vector: SIMD4(rest[0], rest[1], rest[2], rest[3]))
@@ -222,7 +234,11 @@ struct GLTFPoser: @unchecked Sendable {
             switch target {
             case let .node(node, path) where transforms.indices.contains(node):
                 // Loading drops channels that animate a matrix node; this guards clips built some other way.
-                let isMatrix = if case .matrix = transforms[node].storage { true } else { false }
+                let isMatrix = if case .matrix = transforms[node].storage {
+                    true
+                } else {
+                    false
+                }
                 switch path {
                 case .translation where value.count == 3 && !isMatrix:
                     transforms[node].translation = SIMD3(value[0], value[1], value[2])

@@ -22,7 +22,9 @@ enum GLTFGeometry {
     static func makePrimitive(_ primitive: SwiftGLTF.Mesh.Primitive, container: Container, defaultWeights: [Float]) throws -> Primitive? {
         let document = container.document
         func floats(_ semantic: SwiftGLTF.Mesh.Primitive.Semantic) throws -> (values: [Float], components: Int)? {
-            guard let index = primitive.attributes[semantic] else { return nil }
+            guard let index = primitive.attributes[semantic] else {
+                return nil
+            }
             let accessor = try index.resolve(in: document)
             return (try container.floatComponents(for: accessor), accessor.type.componentCount)
         }
@@ -31,12 +33,14 @@ enum GLTFGeometry {
             throw PBRGeometryError.missingPositions
         }
         let vertexCount = positions.values.count / 3
+        // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         func vectors2(_ data: (values: [Float], components: Int)?) -> [SIMD2<Float>]? {
             data.map { data in (0 ..< vertexCount).map { SIMD2(data.values[$0 * 2], data.values[$0 * 2 + 1]) } }
         }
         func vectors3(_ values: [Float]) -> [SIMD3<Float>] {
             (0 ..< vertexCount).map { SIMD3(values[$0 * 3], values[$0 * 3 + 1], values[$0 * 3 + 2]) }
         }
+        // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         func vectors4(_ data: (values: [Float], components: Int)?) -> [SIMD4<Float>]? {
             data.map { data in
                 (0 ..< vertexCount).map { index in
@@ -55,8 +59,11 @@ enum GLTFGeometry {
         var colors = try vectors4(floats(.COLOR_0))
         // Missing attributes in a target contribute nothing.
         var morphTargets: [MetalMesh.MorphTargets.Target] = try primitive.targets.map { target in
+            // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
             func offsets(_ semantic: SwiftGLTF.Mesh.Primitive.Semantic) throws -> [SIMD3<Float>]? {
-                guard let index = target[semantic] else { return nil }
+                guard let index = target[semantic] else {
+                    return nil
+                }
                 let values = try container.floatComponents(for: index.resolve(in: document))
                 guard values.count == vertexCount * 3 else {
                     throw GLTFError.invalidDocument("Morph target \(semantic.rawValue) count mismatch")
@@ -65,7 +72,9 @@ enum GLTFGeometry {
             }
             return MetalMesh.MorphTargets.Target(positionOffsets: try offsets(.POSITION), normalOffsets: try offsets(.NORMAL), tangentOffsets: try offsets(.TANGENT))
         }
+        // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         var joints: [SIMD4<UInt16>]?
+        // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         var weights: [SIMD4<Float>]?
         if let jointData = try floats(.JOINTS_0), let weightData = try floats(.WEIGHTS_0), jointData.components == 4, weightData.components == 4 {
             joints = vectors4(jointData)?.map { SIMD4<UInt16>($0, rounding: .toNearestOrEven) }
@@ -108,7 +117,9 @@ enum GLTFGeometry {
             primitiveType = .line
             indices = lineList(fromStrip: indices, closed: true)
         }
-        guard !indices.isEmpty else { return nil }
+        guard !indices.isEmpty else {
+            return nil
+        }
 
         // glTF requires flat normals when NORMAL is missing. The fragment shader derives them per pixel (hasNormals), so
         // vertices stay shared instead of being unwelded per triangle.
@@ -130,9 +141,11 @@ enum GLTFGeometry {
                 indices: indices
             )
             let welded = GLTFTangents.weld(cornerTangents: cornerTangents, indices: indices)
+            // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
             func remap<T>(_ values: [T]?) -> [T]? {
                 values.map { values in welded.sources.map { values[$0] } }
             }
+            // swiftlint:disable:next force_unwrapping - remap returns nil only for nil input, and positions always exist
             positionValues = remap(positionValues)!
             normals = remap(normals)
             texCoords0 = remap(texCoords0)
@@ -149,11 +162,21 @@ enum GLTFGeometry {
         }
 
         var attributes: [MetalMesh.VertexAttributeData] = [.positions(positionValues)]
-        if let normals { attributes.append(.normals(normals)) }
-        if let tangents { attributes.append(.tangents(tangents)) }
-        if let texCoords0 { attributes.append(.textureCoordinates(texCoords0, set: 0)) }
-        if let texCoords1 { attributes.append(.textureCoordinates(texCoords1, set: 1)) }
-        if let colors { attributes.append(.colors(colors)) }
+        if let normals {
+            attributes.append(.normals(normals))
+        }
+        if let tangents {
+            attributes.append(.tangents(tangents))
+        }
+        if let texCoords0 {
+            attributes.append(.textureCoordinates(texCoords0, set: 0))
+        }
+        if let texCoords1 {
+            attributes.append(.textureCoordinates(texCoords1, set: 1))
+        }
+        if let colors {
+            attributes.append(.colors(colors))
+        }
         if let joints, let weights {
             attributes.append(.jointIndices(joints))
             attributes.append(.jointWeights(weights))
@@ -183,7 +206,9 @@ enum GLTFGeometry {
 
     /// Consecutive pairs of a line strip, plus the closing segment for a loop.
     static func lineList(fromStrip strip: [UInt32], closed: Bool) -> [UInt32] {
-        guard strip.count >= 2 else { return [] }
+        guard strip.count >= 2 else {
+            return []
+        }
         var lines = zip(strip, strip.dropFirst()).flatMap { [$0, $1] }
         if closed, strip.count > 2, let first = strip.first, let last = strip.last {
             lines += [last, first]
@@ -192,7 +217,9 @@ enum GLTFGeometry {
     }
 
     static func triangleList(fromStrip strip: [UInt32]) -> [UInt32] {
-        guard strip.count >= 3 else { return [] }
+        guard strip.count >= 3 else {
+            return []
+        }
         var result: [UInt32] = []
         for index in 0 ..< strip.count - 2 {
             if index.isMultiple(of: 2) {
@@ -205,7 +232,9 @@ enum GLTFGeometry {
     }
 
     static func triangleList(fromFan fan: [UInt32]) -> [UInt32] {
-        guard fan.count >= 3 else { return [] }
+        guard fan.count >= 3 else {
+            return []
+        }
         return (1 ..< fan.count - 1).flatMap { [fan[0], fan[$0], fan[$0 + 1]] }
     }
 }

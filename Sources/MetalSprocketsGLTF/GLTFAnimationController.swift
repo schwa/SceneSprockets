@@ -64,7 +64,9 @@ public struct GLTFAnimationController: Sendable {
     /// Switches to `animation`, fading it in and every other track out over `fadeDuration` seconds (0 cuts).
     /// A clip already playing continues from its time unless `restarts`.
     public mutating func play(_ animation: Int, fadeDuration: Float = 0.25, speed: Float = 1, loops: Bool = true, restarts: Bool = false) {
-        guard durations.indices.contains(animation) else { return }
+        guard durations.indices.contains(animation) else {
+            return
+        }
         syncedPhase = nil
         let rate: Float = fadeDuration > 0 ? 1 / fadeDuration : .infinity
         for index in tracks.indices {
@@ -129,7 +131,9 @@ public struct GLTFAnimationController: Sendable {
 
     /// Adds `animation` on top of the playing clips at `weight` (0 removes it), e.g. breathing over a walk.
     public mutating func setAdditive(_ animation: Int, weight: Float, speed: Float = 1) {
-        guard durations.indices.contains(animation) else { return }
+        guard durations.indices.contains(animation) else {
+            return
+        }
         if weight <= 0 {
             additiveTracks.removeAll { $0.animation == animation }
         } else if let index = additiveTracks.firstIndex(where: { $0.animation == animation }) {
@@ -155,7 +159,9 @@ public struct GLTFAnimationController: Sendable {
         var motion = SIMD3<Float>.zero
         var totalWeight: Float = 0
         for track in tracks {
-            guard let old = before.first(where: { $0.animation == track.animation }) else { continue }
+            guard let old = before.first(where: { $0.animation == track.animation }) else {
+                continue
+            }
             let duration = durations[track.animation]
             var delta = translation(track.animation, track.time) - translation(track.animation, old.time)
             // Moving forward but ending up earlier means the clip looped: add the end-to-start jump back.

@@ -10,7 +10,7 @@ import Testing
 @Test(arguments: BasicShape.allCases)
 func shapeGeometryIsConsistent(_ shape: BasicShape) {
     let mesh = shape.mesh
-    #expect(!mesh.indices.isEmpty && mesh.indices.count % 3 == 0)
+    #expect(!mesh.indices.isEmpty && mesh.indices.count.isMultiple(of: 3))
     #expect(mesh.positions.allSatisfy { simd_reduce_max(simd_abs($0)) <= 0.5 + 1e-5 })
     #expect(mesh.normals.allSatisfy { abs(simd_length($0) - 1) < 1e-4 })
     for triangle in stride(from: 0, to: mesh.indices.count, by: 3) {
@@ -18,7 +18,9 @@ func shapeGeometryIsConsistent(_ shape: BasicShape) {
         let a = mesh.positions[corners[0]], b = mesh.positions[corners[1]], c = mesh.positions[corners[2]]
         let faceNormal = simd_cross(b - a, c - a)
         // Degenerate triangles (at poles and apexes) have no direction to check.
-        guard simd_length(faceNormal) > 1e-7 else { continue }
+        guard simd_length(faceNormal) > 1e-7 else {
+            continue
+        }
         let vertexNormal = mesh.normals[corners[0]] + mesh.normals[corners[1]] + mesh.normals[corners[2]]
         #expect(simd_dot(faceNormal, vertexNormal) > 0, "\(shape) triangle \(triangle / 3) winds against its normals")
     }

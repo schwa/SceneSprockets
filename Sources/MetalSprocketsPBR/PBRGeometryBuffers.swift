@@ -19,8 +19,10 @@ public final class PBRGeometryBuffers: @unchecked Sendable {
     public struct Pending {
         public var vertices: [PBRVertex]
         public var indices: [UInt32]
+        // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         public var skinVertices: [PBRSkinVertex]?
 
+        // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         public init(vertices: [PBRVertex], indices: [UInt32], skinVertices: [PBRSkinVertex]?) {
             self.vertices = vertices
             self.indices = indices
@@ -50,6 +52,7 @@ public final class PBRGeometryBuffers: @unchecked Sendable {
         func buffer<T>(_ values: [T], label: String) throws -> MTLBuffer {
             let made = values.isEmpty
                 ? device.makeBuffer(length: 1, options: .storageModeShared)
+                // swiftlint:disable:next force_unwrapping - a non-empty array has a base address
                 : values.withUnsafeBytes { device.makeBuffer(bytes: $0.baseAddress!, length: $0.count, options: .storageModeShared) }
             guard let buffer = made else {
                 throw PBRGeometryError.bufferAllocationFailed

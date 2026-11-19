@@ -166,6 +166,7 @@ public final class PBRModel: @unchecked Sendable {
             (.color(0), .float4, MemoryLayout<PBRVertex>.offset(of: \.color))
         ]
         return VertexDescriptor(
+            // swiftlint:disable:next force_unwrapping - offsets of stored struct fields are never nil
             attributes: fields.map { .init(semantic: $0.0, format: $0.1, offset: $0.2!, bufferIndex: 0) },
             layouts: [.init(bufferIndex: 0, stride: MemoryLayout<PBRVertex>.stride, stepFunction: .perVertex, stepRate: 1)]
         )
@@ -175,7 +176,9 @@ public final class PBRModel: @unchecked Sendable {
     public static let skinnedMeshVertexDescriptor: VertexDescriptor = {
         var descriptor = meshVertexDescriptor
         descriptor.attributes += [
+            // swiftlint:disable:next force_unwrapping - offsets of stored struct fields are never nil
             .init(semantic: .jointIndices(0), format: .float4, offset: MemoryLayout<PBRSkinVertex>.offset(of: \.joints)!, bufferIndex: skinBufferIndex),
+            // swiftlint:disable:next force_unwrapping - offsets of stored struct fields are never nil
             .init(semantic: .jointWeights(0), format: .float4, offset: MemoryLayout<PBRSkinVertex>.offset(of: \.weights)!, bufferIndex: skinBufferIndex)
         ]
         descriptor.layouts[skinBufferIndex] = .init(bufferIndex: skinBufferIndex, stride: MemoryLayout<PBRSkinVertex>.stride, stepFunction: .perVertex, stepRate: 1)
@@ -198,7 +201,9 @@ public extension PBRModel {
     /// World bounds of a batch's instances drawn with `pose`; hidden instances do not count.
     func worldBounds(of batch: Batch, pose: PBRPose) -> BoundingBox3D {
         if let skinIndex = batch.skinIndex, skins.indices.contains(skinIndex) {
-            guard pose.isVisible(batch.nodeIndices.first ?? -1) else { return .empty }
+            guard pose.isVisible(batch.nodeIndices.first ?? -1) else {
+                return .empty
+            }
             return Self.skinnedBounds(batch.primitive, skin: skins[skinIndex], pose: pose)
         }
         return pose.bounds(of: batch.primitive.bounds, nodes: batch.nodeIndices, instanceMatrices: batch.instanceMatrices)
@@ -214,7 +219,9 @@ public extension PBRModel {
     static func skinnedBounds(_ primitive: Primitive, skin: Skin, pose: PBRPose) -> BoundingBox3D {
         let jointMatrices = skin.jointMatrices(for: pose)
         return primitive.jointBounds.reduce(BoundingBox3D.empty) { result, entry in
-            guard jointMatrices.indices.contains(entry.key) else { return result }
+            guard jointMatrices.indices.contains(entry.key) else {
+                return result
+            }
             return result.union(entry.value.transformedKeepingEmpty(by: jointMatrices[entry.key]))
         }
     }

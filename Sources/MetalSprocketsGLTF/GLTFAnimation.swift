@@ -120,16 +120,24 @@ extension Node {
 
 extension GLTFAnimationClip.Target {
     var isRotation: Bool {
-        if case .node(_, .rotation) = self { true } else { false }
+        if case .node(_, .rotation) = self {
+            true
+        } else {
+            false
+        }
     }
 }
 
 extension GLTFNodeHierarchy {
     /// A node's rest value for `path`, as an animation sampler would give it; nil for nodes that use `matrix`.
-    func restValue(node: Int, path: GLTFAnimationClip.NodeProperty) -> [Float]? {
-        guard rest.indices.contains(node) else { return nil }
+    func restValue(node: Int, path: GLTFAnimationClip.NodeProperty) -> [Float]? { // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
+        guard rest.indices.contains(node) else {
+            return nil
+        }
         let transform = rest[node]
-        if path != .weights, case .matrix = transform.storage { return nil }
+        if path != .weights, case .matrix = transform.storage {
+            return nil
+        }
         switch path {
         case .translation:
             return [transform.translation.x, transform.translation.y, transform.translation.z]
@@ -194,7 +202,7 @@ struct GLTFNodeHierarchy: Sendable {
     /// Visits every node reachable from the roots, depth first and parents before children, with its world matrix
     /// for `transforms` and its visibility (each node's own `visible`, inherited down the hierarchy). A node reached
     /// through two parents is visited twice.
-    func walk(_ transforms: [Transform3D], visible: [Bool]? = nil, _ body: (_ node: Int, _ world: simd_float4x4, _ visible: Bool) throws -> Void) rethrows {
+    func walk(_ transforms: [Transform3D], visible: [Bool]? = nil, _ body: (_ node: Int, _ world: simd_float4x4, _ visible: Bool) throws -> Void) rethrows { // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         let ownVisible = visible ?? restVisible
         func visit(_ node: Int, parent: simd_float4x4, parentVisible: Bool) throws {
             let world = parent * transforms[node].matrix
@@ -210,7 +218,7 @@ struct GLTFNodeHierarchy: Sendable {
     }
 
     /// World matrices and visibility for `transforms`; see ``walk(_:visible:_:)``.
-    func pose(_ transforms: [Transform3D], morphWeights: [[Float]], visible: [Bool]? = nil) -> PBRPose {
+    func pose(_ transforms: [Transform3D], morphWeights: [[Float]], visible: [Bool]? = nil) -> PBRPose { // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         var world = [simd_float4x4](repeating: matrix_identity_float4x4, count: transforms.count)
         var effective = [Bool](repeating: true, count: transforms.count)
         walk(transforms, visible: visible) { node, nodeWorld, nodeVisible in

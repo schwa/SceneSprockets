@@ -27,8 +27,12 @@ struct StatisticsSections: View {
         }
         Section("Geometry") {
             count("Triangles", statistics.triangles)
-            if statistics.lines > 0 { count("Lines", statistics.lines) }
-            if statistics.points > 0 { count("Points", statistics.points) }
+            if statistics.lines > 0 {
+                count("Lines", statistics.lines)
+            }
+            if statistics.points > 0 {
+                count("Points", statistics.points)
+            }
             count("Vertices", statistics.vertices)
             count("Nodes", statistics.nodes)
             count("Meshes", statistics.meshes)
@@ -38,7 +42,9 @@ struct StatisticsSections: View {
         }
         Section("Materials") {
             count("Materials", statistics.materials)
-            if statistics.materialVariants > 0 { count("Variants", statistics.materialVariants) }
+            if statistics.materialVariants > 0 {
+                count("Variants", statistics.materialVariants)
+            }
             count("Textures", statistics.textures)
             LabeledContent("Texture Memory", value: statistics.textureBytes.formatted(.byteCount(style: .memory)))
             if let largest = statistics.largestTexture {
@@ -46,10 +52,14 @@ struct StatisticsSections: View {
             }
         }
         Section("Scene") {
-            if statistics.scenes > 1 { count("Scenes", statistics.scenes) }
+            if statistics.scenes > 1 {
+                count("Scenes", statistics.scenes)
+            }
             count("Animations", statistics.animations)
             count("Skins", statistics.skins)
-            if statistics.joints > 0 { count("Joints", statistics.joints) }
+            if statistics.joints > 0 {
+                count("Joints", statistics.joints)
+            }
             count("Morph Targets", statistics.morphTargets)
             count("Lights", statistics.lights)
             count("Cameras", statistics.cameras)

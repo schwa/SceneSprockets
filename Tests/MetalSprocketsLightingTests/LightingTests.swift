@@ -50,7 +50,10 @@ struct LightingTests {
     init() throws {
         device = try #require(MTLCreateSystemDefaultDevice())
         queue = try #require(device.makeCommandQueue())
-        let include = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let include = URL(filePath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
             .appending(path: "Sources/MetalSprocketsLightingShaders/include")
         let headers = try ["MetalSprocketsLightingTypes.h", "MetalSprocketsLighting.h", "MetalSprocketsLightingToneMapping.h"].map { name in
             try String(contentsOf: include.appending(path: name), encoding: .utf8)

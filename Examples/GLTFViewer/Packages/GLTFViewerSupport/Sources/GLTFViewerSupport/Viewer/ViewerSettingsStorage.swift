@@ -85,7 +85,9 @@ extension ViewerEnvironment {
         case "gray": self = .gray
 
         default:
-            guard storedValue.hasPrefix("hdri:"), let hdri = BundledHDRI(rawValue: String(storedValue.dropFirst(5))) else { return nil }
+            guard storedValue.hasPrefix("hdri:"), let hdri = BundledHDRI(rawValue: String(storedValue.dropFirst(5))) else {
+                return nil
+            }
             self = .hdri(hdri)
         }
     }

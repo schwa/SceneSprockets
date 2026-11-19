@@ -224,8 +224,12 @@ public extension GLTFAsset {
         for primitive in meshes.flatMap(\.self) {
             let built = resources.material(for: primitive, variant: variant)
             let wanted = resources.material(for: primitive, variant: index)
-            guard built !== wanted else { continue }
-            guard built.canOverride(wanted) else { return nil }
+            guard built !== wanted else {
+                continue
+            }
+            guard built.canOverride(wanted) else {
+                return nil
+            }
             overrides[primitive.key] = wanted
         }
         return overrides

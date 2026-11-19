@@ -127,8 +127,11 @@ struct GLTFBenchCommand: ParsableCommand {
         for (index, (scene, _)) in loaded.enumerated() {
             let runs = rounds.map { $0[index] }
             // CPU and GPU are judged separately, so each takes its own fastest run.
+            // swiftlint:disable:next force_unwrapping - there is at least one run
             var timings = runs.min { $0.frame.median < $1.frame.median }!
+            // swiftlint:disable:next force_unwrapping - there is at least one run
             timings.cpu = runs.map(\.cpu).min { $0.median < $1.median }!
+            // swiftlint:disable:next force_unwrapping - there is at least one run
             timings.gpu = runs.map(\.gpu).min { $0.median < $1.median }!
             results[scene.name] = timings
             var comparison = ""
@@ -184,10 +187,14 @@ struct GLTFBenchCommand: ParsableCommand {
 
     static func sysctl(_ name: String) -> String? {
         var size = 0
-        guard sysctlbyname(name, nil, &size, nil, 0) == 0, size > 0 else { return nil }
+        guard sysctlbyname(name, nil, &size, nil, 0) == 0, size > 0 else {
+            return nil
+        }
         var buffer = [UInt8](repeating: 0, count: size)
-        guard sysctlbyname(name, &buffer, &size, nil, 0) == 0 else { return nil }
-        return String(decoding: buffer.prefix { $0 != 0 }, as: UTF8.self)
+        guard sysctlbyname(name, &buffer, &size, nil, 0) == 0 else {
+            return nil
+        }
+        return String(bytes: buffer.prefix { $0 != 0 }, encoding: .utf8)
     }
 }
 

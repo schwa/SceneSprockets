@@ -73,7 +73,7 @@ public enum GLTFMeshoptError: Error, CustomStringConvertible {
     public var description: String {
         switch self {
         case .sourceOutOfRange(let buffer): "meshopt source range is outside buffer \(buffer)"
-        case .decodingFailed(let mode, let code): "meshopt \(mode.rawValue) decoding failed (\(code))"
+        case let .decodingFailed(mode, code): "meshopt \(mode.rawValue) decoding failed (\(code))"
         case .unsupported(let message): "meshopt: \(message)"
         }
     }

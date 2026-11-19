@@ -1,11 +1,11 @@
 import MetalSprocketsPBRShaders
 import SwiftGLTF
 
+// Immutable; @unchecked only because key paths are not Sendable.
 /// One material texture: where the shader finds it, which uniform slot describes it, and where a glTF material keeps it.
 ///
 /// ``GLTFMaterialTextureSlot/all`` is the list of material textures, gathered from ``GLTFMaterialFeature/all``.
 /// Binding, the argument buffer's order, texture preloading and KHR_animation_pointer texture paths all come from it.
-// Immutable; @unchecked only because key paths are not Sendable.
 struct GLTFMaterialTextureSlot: @unchecked Sendable {
     /// Index into `PBRMaterialResources` (the shader's `PBRMaterialTextureIndex`).
     var index: PBRMaterialTextureIndex

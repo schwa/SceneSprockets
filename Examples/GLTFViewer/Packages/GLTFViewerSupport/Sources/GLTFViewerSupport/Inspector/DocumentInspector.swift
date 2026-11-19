@@ -69,7 +69,9 @@ struct DocumentInspector: View {
     }
 
     private var selectedReference: DocumentReference? {
-        guard let selection else { return nil }
+        guard let selection else {
+            return nil
+        }
         func find(_ items: [DocumentOutlineItem]) -> DocumentReference? {
             for item in items {
                 if item.id == selection {

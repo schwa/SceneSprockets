@@ -24,7 +24,9 @@ extension LightingToneMapping: ExpressibleByArgument {
     }
 
     public init?(argument: String) {
-        guard let value = Self.allCases.first(where: { $0.argumentName == argument }) else { return nil }
+        guard let value = Self.allCases.first(where: { $0.argumentName == argument }) else {
+            return nil
+        }
         self = value
     }
 }
@@ -36,7 +38,9 @@ extension PBRDebugView: ExpressibleByArgument {
     }
 
     public init?(argument: String) {
-        guard let view = Self.allCases.first(where: { $0.argumentName == argument }) else { return nil }
+        guard let view = Self.allCases.first(where: { $0.argumentName == argument }) else {
+            return nil
+        }
         self = view
     }
 }

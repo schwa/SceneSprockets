@@ -159,7 +159,9 @@ final class GLTFTextureCache {
         var seen = Set<ImageKey>()
         for material in materials {
             for slot in GLTFMaterialTextureSlot.all {
-                guard let info = slot.source(material)?.info, document.textures.indices.contains(info.index.index), let (imageIndex, decoder) = source(of: document.textures[info.index.index]) else { continue }
+                guard let info = slot.source(material)?.info, document.textures.indices.contains(info.index.index), let (imageIndex, decoder) = source(of: document.textures[info.index.index]) else {
+                    continue
+                }
                 let key = ImageKey(imageIndex: imageIndex, sRGB: slot.sRGB)
                 if images[key] == nil, seen.insert(key).inserted {
                     requests.append((key, decoder))
@@ -235,6 +237,7 @@ final class GLTFTextureCache {
         let width = image.width
         let height = image.height
         // Indexed and grey images draw into RGB; keep RGB images in their own space so data textures are not converted.
+        // swiftlint:disable:next force_unwrapping - sRGB is always available
         let space = image.colorSpace.flatMap { $0.model == .rgb ? $0 : nil } ?? CGColorSpace(name: CGColorSpace.sRGB)!
         var pixels = [UInt8](repeating: 0, count: width * height * 4)
         guard let context = CGContext(data: &pixels, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4, space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
@@ -318,6 +321,7 @@ final class GLTFTextureCache {
     func makeWhiteTexture() -> MTLTexture {
         let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba8Unorm, width: 1, height: 1, mipmapped: false)
         descriptor.usage = .shaderRead
+        // swiftlint:disable:next force_unwrapping - a small 2D texture on the asset's device
         let texture = device.makeTexture(descriptor: descriptor)!
         let white: [UInt8] = [255, 255, 255, 255]
         texture.replace(region: MTLRegionMake2D(0, 0, 1, 1), mipmapLevel: 0, withBytes: white, bytesPerRow: 4)

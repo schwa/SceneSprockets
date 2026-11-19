@@ -150,6 +150,7 @@ public final class LightingEnvironment: @unchecked Sendable {
         let rowBytes = width * 8
         var data = Data(count: rowBytes * height)
         data.withUnsafeMutableBytes { buffer in
+            // swiftlint:disable:next force_unwrapping - Data(count:) with a non-zero count has a base address
             let base = buffer.baseAddress!
             for row in 0 ..< height {
                 // Flip vertically: WebGL textures start at the bottom row.

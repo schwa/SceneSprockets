@@ -1,3 +1,6 @@
+// JSON fixtures in multi-line strings keep JSON's usual 2-space indentation.
+// swiftlint:disable indentation_width
+
 import Foundation
 @testable import GLTFViewerSupport
 import MetalSprocketsGLTF
@@ -56,3 +59,5 @@ private func makeTwoClipFile() throws -> URL {
     try await Task.sleep(for: .seconds(Double(ViewerModel.crossFadeDuration) + 0.05))
     #expect(x() == 4)
 }
+
+// swiftlint:enable indentation_width

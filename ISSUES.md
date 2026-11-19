@@ -12841,11 +12841,13 @@ Was MetalSprocketsPBR#20 (moved with the package, #552).
 ## 568: Imported Lighting, PBR and glTF code does not follow SceneSprockets' SwiftLint rules
 
 +++
-status: new
+status: closed
 priority: low
 kind: task
 labels: effort:m
 created: 2026-11-19T02:14:13Z
+updated: 2026-11-19T03:11:55Z
+closed: 2026-11-19T03:11:55Z
 +++
 
 The code moved in with #552 (MetalSprocketsLighting, MetalSprocketsPBR, MetalSprocketsGLTF and the GLTFViewer example) was written against looser SwiftLint rules. Under SceneSprockets' configuration it has 182 warnings, mostly conditional_returns_on_newline (55), discouraged_optional_collection (42), force_unwrapping (26) and multiline argument and chain rules (45).
@@ -12875,7 +12877,7 @@ Users of the scene graph have to know about and import both, and the names do no
 
 Merge them into one module. Trade-off: using the PBR renderer without the scene graph would then pull in SceneSprockets. Blinn-Phong is split the same way (shaders in SceneSprocketsShaders, renderer in SceneSprocketsBlinnPhong).
 
-- `2026-11-19T02:58:01Z`: Merging only the two modules creates a dependency cycle: MetalSprocketsGLTF depends on MetalSprocketsPBR, and SceneSprocketsPBR depends on MetalSprocketsGLTF (GLTFSceneGraph.swift, GLTFSceneGraph+Export.swift and ModelFile.swift import it). One merged PBR module would need glTF, and glTF needs it.
+\- `2026-11-19T02:58:01Z`: Merging only the two modules creates a dependency cycle: MetalSprocketsGLTF depends on MetalSprocketsPBR, and SceneSprocketsPBR depends on MetalSprocketsGLTF (GLTFSceneGraph.swift, GLTFSceneGraph+Export.swift and ModelFile.swift import it). One merged PBR module would need glTF, and glTF needs it.
 
 Ways out:
 1. Merge the two, and move the glTF and Model I/O scene loaders (GLTFSceneGraph*, ModelFile, ModelIOSceneGraph) into MetalSprocketsGLTF. PBR then has no glTF dependency. Smallest change that yields one PBR module.

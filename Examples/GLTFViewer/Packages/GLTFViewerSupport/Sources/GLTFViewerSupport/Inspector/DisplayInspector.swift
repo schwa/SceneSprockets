@@ -10,7 +10,9 @@ struct DisplayInspector: View {
 
     /// MSAA sample counts this GPU can render with, 1 (off) first.
     nonisolated static let supportedSampleCounts: [Int] = {
-        guard let device = MTLCreateSystemDefaultDevice() else { return [1] }
+        guard let device = MTLCreateSystemDefaultDevice() else {
+            return [1]
+        }
         return [1, 2, 4, 8].filter { device.supportsTextureSampleCount($0) }
     }()
 

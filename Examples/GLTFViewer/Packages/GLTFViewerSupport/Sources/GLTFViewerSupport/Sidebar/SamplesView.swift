@@ -147,7 +147,11 @@ public struct SamplesView: View {
     }
 
     private var models: [SampleModel] {
-        if case .loaded(let models) = library.state { models } else { [] }
+        if case .loaded(let models) = library.state {
+            models
+        } else {
+            []
+        }
     }
 
     /// Shown in the Sample Assets section until the index is downloaded, so the built-in shapes work offline.
@@ -252,7 +256,9 @@ public struct SamplesView: View {
 
             case .shape(let shape):
                 ModelDetailView(title: shape.name) { _ in
-                    guard let url = shape.fileURL else { throw CocoaError(.fileNoSuchFile) }
+                    guard let url = shape.fileURL else {
+                        throw CocoaError(.fileNoSuchFile)
+                    }
                     return url
                 }
                 .id(selection)

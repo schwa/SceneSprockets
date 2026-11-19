@@ -152,7 +152,7 @@ public final class PBRMaterial: @unchecked Sendable {
     }
 
     /// A new material sharing this one's textures and GPU resources, with the given values replaced.
-    public func with(uniforms: PBRMaterialUniforms? = nil, renderState: PBRRenderState? = nil, textureTransforms: [String: TextureTransform]? = nil) -> PBRMaterial {
+    public func with(uniforms: PBRMaterialUniforms? = nil, renderState: PBRRenderState? = nil, textureTransforms: [String: TextureTransform]? = nil) -> PBRMaterial { // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         PBRMaterial(copying: self, uniforms: uniforms ?? self.uniforms, renderState: renderState ?? self.renderState, textureTransforms: textureTransforms ?? self.textureTransforms)
     }
 

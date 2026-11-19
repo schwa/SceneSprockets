@@ -51,6 +51,7 @@ public struct PBRModelBuilder {
             materialRanks[ObjectIdentifier(instance.material)] = materialRanks.count
         }
         let opaque = placed.filter { !$0.material.isBlended }.sorted {
+            // swiftlint:disable:next force_unwrapping - every batch's material was ranked above
             (materialRanks[ObjectIdentifier($0.material)]!, $0.id) < (materialRanks[ObjectIdentifier($1.material)]!, $1.id)
         }
         let opaqueBatches = try Self.makeBatches(opaque, merging: true, device: device)

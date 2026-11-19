@@ -12,9 +12,9 @@ struct PBRDrawPlan {
     struct MergedDraw {
         var geometry: PBRMergedGeometry
         /// Per-frame instances when posed; nil uses the rest-pose instance buffer.
-        var instances: [PBRInstance]?
+        var instances: [PBRInstance]? // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         /// Per-record uniforms when the pose animates materials or overrides apply; nil uses the prebuilt buffer.
-        var materials: [PBRMaterialUniforms]?
+        var materials: [PBRMaterialUniforms]? // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         /// Per-record textures when overrides apply; nil uses the prebuilt buffer.
         var resources: ArgumentBuffer?
         /// Per-record double-sidedness of the material drawn.
@@ -29,11 +29,12 @@ struct PBRDrawPlan {
     struct SkinnedMergedDraw {
         var geometry: PBRMergedGeometry
         var palette: [simd_float4x4]
+        // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         var materials: [PBRMaterialUniforms]?
         var resources: ArgumentBuffer?
         var doubleSided: [Bool]
         /// Which records to draw (nil: all); a record whose node the pose hides is skipped.
-        var visible: [Bool]?
+        var visible: [Bool]? // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
     }
 
     /// Opaque batches drawn individually with one vertex variant's and render state's pipeline.
@@ -71,11 +72,11 @@ struct PBRDrawPlan {
         /// Never empty.
         var ranges: [InstanceRange]
         /// Posed instances, unmirrored first, matching `ranges`; nil uses the batch's instance buffer.
-        var instances: [PBRInstance]?
+        var instances: [PBRInstance]? // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         /// This frame's joint matrices, for skinned batches.
-        var jointMatrices: [simd_float4x4]?
+        var jointMatrices: [simd_float4x4]? // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         /// One weight per morph target (at least one), for batches with morph targets.
-        var morphWeights: [Float]?
+        var morphWeights: [Float]? // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
     }
 
     var mergedStatic: MergedDraw?
@@ -96,6 +97,7 @@ struct PBRDrawPlan {
     ///   - writesBlendedDepth: Blended batches write depth whatever their render state says (stereo).
     ///   - drawsTrianglesOnly: Leave out point and line batches (a rasterization rate map allows only triangles).
     init(model: PBRModel, pose: PBRPose?, stage: PBRRenderer.TransmissionPrePassStage, viewProjections: [simd_float4x4], cameraPosition: SIMD3<Float>, modelMatrix: simd_float4x4, usesMergedGeometry: Bool, materialOverrides: PBRModel.MaterialOverrides = [:], phase: PBRRenderer.DrawPhase = .all, transmissionAsCoverage: Bool = false, writesBlendedDepth: Bool = false, drawsTrianglesOnly: Bool = false) {
+        // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         var blendedOrder: [PBRRenderer.SortedBatch]?
         if case let .blended(order) = phase {
             blendedOrder = order
@@ -126,7 +128,9 @@ struct PBRDrawPlan {
             case .opaque: !material.isTransmissive
             case .transmissiveBackFaces: material.hasTransmissiveBackFaces
             }
-            guard inStage else { return false }
+            guard inStage else {
+                return false
+            }
             let bounds = worldBounds(batch)
             return frustums.contains { $0.intersectsNonEmpty(bounds) }
         }
@@ -136,10 +140,15 @@ struct PBRDrawPlan {
         // Transmissive batches merge separately: the opaque pre-pass draws the rest, the back-face pre-pass draws the
         // transmissive set, and the main pass draws both.
         func mergedDraw(_ geometry: PBRMergedGeometry?, backFaces: Bool) -> MergedDraw? {
-            guard drawsOpaque, usesMergedGeometry, let geometry else { return nil }
+            guard drawsOpaque, usesMergedGeometry, let geometry else {
+                return nil
+            }
+            // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
             var instances: [PBRInstance]?
             if let pose {
-                guard let posed = geometry.instances(pose: pose) else { return nil }
+                guard let posed = geometry.instances(pose: pose) else {
+                    return nil
+                }
                 instances = posed
             }
             let doubleSided = geometry.records.map { geometry.material(of: $0, overrides: materialOverrides).doubleSided }
@@ -205,9 +214,10 @@ struct PBRDrawPlan {
         }
         if blendedOrder == nil {
             let centers = candidates.map { worldBounds($0.batch).center }
-            candidates = candidates.indices.sorted {
+            let backToFront = candidates.indices.sorted {
                 simd_distance_squared(centers[$0], cameraPosition) > simd_distance_squared(centers[$1], cameraPosition)
-            }.map { candidates[$0] }
+            }
+            candidates = backToFront.map { candidates[$0] }
         }
         var runs: [BlendedRun] = []
         let blendedDraws = candidates.filter { included($0.batch) }.compactMap { candidate in
@@ -230,7 +240,9 @@ struct PBRDrawPlan {
     static func batchDraw(_ batch: PBRModel.Batch, model: PBRModel, pose: PBRPose?, stage: PBRRenderer.TransmissionPrePassStage, modelIsMirrored: Bool, materialOverrides: PBRModel.MaterialOverrides, drawsTrianglesOnly: Bool) -> BatchDraw? {
         let primitive = batch.primitive
         let isTriangles = primitive.primitiveType == .triangle
-        guard isTriangles || !drawsTrianglesOnly else { return nil }
+        guard isTriangles || !drawsTrianglesOnly else {
+            return nil
+        }
         let material = batch.material(overrides: materialOverrides)
         // KHR_animation_pointer can animate material properties; the pose carries the result.
         var uniforms = PBRMaterialUniforms.resolved(material, primitive: primitive, pose: pose)
@@ -243,7 +255,9 @@ struct PBRDrawPlan {
         let fillMode: MTLTriangleFillMode = material.renderState.fillMode == .lines ? .lines : .fill
 
         // Mirroring by both the node and the model matrix cancels out.
+        // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         var instances: [PBRInstance]?
+        // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         var jointMatrices: [simd_float4x4]?
         let ranges: [InstanceRange]
         if let skinIndex = batch.skinIndex {
@@ -257,7 +271,9 @@ struct PBRDrawPlan {
             let placements = zip(batch.nodeIndices, batch.instanceMatrices).filter { pose.isVisible($0.0) }.map { node, instanceMatrix in
                 pose.placement(node: node, instanceMatrix: instanceMatrix)
             }
-            guard !placements.isEmpty else { return nil }
+            guard !placements.isEmpty else {
+                return nil
+            }
             let unmirrored = placements.filter { !$0.isMirroring }
             let mirrored = placements.filter(\.isMirroring)
             instances = (unmirrored + mirrored).map { PBRInstance(worldMatrix: $0, normalMatrix: $0.inverse.transpose) }
@@ -277,9 +293,11 @@ struct PBRDrawPlan {
     }
 
     /// One weight per morph target from the pose, else the node's rest weights; nil without morph targets.
-    static func morphWeights(_ batch: PBRModel.Batch, model: PBRModel, pose: PBRPose?) -> [Float]? {
+    static func morphWeights(_ batch: PBRModel.Batch, model: PBRModel, pose: PBRPose?) -> [Float]? { // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         let targetCount = batch.primitive.morphTargetCount
-        guard targetCount > 0 else { return nil }
+        guard targetCount > 0 else {
+            return nil
+        }
         let node = batch.nodeIndices.first ?? 0
         let poseWeights = pose.flatMap { $0.morphWeights.indices.contains(node) ? $0.morphWeights[node] : nil }
         let weights = poseWeights ?? model.restMorphWeights(node: node)

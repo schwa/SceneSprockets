@@ -58,7 +58,9 @@ public struct GLTFImageBasedLight: Sendable {
 extension GLTFImageBasedLight {
     /// The index of the light scene `sceneIndex` uses, if any.
     static func lightIndex(document: Document, sceneIndex: Int) -> Int? {
-        guard document.scenes.indices.contains(sceneIndex) else { return nil }
+        guard document.scenes.indices.contains(sceneIndex) else {
+            return nil
+        }
         return (try? document.scenes[sceneIndex].extensionValue(EXTLightsImageBasedScene.self))?.light
     }
 

@@ -43,7 +43,9 @@ struct FileInfo {
 
     /// The file plus a .gltf's external buffers and images.
     func sizeOnDisk(externalPaths: [String]) -> Int? {
-        guard let url else { return nil }
+        guard let url else {
+            return nil
+        }
         let directory = url.deletingLastPathComponent()
         let urls = [url] + externalPaths.map { directory.appending(path: $0) }
         let sizes = urls.compactMap { try? $0.resourceValues(forKeys: [.fileSizeKey]).fileSize }

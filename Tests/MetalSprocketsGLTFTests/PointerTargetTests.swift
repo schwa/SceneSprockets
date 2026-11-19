@@ -79,7 +79,11 @@ private func makePointerTargetFile(animated: Bool = true, lightHidden: Bool = fa
 extension GLTFAnimationClip.Target {
     /// The path of a material target of material 0; nil for any other target.
     var materialPath: String? {
-        if case let .material(0, pointer) = self { pointer.path } else { nil }
+        if case let .material(0, pointer) = self {
+            pointer.path
+        } else {
+            nil
+        }
     }
 }
 

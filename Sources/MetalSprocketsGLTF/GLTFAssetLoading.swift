@@ -86,7 +86,13 @@ struct GLTFSceneContents {
     /// Throws for out-of-range nodes and cyclic hierarchies.
     init(document: Document, resources: GLTFAsset.Resources, sceneIndex: Int, variant: Int?) throws {
         let animatesVisibility = resources.animations.contains { clip in
-            clip.channels.contains { if case .visibility = $0.target { true } else { false } }
+            clip.channels.contains {
+                if case .visibility = $0.target {
+                    true
+                } else {
+                    false
+                }
+            }
         }
         let hierarchy = try GLTFNodeHierarchy(document: document, sceneIndex: sceneIndex)
         let materials = resources.materials.map { GLTFPoser.Material(id: ObjectIdentifier($0), rest: $0.animatedState()) }

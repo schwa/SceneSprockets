@@ -10,6 +10,7 @@ import Testing
 
 private func render(_ scene: PBRScene, size: Int) throws -> [UInt8] {
     let image = try OffscreenRenderer(size: CGSize(width: size, height: size), clearDepth: 0).render(scene).cgImage
+    // swiftlint:disable:next force_unwrapping - sRGB is always available
     let context = try #require(CGContext(data: nil, width: size, height: size, bitsPerComponent: 8, bytesPerRow: size * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
     context.draw(image, in: CGRect(x: 0, y: 0, width: size, height: size))
     let pixels = try #require(context.data).assumingMemoryBound(to: UInt8.self)

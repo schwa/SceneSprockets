@@ -6,6 +6,7 @@ public struct SampleModel: Codable, Hashable, Identifiable, Sendable {
     public var label: String
     public var name: String
     public var screenshot: String?
+    // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
     public var tags: [String]?
     public var variants: [String: String]
 
@@ -37,9 +38,10 @@ public struct SampleModel: Codable, Hashable, Identifiable, Sendable {
     public var variantChoices: [VariantChoice] {
         let unsupportedMarkers = ["Draco"]
         let preferred = preferredVariant?.folder
-        return variants.map { folder, file in
+        let choices = variants.map { folder, file in
             VariantChoice(folder: folder, file: file, isSupported: !unsupportedMarkers.contains { folder.contains($0) })
-        }.sorted { lhs, rhs in
+        }
+        return choices.sorted { lhs, rhs in
             func rank(_ choice: VariantChoice) -> Int {
                 choice.folder == preferred ? 0 : ["glTF-Binary", "glTF-Embedded", "glTF"].firstIndex(of: choice.folder).map { $0 + 1 } ?? (choice.isSupported ? 4 : 5)
             }
@@ -79,9 +81,10 @@ public final class SampleLibrary {
         cacheDirectory = URL.cachesDirectory.appending(path: "GLTFSamples", directoryHint: .isDirectory)
         if let data = try? Data(contentsOf: indexURL), let models = try? Self.decode(data) {
             state = .loaded(models)
-            cachedModelNames = Set(models.filter { model in
+            let cached = models.filter { model in
                 model.preferredVariant.map { FileManager.default.fileExists(atPath: localURL(model, $0).path) } ?? false
-            }.map(\.name))
+            }
+            cachedModelNames = Set(cached.map(\.name))
         }
     }
 
@@ -105,7 +108,11 @@ public final class SampleLibrary {
     }
 
     var isLoaded: Bool {
-        if case .loaded = state { true } else { false }
+        if case .loaded = state {
+            true
+        } else {
+            false
+        }
     }
 
     public func isCached(_ model: SampleModel) -> Bool {
@@ -136,7 +143,9 @@ public final class SampleLibrary {
             if destination.pathExtension.lowercased() == "gltf" {
                 for path in try Self.externalFiles(ofGLTF: Data(contentsOf: temporary)) {
                     let file = directory.appending(path: path)
-                    guard !FileManager.default.fileExists(atPath: file.path) else { continue }
+                    guard !FileManager.default.fileExists(atPath: file.path) else {
+                        continue
+                    }
                     let downloaded = try await Self.download(folderURL.appending(path: path))
                     try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
                     try FileManager.default.moveItem(at: downloaded, to: file)
@@ -169,7 +178,9 @@ public final class SampleLibrary {
     nonisolated static func externalFiles(ofGLTF data: Data) throws -> [String] {
         struct Document: Decodable {
             struct Resource: Decodable { var uri: String? }
+            // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
             var buffers: [Resource]?
+            // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
             var images: [Resource]?
         }
         let document = try JSONDecoder().decode(Document.self, from: data)

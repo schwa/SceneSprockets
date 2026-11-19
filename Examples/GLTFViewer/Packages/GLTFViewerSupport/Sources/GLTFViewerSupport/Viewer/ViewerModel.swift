@@ -50,7 +50,11 @@ final class ViewerModel {
     @ObservationIgnored private var loadedVariant: String?
 
     var loaded: LoadedAsset? {
-        if case .loaded(let model) = phase { model } else { nil }
+        if case .loaded(let model) = phase {
+            model
+        } else {
+            nil
+        }
     }
 
     var loadKey: LoadKey {
@@ -93,7 +97,9 @@ final class ViewerModel {
             let url = try await fileURL(fileVariant)
             let (asset, loadTime) = try await Self.load(url, options: Self.loadOptions(disabling: disabledExtensions))
             // A newer load (another variant or extension toggle) replaced this one.
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled else {
+                return
+            }
             phase = .loaded(LoadedAsset(asset: asset, url: url, loadTime: loadTime))
             loadedVariant = fileVariant
             if isNewFile {
@@ -101,7 +107,9 @@ final class ViewerModel {
             }
             updateMaterialVariant()
         } catch {
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled else {
+                return
+            }
             phase = .failed(error.localizedDescription)
         }
     }
@@ -138,7 +146,9 @@ final class ViewerModel {
     /// Shows the material variant instantly through overrides when it keeps every primitive's pass, else by building
     /// the variant's asset (sharing the loaded materials and meshes).
     private func updateMaterialVariant() {
-        guard let asset = loaded?.asset else { return }
+        guard let asset = loaded?.asset else {
+            return
+        }
         if let overrides = try? asset.materialOverrides(variant: materialVariant) {
             materialOverrides = overrides
             variantAsset = nil
@@ -192,7 +202,9 @@ final class ViewerModel {
     /// keeping play or pause, and cross-fades from the previous clip over ``crossFadeDuration``.
     var animationIndex = 0 {
         didSet {
-            guard animationIndex != oldValue else { return }
+            guard animationIndex != oldValue else {
+                return
+            }
             fade = Fade(animation: oldValue, start: animationStart, heldTime: heldAnimationTime, began: Date())
             heldAnimationTime = 0
             if animationStart != nil {
@@ -220,7 +232,9 @@ final class ViewerModel {
     }
 
     var animationDuration: Float {
-        guard let animations = loaded?.asset.animations, animations.indices.contains(animationIndex) else { return 0 }
+        guard let animations = loaded?.asset.animations, animations.indices.contains(animationIndex) else {
+            return 0
+        }
         return animations[animationIndex].duration
     }
 
@@ -255,7 +269,9 @@ final class ViewerModel {
     /// The selected clip at the current time, or nil when the asset has no animations. Even stopped at time 0 this is
     /// the clip's first frame, not the rest pose.
     var currentPose: PBRPose? {
-        guard let asset = loaded?.asset, !asset.animations.isEmpty else { return nil }
+        guard let asset = loaded?.asset, !asset.animations.isEmpty else {
+            return nil
+        }
         let current = GLTFAnimationLayer(animation: animationIndex, time: animationTime)
         guard let fade, asset.animations.indices.contains(fade.animation) else {
             return asset.pose(layers: [current])

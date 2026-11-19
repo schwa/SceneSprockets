@@ -10,7 +10,7 @@ struct DocumentOutlineItem: Identifiable, Hashable {
     var detail: String?
     var systemImage: String
     /// Nil for leaves, so the outline shows no disclosure triangle.
-    var children: [Self]?
+    var children: [Self]? // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
     /// What the item shows, for the detail view; nil for section headers.
     var reference: DocumentReference?
 }

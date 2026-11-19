@@ -10,7 +10,9 @@ import Testing
 
 // <repo>/Tests/MetalSprocketsGLTFMeshoptTests/MeshoptTests.swift -> <repo>/.sample-assets/Models
 private let modelsDirectory = URL(fileURLWithPath: #filePath)
-    .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+    .deletingLastPathComponent()
+    .deletingLastPathComponent()
+    .deletingLastPathComponent()
     .appending(path: ".sample-assets/Models", directoryHint: .isDirectory)
 private let samplesAvailable = FileManager.default.fileExists(atPath: modelsDirectory.appending(path: "model-index.json").path)
 

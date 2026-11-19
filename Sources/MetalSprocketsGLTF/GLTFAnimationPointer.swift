@@ -50,11 +50,21 @@ public enum GLTFAnimationPointer {
 
         func apply(_ value: [Float], to light: inout LightingLight) {
             switch self {
-            case .color: if value.count == 3 { light.color = SIMD3(value[0], value[1], value[2]) }
-            case .intensity: if let value = value.first { light.intensity = value }
-            case .range: if let value = value.first { light.range = value }
-            case .innerConeAngle: if let value = value.first { light.innerConeCos = cos(value) }
-            case .outerConeAngle: if let value = value.first { light.outerConeCos = cos(value) }
+            case .color: if value.count == 3 {
+                light.color = SIMD3(value[0], value[1], value[2])
+            }
+            case .intensity: if let value = value.first {
+                light.intensity = value
+            }
+            case .range: if let value = value.first {
+                light.range = value
+            }
+            case .innerConeAngle: if let value = value.first {
+                light.innerConeCos = cos(value)
+            }
+            case .outerConeAngle: if let value = value.first {
+                light.outerConeCos = cos(value)
+            }
             }
         }
     }
@@ -130,7 +140,9 @@ public enum GLTFAnimationPointer {
         public let property: MaterialProperty
 
         public init?(_ path: String) {
-            guard let property = MaterialProperty(path) else { return nil }
+            guard let property = MaterialProperty(path) else {
+                return nil
+            }
             self.path = path
             self.property = property
         }

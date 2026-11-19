@@ -122,6 +122,7 @@ public enum ShowcaseScene: String, CaseIterable, Identifiable, Sendable {
             }
         }
         guard let provider = CGDataProvider(data: Data(pixels) as CFData),
+              // swiftlint:disable:next force_unwrapping - sRGB is always available
               let image = CGImage(width: size, height: size, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: size * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue), provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent)
         else {
             throw CocoaError(.fileWriteUnknown)

@@ -177,10 +177,11 @@ public struct PBRRenderer: Element {
         // visionOS shows our color only where depth is written. In stereo, blended surfaces write depth so glass over
         // passthrough stays visible (see PBRPipelineState). They draw back to front, so nearer ones still pass.
         try RenderPipeline(label: label, vertexShader: context.shaders.vertexShader(variant), fragmentShader: context.shaders.fragment) {
-            context.bindings.apply(to: ForEach(draws) { batchDraw in
+            let content = ForEach(draws) { batchDraw in
                 draw(batchDraw)
             }
-            .parameter("view", value: context.bindings.view), frameResources: context.frameResources)
+            .parameter("view", value: context.bindings.view)
+            context.bindings.apply(to: content, frameResources: context.frameResources)
         }
         .vertexDescriptor(variant.skinned ? PBRModel.skinnedVertexDescriptor : PBRModel.vertexDescriptor)
         .renderPipelineDescriptorTransformer { descriptor in
@@ -207,7 +208,7 @@ public struct PBRRenderer: Element {
     }
 
     /// One Metal draw per visible record of `merged`, all in one element.
-    private func mergedDrawCalls(_ merged: PBRMergedGeometry, visible: [Bool]?, doubleSided: [Bool], backFaces: Bool, modelIsMirrored: Bool) -> some Element {
+    private func mergedDrawCalls(_ merged: PBRMergedGeometry, visible: [Bool]?, doubleSided: [Bool], backFaces: Bool, modelIsMirrored: Bool) -> some Element { // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         let indexBuffer = merged.indexBuffer
         return Draw { encoder in
             stereo?.configure(encoder)
@@ -234,8 +235,10 @@ public struct PBRRenderer: Element {
     private func skinnedMergedPipeline(_ plan: PBRDrawPlan.SkinnedMergedDraw, context: PipelineContext) throws -> some Element {
         let merged = plan.geometry
         let draw = mergedDrawCalls(merged, visible: plan.visible, doubleSided: plan.doubleSided, backFaces: false, modelIsMirrored: context.modelIsMirrored)
+            // swiftlint:disable:next force_unwrapping - skinned merged geometry always has skin vertices
             .vertexBuffer(merged.skinVertexBuffer!, index: PBRModel.skinBufferIndex)
             .parameter("jointMatrices", values: plan.palette)
+            // swiftlint:disable:next force_unwrapping - skinned merged geometry always has joint offsets
             .parameter("recordJointOffsets", buffer: merged.recordJointOffsetBuffer!)
         return try mergedPipeline("PBR Opaque Skinned Merged", vertexShader: context.shaders.skinnedMergedVertex, vertexDescriptor: PBRModel.skinnedVertexDescriptor, merged: merged, materials: plan.materials, resources: plan.resources, context: context) {
             draw
@@ -254,7 +257,7 @@ public struct PBRRenderer: Element {
 
     /// A merged pipeline: the record inputs every merged draw shares, its record materials and textures (prebuilt, or
     /// this frame's when given) and the frame's bindings, around `draw`.
-    private func mergedPipeline(_ label: String, vertexShader: VertexShader, vertexDescriptor: MTLVertexDescriptor, merged: PBRMergedGeometry, materials: [PBRMaterialUniforms]?, resources: ArgumentBuffer?, context: PipelineContext, draw: () -> some Element) throws -> some Element {
+    private func mergedPipeline(_ label: String, vertexShader: VertexShader, vertexDescriptor: MTLVertexDescriptor, merged: PBRMergedGeometry, materials: [PBRMaterialUniforms]?, resources: ArgumentBuffer?, context: PipelineContext, draw: () -> some Element) throws -> some Element { // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         let content = draw()
             .vertexBuffer(merged.vertexBuffer, index: 0)
             .parameter("instanceRecords", buffer: merged.instanceRecordBuffer)
@@ -273,6 +276,7 @@ public struct PBRRenderer: Element {
         let morph = PBRMorphUniforms(targetCount: UInt32(primitive.morphTargetCount), vertexCount: UInt32(primitive.vertexCount))
         return draw(batchDraw)
             .parameter("morph", value: morph)
+            // swiftlint:disable:next force_unwrapping - morphed primitives always have a morph buffer
             .parameter("morphDeltas", buffer: primitive.morphBuffer!)
             .parameter("morphWeights", values: batchDraw.morphWeights ?? [0])
     }
@@ -385,6 +389,7 @@ extension PBRRenderer {
 extension Element {
     /// Binds `values` when given (this frame's), else `buffer` (prebuilt).
     @ElementBuilder
+    // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
     func parameter<Value>(_ name: String, values: [Value]?, else buffer: MTLBuffer) -> some Element {
         if let values {
             parameter(name, values: values)

@@ -119,14 +119,25 @@ struct PBRPipelineState: Hashable {
     }
 
     func apply(to descriptor: MTL4RenderPipelineDescriptor) {
+        // swiftlint:disable:next force_unwrapping - color attachment 0 always exists
         let attachment = descriptor.colorAttachments[0]!
         var mask: MTLColorWriteMask = []
-        if colorWriteMask.contains(.red) { mask.insert(.red) }
-        if colorWriteMask.contains(.green) { mask.insert(.green) }
-        if colorWriteMask.contains(.blue) { mask.insert(.blue) }
-        if colorWriteMask.contains(.alpha) { mask.insert(.alpha) }
+        if colorWriteMask.contains(.red) {
+            mask.insert(.red)
+        }
+        if colorWriteMask.contains(.green) {
+            mask.insert(.green)
+        }
+        if colorWriteMask.contains(.blue) {
+            mask.insert(.blue)
+        }
+        if colorWriteMask.contains(.alpha) {
+            mask.insert(.alpha)
+        }
         attachment.writeMask = mask
-        guard blendMode != .opaque else { return }
+        guard blendMode != .opaque else {
+            return
+        }
         attachment.blendingState = .enabled
         attachment.sourceRGBBlendFactor = blendMode == .premultiplied ? .one : .sourceAlpha
         attachment.destinationRGBBlendFactor = blendMode == .additive ? .one : .oneMinusSourceAlpha

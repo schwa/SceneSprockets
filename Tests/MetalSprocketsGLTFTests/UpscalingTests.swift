@@ -29,7 +29,9 @@ struct UpscalingTests {
     // Drawn at half size and upscaled with MetalFX, the frame matches the full-size one except near edges.
     @Test(.metalValidation) @MainActor
     func upscaledFrameMatchesFullSize() throws {
-        guard PBRUpscaling.isSupported(device: try #require(MTLCreateSystemDefaultDevice())) else { return }
+        guard PBRUpscaling.isSupported(device: try #require(MTLCreateSystemDefaultDevice())) else {
+            return
+        }
         let full = try redChannel(upscaling: nil)
         let upscaled = try redChannel(upscaling: PBRUpscaling(scale: 0.5))
         #expect(upscaled[32 * 64 + 32] > 200, "The triangle's center is red")
@@ -41,7 +43,9 @@ struct UpscalingTests {
     // Upscaling into a float (EDR) target keeps values above 1.
     @Test(.metalValidation) @MainActor
     func upscalesIntoFloatTargets() throws {
-        guard PBRUpscaling.isSupported(device: try #require(MTLCreateSystemDefaultDevice())) else { return }
+        guard PBRUpscaling.isSupported(device: try #require(MTLCreateSystemDefaultDevice())) else {
+            return
+        }
         let asset = try GLTFAsset(url: makeExtensionMaterialFile(#"{"KHR_materials_unlit": {}}"#, extensionsUsed: ["KHR_materials_unlit"]))
         let view = LookAt(position: [0, 0, 4], target: .zero, up: [0, 1, 0]).viewMatrix
         let projection = PerspectiveProjection(verticalAngleOfView: .radians(.pi / 4), depthMode: .reversed(zClip: 0.1 ... 20)).projectionMatrix(aspectRatio: 1)

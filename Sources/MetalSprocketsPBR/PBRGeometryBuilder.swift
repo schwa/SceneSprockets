@@ -16,7 +16,7 @@ public struct PBRGeometryBuilder {
         /// `.triangle`, `.line` or `.point` (lists only).
         var primitiveType: MTLPrimitiveType
         /// Joints (indexes into the skin's joints) and weights, one per vertex, for skinned primitives.
-        var skinVertices: [PBRSkinVertex]?
+        var skinVertices: [PBRSkinVertex]? // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         /// Morph target offsets, [target][vertex].
         var morphTargets: [[PBRMorphDelta]]
         /// The morph targets as given, for the primitive's ``PBRModel/Primitive/mesh``.
@@ -99,15 +99,21 @@ public struct PBRGeometryBuilder {
                 (0 ..< attribute.count).map { bytes.loadUnaligned(fromByteOffset: $0 * size, as: T.self) }
             }
         }
+        // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         func floats<T>(_ semantic: VertexDescriptor.Attribute.Semantic, _ format: MTLVertexFormat, as _: T.Type) throws -> [T]? {
-            guard let attribute = attribute(semantic) else { return nil }
+            guard let attribute = attribute(semantic) else {
+                return nil
+            }
             guard attribute.format == format else {
                 throw PBRGeometryError.unsupportedAttributeFormat(semantic, attribute.format)
             }
             return read(attribute, as: T.self)
         }
+        // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         func float4s(_ semantic: VertexDescriptor.Attribute.Semantic, w: Float) throws -> [SIMD4<Float>]? {
-            guard let attribute = attribute(semantic) else { return nil }
+            guard let attribute = attribute(semantic) else {
+                return nil
+            }
             switch attribute.format {
             case .float4:
                 return read(attribute, as: SIMD4<Float>.self)
@@ -120,6 +126,7 @@ public struct PBRGeometryBuilder {
             }
         }
 
+        // swiftlint:disable:next force_unwrapping - every primitive has positions (checked when it was added)
         let positionValues = try floats(.position, .float3, as: Packed3<Float>.self)!
         let normals = try floats(.normal, .float3, as: Packed3<Float>.self)
         let tangents = try float4s(.tangent, w: 1)
@@ -137,6 +144,7 @@ public struct PBRGeometryBuilder {
             return vertex
         }
 
+        // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         var skinVertices: [PBRSkinVertex]?
         if let joints = attribute(.jointIndices(0)), let weights = try floats(.jointWeights(0), .float4, as: SIMD4<Float>.self) {
             let jointValues: [SIMD4<Float>]
