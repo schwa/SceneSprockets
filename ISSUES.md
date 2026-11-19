@@ -12359,7 +12359,7 @@ Needed before deciding:
 
 Was also MetalSprocketsPBR#37 (merged here with the package, #552).
 
-- `2026-11-19T03:52:54Z`: Benchmark: ms-gltf-render bench vs bench --no-merging (new flag), Release, M5 Max (Mac17,6), 1024², median of fastest of 3 rounds × 60 frames. CPU ms / GPU ms:
+\- `2026-11-19T03:52:54Z`: Benchmark: ms-gltf-render bench vs bench --no-merging (new flag), Release, M5 Max (Mac17,6), 1024², median of fastest of 3 rounds × 60 frames. CPU ms / GPU ms:
 
 | scene | merged | per-batch |
 |---|---|---|
@@ -12376,6 +12376,8 @@ Was also MetalSprocketsPBR#37 (merged here with the package, #552).
 | CarConcept | 2.42 / 0.60 | 9.21 / 1.35 |
 
 Per-batch drawing costs 2-8x more render-thread CPU on most multi-primitive scenes (NodePerformanceTest 7.6x, AnimationPointerUVs 6.6x), and up to ~3.7x GPU (AnimationPointerUVs, CarConcept 2.2x). Single-primitive scenes are equal. With today's MetalSprockets per-element costs, removing merging would put several scenes over the 8.3 ms 120 Hz budget. Not measured: memory, energy, Debug.
+
+- `2026-11-19T03:52:54Z`: Question 1 (decision): Keep the merged path for now and revisit #545 after MetalSprockets' per-element costs drop (MetalSprockets#519 etc.), re-running bench --no-merging then? Recommended: Yes: keep merging; lower #545 to Medium, label deferred, and re-measure after MetalSprockets#519.
 
 ---
 
