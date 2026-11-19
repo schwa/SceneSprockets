@@ -13140,6 +13140,8 @@ updated: 2026-11-19T14:18:22Z
 
 Umbrella for RFCs/0001-pbr-performance.md: per-batch PBR drawing is too slow for merged sets to be optional. The work is in its dependencies.
 
+- `2026-11-19T14:20:17Z`: MetalSprockets side: MetalSprockets#583.
+
 ---
 
 ## Milestone: M001-Correctness
