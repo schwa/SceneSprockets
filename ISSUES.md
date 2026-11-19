@@ -12334,13 +12334,13 @@ Related: #516 No GPU-driven rendering (overlapping umbrella), #518 No mesh shadi
 
 +++
 status: open
-priority: critical
+priority: medium
 kind: task
-labels: area:renderer, area:performance, effort:l, investigate
+labels: area:renderer, area:performance, effort:l, investigate, deferred
 milestone: M007-PBR-Merged-Geometry
 depends: 572, 573
 created: 2026-11-18T18:13:33Z
-updated: 2026-11-19T04:09:28Z
+updated: 2026-11-19T14:37:55Z
 +++
 
 MetalSprocketsPBR draws eligible opaque batches from merged sets (PBRMergedGeometry): one element issues one Metal draw per batch, using the asset's own vertex and index buffers. Meshes are not combined; batches keep their own draw calls and instancing. Each set copies its batches' instances, material uniforms and material textures into shared buffers at build time. The reason: MetalSprockets' per-frame cost grows with the number of elements, not Metal draw calls.
@@ -12357,6 +12357,8 @@ Measurements and alternatives: RFCs/0001-pbr-performance.md. bench --no-merging 
 - `2026-11-19T03:52:54Z`: Question 1 (decision): Keep the merged path for now and revisit #545 after MetalSprockets' per-element costs drop (MetalSprockets#519 etc.), re-running bench --no-merging then? Recommended: Yes: keep merging; lower #545 to Medium, label deferred, and re-measure after MetalSprockets#519.
 - `2026-11-19T03:58:37Z`: Related: #572 (bench --no-merging, used for the table above), #571 (NodePerformanceTest regression found in this benchmark).
 - `2026-11-19T03:59:13Z`: RFC: RFCs/0001-pbr-performance.md (keep merging optional; alternative ways to cut per-draw cost).
+- `2026-11-19T14:37:39Z`: Answer 1: yes
+- `2026-11-19T14:37:55Z`: Decision (Q1): keep the merged path for now. Revisit when MetalSprockets' per-element cost drops (MetalSprockets#583, #519, #522): re-run bench --no-merging then.
 
 ---
 
