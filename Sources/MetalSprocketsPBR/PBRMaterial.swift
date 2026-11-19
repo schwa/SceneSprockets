@@ -1,6 +1,7 @@
 import Metal
 import MetalSprockets
 import MetalSprocketsPBRShaders
+import os
 import simd
 
 public extension PBRMaterialUniforms {
@@ -102,6 +103,20 @@ public final class PBRMaterial: @unchecked Sendable {
     /// Every material texture and its sampler, in `PBRMaterialTextureIndex` order. Slots the material does not use
     /// hold a placeholder (see ``placeholderBinding(device:)``).
     public let textureBindings: [Binding]
+    /// `textureBindings` as a one-element `PBRMaterialResources` argument buffer (textures and samplers; `uniforms` is
+    /// not set), for shaders outside ``PBRRenderer`` that take a material's textures this way. Built on first use.
+    public var resources: ArgumentBuffer {
+        resourcesCache.withLockUnchecked { cache in
+            if let cache {
+                return cache
+            }
+            let resources = ArgumentBuffer(device: textureBindings[0].texture.device, label: "\(name ?? "PBR Material") Resources")
+            resources.setMaterialResources(textureBindings)
+            cache = resources
+            return resources
+        }
+    }
+    private let resourcesCache = OSAllocatedUnfairLock<ArgumentBuffer?>(uncheckedState: nil)
     /// Animatable texture transforms, keyed by the producer's name for the texture (glTF: its path below
     /// `/materials/N/`).
     public let textureTransforms: [String: TextureTransform]
