@@ -11581,6 +11581,8 @@ updated: 2026-11-17T19:13:15Z
 
 Good-looking materials without placing lights. Complexity: low–medium. (Moved from SceneSprocketsAddOns #69.)
 
+- `2026-11-19T03:24:03Z`: Done by #552: the PBR scene renderer does image-based lighting from LightingEnvironment (SceneGraph.Environment.map; default .studio). Blinn-Phong has no IBL.
+
 ---
 
 ## 507: Automatic environment lighting
