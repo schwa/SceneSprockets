@@ -12996,6 +12996,88 @@ RFC: RFCs/0001-pbr-performance.md option 1.
 
 ---
 
+## 574: glTF benchmark baseline predates current MetalSprockets
+
++++
+status: new
+priority: medium
+kind: task
+labels: area:performance, effort:s, gltf
+milestone: M007-PBR-Merged-Geometry
+created: 2026-11-19T05:54:15Z
++++
+
+Benchmarks/glTF/Mac17,6.json was recorded 2026-10-06. With MetalSprockets 0.3.6, bench still flags NodePerformanceTest as a regression (10.3 ms CPU vs 6.7 ms baseline, +55%) and most other scenes run 20-55% under their baselines, so the comparison no longer shows real changes.
+
+The remaining NodePerformanceTest gap has no single hot spot in a Time Profiler run (#571); it is spread over MetalSprockets reconciliation and draw binding.
+
+---
+
+## 575: PBRMaterial builds an argument buffer that no draw uses
+
++++
+status: new
+priority: low
+kind: task
+labels: area:renderer, effort:xs
+milestone: M007-PBR-Merged-Geometry
+created: 2026-11-19T05:54:15Z
++++
+
+Since the material table (#573), draws read material textures from PBRMaterialTable. Each PBRMaterial still builds its own PBRMaterialResources ArgumentBuffer (PBRMaterial.resources), and PBRModelBuilder keeps it resident. Nothing binds it.
+
+---
+
+## 576: Per-batch PBR draws bind every buffer per batch
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:renderer, area:performance, effort:m
+milestone: M007-PBR-Merged-Geometry
+created: 2026-11-19T05:54:15Z
++++
+
+PBRRenderer.draw(_:materials:) binds, for every batch: the asset's vertex buffer at the primitive's first vertex, the batch's instances, the material table and the material index. The vertex and index buffers are shared by every primitive of the asset, so most of these binds repeat. Morphed primitives need vertex IDs local to the primitive.
+
+RFC 0001 option 3.
+
+---
+
+## 577: Per-batch PBR draws are not grouped by material
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:renderer, area:performance, effort:s
+milestone: M007-PBR-Merged-Geometry
+created: 2026-11-19T05:54:15Z
++++
+
+Opaque per-batch draws are grouped by vertex variant and pipeline state (PBRDrawPlan.OpaqueGroup), but not ordered by material within a group, so state and bindings change between neighbouring draws more than needed.
+
+RFC 0001 option 4.
+
+---
+
+## 578: Per-batch PBR drawing uses more GPU time than merged drawing
+
++++
+status: new
+priority: low
+kind: task
+labels: area:performance, effort:m, investigate
+milestone: M007-PBR-Merged-Geometry
+created: 2026-11-19T05:54:15Z
+updated: 2026-11-19T05:54:15Z
++++
+
+bench --no-merging uses more GPU time than bench on several scenes with about the same number of Metal draws (Release, M5 Max, MetalSprockets 0.3.6 with the material table): NodePerformanceTest 6.0 vs 1.5 ms, AnimationPointerUVs 1.2 vs 0.3 ms, CarConcept 1.35 vs 0.57 ms, BrainStem 0.31 vs 0.12 ms. Cause not known; not profiled on the GPU.
+
+---
+
 ## Milestone: M001-Correctness
 
 +++
