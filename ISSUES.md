@@ -12359,6 +12359,24 @@ Needed before deciding:
 
 Was also MetalSprocketsPBR#37 (merged here with the package, #552).
 
+- `2026-11-19T03:52:54Z`: Benchmark: ms-gltf-render bench vs bench --no-merging (new flag), Release, M5 Max (Mac17,6), 1024², median of fastest of 3 rounds × 60 frames. CPU ms / GPU ms:
+
+| scene | merged | per-batch |
+|---|---|---|
+| ABeautifulGame | 1.33 / 0.89 | 2.45 / 0.80 |
+| Sponza | 1.34 / 0.25 | 4.50 / 0.40 |
+| NodePerformanceTest | 54.3 / 3.99 | 415.0 / 9.84 |
+| SimpleInstancing | 0.55 / 0.05 | 0.54 / 0.06 |
+| BrainStem | 0.85 / 0.14 | 5.14 / 0.35 |
+| RecursiveSkeletons | 1.17 / 0.13 | 4.78 / 0.16 |
+| Fox | 0.58 / 0.05 | 0.58 / 0.03 |
+| AnimationPointerUVs | 2.93 / 0.30 | 19.27 / 1.12 |
+| AlphaBlendModeTest | 0.73 / 0.08 | 0.92 / 0.06 |
+| TransmissionTest | 1.48 / 0.61 | 3.25 / 0.58 |
+| CarConcept | 2.42 / 0.60 | 9.21 / 1.35 |
+
+Per-batch drawing costs 2-8x more render-thread CPU on most multi-primitive scenes (NodePerformanceTest 7.6x, AnimationPointerUVs 6.6x), and up to ~3.7x GPU (AnimationPointerUVs, CarConcept 2.2x). Single-primitive scenes are equal. With today's MetalSprockets per-element costs, removing merging would put several scenes over the 8.3 ms 120 Hz budget. Not measured: memory, energy, Debug.
+
 ---
 
 ## 546: Blinn-Phong binds every material texture as a separate slot on every draw
