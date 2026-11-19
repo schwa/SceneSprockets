@@ -1,5 +1,5 @@
 {
-  "originHash" : "a4b312a3e4f6f4ec96a51f78bbbf8c41acc61be45645c20db1866d4c7e3d1465",
+  "originHash" : "5d7f9844bb4a1f007604ceec63d2b158d9d4ce294a7be9163e041e3a2fda33a2",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/CollaborationKit",
       "state" : {
-        "revision" : "d06653ed2f5e733259f62c28385cb323039cee36",
-        "version" : "0.2.6"
+        "revision" : "1f317cf6488e554c0e0e1d92dcee594540e41353",
+        "version" : "0.2.7"
       }
     },
     {
@@ -74,39 +74,12 @@
       }
     },
     {
-      "identity" : "metalsprocketsgltf",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/schwa/MetalSprocketsGLTF",
-      "state" : {
-        "revision" : "911935784c5afc43ac816326b811295e4cfef385",
-        "version" : "0.3.0"
-      }
-    },
-    {
-      "identity" : "metalsprocketslighting",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/schwa/MetalSprocketsLighting",
-      "state" : {
-        "revision" : "1d541786fc9be6fbe6fc78942f249ec663efc4ae",
-        "version" : "0.0.4"
-      }
-    },
-    {
       "identity" : "metalsprocketsparticles",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsParticles",
       "state" : {
         "revision" : "bf71cbace0a71a66270c68c439a84714ec703ee7",
         "version" : "0.1.0"
-      }
-    },
-    {
-      "identity" : "metalsprocketspbr",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/schwa/MetalSprocketsPBR",
-      "state" : {
-        "revision" : "c3a05c796f0e2ea6eaff567795579531edc9dc59",
-        "version" : "0.4.0"
       }
     },
     {
@@ -222,8 +195,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/SwiftJolt.git",
       "state" : {
-        "revision" : "e044cf48c7e262b0a33d8a57fd9ebe8be60190df",
-        "version" : "0.0.3"
+        "revision" : "3382e3425c48596f3b659a6439789278f9cdcf4b",
+        "version" : "0.0.4"
       }
     },
     {

@@ -1,0 +1,15 @@
+# Imported from MetalSprocketsLighting, MetalSprocketsPBR and MetalSprocketsGLTF (#552), which used looser rules.
+# Remove these exceptions as the code is brought in line.
+disabled_rules:
+  - conditional_returns_on_newline
+  - discouraged_optional_collection
+  - force_unwrapping
+  - multiline_arguments
+  - multiline_call_arguments
+  - multiline_function_chains
+  - indentation_width
+  - orphaned_doc_comment
+  - pattern_matching_keywords
+  - optional_data_string_conversion
+  - local_doc_comment
+  - legacy_multiple

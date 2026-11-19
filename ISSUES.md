@@ -11786,7 +11786,7 @@ State:
 
 - MetalSprockets has indirect draws and indirect command buffers (MetalSprockets#575, #576, in 0.3.3).
 - Commands in one indirect command buffer cannot bind textures per draw, so a renderer needs bindless materials first. PBR has them; Blinn-Phong has argument-buffer materials since #546.
-- Merged geometry is not required, but whether PBR keeps it decides how commands get their vertex data (#545, MetalSprocketsPBR#37).
+- Merged geometry is not required, but whether PBR keeps it decides how commands get their vertex data (#545).
 
 ---
 
@@ -12339,16 +12339,22 @@ created: 2026-11-18T18:13:33Z
 updated: 2026-11-19T01:55:29Z
 +++
 
-Tracking issue for MetalSprocketsPBR#37 (Investigate removing merged geometry), because SceneSprockets is the top-level project that ships it.
+MetalSprocketsPBR merges opaque, unmorphed triangle primitives into shared vertex, index, instance and material buffers (PBRMergedGeometry), so one draw element issues many Metal draws. Its reason: MetalSprockets' per-frame cost grows with the number of elements, not Metal draw calls. Merging works around MetalSprockets overhead; it does not address a GPU cost. Merging may have been the wrong choice.
 
-MetalSprocketsPBR merges opaque, unmorphed primitives into shared buffers (PBRMergedGeometry) to work around MetalSprockets' per-element cost. That cost now runs on a render thread (#393), and MetalSprockets work such as subtree reuse (MetalSprockets#519) targets it directly. Merging may have been the wrong choice.
+Costs of merging:
+- Two drawing paths, merged (opaque static and skinned) and per-batch (blended, morphed, transmissive), each with its own rules.
+- Live material changes need overrides, and pass changes need a model rebuild (#479).
+- Geometry is copied into the shared buffers and rebuilt with the model.
 
-How it affects SceneSprockets:
-- PBRMaterialRenderer needs material overrides and pass-change rebuilds for live material changes (#479).
-- GPU-driven work (#517, #520, #522, umbrella #544) would be built on either the merged layout or per-mesh draws; merging is not required for it.
-- Performance work should go into MetalSprockets, not into workarounds in SceneSprockets or its renderers.
+The overhead it avoids belongs in MetalSprockets, where it is tracked: MetalSprockets#476 (argument tables re-bound every draw), #513 (ParameterSet rebuilt every draw), #519 (draw subtrees never reused), #522 (no closure-free Draw). Merging is not required for GPU-driven rendering (#517, #520, #522, #544).
 
-No measurements yet. The decision depends on the benchmarks described in MetalSprocketsPBR#37: render-thread CPU time against the frame budget, GPU time, memory and energy, merged versus per-primitive, at several scene sizes.
+What is known (from MetalSprockets' issues, not re-measured): rendering runs on a render thread (#393), so the cost matters against the frame budget (8.3 ms at 120 Hz, 11.1 ms at 90 Hz) and for energy, not the main thread. The only profile (GLTFViewer) showed reconciliation as the hot spot, not argument-table binding. A static 1000-cube scene spends about 1.75 ms per frame in Update (Release). Not measured: tree building alone, scaling past 1000 draws, SceneSprockets' real scenes.
+
+Needed before deciding:
+- Benchmarks of merged versus per-primitive drawing at several primitive and material counts: render-thread CPU time, GPU time, memory and energy, in Debug and Release.
+- The same after MetalSprockets' per-element costs are reduced (MetalSprockets#519 targets reconciliation directly).
+
+Was also MetalSprocketsPBR#37 (merged here with the package, #552).
 
 ---
 
@@ -12533,6 +12539,318 @@ SceneSprocketsAddOns follows SceneSprockets' main branch while SceneSprockets' d
 - SceneSprocketsAddOns stays standalone; it would depend on tagged SceneSprockets releases instead of main.
 
 Costs: one-time migration (history, issue trackers, manifests), shared versioning, larger download for anyone using only PBR or glTF.
+
+---
+
+## 553: Draco compressed meshes are not supported
+
++++
+status: new
+priority: low
+kind: feature
+labels: effort:l, area:extensions, deferred, gltf
+created: 2026-11-19T02:12:55Z
++++
+
+Primitives using KHR_draco_mesh_compression cannot be decoded; GLTFViewer lists glTF-Draco variants (about 20 sample models, none of them a default variant) as unsupported. Needs Google's Draco decoder (Apache-2.0, large C++), most likely in SwiftGLTF. Deferred: no default sample needs it. Meshopt split out to MetalSprocketsGLTF#104 (done).
+
+State: meshopt compression is supported (MetalSprocketsGLTFMeshopt); Draco is not. Draco appears only in the glTF-Draco variants of about 20 sample models, and needs Google's decoder (Apache-2.0, large), which would belong in SwiftGLTF.
+
+Was MetalSprocketsGLTF#8 (moved with the package, #552).
+
+---
+
+## 554: AnimationPointerUVs runs at ~90 fps while animating
+
++++
+status: new
+priority: low
+kind: bug
+labels: area:performance, effort:m, deferred, gltf
+created: 2026-11-19T02:12:55Z
++++
+
+In GLTFViewer (Release, 120 Hz display) AnimationPointerUVs runs at ~90 fps with its animation playing. Headless (ms-gltf-render --benchmark 60 --orbit --animation 0, Release, M5 Max): ~4.8 ms CPU, <1 ms GPU per frame. The scene has 132 primitives, 82 materials (9 transmissive, 3 blended) and animates material texture transforms through KHR_animation_pointer, so each frame also pays for the transmission pre-passes, per-batch drawing of the 3 blended primitives, and per-frame material uniform arrays for the merged sets. Not yet profiled.
+
+State: the benchmark measures 4.4 ms CPU per frame (Release, M5 Max), within 120 Hz. Re-measure in the app before working on it. Related: material pointer strings parsed on every pose (was MetalSprocketsGLTF#167).
+
+Was MetalSprocketsGLTF#75 (moved with the package, #552).
+
+---
+
+## 555: CarConcept runs at ~110 fps
+
++++
+status: new
+priority: low
+kind: bug
+labels: area:performance, effort:s, deferred, gltf
+created: 2026-11-19T02:12:55Z
++++
+
+In GLTFViewer (Release, 120 Hz display) CarConcept runs at ~110 fps. Headless (ms-gltf-render --benchmark 60 --orbit, Release, M5 Max): ~3.8 ms CPU, <1 ms GPU per frame. 109 primitives, of which one has a transmissive material; that single material turns on the transmission pre-passes (opaque scene, back faces, mipmaps) for the whole scene. Likely the fixed cost of those passes; not yet profiled.
+
+State: the benchmark measures 3.4 ms CPU per frame (Release, M5 Max), within 120 Hz. Re-measure in the app before working on it.
+
+Was MetalSprocketsGLTF#76 (moved with the package, #552).
+
+---
+
+## 556: KHR_gaussian_splatting is not supported
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:extensions, effort:l, deferred, gltf
+created: 2026-11-19T02:12:55Z
++++
+
+Primitives using KHR_gaussian_splatting (point primitives with Gaussian splat attributes) are not drawn as splats. Supporting it means a separate splat renderer (sorting, splat rasterisation), not a material change.
+
+Suggested: decode the splat attributes into MetalSprocketsGaussianSplats and render with one of its renderers, rather than writing a splat renderer here.
+
+Was MetalSprocketsGLTF#85 (moved with the package, #552).
+
+---
+
+## 557: EXT_lights_ies is not supported
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:extensions, effort:m, deferred, gltf
+created: 2026-11-19T02:12:55Z
++++
+
+Photometric lights defined by EXT_lights_ies (IES light profiles) are ignored.
+
+Was MetalSprocketsGLTF#87 (moved with the package, #552).
+
+---
+
+## 558: Benchmark suite misses several draw paths
+
++++
+status: new
+priority: low
+kind: task
+labels: area:performance, area:testing, effort:s, gltf
+created: 2026-11-19T02:12:55Z
++++
+
+The bench suite (ms-gltf-render bench, GLTFBenchCommand.scenes) has 11 scenes picked by hand. Paths with no scene, so their regressions go unnoticed:
+- morph targets (e.g. AnimatedMorphCube, MorphStressTest, or a skinned+morphed character);
+- diffuse transmission (DiffuseTransmissionPlant), sheen (SheenWoodLeatherSofa, GlamVelvetSofa), clearcoat, iridescence, anisotropy, dispersion: material lobes that add shader cost;
+- KHR_materials_variants switching and node visibility;
+- large texture sets / many materials (FlightHelmet, Sponza already partly);
+- the environment background (--background) and the transmission pre-pass at larger sizes;
+- point/line primitives (MeshPrimitiveModes);
+- a scene with many lights (punctual lights loop), e.g. LightsPunctualLamp or PlaysetLightTest;
+- load time, which is not measured at all (large files: Sponza, ABeautifulGame, CarConcept).
+Also worth considering: a second resolution (GPU-bound at 4K) and scenes that are GPU-heavy rather than CPU-heavy. Adding scenes means re-recording each machine's baseline (just bench-record) and keeping the suite's run time reasonable (about a minute now).
+
+Was MetalSprocketsGLTF#113 (moved with the package, #552).
+
+---
+
+## 559: Immersive rendering has no antialiasing
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:rendering, effort:m, deferred, gltf
+created: 2026-11-19T02:12:55Z
++++
+
+In GLTFViewer's immersive space, edges show stair-stepping, more visible toward the edges of the view where foveation lowers resolution. MetalSprockets' ImmersiveLayerConfiguration does not request multisampling, and PBRImmersiveScene renders at one sample. Wanted: MSAA (or another antialiasing) in the immersive path, checking that CompositorServices layered targets and foveation (rasterization rate maps) support it, and the GPU cost on Vision Pro.
+
+State: MetalSprockets' immersive runtime has no multisample support, so this needs a MetalSprockets change first, and its GPU cost can only be measured on a Vision Pro.
+
+Was MetalSprocketsGLTF#146 (moved with the package, #552).
+
+---
+
+## 560: Verify on device that immersive no longer aborts on line and point primitives
+
++++
+status: new
+priority: medium
+kind: task
+labels: area:rendering, effort:xs, deferred, gltf
+created: 2026-11-19T02:12:56Z
++++
+
+On Vision Pro, opening the model after the Showcase in the immersive space aborted with Metal validation: 'Only triangles may be drawn when using a rasterization rate map' (drawIndexedPrimitives). Fixed in e6f4bb6d: PBRImmersiveScene sets PBRRenderer.drawsTrianglesOnly, so point and line primitives are skipped in immersive (still drawn in windows); TrianglesOnlyTests covers it on macOS. To verify on device: open that model (and a points/lines sample such as MeshPrimitiveModes) in immersive with foveation on; no abort, triangles visible, lines and points absent.
+
+Was MetalSprocketsGLTF#152 (moved with the package, #552).
+
+---
+
+## 561: Malformed glTF input can crash the loader
+
++++
+status: new
+priority: medium
+kind: task
+labels: effort:xl, area:testing, has-subtasks, gltf
+depends: 563, 564, 565, 566
+created: 2026-11-19T02:12:56Z
+updated: 2026-11-19T02:13:03Z
++++
+
+Loading or animating a malformed or hostile glTF/GLB should produce an error or a warning, never a crash (precondition, fatalError, out-of-range index, force unwrap, integer overflow, unbounded allocation).
+
+There is no fuzz coverage of the load and pose paths today, so crashes on bad input are found only by accident (for example the Transform3D precondition described in MetalSprocketsGLTF#179).
+
+Areas to cover: JSON structure, accessor/bufferView offsets, counts and strides, sparse accessors, node hierarchy indices, skins, animation samplers and pointers, extensions (meshopt, Basis, instancing, lights, image-based lights), and texture data.
+
+Was MetalSprocketsGLTF#180 (moved with the package, #552).
+
+---
+
+## 562: Resources.load does every loading step in one function; non-material extensions are spread across files
+
++++
+status: new
+priority: low
+kind: task
+labels: effort:l, area:architecture, gltf
+created: 2026-11-19T02:12:56Z
++++
+
+GLTFAsset.Resources.load (GLTFAssetLoading.swift, about 90 lines) does all of these in one function:
+- checks required extensions
+- loads textures and materials
+- builds geometry
+- builds skins and animations
+- filters out channels that animate matrix nodes
+- reads EXT_mesh_gpu_instancing matrices
+- decodes EXT_lights_image_based lights
+- parses material animation properties
+
+Material extensions have one feature table (GLTFMaterialFeature.all). Non-material extensions (instancing, image-based lights, node visibility, variants) do not. Their code is split between Resources.load, GLTFSceneContents, and the hand-written GLTFAsset.builtInExtensions list in GLTFLoadOptions.swift.
+
+Warnings are plain [String], so DisabledExtensionsTests, InstancingTests, ImageBasedLightTests and AssetLoadingTests check them by matching substrings. No loading step can be tested on its own.
+
+State: partly done; Resources.load is now about 60 lines. Decided: add a feature table for non-material extensions (instancing, image-based lights, node visibility, variants), like GLTFMaterialFeature.all, and make GLTFAsset.warnings typed instead of [String].
+
+Was MetalSprocketsGLTF#188 (moved with the package, #552).
+
+---
+
+## 563: Malformed JSON structure and indices can crash the loader
+
++++
+status: new
+priority: medium
+kind: task
+labels: effort:m, area:testing, subtask, gltf
+created: 2026-11-19T02:12:56Z
++++
+
+Part of #561. Loading or posing malformed input in this area must produce an error or warning, never a crash (precondition, fatalError, out-of-range index, force unwrap, integer overflow, unbounded allocation). Acceptance: a fuzz or malformed-input test covers the area and finds no crash. Area: JSON structure, node hierarchy indices, skins and other cross-object indices.
+
+Was MetalSprocketsGLTF#191 (moved with the package, #552).
+
+---
+
+## 564: Malformed accessors and buffer views can crash the loader
+
++++
+status: new
+priority: medium
+kind: task
+labels: effort:m, area:testing, subtask, gltf
+created: 2026-11-19T02:12:56Z
++++
+
+Part of #561. Loading or posing malformed input in this area must produce an error or warning, never a crash (precondition, fatalError, out-of-range index, force unwrap, integer overflow, unbounded allocation). Acceptance: a fuzz or malformed-input test covers the area and finds no crash. Area: accessor and bufferView offsets, counts, strides, sparse accessors.
+
+Was MetalSprocketsGLTF#192 (moved with the package, #552).
+
+---
+
+## 565: Malformed animations can crash loading or posing
+
++++
+status: new
+priority: medium
+kind: task
+labels: effort:m, area:testing, subtask, gltf
+created: 2026-11-19T02:12:56Z
++++
+
+Part of #561. Loading or posing malformed input in this area must produce an error or warning, never a crash (precondition, fatalError, out-of-range index, force unwrap, integer overflow, unbounded allocation). Acceptance: a fuzz or malformed-input test covers the area and finds no crash. Area: animation samplers, channels and KHR_animation_pointer targets, through both loading and GLTFPoser.
+
+Was MetalSprocketsGLTF#193 (moved with the package, #552).
+
+---
+
+## 566: Malformed extension data can crash the loader
+
++++
+status: new
+priority: medium
+kind: task
+labels: effort:m, area:testing, subtask, gltf
+created: 2026-11-19T02:12:56Z
++++
+
+Part of #561. Loading or posing malformed input in this area must produce an error or warning, never a crash (precondition, fatalError, out-of-range index, force unwrap, integer overflow, unbounded allocation). Acceptance: a fuzz or malformed-input test covers the area and finds no crash. Area: extensions (meshopt, Basis, EXT_mesh_gpu_instancing, KHR_lights_punctual, EXT_lights_image_based).
+
+Was MetalSprocketsGLTF#194 (moved with the package, #552).
+
+---
+
+## 567: Explore RoboCloth cloth materials
+
++++
+status: new
+priority: low
+kind: feature
+labels: effort:m, area:shading, deferred, pbr
+created: 2026-11-19T02:12:56Z
++++
+
+RoboCloth (https://github.com/theialab/robocloth, local copy in ~/Projects/Vendor) has 500 captured cloth materials. They are released as neural BRDFs (a 16-channel latent texture plus a shared MLP) and as a Disney PBR fit.
+
+Findings:
+- Checkpoints: HF `theialab/RoboCloth-assets`, `checkpoints/stage2/RoboCloth/<material>/PBR_epoch*.ckpt`.
+- Licenses: code Apache-2.0; dataset and checkpoints CC BY 4.0 (attribution needed).
+- PBR latent layout (`rendering/brdf_plugin/material/anisotropic_pbr.py`): [0:12] baseColor(3), ao, roughness, metallic, ior, aniso_strength, aniso_rot, specularTint, sheen, sheenTint; [12:28] neural-geometry latent; [28:34] predicted normal(3) + tangent(3). 2048² texture.
+
+Option 1 (do first, effort:m): bake the PBR fit.
+- uv script: load the checkpoint, decode the latent with the same activations/ranges as `PBRDecoder`, write base color, ORM, anisotropy, sheen and normal maps.
+- Map Disney sheen/sheenTint to glTF sheen color/roughness. Check that anisotropy rotation and the tangent frame match our conventions.
+- This is an approximation: the neural-geometry UV-offset MLP cannot be baked.
+
+Option 2 (research, effort:l-xl): neural BRDF fragment shader.
+- MLP weights in a buffer, latent in 4 RGBA16F textures, about 200K MACs per light sample.
+- No pre-filtered IBL: needs many env samples or an analytic ambient fallback.
+- A separate material type outside the glTF model.
+
+Verify: compare against their Mitsuba renders (cloth_on_bar).
+
+Was MetalSprocketsPBR#20 (moved with the package, #552).
+
+---
+
+## 568: Imported Lighting, PBR and glTF code does not follow SceneSprockets' SwiftLint rules
+
++++
+status: new
+priority: low
+kind: task
+labels: effort:m
+created: 2026-11-19T02:14:13Z
++++
+
+The code moved in with #552 (MetalSprocketsLighting, MetalSprocketsPBR, MetalSprocketsGLTF and the GLTFViewer example) was written against looser SwiftLint rules. Under SceneSprockets' configuration it has 182 warnings, mostly conditional_returns_on_newline (55), discouraged_optional_collection (42), force_unwrapping (26) and multiline argument and chain rules (45).
+
+Each imported folder has a .swiftlint.yml that disables those 12 rules, so the code lints clean for now. Expected: the code meets the shared rules and the nested .swiftlint.yml files are removed.
 
 ---
 

@@ -19,16 +19,24 @@ let package = Package(
         .library(name: "SceneSprocketsGizmos", targets: ["SceneSprocketsGizmos"]),
         // For other packages' shaders that use the scene's lighting headers, such as BlinnPhongLighting.h.
         .library(name: "SceneSprocketsShaders", targets: ["SceneSprocketsShaders"]),
+        // Lights, shadows, environment and tone mapping shared by every renderer (#547).
+        .library(name: "MetalSprocketsLighting", targets: ["MetalSprocketsLighting"]),
+        .library(name: "MetalSprocketsLightingShaders", targets: ["MetalSprocketsLightingShaders"]),
+        // glTF 2.0 PBR renderer.
+        .library(name: "MetalSprocketsPBR", targets: ["MetalSprocketsPBR"]),
+        .library(name: "MetalSprocketsPBRShaders", targets: ["MetalSprocketsPBRShaders"]),
+        // glTF loading for MetalSprocketsPBR.
+        .library(name: "MetalSprocketsGLTF", targets: ["MetalSprocketsGLTF"]),
+        .library(name: "MetalSprocketsGLTFBasisU", targets: ["MetalSprocketsGLTFBasisU"]),
+        .library(name: "MetalSprocketsGLTFMeshopt", targets: ["MetalSprocketsGLTFMeshopt"]),
+        .executable(name: "ms-gltf-render", targets: ["ms-gltf-render"]),
     ],
     dependencies: [
         .package(url: "https://github.com/schwa/GeometryLite3D", .upToNextMinor(from: "0.3.1")),
         .package(url: "https://github.com/schwa/MetalSprockets", .upToNextMinor(from: "0.3.4")),
         .package(url: "https://github.com/schwa/SwiftMesh", .upToNextMinor(from: "0.1.0")),
         .package(url: "https://github.com/schwa/MetalSupport", .upToNextMinor(from: "1.0.7")),
-        .package(url: "https://github.com/schwa/MetalSprocketsPBR", .upToNextMinor(from: "0.4.0")),
-        .package(url: "https://github.com/schwa/MetalSprocketsLighting", .upToNextMinor(from: "0.0.4")),
-        .package(url: "https://github.com/schwa/MetalSprocketsGLTF", .upToNextMinor(from: "0.3.0")),
-        .package(url: "https://github.com/schwa/SwiftGLTF", .upToNextMinor(from: "1.0.6")),
+        .package(url: "https://github.com/schwa/SwiftGLTF", .upToNextMinor(from: "1.0.7")),
         .package(url: "https://github.com/schwa/Interaction3D", .upToNextMinor(from: "0.2.1")),
         .package(url: "https://github.com/schwa/MetalCompilerPlugin", .upToNextMinor(from: "0.4.1")),
         .package(url: "https://github.com/schwa/SwiftJolt.git", .upToNextMinor(from: "0.0.3")),
@@ -36,14 +44,166 @@ let package = Package(
         .package(url: "https://github.com/schwa/MetalSprocketsAddOns", .upToNextMinor(from: "0.3.0")),
         .package(url: "https://github.com/schwa/SwiftECS", .upToNextMinor(from: "0.1.1")),
         .package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.0.0"),
+        .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.8.2"),
+        .package(url: "https://github.com/schwa/GoldenImage", .upToNextMinor(from: "0.1.7")),
+        .package(url: "https://github.com/schwa/BasisUniversalMetal", .upToNextMinor(from: "0.0.3")),
     ],
     targets: [
+        // MARK: MetalSprocketsLighting
+
+        .target(
+            name: "MetalSprocketsLightingShaders",
+            exclude: ["Metal"],
+            plugins: [
+                .plugin(name: "MetalCompilerPlugin", package: "MetalCompilerPlugin")
+            ]
+        ),
+        .target(
+            name: "MetalSprocketsLighting",
+            dependencies: [
+                "MetalSprocketsLightingShaders",
+                .product(name: "MetalSupport", package: "MetalSupport")
+            ]
+        ),
+        .testTarget(
+            name: "MetalSprocketsLightingTests",
+            dependencies: ["MetalSprocketsLighting"]
+        ),
+
+        // MARK: MetalSprocketsPBR
+
+        .target(
+            name: "MetalSprocketsPBRShaders",
+            dependencies: [
+                .product(name: "MetalSprocketsShaders", package: "MetalSprockets"),
+                "MetalSprocketsLightingShaders"
+            ],
+            exclude: ["Metal"],
+            plugins: [
+                .plugin(name: "MetalCompilerPlugin", package: "MetalCompilerPlugin")
+            ]
+        ),
+        .target(
+            name: "MetalSprocketsPBR",
+            dependencies: [
+                "MetalSprocketsPBRShaders",
+                "MetalSprocketsLighting",
+                .product(name: "MetalSprockets", package: "MetalSprockets"),
+                .product(name: "MetalSprocketsUI", package: "MetalSprockets"),
+                .product(name: "MetalSupport", package: "MetalSupport"),
+                .product(name: "SwiftMesh", package: "SwiftMesh"),
+                .product(name: "GeometryLite3D", package: "GeometryLite3D")
+            ]
+        ),
+        .testTarget(
+            name: "MetalSprocketsPBRTests",
+            dependencies: [
+                "MetalSprocketsPBR",
+                "MetalSprocketsPBRShaders",
+                .product(name: "MetalSprockets", package: "MetalSprockets"),
+                .product(name: "SwiftMesh", package: "SwiftMesh"),
+                .product(name: "GeometryLite3D", package: "GeometryLite3D"),
+                .product(name: "GoldenImage", package: "GoldenImage")
+            ],
+            resources: [
+                .copy("GoldenImages")
+            ]
+        ),
+
+        // MARK: MetalSprocketsGLTF
+
+        .target(
+            name: "MetalSprocketsGLTF",
+            dependencies: [
+                "MetalSprocketsPBR",
+                "MetalSprocketsPBRShaders",
+                .product(name: "SwiftGLTF", package: "SwiftGLTF"),
+                .product(name: "SwiftMesh", package: "SwiftMesh"),
+                .product(name: "SwiftMeshMikkTSpace", package: "SwiftMesh"),
+                .product(name: "GeometryLite3D", package: "GeometryLite3D"),
+                .product(name: "MetalSprockets", package: "MetalSprockets"),
+                .product(name: "MetalSprocketsUI", package: "MetalSprockets"),
+                .product(name: "MetalSupport", package: "MetalSupport")
+            ]
+        ),
+        .executableTarget(
+            name: "ms-gltf-render",
+            dependencies: [
+                "MetalSprocketsGLTF",
+                "MetalSprocketsGLTFBasisU",
+                "MetalSprocketsGLTFMeshopt",
+                "MetalSprocketsPBR",
+                .product(name: "ArgumentParser", package: "swift-argument-parser")
+            ]
+        ),
+        .target(
+            name: "MetalSprocketsGLTFBasisU",
+            dependencies: [
+                "MetalSprocketsGLTF",
+                .product(name: "SwiftGLTF", package: "SwiftGLTF"),
+                .product(name: "BasisUniversalMetal", package: "BasisUniversalMetal")
+            ]
+        ),
+        // meshoptimizer's decoder (vendored, MIT; see Sources/CMeshoptimizer/VERSION).
+        .target(
+            name: "CMeshoptimizer",
+            exclude: ["LICENSE.md", "VERSION"]
+        ),
+        .target(
+            name: "MetalSprocketsGLTFMeshopt",
+            dependencies: [
+                "CMeshoptimizer",
+                .product(name: "SwiftGLTF", package: "SwiftGLTF")
+            ]
+        ),
+        .testTarget(
+            name: "MetalSprocketsGLTFMeshoptTests",
+            dependencies: [
+                "MetalSprocketsGLTFMeshopt",
+                "MetalSprocketsGLTF",
+                "MetalSprocketsPBR",
+                .product(name: "SwiftGLTF", package: "SwiftGLTF"),
+                .product(name: "MetalSprockets", package: "MetalSprockets"),
+                .product(name: "GoldenImage", package: "GoldenImage")
+            ]
+        ),
+        .testTarget(
+            name: "MetalSprocketsGLTFBasisUTests",
+            dependencies: [
+                "MetalSprocketsGLTFBasisU",
+                "MetalSprocketsGLTF",
+                "MetalSprocketsPBR",
+                .product(name: "SwiftGLTF", package: "SwiftGLTF"),
+                .product(name: "MetalSprockets", package: "MetalSprockets"),
+                .product(name: "GoldenImage", package: "GoldenImage")
+            ],
+            // Plain ASTC KTX2 images for EXT_texture_astc, from BasisUniversalMetal's tests: astc_6x6_srgb (one level)
+            // and astc_8x8_srgb_zstd (full mip chain).
+            resources: [.copy("Resources")]
+        ),
+        .testTarget(
+            name: "MetalSprocketsGLTFTests",
+            dependencies: [
+                "MetalSprocketsPBR",
+                "MetalSprocketsPBRShaders",
+                "MetalSprocketsGLTF",
+                .product(name: "GeometryLite3D", package: "GeometryLite3D"),
+                .product(name: "MetalSupport", package: "MetalSupport"),
+                .product(name: "GoldenImage", package: "GoldenImage")
+            ],
+            resources: [
+                .copy("GoldenImages")
+            ]
+        ),
+
+        // MARK: SceneSprockets
+
         .target(
             name: "SceneSprockets",
             dependencies: [
                 "SceneSprocketsAudio",
                 "SceneSprocketsShaders",
-                .product(name: "MetalSprocketsLighting", package: "MetalSprocketsLighting"),
+                "MetalSprocketsLighting",
                 .product(name: "MetalSprocketsParticles", package: "MetalSprocketsParticles"),
                 // Slug text for SceneText (#119).
                 .product(name: "MetalSprocketsAddOns", package: "MetalSprocketsAddOns"),
@@ -65,9 +225,9 @@ let package = Package(
                 "SceneSprocketsBlinnPhong",
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
-                .product(name: "MetalSprocketsGLTF", package: "MetalSprocketsGLTF"),
-                .product(name: "MetalSprocketsPBR", package: "MetalSprocketsPBR"),
-                .product(name: "MetalSprocketsPBRShaders", package: "MetalSprocketsPBR"),
+                "MetalSprocketsGLTF",
+                "MetalSprocketsPBR",
+                "MetalSprocketsPBRShaders",
                 .product(name: "MetalSupport", package: "MetalSupport"),
                 .product(name: "SwiftGLTF", package: "SwiftGLTF"),
                 .product(name: "SwiftMesh", package: "SwiftMesh"),
@@ -100,7 +260,7 @@ let package = Package(
             dependencies: [
                 "SceneSprockets",
                 "SceneSprocketsShaders",
-                .product(name: "MetalSprocketsLighting", package: "MetalSprocketsLighting"),
+                "MetalSprocketsLighting",
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
                 .product(name: "MetalSupport", package: "MetalSupport"),
@@ -112,7 +272,7 @@ let package = Package(
             dependencies: [
                 "SceneSprockets",
                 "SceneSprocketsShaders",
-                .product(name: "MetalSprocketsLighting", package: "MetalSprocketsLighting"),
+                "MetalSprocketsLighting",
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
                 .product(name: "MetalSupport", package: "MetalSupport"),
@@ -142,7 +302,7 @@ let package = Package(
         .target(
             name: "SceneSprocketsShaders",
             dependencies: [
-                .product(name: "MetalSprocketsLightingShaders", package: "MetalSprocketsLighting")
+                "MetalSprocketsLightingShaders"
             ],
             exclude: ["Metal"],
             plugins: [
@@ -159,9 +319,9 @@ let package = Package(
                 "SceneSprocketsShaderMaterial",
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
-                .product(name: "MetalSprocketsGLTF", package: "MetalSprocketsGLTF"),
-                .product(name: "MetalSprocketsPBR", package: "MetalSprocketsPBR"),
-                .product(name: "MetalSprocketsPBRShaders", package: "MetalSprocketsPBR"),
+                "MetalSprocketsGLTF",
+                "MetalSprocketsPBR",
+                "MetalSprocketsPBRShaders",
                 .product(name: "SwiftGLTF", package: "SwiftGLTF"),
                 .product(name: "SwiftMesh", package: "SwiftMesh"),
             ]

@@ -92,10 +92,10 @@ enum MaterialEdit {
             }
             changed = true
         }
-        return changed ? try Self.material(of: draft) : nil
+        return changed ? Self.material(of: draft) : nil
     }
 
-    private static func material(of draft: Draft) throws -> (any SceneMaterial)? {
+    private static func material(of draft: Draft) -> (any SceneMaterial)? {
         switch draft {
         case let .blinnPhong(material):
             return material

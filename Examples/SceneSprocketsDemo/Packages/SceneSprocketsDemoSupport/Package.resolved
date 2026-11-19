@@ -1,5 +1,5 @@
 {
-  "originHash" : "9ef2edb28e8305539fd6f0acc2bffdbf69e70e61dea417910f0772fbe4f23a29",
+  "originHash" : "57f43869059b23a86e9287cf6a1bb6e35f04f38b125400926ca63e7ff769e86e",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -80,15 +80,6 @@
       "state" : {
         "revision" : "2afe2f0cdc8de8ac0dceb29dc971256ec5cd6097",
         "version" : "0.3.2"
-      }
-    },
-    {
-      "identity" : "metalsprocketsgltf",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/schwa/MetalSprocketsGLTF",
-      "state" : {
-        "revision" : "911935784c5afc43ac816326b811295e4cfef385",
-        "version" : "0.3.0"
       }
     },
     {
