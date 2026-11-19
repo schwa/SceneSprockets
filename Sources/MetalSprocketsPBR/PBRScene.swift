@@ -63,6 +63,8 @@ public struct PBRScene: Element {
     /// MetalFX needs antialiased input, so `sampleCount` applies to the low-resolution frame. On screen, set it here
     /// and keep the view's sample count at 1.
     public var upscaling: PBRUpscaling?
+    // Off draws every batch on its own, for benchmarks comparing against merged drawing (#545).
+    package var usesMergedGeometry = true
 
     @MSState private var transmissionTargets = PBRTargetCache<PBRTransmissionTarget>()
     @MSState private var upscaleTargets = PBRTargetCache<PBRUpscaleTargets>()
@@ -185,6 +187,7 @@ public struct PBRScene: Element {
         renderer.debugView = debugView
         renderer.showsWireframe = showsWireframe
         renderer.materialOverrides = item.materialOverrides
+        renderer.usesMergedGeometry = usesMergedGeometry
         return renderer
     }
 

@@ -72,6 +72,9 @@ struct GLTFBenchCommand: ParsableCommand {
     @Option(help: "Slowdowns smaller than this many milliseconds are noise, whatever the fraction.")
     var noiseFloor = 0.3
 
+    @Flag(inversion: .prefixedNo, help: "Draw eligible batches from merged buffers. --no-merging draws every batch on its own (#545); it never compares or records a baseline.")
+    var merging = true
+
     @Argument(help: "Only these scenes (default: all).")
     var only: [String] = []
 
@@ -96,8 +99,11 @@ struct GLTFBenchCommand: ParsableCommand {
         let selected = Self.scenes.filter { only.isEmpty || only.contains($0.name) }
         let machine = Self.sysctl("hw.model") ?? "unknown"
         let baselineURL = URL(fileURLWithPath: baselines).appending(path: "\(machine).json")
-        let existing = try? JSONDecoder.iso.decode(Baseline.self, from: Data(contentsOf: baselineURL))
-        if !record, existing == nil {
+        if !merging, record {
+            throw ValidationError("Baselines are recorded with merging on.")
+        }
+        let existing = merging ? try? JSONDecoder.iso.decode(Baseline.self, from: Data(contentsOf: baselineURL)) : nil
+        if !record, merging, existing == nil {
             print("No baseline for \(machine) at \(baselineURL.path); run with --record to make one.")
         }
 
@@ -167,7 +173,7 @@ struct GLTFBenchCommand: ParsableCommand {
         let lighting = PBRLighting(asset: asset)
         let viewportSize = CGSize(width: width, height: height)
         return try measureFrames(frames: frames, warmUpFrames: 30, renderer: renderer) { frame in
-            GLTFScene(
+            var gltfScene = GLTFScene(
                 asset: asset,
                 viewMatrix: camera.viewMatrix,
                 projectionMatrix: camera.projectionMatrix,
@@ -176,6 +182,8 @@ struct GLTFBenchCommand: ParsableCommand {
                 pose: scene.animation.map { asset.pose(animation: $0, time: Float(frame) / 60) },
                 viewportSize: viewportSize
             )
+            gltfScene.usesMergedGeometry = merging
+            return gltfScene
         }
     }
 
