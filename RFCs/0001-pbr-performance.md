@@ -8,41 +8,109 @@
 
 ## Summary
 
-The PBR renderer merges opaque, unmorphed triangle primitives into shared buffers (`PBRMergedGeometry`), so one draw
-element issues many Metal draws. Merging is fast today, but it exists mostly to work around MetalSprockets' cost per
-element, and it makes the renderer harder to change. This RFC records how the renderer performs now. It also lists
-other ways to get the same speed, so that merging becomes an optimization the renderer can choose, not a requirement.
+The PBR renderer has two ways to draw opaque batches. The per-batch path uses one MetalSprockets element per batch.
+The "merged" path (`PBRMergedGeometry`) issues the Metal draws of many batches from one element. It does not combine
+meshes: each primitive still has its own draw call, and the vertex and index buffers are the asset's own. What it
+combines is per-batch data: instances, material uniforms and material textures.
+
+The merged path is much faster on CPU today (see Measurements), because MetalSprockets' cost grows with the number of
+elements. This RFC describes both paths exactly, records their performance, and lists other ways to get the same
+speed. The goal is that merging is an optimization the renderer can choose, not a requirement.
+
+## Terms
+
+- **Primitive** (`PBRModel.Primitive`): one glTF mesh primitive. Its vertices and indices are a range of the asset's
+  shared vertex and index buffers (`baseVertex`, `indexStart`).
+- **Batch** (`PBRModel.Batch`): one primitive with one material, and every placement of it (its instances).
+- **Instancing:** one Metal draw for all instances of a batch (`instanceCount`). Both paths use it.
+- **Merged set** (`PBRMergedGeometry`): several batches whose Metal draws one element issues. A model has up to three:
+  static, skinned and transmissive (`PBRModel.merged`, `mergedSkinned`, `mergedTransmissive`).
+
+## How the two paths draw
+
+### Per-batch (`PBRRenderer.draw(_:)`)
+
+One element per batch. For each batch it binds:
+
+- the asset's vertex buffer, at the primitive's first vertex,
+- the batch's instances (its prebuilt buffer, or this frame's posed instances),
+- the batch's material uniforms (`material`) and texture argument buffer (`materialResources`).
+
+It then issues one `drawIndexedPrimitives` per instance range. Instances are split into ranges by mirroring, so a
+batch is usually one or two Metal draws.
+
+### Merged (`PBRRenderer.mergedDrawCalls`)
+
+Built once per model by `PBRModelBuilder` from the opaque batches. A batch can be in a merged set when
+(`PBRMergedGeometry.canMerge`):
+
+- its primitive draws triangles and has no morph targets,
+- its material is not blended and has the default render state,
+- it is transmissive only in the transmissive set, and skinned only in the skinned set (skinned transmissive batches are
+  not merged).
+
+The set also requires every primitive to use the same geometry buffers as the first one, and at least two batches.
+
+At build time the set copies, per batch (a "record"):
+
+- its instances, into one instance buffer, and an instance-to-record table,
+- its resolved material uniforms, into one material buffer,
+- its material textures, into one argument buffer,
+- for skinned sets, its offset into one joint palette.
+
+It does not copy vertices or indices: `vertexBuffer`, `indexBuffer` and `skinVertexBuffer` are the asset's buffers.
+
+At draw time one element binds the vertex buffer, instance records, material buffer, texture argument buffer and view
+once. Then it loops over the records, skips culled ones, sets cull mode and front facing, and issues one
+`drawIndexedPrimitives` per record with `baseVertex` and `baseInstance`. The merged shaders find each instance's
+material through the instance-to-record table.
+
+So the merged path saves MetalSprockets elements and per-batch binds. It issues about the same number of Metal draws
+as the per-batch path.
+
+### Per-frame work on the merged path
+
+- Animated poses: posed instances for every record are built into a new array (`instances(pose:)`). If the pose
+  mirrors an instance differently from its rest placement, the set is not used that frame and its batches draw per
+  batch.
+- Animated materials or uniform overrides: uniforms for every record are built into a new array
+  (`materials(pose:overrides:)`), even when only one record changes (#554).
+- Texture overrides: a new texture argument buffer for the whole set is built every frame
+  (`resources(overrides:)`).
+- In-place changes to a `PBRMaterial` after the model is built are not seen, because the set uses its prebuilt
+  buffers unless an override or animation applies (#479).
 
 ## Motivation
 
-Merging has costs (from #545):
+The merged path has costs that the per-batch path does not:
 
-- Two drawing paths with different rules: merged (opaque static and skinned) and per-batch (blended, morphed,
-  transmissive).
-- Live material changes need overrides, and some changes need a model rebuild (#479).
-- Geometry is copied into the shared buffers and rebuilt with the model.
-- Per-frame material uniform arrays are rebuilt for animated materials (#554).
+- Two drawing paths with different eligibility rules.
+- Material data is copied into each set at build time, so material changes need overrides or a rebuild (#479).
+- Animated materials and overrides rebuild whole-set arrays or argument buffers every frame (#554).
 
-If per-batch drawing were fast enough, the renderer could drop these costs, or keep merging only where it clearly
-helps.
+These costs come from how the merged path stores material and instance data, not from issuing many draws from one
+element. If per-batch drawing were fast enough, or material data were stored differently, the renderer could keep
+merging only where it clearly helps.
 
 ## Goals
 
-- Per-batch drawing within a small margin of merged drawing on the benchmark scenes (target to be agreed; see Open
+- Per-batch drawing within a small margin of merged drawing on the benchmark scenes (margin to be agreed; see Open
   questions).
+- Material and instance changes that cost work in proportion to what changed, on both paths.
 - Keep each improvement measurable with `ms-gltf-render bench` and `bench --no-merging` (#572).
 - Prefer improvements that help every renderer (Blinn-Phong, shader materials), not only PBR.
 
 ## Non-goals
 
-- Removing merging in this RFC. That decision waits for the measurements below to change.
+- Removing the merged path in this RFC.
 - New lighting or material features.
-- GPU-bound costs (shading, transmission pre-pass). The gap is mostly CPU.
+- GPU-bound costs (shading, transmission pre-pass).
 
 ## Measurements
 
-`ms-gltf-render bench` vs `bench --no-merging`. Release, M5 Max (Mac17,6), 1024×1024, 60 frames after 30 warm-up
-frames, fastest of 3 rounds. Median ms per frame, CPU / GPU.
+`ms-gltf-render bench` vs `bench --no-merging`. Release, M5 Max (Mac17,6), 1024×1024. Each scene: 60 timed frames
+after 30 warm-up frames, run 3 times; the table shows the lowest of the 3 medians. Values are ms per frame,
+CPU / GPU. CPU is render-thread time to build and encode the frame; GPU is the frame's command buffer time.
 
 | Scene | Merged | Per-batch | CPU × | GPU × |
 |---|---|---|---|---|
@@ -60,23 +128,25 @@ frames, fastest of 3 rounds. Median ms per frame, CPU / GPU.
 
 Findings:
 
-- Per-batch drawing costs 2–8× more CPU on scenes with many primitives. Single-primitive scenes are equal.
-- GPU time is also higher per-batch on some scenes (up to 3.7×). The cause is not known; candidates are per-draw
-  binding and state changes, and lost instancing of repeated meshes.
-- NodePerformanceTest is 8× slower than its October baseline even when merged (#571). Fix that before comparing it.
+- Per-batch drawing costs 2–8× more CPU on scenes with many batches. Scenes with one batch are equal.
+- Per-batch GPU time is higher on some scenes (up to 3.7×). The cause is not known. Both paths issue about the same
+  number of Metal draws, so a likely cause is the per-batch buffer and argument binds; this is not verified.
+- NodePerformanceTest is 8× slower than its October baseline on the merged path (#571). Fix that before comparing it.
 - Not measured: memory, energy, Debug builds, the SceneSprockets scene graph path (only `PBRScene` via glTF).
-
-## Where the time goes
-
-Not yet profiled per path. From MetalSprockets RFC 0006 the per-element cost is mostly in reconciliation (update),
-then workload encoding. Merging reduces the number of elements, so it skips both. Each alternative below targets one
-of these costs.
 
 ## Alternatives
 
 Each is independent and can be measured on its own.
 
-### 1. Cheaper elements in MetalSprockets
+### 1. Material data in long-lived argument buffers (proposed first)
+
+Keep every material's uniforms and textures in long-lived argument buffers (MetalSprockets `ArgumentBuffer`, #579),
+one element per material, shared by both paths. Write a field when it changes, and index materials by ID from the
+draw. This removes, on the merged path, the per-set copies of material data, the per-frame uniform arrays (#554), the
+per-frame texture argument buffers for overrides, and the stale in-place changes (#479). The per-batch path binds one
+shared buffer and an index, not a buffer per batch.
+
+### 2. Cheaper elements in MetalSprockets
 
 Lower the per-element cost so per-batch drawing is cheap enough. Continues RFC 0006.
 
@@ -86,47 +156,36 @@ Lower the per-element cost so per-batch drawing is cheap enough. Continues RFC 0
 
 Helps every renderer. Largest expected win, largest effort.
 
-### 2. Shared buffers without merged draws
+### 3. Fewer binds on the per-batch path
 
-Merging does two things: it puts geometry in shared buffers, and it collapses many draws into one element. Keep the
-shared vertex, index and material buffers (one bind per frame) but emit one element per batch with `baseVertex` and
-index offsets. This measures how much of the gain comes from fewer elements and how much from fewer buffer binds.
+The per-batch path already draws from the asset's shared vertex and index buffers, but it binds the vertex buffer at
+an offset and binds instances and materials for every batch. Bind the shared buffers once per pipeline and pass
+`baseVertex` and an instance offset in the draw instead. Morphed batches need local vertex IDs, so they would keep the
+offset bind.
 
-### 3. Instancing repeated meshes
+### 4. Sort and group by pipeline state
 
-Draw nodes that share a mesh and material as one instanced draw, including outside `EXT_mesh_gpu_instancing`. This
-reduces both elements and Metal draws without merging buffers. It may explain part of the GPU difference.
+Sort per-batch draws by pipeline and material so state changes and binds happen once per group.
 
-### 4. Indirect command buffers and GPU-driven drawing
+### 5. Indirect command buffers and GPU-driven drawing
 
 Encode the draws once into an indirect command buffer and reuse it across frames; update only transforms and
 materials (#517). Culling and LOD selection on the GPU then work on the same buffers (#520, #522). This removes the
-per-frame CPU cost per draw, but needs an argument-buffer material layout.
-
-### 5. Material data in argument buffers
-
-Keep material uniforms in long-lived argument buffers (MetalSprockets `ArgumentBuffer`, #579) and update changed
-fields in place. This removes the per-frame uniform arrays (#554) and the override rules (#479), whether or not
-merging stays.
-
-### 6. Sort and group by pipeline state
-
-Sort per-batch draws by pipeline and material so state changes and argument binds happen once per group. This is
-cheap to try and lowers both CPU and GPU cost per draw.
+per-frame CPU cost per draw. It needs material data in argument buffers (alternative 1).
 
 ## Proposed direction
 
 1. Fix #571 so the benchmark baselines are trustworthy.
-2. Profile merged and per-batch drawing on two scenes (CarConcept, AnimationPointerUVs) and split the gap into
-   update, encoding and GPU.
-3. Try the cheap alternatives first (2, 5, 6) and record each in a Progress table, as RFC 0006 does.
-4. Track MetalSprockets#519 and #522. Re-run `bench --no-merging` after each lands.
-5. Decide on #545 when per-batch drawing meets the goal, or when the remaining gap is understood.
+2. Profile both paths on CarConcept and AnimationPointerUVs, and split the gap into update, encoding and GPU.
+3. Do alternative 1. Re-measure both paths.
+4. Try alternatives 3 and 4. Record each change in a Progress table, as RFC 0006 does.
+5. Re-run `bench --no-merging` after each MetalSprockets change from alternative 2 lands.
+6. Decide on #545 when per-batch drawing meets the goal, or when the remaining gap is understood.
 
 ## Open questions
 
-- What margin counts as "close enough" for per-batch drawing (for example, within 20% CPU on every benchmark scene)?
-- Should merging stay as an opt-in optimization for static scenes after per-batch drawing is fast?
+- What margin counts as close enough for per-batch drawing (for example, within 20% CPU on every benchmark scene)?
+- Should the merged path stay as an opt-in optimization after per-batch drawing is fast?
 - Does the SceneSprockets scene graph path show the same gap as `PBRScene`?
 
 ## Verification
