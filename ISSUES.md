@@ -12299,6 +12299,7 @@ Sub-issues:
 Not included: shadows (#88, #299, #495, #541) and exposure/tone mapping (#501, #508), which are separate systems.
 
 - `2026-11-18T18:56:37Z`: Design decided (per schwa): a new small lighting package on top of MetalSprockets, holding lights, shadow sampling, environment/IBL, per-frame lighting resources, ambient occlusion input, exposure and tone mapping. Renderers keep only their BRDFs. Breaking API changes are fine. Tracked as #547; the other sub-issues build on it.
+- `2026-11-19T01:40:57Z`: The shared lighting model is done (#547). The remaining lighting work (#86, #497, #506, #507, #509, #512, #514, #519, #533, #535, #536) is new features, not part of the shared model; they keep the 'lighting' label and are no longer sub-issues here.
 
 ---
 
