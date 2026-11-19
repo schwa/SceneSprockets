@@ -12875,6 +12875,14 @@ Users of the scene graph have to know about and import both, and the names do no
 
 Merge them into one module. Trade-off: using the PBR renderer without the scene graph would then pull in SceneSprockets. Blinn-Phong is split the same way (shaders in SceneSprocketsShaders, renderer in SceneSprocketsBlinnPhong).
 
+- `2026-11-19T02:58:01Z`: Merging only the two modules creates a dependency cycle: MetalSprocketsGLTF depends on MetalSprocketsPBR, and SceneSprocketsPBR depends on MetalSprocketsGLTF (GLTFSceneGraph.swift, GLTFSceneGraph+Export.swift and ModelFile.swift import it). One merged PBR module would need glTF, and glTF needs it.
+
+Ways out:
+1. Merge the two, and move the glTF and Model I/O scene loaders (GLTFSceneGraph*, ModelFile, ModelIOSceneGraph) into MetalSprocketsGLTF. PBR then has no glTF dependency. Smallest change that yields one PBR module.
+2. Merge MetalSprocketsPBR, MetalSprocketsGLTF and SceneSprocketsPBR into one module.
+
+Either way the merged PBR module depends on the scene graph, so GLTFViewer and ms-gltf-render would pull in SceneSprockets. Left for now (per schwa).
+
 ---
 
 ## 570: MetalSprocketsLighting, MetalSprocketsPBR and MetalSprocketsGLTF repositories are still live after the move
