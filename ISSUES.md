@@ -12985,6 +12985,8 @@ MetalSprockets' ArgumentBuffer (checked 0.3.4) is copy-on-write: any set() drops
 
 RFC: RFCs/0001-pbr-performance.md option 1.
 
+- `2026-11-19T04:15:24Z`: Needs MetalSprockets#580 (field-level ArgumentBuffer updates).
+
 ---
 
 ## Milestone: M001-Correctness
