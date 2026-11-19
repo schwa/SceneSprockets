@@ -6133,25 +6133,22 @@ created: 2026-11-05T18:22:50Z
 updated: 2026-11-19T01:50:43Z
 +++
 
-Part of #250. After #265, nodes under a SceneGraph's root read transform and content through the World. Release build, 100k nodes, best of 5 (noisy machine): attached transform read ~64 ns vs ~34 ns before; attached write ~220 ns vs ~180 ns; detached read ~38 ns vs ~28 ns. Each attached read registers observation on both the Node and the World and takes a column lock. Traversal measured 75-153 ns per node vs ~102 ns before; the noise is too high to say more.
+Part of #250. Since nodes in a graph read and write their fields through the SwiftECS World (#265), node access is slower than before the ECS work.
 
-\- `2026-11-05T18:27:51Z`: After #266 (Release, 100k nodes, two runs): attached write ~360-390 ns (was ~220 after #265, ~180 before ECS). Node writes now go through SwiftECS's change observer, which SceneGraph uses to catch direct World writes. My guess is the cost is in the observer dispatch passing the component as 'any Component' (boxing a LocalTransform), not profiled. Attached read 70-98 ns; traversal ~95 ns/node (baseline ~102).
-\- `2026-11-05T19:40:58Z`: After #279 (8 more fields in the World; traversal now reads isVisible, isActive, pivot and transform through the World): traversal 181-199 ns/node over 3 runs (was 81-167 before #279, ~102 before ECS). Attached transform read 93-100 ns. Each field read checks the binding's structuralRevision and the field's cached ref separately.
-\- `2026-11-05T22:07:08Z`: Profiled the benchmark with Time Profiler. Two findings:
-1. Main cause: every structural change anywhere in the World (add/remove of any node, app components) invalidated every node's cached field refs, so the next pass re-looked-up all of them (dictionary hashing, String(describing:) in ComponentType.init, conformance checks). Traversal right after one add+remove: 9,480 ns/node. Fixed by tracking the entity's own storage location (new World.storageLocation(of:) in SwiftECS, archetype serial + row) and re-making refs only when that moves: now ~300-340 ns/node.
-2. Steady state is still slower than before ECS: attached read ~100-110 ns (pre-ECS ~28), traversal ~280-300 ns/node (pre-ECS ~100), write ~490-540 ns. Profile shows this spread across retain/release, exclusivity checks, NodeFieldStorage copies and the column lock in ComponentRef. Tried making NodeFieldStorage a class: no measurable gain, reverted.
+Last measured (2026-11-06, Release, 100k nodes, ns per node), after two optimization sessions (#283):
 
-Leaving open for the steady-state cost. Further gains likely need SwiftECS changes (lock-free serial reads in ComponentRef) or the renderer reading columns via queries (#267) instead of per-node getters.
+| | Now | Before ECS |
+|---|---|---|
+| Traversal | ~142 | ~100 |
+| Read | ~38 | ~30 |
+| Write | ~192 | ~180 |
 
-- `2026-11-05T22:17:11Z`: Question 1 (decision): Steady-state node access is still about 2-3x slower than before the ECS work. Keep this open until #267 (queries) or a lock-free SwiftECS read path lands, or accept the cost and close it? Suggested: keep open.
-- `2026-11-05T22:19:29Z`: Answer 1: keep open - but we'll measure cost later
-- `2026-11-06T00:25:58Z`: Autoresearch session (#283), commit 'Speed up node access and writes after the ECS port': traversal 276 -> ~153 ns/node, write 511 -> 260, flatten 296 -> ~155, read 107 -> ~45, create+attach 65,800 -> ~38,000. Pre-ECS reference: traversal ~100, read ~30, write ~180. Remaining traversal cost is mostly ComponentRef retain/release; further gains likely need a non-retaining SwiftECS read path.
-- `2026-11-06T01:29:09Z`: Second autoresearch session (#283), geomean of the 5 benchmark metrics 419 -> 284 (-32%). Mostly SwiftECS: entity location holds its archetype, lazy ComponentType names, typed entity creation, specialized swapRemove and change dispatch, reuse of the last creation archetype, skipping storage publish with no observers. SceneSprockets: typed node creation, static key paths for Observation, cheaper transaction check. Now (ns/node): traversal ~142, flatten ~137, read ~38, write ~192, create+attach ~13,000. Pre-ECS: traversal ~100, read ~30, write ~180.
-- `2026-11-07T16:17:46Z`: Autonomous run: not changed. Per the 2026-11-05 answer ('keep open, measure later') and two autoresearch sessions since: traversal ~142 ns/node (pre-ECS ~100), read ~38 (~30), write ~192 (~180). The remaining cost is mostly ComponentRef retain/release; the next real gain needs a non-retaining read path in SwiftECS, which is outside this repo. Tuning SceneSprockets further against the benchmark would be overfitting. Unblocker: decide whether to add that SwiftECS read path, or accept the current cost and close.
-- `2026-11-07T16:59:56Z`: Question 2 (decision): Add a non-retaining read path to SwiftECS to close the remaining gap, or accept the current cost (traversal ~142 vs ~100 ns/node) and close?
-- `2026-11-07T23:23:50Z`: Answer 2: file issues on swiftecs
-- `2026-11-11T16:15:02Z`: Per answer 2 ('file issues on swiftecs'): filed SwiftECS #52 (ComponentRef retain/release on every read). Blocking this issue on it; the SceneSprockets side needs no change until SwiftECS has a cheaper read path.
-- `2026-11-19T01:50:43Z`: Unblocked: SwiftECS #52 (ComponentRef retain/release on every read) is closed and shipped in SwiftECS 0.1.2, which SceneSprockets resolves. Per answer 1 ('measure cost later'), next step is to re-run the node-access benchmark and compare with the 2026-11-05 numbers (traversal ~142 ns/node, read ~38, write ~192; pre-ECS ~100 / ~30 / ~180).
+The remaining cost was mostly ComponentRef retain/release. That was fixed in SwiftECS (#52, shipped in 0.1.2, which SceneSprockets uses) but not measured since.
+
+Decided: keep open and measure later.
+
+Next: re-run the node-access benchmark and compare with the table above.
+
 
 ---
 
@@ -7580,33 +7577,21 @@ created: 2026-11-07T18:39:49Z
 updated: 2026-11-17T19:13:17Z
 +++
 
-SceneSprockets has no spatial acceleration structure (for example a bounding volume hierarchy, octree or grid). Work that asks "what is near here?" or "what does this ray or frustum touch?" goes through every node or every triangle:
+SceneSprockets has no spatial acceleration structure. Queries go through every node or every triangle:
 
 - Frustum culling tests every mesh entry each frame.
-- Hit testing walks every node and then every triangle of each mesh it reaches.
-- There is no general query for nodes in a region (box, sphere) or nearest to a point.
+- Hit testing walks every node, then every triangle of each mesh it reaches.
+- There is no query for nodes in a region (box, sphere) or nearest to a point.
 
-This costs more as scenes grow (thousands of nodes, high-poly meshes).
+This costs more as scenes grow. Part of #543.
 
-Open question (per schwa): where should this live? Candidates: SceneSprockets (node-level structure that follows the scene graph and its change tracking), SwiftMesh (per-mesh triangle structure, reusable outside SceneSprockets), or a separate package. A split is also possible: per-mesh triangle structures in SwiftMesh, node-level structure in SceneSprockets.
+Known so far:
 
-\- `2026-11-07T18:39:49Z`: Question 1 (decision): Where should the spatial acceleration structure live: SceneSprockets, SwiftMesh, a separate package, or split (triangles in SwiftMesh, nodes in SceneSprockets)?
-\- `2026-11-16T20:08:31Z`: Related: #402 (positions re-read per hit test call).
-\- `2026-11-16T21:26:58Z`: Answer 1: SwiftMesh seems correct
-\- `2026-11-17T14:17:38Z`: Looked at it; punting on a scope decision.
+- Decided: triangle-level structures belong in SwiftMesh.
+- SwiftMesh already has TriangleBVH (closestPoint, intersect). intersect returns only the nearest hit; SceneGraph.hitTest can return every hit, so all-hits needs a new SwiftMesh query.
+- Node-level culling and region queries follow scene changes, so they belong in SceneSprockets.
+- Related: #402 (positions re-read per hit test).
 
-Found: SwiftMesh already has a triangle BVH (TriangleBVH, also in the 0.1.0 release SceneSprockets uses) with closestPoint(to:) and intersect(ray:cullBackFaces:). intersect returns only the nearest hit. SceneGraph.hitTest returns every hit, nearest first, unless firstFoundOnly, so the BVH can replace the per-triangle loop only for nearest-hit queries; returning every hit needs a new 'all hits' query in SwiftMesh and a SwiftMesh release.
-
-The other two parts of this issue (frustum culling and region or nearest-node queries) are about nodes, not triangles. SwiftMesh does not know about scene graph nodes, so a node-level structure that follows node changes would live in SceneSprockets.
-
-Proposed split for your decision:
-1. SwiftMesh: an all-hits ray query on TriangleBVH (needs a SwiftMesh change and release).
-2. SceneSprockets: build a TriangleBVH per mesh (cached like HitTestGeometryCache, #402) and use it in hitTest.
-3. SceneSprockets: a node-level bounds hierarchy for culling and region queries, rebuilt or refit from the scene's change tracking.
-
-Should I go ahead with that split, and may I work in the SwiftMesh repo for step 1?
-
-- `2026-11-17T18:59:44Z`: Auto-fixer (M002): still punting; waiting on the split question above (and permission to work in SwiftMesh for the all-hits query).
 - `2026-11-17T19:05:44Z`: Question 1 (decision): Go ahead with the 3-part split (all-hits query in SwiftMesh, per-mesh BVH in hitTest, node-level bounds hierarchy here), including work in the SwiftMesh repo? Recommended: Yes
 
 ---
@@ -11030,21 +11015,16 @@ created: 2026-11-17T06:39:06Z
 updated: 2026-11-17T19:08:54Z
 +++
 
-Each SceneView has its own render thread, and a visionOS immersive space has another (#392). When two of them draw the same scene graph, or are given the same renderer objects, at the same time, these are written from two threads with no synchronization:
+Each SceneView has its own render thread, and a visionOS immersive space has another (#392). When two of them draw the same scene graph, or share renderer objects, at the same time, these are written from two threads with no synchronization:
 
-- NodeRenderCache.gpuDeformation and GPUDeformationState.current, per node. Both renderers also pick the output slot from their own submission index, so they can write the same vertex buffers in the same frame.
-- PBRMaterialRenderer's caches and Shadows' caches, when the same instance is given to both views.
-- AmbientOcclusionTargets and the particle scene-depth texture, which are shared process-wide by size, so two views of the same size write the same textures.
+- Per-node GPU deformation buffers (each renderer picks the output slot from its own submission index, so both can write the same buffer in one frame).
+- PBRMaterialRenderer's and Shadows' caches, when one instance is given to both views.
+- Ambient occlusion targets and the particle scene-depth texture, which are shared process-wide by size.
 
-SceneParticleSystem already has a lock for this case (#392). The demo avoids the case by blanking its window while the immersive space is open.
+Locks alone do not fix it: two command buffers would still write one resource in the same frame. Supporting it needs per-view storage reachable from the render context. The demo avoids the case by blanking its window while the immersive space is open.
 
-Found by the swift-concurrency-pro review (#476).
+Found by the concurrency review (#476).
 
-\- `2026-11-17T13:46:56Z`: Looked at it; punting. Locks alone do not fix it: the worst parts are GPU-side. Two render threads write the same per-node deformation vertex buffers (slot chosen from each renderer's own submission index) and the same process-wide ambient occlusion and particle scene-depth textures (cached by size), so even serialized CPU code leaves two command buffers writing one resource in the same frame. The fix needs per-view storage that the renderers can reach: SceneGraphElement/RenderContext would carry a per-view owner, and NodeRenderCache.gpuDeformation, AmbientOcclusionTargets, ParticleDepthShaders.sceneDepthTexture, and possibly Shadows and PBRMaterialRenderer state would be keyed by it. That touches the element, the context, every renderer that reads deformed meshes, and the immersive element.
-
-Question: should two views drawing one scene at once be supported (then per-view storage as above), or should it be documented as unsupported, with one Shadows and one PBRMaterialRenderer per view, as the demo already does by blanking its window while the immersive space is open?
-
-- `2026-11-17T18:59:12Z`: Auto-fixer run (M002): re-checked, still punting. Unblocker: decide supported (per-view storage) vs documented-unsupported.
 - `2026-11-17T19:05:44Z`: Question 1 (decision): Should two views drawing one scene at once be supported with per-view storage (rather than documented as unsupported)? Recommended: No, document as unsupported
 
 ---
@@ -11801,21 +11781,14 @@ created: 2026-11-17T14:12:10Z
 updated: 2026-11-17T19:36:22Z
 +++
 
-Draw commands are encoded on the CPU each frame. MTLIndirectCommandBuffer would let them be encoded once or on the GPU.
+Draw commands are encoded on the CPU each frame. Indirect command buffers would let them be encoded once, or on the GPU. Part of #544.
 
-\- `2026-11-17T18:59:59Z`: Auto-fixer (M002): punting. MetalSprockets has no indirect-draw or MTLIndirectCommandBuffer support (only indirect compute dispatch), so this first needs new API in the MetalSprockets repo, and every material renderer (Blinn-Phong, PBR, shader, toon, voxel...) encodes its own draws, so blast radius is the whole renderer. Part of the #516 GPU-driven umbrella (effort:xl). Unblocker: OK to design ICB/indirect-draw elements in MetalSprockets first, and which renderer to pilot (Blinn-Phong instanced batches seem simplest)?
-\- `2026-11-17T19:05:44Z`: Question 1 (decision): May I add indirect-draw / indirect command buffer support to MetalSprockets first, piloting with Blinn-Phong instanced batches? Recommended: Yes
-\- `2026-11-17T19:09:28Z`: Answer 1: File issues on MetalSprockets first
-\- `2026-11-17T19:14:03Z`: Correction to earlier comments: MetalSprockets can already issue indirect draws through a raw Draw closure; what it lacks is first-class support. Filed MetalSprockets#575 (Draw initializers for indirect draws) and MetalSprockets#576 (indirect command buffers). Under umbrella #544.
-\- `2026-11-17T19:17:22Z`: Per Q1 answer: filed MetalSprockets#575 (indirect Draw initializers) and MetalSprockets#576 (indirect command buffers). Blocked until those land.
-\- `2026-11-17T19:36:22Z`: MetalSprockets#575 and #576 shipped in 0.3.3; Package.resolved files updated. Unblocked.
-\- `2026-11-17T20:00:47Z`: Looked at implementing this now that MetalSprockets 0.3.3 has indirect command buffers. Findings:
-- makeRenderIndirectCommandBuffer inherits pipeline state and buffers (argument tables) from the enclosing Draw, so commands in one ICB can only differ in draw arguments (index range, instance count, base instance).
-- Blinn-Phong binds a separate mesh (vertex/index buffers) and material (uniforms, textures) per batch. ICB render commands cannot carry per-draw textures, so Blinn-Phong cannot use these ICBs without merging meshes into shared buffers and moving materials into argument buffers (a renderer rewrite).
-- PBR already has that shape: MetalSprocketsPBR merges static geometry into shared buffers and selects materials per instance (PBRMergedGeometry, PBRDrawPlan.MergedDraw). Each merged range could be one ICB command, encoded once per model and later filled by GPU culling/LOD (#520, #522). That code lives in MetalSprocketsPBR, not here.
-So the first real ICB user is the PBR merged-geometry path in MetalSprocketsPBR; nothing to change in SceneSprockets until that exists.
+State:
 
-- `2026-11-17T20:04:16Z`: Correction to the previous comment: merged geometry is not required. The MetalSprockets helper (makeRenderIndirectCommandBuffer) sets inheritBuffers = true, but that is the helper's choice, not a Metal limit; indirect render commands can set their own vertex buffers. What ICB commands cannot do is bind textures per draw, so the real prerequisite is bindless materials (each draw finds its material and textures through a buffer index, as PBRMaterialResources already does), plus per-command or addressable vertex data and one pipeline per command group. Blinn-Phong needs bindless materials, not a merge. Whether PBR should keep merging at all is tracked in MetalSprocketsPBR#37.
+- MetalSprockets has indirect draws and indirect command buffers (MetalSprockets#575, #576, in 0.3.3).
+- Commands in one indirect command buffer cannot bind textures per draw, so a renderer needs bindless materials first. PBR has them; Blinn-Phong has argument-buffer materials since #546.
+- Merged geometry is not required, but whether PBR keeps it decides how commands get their vertex data (#545, MetalSprocketsPBR#37).
+
 
 ---
 
@@ -11849,11 +11822,8 @@ created: 2026-11-17T14:12:10Z
 updated: 2026-11-17T19:13:16Z
 +++
 
-Lights are not assigned to visible regions with compute shaders. Related: #514.
+Every lit fragment loops over every light in the frame; lights are not assigned to screen or view-space clusters. Lights are shared by all renderers through MetalSprocketsLighting (#547), so a cluster grid built there could serve every renderer. No demo scene has enough lights to measure the benefit. Related: #514.
 
-- `2026-11-17T19:00:13Z`: Auto-fixer (M002): punting. Each material renderer lights in its own shader: Blinn-Phong loops over all frame lights in this repo, but PBR lighting is in MetalSprocketsPBR (another repo), plus toon/voxel/SDF in SceneSprocketsAddOns. A shared cluster grid (compute pass building per-cluster light lists, bound to every lit shader) needs agreement across those packages, and no benchmark scene defines 'many lights'. Unblocker: OK to pilot clustering in Blinn-Phong only (with a many-lights demo scene for measurement) and follow up in MetalSprocketsPBR separately?
-- `2026-11-17T19:05:45Z`: Question 1 (decision): Pilot clustered light assignment in Blinn-Phong only, with a many-lights demo scene, and do MetalSprocketsPBR later? Recommended: Yes
-- `2026-11-19T01:50:43Z`: Q1 is superseded: lights are now shared through MetalSprocketsLighting (#547), so light assignment would naturally live there and serve every renderer, not start as a Blinn-Phong-only pilot. See Q2.
 - `2026-11-19T01:50:43Z`: Question 2 (decision): Build clustered light assignment in MetalSprocketsLighting (a compute pass producing per-cluster light lists that every renderer reads), measured with a many-lights demo scene? Recommended: Yes
 
 ---
@@ -11871,12 +11841,9 @@ created: 2026-11-17T14:12:10Z
 updated: 2026-11-19T01:50:43Z
 +++
 
-Hidden objects are still drawn. There is no depth pyramid + compute pass to cull them.
+Hidden objects are still drawn: there is no depth pyramid and compute pass to cull them. A GPU culling result only saves work if the GPU also issues the draws (indirect draws, #517); otherwise visibility would be read back to the CPU a frame late. How draws are fed depends on #545. Part of #543 and #544.
 
-- `2026-11-17T19:00:22Z`: Auto-fixer (M002): punting. A Hi-Z pyramid plus compute cull only pays off if the GPU's visibility result decides the draws, which needs indirect draws or ICBs; MetalSprockets has neither (see #517). Reading results back to the CPU a frame late is possible but adds latency/popping and is a design call. Unblocker: land #517's indirect-draw support first, or approve a CPU-readback variant (one-frame-late visibility) as an interim.
 - `2026-11-17T19:05:45Z`: Question 1 (decision): Wait for #517 indirect draws instead of an interim one-frame-late CPU readback of visibility? Recommended: Yes, wait for #517
-- `2026-11-17T19:14:03Z`: Depends on MetalSprockets#575 (indirect Draw initializers) and MetalSprockets#576 (indirect command buffers). Under umbrella #544.
-- `2026-11-19T01:50:44Z`: Now depends on #545 rather than only #517: MetalSprockets' indirect draw and indirect command buffer support has shipped (MetalSprockets#575, #576), but how GPU-driven draws are fed depends on whether PBR keeps merged geometry (#545, MetalSprocketsPBR#37).
 
 ---
 
@@ -11892,11 +11859,9 @@ created: 2026-11-17T14:12:10Z
 updated: 2026-11-17T19:14:02Z
 +++
 
-Particle simulation and draw counts are not driven by compute + indirect draws.
+Particle simulation and draw counts are not driven by compute and indirect draws. The particle code lives in MetalSprocketsParticles, not here; MetalSprockets now has indirect draws (MetalSprockets#575, #576). Part of #544.
 
-- `2026-11-17T19:00:38Z`: Auto-fixer (M002): punting. Particle simulation and drawing live in MetalSprocketsParticles (separate repo), and indirect draws need MetalSprockets support that doesn't exist yet (#517). Nothing to change in SceneSprockets alone. Unblocker: approve work in MetalSprockets (indirect draw element) and MetalSprocketsParticles, or move this issue to that repo's tracker.
 - `2026-11-17T19:05:45Z`: Question 1 (decision): Move this issue to the MetalSprocketsParticles tracker? Recommended: Yes
-- `2026-11-17T19:14:03Z`: Depends on MetalSprockets#575 (indirect Draw initializers) and MetalSprockets#576 (indirect command buffers). Under umbrella #544.
 
 ---
 
@@ -11913,12 +11878,8 @@ created: 2026-11-17T14:12:10Z
 updated: 2026-11-19T01:50:44Z
 +++
 
-Mesh detail per object is not chosen on the GPU with compute + indirect commands.
+Mesh detail is chosen on the CPU (Node.levelsOfDetail, by camera distance), not on the GPU. Choosing it on the GPU only helps if the GPU also issues the draws (#517); how draws are fed depends on #545. Part of #544.
 
-- `2026-11-17T19:00:46Z`: Auto-fixer (M002): punting. CPU LOD selection already exists (Node.levelsOfDetail, chosen by camera distance). Moving the choice to the GPU only helps when the GPU also issues the draws, which needs indirect draws/ICBs that MetalSprockets lacks (#517). Unblocker: same as #517 (approve indirect-draw support in MetalSprockets first).
-- `2026-11-17T19:05:45Z`: Question 1 (decision): Keep this blocked on #517 (indirect draws in MetalSprockets)? Recommended: Yes
-- `2026-11-17T19:14:03Z`: Depends on MetalSprockets#575 (indirect Draw initializers) and MetalSprockets#576 (indirect command buffers). Under umbrella #544.
-- `2026-11-19T01:50:44Z`: Now depends on #545 rather than only #517: MetalSprockets' indirect draw and indirect command buffer support has shipped (MetalSprockets#575, #576), but how GPU-driven draws are fed depends on whether PBR keeps merged geometry (#545, MetalSprocketsPBR#37).
 
 ---
 
