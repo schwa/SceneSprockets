@@ -12924,13 +12924,14 @@ Expected, once #552 lands:
 ## 571: NodePerformanceTest is 8x slower than its benchmark baseline
 
 +++
-status: new
+status: closed
 priority: high
 kind: bug
 labels: area:performance, effort:m, gltf
 milestone: M007-PBR-Merged-Geometry
 created: 2026-11-19T03:53:06Z
-updated: 2026-11-19T03:53:09Z
+updated: 2026-11-19T05:54:20Z
+closed: 2026-11-19T05:54:20Z
 +++
 
 ms-gltf-render bench (Release, M5 Max, Mac17,6, merging on) reports NodePerformanceTest at ~54.3 ms CPU / ~4.0 ms GPU per frame. The baseline in Benchmarks/glTF/Mac17,6.json (recorded 2026-10-06) is 6.7 ms CPU / 1.15 ms GPU. Reproduced on two runs. Other scenes are within or below their baselines (Sponza is noisy, +18% to +49%).
@@ -12946,6 +12947,8 @@ Fix (MetalSprockets 1fc95602, local; not released): retain each allocation once 
 NodePerformanceTest 54.3/4.0 -> 10.4/1.6; CarConcept 2.42 -> 1.54; Sponza 1.34 -> 0.65; AnimationPointerUVs 2.93 -> 2.34; every scene faster.
 
 NodePerformanceTest is still +56% CPU over the Oct 6 baseline (6.7 ms). The rest of the profile is MetalSprockets per-element work (reconcile, draw binding); no single hot spot. Not closing until a MetalSprockets release with the fix is used here.
+
+- `2026-11-19T05:54:20Z`: Fixed by MetalSprockets 0.3.6 (#581), required since 7a1dc9ad: 54.3 -> 10.3 ms CPU. The remaining gap to the Oct 6 baseline (+55%) is tracked in #574.
 
 ---
 
@@ -13071,7 +13074,6 @@ kind: task
 labels: area:performance, effort:m, investigate
 milestone: M007-PBR-Merged-Geometry
 created: 2026-11-19T05:54:15Z
-updated: 2026-11-19T05:54:15Z
 +++
 
 bench --no-merging uses more GPU time than bench on several scenes with about the same number of Metal draws (Release, M5 Max, MetalSprockets 0.3.6 with the material table): NodePerformanceTest 6.0 vs 1.5 ms, AnimationPointerUVs 1.2 vs 0.3 ms, CarConcept 1.35 vs 0.57 ms, BrainStem 0.31 vs 0.12 ms. Cause not known; not profiled on the GPU.
