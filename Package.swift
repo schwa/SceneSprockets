@@ -33,7 +33,8 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/schwa/GeometryLite3D", .upToNextMinor(from: "0.3.1")),
-        .package(url: "https://github.com/schwa/MetalSprockets", .upToNextMinor(from: "0.3.7")),
+        // TEMPORARY: DrawList (#582) is not released yet. Restore .upToNextMinor(from:) once it is tagged.
+        .package(url: "https://github.com/schwa/MetalSprockets", branch: "main"),
         .package(url: "https://github.com/schwa/SwiftMesh", .upToNextMinor(from: "0.1.0")),
         .package(url: "https://github.com/schwa/MetalSupport", .upToNextMinor(from: "1.0.7")),
         .package(url: "https://github.com/schwa/SwiftGLTF", .upToNextMinor(from: "1.0.7")),

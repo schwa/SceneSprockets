@@ -211,26 +211,21 @@ public struct PBRRenderer: Element {
 
     /// One Metal draw per visible record of `merged`, all in one element.
     private func mergedDrawCalls(_ merged: PBRMergedGeometry, visible: [Bool]?, doubleSided: [Bool], backFaces: Bool, modelIsMirrored: Bool) -> some Element { // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
-        let indexBuffer = merged.indexBuffer
-        return Draw { encoder in
-            stereo?.configure(encoder)
-            encoder.setTriangleFillMode(.fill)
-            for (index, record) in merged.records.enumerated() where visible?[index] ?? true {
-                encoder.setCullMode(backFaces ? .front : doubleSided[index] ? .none : .back)
-                // glTF front faces are counter-clockwise; a mirroring transform flips that.
-                encoder.setFrontFacing(record.mirrored != modelIsMirrored ? .clockwise : .counterClockwise)
-                encoder.drawIndexedPrimitives(
-                    primitiveType: .triangle,
-                    indexCount: record.indexCount,
-                    indexType: .uint32,
-                    indexBuffer: indexBuffer.gpuAddress + UInt64(record.indexStart * MemoryLayout<UInt32>.stride),
-                    indexBufferLength: record.indexCount * MemoryLayout<UInt32>.stride,
-                    instanceCount: record.instanceCount,
-                    baseVertex: record.baseVertex,
-                    baseInstance: record.firstInstance
-                )
+        // The plan already culled (frustum, and the back-face pre-pass's double-sided filter), so the list does not.
+        let rows = merged.records.indices.compactMap { index -> DrawRow? in
+            guard visible?[index] ?? true else {
+                return nil
             }
+            let record = merged.records[index]
+            return DrawRow(
+                geometry: .indexed(record.indexStart ..< record.indexStart + record.indexCount, baseVertex: record.baseVertex),
+                instances: record.firstInstance ..< record.firstInstance + record.instanceCount,
+                cullMode: backFaces ? .front : doubleSided[index] ? .none : .back,
+                // glTF front faces are counter-clockwise; a mirroring transform flips that.
+                winding: record.mirrored != modelIsMirrored ? .clockwise : .counterClockwise
+            )
         }
+        return DrawList(indexBuffer: merged.indexBuffer, indexType: .uint32, stereoViews: stereo, rows: rows)
     }
 
     /// Every merged skinned record, drawn by one element. Not culled: skinned bounds move with the joints.
