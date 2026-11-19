@@ -11876,6 +11876,7 @@ Hidden objects are still drawn. There is no depth pyramid + compute pass to cull
 - `2026-11-17T19:00:22Z`: Auto-fixer (M002): punting. A Hi-Z pyramid plus compute cull only pays off if the GPU's visibility result decides the draws, which needs indirect draws or ICBs; MetalSprockets has neither (see #517). Reading results back to the CPU a frame late is possible but adds latency/popping and is a design call. Unblocker: land #517's indirect-draw support first, or approve a CPU-readback variant (one-frame-late visibility) as an interim.
 - `2026-11-17T19:05:45Z`: Question 1 (decision): Wait for #517 indirect draws instead of an interim one-frame-late CPU readback of visibility? Recommended: Yes, wait for #517
 - `2026-11-17T19:14:03Z`: Depends on MetalSprockets#575 (indirect Draw initializers) and MetalSprockets#576 (indirect command buffers). Under umbrella #544.
+- `2026-11-19T01:50:44Z`: Now depends on #545 rather than only #517: MetalSprockets' indirect draw and indirect command buffer support has shipped (MetalSprockets#575, #576), but how GPU-driven draws are fed depends on whether PBR keeps merged geometry (#545, MetalSprocketsPBR#37).
 
 ---
 
