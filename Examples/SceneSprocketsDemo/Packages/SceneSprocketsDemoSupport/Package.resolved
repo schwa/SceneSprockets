@@ -1,5 +1,5 @@
 {
-  "originHash" : "57f43869059b23a86e9287cf6a1bb6e35f04f38b125400926ca63e7ff769e86e",
+  "originHash" : "79ee1da3a57c851456d85e462ce677f94a5f1e5555da21407b2aa9143e66a43f",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -83,30 +83,12 @@
       }
     },
     {
-      "identity" : "metalsprocketslighting",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/schwa/MetalSprocketsLighting",
-      "state" : {
-        "revision" : "1d541786fc9be6fbe6fc78942f249ec663efc4ae",
-        "version" : "0.0.4"
-      }
-    },
-    {
       "identity" : "metalsprocketsparticles",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsParticles",
       "state" : {
         "revision" : "bf71cbace0a71a66270c68c439a84714ec703ee7",
         "version" : "0.1.0"
-      }
-    },
-    {
-      "identity" : "metalsprocketspbr",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/schwa/MetalSprocketsPBR",
-      "state" : {
-        "revision" : "c3a05c796f0e2ea6eaff567795579531edc9dc59",
-        "version" : "0.4.0"
       }
     },
     {
@@ -124,7 +106,7 @@
       "location" : "https://github.com/schwa/SceneSprocketsAddOns",
       "state" : {
         "branch" : "main",
-        "revision" : "96bc171c04d533a9c1c9f1a4d2ff3e5bb6d59ca5"
+        "revision" : "92359073512a2b92552a1e1f4bdbd8b45461f647"
       }
     },
     {

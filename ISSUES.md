@@ -12511,13 +12511,14 @@ Part of #547.
 ## 552: Changes across SceneSprockets' sibling packages need a chain of releases
 
 +++
-status: new
+status: closed
 priority: low
 kind: task
 labels: proposal, effort:l
 milestone: M999-Nice-to-have
 created: 2026-11-19T01:14:33Z
-updated: 2026-11-19T01:55:38Z
+updated: 2026-11-19T03:21:00Z
+closed: 2026-11-19T03:21:00Z
 +++
 
 SceneSprockets depends on several sibling packages that have no other users:
