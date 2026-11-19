@@ -65,7 +65,11 @@ struct LightingTests {
     }
 
     private func buffer<T>(_ values: [T]) throws -> any MTLBuffer {
-        try #require(device.makeBuffer(bytes: values, length: MemoryLayout<T>.stride * values.count, options: .storageModeShared))
+        let buffer = values.withUnsafeBytes { bytes in
+            // swiftlint:disable:next force_unwrapping - the test arrays are never empty
+            device.makeBuffer(bytes: bytes.baseAddress!, length: bytes.count, options: .storageModeShared)
+        }
+        return try #require(buffer)
     }
 
     private func run(_ name: String, count: Int, encode: (any MTLComputeCommandEncoder) -> Void) throws {
