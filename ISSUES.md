@@ -6149,7 +6149,6 @@ Decided: keep open and measure later.
 
 Next: re-run the node-access benchmark and compare with the table above.
 
-
 ---
 
 ## 271: Node keeps its parent after its entity is destroyed outside the scene graph
@@ -11789,7 +11788,6 @@ State:
 - Commands in one indirect command buffer cannot bind textures per draw, so a renderer needs bindless materials first. PBR has them; Blinn-Phong has argument-buffer materials since #546.
 - Merged geometry is not required, but whether PBR keeps it decides how commands get their vertex data (#545, MetalSprocketsPBR#37).
 
-
 ---
 
 ## 518: No mesh shading
@@ -11879,7 +11877,6 @@ updated: 2026-11-19T01:50:44Z
 +++
 
 Mesh detail is chosen on the CPU (Node.levelsOfDetail, by camera distance), not on the GPU. Choosing it on the GPU only helps if the GPU also issues the draws (#517); how draws are fed depends on #545. Part of #544.
-
 
 ---
 
@@ -12334,12 +12331,12 @@ Related: #516 No GPU-driven rendering (overlapping umbrella), #518 No mesh shadi
 
 +++
 status: new
-priority: high
+priority: critical
 kind: task
 labels: area:renderer, area:performance, effort:l, investigate
 milestone: M002-Performance
 created: 2026-11-18T18:13:33Z
-updated: 2026-11-18T18:13:35Z
+updated: 2026-11-19T01:55:29Z
 +++
 
 Tracking issue for MetalSprocketsPBR#37 (Investigate removing merged geometry), because SceneSprockets is the top-level project that ships it.
@@ -12512,7 +12509,9 @@ status: new
 priority: low
 kind: task
 labels: proposal, effort:l
+milestone: M999-Nice-to-have
 created: 2026-11-19T01:14:33Z
+updated: 2026-11-19T01:55:38Z
 +++
 
 SceneSprockets depends on several sibling packages that have no other users:
