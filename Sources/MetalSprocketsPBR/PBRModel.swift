@@ -124,7 +124,7 @@ public final class PBRModel: @unchecked Sendable {
     /// buffers), kept resident across frames. Material textures are only reached through argument buffers, so they
     /// must be resident. The renderer attaches it.
     public let resourceCollection: ResourceCollection
-    /// Static opaque batches merged for drawing with one element; nil when there is nothing worth merging.
+    /// Static opaque batches drawn by one element (see ``PBRMergedGeometry``); nil when fewer than two can be merged.
     public let merged: PBRMergedGeometry?
     /// Skinned opaque batches merged the same way, reading joints from one per-frame palette.
     public let mergedSkinned: PBRMergedGeometry?

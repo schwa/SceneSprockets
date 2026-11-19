@@ -4,12 +4,13 @@ import MetalSprockets
 import MetalSprocketsPBRShaders
 import simd
 
-/// Opaque geometry merged into shared buffers, so one draw element can issue a Metal draw per primitive.
+/// Opaque batches whose Metal draws one element issues: one instanced draw per batch (a record).
 ///
-/// MetalSprockets' per-frame cost grows with the number of elements, not Metal draw calls. Merging lets opaque,
-/// unmorphed triangle primitives share one vertex, index and instance buffer; each instance knows its draw record, and
-/// the fragment shader looks up that record's material. One merge holds either static or skinned primitives; skinned
-/// ones also share a skin-vertex buffer and read their joints from one per-frame palette of every skin.
+/// MetalSprockets' per-frame cost grows with the number of elements, not Metal draw calls. Meshes are not combined:
+/// records draw their own range of the asset's vertex and index buffers, which are not copied. The set copies each
+/// record's instances, material uniforms and material textures into its own buffers; each instance knows its record,
+/// and the shaders look up that record's material. One set holds static, skinned or transmissive batches; skinned ones
+/// also use the asset's skin-vertex buffer and read their joints from one per-frame palette of every skin.
 public final class PBRMergedGeometry {
     public struct Record {
         public var indexStart: Int
