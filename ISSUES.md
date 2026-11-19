@@ -12413,14 +12413,15 @@ Depends on: MetalSprockets#579 (no persistent argument buffers).
 ## 547: No shared lighting package: lights, shadows and environment are defined separately in each renderer
 
 +++
-status: new
+status: closed
 priority: medium
 kind: feature
 labels: area:renderer, effort:xl, lighting, subtask
 milestone: M003-Rendering
 depends: 548, 549, 550, 551
 created: 2026-11-18T18:56:33Z
-updated: 2026-11-18T19:25:51Z
+updated: 2026-11-19T01:11:06Z
+closed: 2026-11-19T01:11:06Z
 +++
 
 Lighting inputs are defined several times across packages:
