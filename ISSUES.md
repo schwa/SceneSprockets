@@ -11570,13 +11570,14 @@ Instancing, frustum culling, and depth prepasses where beneficial. (Moved from S
 ## 506: Image-based lighting (IBL)
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:renderer, effort:m, subtask, lighting
 milestone: M003-Rendering
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-17T19:13:15Z
+updated: 2026-11-19T03:24:03Z
+closed: 2026-11-19T03:24:03Z
 +++
 
 Good-looking materials without placing lights. Complexity: low–medium. (Moved from SceneSprocketsAddOns #69.)
