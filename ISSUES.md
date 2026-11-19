@@ -11918,6 +11918,7 @@ Mesh detail per object is not chosen on the GPU with compute + indirect commands
 - `2026-11-17T19:00:46Z`: Auto-fixer (M002): punting. CPU LOD selection already exists (Node.levelsOfDetail, chosen by camera distance). Moving the choice to the GPU only helps when the GPU also issues the draws, which needs indirect draws/ICBs that MetalSprockets lacks (#517). Unblocker: same as #517 (approve indirect-draw support in MetalSprockets first).
 - `2026-11-17T19:05:45Z`: Question 1 (decision): Keep this blocked on #517 (indirect draws in MetalSprockets)? Recommended: Yes
 - `2026-11-17T19:14:03Z`: Depends on MetalSprockets#575 (indirect Draw initializers) and MetalSprockets#576 (indirect command buffers). Under umbrella #544.
+- `2026-11-19T01:50:44Z`: Now depends on #545 rather than only #517: MetalSprockets' indirect draw and indirect command buffer support has shipped (MetalSprockets#575, #576), but how GPU-driven draws are fed depends on whether PBR keeps merged geometry (#545, MetalSprocketsPBR#37).
 
 ---
 
