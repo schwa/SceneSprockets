@@ -13008,17 +13008,21 @@ RFC: RFCs/0001-pbr-performance.md option 1.
 ## 574: glTF benchmark baseline predates current MetalSprockets
 
 +++
-status: new
+status: closed
 priority: medium
 kind: task
 labels: area:performance, effort:s, gltf
 milestone: M007-PBR-Merged-Geometry
 created: 2026-11-19T05:54:15Z
+updated: 2026-11-19T14:39:14Z
+closed: 2026-11-19T14:39:14Z
 +++
 
 Benchmarks/glTF/Mac17,6.json was recorded 2026-10-06. With MetalSprockets 0.3.6, bench still flags NodePerformanceTest as a regression (10.3 ms CPU vs 6.7 ms baseline, +55%) and most other scenes run 20-55% under their baselines, so the comparison no longer shows real changes.
 
 The remaining NodePerformanceTest gap has no single hot spot in a Time Profiler run (#571); it is spread over MetalSprockets reconciliation and draw binding.
+
+- `2026-11-19T14:39:14Z`: Re-recorded with MetalSprockets 0.3.7 and the material table (just bench-gltf-record). NodePerformanceTest's +56% over the Oct 6 baseline is kept as the new normal; it is per-element MetalSprockets cost (MetalSprockets#583), with no single hot spot.
 
 ---
 
