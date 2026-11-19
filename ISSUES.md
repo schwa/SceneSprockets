@@ -12049,12 +12049,12 @@ updated: 2026-11-17T17:51:39Z
 
 +++
 status: open
-priority: high
+priority: low
 kind: feature
 labels: effort:l, area:renderer
 milestone: M003-Rendering
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-19T01:35:45Z
 +++
 
 No local cubemap reflections with parallax correction and probe blending. (Moved from SceneSprocketsAddOns#49.)
@@ -12067,12 +12067,12 @@ No local cubemap reflections with parallax correction and probe blending. (Moved
 
 +++
 status: open
-priority: medium
+priority: low
 kind: feature
 labels: effort:m, area:renderer
 milestone: M999-Nice-to-have
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-17T18:00:18Z
+updated: 2026-11-19T01:35:56Z
 +++
 
 Mirrors, polished floors and water surfaces cannot show planar reflections. (Moved from SceneSprocketsAddOns#50.)
@@ -12085,12 +12085,12 @@ Mirrors, polished floors and water surfaces cannot show planar reflections. (Mov
 
 +++
 status: open
-priority: medium
+priority: low
 kind: feature
 labels: effort:m, area:renderer
 milestone: M999-Nice-to-have
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-17T18:00:18Z
+updated: 2026-11-19T01:35:56Z
 +++
 
 Objects do not receive indirect lighting appropriate to their location. (Moved from SceneSprocketsAddOns#71.)
@@ -12103,12 +12103,12 @@ Objects do not receive indirect lighting appropriate to their location. (Moved f
 
 +++
 status: open
-priority: medium
+priority: low
 kind: feature
 labels: effort:xl, area:renderer, subtask, lighting
 milestone: M999-Nice-to-have
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-17T19:13:16Z
+updated: 2026-11-19T01:35:56Z
 +++
 
 No dynamic indirect lighting or color bleeding. (Moved from SceneSprocketsAddOns#72.)
@@ -12121,12 +12121,12 @@ No dynamic indirect lighting or color bleeding. (Moved from SceneSprocketsAddOns
 
 +++
 status: open
-priority: medium
+priority: low
 kind: feature
 labels: effort:l, area:renderer
 milestone: M999-Nice-to-have
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-17T18:00:18Z
+updated: 2026-11-19T01:35:56Z
 +++
 
 No approximate bounced light from visible surfaces. (Moved from SceneSprocketsAddOns#73.)
@@ -12139,12 +12139,12 @@ No approximate bounced light from visible surfaces. (Moved from SceneSprocketsAd
 
 +++
 status: open
-priority: medium
+priority: low
 kind: feature
 labels: effort:l, area:renderer, subtask, lighting
 milestone: M999-Nice-to-have
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-17T19:13:16Z
+updated: 2026-11-19T01:35:56Z
 +++
 
 Static scenes cannot use precomputed indirect lighting. (Moved from SceneSprocketsAddOns#74.)
@@ -12157,12 +12157,12 @@ Static scenes cannot use precomputed indirect lighting. (Moved from SceneSprocke
 
 +++
 status: open
-priority: medium
+priority: low
 kind: feature
 labels: effort:xl, area:renderer, subtask, lighting
 milestone: M999-Nice-to-have
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-17T19:13:16Z
+updated: 2026-11-19T01:35:56Z
 +++
 
 Lighting for static environments cannot be generated automatically. (Moved from SceneSprocketsAddOns#75.)
@@ -12175,12 +12175,12 @@ Lighting for static environments cannot be generated automatically. (Moved from 
 
 +++
 status: open
-priority: medium
+priority: low
 kind: feature
 labels: effort:s, area:renderer
 milestone: M999-Nice-to-have
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-17T18:00:18Z
+updated: 2026-11-19T01:35:56Z
 +++
 
 Surfaces cannot show apparent depth without extra geometry. (Moved from SceneSprocketsAddOns#58.)
@@ -12191,12 +12191,12 @@ Surfaces cannot show apparent depth without extra geometry. (Moved from SceneSpr
 
 +++
 status: open
-priority: medium
+priority: low
 kind: feature
 labels: effort:l, area:renderer
 milestone: M999-Nice-to-have
 created: 2026-11-17T17:55:40Z
-updated: 2026-11-17T18:00:18Z
+updated: 2026-11-19T01:35:56Z
 +++
 
 Skin, wax, leaves and other translucent materials cannot scatter light below the surface. (Moved from SceneSprocketsAddOns#59.)
@@ -12207,12 +12207,12 @@ Skin, wax, leaves and other translucent materials cannot scatter light below the
 
 +++
 status: open
-priority: medium
+priority: low
 kind: feature
 labels: effort:m, area:renderer
 milestone: M999-Nice-to-have
 created: 2026-11-17T17:55:40Z
-updated: 2026-11-17T18:00:18Z
+updated: 2026-11-19T01:35:56Z
 +++
 
 Hair, foliage and dense overlapping transparent surfaces need order-independent transparency. (Moved from SceneSprocketsAddOns#61.)
@@ -12225,12 +12225,12 @@ Hair, foliage and dense overlapping transparent surfaces need order-independent 
 
 +++
 status: open
-priority: medium
+priority: low
 kind: feature
 labels: effort:l, area:renderer
 milestone: M999-Nice-to-have
 created: 2026-11-17T17:55:40Z
-updated: 2026-11-17T18:00:18Z
+updated: 2026-11-19T01:35:56Z
 +++
 
 Fog does not scatter light through participating media. (Moved from SceneSprocketsAddOns#56.)
@@ -12272,9 +12272,9 @@ priority: medium
 kind: feature
 labels: umbrella, area:renderer, effort:xl, lighting
 milestone: M003-Rendering
-depends: 86, 497, 506, 507, 509, 512, 514, 519, 533, 535, 536, 547
+depends: 547
 created: 2026-11-17T19:13:03Z
-updated: 2026-11-18T18:56:36Z
+updated: 2026-11-19T01:40:56Z
 +++
 
 Each material renderer has its own lighting: Blinn-Phong loops over the frame's lights in this repo, PBR lighting is in MetalSprocketsPBR, and toon, voxel and signed-distance lighting are in SceneSprocketsAddOns. There is no common light data layout, light list, or lighting entry point that all of them read.
@@ -12541,7 +12541,7 @@ Part of #547.
 status: new
 priority: low
 kind: task
-labels: proposal,effort:l
+labels: proposal, effort:l
 created: 2026-11-19T01:14:33Z
 +++
 
