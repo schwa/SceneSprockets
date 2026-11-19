@@ -1,6 +1,6 @@
 # RFC 0001 — PBR performance without forced merging
 
-**Status:** Draft · **Tracking:** #545 · **Milestone:** M007 · **Related:** MetalSprockets RFC 0006
+**Status:** Draft · **Tracking:** #581 · **Decision:** #545 · **Milestone:** M007 · **Related:** MetalSprockets RFC 0006
 
 ## Summary
 

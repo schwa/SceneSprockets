@@ -11778,9 +11778,9 @@ status: open
 priority: medium
 kind: feature
 labels: area:renderer, effort:l, subtask, indirect-drawing
-milestone: M007-PBR-Merged-Geometry
+milestone: M002-Performance
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-19T14:01:40Z
+updated: 2026-11-19T14:14:34Z
 +++
 
 Draw commands are encoded on the CPU each frame. Indirect command buffers would let them be encoded once, or on the GPU. Part of #544.
@@ -13122,6 +13122,39 @@ xcb is not a standard tool, so readers cannot run these commands as written:
 - Examples/SceneSprocketsDemo/Packages/SceneSprocketsDemoSupport/README.md:6: `xcb run scenesprockets-demos`
 
 MetalSprockets/README.md:205 has the same problem (`xcb test`, `xcb test -e MTL_DEBUG_LAYER=1`).
+
+---
+
+## 581: RFC 0001: PBR performance without forced merging
+
++++
+status: new
+priority: medium
+kind: task
+labels: area:renderer, area:performance, tracking
+milestone: M007-PBR-Merged-Geometry
+depends: 545,574,576,577,578
+created: 2026-11-19T14:17:08Z
+updated: 2026-11-19T14:17:08Z
++++
+
+Umbrella for RFCs/0001-pbr-performance.md: make per-batch PBR drawing fast enough that merged sets are optional, and keep both paths measurable.
+
+Done:
+- [x] #572 bench --no-merging
+- [x] #571 NodePerformanceTest regression (MetalSprockets#581, 0.3.6)
+- [x] #573 per-renderer material table (MetalSprockets#582, 0.3.7)
+- [x] #575 unused per-material argument buffer
+- [x] #579 unused PBRMaterial device parameter
+
+Open:
+- [ ] #576 bind less per batch
+- [ ] #577 group per-batch draws by material
+- [ ] #578 per-batch GPU time
+- [ ] #574 re-record the benchmark baseline
+- [ ] #545 decide whether merging stays required
+
+Related, outside this milestone: MetalSprockets#476, #513, #519, #522 (cheaper elements); #517, #520, #522 (GPU-driven drawing); #554.
 
 ---
 
