@@ -81,8 +81,8 @@ To run the demos in Xcode, open `Examples/SceneSprocketsDemo/SceneSprocketsDemo.
 
 ```sh
 cd Examples/SceneSprocketsDemo/Packages/SceneSprocketsDemoSupport
-xcb run scenesprockets-demos                                   # opens the demo picker
-scenesprockets-demos --render gears gears.png --size 1280x800  # renders a demo to a PNG
+swift run scenesprockets-demos                                   # opens the demo picker
+swift run scenesprockets-demos --render gears gears.png --size 1280x800  # renders a demo to a PNG
 ```
 
 The demos use third-party models and textures under CC0 and CC BY 4.0. See [CREDITS.md](CREDITS.md).
