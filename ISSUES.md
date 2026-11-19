@@ -13133,9 +13133,9 @@ priority: medium
 kind: task
 labels: area:renderer, area:performance, tracking
 milestone: M007-PBR-Merged-Geometry
-depends: 545,574,576,577,578
+depends: 545, 574, 576, 577, 578, 571, 572, 573, 575, 579
 created: 2026-11-19T14:17:08Z
-updated: 2026-11-19T14:17:08Z
+updated: 2026-11-19T14:17:18Z
 +++
 
 Umbrella for RFCs/0001-pbr-performance.md: make per-batch PBR drawing fast enough that merged sets are optional, and keep both paths measurable.
