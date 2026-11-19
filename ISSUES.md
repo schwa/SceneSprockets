@@ -12267,14 +12267,15 @@ Found while auditing #499.
 ## 542: Umbrella: no shared lighting model across material renderers
 
 +++
-status: new
+status: closed
 priority: medium
 kind: feature
 labels: umbrella, area:renderer, effort:xl, lighting
 milestone: M003-Rendering
 depends: 547
 created: 2026-11-17T19:13:03Z
-updated: 2026-11-19T01:40:56Z
+updated: 2026-11-19T01:40:57Z
+closed: 2026-11-19T01:40:57Z
 +++
 
 Each material renderer has its own lighting: Blinn-Phong loops over the frame's lights in this repo, PBR lighting is in MetalSprocketsPBR, and toon, voxel and signed-distance lighting are in SceneSprocketsAddOns. There is no common light data layout, light list, or lighting entry point that all of them read.
