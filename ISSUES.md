@@ -12338,8 +12338,9 @@ priority: critical
 kind: task
 labels: area:renderer, area:performance, effort:l, investigate
 milestone: M007-PBR-Merged-Geometry
+depends: 572
 created: 2026-11-18T18:13:33Z
-updated: 2026-11-19T03:45:19Z
+updated: 2026-11-19T03:58:37Z
 +++
 
 MetalSprocketsPBR merges opaque, unmorphed triangle primitives into shared vertex, index, instance and material buffers (PBRMergedGeometry), so one draw element issues many Metal draws. Its reason: MetalSprockets' per-frame cost grows with the number of elements, not Metal draw calls. Merging works around MetalSprockets overhead; it does not address a GPU cost. Merging may have been the wrong choice.
@@ -12378,6 +12379,7 @@ Was also MetalSprocketsPBR#37 (merged here with the package, #552).
 Per-batch drawing costs 2-8x more render-thread CPU on most multi-primitive scenes (NodePerformanceTest 7.6x, AnimationPointerUVs 6.6x), and up to ~3.7x GPU (AnimationPointerUVs, CarConcept 2.2x). Single-primitive scenes are equal. With today's MetalSprockets per-element costs, removing merging would put several scenes over the 8.3 ms 120 Hz budget. Not measured: memory, energy, Debug.
 
 - `2026-11-19T03:52:54Z`: Question 1 (decision): Keep the merged path for now and revisit #545 after MetalSprockets' per-element costs drop (MetalSprockets#519 etc.), re-running bench --no-merging then? Recommended: Yes: keep merging; lower #545 to Medium, label deferred, and re-measure after MetalSprockets#519.
+- `2026-11-19T03:58:37Z`: Related: #572 (bench --no-merging, used for the table above), #571 (NodePerformanceTest regression found in this benchmark).
 
 ---
 
@@ -12601,6 +12603,8 @@ In GLTFViewer (Release, 120 Hz display) AnimationPointerUVs runs at ~90 fps with
 State: the benchmark measures 4.4 ms CPU per frame (Release, M5 Max), within 120 Hz. Re-measure in the app before working on it. Related: material pointer strings parsed on every pose (was MetalSprocketsGLTF#167).
 
 Was MetalSprocketsGLTF#75 (moved with the package, #552).
+
+- `2026-11-19T03:58:37Z`: #545 has merged vs per-batch numbers for this scene (2.93 vs 19.27 ms CPU); #571 is a related slowdown in NodePerformanceTest.
 
 ---
 
@@ -12956,6 +12960,26 @@ ms-gltf-render bench (Release, M5 Max, Mac17,6, merging on) reports NodePerforma
 The slowdown happened between the baseline recording and #552; that history is in the archived MetalSprocketsPBR/MetalSprocketsGLTF repos.
 
 Repro: just bench-gltf NodePerformanceTest
+
+- `2026-11-19T03:58:37Z`: Found while benchmarking #545 with the tool from #572. Also see #554 (AnimationPointerUVs frame time).
+
+---
+
+## 572: Benchmark cannot compare merged and per-batch PBR drawing
+
++++
+status: closed
+priority: medium
+kind: task
+labels: area:performance, effort:s, gltf
+milestone: M007-PBR-Merged-Geometry
+created: 2026-11-19T03:58:37Z
+closed: 2026-11-19T03:58:37Z
++++
+
+ms-gltf-render bench always drew with merged geometry: PBRRenderer.usesMergedGeometry was internal and PBRScene built its renderers with the default, so #545 had no way to measure per-batch drawing on real scenes.
+
+Fixed in 4be90eac: PBRScene.usesMergedGeometry (package) passes the setting to its renderers, and bench --no-merging uses it (never compares or records a baseline). Results are on #545.
 
 ---
 
