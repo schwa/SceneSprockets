@@ -12891,12 +12891,14 @@ Either way the merged PBR module depends on the scene graph, so GLTFViewer and m
 ## 570: MetalSprocketsLighting, MetalSprocketsPBR and MetalSprocketsGLTF repositories are still live after the move
 
 +++
-status: new
+status: closed
 priority: low
 kind: task
 labels: effort:s
 depends: 552
 created: 2026-11-19T02:45:09Z
+updated: 2026-11-19T03:23:53Z
+closed: 2026-11-19T03:23:53Z
 +++
 
 #552 copies MetalSprocketsLighting, MetalSprocketsPBR and MetalSprocketsGLTF into this package. Their separate repositories still look active: their READMEs give their own install instructions, MetalSprocketsGLTF and MetalSprocketsPBR still list open issues (now re-filed here as #553-#567, and #545 for MetalSprocketsPBR#37), and nothing marks them as moved.
@@ -12907,6 +12909,8 @@ Expected, once #552 lands:
 - Each repository's README says it moved into SceneSprockets and shows the new product line.
 - Their open issues are closed with pointers to the re-filed issues here.
 - The repositories are archived on GitHub (read-only; existing tags such as PBR 0.4.0 and glTF 0.3.0 keep resolving).
+
+- `2026-11-19T03:23:53Z`: Done: MetalSprocketsPBR and MetalSprocketsGLTF are archived on GitHub with no open issues. MetalSprocketsLighting never had a GitHub repo. README 'moved' notes were skipped (repos archived first).
 
 ---
 
