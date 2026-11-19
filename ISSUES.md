@@ -10933,9 +10933,9 @@ status: closed
 priority: medium
 kind: bug
 labels: area:renderer, effort:m
-milestone: M002-Performance
+milestone: M007-PBR-Merged-Geometry
 created: 2026-11-17T06:39:06Z
-updated: 2026-11-17T19:58:58Z
+updated: 2026-11-19T03:27:32Z
 closed: 2026-11-17T19:58:58Z
 +++
 
