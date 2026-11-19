@@ -6151,6 +6151,7 @@ Leaving open for the steady-state cost. Further gains likely need SwiftECS chang
 - `2026-11-07T16:59:56Z`: Question 2 (decision): Add a non-retaining read path to SwiftECS to close the remaining gap, or accept the current cost (traversal ~142 vs ~100 ns/node) and close?
 - `2026-11-07T23:23:50Z`: Answer 2: file issues on swiftecs
 - `2026-11-11T16:15:02Z`: Per answer 2 ('file issues on swiftecs'): filed SwiftECS #52 (ComponentRef retain/release on every read). Blocking this issue on it; the SceneSprockets side needs no change until SwiftECS has a cheaper read path.
+- `2026-11-19T01:50:43Z`: Unblocked: SwiftECS #52 (ComponentRef retain/release on every read) is closed and shipped in SwiftECS 0.1.2, which SceneSprockets resolves. Per answer 1 ('measure cost later'), next step is to re-run the node-access benchmark and compare with the 2026-11-05 numbers (traversal ~142 ns/node, read ~38, write ~192; pre-ECS ~100 / ~30 / ~180).
 
 ---
 
