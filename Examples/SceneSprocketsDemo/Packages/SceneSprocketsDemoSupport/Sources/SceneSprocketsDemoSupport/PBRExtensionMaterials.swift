@@ -44,7 +44,7 @@ enum PBRExtensionMaterials {
         uniforms.clearcoatRoughnessFactor = 0.35
         var bindings = Array(repeating: placeholder(), count: Int(kPBRMaterialTextureCount.rawValue))
         bindings[Int(kPBRTextureBaseColor.rawValue)] = speckles
-        return PBRSceneMaterial(PBRMaterial(name: "Gummy", uniforms: uniforms, textureBindings: bindings, device: demoDevice))
+        return PBRSceneMaterial(PBRMaterial(name: "Gummy", uniforms: uniforms, textureBindings: bindings))
     }
 
     static func pearl() -> PBRSceneMaterial {
@@ -56,7 +56,7 @@ enum PBRExtensionMaterials {
         uniforms.clearcoatFactor = 1
         uniforms.clearcoatRoughnessFactor = 0.1
         let placeholderBinding = placeholder()
-        return PBRSceneMaterial(PBRMaterial(name: "Pearl", uniforms: uniforms, placeholder: placeholderBinding, device: demoDevice))
+        return PBRSceneMaterial(PBRMaterial(name: "Pearl", uniforms: uniforms, placeholder: placeholderBinding))
     }
 
     // MARK: Noise texture

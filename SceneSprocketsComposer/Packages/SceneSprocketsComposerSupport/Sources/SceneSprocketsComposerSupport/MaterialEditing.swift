@@ -50,7 +50,7 @@ enum MaterialPreset: String, CaseIterable, Identifiable {
             uniforms.roughnessFactor = 0.05
             uniforms.transmissionFactor = 1
         }
-        return PBRSceneMaterial(try PBRMaterial(uniforms: uniforms, placeholder: PBRMaterial.placeholderBinding(device: _MTLCreateSystemDefaultDevice()), device: _MTLCreateSystemDefaultDevice()))
+        return PBRSceneMaterial(try PBRMaterial(uniforms: uniforms, placeholder: PBRMaterial.placeholderBinding(device: _MTLCreateSystemDefaultDevice())))
     }
 }
 
@@ -135,7 +135,7 @@ extension EditorModel {
         let original = material.pbrMaterial
         var uniforms = original.uniforms
         change(&uniforms)
-        let copy = PBRMaterial(name: original.name, uniforms: uniforms, doubleSided: doubleSided ?? original.doubleSided, renderState: original.renderState, textureTransforms: original.textureTransforms, textureBindings: original.textureBindings, device: _MTLCreateSystemDefaultDevice())
+        let copy = PBRMaterial(name: original.name, uniforms: uniforms, doubleSided: doubleSided ?? original.doubleSided, renderState: original.renderState, textureTransforms: original.textureTransforms, textureBindings: original.textureBindings)
         return PBRSceneMaterial(copy)
     }
 }

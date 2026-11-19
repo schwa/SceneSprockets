@@ -43,7 +43,7 @@ extension PBRMaterial {
             }
         }
 
-        self.init(name: material?.name, uniforms: uniforms, doubleSided: material?.doubleSided ?? false, textureTransforms: textureTransforms, textureBindings: bindings, device: textures.device)
+        self.init(name: material?.name, uniforms: uniforms, doubleSided: material?.doubleSided ?? false, textureTransforms: textureTransforms, textureBindings: bindings)
     }
 }
 

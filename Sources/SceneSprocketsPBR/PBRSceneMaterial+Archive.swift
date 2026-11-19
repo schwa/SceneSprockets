@@ -72,8 +72,7 @@ extension PBRSceneMaterial: ArchivableMaterial {
             doubleSided: try container.decode(Bool.self, forKey: .doubleSided),
             renderState: renderState,
             textureTransforms: try Self.decodeTextureTransforms(container, context: context),
-            textureBindings: bindings,
-            device: device
+            textureBindings: bindings
         )
         self.init(material)
     }

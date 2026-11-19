@@ -366,7 +366,7 @@ struct RenderTests {
         var uniforms = PBRMaterialUniforms.defaults(baseColor: [0, 0, 0, 1], metallic: 0, roughness: 1)
         uniforms.emissiveFactor = [1, 1, 1]
         uniforms.emissiveStrength = 4
-        let material = PBRMaterial(uniforms: uniforms, placeholder: models.placeholder, device: models.device)
+        let material = PBRMaterial(uniforms: uniforms, placeholder: models.placeholder)
         let model = try models.model([(.zero, material)])
         let renderer = try OffscreenRenderer.hdr(size: size, device: models.device)
         let scene = PBRScene(model: model, viewMatrix: view, projectionMatrix: projection, lighting: PBRLighting(environment: try LightingEnvironment(source: .uniform(.zero), device: models.device), toneMapping: .none), viewportSize: size)

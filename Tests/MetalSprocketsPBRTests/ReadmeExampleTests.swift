@@ -18,7 +18,7 @@ struct ReadmeExampleTests {
         let quad = try geometry.build()[quadIndex]
 
         let uniforms = PBRMaterialUniforms.defaults(baseColor: [1, 0, 0, 1], metallic: 0, roughness: 0.5)
-        let red = try PBRMaterial(uniforms: uniforms, placeholder: PBRMaterial.placeholderBinding(device: device), device: device)
+        let red = try PBRMaterial(uniforms: uniforms, placeholder: PBRMaterial.placeholderBinding(device: device))
 
         var builder = PBRModelBuilder(device: device, restPose: PBRPose(worldMatrices: [matrix_identity_float4x4]))
         builder.addInstance(quad, material: red, node: 0)

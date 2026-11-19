@@ -21,14 +21,14 @@ struct TransmissionCoverageTests {
         let quad = try geometry.build()[0]
         var glassUniforms = PBRMaterialUniforms.defaults(baseColor: [1, 1, 1, 1], metallic: 0, roughness: 0)
         glassUniforms.transmissionFactor = 1
-        let glass = try PBRMaterial(uniforms: glassUniforms, placeholder: PBRMaterial.placeholderBinding(device: device), device: device)
+        let glass = try PBRMaterial(uniforms: glassUniforms, placeholder: PBRMaterial.placeholderBinding(device: device))
         var builder = PBRModelBuilder(device: device, restPose: PBRPose(worldMatrices: [simd_float4x4(translation: [0, 0, 1]), simd_float4x4(translation: .zero)]))
         builder.addInstance(quad, material: glass, node: 0)
         if withRedBehind {
             // Emissive, so it is red whatever the (blue) environment.
             var redUniforms = PBRMaterialUniforms.defaults(baseColor: [1, 0, 0, 1], metallic: 0, roughness: 1)
             redUniforms.emissiveFactor = [1, 0, 0]
-            let red = try PBRMaterial(uniforms: redUniforms, placeholder: PBRMaterial.placeholderBinding(device: device), device: device)
+            let red = try PBRMaterial(uniforms: redUniforms, placeholder: PBRMaterial.placeholderBinding(device: device))
             builder.addInstance(quad, material: red, node: 1)
         }
         return try builder.build()

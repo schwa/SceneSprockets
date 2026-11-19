@@ -32,7 +32,7 @@ struct TestModels {
             uniforms.alphaMode = .blend
         }
         uniforms.transmissionFactor = transmission
-        return PBRMaterial(uniforms: uniforms, doubleSided: doubleSided, placeholder: placeholder, device: device)
+        return PBRMaterial(uniforms: uniforms, doubleSided: doubleSided, placeholder: placeholder)
     }
 
     /// One quad per entry, each at its own node translated to `position`.

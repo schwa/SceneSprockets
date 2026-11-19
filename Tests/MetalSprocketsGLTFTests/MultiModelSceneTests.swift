@@ -87,7 +87,7 @@ struct MultiModelSceneTests {
         var glassUniforms = try makeColorMaterial([1, 1, 1, 1], device: device).uniforms
         glassUniforms.transmissionFactor = 1
         glassUniforms.roughnessFactor = 0
-        let glassMaterial = try PBRMaterial(uniforms: glassUniforms, placeholder: PBRMaterial.placeholderBinding(device: device), device: device)
+        let glassMaterial = try PBRMaterial(uniforms: glassUniforms, placeholder: PBRMaterial.placeholderBinding(device: device))
         let glass = try model([(glassMaterial, [0, 0, 1])])
         let pixel = center(try render(scene([.init(model: glass), .init(model: red)])))
         #expect(pixel.x > pixel.z + 80, "Expected the red quad through the glass, got \(pixel)")

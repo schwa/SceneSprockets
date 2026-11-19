@@ -253,7 +253,7 @@ struct SceneArchiveTests {
             bufferLayout: layout
         )
         let blinnPhong = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .texture(makeTexture()), specular: .color(0), shininess: 8)
-        let pbr = PBRSceneMaterial(try PBRMaterial(uniforms: .defaults(baseColor: [0, 1, 0, 1]), placeholder: PBRMaterial.placeholderBinding(device: device), device: device))
+        let pbr = PBRSceneMaterial(try PBRMaterial(uniforms: .defaults(baseColor: [0, 1, 0, 1]), placeholder: PBRMaterial.placeholderBinding(device: device)))
         let root = SceneGraph.Node()
         root.addChild(SceneGraph.Node(label: "Generated", content: .mesh(mesh, materials: [blinnPhong, pbr], castsShadow: false)))
         // Shares the mesh, so shares its file.
@@ -378,7 +378,7 @@ struct SceneArchiveTests {
         bindings[Int(kPBRTextureBaseColor.rawValue)] = try .init(texture: makeTexture(), samplerDescriptor: nearestClampSampler(), device: device)
         var uniforms = PBRMaterialUniforms.defaults(baseColor: [1, 1, 1, 1], metallic: 0, roughness: 1)
         uniforms.baseColor.enabled = 1
-        let pbr = PBRSceneMaterial(PBRMaterial(uniforms: uniforms, textureBindings: bindings, device: device))
+        let pbr = PBRSceneMaterial(PBRMaterial(uniforms: uniforms, textureBindings: bindings))
         root.addChild(SceneGraph.Node(label: "PBR", shape: .box(), material: pbr))
         let blinnPhong = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .texture(makeTexture(), sampler: nearestClampSampler()), specular: .color(0), shininess: 1)
         root.addChild(SceneGraph.Node(label: "BlinnPhong", shape: .box(), material: blinnPhong))

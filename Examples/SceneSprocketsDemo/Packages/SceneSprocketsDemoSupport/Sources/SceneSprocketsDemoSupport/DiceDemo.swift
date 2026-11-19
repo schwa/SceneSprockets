@@ -228,7 +228,7 @@ final class DiceDemo: DemoScene {
             // A thin satin varnish.
             uniforms.clearcoatFactor = 0.3
             uniforms.clearcoatRoughnessFactor = 0.25
-            return PBRSceneMaterial(PBRMaterial(name: "Dark Wood", uniforms: uniforms, textureBindings: bindings, device: demoDevice))
+            return PBRSceneMaterial(PBRMaterial(name: "Dark Wood", uniforms: uniforms, textureBindings: bindings))
         }()
         let tray = root.addChild(SceneGraph.Node(label: "Tray"))
         let outerWidth = trayWidth + 2 * wallThickness

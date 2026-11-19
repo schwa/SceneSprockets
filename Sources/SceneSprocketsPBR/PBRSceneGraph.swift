@@ -89,7 +89,7 @@ public final class PBRSceneMaterial: SceneMaterial, SamplesShadowsInShader, @unc
             uniforms.alphaMode = .blend
         }
         do {
-            storedMaterial = try PBRMaterial(uniforms: uniforms, placeholder: PBRMaterial.placeholderBinding(device: device), device: device)
+            storedMaterial = try PBRMaterial(uniforms: uniforms, placeholder: PBRMaterial.placeholderBinding(device: device))
         } catch {
             fatalError("Could not create a PBR material: \(error)")
         }
@@ -150,7 +150,7 @@ public final class PBRSceneMaterial: SceneMaterial, SamplesShadowsInShader, @unc
         if textures.emissive != nil {
             uniforms.emissiveFactor = [1, 1, 1]
         }
-        storedMaterial = PBRMaterial(uniforms: uniforms, textureBindings: bindings, device: device)
+        storedMaterial = PBRMaterial(uniforms: uniforms, textureBindings: bindings)
     }
 }
 

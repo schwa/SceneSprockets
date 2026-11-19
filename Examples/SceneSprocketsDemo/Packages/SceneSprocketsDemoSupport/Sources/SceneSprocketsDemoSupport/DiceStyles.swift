@@ -139,7 +139,7 @@ enum DiceStyle: String, CaseIterable {
             uniforms.clearcoatFactor = 1
             uniforms.clearcoatRoughnessFactor = 0.05
         }
-        return PBRSceneMaterial(PBRMaterial(name: rawValue, uniforms: uniforms, textureBindings: bindings, device: demoDevice))
+        return PBRSceneMaterial(PBRMaterial(name: rawValue, uniforms: uniforms, textureBindings: bindings))
     }
 
     // MARK: Textures

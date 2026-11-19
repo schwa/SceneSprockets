@@ -35,7 +35,7 @@ struct GoldenImageTests {
         ], indices: [0, 1, 2, 0, 2, 3])
         let quad = try geometry.build()[quadIndex]
         let uniforms = PBRMaterialUniforms.defaults(baseColor: [1, 0, 0, 1], metallic: 0, roughness: 0.5)
-        let red = try PBRMaterial(uniforms: uniforms, placeholder: PBRMaterial.placeholderBinding(device: device), device: device)
+        let red = try PBRMaterial(uniforms: uniforms, placeholder: PBRMaterial.placeholderBinding(device: device))
         var builder = PBRModelBuilder(device: device, restPose: PBRPose(worldMatrices: [matrix_identity_float4x4]))
         builder.addInstance(quad, material: red, node: 0)
         try check("ReadmeQuad", model: builder.build(), size: CGSize(width: 256, height: 256))
@@ -62,7 +62,7 @@ struct GoldenImageTests {
                 let roughness = Float(column) / Float(columns - 1)
                 let metallic: Float = row == 0 ? 0 : 1
                 let uniforms = PBRMaterialUniforms.defaults(baseColor: colors[row], metallic: metallic, roughness: roughness)
-                materials.append(PBRMaterial(uniforms: uniforms, placeholder: placeholder, device: device))
+                materials.append(PBRMaterial(uniforms: uniforms, placeholder: placeholder))
                 matrices.append(simd_float4x4(translation: [Float(column) - Float(columns - 1) / 2, Float(rows - 1) / 2 - Float(row), 0]))
             }
         }

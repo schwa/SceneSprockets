@@ -22,7 +22,7 @@ struct RetroreflectionTests {
         var uniforms = PBRMaterialUniforms.defaults(baseColor: [0.2, 0.2, 0.2, 1], metallic: 0, roughness: 0.3)
         uniforms.specularColorFactor = [4, 4, 4]
         uniforms.retroreflectionFactor = retroreflection
-        let material = try PBRMaterial(uniforms: uniforms, placeholder: PBRMaterial.placeholderBinding(device: device), device: device)
+        let material = try PBRMaterial(uniforms: uniforms, placeholder: PBRMaterial.placeholderBinding(device: device))
         var builder = PBRModelBuilder(device: device, restPose: PBRPose(worldMatrices: [matrix_identity_float4x4]))
         builder.addInstance(quad, material: material, node: 0)
         let model = try builder.build()

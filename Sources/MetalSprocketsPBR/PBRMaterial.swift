@@ -136,7 +136,7 @@ public final class PBRMaterial: @unchecked Sendable {
 
     /// `textureBindings` must have one binding per `PBRMaterialTextureIndex` (`kPBRMaterialTextureCount`); enable
     /// the matching `uniforms` slots for the ones that are real textures.
-    public init(name: String? = nil, uniforms: PBRMaterialUniforms, doubleSided: Bool = false, renderState: PBRRenderState = PBRRenderState(), textureTransforms: [String: TextureTransform] = [:], textureBindings: [Binding], device _: MTLDevice) {
+    public init(name: String? = nil, uniforms: PBRMaterialUniforms, doubleSided: Bool = false, renderState: PBRRenderState = PBRRenderState(), textureTransforms: [String: TextureTransform] = [:], textureBindings: [Binding]) {
         precondition(textureBindings.count == Int(kPBRMaterialTextureCount.rawValue), "One texture binding per PBRMaterialTextureIndex")
         self.name = name
         self.uniforms = uniforms
@@ -147,8 +147,8 @@ public final class PBRMaterial: @unchecked Sendable {
     }
 
     /// A material with every texture slot holding `placeholder` (disabled in the uniforms): factors only.
-    public convenience init(name: String? = nil, uniforms: PBRMaterialUniforms, doubleSided: Bool = false, renderState: PBRRenderState = PBRRenderState(), placeholder: Binding, device: MTLDevice) {
-        self.init(name: name, uniforms: uniforms, doubleSided: doubleSided, renderState: renderState, textureBindings: Array(repeating: placeholder, count: Int(kPBRMaterialTextureCount.rawValue)), device: device)
+    public convenience init(name: String? = nil, uniforms: PBRMaterialUniforms, doubleSided: Bool = false, renderState: PBRRenderState = PBRRenderState(), placeholder: Binding) {
+        self.init(name: name, uniforms: uniforms, doubleSided: doubleSided, renderState: renderState, textureBindings: Array(repeating: placeholder, count: Int(kPBRMaterialTextureCount.rawValue)))
     }
 
     private init(copying material: PBRMaterial, uniforms: PBRMaterialUniforms, renderState: PBRRenderState, textureTransforms: [String: TextureTransform]) {

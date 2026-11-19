@@ -57,7 +57,7 @@ public extension BasicShape {
         var geometry = PBRGeometryBuilder(device: device)
         try geometry.add(attributes: mesh.attributes, indices: mesh.indices, label: name)
         let primitive = try geometry.build()[0]
-        let material = try PBRMaterial(name: "Neutral", uniforms: .defaults(baseColor: ShapeMesh.neutralColor, metallic: 0, roughness: 0.5), placeholder: PBRMaterial.placeholderBinding(device: device), device: device)
+        let material = try PBRMaterial(name: "Neutral", uniforms: .defaults(baseColor: ShapeMesh.neutralColor, metallic: 0, roughness: 0.5), placeholder: PBRMaterial.placeholderBinding(device: device))
         var builder = PBRModelBuilder(device: device, restPose: PBRPose(worldMatrices: [matrix_identity_float4x4]))
         builder.addInstance(primitive, material: material, node: 0)
         return try builder.build()

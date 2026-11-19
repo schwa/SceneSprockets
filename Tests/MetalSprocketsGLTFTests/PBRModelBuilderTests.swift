@@ -31,7 +31,7 @@ func makeColorMaterial(_ color: SIMD4<Float>, device: MTLDevice) throws -> PBRMa
     if color.w < 1 {
         uniforms.alphaMode = .blend
     }
-    return try PBRMaterial(uniforms: uniforms, placeholder: PBRMaterial.placeholderBinding(device: device), device: device)
+    return try PBRMaterial(uniforms: uniforms, placeholder: PBRMaterial.placeholderBinding(device: device))
 }
 
 @Suite(.requiresMetal4)
