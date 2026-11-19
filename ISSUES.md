@@ -12333,13 +12333,13 @@ Related: #516 No GPU-driven rendering (overlapping umbrella), #518 No mesh shadi
 ## 545: PBR draws opaque geometry through a merged path that may not be needed
 
 +++
-status: new
+status: open
 priority: critical
 kind: task
 labels: area:renderer, area:performance, effort:l, investigate
 milestone: M007-PBR-Merged-Geometry
 created: 2026-11-18T18:13:33Z
-updated: 2026-11-19T03:27:31Z
+updated: 2026-11-19T03:45:19Z
 +++
 
 MetalSprocketsPBR merges opaque, unmorphed triangle primitives into shared vertex, index, instance and material buffers (PBRMergedGeometry), so one draw element issues many Metal draws. Its reason: MetalSprockets' per-frame cost grows with the number of elements, not Metal draw calls. Merging works around MetalSprockets overhead; it does not address a GPU cost. Merging may have been the wrong choice.
