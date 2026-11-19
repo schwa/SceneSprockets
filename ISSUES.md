@@ -11778,9 +11778,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, indirect-drawing
-milestone: M002-Performance
+milestone: M007-PBR-Merged-Geometry
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-17T19:36:22Z
+updated: 2026-11-19T03:27:32Z
 +++
 
 Draw commands are encoded on the CPU each frame. Indirect command buffers would let them be encoded once, or on the GPU. Part of #544.
