@@ -13006,3 +13006,14 @@ created: 2026-11-17T18:07:08Z
 Physics, scene graph, assets and UI features.
 
 ---
+
+## Milestone: M007-PBR-Merged-Geometry
+
++++
+status: open
+created: 2026-11-19T03:27:31Z
++++
+
+Decide whether PBR keeps the merged-geometry path (#545), and fix the issues it causes or blocks.
+
+---
