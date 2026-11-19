@@ -12380,6 +12380,7 @@ Per-batch drawing costs 2-8x more render-thread CPU on most multi-primitive scen
 
 - `2026-11-19T03:52:54Z`: Question 1 (decision): Keep the merged path for now and revisit #545 after MetalSprockets' per-element costs drop (MetalSprockets#519 etc.), re-running bench --no-merging then? Recommended: Yes: keep merging; lower #545 to Medium, label deferred, and re-measure after MetalSprockets#519.
 - `2026-11-19T03:58:37Z`: Related: #572 (bench --no-merging, used for the table above), #571 (NodePerformanceTest regression found in this benchmark).
+- `2026-11-19T03:59:13Z`: RFC: RFCs/0001-pbr-performance.md (keep merging optional; alternative ways to cut per-draw cost).
 
 ---
 
