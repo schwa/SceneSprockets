@@ -11908,8 +11908,9 @@ priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, indirect-drawing
 milestone: M002-Performance
+depends: 545
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-17T19:14:02Z
+updated: 2026-11-19T01:50:44Z
 +++
 
 Mesh detail per object is not chosen on the GPU with compute + indirect commands.
