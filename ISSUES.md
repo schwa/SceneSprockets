@@ -13066,9 +13066,8 @@ priority: high
 kind: enhancement
 labels: area:renderer, area:performance, effort:s
 milestone: M007-PBR-Merged-Geometry
-depends: 0
 created: 2026-11-19T05:54:15Z
-updated: 2026-11-19T14:35:48Z
+updated: 2026-11-19T14:35:53Z
 +++
 
 Opaque per-batch draws are grouped by vertex variant and pipeline state (PBRDrawPlan.OpaqueGroup), but not ordered by material within a group, so state and bindings change between neighbouring draws more than needed.
