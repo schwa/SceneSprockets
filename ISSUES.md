@@ -11775,12 +11775,12 @@ Draw selection, culling, and draw arguments are produced on the CPU. GPU-driven 
 
 +++
 status: open
-priority: low
+priority: medium
 kind: feature
 labels: area:renderer, effort:l, subtask, indirect-drawing
 milestone: M007-PBR-Merged-Geometry
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-19T03:27:32Z
+updated: 2026-11-19T14:01:40Z
 +++
 
 Draw commands are encoded on the CPU each frame. Indirect command buffers would let them be encoded once, or on the GPU. Part of #544.
@@ -11836,10 +11836,10 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, bounds, indirect-drawing
-milestone: M007-PBR-Merged-Geometry
+milestone: M002-Performance
 depends: 545
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-19T03:27:32Z
+updated: 2026-11-19T14:01:26Z
 +++
 
 Hidden objects are still drawn: there is no depth pyramid and compute pass to cull them. A GPU culling result only saves work if the GPU also issues the draws (indirect draws, #517); otherwise visibility would be read back to the CPU a frame late. How draws are fed depends on #545. Part of #543 and #544.
@@ -11873,10 +11873,10 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, indirect-drawing
-milestone: M007-PBR-Merged-Geometry
+milestone: M002-Performance
 depends: 545
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-19T03:27:32Z
+updated: 2026-11-19T14:01:26Z
 +++
 
 Mesh detail is chosen on the CPU (Node.levelsOfDetail, by camera distance), not on the GPU. Choosing it on the GPU only helps if the GPU also issues the draws (#517); how draws are fed depends on #545. Part of #544.
@@ -12570,10 +12570,10 @@ status: new
 priority: low
 kind: bug
 labels: area:performance, effort:m, deferred, gltf
-milestone: M007-PBR-Merged-Geometry
+milestone: M002-Performance
 depends: 573
 created: 2026-11-19T02:12:55Z
-updated: 2026-11-19T04:09:28Z
+updated: 2026-11-19T14:01:47Z
 +++
 
 In GLTFViewer (Release, 120 Hz display) AnimationPointerUVs runs at ~90 fps with its animation playing. Headless (ms-gltf-render --benchmark 60 --orbit --animation 0, Release, M5 Max): ~4.8 ms CPU, <1 ms GPU per frame. The scene has 132 primitives, 82 materials (9 transmissive, 3 blended) and animates material texture transforms through KHR_animation_pointer, so each frame also pays for the transmission pre-passes, per-batch drawing of the 3 blended primitives, and per-frame material uniform arrays for the merged sets. Not yet profiled.
@@ -13041,11 +13041,12 @@ Since the material table (#573), draws read material textures from PBRMaterialTa
 
 +++
 status: new
-priority: low
+priority: high
 kind: enhancement
 labels: area:renderer, area:performance, effort:m
 milestone: M007-PBR-Merged-Geometry
 created: 2026-11-19T05:54:15Z
+updated: 2026-11-19T14:01:06Z
 +++
 
 PBRRenderer.draw(_:materials:) binds, for every batch: the asset's vertex buffer at the primitive's first vertex, the batch's instances, the material table and the material index. The vertex and index buffers are shared by every primitive of the asset, so most of these binds repeat. Morphed primitives need vertex IDs local to the primitive.
@@ -13058,11 +13059,12 @@ RFC 0001 option 3.
 
 +++
 status: new
-priority: low
+priority: high
 kind: enhancement
 labels: area:renderer, area:performance, effort:s
 milestone: M007-PBR-Merged-Geometry
 created: 2026-11-19T05:54:15Z
+updated: 2026-11-19T14:00:59Z
 +++
 
 Opaque per-batch draws are grouped by vertex variant and pipeline state (PBRDrawPlan.OpaqueGroup), but not ordered by material within a group, so state and bindings change between neighbouring draws more than needed.
@@ -13089,12 +13091,14 @@ bench --no-merging uses more GPU time than bench on several scenes with about th
 ## 579: PBRMaterial initializers take a device they do not use
 
 +++
-status: new
-priority: low
+status: closed
+priority: high
 kind: task
 labels: area:renderer, effort:s
 milestone: M007-PBR-Merged-Geometry
 created: 2026-11-19T06:10:23Z
+updated: 2026-11-19T14:08:44Z
+closed: 2026-11-19T14:08:44Z
 +++
 
 Since #575 removed the per-material argument buffer, PBRMaterial.init(name:uniforms:doubleSided:renderState:textureTransforms:textureBindings:device:) ignores its device argument (declared 'device _:'). The convenience init with placeholder: forwards it. About 25 callers in SceneSprockets (sources, tests, GLTFViewer, SceneSprocketsDemo, Composer) still pass a device.
@@ -13104,11 +13108,13 @@ Since #575 removed the per-material argument buffer, PBRMaterial.init(name:unifo
 ## 580: READMEs give xcb commands
 
 +++
-status: new
+status: closed
 priority: low
 kind: documentation
 labels: effort:xs
 created: 2026-11-19T06:16:12Z
+updated: 2026-11-19T14:08:44Z
+closed: 2026-11-19T14:08:44Z
 +++
 
 xcb is not a standard tool, so readers cannot run these commands as written:
