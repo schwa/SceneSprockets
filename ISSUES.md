@@ -11873,10 +11873,10 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, indirect-drawing
-milestone: M002-Performance
+milestone: M007-PBR-Merged-Geometry
 depends: 545
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-19T01:50:44Z
+updated: 2026-11-19T03:27:32Z
 +++
 
 Mesh detail is chosen on the CPU (Node.levelsOfDetail, by camera distance), not on the GPU. Choosing it on the GPU only helps if the GPU also issues the draws (#517); how draws are fed depends on #545. Part of #544.
