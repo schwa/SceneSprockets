@@ -12973,12 +12973,14 @@ Fixed in 4be90eac: PBRScene.usesMergedGeometry (package) passes the setting to i
 ## 573: PBR material data is copied per merged set and rebuilt whole when one material changes
 
 +++
-status: new
+status: closed
 priority: medium
 kind: enhancement
 labels: area:renderer, area:performance, effort:l
 milestone: M007-PBR-Merged-Geometry
 created: 2026-11-19T04:09:28Z
+updated: 2026-11-19T06:31:29Z
+closed: 2026-11-19T06:31:29Z
 +++
 
 Material uniforms and textures live in several places: each merged set copies its batches' uniforms into a material buffer and its textures into an ArgumentBuffer at build time (PBRMergedGeometry), and the per-batch path binds each batch's uniforms by value plus the material's own ArgumentBuffer.
@@ -12997,6 +12999,7 @@ RFC: RFCs/0001-pbr-performance.md option 1.
 - `2026-11-19T04:15:24Z`: Needs MetalSprockets#580 (field-level ArgumentBuffer updates).
 - `2026-11-19T05:41:45Z`: Implemented in cb29f2e8 (per-renderer PBRMaterialTable, both paths). Paused: AnimationPointerUVs merged is 2.34 -> 2.76 ms CPU from ArgumentBuffer's per-version cost; needs MetalSprockets#582. Static scenes unchanged. Measured with the local MetalSprockets (includes #581, unreleased).
 - `2026-11-19T06:06:31Z`: MetalSprockets#582 fixed locally (unreleased): AnimationPointerUVs merged 2.76 -> 2.47 ms CPU (2.34 before the table). Static scenes unchanged.
+- `2026-11-19T06:31:29Z`: Done with MetalSprockets 0.3.7 (#582): AnimationPointerUVs merged ~2.5 ms CPU (2.34 before the table, 2.76 with the table on 0.3.6). Static scenes unchanged.
 
 ---
 
