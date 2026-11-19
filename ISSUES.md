@@ -13081,6 +13081,7 @@ Opaque per-batch draws are grouped by vertex variant and pipeline state (PBRDraw
 RFC 0001 option 4.
 
 - `2026-11-19T14:35:48Z`: Not tried. #576 showed binds are a small part of per-batch time (2-6% on large scenes); ordering draws by material saves only binds and state changes, so it is not expected to help until per-element cost drops (MetalSprockets#583).
+- `2026-11-19T14:51:01Z`: Could be solved generally by MetalSprockets#585 (a List-like container for many similar draws that owns ordering by state).
 
 ---
 
@@ -13144,14 +13145,32 @@ priority: medium
 kind: task
 labels: area:renderer, area:performance, tracking
 milestone: M007-PBR-Merged-Geometry
-depends: 545, 574, 576, 577, 578, 571, 572, 573, 575, 579
+depends: 545, 574, 576, 577, 578, 571, 572, 573, 575, 579, 582
 created: 2026-11-19T14:17:08Z
-updated: 2026-11-19T14:18:22Z
+updated: 2026-11-19T14:51:02Z
 +++
 
 Umbrella for RFCs/0001-pbr-performance.md: per-batch PBR drawing is too slow for merged sets to be optional. The work is in its dependencies.
 
 - `2026-11-19T14:20:17Z`: MetalSprockets side: MetalSprockets#583.
+- `2026-11-19T14:51:02Z`: MetalSprockets#585 proposes a general container for many similar draws, which would replace the merged path's hand-rolled batching.
+
+---
+
+## 582: PBR batches draws by hand instead of with a MetalSprockets draw container
+
++++
+status: new
+priority: low
+kind: task
+labels: area:renderer, area:performance, effort:l, deferred
+milestone: M007-PBR-Merged-Geometry
+created: 2026-11-19T14:51:02Z
++++
+
+PBRRenderer issues the draws of merged sets from one Draw closure over shared buffers (PBRMergedGeometry, mergedDrawCalls), with its own per-record tables (instances, material indices, cull mode, winding) and eligibility rules, and draws everything else one element per batch. This is a second draw path that exists only to work around MetalSprockets' per-element cost.
+
+MetalSprockets#585 proposes a container for many similar draws. If it is implemented, PBR could draw opaque and blended batches through it and drop the hand-rolled merged path. Blocked until then.
 
 ---
 
