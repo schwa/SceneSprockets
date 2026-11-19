@@ -12571,7 +12571,9 @@ status: new
 priority: low
 kind: bug
 labels: area:performance, effort:m, deferred, gltf
+milestone: M007-PBR-Merged-Geometry
 created: 2026-11-19T02:12:55Z
+updated: 2026-11-19T03:27:32Z
 +++
 
 In GLTFViewer (Release, 120 Hz display) AnimationPointerUVs runs at ~90 fps with its animation playing. Headless (ms-gltf-render --benchmark 60 --orbit --animation 0, Release, M5 Max): ~4.8 ms CPU, <1 ms GPU per frame. The scene has 132 primitives, 82 materials (9 transmissive, 3 blended) and animates material texture transforms through KHR_animation_pointer, so each frame also pays for the transmission pre-passes, per-batch drawing of the 3 blended primitives, and per-frame material uniform arrays for the merged sets. Not yet profiled.
