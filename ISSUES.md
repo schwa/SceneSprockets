@@ -13092,10 +13092,27 @@ kind: task
 labels: area:renderer, effort:s
 milestone: M007-PBR-Merged-Geometry
 created: 2026-11-19T06:10:23Z
-updated: 2026-11-19T06:10:23Z
 +++
 
 Since #575 removed the per-material argument buffer, PBRMaterial.init(name:uniforms:doubleSided:renderState:textureTransforms:textureBindings:device:) ignores its device argument (declared 'device _:'). The convenience init with placeholder: forwards it. About 25 callers in SceneSprockets (sources, tests, GLTFViewer, SceneSprocketsDemo, Composer) still pass a device.
+
+---
+
+## 580: READMEs give xcb commands
+
++++
+status: new
+priority: low
+kind: documentation
+labels: effort:xs
+created: 2026-11-19T06:16:12Z
++++
+
+xcb is not a standard tool, so readers cannot run these commands as written:
+- README.md:84: `xcb run scenesprockets-demos`
+- Examples/SceneSprocketsDemo/Packages/SceneSprocketsDemoSupport/README.md:6: `xcb run scenesprockets-demos`
+
+MetalSprockets/README.md:205 has the same problem (`xcb test`, `xcb test -e MTL_DEBUG_LAYER=1`).
 
 ---
 
