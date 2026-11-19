@@ -102,9 +102,6 @@ public final class PBRMaterial: @unchecked Sendable {
     /// Every material texture and its sampler, in `PBRMaterialTextureIndex` order. Slots the material does not use
     /// hold a placeholder (see ``placeholderBinding(device:)``).
     public let textureBindings: [Binding]
-    /// `textureBindings` as a `PBRMaterialResources` argument buffer, so a draw binds the whole material with one
-    /// buffer and keeps its textures resident.
-    public let resources: ArgumentBuffer
     /// Animatable texture transforms, keyed by the producer's name for the texture (glTF: its path below
     /// `/materials/N/`).
     public let textureTransforms: [String: TextureTransform]
@@ -124,7 +121,7 @@ public final class PBRMaterial: @unchecked Sendable {
 
     /// `textureBindings` must have one binding per `PBRMaterialTextureIndex` (`kPBRMaterialTextureCount`); enable
     /// the matching `uniforms` slots for the ones that are real textures.
-    public init(name: String? = nil, uniforms: PBRMaterialUniforms, doubleSided: Bool = false, renderState: PBRRenderState = PBRRenderState(), textureTransforms: [String: TextureTransform] = [:], textureBindings: [Binding], device: MTLDevice) {
+    public init(name: String? = nil, uniforms: PBRMaterialUniforms, doubleSided: Bool = false, renderState: PBRRenderState = PBRRenderState(), textureTransforms: [String: TextureTransform] = [:], textureBindings: [Binding], device _: MTLDevice) {
         precondition(textureBindings.count == Int(kPBRMaterialTextureCount.rawValue), "One texture binding per PBRMaterialTextureIndex")
         self.name = name
         self.uniforms = uniforms
@@ -132,8 +129,6 @@ public final class PBRMaterial: @unchecked Sendable {
         self.renderState = renderState
         self.textureTransforms = textureTransforms
         self.textureBindings = textureBindings
-        resources = ArgumentBuffer(device: device, label: "\(name ?? "PBR Material") Resources")
-        resources.setMaterialResources(textureBindings)
     }
 
     /// A material with every texture slot holding `placeholder` (disabled in the uniforms): factors only.
@@ -148,10 +143,9 @@ public final class PBRMaterial: @unchecked Sendable {
         self.renderState = renderState
         self.textureTransforms = textureTransforms
         textureBindings = material.textureBindings
-        resources = material.resources
     }
 
-    /// A new material sharing this one's textures and GPU resources, with the given values replaced.
+    /// A new material sharing this one's textures, with the given values replaced.
     public func with(uniforms: PBRMaterialUniforms? = nil, renderState: PBRRenderState? = nil, textureTransforms: [String: TextureTransform]? = nil) -> PBRMaterial { // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         PBRMaterial(copying: self, uniforms: uniforms ?? self.uniforms, renderState: renderState ?? self.renderState, textureTransforms: textureTransforms ?? self.textureTransforms)
     }

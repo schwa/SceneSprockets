@@ -13019,15 +13019,17 @@ The remaining NodePerformanceTest gap has no single hot spot in a Time Profiler 
 ## 575: PBRMaterial builds an argument buffer that no draw uses
 
 +++
-status: new
+status: closed
 priority: low
 kind: task
 labels: area:renderer, effort:xs
 milestone: M007-PBR-Merged-Geometry
 created: 2026-11-19T05:54:15Z
+updated: 2026-11-19T06:01:40Z
+closed: 2026-11-19T06:01:40Z
 +++
 
-Since the material table (#573), draws read material textures from PBRMaterialTable. Each PBRMaterial still builds its own PBRMaterialResources ArgumentBuffer (PBRMaterial.resources), and PBRModelBuilder keeps it resident. Nothing binds it.
+Since the material table (#573), draws read material textures from PBRMaterialTable. Each PBRMaterial still built its own PBRMaterialResources ArgumentBuffer (PBRMaterial.resources) holding its texture and sampler values. Nothing bound it, so it never allocated a GPU buffer, but every material kept the object.
 
 ---
 
