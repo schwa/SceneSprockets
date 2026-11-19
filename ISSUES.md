@@ -13083,6 +13083,22 @@ bench --no-merging uses more GPU time than bench on several scenes with about th
 
 ---
 
+## 579: PBRMaterial initializers take a device they do not use
+
++++
+status: new
+priority: low
+kind: task
+labels: area:renderer, effort:s
+milestone: M007-PBR-Merged-Geometry
+created: 2026-11-19T06:10:23Z
+updated: 2026-11-19T06:10:23Z
++++
+
+Since #575 removed the per-material argument buffer, PBRMaterial.init(name:uniforms:doubleSided:renderState:textureTransforms:textureBindings:device:) ignores its device argument (declared 'device _:'). The convenience init with placeholder: forwards it. About 25 callers in SceneSprockets (sources, tests, GLTFViewer, SceneSprocketsDemo, Composer) still pass a device.
+
+---
+
 ## Milestone: M001-Correctness
 
 +++
