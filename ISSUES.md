@@ -13040,18 +13040,21 @@ Since the material table (#573), draws read material textures from PBRMaterialTa
 ## 576: Per-batch PBR draws bind every buffer per batch
 
 +++
-status: new
+status: closed
 priority: high
 kind: enhancement
 labels: area:renderer, area:performance, effort:m
 milestone: M007-PBR-Merged-Geometry
 created: 2026-11-19T05:54:15Z
-updated: 2026-11-19T14:01:06Z
+updated: 2026-11-19T14:35:48Z
+closed: 2026-11-19T14:35:48Z
 +++
 
 PBRRenderer.draw(_:materials:) binds, for every batch: the asset's vertex buffer at the primitive's first vertex, the batch's instances, the material table and the material index. The vertex and index buffers are shared by every primitive of the asset, so most of these binds repeat. Morphed primitives need vertex IDs local to the primitive.
 
 RFC 0001 option 3.
+
+- `2026-11-19T14:35:48Z`: Tried: bind the material table once per pipeline, and when a pipeline's draws share geometry, bind the vertex and skin buffers once and pass baseVertex per draw (morphed draws unchanged). Tests passed. bench --no-merging, Release, M5 Max, CPU ms: NodePerformanceTest 362 -> 341, CarConcept 9.50 -> 9.36, AnimationPointerUVs 19.3 -> 19.0, BrainStem 4.89 -> 4.73; small scenes worse by 0.1-0.4 ms (ABeautifulGame 2.32 -> 2.72, SimpleInstancing 0.60 -> 0.71). Not kept: per-batch time is dominated by per-element cost (MetalSprockets#583), not binds.
 
 ---
 
@@ -13063,13 +13066,16 @@ priority: high
 kind: enhancement
 labels: area:renderer, area:performance, effort:s
 milestone: M007-PBR-Merged-Geometry
+depends: 0
 created: 2026-11-19T05:54:15Z
-updated: 2026-11-19T14:00:59Z
+updated: 2026-11-19T14:35:48Z
 +++
 
 Opaque per-batch draws are grouped by vertex variant and pipeline state (PBRDrawPlan.OpaqueGroup), but not ordered by material within a group, so state and bindings change between neighbouring draws more than needed.
 
 RFC 0001 option 4.
+
+- `2026-11-19T14:35:48Z`: Not tried. #576 showed binds are a small part of per-batch time (2-6% on large scenes); ordering draws by material saves only binds and state changes, so it is not expected to help until per-element cost drops (MetalSprockets#583).
 
 ---
 
