@@ -12535,6 +12535,38 @@ Part of #547.
 
 ---
 
+## 552: Changes across SceneSprockets' sibling packages need a chain of releases
+
++++
+status: new
+priority: low
+kind: task
+labels: proposal,effort:l
+created: 2026-11-19T01:14:33Z
++++
+
+SceneSprockets depends on several sibling packages that have no other users:
+
+- MetalSprocketsLighting: used only by MetalSprocketsPBR and SceneSprockets.
+- MetalSprocketsPBR: used only by MetalSprocketsGLTF, SceneSprockets and SceneSprocketsAddOns.
+- MetalSprocketsGLTF: used only by SceneSprockets (and its own GLTFViewer demo).
+
+A change that crosses them needs a release of each, in dependency order. The shared lighting work (#547) needed eight tags across four repos (Lighting 0.0.2-0.0.4, PBR 0.3.0 and 0.4.0, GLTF 0.2.0 and 0.3.0) plus ordered pushes.
+
+MetalCompilerPlugin does not recompile a .metal file when a header from another package changes, so cross-package shader edits can pass on a stale metallib (seen with SceneSprocketsAddOns' voxel and SDF shaders during #547).
+
+SceneSprocketsAddOns follows SceneSprockets' main branch while SceneSprockets' demo depends on SceneSprocketsAddOns. This loop causes the 'conflicting identity for scenesprockets' warning and forces a fixed push order.
+
+## Proposed (per schwa; maybe, not decided)
+
+- Roll MetalSprocketsLighting into SceneSprockets as its own products.
+- Possibly roll in MetalSprocketsPBR and MetalSprocketsGLTF, unless they should stay standalone libraries.
+- SceneSprocketsAddOns stays standalone; it would depend on tagged SceneSprockets releases instead of main.
+
+Costs: one-time migration (history, issue trackers, manifests), shared versioning, larger download for anyone using only PBR or glTF.
+
+---
+
 ## Milestone: M001-Correctness
 
 +++
