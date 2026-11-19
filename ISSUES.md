@@ -13163,14 +13163,15 @@ Umbrella for RFCs/0001-pbr-performance.md: per-batch PBR drawing is too slow for
 status: new
 priority: low
 kind: task
-labels: area:renderer, area:performance, effort:l, deferred
+labels: area:renderer, area:performance, effort:l
 milestone: M007-PBR-Merged-Geometry
 created: 2026-11-19T14:51:02Z
+updated: 2026-11-19T14:52:01Z
 +++
 
 PBRRenderer issues the draws of merged sets from one Draw closure over shared buffers (PBRMergedGeometry, mergedDrawCalls), with its own per-record tables (instances, material indices, cull mode, winding) and eligibility rules, and draws everything else one element per batch. This is a second draw path that exists only to work around MetalSprockets' per-element cost.
 
-MetalSprockets#585 proposes a container for many similar draws. If it is implemented, PBR could draw opaque and blended batches through it and drop the hand-rolled merged path. Blocked until then.
+MetalSprockets#585 proposes a container for many similar draws. If it is implemented, PBR could draw opaque and blended batches through it and drop the hand-rolled merged path.
 
 ---
 
