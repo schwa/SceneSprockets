@@ -86,7 +86,8 @@ extension SceneGraph {
         let revision = self.revision
         var hits: [Hit] = []
         let geometry = HitTestGeometryCache.shared
-        let entries = meshEntries().filter { entry in
+        // Only entries whose world bounds the ray enters (#337).
+        let entries = meshEntries(hitBy: ray, maximumDistance: options.maximumDistance).filter { entry in
             guard entry.node.categoryBitMask & options.categoryBitMask != 0 else {
                 return false
             }

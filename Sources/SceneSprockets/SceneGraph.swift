@@ -334,6 +334,7 @@ public class SceneGraph {
     }
 
     @ObservationIgnored private var flattenedCache: (revision: Revision, flattened: Flattened)?
+    @ObservationIgnored var meshEntryIndexCache: (revision: Revision, index: MeshEntryIndex)?
     @ObservationIgnored var presentationCache: PresentationParts?
     // Number of full traversals done for queries; for tests. Not observed: queries run during SwiftUI view updates,
     // and writing an observed property then crashes SwiftUI (#212).
