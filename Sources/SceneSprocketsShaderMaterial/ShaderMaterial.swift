@@ -149,7 +149,7 @@ public struct ShaderMaterialRenderer: MaterialRenderer, Equatable {
             let deformed = entry.renderDeformed(revision: context.revision)
             return ShaderMaterialItem(mesh: deformed?.mesh ?? entry.mesh, submeshIndex: entry.submeshIndex, modelMatrix: deformed?.modelMatrix ?? entry.worldTransform, material: material, opacity: entry.opacity, isTransparent: entry.isTransparent, receivesShadow: entry.receivesShadow)
         }
-        let lights = shaderMaterialLights(context.lights, shadowSlices: context.shadow == nil ? [] : context.lightShadowSlices, cameraPosition: cameraPosition)
+        let lights = context.lightingLights(cameraPosition: cameraPosition)
         return ShaderMaterialDrawsElement(items: items, context: context, cameraPosition: cameraPosition, lights: lights).eraseToAnyElement()
     }
 }
@@ -235,34 +235,6 @@ struct ShaderMaterialDrawsElement: Element {
         .vertexDescriptor(item.mesh.vertexDescriptor.mtlVertexDescriptor)
         .materialRenderState(item.material.renderState, isTransparent: item.isTransparent, writesBlendedDepth: context.stereoViews != nil)
         .vertexAmplification(count: context.viewCount)
-    }
-}
-
-// Lights point down their node's -Z axis. `shadowSlices` is parallel to `lights` (empty: no shadows). Positions are
-// camera-relative.
-func shaderMaterialLights(_ lights: [(worldTransform: simd_float4x4, light: Light)], shadowSlices: [Range<Int>], cameraPosition: SIMD3<Float>) -> [LightingLight] {
-    lights.enumerated().map { index, entry in
-        let slices = index < shadowSlices.count ? shadowSlices[index] : 0..<0
-        let transform = entry.worldTransform
-        let forward = -transform.columns.2.xyz
-        let type: LightingLightType = switch entry.light.type {
-        case .directional: .directional
-        case .spot: .spot
-        case .point: .point
-        }
-        return LightingLight(
-            position: cameraRelative(transform.columns.3.xyz, to: cameraPosition),
-            direction: simd_length(forward) > 0 ? simd_normalize(forward) : [0, 0, -1],
-            color: entry.light.color,
-            intensity: entry.light.intensity,
-            // 0 is infinite in KHR_lights_punctual.
-            range: entry.light.range.isFinite ? entry.light.range : 0,
-            innerConeCos: cos(entry.light.innerConeAngle),
-            outerConeCos: cos(entry.light.outerConeAngle),
-            type: type,
-            shadowSliceStart: Int32(slices.lowerBound),
-            shadowSliceCount: Int32(slices.count)
-        )
     }
 }
 

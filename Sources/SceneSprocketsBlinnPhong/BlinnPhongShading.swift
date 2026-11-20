@@ -22,11 +22,7 @@ public struct BlinnPhongShading {
     /// Creates the lighting inputs from a render context.
     public init(context: RenderContext, ambientLightColor: SIMD3<Float>) {
         let cameraPosition = context.cameraMatrix.columns.3.xyz
-        let lights = blinnPhongLights(context.lights, shadowSlices: context.shadow == nil ? [] : context.lightShadowSlices).map { light in
-            var light = light
-            light.position = cameraRelative(light.position, to: cameraPosition)
-            return light
-        }
+        let lights = context.lightingLights(cameraPosition: cameraPosition)
         var frame = BlinnPhongFrame()
         frame.ambientLightColor = ambientLightColor
         frame.lightCount = Int32(lights.count)

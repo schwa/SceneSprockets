@@ -107,7 +107,7 @@ func pbrLightDirectionFollowsNodeRotation() {
     // Rotate -90° about X: the node's -Z axis points down (-Y).
     let angle = -Float.pi / 2
     let rotation = simd_float4x4(simd_quatf(angle: angle, axis: [1, 0, 0]))
-    let light = pbrLight(worldTransform: rotation, light: Light(type: .directional))
+    let light = LightingLight(Light(type: .directional), worldTransform: rotation)
     #expect(light.type == .directional)
     #expect(simd_distance(light.direction, [0, -1, 0]) < 0.001)
 }

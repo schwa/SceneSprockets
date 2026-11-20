@@ -580,16 +580,7 @@ extension PBRMaterialRenderer: BackgroundRenderer {
     public func lighting(context: RenderContext, cameraPosition: SIMD3<Float> = .zero) -> PBRLighting {
         let settings = self.settings
         var lighting = PBRLighting(
-            lights: context.lights.enumerated().map { index, light in
-                var result = pbrLight(worldTransform: light.worldTransform.cameraRelative(to: cameraPosition), light: light.light)
-                // Each light samples only its own shadow slices.
-                if context.shadow != nil, index < context.lightShadowSlices.count {
-                    let slices = context.lightShadowSlices[index]
-                    result.shadowSliceStart = Int32(slices.lowerBound)
-                    result.shadowSliceCount = Int32(slices.count)
-                }
-                return result
-            },
+            lights: context.lightingLights(cameraPosition: cameraPosition),
             environment: context.environment.map as? LightingEnvironment ?? settings.environment,
             environmentIntensity: settings.environmentIntensity * context.environment.intensity,
             exposure: context.environment.exposure,
@@ -650,25 +641,3 @@ func pbrPrimitiveInput(entry: SceneGraph.MeshEntry, attributes: [MetalMesh.Verte
     return PBRPrimitiveInput(attributes: attributes, indices: submesh.indices, primitiveType: submesh.primitiveType, morphTargets: morphTargets)
 }
 
-// Lights point down the node's -Z axis.
-func pbrLight(worldTransform: simd_float4x4, light: Light) -> LightingLight {
-    var result = LightingLight()
-    // Spelled out: MetalSprocketsPBR and GeometryLite3D both define SIMD4.xyz, which is ambiguous where both are imported.
-    result.position = SIMD3(worldTransform.columns.3.x, worldTransform.columns.3.y, worldTransform.columns.3.z)
-    let forward = -SIMD3(worldTransform.columns.2.x, worldTransform.columns.2.y, worldTransform.columns.2.z)
-    result.direction = simd_length(forward) > 0 ? simd_normalize(forward) : [0, 0, -1]
-    result.color = light.color
-    result.intensity = light.intensity
-    result.range = light.range
-    switch light.type {
-    case .directional:
-        result.type = .directional
-    case .spot:
-        result.type = .spot
-        result.innerConeCos = cos(light.innerConeAngle)
-        result.outerConeCos = cos(light.outerConeAngle)
-    default:
-        result.type = .point
-    }
-    return result
-}

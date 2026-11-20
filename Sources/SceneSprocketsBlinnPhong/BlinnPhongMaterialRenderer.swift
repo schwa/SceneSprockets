@@ -686,33 +686,6 @@ private struct MaterialKey: Hashable {
     }
 }
 
-// Lights point down their node's -Z axis. `shadowSlices` is parallel to `lights` (empty: no shadows).
-func blinnPhongLights(_ lights: [(worldTransform: simd_float4x4, light: Light)], shadowSlices: [Range<Int>] = []) -> [LightingLight] {
-    lights.enumerated().map { index, entry in
-        let slices = index < shadowSlices.count ? shadowSlices[index] : 0..<0
-        let transform = entry.worldTransform
-        let forward = -SIMD3(transform.columns.2.x, transform.columns.2.y, transform.columns.2.z)
-        let type: LightingLightType = switch entry.light.type {
-        case .directional: .directional
-        case .spot: .spot
-        case .point: .point
-        }
-        return LightingLight(
-            position: transform.columns.3.xyz,
-            direction: simd_length(forward) > 0 ? simd_normalize(forward) : [0, 0, -1],
-            color: entry.light.color,
-            intensity: entry.light.intensity,
-            // 0 is infinite in KHR_lights_punctual.
-            range: entry.light.range.isFinite ? entry.light.range : 0,
-            innerConeCos: cos(entry.light.innerConeAngle),
-            outerConeCos: cos(entry.light.outerConeAngle),
-            type: type,
-            shadowSliceStart: Int32(slices.lowerBound),
-            shadowSliceCount: Int32(slices.count)
-        )
-    }
-}
-
 // From BlinnPhong.metal in SceneSprocketsShaders, loaded once.
 struct BlinnPhongShaders {
     var vertex: VertexShader

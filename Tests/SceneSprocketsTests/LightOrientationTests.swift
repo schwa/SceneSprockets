@@ -10,23 +10,24 @@ import Testing
 private let pointingDown = simd_float4x4(simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])) * simd_float4x4(columns: ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]))
 
 @Test
-func blinnPhongLightsUseNodeOrientation() {
+func lightingLightUsesNodeOrientation() {
     var transform = pointingDown
     transform.columns.3 = [1, 2, 3, 1]
-    let inputs = blinnPhongLights([(transform, Light.spot(intensity: 2))])
-    #expect(inputs.count == 1)
-    #expect(inputs[0].position == [1, 2, 3])
-    #expect(simd_distance(inputs[0].direction, [0, -1, 0]) < 0.0001)
-    #expect(inputs[0].type == .spot)
-    #expect(inputs[0].color == [1, 1, 1])
-    #expect(inputs[0].intensity == 2)
+    let light = LightingLight(Light.spot(intensity: 2), worldTransform: transform, shadowSlices: 2..<5)
+    #expect(light.position == [1, 2, 3])
+    #expect(simd_distance(light.direction, [0, -1, 0]) < 0.0001)
+    #expect(light.type == .spot)
+    #expect(light.color == [1, 1, 1])
+    #expect(light.intensity == 2)
     // Infinite range is 0, as in KHR_lights_punctual.
-    #expect(inputs[0].range == 0)
+    #expect(light.range == 0)
+    #expect(light.shadowSliceStart == 2)
+    #expect(light.shadowSliceCount == 3)
 }
 
 @Test
 func pbrSpotLightUsesConeAngles() {
-    let light = pbrLight(worldTransform: pointingDown, light: .spot(innerConeAngle: 0.2, outerConeAngle: 0.4))
+    let light = LightingLight(.spot(innerConeAngle: 0.2, outerConeAngle: 0.4), worldTransform: pointingDown)
     #expect(light.type == .spot)
     #expect(abs(light.innerConeCos - cos(0.2)) < 0.0001)
     #expect(abs(light.outerConeCos - cos(0.4)) < 0.0001)

@@ -13378,13 +13378,14 @@ Found in the architecture review (#477).
 ## 592: Scene lights are converted to LightingLight in three places, and the copies disagree on range
 
 +++
-status: new
+status: closed
 priority: low
 kind: task
 labels: area:architecture, effort:s, subtask
 milestone: M002-Performance
 created: 2026-11-20T02:56:49Z
-updated: 2026-11-20T02:56:54Z
+updated: 2026-11-20T03:07:15Z
+closed: 2026-11-20T03:07:15Z
 +++
 
 `blinnPhongLights` (SceneSprocketsBlinnPhong), `shaderMaterialLights` (SceneSprocketsShaderMaterial) and `pbrLight` with `PBRMaterialRenderer.lighting` (SceneSprocketsPBR) each convert a scene light and its world transform to a `LightingLight`: forward is the node's -Z axis, cone angles become cosines, shadow slices are attached, positions are shifted to camera-relative space.
@@ -13398,6 +13399,8 @@ The copies have drifted:
 Expected: one light gives the same LightingLight in every renderer.
 
 Found in the architecture review (#477).
+
+- `2026-11-20T02:58:33Z`: Sounds like we didn't properly unify lighting?
 
 ---
 
