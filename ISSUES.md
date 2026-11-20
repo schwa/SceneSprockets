@@ -10904,10 +10904,11 @@ Checked and found sound: the 22 nonisolated(unsafe) static caches (all lock-guar
 status: open
 priority: medium
 kind: task
-labels: area:scenegraph, effort:m
+labels: area:scenegraph, effort:m, has-subtasks
 milestone: M002-Performance
+depends: 589,590,591,592,593
 created: 2026-11-17T06:04:19Z
-updated: 2026-11-20T02:27:18Z
+updated: 2026-11-20T02:56:54Z
 +++
 
 The codebase has not had an architecture review with the improve-codebase-architecture skill. Coupling, shallow modules and logic spread over many places (for example demos listed twice, #115; each material renderer handling scene-wide techniques on its own, #409) are found only one at a time.
@@ -13275,6 +13276,153 @@ Measured (Tests/SceneSprocketsTests/CullingBenchmark.swift, Release, M5 Max): bu
 So hover picking in a large animated scene is likely slower than before #337.
 
 - `2026-11-20T02:35:10Z`: Fixed: BVH.refit updates boxes in place, keeping the tree, and the mesh entry index refits when the entries are the same submeshes in the same order (transforms or poses changed), rebuilding only when the structure changed. CullingBenchmark, 10,000 entries, Release, M5 Max: refit 120 us vs build ~1,700 us; a linear pass over entry boxes is ~60 us. Flattening the entries after a change (~2.6 ms) dominates either way and is not new.
+
+---
+
+## 588: Re-flattening mesh entries after a change takes ~2.6 ms for 10,000 entries
+
++++
+status: new
+priority: medium
+kind: bug
+labels: area:scenegraph, area:performance, effort:m
+milestone: M002-Performance
+created: 2026-11-20T02:46:36Z
++++
+
+SceneGraph.meshEntries() (flattened(worldTransform:)) is cached by revision, so any change, including a transform-only change, re-walks the graph and rebuilds every entry. Renderers ask for the entries every frame, so an animated scene pays this every frame.
+
+Measured with Tests/SceneSprocketsTests/CullingBenchmark.swift (Release, M5 Max): moving one node of a 10,000-box scene and asking for the entries again takes ~2.6 ms (animated_linear_us minus the ~60 us culling pass). At 120 Hz (8.3 ms per frame) that is about a third of the frame before any drawing.
+
+Possibly related to node access cost (#270): flattening reads several fields of every node.
+
+---
+
+## 589: Animation blending, controller and state machine are implemented twice (glTF and scene graph)
+
++++
+status: new
+priority: medium
+kind: task
+labels: area:architecture, effort:l, subtask
+milestone: M002-Performance
+created: 2026-11-20T02:56:32Z
+updated: 2026-11-20T02:56:53Z
++++
+
+MetalSprocketsGLTF (GLTFAnimationController, the blending in GLTFPoser, GLTFAnimationStateMachine) and SceneSprockets/AnimationBlending.swift (AnimationController, AnimationMixer, AnimationStateMachine) hold near line-for-line copies of the same logic. A diff of `advance` and of `blendedValues`/`addDeltas` shows only renames (`animation` → `clip`, `Target` → `Key`).
+
+The rest-pose fill for partial weights, additive deltas, weight normalization, looping and phase sync must behave the same in both, but nothing enforces it: a fix in one copy does not reach the other. Neither target depends on the other, so there is no shared place for the logic today.
+
+AnimationControllerTests and AnimationBlendingTests test the same behaviour twice.
+
+Found in the architecture review (#477).
+
+---
+
+## 590: Skinned and morphed geometry for a frame is resolved in four places and passed through a per-node cache
+
++++
+status: new
+priority: medium
+kind: task
+labels: area:architecture, effort:l, subtask
+milestone: M002-Performance
+created: 2026-11-20T02:56:48Z
+updated: 2026-11-20T02:56:53Z
++++
+
+The mesh and model matrix that a skinned or morphed entry draws with are worked out separately in:
+
+- Deformation.swift (CPU deformation, `MeshEntry.deformed(revision:)`)
+- GPUDeformation.swift (compute pre-pass, for `DrawsDeformedVertices` materials)
+- Shadows.prepare (its own GPU skinning, position and influence buffers)
+- each of the Blinn-Phong, ShaderMaterial and debug renderers, through `renderDeformed(revision:)`
+
+`GPUDeformation.prepare` writes its result onto `NodeRenderCache`, and the renderers read it back later by revision. A renderer is only correct when SceneGraphElement ran the pre-pass first, and each renderer must remember to call `renderDeformed` and to skip culling for deformed entries. A custom element built on the public `renderBatches` gets none of this.
+
+The rules for which morph targets and weights are valid are repeated in the CPU path, the GPU path and the PBR primitive input.
+
+Found in the architecture review (#477).
+
+---
+
+## 591: SceneGraphElement.body decides the frame's passes and builds their elements in one 250-line function
+
++++
+status: new
+priority: medium
+kind: task
+labels: area:architecture, effort:l, subtask
+milestone: M002-Performance
+created: 2026-11-20T02:56:48Z
+updated: 2026-11-20T02:56:53Z
++++
+
+`SceneGraphElement.body` (SceneGraphRenderer.swift) decides what a frame contains and builds the elements at the same time: post targets, shadow preparation, the deformation pre-pass, the ambient occlusion depth passes and their in-shader split, renderer pre-passes, background, batches, text, particles and soft-particle depth copy, `storesDepth`, and the order of the post passes.
+
+It finds renderer and material abilities by downcasting to six separate protocols: PrePassRenderer, BackgroundRenderer, ShadowCasterRenderer, SamplesShadowsInShader, AppliesAmbientOcclusionInShader and DrawsDeformedVertices.
+
+The pass decisions can only be observed by rendering, so they are covered by golden-image and pixel tests (ShadowTests, FogTests, PostProcessingTests, TransmissionTests) and not by fast tests. MetalSprocketsPBR has a tested draw plan (DrawPlanTests); the scene level has no equivalent.
+
+Related: #512, #409.
+
+Found in the architecture review (#477).
+
+---
+
+## 592: Scene lights are converted to LightingLight in three places, and the copies disagree on range
+
++++
+status: new
+priority: low
+kind: task
+labels: area:architecture, effort:s, subtask
+milestone: M002-Performance
+created: 2026-11-20T02:56:49Z
+updated: 2026-11-20T02:56:54Z
++++
+
+`blinnPhongLights` (SceneSprocketsBlinnPhong), `shaderMaterialLights` (SceneSprocketsShaderMaterial) and `pbrLight` with `PBRMaterialRenderer.lighting` (SceneSprocketsPBR) each convert a scene light and its world transform to a `LightingLight`: forward is the node's -Z axis, cone angles become cosines, shadow slices are attached, positions are shifted to camera-relative space.
+
+The copies have drifted:
+
+- Range: Blinn-Phong and ShaderMaterial send 0 for an infinite range; PBR sends `light.range` unchanged.
+- Cone cosines: PBR sets them only for spot lights; the other two set them for every light.
+- Camera-relative shift: done inside the function for ShaderMaterial, by the caller for PBR, and elsewhere for Blinn-Phong.
+
+Expected: one light gives the same LightingLight in every renderer.
+
+Found in the architecture review (#477).
+
+---
+
+## 593: A node field is declared by hand in about seven places
+
++++
+status: new
+priority: low
+kind: task
+labels: area:architecture, effort:m, subtask
+milestone: M002-Performance
+created: 2026-11-20T02:56:49Z
+updated: 2026-11-20T02:56:54Z
++++
+
+Each of the 25 node fields (transform, content, opacity, skin, ...) is listed separately in:
+
+- Node.swift: a `NodeFieldStorage` variable
+- Node+Fields.swift: a `FieldKeyPaths` entry, a `worldFields` slot and the computed property
+- NodeComponents.swift: the component type
+- `Node.clone()`
+- the archive encode and decode (SceneGraph+Archive.swift)
+- for render fields, the copies in `MeshEntry`
+
+Nothing checks that the lists agree. A field missing from `clone()` or the archive fails silently: the value is dropped.
+
+Note: field access is performance-tuned (#283, #270), and the lists are next to the flattening code of #588.
+
+Found in the architecture review (#477).
 
 ---
 
