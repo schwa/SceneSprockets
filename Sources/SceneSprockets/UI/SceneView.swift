@@ -110,6 +110,7 @@ public struct SceneView: View {
     @State private var orbitTarget: SIMD3<Float>?
     @State private var frames = SceneViewFrames()
     @State private var frameTiming = FrameTimingHolder()
+    @State private var statisticsHolder = SceneStatisticsHolder()
 
     /// Creates a view that shows a scene graph.
     ///
@@ -226,6 +227,9 @@ public struct SceneView: View {
             if showsFrameTiming {
                 frameTiming.statistics = statistics
             }
+            if showsStatistics {
+                statisticsHolder.record(statistics)
+            }
             onFrameTiming?(statistics)
         }
         .overlay(alignment: .topTrailing) {
@@ -235,16 +239,7 @@ public struct SceneView: View {
         }
         .overlay(alignment: .bottomLeading) {
             if showsStatistics {
-                TimelineView(.periodic(from: .now, by: 0.5)) { _ in
-                    let statistics = sceneGraph.statistics
-                    Text("\(statistics.meshCount) meshes \u{00B7} \(statistics.triangleCount) triangles \u{00B7} \(statistics.lightCount) lights")
-                        .font(.caption.monospacedDigit())
-                        // A tight badge inset; the default padding is too large for caption text.
-                        .padding(4)
-                        .background(.black.opacity(0.6), in: .rect(cornerRadius: 4))
-                        .foregroundStyle(.white)
-                        .padding()
-                }
+                SceneStatisticsOverlay(holder: statisticsHolder, sceneGraph: sceneGraph)
             }
         }
     }
@@ -713,7 +708,8 @@ public extension SceneView {
         with { $0.materialChannel = channel }
     }
 
-    /// Overlays scene statistics (meshes, triangles, lights), like SCNView.showsStatistics. Also on when the
+    /// Overlays scene statistics (FPS, meshes, triangles, vertices, lights and a frame-time sparkline), like
+    /// SCNView.showsStatistics. Tap it for a chart of frame time by phase. Also on when the
     /// `SS_SHOWS_STATISTICS` environment variable is set.
     func sceneStatistics(_ shown: Bool = true) -> Self {
         with { $0.settingsShowStatistics = shown }

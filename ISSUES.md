@@ -2718,13 +2718,14 @@ Blocked on MetalSprocketsPBR#16 (PBRTransmissionPass from existing renderers).
 ## 131: Add SceneKit-style debug statistics overlay
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: effort:l, area:renderer
 milestone: M003-Rendering
 created: 2026-10-16T02:37:54Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:10:38Z
+closed: 2026-11-20T06:10:38Z
 +++
 
 Add an optional debug info overlay to the scene view, like SceneKit's showsStatistics.
@@ -2742,6 +2743,8 @@ Expanded panel shows:
 - Breakdown by phase with color legend: e.g. update/animation, scene graph traversal, culling, encoding/rendering, GPU time, 2D/UI overlay
 
 Done when: a view modifier or flag turns the overlay on, and it shows live per-frame stats.
+
+- `2026-11-20T06:10:38Z`: Statistics overlay (.sceneStatistics / SS_SHOWS_STATISTICS) now shows Metal FPS, meshes, triangles, vertices, lights and a frame-time sparkline; tap to expand a donut chart of frame time by phase (scene update, element update, setup, encoding, GPU). Mesh count stands in for draw calls; no separate 2D/UI phase is measured.
 
 ---
 
@@ -2813,9 +2816,9 @@ status: open
 priority: medium
 kind: feature
 labels: effort:l, area:scenegraph
-milestone: M006-Physics-and-Scene
+milestone: M007-Performance
 created: 2026-10-17T12:50:07Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:09:29Z
 +++
 
 The only way to draw many copies of a mesh is one Node per copy. Renderers then discover the repeats each frame (implicit instancing): flatten the tree into one MeshEntry per node, cull each entry, and group entries back into instance batches. Even with the cached batching from #134, the per-node cost remains: node traversal and world transforms, one MeshEntry and one frustum test per copy, and gathering one model matrix per copy every frame.

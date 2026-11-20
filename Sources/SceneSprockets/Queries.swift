@@ -14,6 +14,8 @@ extension SceneGraph {
         public var meshCount: Int
         /// The number of triangles in visible meshes.
         public var triangleCount: Int
+        /// The number of vertices in visible meshes, counting each mesh once.
+        public var vertexCount: Int = 0
         /// The number of visible lights.
         public var lightCount: Int
         /// The number of visible cameras.
@@ -34,7 +36,11 @@ extension SceneGraph {
             }
             return total + triangles
         }
-        return Statistics(nodeCount: nodeCount, meshCount: flattened.meshes.count, triangleCount: triangleCount, lightCount: flattened.lights.count, cameraCount: flattened.cameras.count)
+        // Submeshes of one mesh share its vertices.
+        let vertexCount = flattened.meshes.reduce(0) { total, entry in
+            entry.submeshIndex == 0 ? total + entry.mesh.vertexCount : total
+        }
+        return Statistics(nodeCount: nodeCount, meshCount: flattened.meshes.count, triangleCount: triangleCount, vertexCount: vertexCount, lightCount: flattened.lights.count, cameraCount: flattened.cameras.count)
     }
 
     /// x and y in view coordinates; z is the clip-space depth (0...1, reversed for reversed-depth projections).
