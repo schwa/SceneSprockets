@@ -12253,7 +12253,7 @@ labels: umbrella, area:renderer, effort:xl, lighting
 milestone: M003-Rendering
 depends: 547
 created: 2026-11-17T19:13:03Z
-updated: 2026-11-19T01:40:57Z
+updated: 2026-11-20T01:57:40Z
 closed: 2026-11-19T01:40:57Z
 +++
 
@@ -12262,19 +12262,6 @@ Each material renderer has its own lighting: Blinn-Phong loops over the frame's 
 Every lighting feature must therefore be built once per renderer and across several packages, and most lighting issues stall on that (for example #519: clustered light assignment needs agreement between three packages).
 
 Affects: light types and parameters, environment and image-based lighting, light assignment for many lights, baked and indirect lighting, and lighting extension points.
-
-Sub-issues:
-- #86 Light gaps: ambient node, attenuation, temperature, IES and area lights
-- #497 Light cookies / IES
-- #506 Image-based lighting (IBL)
-- #507 Automatic environment lighting
-- #509 Area lights / LTC
-- #512 No extension points for injecting render passes or lighting terms
-- #514 No deferred or clustered lighting for many lights
-- #519 No clustered Forward+ light assignment
-- #533 No dynamic indirect illumination (light probes / DDGI)
-- #535 No lightmaps
-- #536 No light baking
 
 Not included: shadows (#88, #299, #495, #541) and exposure/tone mapping (#501, #508), which are separate systems.
 
@@ -12318,7 +12305,7 @@ labels: umbrella, area:renderer, effort:xl, indirect-drawing
 milestone: M002-Performance
 depends: 517, 520, 521, 522
 created: 2026-11-17T19:13:56Z
-updated: 2026-11-17T19:14:02Z
+updated: 2026-11-20T01:57:40Z
 +++
 
 Every SceneSprockets draw is chosen and encoded on the CPU each frame. No renderer issues indirect draws or uses indirect command buffers, so the GPU cannot decide what to draw, how many instances, or which level of detail.
@@ -12326,12 +12313,6 @@ Every SceneSprockets draw is chosen and encoded on the CPU each frame. No render
 Depends on MetalSprockets support that does not exist yet:
 - MetalSprockets#575 No Draw initializers for indirect draws
 - MetalSprockets#576 No support for indirect command buffers
-
-Sub-issues:
-- #517 Draws are not encoded with indirect command buffers
-- #520 No GPU-driven occlusion culling (also under #543, bounds)
-- #521 GPU particles do not use indirect draws (particles live in MetalSprocketsParticles)
-- #522 No GPU LOD selection
 
 Related: #516 No GPU-driven rendering (overlapping umbrella), #518 No mesh shading.
 
