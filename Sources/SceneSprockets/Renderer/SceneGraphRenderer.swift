@@ -209,88 +209,46 @@ public struct SceneGraphElement: Element {
             if !deformationJobs.isEmpty {
                 prePasses.append(DeformationPass(jobs: deformationJobs).eraseToAnyElement())
             }
-            // Ambient occlusion from a depth pre-pass, before shading, so in-shader materials darken only their
-            // ambient light (#136).
+            let opaque = entries.filter { !$0.isTransparent }
+            let inShaderAmbientOcclusion = opaque.filter { $0.material is any AppliesAmbientOcclusionInShader }
+            let wantsAmbientOcclusion = context.environment.ambientOcclusion != nil && postTargets != nil && debugMode == nil
+            let ambientOcclusionContent = wantsAmbientOcclusion && !opaque.isEmpty ? try makeOpaqueContent(entries: opaque, context: context, excluding: nil) : nil
+            let visibleParticleFrames = presentation.visibleParticleIndices.map { presentation.particleFrames[$0] }
+            let postProcessing = postTargets == nil ? nil : presentation.postProcessing
+            let plan = SceneFramePlan(.init(
+                hasPostTargets: postTargets != nil,
+                isDebug: debugMode != nil,
+                hasAmbientOcclusionSettings: context.environment.ambientOcclusion != nil,
+                opaqueCount: ambientOcclusionContent == nil ? 0 : opaque.count,
+                inShaderAmbientOcclusionCount: inShaderAmbientOcclusion.count,
+                hasShadowFrame: shadowFrame != nil,
+                shadowMasksEverything: shadowFrame?.masksEverything ?? false,
+                hasFog: presentation.fog != nil,
+                adjustsColor: postProcessing?.adjustsColor ?? false,
+                hasSoftParticles: visibleParticleFrames.contains(where: \.isSoft),
+                resolvesMultisample: renderPassDescriptor?.colorAttachments[0].resolveTexture != nil,
+                storesDepthRequested: storesDepth,
+                depthIsMemoryless: renderPassDescriptor?.depthAttachment.texture?.storageMode == .memoryless
+            ))
             var ambientOcclusionApply: ApplyAmbientOcclusionPass?
-            if let settings = context.environment.ambientOcclusion, let postTargets, debugMode == nil {
-                let opaque = entries.filter { !$0.isTransparent }
-                let appliesInShader = { (entry: SceneGraph.MeshEntry) in entry.material is any AppliesAmbientOcclusionInShader }
-                let inShader = opaque.filter(appliesInShader)
-                if !opaque.isEmpty, let content = try makeOpaqueContent(entries: opaque, context: context, excluding: nil) {
-                    let targets = try AmbientOcclusionTargets.targets(device: postTargets.color.device, width: postTargets.color.width, height: postTargets.color.height, colorFormat: postTargets.color.pixelFormat, depthFormat: postTargets.depth.pixelFormat)
-                    let relativeViewProjection = context.projectionMatrix * context.viewMatrix.rotationOnlyView
-                    prePasses.append(AmbientOcclusionDepthPass(label: "Ambient Occlusion Depth", depth: targets.depth, scratchColor: targets.scratchColor, content: content).eraseToAnyElement())
-                    let isMixed = !inShader.isEmpty && inShader.count < opaque.count
-                    if isMixed, let inShaderContent = try makeOpaqueContent(entries: inShader, context: context, excluding: nil) {
-                        prePasses.append(AmbientOcclusionDepthPass(label: "Ambient Occlusion In-Shader Depth", depth: targets.inShaderDepth, scratchColor: targets.scratchColor, content: inShaderContent).eraseToAnyElement())
-                    }
-                    prePasses.append(AmbientOcclusionPass(settings: settings, depthTexture: targets.depth, visibilityTexture: targets.visibility, viewProjection: relativeViewProjection, cameraPosition: .zero).eraseToAnyElement())
-                    context.ambientOcclusion = targets.visibility
-                    if inShader.count < opaque.count {
-                        ambientOcclusionApply = ApplyAmbientOcclusionPass(visibilityTexture: targets.visibility, depthTexture: targets.depth, inShaderDepthTexture: isMixed ? targets.inShaderDepth : nil, colorTexture: postTargets.color)
-                    }
-                }
+            if case let .passes(inShaderDepth, appliesAsPostPass) = plan.ambientOcclusion, let postTargets, let ambientOcclusionContent, let settings = context.environment.ambientOcclusion {
+                let inShaderContent = inShaderDepth ? try makeOpaqueContent(entries: inShaderAmbientOcclusion, context: context, excluding: nil) : nil
+                ambientOcclusionApply = try makeAmbientOcclusionPasses(settings: settings, content: ambientOcclusionContent, inShaderContent: inShaderContent, splitsInShader: inShaderDepth, appliesAsPostPass: appliesAsPostPass, postTargets: postTargets, context: &context, prePasses: &prePasses)
             }
-            if let color = renderPassDescriptor?.colorAttachments[0].texture {
-                for (renderer, rendererEntries) in zip(renderers, partitionMeshEntries(entries, renderers: renderers)) {
-                    guard let prePassRenderer = renderer as? any PrePassRenderer, !rendererEntries.isEmpty else {
-                        continue
-                    }
-                    let frameContext = context
-                    let materialType = renderer.materialType
-                    if let prePass = try prePassRenderer.makePrePassElement(entries: rendererEntries, context: frameContext, viewSize: (color.width, color.height), otherOpaqueContent: {
-                        var linearContext = frameContext
-                        linearContext.outputIsLinear = true
-                        return try makeOpaqueContent(entries: entries, context: linearContext, excluding: materialType)
-                    }) {
-                        prePasses.append(prePass)
-                    }
-                }
-            }
+            prePasses += try makeRendererPrePasses(entries: entries, context: context)
             #if os(visionOS)
             if immersiveContext != nil {
                 // Only the compositor's pass may end through its render context, which also ends the command buffer.
                 prePasses = prePasses.map { $0.immersiveRenderContext(nil).eraseToAnyElement() }
             }
             #endif
-            var elements: [AnyElement] = []
-            if case let .gradient(gradient) = context.environment.background {
-                elements.append(SkyGradientBackground(gradient: gradient, viewMatrix: context.viewMatrix, projectionMatrix: context.projectionMatrix, stereoViews: context.stereoViews).eraseToAnyElement())
-            }
-            if case .environment = context.environment.background {
-                for case let renderer as any BackgroundRenderer in renderers {
-                    if let background = try renderer.makeBackgroundElement(context: context) {
-                        elements.append(background)
-                        break
-                    }
-                }
-            }
-            // One batch per rendering order and set of affecting lights; each renderer draws its part of each batch.
-            for batch in renderBatches(entries, context: context) {
-                let partitions = partitionMeshEntries(batch.entries, renderers: renderers)
-                elements += try zip(renderers, partitions).compactMap { renderer, entries in
-                    entries.isEmpty ? nil : try renderer.makeElement(entries: entries, context: batch.context)
-                }
-            }
-            // Editor aids such as grids and axes: in the scene pass after the meshes, so they depth-test against them.
-            if let decorations, let decoration = try decorations(context) {
-                elements.append(decoration)
-            }
-            #if arch(arm64)
-            // Node text (#119): after the meshes, depth-tested against them.
-            if let color = renderPassDescriptor?.colorAttachments[0].texture, debugMode == nil {
-                let texts = presentation.texts.filter { $0.categoryBitMask & context.categoryBitMask != 0 }.map { ($0.text, $0.worldTransform) }
-                elements += try Self.makeTextElements(texts, context: context, viewportSize: [Float(color.width), Float(color.height)], device: color.device)
-            }
-            #endif
+            var elements = try makeSceneElements(entries: entries, context: context, drawsText: plan.drawsText)
             // Particles simulate in their own compute pass before the scene pass, then draw after the meshes.
             let particleSimulations = try presentation.particleFrames.map { try $0.system.simulate($0, view: context.viewMatrix).eraseToAnyElement() }
             prePasses = particleSimulations + prePasses
-            let visibleParticleFrames = presentation.visibleParticleIndices.map { presentation.particleFrames[$0] }
-            // Soft particles read the scene's depth, so they draw in a second pass after a depth copy. That needs depth
-            // that can be stored and read, and no MSAA resolve (the second pass would have to reload the samples).
+            // Soft particles read the scene's depth, so they draw in a second pass after a depth copy.
             let softParticleDepth: (scene: MTLTexture, copy: MTLTexture)? = try {
-                guard let postTargets, visibleParticleFrames.contains(where: \.isSoft), renderPassDescriptor?.colorAttachments[0].resolveTexture == nil else {
+                guard plan.hasSoftParticlePass, let postTargets else {
                     return nil
                 }
                 let copy = try ParticleDepthShaders.sceneDepthTexture(device: postTargets.depth.device, width: postTargets.depth.width, height: postTargets.depth.height)
@@ -320,21 +278,14 @@ public struct SceneGraphElement: Element {
             } else {
                 nil
             }
-            let fog = postTargets == nil ? nil : presentation.fog
-            let postProcessing = postTargets == nil ? nil : presentation.postProcessing
-            let adjustsColor = postProcessing?.adjustsColor ?? false
-            let hasPostPasses = shadowFrame != nil || fog != nil || ambientOcclusionApply != nil || adjustsColor
-            // The view's depth storage can lag behind `storesDepth` when the frame is built on a render thread (#393):
-            // memoryless depth cannot be stored.
-            let storesDepth = storesDepth && renderPassDescriptor?.depthAttachment.texture?.storageMode != .memoryless
             let scenePass = try MetalSprockets.Group {
-                try makeScenePass(elements: elements, clearColor: clearColor, storesDepth: storesDepth || hasPostPasses || softParticleDepth != nil)
+                try makeScenePass(elements: elements, clearColor: clearColor, storesDepth: plan.scenePassStoresDepth)
                 if let softParticleDepth {
                     ParticleDepthCopyPass(depthTexture: softParticleDepth.scene, output: softParticleDepth.copy)
-                    try makeParticlePass(elements: particleElements, storesDepth: storesDepth || hasPostPasses)
+                    try makeParticlePass(elements: particleElements, storesDepth: plan.particlePassStoresDepth)
                 }
             }
-            guard let postTargets, hasPostPasses else {
+            guard let postTargets, plan.hasPostPhase else {
                 if prePasses.isEmpty {
                     return scenePass.eraseToAnyElement()
                 }
@@ -349,6 +300,9 @@ public struct SceneGraphElement: Element {
             // Post passes rebuild positions from depth in camera-relative space (camera at the origin), so they stay
             // precise far from the world origin (#257). Shadow views are camera-relative too.
             let relativeViewProjection = context.projectionMatrix * context.viewMatrix.rotationOnlyView
+            let postPasses = try plan.postPasses.compactMap { postPass in
+                try makePostPass(postPass, shadowFrame: shadowFrame, ambientOcclusionApply: ambientOcclusionApply, postProcessing: postProcessing, postTargets: postTargets, relativeViewProjection: relativeViewProjection)
+            }
             // The shadow and post passes open their own encoders, so they are siblings of the scene pass.
             return try MetalSprockets.Group {
                 if let shadowFrame {
@@ -358,29 +312,106 @@ public struct SceneGraphElement: Element {
                     prePass
                 }
                 scenePass
-                if let shadows, let shadowFrame, !shadowFrame.masksEverything {
-                    SceneShadowMaskPass(
-                        frame: shadowFrame,
-                        sceneDepthTexture: postTargets.depth,
-                        outputTexture: postTargets.color,
-                        viewProjection: relativeViewProjection,
-                        intensity: shadows.intensity,
-                        color: shadows.color,
-                        radius: shadows.softness
-                    )
-                }
-                // Occlusion darkens geometry before fog covers it; color adjustment comes last.
-                if let ambientOcclusionApply {
-                    ambientOcclusionApply
-                }
-                if let fog {
-                    FogPass(fog: fog, depthTexture: postTargets.depth, colorTexture: postTargets.color, inverseViewProjection: relativeViewProjection.inverse, cameraPosition: .zero)
-                }
-                if let postProcessing, adjustsColor {
-                    ColorAdjustPass(settings: postProcessing, colorTexture: postTargets.color)
+                ForEach(Array(postPasses.enumerated()), id: \.offset) { _, postPass in
+                    postPass
                 }
             }
             .eraseToAnyElement()
+        }
+    }
+
+    // Ambient occlusion from a depth pre-pass, before shading, so in-shader materials darken only their ambient light
+    // (#136). Sets the context's visibility texture; returns the pass that applies it to the other materials.
+    private func makeAmbientOcclusionPasses(settings: SceneGraph.AmbientOcclusion, content: AnyElement, inShaderContent: AnyElement?, splitsInShader: Bool, appliesAsPostPass: Bool, postTargets: (color: MTLTexture, depth: MTLTexture), context: inout RenderContext, prePasses: inout [AnyElement]) throws -> ApplyAmbientOcclusionPass? {
+        let targets = try AmbientOcclusionTargets.targets(device: postTargets.color.device, width: postTargets.color.width, height: postTargets.color.height, colorFormat: postTargets.color.pixelFormat, depthFormat: postTargets.depth.pixelFormat)
+        let relativeViewProjection = context.projectionMatrix * context.viewMatrix.rotationOnlyView
+        prePasses.append(AmbientOcclusionDepthPass(label: "Ambient Occlusion Depth", depth: targets.depth, scratchColor: targets.scratchColor, content: content).eraseToAnyElement())
+        if let inShaderContent {
+            prePasses.append(AmbientOcclusionDepthPass(label: "Ambient Occlusion In-Shader Depth", depth: targets.inShaderDepth, scratchColor: targets.scratchColor, content: inShaderContent).eraseToAnyElement())
+        }
+        prePasses.append(AmbientOcclusionPass(settings: settings, depthTexture: targets.depth, visibilityTexture: targets.visibility, viewProjection: relativeViewProjection, cameraPosition: .zero).eraseToAnyElement())
+        context.ambientOcclusion = targets.visibility
+        guard appliesAsPostPass else {
+            return nil
+        }
+        return ApplyAmbientOcclusionPass(visibilityTexture: targets.visibility, depthTexture: targets.depth, inShaderDepthTexture: splitsInShader ? targets.inShaderDepth : nil, colorTexture: postTargets.color)
+    }
+
+    // Passes that renderers need before the scene pass, such as what is behind glass.
+    private func makeRendererPrePasses(entries: [SceneGraph.MeshEntry], context: RenderContext) throws -> [AnyElement] {
+        guard let color = renderPassDescriptor?.colorAttachments[0].texture else {
+            return []
+        }
+        var prePasses: [AnyElement] = []
+        for (renderer, rendererEntries) in zip(renderers, partitionMeshEntries(entries, renderers: renderers)) {
+            guard let prePassRenderer = renderer as? any PrePassRenderer, !rendererEntries.isEmpty else {
+                continue
+            }
+            let materialType = renderer.materialType
+            if let prePass = try prePassRenderer.makePrePassElement(entries: rendererEntries, context: context, viewSize: (color.width, color.height), otherOpaqueContent: {
+                var linearContext = context
+                linearContext.outputIsLinear = true
+                return try makeOpaqueContent(entries: entries, context: linearContext, excluding: materialType)
+            }) {
+                prePasses.append(prePass)
+            }
+        }
+        return prePasses
+    }
+
+    // The scene pass's content before particles: background, mesh batches, decorations and node text.
+    private func makeSceneElements(entries: [SceneGraph.MeshEntry], context: RenderContext, drawsText: Bool) throws -> [AnyElement] {
+        var elements: [AnyElement] = []
+        switch context.environment.background {
+        case let .gradient(gradient):
+            elements.append(SkyGradientBackground(gradient: gradient, viewMatrix: context.viewMatrix, projectionMatrix: context.projectionMatrix, stereoViews: context.stereoViews).eraseToAnyElement())
+        case .environment:
+            for case let renderer as any BackgroundRenderer in renderers {
+                if let background = try renderer.makeBackgroundElement(context: context) {
+                    elements.append(background)
+                    break
+                }
+            }
+        default:
+            break
+        }
+        // One batch per rendering order and set of affecting lights; each renderer draws its part of each batch.
+        for batch in renderBatches(entries, context: context) {
+            let partitions = partitionMeshEntries(batch.entries, renderers: renderers)
+            elements += try zip(renderers, partitions).compactMap { renderer, entries in
+                entries.isEmpty ? nil : try renderer.makeElement(entries: entries, context: batch.context)
+            }
+        }
+        // Editor aids such as grids and axes: in the scene pass after the meshes, so they depth-test against them.
+        if let decorations, let decoration = try decorations(context) {
+            elements.append(decoration)
+        }
+        #if arch(arm64)
+        // Node text (#119): after the meshes, depth-tested against them.
+        if drawsText, let color = renderPassDescriptor?.colorAttachments[0].texture {
+            let texts = presentation.texts.filter { $0.categoryBitMask & context.categoryBitMask != 0 }.map { ($0.text, $0.worldTransform) }
+            elements += try Self.makeTextElements(texts, context: context, viewportSize: [Float(color.width), Float(color.height)], device: color.device)
+        }
+        #endif
+        return elements
+    }
+
+    private func makePostPass(_ postPass: SceneFramePlan.PostPass, shadowFrame: Shadows.Frame?, ambientOcclusionApply: ApplyAmbientOcclusionPass?, postProcessing: SceneGraph.PostProcessing?, postTargets: (color: MTLTexture, depth: MTLTexture), relativeViewProjection: simd_float4x4) throws -> AnyElement? {
+        switch postPass {
+        case .shadowMask:
+            guard let shadows, let shadowFrame else {
+                return nil
+            }
+            return SceneShadowMaskPass(frame: shadowFrame, sceneDepthTexture: postTargets.depth, outputTexture: postTargets.color, viewProjection: relativeViewProjection, intensity: shadows.intensity, color: shadows.color, radius: shadows.softness).eraseToAnyElement()
+        case .ambientOcclusion:
+            return ambientOcclusionApply?.eraseToAnyElement()
+        case .fog:
+            guard let fog = presentation.fog else {
+                return nil
+            }
+            return FogPass(fog: fog, depthTexture: postTargets.depth, colorTexture: postTargets.color, inverseViewProjection: relativeViewProjection.inverse, cameraPosition: .zero).eraseToAnyElement()
+        case .colorAdjust:
+            return postProcessing.map { ColorAdjustPass(settings: $0, colorTexture: postTargets.color).eraseToAnyElement() }
         }
     }
 

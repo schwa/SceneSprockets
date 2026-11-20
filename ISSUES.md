@@ -13355,13 +13355,14 @@ Found in the architecture review (#477).
 ## 591: SceneGraphElement.body decides the frame's passes and builds their elements in one 250-line function
 
 +++
-status: new
+status: closed
 priority: medium
 kind: task
 labels: area:architecture, effort:l, subtask
 milestone: M002-Performance
 created: 2026-11-20T02:56:48Z
-updated: 2026-11-20T02:56:53Z
+updated: 2026-11-20T05:46:46Z
+closed: 2026-11-20T05:46:46Z
 +++
 
 `SceneGraphElement.body` (SceneGraphRenderer.swift) decides what a frame contains and builds the elements at the same time: post targets, shadow preparation, the deformation pre-pass, the ambient occlusion depth passes and their in-shader split, renderer pre-passes, background, batches, text, particles and soft-particle depth copy, `storesDepth`, and the order of the post passes.
