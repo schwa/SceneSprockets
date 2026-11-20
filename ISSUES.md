@@ -7605,6 +7605,7 @@ Related: #402 (positions re-read per hit test).
 - `2026-11-17T19:05:44Z`: Question 1 (decision): Go ahead with the 3-part split (all-hits query in SwiftMesh, per-mesh BVH in hitTest, node-level bounds hierarchy here), including work in the SwiftMesh repo? Recommended: Yes
 - `2026-11-20T01:57:11Z`: Answer 1: No (schwa): no SwiftMesh work for now. Both levels (per-mesh triangle BVH with an all-hits query, and the node-level bounds hierarchy) go in a new BVH target in SceneSprockets; it may move later.
 - `2026-11-20T02:10:54Z`: Progress: new SceneSprocketsBVH target (static BVH over item boxes: box, frustum and ray queries; c8539a66). hitTest tests only triangles from a cached per-submesh BVH for static meshes (f1bc8833), and only mesh entries whose world bounds the ray enters; new SceneGraph.meshEntries(overlapping:) and meshEntries(in:) (49b5959b). Not done: nearest-to-point query; renderer frustum culling still tests every entry (the index is rebuilt on every revision change, so animated scenes would rebuild it each frame; needs refitting); skinned and morphed entries are never culled by the index.
+- `2026-11-20T02:15:00Z`: Measured with Tests/SceneSprocketsTests/HitTestBenchmark.swift (SCENESPROCKETS_BENCHMARK=1, Release, M5 Max): 400 spheres of ~16k triangles, 500 rays. Per ray: before the BVH 108.8 us (115.9 first pass); with it 2.2 us (23.4 first pass, which builds the BVHs). Rays are random per run, so hit counts are not compared.
 
 ---
 
