@@ -302,8 +302,8 @@ public struct SceneGraphElement: Element {
             // Post passes rebuild positions from depth in camera-relative space (camera at the origin), so they stay
             // precise far from the world origin (#257). Shadow views are camera-relative too.
             let relativeViewProjection = context.projectionMatrix * context.viewMatrix.rotationOnlyView
-            let postPasses = try plan.postPasses.compactMap { postPass in
-                try makePostPass(postPass, shadowFrame: shadowFrame, ambientOcclusionApply: ambientOcclusionApply, postProcessing: postProcessing, postTargets: postTargets, relativeViewProjection: relativeViewProjection)
+            let postPasses = plan.postPasses.compactMap { postPass in
+                makePostPass(postPass, shadowFrame: shadowFrame, ambientOcclusionApply: ambientOcclusionApply, postProcessing: postProcessing, postTargets: postTargets, relativeViewProjection: relativeViewProjection)
             }
             // The shadow and post passes open their own encoders, so they are siblings of the scene pass.
             return try MetalSprockets.Group {
@@ -398,7 +398,7 @@ public struct SceneGraphElement: Element {
         return elements
     }
 
-    private func makePostPass(_ postPass: SceneFramePlan.PostPass, shadowFrame: Shadows.Frame?, ambientOcclusionApply: ApplyAmbientOcclusionPass?, postProcessing: SceneGraph.PostProcessing?, postTargets: (color: MTLTexture, depth: MTLTexture), relativeViewProjection: simd_float4x4) throws -> AnyElement? {
+    private func makePostPass(_ postPass: SceneFramePlan.PostPass, shadowFrame: Shadows.Frame?, ambientOcclusionApply: ApplyAmbientOcclusionPass?, postProcessing: SceneGraph.PostProcessing?, postTargets: (color: MTLTexture, depth: MTLTexture), relativeViewProjection: simd_float4x4) -> AnyElement? {
         switch postPass {
         case .shadowMask:
             guard let shadows, let shadowFrame else {

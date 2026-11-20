@@ -25,7 +25,7 @@ public enum AnimationBlending {
     /// its rest value (when `rest` has one) fills the rest of the weight.
     public static func blendedValues<Key: Hashable>(
         _ layers: [(weight: Float, values: [Key: [Float]])],
-        rest: (Key) -> [Float]?,
+        rest: (Key) -> [Float]?, // swiftlint:disable:this discouraged_optional_collection - nil means no rest value
         kind: (Key) -> AnimationValueKind
     ) -> [Key: [Float]] {
         let totalWeight = layers.reduce(0) { $0 + $1.weight }
@@ -56,7 +56,7 @@ public enum AnimationBlending {
         _ sampled: [Key: [Float]],
         weight: Float,
         to values: inout [Key: [Float]],
-        rest: (Key) -> [Float]?,
+        rest: (Key) -> [Float]?, // swiftlint:disable:this discouraged_optional_collection - nil means no rest value
         kind: (Key) -> AnimationValueKind
     ) {
         for (key, sample) in sampled {

@@ -10901,14 +10901,15 @@ Checked and found sound: the 22 nonisolated(unsafe) static caches (all lock-guar
 ## 477: Codebase architecture has not been reviewed with the improve-codebase-architecture skill
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: area:scenegraph, effort:m, has-subtasks
 milestone: M002-Performance
 depends: 589, 590, 591, 592, 593
 created: 2026-11-17T06:04:19Z
-updated: 2026-11-20T02:56:54Z
+updated: 2026-11-20T05:52:58Z
+closed: 2026-11-20T05:52:58Z
 +++
 
 The codebase has not had an architecture review with the improve-codebase-architecture skill. Coupling, shallow modules and logic spread over many places (for example demos listed twice, #115; each material renderer handling scene-wide techniques on its own, #409) are found only one at a time.
@@ -13487,8 +13488,10 @@ Bugs and wrong behavior.
 ## Milestone: M002-Performance
 
 +++
-status: open
+status: closed
 created: 2026-11-16T20:12:42Z
+updated: 2026-11-20T05:53:00Z
+closed: 2026-11-20T05:53:00Z
 +++
 
 Speed and memory.
