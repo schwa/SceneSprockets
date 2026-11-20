@@ -11845,12 +11845,11 @@ priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, bounds, indirect-drawing
 milestone: M002-Performance
-depends: 545
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-19T14:01:26Z
+updated: 2026-11-20T01:55:12Z
 +++
 
-Hidden objects are still drawn: there is no depth pyramid and compute pass to cull them. A GPU culling result only saves work if the GPU also issues the draws (indirect draws, #517); otherwise visibility would be read back to the CPU a frame late. How draws are fed depends on #545. Part of #543 and #544.
+Hidden objects are still drawn: there is no depth pyramid (Hi-Z: a mip chain of the depth buffer, each level keeping the farthest depth of the level below) and compute pass to cull them. A GPU culling result only saves work if the GPU also issues the draws (indirect draws, #517); otherwise visibility would be read back to the CPU a frame late. PBR draws go through MetalSprockets DrawList (#582), so indirect drawing would replace those lists. Part of #543 and #544.
 
 - `2026-11-17T19:05:45Z`: Question 1 (decision): Wait for #517 indirect draws instead of an interim one-frame-late CPU readback of visibility? Recommended: Yes, wait for #517
 
