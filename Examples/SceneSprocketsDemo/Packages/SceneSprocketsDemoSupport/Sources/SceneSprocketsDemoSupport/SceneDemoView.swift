@@ -52,6 +52,8 @@ struct SceneDemoContentView: View {
     @State private var selectionOutline = SelectionOutline()
     // The scene is also drawn in the immersive space (#385); this view pauses so it is advanced only once per frame.
     @State private var isImmersive = false
+    // FPS, frame timing and scene counts (#131). Remembered across launches.
+    @AppStorage("showsStatistics") private var showsStatistics = false
 
     init(scene: DemoScene, delegate: DemoSceneDelegate) {
         self.scene = scene
@@ -60,7 +62,7 @@ struct SceneDemoContentView: View {
     }
 
     var body: some View {
-        DemoSceneContent(scene: scene, delegate: delegate, isImmersive: isImmersive, isPaused: isPaused, cameraMatrix: $cameraMatrix, gizmo: gizmo, selectionOutline: selectionOutline)
+        DemoSceneContent(scene: scene, delegate: delegate, isImmersive: isImmersive, isPaused: isPaused, showsStatistics: showsStatistics, cameraMatrix: $cameraMatrix, gizmo: gizmo, selectionOutline: selectionOutline)
         .onFrameTimingChange { frameTiming.statistics = $0 }
         .onChange(of: scene.selectedNodeID, initial: true) {
             gizmo.target = scene.selectedNode
@@ -77,7 +79,9 @@ struct SceneDemoContentView: View {
             gizmo.space = gizmoSpace
         }
         .overlay(alignment: .topTrailing) {
-            FrameTimingBadge(model: frameTiming)
+            if showsStatistics {
+                FrameTimingBadge(model: frameTiming)
+            }
         }
         .toolbar {
             ForEach(scene.actions) { action in
@@ -100,6 +104,8 @@ struct SceneDemoContentView: View {
             Button(isPaused ? "Play" : "Pause", systemImage: isPaused ? "play.fill" : "pause.fill") {
                 isPaused.toggle()
             }
+            Toggle("Statistics", systemImage: "speedometer", isOn: $showsStatistics)
+                .help("Show FPS, frame timing and scene counts")
             #if os(visionOS)
             ImmersiveSceneToggle(scene: scene, isImmersive: $isImmersive)
             #endif
@@ -123,6 +129,7 @@ private struct DemoSceneContent: View {
     let delegate: DemoSceneDelegate
     let isImmersive: Bool
     let isPaused: Bool
+    let showsStatistics: Bool
     @Binding var cameraMatrix: simd_float4x4?
     let gizmo: TransformGizmo
     let selectionOutline: SelectionOutline
@@ -140,6 +147,7 @@ private struct DemoSceneContent: View {
                 .sceneHitTestOptions(.init(categoryBitMask: scene.pickCategoryBitMask))
                 .sceneManipulator(gizmo)
                 .sceneDebugMode(scene.debugMode)
+                .sceneStatistics(showsStatistics)
                 .onSceneTap { hit in
                     scene.pick(hit)
                 }
