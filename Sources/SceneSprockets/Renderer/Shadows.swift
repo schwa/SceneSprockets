@@ -87,8 +87,9 @@ public protocol ShadowCasterAlphaMaterial {
 /// light's shadow at once. Keep one instance across frames (it holds the shadow map and caster buffers) and pass it to
 /// SceneGraphElement or SceneView.
 /// 
-/// The shadow map has 8 slices: a directional or spot light uses one, a point light six; a light that does not fit
-/// casts none and is counted in `droppedLightCount`. Meshes with `castsShadow: false` cast none; meshes with
+/// The shadow map has ``maximumSliceCount`` slices (8 by default): a directional or spot light uses one, a point light
+/// six. ``lightPriority`` picks which lights get them; a light that does not fit casts none and is counted in
+/// `droppedLightCount`. Meshes with `castsShadow: false` cast none; meshes with
 /// `receivesShadow: false` receive none.
 /// The view's color texture needs `.shaderWrite` and its depth texture `.shaderRead` usage (see
 /// `requiredColorUsage`); otherwise no shadows are drawn.
@@ -110,8 +111,23 @@ public final class Shadows {
         var depthBias: Float
         var slopeScale: Float
         var depthOffsetTexels: Float
+        var maximumSliceCount = 8
+        var lightPriority = LightPriority.sceneOrder
         var droppedLightCount = 0
     }
+
+    /// Which lights get shadow map slices first when not all fit.
+    public enum LightPriority: Sendable {
+        /// In scene order.
+        case sceneOrder
+        /// Highest intensity times brightest color channel first.
+        case brightest
+        /// Nearest to the camera first. Directional lights count as at the camera.
+        case nearestToCamera
+    }
+
+    /// The most slices the shaders support; ``maximumSliceCount`` is clamped to it.
+    public static let sliceCountLimit = Int(kLightingMaxShadowSliceCount)
 
     // Guards `storedSettings`: the app changes settings on one thread while a view's render thread reads them (#478).
     private let lock = NSLock()
@@ -174,7 +190,20 @@ public final class Shadows {
         set { write(\.depthOffsetTexels, newValue) }
     }
 
-    /// Lights that cast no shadow in the last frame because their views did not fit in the 8 slices.
+    /// The number of shadow map slices, from 1 to ``sliceCountLimit``. The map only allocates the slices that lights
+    /// use; each one at the default resolution is 16 MB per frame in flight.
+    public var maximumSliceCount: Int {
+        get { read(\.maximumSliceCount) }
+        set { write(\.maximumSliceCount, min(max(newValue, 1), Self.sliceCountLimit)) }
+    }
+
+    /// Which lights get slices first when not all fit.
+    public var lightPriority: LightPriority {
+        get { read(\.lightPriority) }
+        set { write(\.lightPriority, newValue) }
+    }
+
+    /// Lights that cast no shadow in the last frame because their views did not fit in ``maximumSliceCount`` slices.
     public var droppedLightCount: Int {
         read(\.droppedLightCount)
     }
@@ -188,8 +217,8 @@ public final class Shadows {
     private var receiverMasks: [MTLTexture] = []
 
     /// Creates shadow settings. Keep one instance for each view, because it keeps the shadow map between frames.
-    public init(intensity: Float = 0.6, color: SIMD3<Float> = .zero, softness: Int = 1, resolution: Int = 2_048, depthBias: Float = 2, slopeScale: Float = 2, depthOffsetTexels: Float = 1.5) {
-        storedSettings = Settings(intensity: intensity, color: color, softness: softness, resolution: resolution, depthBias: depthBias, slopeScale: slopeScale, depthOffsetTexels: depthOffsetTexels)
+    public init(intensity: Float = 0.6, color: SIMD3<Float> = .zero, softness: Int = 1, resolution: Int = 2_048, depthBias: Float = 2, slopeScale: Float = 2, depthOffsetTexels: Float = 1.5, maximumSliceCount: Int = 8, lightPriority: LightPriority = .sceneOrder) {
+        storedSettings = Settings(intensity: intensity, color: color, softness: softness, resolution: resolution, depthBias: depthBias, slopeScale: slopeScale, depthOffsetTexels: depthOffsetTexels, maximumSliceCount: min(max(maximumSliceCount, 1), Self.sliceCountLimit), lightPriority: lightPriority)
     }
 
     /// What an in-shader renderer needs to sample the shadow map.
@@ -402,7 +431,7 @@ public final class Shadows {
         return receiverMasks
     }
 
-    // One view-projection per shadow map slice, up to SCENE_SHADOW_MAX_SLICES: directional lights get an orthographic view
+    // One view-projection per shadow map slice, up to `maximumSliceCount`: directional lights get an orthographic view
     // fitted to `bounds`, spot lights a perspective view of their outer cone, point lights six 90° views. All use
     // reversed depth, like ShadowMap's default.
     func shadowViews(lights: [(worldTransform: simd_float4x4, light: Light)], bounds: BoundingBox3D) -> [simd_float4x4] {
@@ -414,12 +443,30 @@ public final class Shadows {
     func shadowViewsAndDroppedLights(lights: [(worldTransform: simd_float4x4, light: Light)], bounds: BoundingBox3D) -> (views: [simd_float4x4], dropped: Int, slices: [Range<Int>]) {
         let center = (bounds.min + bounds.max) / 2
         let radius = max(simd_length(bounds.max - bounds.min) / 2, 0.01)
+        let settings = self.settings
         var views: [simd_float4x4] = []
         var dropped = 0
-        var slices: [Range<Int>] = []
-        for (transform, light) in lights {
+        var slices = Array(repeating: 0..<0, count: lights.count)
+        let order: [Int] = switch settings.lightPriority {
+        case .sceneOrder:
+            Array(lights.indices)
+        case .brightest:
+            lights.indices.sorted { index, other in
+                let brightness = { (light: Light) in light.intensity * light.color.max() }
+                let (value, otherValue) = (brightness(lights[index].light), brightness(lights[other].light))
+                return value != otherValue ? value > otherValue : index < other
+            }
+        case .nearestToCamera:
+            // Positions are camera-relative, so the camera is at the origin.
+            lights.indices.sorted { index, other in
+                let distance = { (entry: (worldTransform: simd_float4x4, light: Light)) in entry.light.type == .directional ? 0 : simd_length(entry.worldTransform.columns.3.xyz) }
+                let (value, otherValue) = (distance(lights[index]), distance(lights[other]))
+                return value != otherValue ? value < otherValue : index < other
+            }
+        }
+        for lightIndex in order {
+            let (transform, light) = lights[lightIndex]
             guard light.castsShadow else {
-                slices.append(0..<0)
                 continue
             }
             var lightViews: [simd_float4x4] = []
@@ -444,11 +491,10 @@ public final class Shadows {
                     lightViews.append(projection.projectionMatrix(aspectRatio: 1) * .viewMatrix(eye: position, forward: face))
                 }
             }
-            if views.count + lightViews.count <= Int(SCENE_SHADOW_MAX_SLICES) {
-                slices.append(views.count..<(views.count + lightViews.count))
+            if views.count + lightViews.count <= settings.maximumSliceCount {
+                slices[lightIndex] = views.count..<(views.count + lightViews.count)
                 views += lightViews
             } else {
-                slices.append(0..<0)
                 dropped += 1
             }
         }

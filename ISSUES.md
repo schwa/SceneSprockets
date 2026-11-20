@@ -6732,13 +6732,14 @@ The PBR renderer deforms morph targets and skins on the GPU. Blinn-Phong and Sha
 ## 299: Lights beyond 8 shadow map slices cast no shadow
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:renderer, effort:m
 milestone: M003-Rendering
 created: 2026-11-07T15:41:12Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:26:12Z
+closed: 2026-11-20T06:26:12Z
 +++
 
 SceneGraphShadows has 8 shadow map slices: a directional or spot light takes one, a point light six. Lights that do not fit cast no shadow; SceneGraphShadows.droppedLightCount counts them (#68). A scene with two point lights already loses one light's shadows. Listed under Limitations in the README.
@@ -6748,6 +6749,7 @@ SceneGraphShadows has 8 shadow map slices: a directional or spot light takes one
 - `2026-11-07T16:59:56Z`: Question 2 (decision): When lights still do not fit, which get shadows: first come first served (today), brightest, or nearest to the camera?
 - `2026-11-16T21:25:11Z`: Answer 1: Configurable
 - `2026-11-16T21:25:34Z`: Answer 2: Configurable
+- `2026-11-20T06:26:12Z`: Shadows.maximumSliceCount (default 8, up to Shadows.sliceCountLimit = 32) and Shadows.lightPriority (.sceneOrder, .brightest, .nearestToCamera), per the answers to both questions. The shadow map only allocates slices that lights use.
 
 ---
 
@@ -13580,7 +13582,7 @@ Expected: an app can ask for a scene graph (or a subtree, or a set of materials)
 
 ---
 
-## Milestone: M001-Correctness
+## Milestone M1: M001-Correctness
 
 +++
 status: closed
@@ -13593,7 +13595,7 @@ Bugs and wrong behavior.
 
 ---
 
-## Milestone: M002-Performance
+## Milestone M2: M002-Performance
 
 +++
 status: closed
@@ -13606,7 +13608,7 @@ Speed and memory.
 
 ---
 
-## Milestone: M003-Features
+## Milestone M3: M003-Features
 
 +++
 status: closed
@@ -13619,7 +13621,7 @@ New capabilities and missing API.
 
 ---
 
-## Milestone: M999-Nice-to-have
+## Milestone M4: M999-Nice-to-have
 
 +++
 status: open
@@ -13630,7 +13632,7 @@ Out of sequence. Large or speculative work.
 
 ---
 
-## Milestone: M004-VisionOS
+## Milestone M5: M004-VisionOS
 
 +++
 status: open
@@ -13639,7 +13641,7 @@ created: 2026-11-17T17:28:41Z
 
 ---
 
-## Milestone: M005-Big-World
+## Milestone M6: M005-Big-World
 
 +++
 status: open
@@ -13650,7 +13652,7 @@ Very large worlds (solar-system scale): enough precision in transforms, time, de
 
 ---
 
-## Milestone: M003-Rendering
+## Milestone M7: M003-Rendering
 
 +++
 status: open
@@ -13662,7 +13664,7 @@ Renderer gaps and fixes: lights, shadows, MSAA, exposure, depth, debug overlays 
 
 ---
 
-## Milestone: M006-Physics-and-Scene
+## Milestone M8: M006-Physics-and-Scene
 
 +++
 status: open
@@ -13673,7 +13675,7 @@ Physics, scene graph, assets and UI features.
 
 ---
 
-## Milestone: M007-PBR-Merged-Geometry
+## Milestone M9: M007-PBR-Merged-Geometry
 
 +++
 status: closed
@@ -13686,7 +13688,7 @@ Decide whether PBR keeps the merged-geometry path (#545), and fix the issues it 
 
 ---
 
-## Milestone: M007-Performance
+## Milestone M10: M007-Performance
 
 +++
 status: open
@@ -13697,7 +13699,7 @@ Frame time, CPU cost and scaling to large scenes, with benchmarks to measure the
 
 ---
 
-## Milestone: M008-Reliability
+## Milestone M11: M008-Reliability
 
 +++
 status: open
@@ -13708,7 +13710,7 @@ Crashes, races and flaky tests: malformed input, threading and CI stability.
 
 ---
 
-## Milestone: M009-Rendering-2
+## Milestone M12: M009-Rendering-2
 
 +++
 status: open

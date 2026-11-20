@@ -117,8 +117,8 @@ struct LightingTests {
     @Test func layoutsMatchPBR() {
         #expect(MemoryLayout<LightingLight>.size == 80)
         #expect(MemoryLayout<LightingLight>.stride == 80)
-        #expect(MemoryLayout<LightingShadowUniforms>.offset(of: \.mapSize) == 512)
-        #expect(MemoryLayout<LightingShadowUniforms>.offset(of: \.color) == 528)
+        #expect(MemoryLayout<LightingShadowUniforms>.offset(of: \.mapSize) == 64 * Int(kLightingMaxShadowSliceCount))
+        #expect(MemoryLayout<LightingShadowUniforms>.offset(of: \.color) == 64 * Int(kLightingMaxShadowSliceCount) + 16)
     }
 
     @Test func samplesFollowKHRLightsPunctual() throws {

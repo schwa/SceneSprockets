@@ -2,7 +2,8 @@
 
 #import <simd/simd.h>
 
-#define SCENE_SHADOW_MAX_SLICES 8
+// Matches kLightingMaxShadowSliceCount.
+#define SCENE_SHADOW_MAX_SLICES 32
 
 // Uniforms for Shadows' screen-space mask pass.
 struct SceneShadowMaskUniforms {

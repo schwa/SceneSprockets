@@ -146,6 +146,50 @@ func pointLightUsesSixViews() {
     #expect(result.dropped == 1)
 }
 
+// #299: the slice limit and which lights win when they do not fit are settings.
+@Test
+func sliceLimitAndLightPriorityAreConfigurable() {
+    let bounds = BoundingBox3D(min: [-1, -1, -1], max: [1, 1, 1])
+    let dim = (matrix_identity_float4x4, Light(type: .point, intensity: 1))
+    let bright = (matrix_identity_float4x4, Light(type: .point, intensity: 10))
+    let shadows = Shadows(maximumSliceCount: 12)
+    let roomy = shadows.shadowViewsAndDroppedLights(lights: [dim, bright], bounds: bounds)
+    #expect(roomy.views.count == 12)
+    #expect(roomy.dropped == 0)
+
+    shadows.maximumSliceCount = 8
+    shadows.lightPriority = .brightest
+    let brightest = shadows.shadowViewsAndDroppedLights(lights: [dim, bright], bounds: bounds)
+    #expect(brightest.dropped == 1)
+    #expect(brightest.slices == [0..<0, 0..<6])
+
+    // Camera-relative positions: the camera is at the origin.
+    let far = (simd_float4x4(translation: [0, 0, 50]), Light(type: .point))
+    let near = (simd_float4x4(translation: [0, 0, 2]), Light(type: .point))
+    shadows.lightPriority = .nearestToCamera
+    #expect(shadows.shadowViewsAndDroppedLights(lights: [far, near], bounds: bounds).slices == [0..<0, 0..<6])
+    shadows.lightPriority = .sceneOrder
+    #expect(shadows.shadowViewsAndDroppedLights(lights: [far, near], bounds: bounds).slices == [0..<6, 0..<0])
+
+    // Above the shaders' fixed array size, the limit is clamped.
+    shadows.maximumSliceCount = 1_000
+    #expect(shadows.maximumSliceCount == Shadows.sliceCountLimit)
+}
+
+// #299: lights beyond 8 slices cast shadows when the limit is raised.
+@Test(.enabled(if: deviceSupportsMetal4))
+@MainActor
+func raisedSliceLimitShadowsEveryLight() throws {
+    let (sceneGraph, pixel) = try makeScene(light: .point)
+    // A first point light that fills six slices but lights nothing near the measured spot.
+    sceneGraph.root.insertChild(SceneGraph.Node(transform: .init(translation: [0, 40, 0]), content: .light(Light(type: .point, color: [1, 1, 1], intensity: 0.001))), at: 0)
+    let lit = try brightness(sceneGraph, at: pixel, shadows: nil)
+    let limited = try brightness(sceneGraph, at: pixel, shadows: Shadows(intensity: 0.8))
+    let raised = try brightness(sceneGraph, at: pixel, shadows: Shadows(intensity: 0.8, maximumSliceCount: 12))
+    #expect(abs(limited - lit) <= 3)
+    #expect(Double(raised) < Double(lit) * 0.6)
+}
+
 @Test
 @MainActor
 func droppedLightsAreCounted() throws {

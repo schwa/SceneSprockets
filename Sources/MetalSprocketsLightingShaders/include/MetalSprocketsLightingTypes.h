@@ -12,7 +12,8 @@ enum LightingLightType : int {
     kLightingLightTypeSpot = 2,
 };
 
-#define kLightingMaxShadowSliceCount 8
+// The most shadow map slices any renderer reads; Shadows.maximumSliceCount picks how many are used (#299).
+#define kLightingMaxShadowSliceCount 32
 
 // A punctual light (KHR_lights_punctual), in the space the shader shades in.
 struct LightingLight {
