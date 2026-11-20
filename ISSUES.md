@@ -13585,6 +13585,9 @@ Expected: an app can ask for a scene graph (or a subtree, or a set of materials)
 
 - `2026-11-20T06:04:47Z`: Could this be generalise to a pre-warming function that does all sorts of work before first frame? Is this a metalsprockets thing?
 - `2026-11-20T06:05:40Z`: Generalized from pipelines and PBR models to all first-frame work, per the question above. Pipeline compilation needs MetalSprockets#596.
+- `2026-11-20T06:31:14Z`: Autonomous run: scoped, not changed. MetalSprockets#596 (compiling pipelines ahead of time) is still New. Its checkout has no prepare or prewarm API, and pipeline compilation is the largest first-frame cost. The SceneSprockets-only parts could be done now: loading the static shader libraries and kernels, building PBR models, making CPU-readable and text meshes, and creating the BRDF LUT. But a public prepare API built without pipelines would probably change shape once #596 lands, because it needs the view configuration (pixel formats, sample count) to pick pipelines. Punting until that order is decided.
+- `2026-11-20T06:31:14Z`: Question 1 (decision): Should SceneSprockets ship a partial prepare API now (shader libraries, PBR models, meshes, LUTs; no pipelines), or wait until MetalSprockets#596 can compile pipelines ahead of time? Recommended: Wait for MetalSprockets#596, then build one prepare(sceneGraph:renderers:configuration:) async API that covers both
+- `2026-11-20T06:31:14Z`: Question 2 (design): Should prepare be cancellable, like SCNSceneRenderer.prepare's shouldAbortBlock? Recommended: Yes, through Swift Task cancellation on an async prepare, with no separate abort closure
 
 ---
 
@@ -13622,6 +13625,42 @@ created: 2026-11-20T06:27:47Z
 
 Make the info panel contain more info.
 Make it prettier and more panel like
+
+---
+
+## 600: Alpha-masked materials do not use alpha-to-coverage with MSAA
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:renderer, effort:m
+milestone: M003-Rendering
+created: 2026-11-20T06:30:55Z
+updated: 2026-11-20T06:30:57Z
++++
+
+With SceneView.sceneAntialiasing(sampleCount:) or SceneGraphElement(sampleCount:) above 1, alpha-masked materials (PBR alphaMode MASK, Blinn-Phong diffuse texture alpha) still cut out with a hard edge per pixel. Their edges get no antialiasing from the extra samples.
+
+Split out of #95.
+
+---
+
+## 601: Soft particles draw as hard particles with MSAA
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:renderer, effort:m
+milestone: M003-Rendering
+created: 2026-11-20T06:30:55Z
+updated: 2026-11-20T06:30:57Z
++++
+
+With sceneAntialiasing(sampleCount:) above 1, SceneFramePlan turns off the soft particle pass (it would need to reload the multisampled color after a depth copy). Soft particles are then drawn in the scene pass like hard particles, so they clip sharply against geometry.
+
+Split out of #95.
 
 ---
 
