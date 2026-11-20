@@ -19,7 +19,7 @@ public struct BVH: Sendable {
     /// Item indices, grouped so that each leaf's items are contiguous.
     var itemIndices: [Int]
     /// Each item's box, indexed by item.
-    let itemBounds: [BoundingBox3D]
+    var itemBounds: [BoundingBox3D]
 
     /// Items with empty bounds are left out.
     public var itemCount: Int { itemIndices.count }
@@ -32,7 +32,7 @@ public struct BVH: Sendable {
     ///   - leafSize: The most items in one leaf.
     public init(itemBounds: [BoundingBox3D], leafSize: Int = 4) {
         precondition(leafSize > 0)
-        var indices = itemBounds.indices.filter { itemBounds[$0].min.x <= itemBounds[$0].max.x && itemBounds[$0].min.y <= itemBounds[$0].max.y && itemBounds[$0].min.z <= itemBounds[$0].max.z }
+        var indices = itemBounds.indices.filter { !Self.isEmpty(itemBounds[$0]) }
         let centers = itemBounds.map { ($0.min + $0.max) * 0.5 }
         var nodes: [Node] = []
         nodes.reserveCapacity(max(2 * indices.count / leafSize, 1))
@@ -68,6 +68,41 @@ public struct BVH: Sendable {
         nodes[nodeIndex].start = nodes.count
         nodes[nodeIndex].leafItems = 0
         build(&nodes, &indices, range: middle ..< range.upperBound, itemBounds: itemBounds, centers: centers, leafSize: leafSize)
+    }
+
+    /// Updates every box for items that moved, keeping the tree's shape: cheaper than building a new hierarchy, though
+    /// queries get slower if items move far from where they were built. Returns false, changing nothing, when
+    /// `itemBounds` has a different count or an item's box became empty or non-empty (build a new hierarchy then).
+    @discardableResult
+    public mutating func refit(itemBounds newBounds: [BoundingBox3D]) -> Bool {
+        guard newBounds.count == itemBounds.count else {
+            return false
+        }
+        for (old, new) in zip(itemBounds, newBounds) where Self.isEmpty(old) != Self.isEmpty(new) {
+            return false
+        }
+        itemBounds = newBounds
+        // Children follow their parent in `nodes`, so walking backward updates children before parents.
+        for index in nodes.indices.reversed() {
+            let node = nodes[index]
+            if node.isLeaf {
+                var bounds = newBounds[itemIndices[node.start]]
+                for position in node.start + 1 ..< node.start + node.leafItems {
+                    let item = newBounds[itemIndices[position]]
+                    bounds = BoundingBox3D(min: simd.min(bounds.min, item.min), max: simd.max(bounds.max, item.max))
+                }
+                nodes[index].bounds = bounds
+            } else {
+                let left = nodes[index + 1].bounds
+                let right = nodes[node.start].bounds
+                nodes[index].bounds = BoundingBox3D(min: simd.min(left.min, right.min), max: simd.max(left.max, right.max))
+            }
+        }
+        return true
+    }
+
+    static func isEmpty(_ box: BoundingBox3D) -> Bool {
+        !(box.min.x <= box.max.x && box.min.y <= box.max.y && box.min.z <= box.max.z)
     }
 
     /// Calls `visit` with every item whose box overlaps `box`.

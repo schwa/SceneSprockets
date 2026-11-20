@@ -13258,12 +13258,14 @@ SceneGraph has box, frustum and ray queries over mesh entries (#337), but no que
 ## 587: Mesh entry index is rebuilt from scratch whenever the graph changes
 
 +++
-status: new
+status: closed
 priority: medium
 kind: bug
 labels: area:scenegraph, area:performance, effort:m, bounds
 milestone: M002-Performance
 created: 2026-11-20T02:26:22Z
+updated: 2026-11-20T02:35:10Z
+closed: 2026-11-20T02:35:10Z
 +++
 
 SceneGraph's mesh entry index (MeshEntryIndex, #337) is rebuilt whenever the graph's revision changes, including transform-only changes. In an animated scene that is every frame, so the first hitTest, nearestPoint or box/frustum query of each frame pays the full build.
@@ -13271,6 +13273,8 @@ SceneGraph's mesh entry index (MeshEntryIndex, #337) is rebuilt whenever the gra
 Measured (Tests/SceneSprocketsTests/CullingBenchmark.swift, Release, M5 Max): building the index for 10,000 boxes takes ~1.7 ms; a query takes ~5 us. Before #337, hitTest tested each entry's bounds linearly instead (not measured; a linear frustum test of the same entries takes 62 us).
 
 So hover picking in a large animated scene is likely slower than before #337.
+
+- `2026-11-20T02:35:10Z`: Fixed: BVH.refit updates boxes in place, keeping the tree, and the mesh entry index refits when the entries are the same submeshes in the same order (transforms or poses changed), rebuilding only when the structure changed. CullingBenchmark, 10,000 entries, Release, M5 Max: refit 120 us vs build ~1,700 us; a linear pass over entry boxes is ~60 us. Flattening the entries after a change (~2.6 ms) dominates either way and is not new.
 
 ---
 

@@ -12,10 +12,26 @@ struct MeshEntryIndex {
 
     init(entries: [SceneGraph.MeshEntry]) {
         self.entries = entries
-        let empty = BoundingBox3D(min: .init(repeating: .infinity), max: .init(repeating: -.infinity))
         let bounds = entries.map(\.posedWorldBounds)
-        bvh = BVH(itemBounds: bounds.map { $0 ?? empty })
+        bvh = BVH(itemBounds: bounds.map { $0 ?? Self.empty })
         unbounded = entries.indices.filter { bounds[$0] == nil }
+    }
+
+    private static let empty = BoundingBox3D(min: .init(repeating: .infinity), max: .init(repeating: -.infinity))
+
+    // The index for `entries`: this one refitted when they are the same submeshes in the same order (only transforms
+    // or poses changed), else a new one (#587).
+    func updated(for entries: [SceneGraph.MeshEntry]) -> Self {
+        guard entries.count == self.entries.count, zip(entries, self.entries).allSatisfy({ $0.nodeID == $1.nodeID && $0.submeshIndex == $1.submeshIndex }) else {
+            return Self(entries: entries)
+        }
+        let bounds = entries.map(\.posedWorldBounds)
+        var refitted = self
+        guard refitted.bvh.refit(itemBounds: bounds.map { $0 ?? Self.empty }) else {
+            return Self(entries: entries)
+        }
+        refitted.entries = entries
+        return refitted
     }
 
     // Indices of entries that may pass `query`, in entry (traversal) order.
@@ -33,7 +49,7 @@ extension SceneGraph {
         if let meshEntryIndexCache, meshEntryIndexCache.revision == revision {
             return meshEntryIndexCache.index
         }
-        let index = MeshEntryIndex(entries: meshEntries())
+        let index = meshEntryIndexCache?.index.updated(for: meshEntries()) ?? MeshEntryIndex(entries: meshEntries())
         meshEntryIndexCache = (revision, index)
         return index
     }

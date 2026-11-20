@@ -101,6 +101,33 @@ struct BVHTests {
         #expect(bvh.nearest(to: .zero, maximumDistance: 0.1) { _ in 1_000 } == nil)
     }
 
+    // A refitted hierarchy answers like one built from the moved boxes.
+    @Test func refitMatchesARebuild() {
+        var generator = SystemRandomNumberGenerator()
+        func boxes(_ offset: SIMD3<Float>) -> [BoundingBox3D] {
+            (0 ..< 300).map { index in
+                let center = SIMD3<Float>(Float(index % 20) * 3, Float(index / 20) * 3, 0) + offset * Float(index % 7)
+                return BoundingBox3D(min: center - 0.5, max: center + 0.5)
+            }
+        }
+        var bvh = BVH(itemBounds: boxes(.zero))
+        let moved = boxes([1.3, -0.7, 2])
+        let refitted = bvh.refit(itemBounds: moved)
+        #expect(refitted)
+        for _ in 0 ..< 30 {
+            let center = SIMD3<Float>.random(in: -10 ... 70, using: &generator)
+            let query = BoundingBox3D(min: center - 6, max: center + 6)
+            var found = Set<Int>()
+            bvh.items(overlapping: query) { found.insert($0) }
+            #expect(found == bruteForce(moved, overlapping: query))
+        }
+        let empty = BoundingBox3D(min: .init(repeating: .infinity), max: .init(repeating: -.infinity))
+        let shorter = bvh.refit(itemBounds: Array(moved.dropLast()))
+        #expect(!shorter, "Different count")
+        let emptied = bvh.refit(itemBounds: [empty] + moved.dropFirst())
+        #expect(!emptied, "An item became empty")
+    }
+
     @Test func frustumQuery() {
         let boxes = row(20)
         let bvh = BVH(itemBounds: boxes)

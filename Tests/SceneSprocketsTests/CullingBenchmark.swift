@@ -39,9 +39,29 @@ func cullingBenchmark() throws {
     var visible = 0
     let linear = best { visible = meshEntriesInFrustum(entries, projectionMatrix: projection, cameraMatrix: camera).filter(\.self).count }
     let build = best(5) { _ = MeshEntryIndex(entries: entries) }
+    let built = MeshEntryIndex(entries: entries)
+    let refit = best { _ = built.updated(for: entries) }
+    let bounds = best { _ = entries.map(\.posedWorldBounds) }
+    print("METRIC index_refit_us=\(String(format: "%.1f", refit))")
+    print("METRIC posed_bounds_us=\(String(format: "%.1f", bounds))")
     let frustum = Frustum(viewProjection: projection * camera.inverse)
     var indexed = 0
     let query = best { indexed = graph.meshEntries(in: frustum).count }
+    // #587: an animated frame moves a node, then queries; the index follows by refitting.
+    let moving = try #require(root.children.first)
+    var step: Float = 0
+    let animatedQuery = best {
+        step += 0.01
+        moving.transform = Transform3D(storing: simd_float4x4(translation: [step, 0, 0]))
+        indexed = graph.meshEntries(in: frustum).count
+    }
+    let animatedLinear = best {
+        step += 0.01
+        moving.transform = Transform3D(storing: simd_float4x4(translation: [step, 0, 0]))
+        visible = meshEntriesInFrustum(graph.meshEntries(), projectionMatrix: projection, cameraMatrix: camera).filter(\.self).count
+    }
+    print("METRIC animated_index_query_us=\(String(format: "%.1f", animatedQuery))")
+    print("METRIC animated_linear_us=\(String(format: "%.1f", animatedLinear))")
     print("METRIC cull_linear_us=\(String(format: "%.1f", linear))")
     print("METRIC index_build_us=\(String(format: "%.1f", build))")
     print("METRIC cull_index_query_us=\(String(format: "%.1f", query))")

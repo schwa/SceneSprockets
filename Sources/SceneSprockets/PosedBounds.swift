@@ -12,6 +12,10 @@ extension SceneGraph.MeshEntry {
         guard let meshBounds else {
             return nil
         }
+        // Most entries are neither skinned nor morphed.
+        if skin == nil, morphWeights.isEmpty {
+            return meshBounds.transformed(by: worldTransform)
+        }
         let morphGrowth = morphGrowth
         if let skin, let jointBounds = jointRestBounds() {
             let jointMatrices = skin.jointMatrices()
