@@ -146,8 +146,7 @@ public struct BlinnPhongMaterialRenderer: MaterialRenderer, Equatable {
         // matrices are shifted by the camera position in Double.
         let shading = BlinnPhongShading(context: context, ambientLightColor: ambientLightColor)
         let cameraPosition = shading.cameraPosition
-        // The shader has no morph or skin inputs, so SceneGraphElement deforms those meshes in a GPU pre-pass (#298). They skip culling because
-        // their node bounds do not cover the deformation.
+        // The shader has no morph or skin inputs, so SceneGraphElement deforms those meshes in a GPU pre-pass (#298).
         // SceneGraphElement batches opaque and transparent entries apart, transparent ones sorted farthest first.
         let isTransparent = entries.first?.isTransparent ?? false
         let inFrustum = meshEntriesInFrustum(entries, projectionMatrix: context.projectionMatrix, cameraMatrix: context.cameraMatrix)
@@ -157,23 +156,14 @@ public struct BlinnPhongMaterialRenderer: MaterialRenderer, Equatable {
         // One pass, with capacity reserved: this runs every frame over every entry, so copies add up.
         var items: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, modelMatrix: simd_float4x4, material: BlinnPhongSceneMaterial)] = []
         items.reserveCapacity(entries.count)
-        var deformed: [(entry: SceneGraph.MeshEntry, mesh: MetalMesh, modelMatrix: simd_float4x4, material: BlinnPhongSceneMaterial)] = []
-        for (entry, isInFrustum) in zip(entries, inFrustum) {
+        // SceneGraphElement has already swapped skinned and morphed meshes for their deformed vertices, with bounds that
+        // cover the deformation (#590).
+        for (entry, isInFrustum) in zip(entries, inFrustum) where isInFrustum {
             guard let material = entry.material as? BlinnPhongSceneMaterial else {
                 continue
             }
-            if let result = entry.renderDeformed(revision: context.revision) {
-                // Deformed meshes skip culling; their node bounds do not cover the deformation.
-                if isTransparent {
-                    items.append((entry, result.mesh, result.modelMatrix, material))
-                } else {
-                    deformed.append((entry, result.mesh, result.modelMatrix, material))
-                }
-            } else if isInFrustum {
-                items.append((entry, entry.mesh, entry.worldTransform, material))
-            }
+            items.append((entry, entry.mesh, entry.worldTransform, material))
         }
-        items += deformed
         let groups: [(key: PipelineKey, single: [InstanceBatch], instanced: [InstanceBatch])]
         if isTransparent {
             // Keep the order: consecutive runs of one vertex layout, with no instancing (it would reorder draws).
@@ -222,7 +212,8 @@ public struct BlinnPhongMaterialRenderer: MaterialRenderer, Equatable {
         hasher.combine(context.revision.structure)
         hasher.combine(entries.count)
         for entry in entries {
-            guard entry.skin == nil, entry.morphTargets.isEmpty, entry.levelsOfDetail.isEmpty else {
+            // Deformed meshes change buffers every frame.
+            guard entry.skin == nil, entry.skinVertices.isEmpty, entry.morphTargets.isEmpty, entry.levelsOfDetail.isEmpty else {
                 return nil
             }
             hasher.combine(entry.nodeID)

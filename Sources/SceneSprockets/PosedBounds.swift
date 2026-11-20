@@ -34,11 +34,18 @@ extension SceneGraph.MeshEntry {
         return BoundingBox3D(min: meshBounds.min + morphGrowth.min, max: meshBounds.max + morphGrowth.max).transformed(by: worldTransform)
     }
 
+    // Bounds of the morphed mesh in the node's space. Nil without mesh bounds.
+    var posedLocalBounds: BoundingBox3D? {
+        meshBounds.map { meshBounds in
+            let morphGrowth = morphGrowth
+            return BoundingBox3D(min: meshBounds.min + morphGrowth.min, max: meshBounds.max + morphGrowth.max)
+        }
+    }
+
     // Per axis, how far active morph targets can move a vertex down (min) and up (max).
     private var morphGrowth: (min: SIMD3<Float>, max: SIMD3<Float>) {
         var growth = (min: SIMD3<Float>.zero, max: SIMD3<Float>.zero)
-        let vertexCount = mesh.vertexCount
-        for (target, weight) in zip(morphTargets, morphWeights) where weight != 0 && !target.positionDeltas.isEmpty && target.isValid(vertexCount: vertexCount) {
+        for (target, weight) in validMorphs where weight != 0 && !target.positionDeltas.isEmpty {
             let low = target.positionDeltas.reduce(SIMD3<Float>(repeating: .infinity)) { simd_min($0, $1) } * weight
             let high = target.positionDeltas.reduce(SIMD3<Float>(repeating: -.infinity)) { simd_max($0, $1) } * weight
             growth.min += simd_min(low, high)

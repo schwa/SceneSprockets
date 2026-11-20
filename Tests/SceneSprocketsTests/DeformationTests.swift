@@ -128,3 +128,42 @@ func deformedIsSafeFromSeveralThreads() async throws {
     }
     #expect(entry.deformed(revision: SceneGraph.Revision(structure: 0, transform: 0)) != nil)
 }
+
+// #590: one rule for valid morph targets, and entries resolved for plain vertex buffer renderers.
+@Test
+func validMorphsSkipInvalidTargetsAndPadWeights() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let box = MetalMesh(mesh: .box(), device: device)
+    let node = SceneGraph.Node(content: .mesh(box, material: material))
+    node.morphTargets = [
+        SceneGraph.MorphTarget(positionDeltas: Array(repeating: [1, 0, 0], count: box.vertexCount)),
+        SceneGraph.MorphTarget(positionDeltas: [[1, 0, 0]]),
+        SceneGraph.MorphTarget(positionDeltas: Array(repeating: [0, 1, 0], count: box.vertexCount))
+    ]
+    node.morphWeights = [0.5]
+    let morphs = SceneGraph(root: node).meshEntries()[0].validMorphs
+    #expect(morphs.map(\.weight) == [0.5, 0])
+    #expect(morphs.map(\.target) == [node.morphTargets[0], node.morphTargets[2]])
+}
+
+@Test
+func resolvingDeformationGivesAPlainMesh() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let box = MetalMesh(mesh: .box(), device: device)
+    let node = SceneGraph.Node(transform: Transform3D(storing: translation(5, 0, 0)), content: .mesh(box, material: material))
+    node.morphTargets = [SceneGraph.MorphTarget(positionDeltas: Array(repeating: [1, 0, 0], count: box.vertexCount))]
+    node.morphWeights = [1]
+    let sceneGraph = SceneGraph(root: node)
+    let entry = sceneGraph.meshEntries()[0]
+    let resolved = entry.resolvingDeformation(revision: sceneGraph.revision)
+    #expect(!resolved.hasMorphs)
+    #expect(resolved.skin == nil)
+    #expect(resolved.worldTransform == entry.worldTransform)
+    #expect(resolved.mesh.positionBounds()?.max.x == 1.5)
+    #expect(resolved.meshBounds?.max.x == 1.5)
+    // Already resolved: nothing left to deform.
+    #expect(resolved.deformed(revision: sceneGraph.revision) == nil)
+    // The original entry is unchanged.
+    #expect(entry.hasMorphs)
+    #expect(entry.mesh.positionBounds()?.max.x == 0.5)
+}

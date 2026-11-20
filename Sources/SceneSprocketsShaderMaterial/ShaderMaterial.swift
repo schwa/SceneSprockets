@@ -141,13 +141,12 @@ public struct ShaderMaterialRenderer: MaterialRenderer, Equatable {
     // swiftlint:disable:next unneeded_throws_rethrows
     public func makeElement(entries: [SceneGraph.MeshEntry], context: RenderContext) throws -> AnyElement {
         let cameraPosition = context.cameraMatrix.columns.3.xyz
-        // Skinned and morphed meshes are deformed by SceneGraphElement's GPU pre-pass (#298).
+        // SceneGraphElement has already swapped skinned and morphed meshes for their deformed vertices (#298, #590).
         let items: [ShaderMaterialItem] = entries.compactMap { entry in
             guard let material = entry.material as? ShaderMaterial else {
                 return nil
             }
-            let deformed = entry.renderDeformed(revision: context.revision)
-            return ShaderMaterialItem(mesh: deformed?.mesh ?? entry.mesh, submeshIndex: entry.submeshIndex, modelMatrix: deformed?.modelMatrix ?? entry.worldTransform, material: material, opacity: entry.opacity, isTransparent: entry.isTransparent, receivesShadow: entry.receivesShadow)
+            return ShaderMaterialItem(mesh: entry.mesh, submeshIndex: entry.submeshIndex, modelMatrix: entry.worldTransform, material: material, opacity: entry.opacity, isTransparent: entry.isTransparent, receivesShadow: entry.receivesShadow)
         }
         let lights = context.lightingLights(cameraPosition: cameraPosition)
         return ShaderMaterialDrawsElement(items: items, context: context, cameraPosition: cameraPosition, lights: lights).eraseToAnyElement()

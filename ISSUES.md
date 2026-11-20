@@ -13328,13 +13328,14 @@ Found in the architecture review (#477).
 ## 590: Skinned and morphed geometry for a frame is resolved in four places and passed through a per-node cache
 
 +++
-status: new
+status: closed
 priority: medium
 kind: task
 labels: area:architecture, effort:l, subtask
 milestone: M002-Performance
 created: 2026-11-20T02:56:48Z
-updated: 2026-11-20T02:56:53Z
+updated: 2026-11-20T05:52:31Z
+closed: 2026-11-20T05:52:31Z
 +++
 
 The mesh and model matrix that a skinned or morphed entry draws with are worked out separately in:
@@ -13449,6 +13450,24 @@ After #593, NodeFieldSlot records each field's archive keys and clone() copies f
 
 - MeshEntry copies render fields (opacity, categoryBitMask, renderingOrder, ...) by hand. A new render field missing there is silently not drawn with.
 - The test only checks that every ArchiveKeys case belongs to a field. It does not check that encode(to:) and decodeArchive(from:) actually write and read each field, so a field can still be dropped from an archive.
+
+---
+
+## 595: Shadow casters and PBR primitives still resolve skinned and morphed geometry on their own
+
++++
+status: new
+priority: low
+kind: task
+created: 2026-11-20T05:52:31Z
++++
+
+After #590, SceneGraphElement resolves deformation once for renderers that draw plain vertex buffers (MeshEntry.resolvingDeformation), and MeshEntry.validMorphs is the rule for valid morph targets and weights on the CPU and GPU paths. Two places still decide this on their own:
+
+- Shadows.prepare skins casters on the GPU with its own position and influence buffers, and uses CPU deformation for morphed casters.
+- The PBR primitive input (PBRSceneGraph.swift) keeps morph targets only when every target is valid, which differs from validMorphs.
+
+Found while working on #590.
 
 ---
 

@@ -7,18 +7,9 @@ import simd
 import SwiftMesh
 
 /// Materials whose renderer draws plain vertex buffers, so SceneGraphElement morphs and skins their meshes on the GPU
-/// before the scene pass (#298). Renderers get the result from `MeshEntry.renderDeformed(revision:)`.
+/// before the scene pass (#298). Their renderers get entries that are already deformed; see
+/// `MeshEntry.resolvingDeformation(revision:)`.
 package protocol DrawsDeformedVertices {}
-
-extension SceneGraph.MeshEntry {
-    /// The GPU-deformed mesh that this frame's deformation pass writes, or the CPU-deformed mesh when there is none.
-    package func renderDeformed(revision: SceneGraph.Revision) -> Deformed? {
-        if let state = renderCache.gpuDeformation, let current = state.current, current.revision == revision, state.key.matches(mesh) {
-            return Deformed(mesh: current.mesh, modelMatrix: current.modelMatrix)
-        }
-        return deformed(revision: revision)
-    }
-}
 
 // Per node: copies of the mesh's vertex buffers, one set per frame in flight (like the shadow map), and the morph and
 // skin data, which change rarely.
@@ -87,7 +78,7 @@ final class GPUDeformationState {
             slots.append(copies)
         }
         let vertexCount = mesh.vertexCount
-        let morphTargets = entry.morphTargets.filter { $0.isValid(vertexCount: vertexCount) }
+        let morphTargets = entry.validMorphs.map(\.target)
         func deltas(_ path: KeyPath<SceneGraph.MorphTarget, [SIMD3<Float>]>) -> MTLBuffer? {
             guard !morphTargets.isEmpty else {
                 return nil
@@ -140,7 +131,7 @@ struct GPUDeformationJob {
 
 enum GPUDeformation {
     // Prepares this frame's deformation of every morphed or skinned mesh drawn by a DrawsDeformedVertices material, and
-    // publishes the result on each node for `renderDeformed(revision:)`. Returns the jobs for DeformationPass.
+    // publishes the result on each node for `resolvingDeformation(revision:)`. Returns the jobs for DeformationPass.
     static func prepare(entries: [SceneGraph.MeshEntry], revision: SceneGraph.Revision, submissionIndex: UInt64) -> [GPUDeformationJob] {
         var jobs: [GPUDeformationJob] = []
         var done = Set<SceneGraph.Node.ID>()
@@ -152,7 +143,6 @@ enum GPUDeformation {
             }
             let mesh = entry.mesh
             let skin = entry.skin
-            let weights = entry.morphWeights
             let hasMorphs = entry.hasMorphs
             guard skin != nil || hasMorphs else {
                 continue
@@ -169,8 +159,8 @@ enum GPUDeformation {
             }
             var uniforms = state.layout.uniforms
             uniforms.hasSkin = skin == nil ? 0 : 1
-            // Same weights as the CPU path: the valid targets, in order.
-            let validWeights = zip(entry.morphTargets, weights + Array(repeating: 0, count: max(0, entry.morphTargets.count - weights.count))).filter { $0.0.isValid(vertexCount: mesh.vertexCount) }.map(\.1)
+            // Same targets and weights as the CPU path.
+            let validWeights = entry.validMorphs.map(\.weight)
             jobs.append(GPUDeformationJob(
                 uniforms: uniforms,
                 restPositions: restPositions,

@@ -203,12 +203,14 @@ public struct SceneGraphElement: Element {
                 context.lightShadowSlices = shadowFrame.lightSlices
             }
             var prePasses: [AnyElement] = []
-            // Morphs and skins on the GPU for renderers that draw plain vertex buffers (#298). The renderers below pick
-            // up the results from the nodes.
+            // Morphs and skins on the GPU for renderers that draw plain vertex buffers (#298). Their entries are then
+            // swapped for the deformed meshes, so those renderers draw them like any other mesh (#590).
             let deformationJobs = GPUDeformation.prepare(entries: entries, revision: context.revision, submissionIndex: submissionIndex)
             if !deformationJobs.isEmpty {
                 prePasses.append(DeformationPass(jobs: deformationJobs).eraseToAnyElement())
             }
+            let revision = context.revision
+            entries = entries.map { $0.material is any DrawsDeformedVertices ? $0.resolvingDeformation(revision: revision) : $0 }
             let opaque = entries.filter { !$0.isTransparent }
             let inShaderAmbientOcclusion = opaque.filter { $0.material is any AppliesAmbientOcclusionInShader }
             let wantsAmbientOcclusion = context.environment.ambientOcclusion != nil && postTargets != nil && debugMode == nil

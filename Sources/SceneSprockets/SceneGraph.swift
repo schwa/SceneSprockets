@@ -262,6 +262,19 @@ public class SceneGraph {
             return entry
         }
 
+        // This entry as a plain mesh: `mesh` is already morphed and skinned and drawn at `modelMatrix` (#590).
+        func replacingDeformation(mesh: MetalMesh, modelMatrix: float4x4, meshBounds: BoundingBox3D?) -> Self {
+            var entry = self
+            let shared = entry.uniqueShared()
+            shared.mesh = mesh
+            shared.meshBounds = meshBounds
+            let storage = entry.uniqueStorage()
+            storage.worldTransform = modelMatrix
+            storage.skin = nil
+            storage.morphWeights = []
+            return entry
+        }
+
         private static func skinPose(_ node: Node, mesh: MetalMesh) -> SkinPose? {
             node.validSkin(vertexCount: mesh.vertexCount).map(SkinPose.init)
         }

@@ -26,12 +26,48 @@ extension SceneGraph.MeshEntry {
         if let cache = renderCache.deformation, cache.revision == revision {
             return Deformed(mesh: cache.mesh, modelMatrix: modelMatrix)
         }
+        let morphs = hasMorphs ? validMorphs : []
         // Outside the lock: two threads may both deform the mesh, and the last one's copy is kept.
-        guard let deformedMesh = mesh.deformed(morphTargets: hasMorphs ? morphTargets : [], weights: morphWeights, jointMatrices: skin?.jointMatrices(), skinVertices: skinVertices) else {
+        guard let deformedMesh = mesh.deformed(morphTargets: morphs.map(\.target), weights: morphs.map(\.weight), jointMatrices: skin?.jointMatrices(), skinVertices: skinVertices) else {
             return nil
         }
         renderCache.deformation = (revision, deformedMesh)
         return Deformed(mesh: deformedMesh, modelMatrix: modelMatrix)
+    }
+
+    // The morph targets that fit the mesh, in order, each with its weight (0 when there is none). The one rule for
+    // which targets and weights the CPU and GPU paths use (#590).
+    var validMorphs: [(target: SceneGraph.MorphTarget, weight: Float)] {
+        let vertexCount = mesh.vertexCount
+        let weights = morphWeights
+        return morphTargets.enumerated().compactMap { index, target in
+            target.isValid(vertexCount: vertexCount) ? (target, index < weights.count ? weights[index] : 0) : nil
+        }
+    }
+
+    /// This entry ready to draw from plain vertex buffers: its mesh morphed and skinned (by this frame's GPU
+    /// deformation pass when there is one, otherwise on the CPU), placed by the model matrix, with no skin or morphs left
+    /// and bounds that cover the deformation. Unchanged when there is nothing to deform.
+    ///
+    /// SceneGraphElement does this for materials whose renderer draws plain vertex buffers. Use it in your own
+    /// elements built on ``renderBatches(_:context:)``.
+    public func resolvingDeformation(revision: SceneGraph.Revision) -> Self {
+        let result: Deformed?
+        if let state = renderCache.gpuDeformation, let current = state.current, current.revision == revision, state.key.matches(mesh) {
+            result = Deformed(mesh: current.mesh, modelMatrix: current.modelMatrix)
+        } else {
+            result = deformed(revision: revision)
+        }
+        guard let result else {
+            return self
+        }
+        // Skinned meshes are in world space, so their posed world bounds are their mesh bounds.
+        let bounds: BoundingBox3D? = if skin != nil {
+            posedWorldBounds
+        } else {
+            posedLocalBounds
+        }
+        return replacingDeformation(mesh: result.mesh, modelMatrix: result.modelMatrix, meshBounds: bounds)
     }
 }
 
