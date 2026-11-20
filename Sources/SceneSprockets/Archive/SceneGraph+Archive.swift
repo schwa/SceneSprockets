@@ -51,7 +51,7 @@ extension SceneGraph: Codable {
 // MARK: - Nodes
 
 extension SceneGraph.Node: Codable {
-    enum ArchiveKeys: String, CodingKey {
+    enum ArchiveKeys: String, CodingKey, CaseIterable {
         case label, transform, pivot, isVisible, isActive, opacity, categoryBitMask, lightCategoryBitMask, renderingOrder
         case subdivisionLevel, actionSpeed, mesh, light, camera, constraints, children, model
         case morphTargets, morphWeights, skin, skinVertices, physicsBody, particleSystems, levelsOfDetail, audioPlayers, text

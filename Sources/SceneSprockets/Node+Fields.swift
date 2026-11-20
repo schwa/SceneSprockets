@@ -5,7 +5,8 @@ import SwiftECS
 import SwiftMesh
 
 // Node properties stored in the graph's World while the node is in a graph; see Node+Entity.swift. Each has a
-// component, a NodeFieldStorage var on Node, a property below and an entry in `worldFields`.
+// component, a NodeFieldStorage var on Node, a property below and an entry in `worldFields`, which also says
+// whether clone() copies it and which archive keys save it. NodeFieldListTests checks that these agree (#593).
 
 // Made once: a key path literal passed to access(keyPath:) or withMutation(keyPath:) is instantiated through the
 // runtime on every call (#283).
@@ -46,31 +47,33 @@ extension SceneGraph.Node {
     ] + worldFields.map(\.componentType)
 
     static let worldFields: [NodeFieldSlot] = [
-        NodeFieldSlot(\.transform, \.transformStorage),
-        NodeFieldSlot(\.content, \.contentStorage),
-        NodeFieldSlot(\.label, \.labelStorage),
-        NodeFieldSlot(\.isVisible, \.isVisibleStorage),
-        NodeFieldSlot(\.isActive, \.isActiveStorage),
-        NodeFieldSlot(\.opacity, \.opacityStorage),
-        NodeFieldSlot(\.pivot, \.pivotStorage),
-        NodeFieldSlot(\.categoryBitMask, \.categoryBitMaskStorage),
-        NodeFieldSlot(\.lightCategoryBitMask, \.lightCategoryBitMaskStorage),
-        NodeFieldSlot(\.renderingOrder, \.renderingOrderStorage),
-        NodeFieldSlot(\.physicsBody, \.physicsBodyStorage),
-        NodeFieldSlot(\.levelsOfDetail, \.levelsOfDetailStorage),
-        NodeFieldSlot(\.particleSystems, \.particleSystemsStorage),
-        NodeFieldSlot(\.audioPlayers, \.audioPlayersStorage),
-        NodeFieldSlot(\.text, \.textStorage),
-        NodeFieldSlot(\.skin, \.skinStorage),
-        NodeFieldSlot(\.skinVertices, \.skinVerticesStorage),
-        NodeFieldSlot(\.morphTargets, \.morphTargetsStorage),
-        NodeFieldSlot(\.morphWeights, \.morphWeightsStorage),
-        NodeFieldSlot(\.runningActions, \.runningActionsStorage),
-        NodeFieldSlot(\.actionSpeed, \.actionSpeedStorage),
-        NodeFieldSlot(\.constraints, \.constraintsStorage),
-        NodeFieldSlot(\.accelerationStates, \.accelerationStatesStorage),
-        NodeFieldSlot(\.subdivisionLevel, \.subdivisionLevelStorage),
-        NodeFieldSlot(\.subdivisionBase, \.subdivisionBaseStorage)
+        NodeFieldSlot(\.transform, \.transformStorage, archiveKeys: [.transform]),
+        NodeFieldSlot(\.content, \.contentStorage, archiveKeys: [.mesh, .light, .camera]),
+        NodeFieldSlot(\.label, \.labelStorage, archiveKeys: [.label]),
+        NodeFieldSlot(\.isVisible, \.isVisibleStorage, archiveKeys: [.isVisible]),
+        NodeFieldSlot(\.isActive, \.isActiveStorage, archiveKeys: [.isActive]),
+        NodeFieldSlot(\.opacity, \.opacityStorage, archiveKeys: [.opacity]),
+        NodeFieldSlot(\.pivot, \.pivotStorage, archiveKeys: [.pivot]),
+        NodeFieldSlot(\.categoryBitMask, \.categoryBitMaskStorage, archiveKeys: [.categoryBitMask]),
+        NodeFieldSlot(\.lightCategoryBitMask, \.lightCategoryBitMaskStorage, archiveKeys: [.lightCategoryBitMask]),
+        NodeFieldSlot(\.renderingOrder, \.renderingOrderStorage, archiveKeys: [.renderingOrder]),
+        NodeFieldSlot(\.physicsBody, \.physicsBodyStorage, archiveKeys: [.physicsBody]),
+        NodeFieldSlot(\.levelsOfDetail, \.levelsOfDetailStorage, archiveKeys: [.levelsOfDetail]),
+        NodeFieldSlot(\.particleSystems, \.particleSystemsStorage, archiveKeys: [.particleSystems]),
+        NodeFieldSlot(\.audioPlayers, \.audioPlayersStorage, isCloned: false, archiveKeys: [.audioPlayers]),
+        NodeFieldSlot(\.text, \.textStorage, archiveKeys: [.text]),
+        NodeFieldSlot(\.skin, \.skinStorage, archiveKeys: [.skin]),
+        NodeFieldSlot(\.skinVertices, \.skinVerticesStorage, archiveKeys: [.skinVertices]),
+        NodeFieldSlot(\.morphTargets, \.morphTargetsStorage, archiveKeys: [.morphTargets]),
+        NodeFieldSlot(\.morphWeights, \.morphWeightsStorage, archiveKeys: [.morphWeights]),
+        NodeFieldSlot(\.runningActions, \.runningActionsStorage, isCloned: false, archiveKeys: []),
+        NodeFieldSlot(\.actionSpeed, \.actionSpeedStorage, archiveKeys: [.actionSpeed]),
+        NodeFieldSlot(\.constraints, \.constraintsStorage, archiveKeys: [.constraints]),
+        // Smoothing state; rebuilt from the constraints.
+        NodeFieldSlot(\.accelerationStates, \.accelerationStatesStorage, isCloned: false, archiveKeys: []),
+        NodeFieldSlot(\.subdivisionLevel, \.subdivisionLevelStorage, archiveKeys: [.subdivisionLevel]),
+        // The unsubdivided mesh, derived from the content; not saved.
+        NodeFieldSlot(\.subdivisionBase, \.subdivisionBaseStorage, archiveKeys: [])
     ]
 
     /// The node's transform relative to its parent. Does not include ``pivot``.

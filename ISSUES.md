@@ -13407,13 +13407,14 @@ Found in the architecture review (#477).
 ## 593: A node field is declared by hand in about seven places
 
 +++
-status: new
+status: closed
 priority: low
 kind: task
 labels: area:architecture, effort:m, subtask
 milestone: M002-Performance
 created: 2026-11-20T02:56:49Z
-updated: 2026-11-20T02:56:54Z
+updated: 2026-11-20T03:23:37Z
+closed: 2026-11-20T03:23:37Z
 +++
 
 Each of the 25 node fields (transform, content, opacity, skin, ...) is listed separately in:
@@ -13430,6 +13431,22 @@ Nothing checks that the lists agree. A field missing from `clone()` or the archi
 Note: field access is performance-tuned (#283, #270), and the lists are next to the flattening code of #588.
 
 Found in the architecture review (#477).
+
+---
+
+## 594: MeshEntry's copies of node render fields and the archive encode/decode are not checked against the node field list
+
++++
+status: new
+priority: low
+kind: none
+created: 2026-11-20T03:23:37Z
++++
+
+After #593, NodeFieldSlot records each field's archive keys and clone() copies fields from worldFields, and NodeFieldListTests checks the lists agree. Two lists remain unchecked:
+
+- MeshEntry copies render fields (opacity, categoryBitMask, renderingOrder, ...) by hand. A new render field missing there is silently not drawn with.
+- The test only checks that every ArchiveKeys case belongs to a field. It does not check that encode(to:) and decodeArchive(from:) actually write and read each field, so a field can still be dropped from an archive.
 
 ---
 

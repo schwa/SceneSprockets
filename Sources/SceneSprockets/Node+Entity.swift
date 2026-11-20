@@ -53,6 +53,12 @@ typealias NodeFieldStorageKeyPath<Field: NodeField> = ReferenceWritableKeyPath<S
 // Type-erased access to one node field, for code that handles every field.
 struct NodeFieldSlot: Sendable {
     let componentType: ComponentType
+    // Whether clone() copies the field.
+    let isCloned: Bool
+    // The archive keys the field is saved under; empty when archives do not save it. Checked by tests (#593).
+    let archiveKeys: [SceneGraph.Node.ArchiveKeys]
+    // Writes the source's value straight into the copy's storage, so no change handlers run. The copy is detached.
+    let copyToClone: @Sendable (_ source: SceneGraph.Node, _ copy: SceneGraph.Node) -> Void
     // Typed, so attaching does not pass each field through `any Component` (#283).
     let insert: @Sendable (SceneGraph.Node, World.EntityInitializer) -> Void
     let copyBack: @Sendable (SceneGraph.Node) -> Void
@@ -62,9 +68,16 @@ struct NodeFieldSlot: Sendable {
 
     init<Field: NodeField>(
         _ wrappedKeyPath: ReferenceWritableKeyPath<SceneGraph.Node, Field.Value> & Sendable,
-        _ storageKeyPath: NodeFieldStorageKeyPath<Field> & Sendable
+        _ storageKeyPath: NodeFieldStorageKeyPath<Field> & Sendable,
+        isCloned: Bool = true,
+        archiveKeys: [SceneGraph.Node.ArchiveKeys]
     ) {
         componentType = ComponentType(Field.self)
+        self.isCloned = isCloned
+        self.archiveKeys = archiveKeys
+        copyToClone = { source, copy in
+            copy[keyPath: storageKeyPath].local = source.readField(storageKeyPath)
+        }
         insert = { node, initializer in
             initializer.set(Field(value: node[keyPath: storageKeyPath].local))
         }

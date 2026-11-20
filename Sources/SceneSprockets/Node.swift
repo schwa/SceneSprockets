@@ -310,27 +310,10 @@ extension SceneGraph {
         /// A copy of this node and its subtree, like SCNNode.clone(). Meshes, materials, skins and constraints are
         /// shared, not copied; running actions are not copied. The copy has no parent.
         public func clone() -> Node {
-            let copy = Node(label: label, content: content)
-            copy.transform = transform
-            copy.pivot = pivot
-            copy.morphTargets = morphTargets
-            copy.morphWeights = morphWeights
-            copy.skin = skin
-            copy.skinVertices = skinVertices
-            copy.isVisible = isVisible
-            copy.isActive = isActive
-            copy.opacity = opacity
-            copy.physicsBody = physicsBody
-            copy.constraints = constraints
-            copy.categoryBitMask = categoryBitMask
-            copy.lightCategoryBitMask = lightCategoryBitMask
-            copy.renderingOrder = renderingOrder
-            copy.levelsOfDetail = levelsOfDetail
-            copy.particleSystems = particleSystems
-            copy.text = text
-            copy.subdivisionBase = subdivisionBase
-            copy.subdivisionLevel = subdivisionLevel
-            copy.actionSpeed = actionSpeed
+            let copy = Node()
+            for field in Self.worldFields where field.isCloned {
+                field.copyToClone(self, copy)
+            }
             copy.modelSource = modelSource
             copy.shapeStorage = shapeStorage
             for child in children {
