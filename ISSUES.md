@@ -7581,7 +7581,7 @@ kind: feature
 labels: area:scenegraph, effort:l, subtask, bounds
 milestone: M002-Performance
 created: 2026-11-07T18:39:49Z
-updated: 2026-11-17T19:13:17Z
+updated: 2026-11-20T01:57:11Z
 +++
 
 SceneSprockets has no spatial acceleration structure. Queries go through every node or every triangle:
@@ -7592,14 +7592,18 @@ SceneSprockets has no spatial acceleration structure. Queries go through every n
 
 This costs more as scenes grow. Part of #543.
 
-Known so far:
+## Proposed design (per schwa)
 
-- Decided: triangle-level structures belong in SwiftMesh.
-- SwiftMesh already has TriangleBVH (closestPoint, intersect). intersect returns only the nearest hit; SceneGraph.hitTest can return every hit, so all-hits needs a new SwiftMesh query.
-- Node-level culling and region queries follow scene changes, so they belong in SceneSprockets.
-- Related: #402 (positions re-read per hit test).
+A new BVH target in SceneSprockets holds both levels, so it can be moved later (for example to SwiftMesh) if that is better:
+- Per-mesh triangle BVH, with a query that returns every ray hit (SceneGraph.hitTest can return every hit).
+- Node-level bounds hierarchy that follows scene changes (moves, adds, removes), for culling, region queries and the first stage of hit testing.
+
+SwiftMesh's TriangleBVH (nearest hit only) is not extended for now.
+
+Related: #402 (positions re-read per hit test).
 
 - `2026-11-17T19:05:44Z`: Question 1 (decision): Go ahead with the 3-part split (all-hits query in SwiftMesh, per-mesh BVH in hitTest, node-level bounds hierarchy here), including work in the SwiftMesh repo? Recommended: Yes
+- `2026-11-20T01:57:11Z`: Answer 1: No (schwa): no SwiftMesh work for now. Both levels (per-mesh triangle BVH with an all-hits query, and the node-level bounds hierarchy) go in a new BVH target in SceneSprockets; it may move later.
 
 ---
 
@@ -12289,7 +12293,7 @@ labels: umbrella, area:scenegraph, effort:xl, bounds
 milestone: M002-Performance
 depends: 337, 505, 520, 383
 created: 2026-11-17T19:13:08Z
-updated: 2026-11-17T19:13:15Z
+updated: 2026-11-20T01:57:11Z
 +++
 
 SceneSprockets has no hierarchy of node bounds that follows scene changes. Every system that asks what a frustum, ray or region touches walks every node, and does its own bounds work:
@@ -12299,6 +12303,8 @@ SceneSprockets has no hierarchy of node bounds that follows scene changes. Every
 - There is no query for nodes in a box or sphere, or nearest to a point.
 - GPU occlusion culling has no node bounds on the GPU to test.
 - visionOS immersive culling uses one camera.
+
+The BVHs (per-mesh triangles and node bounds) go in a new BVH target in SceneSprockets (#337); no work in other repositories for now.
 
 Sub-issues:
 - #337 No spatial acceleration structure for culling, hit testing and queries
