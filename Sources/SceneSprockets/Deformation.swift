@@ -1,3 +1,4 @@
+import GeometryLite3D
 import Metal
 import MetalSupport
 import simd
@@ -38,6 +39,14 @@ extension SceneGraph.MeshEntry {
 final class NodeRenderCache {
     private let lock = NSLock()
     private var storedDeformation: (revision: SceneGraph.Revision, mesh: MetalMesh)?
+    private var storedJointBounds: (structure: Int, bounds: [BoundingBox3D?])?
+
+    // Rest-space bounds of the vertices each joint influences, for posed bounds (PosedBounds.swift). Kept until the node's
+    // structure revision changes (its mesh or skin vertices).
+    var jointBounds: (structure: Int, bounds: [BoundingBox3D?])? {
+        get { lock.withLock { storedJointBounds } }
+        set { lock.withLock { storedJointBounds = newValue } }
+    }
 
     // The CPU-deformed mesh. Locked: hit testing asks for it on the thread that edits the scene while the render
     // thread asks for it too (#476).

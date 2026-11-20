@@ -2,9 +2,9 @@ import GeometryLite3D
 import SceneSprocketsBVH
 import simd
 
-// The graph's mesh entries with a BVH over their world bounds, for queries that would otherwise test every entry
-// (#337). Entries without bounds can be anywhere, so every query returns them; so are skinned and morphed entries,
-// which move outside their rest bounds.
+// The graph's mesh entries with a BVH over their posed world bounds, for queries that would otherwise test every entry
+// (#337). Entries without bounds can be anywhere, so every query returns them. Skinned and morphed entries use
+// conservative posed bounds (#585).
 struct MeshEntryIndex {
     var entries: [SceneGraph.MeshEntry]
     var bvh: BVH
@@ -13,12 +13,9 @@ struct MeshEntryIndex {
     init(entries: [SceneGraph.MeshEntry]) {
         self.entries = entries
         let empty = BoundingBox3D(min: .init(repeating: .infinity), max: .init(repeating: -.infinity))
-        let isUnbounded = entries.map { $0.meshBounds == nil || $0.skin != nil || !$0.morphTargets.isEmpty }
-        let bounds = entries.indices.map { index in
-            isUnbounded[index] ? empty : entries[index].meshBounds?.transformed(by: entries[index].worldTransform) ?? empty
-        }
-        bvh = BVH(itemBounds: bounds)
-        unbounded = entries.indices.filter { isUnbounded[$0] }
+        let bounds = entries.map(\.posedWorldBounds)
+        bvh = BVH(itemBounds: bounds.map { $0 ?? empty })
+        unbounded = entries.indices.filter { bounds[$0] == nil }
     }
 
     // Indices of entries that may pass `query`, in entry (traversal) order.
@@ -41,15 +38,15 @@ extension SceneGraph {
         return index
     }
 
-    /// Mesh entries whose world bounds overlap `box`, in traversal order. Entries without bounds, and skinned or morphed
-    /// ones, are always included.
+    /// Mesh entries whose posed world bounds (``MeshEntry/posedWorldBounds``) overlap `box`, in traversal order. Entries
+    /// without bounds are always included.
     public func meshEntries(overlapping box: BoundingBox3D) -> [MeshEntry] {
         let index = meshEntryIndex()
         return index.indices { bvh, visit in bvh.items(overlapping: box, visit) }.map { index.entries[$0] }
     }
 
-    /// Mesh entries whose world bounds may be inside `frustum`, in traversal order. Entries without bounds, and skinned
-    /// or morphed ones, are always included.
+    /// Mesh entries whose posed world bounds (``MeshEntry/posedWorldBounds``) may be inside `frustum`, in traversal order.
+    /// Entries without bounds are always included.
     public func meshEntries(in frustum: Frustum) -> [MeshEntry] {
         let index = meshEntryIndex()
         return index.indices { bvh, visit in bvh.items(in: frustum, visit) }.map { index.entries[$0] }

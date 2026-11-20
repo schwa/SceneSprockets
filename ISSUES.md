@@ -13218,13 +13218,15 @@ meshEntriesInFrustum and culledMeshEntries (Renderer/Culling.swift) test every e
 ## 585: Skinned and morphed mesh entries are never culled by the mesh entry index
 
 +++
-status: new
+status: closed
 priority: low
 kind: enhancement
 labels: area:scenegraph, area:performance, effort:m, bounds
 milestone: M002-Performance
 depends: 337
 created: 2026-11-20T02:15:41Z
+updated: 2026-11-20T02:23:49Z
+closed: 2026-11-20T02:23:49Z
 +++
 
 SceneGraph's mesh entry index (#337) always returns skinned and morphed entries, because they move outside their rest bounds and the index has no posed bounds for them. Box, frustum and ray queries therefore include every skinned and morphed entry.

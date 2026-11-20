@@ -83,6 +83,38 @@ struct MeshEntryIndexTests {
         #expect(between.node.label == "3,3")
     }
 
+    // #585: posed bounds contain every vertex of the deformed mesh, for skins (two joints) and morph targets.
+    @Test func posedBoundsContainTheDeformedMesh() throws {
+        let root = SceneGraph.Node()
+        let first = root.addChild(SceneGraph.Node(transform: Transform3D(storing: simd_float4x4(translation: [10, 0, 0]))))
+        let second = root.addChild(SceneGraph.Node(transform: Transform3D(storing: simd_float4x4(translation: [0, 20, 0]))))
+        let skinned = root.addChild(SceneGraph.Node(label: "skinned", content: .mesh(box, material: material())))
+        skinned.skin = SceneGraph.Skin(joints: [first, second], inverseBindMatrices: [matrix_identity_float4x4, matrix_identity_float4x4])
+        // Vertices alternate between the joints, some blended.
+        skinned.skinVertices = (0 ..< box.vertexCount).map { vertex in
+            vertex.isMultiple(of: 3) ? SceneGraph.SkinVertex(joints: [0, 1, 0, 0], weights: [0.5, 0.5, 0, 0]) : SceneGraph.SkinVertex(joints: [UInt16(vertex % 2), 0, 0, 0], weights: [1, 0, 0, 0])
+        }
+        let morphed = root.addChild(SceneGraph.Node(label: "morphed", transform: Transform3D(storing: simd_float4x4(translation: [-30, 0, 0])), content: .mesh(box, material: material())))
+        morphed.morphTargets = [
+            SceneGraph.MorphTarget(positionDeltas: (0 ..< box.vertexCount).map { [Float($0 % 4), -2, 0] }),
+            SceneGraph.MorphTarget(positionDeltas: (0 ..< box.vertexCount).map { [0, 0, Float($0 % 3)] })
+        ]
+        morphed.morphWeights = [0.75, -1.5]
+        let graph = SceneGraph(root: root)
+        for entry in graph.meshEntries() {
+            let bounds = try #require(entry.posedWorldBounds)
+            let deformed = try #require(entry.deformed(revision: graph.revision), "\(entry.node.label ?? "")")
+            for position in deformed.mesh.positions() {
+                let world = (deformed.modelMatrix * SIMD4(position, 1)).xyz
+                #expect(all(world .>= bounds.min - 1e-4) && all(world .<= bounds.max + 1e-4), "\(entry.node.label ?? ""): \(world) outside \(bounds)")
+            }
+        }
+        // The skinned mesh is found where its joints put it (a box spanning both joints, x -0.5...10.5, y -0.5...20.5),
+        // and nothing is found outside every posed box.
+        #expect(labels(graph.meshEntries(overlapping: BoundingBox3D(min: [9, -1, -1], max: [11, 1, 1]))) == ["skinned"])
+        #expect(graph.meshEntries(overlapping: BoundingBox3D(min: [15, 15, -1], max: [17, 17, 1])).isEmpty)
+    }
+
     @Test func hitTestUsesTheIndex() {
         let graph = grid()
         let hits = graph.hitTest(Ray3D(origin: [4, 6, 10], direction: [0, 0, -1]))
