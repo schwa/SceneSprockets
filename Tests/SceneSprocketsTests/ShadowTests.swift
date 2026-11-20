@@ -27,7 +27,8 @@ private var material: BlinnPhongSceneMaterial {
 // A floor, a box floating above it, and a directional light shining down and towards -x, so the box's shadow
 // falls on the floor around x = -1 (a visible spot left of the box). Returns the scene and that spot in pixels.
 @MainActor
-private func makeScene(boxCastsShadow: Bool = true, skinned: Bool = false, light: Light.Kind = .directional) throws -> (SceneGraph, SIMD2<Int>) {
+private func makeScene(boxCastsShadow: Bool = true, skinned: Bool = false, light: Light.Kind = .directional, boxMaterial: (any SceneMaterial)? = nil) throws -> (SceneGraph, SIMD2<Int>) {
+    let boxMaterial = boxMaterial ?? material
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)
     let root = SceneGraph.Node()
@@ -45,11 +46,11 @@ private func makeScene(boxCastsShadow: Bool = true, skinned: Bool = false, light
     if skinned {
         // Placed only by its joint: the mesh node sits far away, the joint at the usual spot.
         let joint = root.addChild(SceneGraph.Node(label: "Joint", transform: .init(translation: [0, 1.5, 0])))
-        let node = root.addChild(SceneGraph.Node(label: "Box", transform: .init(translation: [50, 0, 0]), content: .mesh(box, material: material, castsShadow: boxCastsShadow)))
+        let node = root.addChild(SceneGraph.Node(label: "Box", transform: .init(translation: [50, 0, 0]), content: .mesh(box, material: boxMaterial, castsShadow: boxCastsShadow)))
         node.skin = SceneGraph.Skin(joints: [joint], inverseBindMatrices: [matrix_identity_float4x4])
         node.skinVertices = Array(repeating: SceneGraph.SkinVertex(joints: .zero, weights: [1, 0, 0, 0]), count: box.vertexCount)
     } else {
-        root.addChild(SceneGraph.Node(label: "Box", transform: .init(translation: [0, 1.5, 0]), content: .mesh(box, material: material, castsShadow: boxCastsShadow)))
+        root.addChild(SceneGraph.Node(label: "Box", transform: .init(translation: [0, 1.5, 0]), content: .mesh(box, material: boxMaterial, castsShadow: boxCastsShadow)))
     }
     let sceneGraph = SceneGraph(linearRoot: root)
 
@@ -318,6 +319,64 @@ func nonCastersCastNoShadow() throws {
     let lit = try brightness(sceneGraph, at: pixel, shadows: nil)
     let withShadows = try brightness(sceneGraph, at: pixel, shadows: Shadows(intensity: 0.8))
     #expect(abs(withShadows - lit) <= 3)
+}
+
+private func alphaTexture(_ alpha: UInt8) throws -> MTLTexture {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba8Unorm, width: 1, height: 1, mipmapped: false)
+    let texture = try #require(device.makeTexture(descriptor: descriptor))
+    texture.replace(region: MTLRegionMake2D(0, 0, 1, 1), mipmapLevel: 0, withBytes: [128, 128, 128, alpha], bytesPerRow: 4)
+    return texture
+}
+
+// #541: casters with see-through materials cast shadows only where their alpha reaches the cutoff.
+@Test(.enabled(if: deviceSupportsMetal4), arguments: [
+    ("Blinn-Phong opacity 0.1", false),
+    ("Blinn-Phong texture alpha 0", false),
+    ("Blinn-Phong texture alpha 1", true),
+    ("Blinn-Phong skinned texture alpha 0", false),
+    ("PBR mask texture alpha 0", false),
+    ("PBR mask texture alpha 1", true),
+    ("PBR blend opacity 0.1", false),
+    ("Node opacity 0.1", false)
+])
+@MainActor
+func seeThroughCastersFollowAlpha(name: String, castsShadow: Bool) throws {
+    let boxMaterial: any SceneMaterial
+    var skinned = false
+    var nodeOpacity: Float = 1
+    switch name {
+    case "Blinn-Phong opacity 0.1":
+        boxMaterial = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0.5), specular: .color(0), shininess: 1, opacity: 0.1)
+    case "Blinn-Phong texture alpha 0", "Blinn-Phong skinned texture alpha 0":
+        boxMaterial = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .texture(try alphaTexture(0)), specular: .color(0), shininess: 1, usesDiffuseTextureAlpha: true)
+        skinned = name.contains("skinned")
+    case "Blinn-Phong texture alpha 1":
+        boxMaterial = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .texture(try alphaTexture(255)), specular: .color(0), shininess: 1, usesDiffuseTextureAlpha: true)
+    case "PBR mask texture alpha 0", "PBR mask texture alpha 1":
+        let pbr = try PBRSceneMaterial(textures: .init(baseColor: try alphaTexture(name.hasSuffix("1") ? 255 : 0)))
+        var uniforms = pbr.pbrMaterial.uniforms
+        uniforms.alphaMode = .mask
+        uniforms.alphaCutoff = 0.5
+        boxMaterial = PBRSceneMaterial(pbr.pbrMaterial.with(uniforms: uniforms))
+    case "PBR blend opacity 0.1":
+        boxMaterial = PBRSceneMaterial(opacity: 0.1)
+    default:
+        boxMaterial = material
+        nodeOpacity = 0.1
+    }
+    let (sceneGraph, pixel) = try makeScene(skinned: skinned, boxMaterial: boxMaterial)
+    if nodeOpacity < 1 {
+        try #require(sceneGraph.nodesWithWorldTransforms().first { $0.node.label == "Box" }?.node).opacity = nodeOpacity
+    }
+    let lit = try brightness(sceneGraph, at: pixel, shadows: nil, renderers: [BlinnPhongMaterialRenderer(), PBRMaterialRenderer()])
+    let shadowed = try brightness(sceneGraph, at: pixel, shadows: Shadows(intensity: 0.8), renderers: [BlinnPhongMaterialRenderer(), PBRMaterialRenderer()])
+    #expect(lit > 30)
+    if castsShadow {
+        #expect(Double(shadowed) < Double(lit) * 0.6)
+    } else {
+        #expect(abs(shadowed - lit) <= 3)
+    }
 }
 
 // #60: casters are pushed away from a directional light by `depthOffsetTexels` shadow map texels in world space.

@@ -18,7 +18,7 @@ import SwiftMesh
 ///
 /// You can change the material on one thread while a view draws it on its render thread (#479). `PBRMaterial` is
 /// immutable, so a change replaces it with a copy; the change shows on the next frame.
-public final class PBRSceneMaterial: SceneMaterial, SamplesShadowsInShader, @unchecked Sendable {
+public final class PBRSceneMaterial: SceneMaterial, SamplesShadowsInShader, ShadowCasterAlphaMaterial, @unchecked Sendable {
     private let lock = NSLock()
     private var storedMaterial: PBRMaterial
 
@@ -55,6 +55,24 @@ public final class PBRSceneMaterial: SceneMaterial, SamplesShadowsInShader, @unc
 
     public var appliesNodeOpacity: Bool {
         true
+    }
+
+    // MASK uses its cutoff; BLEND casts where alpha is at least one half (#541).
+    public var shadowCasterAlpha: ShadowCasterAlpha? {
+        let material = pbrMaterial
+        let uniforms = material.uniforms
+        guard uniforms.alphaMode != .opaque else {
+            return nil
+        }
+        var alpha = ShadowCasterAlpha(opacity: uniforms.baseColorFactor.w, cutoff: uniforms.alphaMode == .mask ? uniforms.alphaCutoff : 0.5)
+        if uniforms.baseColor.enabled != 0 {
+            let binding = material[texture: kPBRTextureBaseColor]
+            alpha.texture = binding.texture
+            alpha.sampler = binding.sampler
+            alpha.texCoordIndex = Int(uniforms.baseColor.texCoord)
+            alpha.texCoordTransform = uniforms.baseColor.transform
+        }
+        return alpha
     }
 
     /// The blend mode, depth test and write, color write mask and fill mode. Stored on ``pbrMaterial``.

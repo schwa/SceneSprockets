@@ -412,6 +412,18 @@ func blinnPhongVertexLayout(_ vertexDescriptor: VertexDescriptor) -> (descriptor
 
 extension BlinnPhongSceneMaterial: AppliesAmbientOcclusionInShader {}
 
+// Opacity and diffuse texture alpha cut holes in the shadow (#541).
+extension BlinnPhongSceneMaterial: ShadowCasterAlphaMaterial {
+    public var shadowCasterAlpha: ShadowCasterAlpha? {
+        var alpha = ShadowCasterAlpha(opacity: opacity)
+        if usesDiffuseTextureAlpha, case let .texture(texture, samplerDescriptor, _) = diffuse {
+            alpha.texture = texture
+            alpha.sampler = samplerDescriptor.flatMap { try? BlinnPhongShaders.samplerState(for: $0) }
+        }
+        return opacity < 1 || alpha.texture != nil ? alpha : nil
+    }
+}
+
 struct PipelineKey: Equatable {
     var vertexDescriptor: VertexDescriptor
     var renderState: MaterialRenderState

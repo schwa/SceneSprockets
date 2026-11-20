@@ -3,6 +3,7 @@ import GeometryLite3D
 import Metal
 import MetalSprockets
 import MetalSprocketsLighting
+import MetalSprocketsSupport
 import MetalSupport
 import ModelIO
 import SceneSprocketsShaders
@@ -44,6 +45,40 @@ public extension SamplesShadowsInShader {
     var samplesShadowsInShader: Bool {
         true
     }
+}
+
+/// How a see-through material cuts holes in its shadow (#541). A shadow map holds one depth per texel, so a caster
+/// either blocks the light at a point or not: points where `opacity` times the texture's alpha is below `cutoff` cast
+/// no shadow.
+public struct ShadowCasterAlpha {
+    /// A constant alpha. Node opacity multiplies it.
+    public var opacity: Float
+    /// Points with less alpha than this cast no shadow.
+    public var cutoff: Float
+    /// A texture whose alpha multiplies `opacity`, or nil.
+    public var texture: MTLTexture?
+    /// The sampler for `texture`, or nil for linear filtering with repeat.
+    public var sampler: MTLSamplerState?
+    /// Which texture coordinate set of the mesh to read.
+    public var texCoordIndex: Int
+    /// A transform applied to the texture coordinates, as in KHR_texture_transform.
+    public var texCoordTransform: simd_float3x3
+
+    public init(opacity: Float = 1, cutoff: Float = 0.5, texture: MTLTexture? = nil, sampler: MTLSamplerState? = nil, texCoordIndex: Int = 0, texCoordTransform: simd_float3x3 = matrix_identity_float3x3) {
+        self.opacity = opacity
+        self.cutoff = cutoff
+        self.texture = texture
+        self.sampler = sampler
+        self.texCoordIndex = texCoordIndex
+        self.texCoordTransform = texCoordTransform
+    }
+}
+
+/// Materials that can be partly see-through. Their shadow casters drop the points that ``shadowCasterAlpha`` makes
+/// transparent; other materials cast solid shadows.
+public protocol ShadowCasterAlphaMaterial {
+    /// Nil when the material is opaque.
+    var shadowCasterAlpha: ShadowCasterAlpha? { get }
 }
 
 /// Shadow-mapped shadows from directional, spot and point lights, for every renderer: casters are drawn into a shadow
@@ -147,6 +182,7 @@ public final class Shadows {
     // The caches below belong to the thread that draws with this object.
     private var shadowMap: SceneGraphShadowMap?
     private var positionBuffers: [PositionKey: MTLBuffer] = [:]
+    private var texCoordBuffers: [TexCoordKey: MTLBuffer] = [:]
     private var influenceBuffers: [InfluenceKey: MTLBuffer] = [:]
     // One per frame in flight, like the shadow map's depth textures.
     private var receiverMasks: [MTLTexture] = []
@@ -196,6 +232,8 @@ public final class Shadows {
         var positions: MTLBuffer
         var submesh: MetalMesh.Submesh
         var placement: Placement
+        // See-through casters: their alpha and texture coordinates.
+        var alpha: (alpha: ShadowCasterAlpha, texCoords: MTLBuffer)?
     }
 
     struct Frame {
@@ -232,11 +270,34 @@ public final class Shadows {
             return nil
         }
         var usedKeys = Set<PositionKey>()
+        var usedTexCoords = Set<TexCoordKey>()
         var usedInfluences = Set<InfluenceKey>()
         var casters: [Caster] = []
         var nonReceivers: [Caster] = []
-        // Position-only geometry for `entry`, as drawn this frame.
-        func caster(for entry: SceneGraph.MeshEntry) -> Caster? {
+        // Position-only geometry for `entry`, as drawn this frame. With `alpha`, see-through materials get their
+        // alpha, or no caster when nothing of them reaches the cutoff.
+        func caster(for entry: SceneGraph.MeshEntry, alpha usesAlpha: Bool = false) -> Caster? {
+            var alpha: (alpha: ShadowCasterAlpha, texCoords: MTLBuffer)?
+            if usesAlpha {
+                var materialAlpha = (entry.material as? any ShadowCasterAlphaMaterial)?.shadowCasterAlpha
+                if entry.opacity < 1, entry.material.appliesNodeOpacity {
+                    materialAlpha = materialAlpha ?? ShadowCasterAlpha()
+                    materialAlpha?.opacity *= entry.opacity
+                }
+                if let materialAlpha {
+                    if materialAlpha.opacity < materialAlpha.cutoff {
+                        return nil
+                    }
+                    if materialAlpha.texture != nil {
+                        let texCoordKey = TexCoordKey(position: PositionKey(entry.mesh), index: materialAlpha.texCoordIndex)
+                        usedTexCoords.insert(texCoordKey)
+                        // Without texture coordinates the texture cannot be read; the constant alpha still applies.
+                        if let texCoords = texCoordBuffer(for: entry.mesh, key: texCoordKey) {
+                            alpha = (materialAlpha, texCoords)
+                        }
+                    }
+                }
+            }
             // Skin on the GPU when there is a valid skin and no active morph; otherwise use CPU-deformed positions.
             let skin = gpuSkin(of: entry)
             let deformed = skin == nil ? entry.deformed(revision: context.revision) : nil
@@ -251,14 +312,14 @@ public final class Shadows {
                 return nil
             }
             guard let skin else {
-                return Caster(positions: positions, submesh: submesh, placement: .model((deformed?.modelMatrix ?? entry.worldTransform).cameraRelative(to: cameraPosition)))
+                return Caster(positions: positions, submesh: submesh, placement: .model((deformed?.modelMatrix ?? entry.worldTransform).cameraRelative(to: cameraPosition)), alpha: alpha)
             }
             let influenceKey = InfluenceKey(node: entry.nodeID, revision: context.revision.structure)
             usedInfluences.insert(influenceKey)
             guard let influences = influenceBuffer(for: entry, key: influenceKey, device: mesh.vertexBuffer.device) else {
                 return nil
             }
-            return Caster(positions: positions, submesh: submesh, placement: .skinned(influences: influences, jointMatrices: skin.jointMatrices().map { $0.cameraRelative(to: cameraPosition) }))
+            return Caster(positions: positions, submesh: submesh, placement: .skinned(influences: influences, jointMatrices: skin.jointMatrices().map { $0.cameraRelative(to: cameraPosition) }), alpha: alpha)
         }
         // Materials that sample shadows themselves are kept out of the screen-space mask, like non-receivers.
         let skipsMask = { (entry: SceneGraph.MeshEntry) in !entry.receivesShadow || (entry.material as? any SamplesShadowsInShader)?.samplesShadowsInShader == true }
@@ -270,7 +331,7 @@ public final class Shadows {
                 if entry.castsShadow {
                     customEntries[index].append(entry)
                 }
-            } else if entry.castsShadow, let caster = caster(for: entry) {
+            } else if entry.castsShadow, let caster = caster(for: entry, alpha: true) {
                 casters.append(caster)
             }
             if !masksEverything, skipsMask(entry), let caster = caster(for: entry) {
@@ -278,6 +339,7 @@ public final class Shadows {
             }
         }
         positionBuffers = positionBuffers.filter { usedKeys.contains($0.key) }
+        texCoordBuffers = texCoordBuffers.filter { usedTexCoords.contains($0.key) }
         influenceBuffers = influenceBuffers.filter { usedInfluences.contains($0.key) }
         let customCasters = zip(casterRenderers, customEntries).filter { !$0.1.isEmpty }.map { (renderer: $0.0, entries: $0.1) }
         guard !casters.isEmpty || !customCasters.isEmpty else {
@@ -410,6 +472,19 @@ public final class Shadows {
         return buffer
     }
 
+    // Texture coordinates of the undeformed mesh; deformation moves positions only.
+    private func texCoordBuffer(for mesh: MetalMesh, key: TexCoordKey) -> MTLBuffer? {
+        if let buffer = texCoordBuffers[key] {
+            return buffer
+        }
+        guard let texCoords = mesh.float2Values(.texcoord(key.index)), !texCoords.isEmpty, let buffer = mesh.vertexBuffer.device.makeBuffer(bytes: texCoords, length: texCoords.count * MemoryLayout<SIMD2<Float>>.stride, options: .storageModeShared) else {
+            return nil
+        }
+        buffer.label = "Shadow Caster Texture Coordinates"
+        texCoordBuffers[key] = buffer
+        return buffer
+    }
+
     // Joints (as floats) and weights per vertex, laid out as two float4s.
     private func influenceBuffer(for entry: SceneGraph.MeshEntry, key: InfluenceKey, device: MTLDevice) -> MTLBuffer? {
         if let buffer = influenceBuffers[key] {
@@ -449,6 +524,11 @@ private struct PositionKey: Hashable {
     }
 }
 
+private struct TexCoordKey: Hashable {
+    var position: PositionKey
+    var index: Int
+}
+
 private struct InfluenceKey: Hashable {
     var node: SceneGraph.Node.ID
     var revision: Int
@@ -470,8 +550,11 @@ struct ShadowCasterDepthPass: Element {
             let depthBias = -shadowMap.depthBias
             let slopeScale = -shadowMap.slopeScale
             let depthTexture = shadowMap.depthTexture(forSubmission: submissionIndex)
-            let staticCasters = frame.casters.filter { if case .model = $0.placement { true } else { false } }
-            let skinnedCasters = frame.casters.filter { if case .skinned = $0.placement { true } else { false } }
+            let isStatic = { (caster: Shadows.Caster) in if case .model = caster.placement { true } else { false } }
+            let staticCasters = frame.casters.filter { isStatic($0) && $0.alpha == nil }
+            let skinnedCasters = frame.casters.filter { !isStatic($0) && $0.alpha == nil }
+            let staticAlphaCasters = frame.casters.filter { isStatic($0) && $0.alpha != nil }
+            let skinnedAlphaCasters = frame.casters.filter { !isStatic($0) && $0.alpha != nil }
             return ForEach(Array(0..<shadowMap.lightCount), id: \.self) { lightIndex in
                 let lightViewProjection = frame.casterViewProjections.indices.contains(lightIndex) ? frame.casterViewProjections[lightIndex] : shadowMap.lightViewProjectionMatrices[lightIndex]
                 try RenderPass(label: "Shadow Casters [\(lightIndex)]") {
@@ -482,6 +565,16 @@ struct ShadowCasterDepthPass: Element {
                     }
                     if !skinnedCasters.isEmpty {
                         try pipeline("Skinned Shadow Casters", vertexShader: shaders.skinnedVertex, fragmentShader: shaders.fragment, vertexDescriptor: shaders.skinnedDescriptor, casters: skinnedCasters, lightViewProjection: lightViewProjection)
+                            .depthBias(depthBias, slopeScale: slopeScale)
+                            .depthCompare(function: .greaterEqual, writes: true)
+                    }
+                    if !staticAlphaCasters.isEmpty {
+                        try pipeline("See-Through Shadow Casters", vertexShader: shaders.staticAlphaVertex, fragmentShader: shaders.alphaFragment, vertexDescriptor: shaders.staticAlphaDescriptor, casters: staticAlphaCasters, lightViewProjection: lightViewProjection)
+                            .depthBias(depthBias, slopeScale: slopeScale)
+                            .depthCompare(function: .greaterEqual, writes: true)
+                    }
+                    if !skinnedAlphaCasters.isEmpty {
+                        try pipeline("Skinned See-Through Shadow Casters", vertexShader: shaders.skinnedAlphaVertex, fragmentShader: shaders.alphaFragment, vertexDescriptor: shaders.skinnedAlphaDescriptor, casters: skinnedAlphaCasters, lightViewProjection: lightViewProjection)
                             .depthBias(depthBias, slopeScale: slopeScale)
                             .depthCompare(function: .greaterEqual, writes: true)
                     }
@@ -541,15 +634,25 @@ private func drawCaster(_ caster: Shadows.Caster) -> AnyElement {
         indexBufferOffset: caster.submesh.indexBufferOffset
     )
     .vertexBuffer(caster.positions, index: 0)
-    switch caster.placement {
+    let placed = switch caster.placement {
     case .model(let modelMatrix):
-        return draw.parameter("modelMatrix", functionType: .vertex, value: modelMatrix).eraseToAnyElement()
+        draw.parameter("modelMatrix", functionType: .vertex, value: modelMatrix).eraseToAnyElement()
     case let .skinned(influences, jointMatrices):
-        return draw
+        draw
             .vertexBuffer(influences, index: 1)
             .parameter("jointMatrices", functionType: .vertex, values: jointMatrices)
             .eraseToAnyElement()
     }
+    guard let (alpha, texCoords) = caster.alpha, let shaders = try? ShadowCasterShaders.shared() else {
+        return placed
+    }
+    return placed
+        .vertexBuffer(texCoords, index: ShadowCasterShaders.texCoordBufferIndex)
+        .parameter("alpha", functionType: .fragment, value: SIMD4<Float>(alpha.opacity, alpha.cutoff, 0, 0))
+        .parameter("uvTransform", functionType: .fragment, value: alpha.texCoordTransform)
+        .parameter("alphaTexture", functionType: .fragment, texture: alpha.texture ?? shaders.whiteTexture)
+        .parameter("alphaSampler", functionType: .fragment, samplerState: alpha.sampler ?? shaders.sampler)
+        .eraseToAnyElement()
 }
 
 // From ShadowCasters.metal in SceneSprocketsShaders, loaded once.
@@ -560,6 +663,15 @@ struct ShadowCasterShaders {
     var mark: FragmentShader
     var staticDescriptor: MTLVertexDescriptor
     var skinnedDescriptor: MTLVertexDescriptor
+    var staticAlphaVertex: VertexShader
+    var skinnedAlphaVertex: VertexShader
+    var alphaFragment: FragmentShader
+    var staticAlphaDescriptor: MTLVertexDescriptor
+    var skinnedAlphaDescriptor: MTLVertexDescriptor
+    var whiteTexture: MTLTexture
+    var sampler: MTLSamplerState
+
+    static let texCoordBufferIndex = 5
 
     nonisolated(unsafe) private static var cached: Self?
     private static let lock = NSLock()
@@ -583,13 +695,42 @@ struct ShadowCasterShaders {
         skinnedDescriptor.attributes[2].bufferIndex = 1
         skinnedDescriptor.attributes[2].offset = 16
         skinnedDescriptor.layouts[1].stride = 32
+        func withTexCoords(_ descriptor: MTLVertexDescriptor) -> MTLVertexDescriptor {
+            // swiftlint:disable:next force_cast - MTLVertexDescriptor copies are always MTLVertexDescriptor
+            let copy = descriptor.copy() as! MTLVertexDescriptor
+            copy.attributes[3].format = .float2
+            copy.attributes[3].bufferIndex = texCoordBufferIndex
+            copy.layouts[texCoordBufferIndex].stride = 8
+            return copy
+        }
+        let device = _MTLCreateSystemDefaultDevice()
+        let textureDescriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba8Unorm, width: 1, height: 1, mipmapped: false)
+        guard let whiteTexture = device.makeTexture(descriptor: textureDescriptor) else {
+            throw MetalSprocketsError.resourceCreationFailure("Shadow caster white texture")
+        }
+        whiteTexture.replace(region: MTLRegionMake2D(0, 0, 1, 1), mipmapLevel: 0, withBytes: [UInt8](repeating: 255, count: 4), bytesPerRow: 4)
+        let samplerDescriptor = MTLSamplerDescriptor()
+        samplerDescriptor.minFilter = .linear
+        samplerDescriptor.magFilter = .linear
+        samplerDescriptor.sAddressMode = .repeat
+        samplerDescriptor.tAddressMode = .repeat
+        guard let sampler = device.makeSamplerState(descriptor: samplerDescriptor) else {
+            throw MetalSprocketsError.resourceCreationFailure("Shadow caster sampler")
+        }
         let shaders = Self(
             staticVertex: try library.vertex_static,
             skinnedVertex: try library.vertex_skinned,
             fragment: try library.fragment_depth,
             mark: try library.fragment_mark,
             staticDescriptor: staticDescriptor,
-            skinnedDescriptor: skinnedDescriptor
+            skinnedDescriptor: skinnedDescriptor,
+            staticAlphaVertex: try library.vertex_static_alpha,
+            skinnedAlphaVertex: try library.vertex_skinned_alpha,
+            alphaFragment: try library.fragment_alpha,
+            staticAlphaDescriptor: withTexCoords(staticDescriptor),
+            skinnedAlphaDescriptor: withTexCoords(skinnedDescriptor),
+            whiteTexture: whiteTexture,
+            sampler: sampler
         )
         cached = shaders
         return shaders

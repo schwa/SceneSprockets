@@ -12245,13 +12245,14 @@ Fog does not scatter light through participating media. (Moved from SceneSprocke
 ## 541: Alpha-masked and transparent materials cast fully opaque shadows
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:renderer, effort:l
 milestone: M003-Rendering
 created: 2026-11-17T18:10:56Z
-updated: 2026-11-17T18:28:40Z
+updated: 2026-11-20T06:14:41Z
+closed: 2026-11-20T06:14:41Z
 +++
 
 Shadow casters are drawn as position-only geometry (Shadows.swift, caster(for:)), with no texture coordinates and no material alpha. So a PBR material with alphaMode MASK (foliage, fences) or BLEND, or a Blinn-Phong material with opacity < 1 or diffuse-texture alpha, casts a solid shadow of its whole mesh.
@@ -12266,6 +12267,7 @@ Actual: the whole mesh casts a solid shadow.
 Found while auditing #499.
 
 - `2026-11-17T18:25:50Z`: Split out of #499 (closed).
+- `2026-11-20T06:14:41Z`: Shadow casters now honour material alpha via ShadowCasterAlphaMaterial: Blinn-Phong opacity and diffuse texture alpha, PBR MASK (alphaCutoff) and BLEND (cutoff 0.5), and node opacity. Points below the cutoff cast no shadow; static and GPU-skinned casters both supported. Partial (lighter) shadows for transparent surfaces are not possible with a depth-only shadow map.
 
 ---
 
