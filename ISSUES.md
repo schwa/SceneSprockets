@@ -10906,7 +10906,7 @@ priority: medium
 kind: task
 labels: area:scenegraph, effort:m, has-subtasks
 milestone: M002-Performance
-depends: 589,590,591,592,593
+depends: 589, 590, 591, 592, 593
 created: 2026-11-17T06:04:19Z
 updated: 2026-11-20T02:56:54Z
 +++
@@ -13282,12 +13282,14 @@ So hover picking in a large animated scene is likely slower than before #337.
 ## 588: Re-flattening mesh entries after a change takes ~2.6 ms for 10,000 entries
 
 +++
-status: new
+status: closed
 priority: medium
 kind: bug
 labels: area:scenegraph, area:performance, effort:m
 milestone: M002-Performance
 created: 2026-11-20T02:46:36Z
+updated: 2026-11-20T02:57:45Z
+closed: 2026-11-20T02:57:45Z
 +++
 
 SceneGraph.meshEntries() (flattened(worldTransform:)) is cached by revision, so any change, including a transform-only change, re-walks the graph and rebuilds every entry. Renderers ask for the entries every frame, so an animated scene pays this every frame.
@@ -13295,6 +13297,8 @@ SceneGraph.meshEntries() (flattened(worldTransform:)) is cached by revision, so 
 Measured with Tests/SceneSprocketsTests/CullingBenchmark.swift (Release, M5 Max): moving one node of a 10,000-box scene and asking for the entries again takes ~2.6 ms (animated_linear_us minus the ~60 us culling pass). At 120 Hz (8.3 ms per frame) that is about a third of the frame before any drawing.
 
 Possibly related to node access cost (#270): flattening reads several fields of every node.
+
+- `2026-11-20T02:57:45Z`: Fixed: MeshEntry storage splits structural fields (shared) from per-frame ones (world transform, opacity, morph weights, skin pose). After a transform-only change, flattened() re-walks the graph for world transforms and reuses each entry's structural fields instead of re-reading nodes and copying meshes, materials and arrays. CullingBenchmark, 10,000 entries, Release, M5 Max: move one node + get entries + linear cull ~3.1 ms -> ~1.44 ms. Most of what remains is the traversal itself (~140 ns per node, #270).
 
 ---
 

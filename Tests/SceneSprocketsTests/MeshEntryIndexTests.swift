@@ -115,6 +115,39 @@ struct MeshEntryIndexTests {
         #expect(graph.meshEntries(overlapping: BoundingBox3D(min: [15, 15, -1], max: [17, 17, 1])).isEmpty)
     }
 
+    // #588: after a transform-only change, entries carry the new world transform, opacity, morph weights and skin pose,
+    // the same as entries built from scratch.
+    @Test func transformOnlyChangesUpdateEntries() throws {
+        let root = SceneGraph.Node()
+        let joint = root.addChild(SceneGraph.Node())
+        let parent = root.addChild(SceneGraph.Node())
+        let morphed = parent.addChild(SceneGraph.Node(label: "morphed", content: .mesh(box, material: material())))
+        morphed.morphTargets = [SceneGraph.MorphTarget(positionDeltas: Array(repeating: [1, 0, 0], count: box.vertexCount))]
+        morphed.morphWeights = [0]
+        let skinned = root.addChild(SceneGraph.Node(label: "skinned", content: .mesh(box, material: material())))
+        skinned.skin = SceneGraph.Skin(joints: [joint], inverseBindMatrices: [matrix_identity_float4x4])
+        skinned.skinVertices = Array(repeating: SceneGraph.SkinVertex(joints: [0, 0, 0, 0], weights: [1, 0, 0, 0]), count: box.vertexCount)
+        let graph = SceneGraph(root: root)
+        let before = graph.meshEntries()
+        #expect(before.count == 2)
+        let structure = graph.revision.structure
+
+        parent.transform = Transform3D(storing: simd_float4x4(translation: [5, 0, 0]))
+        parent.opacity = 0.5
+        morphed.morphWeights = [0.25]
+        joint.transform = Transform3D(storing: simd_float4x4(translation: [0, 7, 0]))
+        #expect(graph.revision.structure == structure, "Only transform-revision fields changed")
+        let after = graph.meshEntries()
+        #expect(after.map(\.nodeID) == before.map(\.nodeID))
+        let morphedEntry = try #require(after.first { $0.node.label == "morphed" })
+        #expect(morphedEntry.worldTransform.columns.3.x == 5 && morphedEntry.opacity == 0.5 && morphedEntry.morphWeights == [0.25])
+        #expect(after.first { $0.node.label == "skinned" }?.skin?.jointWorldTransforms.first?.columns.3.y == 7)
+
+        // A structural change rebuilds the entries.
+        skinned.removeFromParent()
+        #expect(graph.meshEntries().map(\.node.label) == ["morphed"])
+    }
+
     @Test func hitTestUsesTheIndex() {
         let graph = grid()
         let hits = graph.hitTest(Ray3D(origin: [4, 6, 10], direction: [0, 0, -1]))

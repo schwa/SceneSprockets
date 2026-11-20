@@ -153,17 +153,17 @@ public class SceneGraph {
     // MARK: - Queries
 
     /// Copy-on-write: renderers copy entries through several stages every frame, so the fields live in one shared
-    /// object and a copy is a single retain (#133).
+    /// object and a copy is a single retain (#133). Fields that only change with the graph's structure live in a second
+    /// object that the next frame's entries share when only transforms changed (#588).
     public struct MeshEntry {
-        private final class Storage {
+        // Fields that change only when the graph's structure revision does.
+        private final class Shared {
             var node: Node
-            var worldTransform: float4x4
             var mesh: MetalMesh
             var submeshIndex: Int
             var material: any SceneMaterial
             var castsShadow: Bool
             var receivesShadow: Bool
-            var opacity: Float
             // Copied from the node when the entry is made, so rendering need not read the live node (#387).
             var nodeID: Node.ID
             var categoryBitMask: UInt
@@ -172,62 +172,76 @@ public class SceneGraph {
             var levelsOfDetail: [LevelOfDetail]
             // The node's materials, for level-of-detail meshes.
             var nodeMaterials: [any SceneMaterial]
-            var skin: SkinPose?
             var skinVertices: [SkinVertex]
             var morphTargets: [MorphTarget]
-            var morphWeights: [Float]
             var renderCache: NodeRenderCache
+            // Whether the node has a skin, so a transform-only update knows to read its pose.
+            var hasSkin: Bool
 
-            init(node: Node, worldTransform: float4x4, mesh: MetalMesh, submeshIndex: Int, material: any SceneMaterial, castsShadow: Bool, receivesShadow: Bool, opacity: Float) {
-                self.nodeID = node.id
-                self.categoryBitMask = node.categoryBitMask
-                self.renderingOrder = node.renderingOrder
-                self.meshBounds = node.meshBounds
-                self.levelsOfDetail = node.levelsOfDetail
+            init(node: Node, mesh: MetalMesh, submeshIndex: Int, material: any SceneMaterial, castsShadow: Bool, receivesShadow: Bool) {
+                nodeID = node.id
+                categoryBitMask = node.categoryBitMask
+                renderingOrder = node.renderingOrder
+                meshBounds = node.meshBounds
+                levelsOfDetail = node.levelsOfDetail
                 if case let .mesh(_, materials, _, _) = node.content {
-                    self.nodeMaterials = materials
+                    nodeMaterials = materials
                 } else {
-                    self.nodeMaterials = [material]
+                    nodeMaterials = [material]
                 }
-                self.skinVertices = node.skinVertices
-                self.morphTargets = node.morphTargets
-                self.morphWeights = node.morphWeights
-                self.skin = node.validSkin(vertexCount: mesh.vertexCount).map(SkinPose.init)
-                self.renderCache = node.renderCache
+                skinVertices = node.skinVertices
+                morphTargets = node.morphTargets
+                renderCache = node.renderCache
+                hasSkin = node.skin != nil
                 self.node = node
-                self.worldTransform = worldTransform
                 self.mesh = mesh
                 self.submeshIndex = submeshIndex
                 self.material = material
                 self.castsShadow = castsShadow
                 self.receivesShadow = receivesShadow
-                self.opacity = opacity
             }
 
-            private init(copying other: Storage) {
+            private init(copying other: Shared) {
                 node = other.node
-                worldTransform = other.worldTransform
                 mesh = other.mesh
                 submeshIndex = other.submeshIndex
                 material = other.material
                 castsShadow = other.castsShadow
                 receivesShadow = other.receivesShadow
-                opacity = other.opacity
                 nodeID = other.nodeID
                 categoryBitMask = other.categoryBitMask
                 renderingOrder = other.renderingOrder
                 meshBounds = other.meshBounds
                 levelsOfDetail = other.levelsOfDetail
                 nodeMaterials = other.nodeMaterials
-                skin = other.skin
                 skinVertices = other.skinVertices
                 morphTargets = other.morphTargets
-                morphWeights = other.morphWeights
                 renderCache = other.renderCache
+                hasSkin = other.hasSkin
+            }
+
+            func copy() -> Shared {
+                Shared(copying: self)
+            }
+        }
+
+        private final class Storage {
+            var shared: Shared
+            var worldTransform: float4x4
+            var opacity: Float
+            var skin: SkinPose?
+            var morphWeights: [Float]
+
+            init(shared: Shared, worldTransform: float4x4, opacity: Float, skin: SkinPose?, morphWeights: [Float]) {
+                self.shared = shared
+                self.worldTransform = worldTransform
+                self.opacity = opacity
+                self.skin = skin
+                self.morphWeights = morphWeights
             }
 
             func copy() -> Storage {
-                Storage(copying: self)
+                Storage(shared: shared, worldTransform: worldTransform, opacity: opacity, skin: skin, morphWeights: morphWeights)
             }
         }
 
@@ -235,7 +249,21 @@ public class SceneGraph {
 
         /// Creates a mesh entry.
         public init(node: Node, worldTransform: float4x4, mesh: MetalMesh, submeshIndex: Int, material: any SceneMaterial, castsShadow: Bool, receivesShadow: Bool, opacity: Float = 1) {
-            storage = Storage(node: node, worldTransform: worldTransform, mesh: mesh, submeshIndex: submeshIndex, material: material, castsShadow: castsShadow, receivesShadow: receivesShadow, opacity: opacity)
+            let shared = Shared(node: node, mesh: mesh, submeshIndex: submeshIndex, material: material, castsShadow: castsShadow, receivesShadow: receivesShadow)
+            storage = Storage(shared: shared, worldTransform: worldTransform, opacity: opacity, skin: Self.skinPose(node, mesh: mesh), morphWeights: node.morphWeights)
+        }
+
+        // This entry's node after a transform-only change: the same structural fields, the node's new world transform,
+        // opacity, morph weights and skin pose (#588).
+        func posed(worldTransform: float4x4, opacity: Float) -> Self {
+            let shared = storage.shared
+            var entry = self
+            entry.storage = Storage(shared: shared, worldTransform: worldTransform, opacity: opacity, skin: shared.hasSkin ? Self.skinPose(shared.node, mesh: shared.mesh) : nil, morphWeights: shared.node.morphWeights)
+            return entry
+        }
+
+        private static func skinPose(_ node: Node, mesh: MetalMesh) -> SkinPose? {
+            node.validSkin(vertexCount: mesh.vertexCount).map(SkinPose.init)
         }
 
         private mutating func uniqueStorage() -> Storage {
@@ -245,10 +273,18 @@ public class SceneGraph {
             return storage
         }
 
+        private mutating func uniqueShared() -> Shared {
+            let storage = uniqueStorage()
+            if !isKnownUniquelyReferenced(&storage.shared) {
+                storage.shared = storage.shared.copy()
+            }
+            return storage.shared
+        }
+
         /// The node that has the mesh.
         public var node: Node {
-            get { storage.node }
-            set { uniqueStorage().node = newValue }
+            get { storage.shared.node }
+            set { uniqueShared().node = newValue }
         }
 
         /// The node's world transform.
@@ -259,32 +295,32 @@ public class SceneGraph {
 
         /// The mesh, or its level of detail for the camera distance.
         public var mesh: MetalMesh {
-            get { storage.mesh }
-            set { uniqueStorage().mesh = newValue }
+            get { storage.shared.mesh }
+            set { uniqueShared().mesh = newValue }
         }
 
         /// The index of the submesh to draw.
         public var submeshIndex: Int {
-            get { storage.submeshIndex }
-            set { uniqueStorage().submeshIndex = newValue }
+            get { storage.shared.submeshIndex }
+            set { uniqueShared().submeshIndex = newValue }
         }
 
         /// The material of the submesh.
         public var material: any SceneMaterial {
-            get { storage.material }
-            set { uniqueStorage().material = newValue }
+            get { storage.shared.material }
+            set { uniqueShared().material = newValue }
         }
 
         /// Whether the submesh casts shadows.
         public var castsShadow: Bool {
-            get { storage.castsShadow }
-            set { uniqueStorage().castsShadow = newValue }
+            get { storage.shared.castsShadow }
+            set { uniqueShared().castsShadow = newValue }
         }
 
         /// Whether shadows darken the submesh.
         public var receivesShadow: Bool {
-            get { storage.receivesShadow }
-            set { uniqueStorage().receivesShadow = newValue }
+            get { storage.shared.receivesShadow }
+            set { uniqueShared().receivesShadow = newValue }
         }
 
         /// The node's opacity times its ancestors'.
@@ -294,27 +330,27 @@ public class SceneGraph {
         }
 
         /// The node's ID, copied when the entry was made.
-        public var nodeID: Node.ID { storage.nodeID }
+        public var nodeID: Node.ID { storage.shared.nodeID }
         /// The node's categoryBitMask, copied when the entry was made.
-        public var categoryBitMask: UInt { storage.categoryBitMask }
+        public var categoryBitMask: UInt { storage.shared.categoryBitMask }
         /// The node's renderingOrder, copied when the entry was made.
-        public var renderingOrder: Int { storage.renderingOrder }
+        public var renderingOrder: Int { storage.shared.renderingOrder }
         /// The node's mesh bounds in its own space, copied when the entry was made.
-        public var meshBounds: BoundingBox3D? { storage.meshBounds }
+        public var meshBounds: BoundingBox3D? { storage.shared.meshBounds }
         /// The node's levels of detail, copied when the entry was made.
-        public var levelsOfDetail: [LevelOfDetail] { storage.levelsOfDetail }
+        public var levelsOfDetail: [LevelOfDetail] { storage.shared.levelsOfDetail }
         /// The node's materials, one per submesh, copied when the entry was made.
-        public var nodeMaterials: [any SceneMaterial] { storage.nodeMaterials }
+        public var nodeMaterials: [any SceneMaterial] { storage.shared.nodeMaterials }
         /// The node's skin with its joints' world transforms, when it is valid for the mesh; copied when the entry was made.
         public var skin: SkinPose? { storage.skin }
         /// The node's skin vertices, copied when the entry was made.
-        public var skinVertices: [SkinVertex] { storage.skinVertices }
+        public var skinVertices: [SkinVertex] { storage.shared.skinVertices }
         /// The node's morph targets, copied when the entry was made.
-        public var morphTargets: [MorphTarget] { storage.morphTargets }
+        public var morphTargets: [MorphTarget] { storage.shared.morphTargets }
         /// The node's morph weights, copied when the entry was made.
         public var morphWeights: [Float] { storage.morphWeights }
         // Deformation caches that only rendering reads and writes.
-        var renderCache: NodeRenderCache { storage.renderCache }
+        var renderCache: NodeRenderCache { storage.shared.renderCache }
 
         /// Whether a morph target that fits the mesh has a non-zero weight.
         public var hasMorphs: Bool {
@@ -348,6 +384,10 @@ public class SceneGraph {
             return flattenedCache.flattened
         }
         traversalCount += 1
+        if isCacheable, let flattenedCache, flattenedCache.revision.structure == revision.structure, let posed = posed(flattenedCache.flattened) {
+            self.flattenedCache = (revision, posed)
+            return posed
+        }
         var result = Flattened()
         visit(worldTransform: initialTransform) { node, worldTransform in
             switch node.content {
@@ -370,6 +410,36 @@ public class SceneGraph {
         }
         if isCacheable {
             flattenedCache = (revision, result)
+        }
+        return result
+    }
+
+    // `previous` after a transform-only change: the same nodes in the same order, with new world transforms, opacities,
+    // morph weights and skin poses (#588). Nil if the traversal does not match `previous`.
+    private func posed(_ previous: Flattened) -> Flattened? {
+        var result = Flattened()
+        result.meshes.reserveCapacity(previous.meshes.count)
+        var meshIndex = 0
+        var lightIndex = 0
+        var cameraIndex = 0
+        visit { node, worldTransform in
+            let id = node.id
+            if meshIndex < previous.meshes.count, previous.meshes[meshIndex].nodeID == id {
+                let opacity = node.inheritedOpacity
+                while meshIndex < previous.meshes.count, previous.meshes[meshIndex].nodeID == id {
+                    result.meshes.append(previous.meshes[meshIndex].posed(worldTransform: worldTransform, opacity: opacity))
+                    meshIndex += 1
+                }
+            } else if lightIndex < previous.lights.count, previous.lights[lightIndex].node === node {
+                result.lights.append((node, worldTransform, previous.lights[lightIndex].light))
+                lightIndex += 1
+            } else if cameraIndex < previous.cameras.count, previous.cameras[cameraIndex].node === node {
+                result.cameras.append((node, worldTransform, previous.cameras[cameraIndex].camera))
+                cameraIndex += 1
+            }
+        }
+        guard meshIndex == previous.meshes.count, lightIndex == previous.lights.count, cameraIndex == previous.cameras.count else {
+            return nil
         }
         return result
     }
