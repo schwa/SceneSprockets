@@ -6120,46 +6120,42 @@ My suggestions: 1 yes, but only after #271/#273 are decided; 2 strong; 3 yes; 4 
 
 ---
 
-## 270: Node property access is slower for nodes in a graph
+## 270: Node creation, writes and traversal are slow for large scenes
 
 +++
 status: open
 priority: low
 kind: enhancement
 labels: area:scenegraph, effort:m, subtask
-milestone: M002-Performance
+milestone: M999-Nice-to-have
 depends: 265
 created: 2026-11-05T18:22:50Z
-updated: 2026-11-19T01:50:43Z
+updated: 2026-11-20T01:53:33Z
 +++
 
-Part of #250. Since nodes in a graph read and write their fields through the SwiftECS World (#265), node access is slower than before the ECS work.
+Nodes in a scene graph store their fields in the SwiftECS World (#265). Per-node costs are fine for the scenes the demos and glTF samples use (hundreds to a few thousand nodes) but too high for large or heavily animated scenes.
 
-Last measured (2026-11-06, Release, 100k nodes, ns per node), after two optimization sessions (#283):
-
-| | Now | Before ECS |
-|---|---|---|
-| Traversal | ~142 | ~100 |
-| Read | ~38 | ~30 |
-| Write | ~192 | ~180 |
-
-The remaining cost was mostly ComponentRef retain/release. That was fixed in SwiftECS (#52, shipped in 0.1.2, which SceneSprockets uses) but not measured since.
-
-Decided: keep open and measure later.
-
-Next: re-run the node-access benchmark and compare with the table above.
-
-- `2026-11-20T01:45:21Z`: Re-measured 2026-11-19 (SCENESPROCKETS_BENCHMARK=1, Release, M5 Max, High Power Mode, two runs), ns per node, lower is faster:
+Measured 2026-11-19, Tests/SceneSprocketsTests/NodePerformanceBenchmark.swift (SCENESPROCKETS_BENCHMARK=1, Release, M5 Max, High Power Mode, 100k nodes, two runs). ns per node; lower is faster:
 
 | | Now | 2026-11-06 | Before ECS |
 |---|---|---|---|
-| Traversal | 141 | ~142 | ~100 |
+| Traversal | ~141 | ~142 | ~100 |
 | Read | ~51 | ~38 | ~30 |
 | Write | ~242 | ~192 | ~180 |
 | Flatten | ~170 | - | - |
 | Create + attach | ~13,400 | - | - |
 
-Traversal unchanged since Nov 6. Read and write are 25-35% slower than Nov 6; cause unknown. Create + attach (~1.3 s for 100k nodes) was not measured before. Earlier runs today in Low Power Mode were ~30% slower across the board.
+What that costs at 120 Hz (8.3 ms per frame):
+- Write: 1,000 nodes per frame ~0.24 ms; 10,000 ~2.4 ms.
+- Read: 10,000 ~0.5 ms.
+- Traversal: 10,000 nodes ~1.4 ms per traversal.
+- Create + attach: 1,000 nodes ~13 ms; 100,000 ~1.3 s.
+
+Findings:
+- Write and read are 25-35% slower than on 2026-11-06; cause unknown.
+- Observation (Node is @Observable) is not the main cost: with access/withMutation removed, write was 218-234 ns (from ~242). The rest is the SwiftECS store write, didChangeInWorld bookkeeping and the Transform3D update; not yet split.
+- Create + attach (~13 us per node) is the largest per-node cost and was not measured before.
+- Low Power Mode runs are ~30% slower across the board; measure in High Power Mode.
 
 ---
 
