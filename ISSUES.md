@@ -12570,14 +12570,15 @@ Was MetalSprocketsGLTF#8 (moved with the package, #552).
 ## 554: AnimationPointerUVs runs at ~90 fps while animating
 
 +++
-status: new
+status: closed
 priority: low
 kind: bug
 labels: area:performance, effort:m, gltf
 milestone: M002-Performance
 depends: 573
 created: 2026-11-19T02:12:55Z
-updated: 2026-11-20T00:54:47Z
+updated: 2026-11-20T01:22:43Z
+closed: 2026-11-20T01:22:43Z
 +++
 
 In GLTFViewer (Release, 120 Hz display) AnimationPointerUVs runs at ~90 fps with its animation playing. Headless (ms-gltf-render --benchmark 60 --orbit --animation 0, Release, M5 Max): ~4.8 ms CPU, <1 ms GPU per frame. The scene has 132 primitives, 82 materials (9 transmissive, 3 blended) and animates material texture transforms through KHR_animation_pointer, so each frame also pays for the transmission pre-passes, per-batch drawing of the 3 blended primitives, and per-frame material uniform arrays for the merged sets. Not yet profiled.
@@ -12587,6 +12588,7 @@ State: the benchmark measures 4.4 ms CPU per frame (Release, M5 Max), within 120
 Was MetalSprocketsGLTF#75 (moved with the package, #552).
 
 - `2026-11-19T03:58:37Z`: #545 has merged vs per-batch numbers for this scene (2.93 vs 19.27 ms CPU); #571 is a related slowdown in NodePerformanceTest.
+- `2026-11-20T01:22:43Z`: Re-measured (MetalSprockets 0.3.8, DrawList rendering #582, Release, M5 Max). Headless, the issue's command (render --benchmark 60 --orbit --animation 0): frame 3.06 ms, CPU 2.73 ms, GPU 0.31 ms (was ~4.8 ms CPU). GLTFViewer with the animation playing: steady 60 FPS, frame 16.7 ms, GPU ~2.5 ms on the built-in display; the machine is in Low Power Mode (pmset powermode 1), which caps the display at 60 Hz, so 120 Hz was not checked in the app. The CPU frame cost is well within the 8.3 ms 120 Hz budget.
 
 ---
 
