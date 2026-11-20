@@ -12305,14 +12305,12 @@ labels: umbrella, area:renderer, effort:xl, indirect-drawing
 milestone: M002-Performance
 depends: 517, 520, 521, 522
 created: 2026-11-17T19:13:56Z
-updated: 2026-11-20T01:57:40Z
+updated: 2026-11-20T01:59:19Z
 +++
 
 Every SceneSprockets draw is chosen and encoded on the CPU each frame. No renderer issues indirect draws or uses indirect command buffers, so the GPU cannot decide what to draw, how many instances, or which level of detail.
 
-Depends on MetalSprockets support that does not exist yet:
-- MetalSprockets#575 No Draw initializers for indirect draws
-- MetalSprockets#576 No support for indirect command buffers
+MetalSprockets now supports indirect draws (MetalSprockets#575) and indirect command buffers (MetalSprockets#576). PBR draws go through DrawList (#582), whose rows map to indirect draw commands.
 
 Related: #516 No GPU-driven rendering (overlapping umbrella), #518 No mesh shading.
 
