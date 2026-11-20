@@ -1,3 +1,18 @@
+/// The labels of the GPU intervals that SceneGraphElement reports for each group of passes (#401), through
+/// MetalSprockets' `onGPUTimings` and `FrameTimingStatistics.gpuTimings`. SceneView's `sceneFrameTiming()` overlay shows
+/// them.
+public enum SceneGPUTimingLabel {
+    public static let shadowCasters = "Shadow Casters"
+    /// Deformation, ambient occlusion depth, renderer pre-passes and particle simulation.
+    public static let prePasses = "Pre-Passes"
+    /// The scene pass, with the soft particle pass when there is one.
+    public static let scene = "Scene"
+    public static let shadowMask = "Shadow Mask"
+    public static let ambientOcclusion = "Ambient Occlusion"
+    public static let fog = "Fog"
+    public static let colorAdjust = "Color Adjust"
+}
+
 // Which passes a SceneGraphElement frame has and in what order, decided from plain facts about the frame so it can be
 // tested without rendering (#591). SceneGraphElement.body builds the elements from it.
 struct SceneFramePlan: Equatable {
@@ -29,6 +44,15 @@ struct SceneFramePlan: Equatable {
 
     enum PostPass: Equatable {
         case shadowMask, ambientOcclusion, fog, colorAdjust
+
+        var gpuTimingLabel: String {
+            switch self {
+            case .shadowMask: SceneGPUTimingLabel.shadowMask
+            case .ambientOcclusion: SceneGPUTimingLabel.ambientOcclusion
+            case .fog: SceneGPUTimingLabel.fog
+            case .colorAdjust: SceneGPUTimingLabel.colorAdjust
+            }
+        }
     }
 
     var ambientOcclusion: AmbientOcclusion?

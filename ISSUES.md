@@ -601,9 +601,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:xl, area:assets
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 created: 2026-10-11T21:31:43Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 Long-term goal: import USD/USDZ into a SceneGraph (via ModelIO or USD bindings), getting the same rendering and animation as glTF. Depends on the scene graph staying format-neutral. Split from #16.
@@ -905,9 +905,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l
-milestone: M009-Rendering-2
+milestone: Rendering-2
 created: 2026-10-13T20:20:23Z
-updated: 2026-11-20T06:01:40Z
+updated: 2026-11-20T06:33:14Z
 +++
 
 Cameras have only a projection. SceneKit cameras have HDR, exposure, bloom, depth of field, motion blur, SSAO, vignette and color grading.
@@ -1207,9 +1207,9 @@ status: closed
 priority: medium
 kind: bug
 labels: area:renderer, effort:m
-milestone: M001-Correctness
+milestone: Correctness
 created: 2026-10-14T01:11:25Z
-updated: 2026-11-16T21:24:14Z
+updated: 2026-11-20T06:32:00Z
 closed: 2026-11-16T21:24:14Z
 +++
 
@@ -1665,9 +1665,9 @@ status: open
 priority: low
 kind: enhancement
 labels: effort:m, area:scenegraph
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 created: 2026-10-15T02:28:07Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 SceneGraph.Shape has no segment counts, no box chamferRadius, no sphere isGeodesic, and no plane corner radius. SCNText's chamfer, flatness, container frame and wrapping are missing too. Needs SwiftMesh support for some of these. See docs/SceneKitComparison.md.
@@ -1757,9 +1757,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:xl, area:renderer
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-10-15T02:28:07Z
-updated: 2026-11-16T20:12:42Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 SceneKit shader modifiers inject code at geometry, surface, lighting and fragment entry points of the built-in materials. ShaderMaterial (like SCNProgram) replaces the whole shader. Want a way to tweak the built-in Blinn-Phong/PBR shading without rewriting it. See docs/SceneKitComparison.md.
@@ -1773,9 +1773,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:l, area:renderer, subtask, lighting
-milestone: M003-Rendering
+milestone: Rendering
 created: 2026-10-15T02:28:07Z
-updated: 2026-11-17T19:13:15Z
+updated: 2026-11-20T06:32:25Z
 +++
 
 Missing SceneKit equivalents: an ambient light type as a node (today it is per renderer: BlinnPhongMaterialRenderer.ambientLightColor), attenuationStartDistance and attenuationFalloffExponent, color temperature, and IES, area and probe lights. See docs/SceneKitComparison.md.
@@ -1812,9 +1812,9 @@ status: open
 priority: low
 kind: enhancement
 labels: effort:l, area:renderer
-milestone: M003-Rendering
+milestone: Rendering
 created: 2026-10-15T02:28:07Z
-updated: 2026-11-17T18:25:50Z
+updated: 2026-11-20T06:32:25Z
 +++
 
 SceneGraphShadows is one global setting. Missing: shadowColor (today only intensity toward black), soft shadows (shadowRadius, shadowSampleCount), cascades, and per-light castsShadow, resolution and bias. See docs/SceneKitComparison.md.
@@ -1939,9 +1939,9 @@ status: closed
 priority: low
 kind: enhancement
 labels: effort:l, area:renderer
-milestone: M003-Rendering
+milestone: Rendering
 created: 2026-10-15T02:28:08Z
-updated: 2026-11-20T06:30:49Z
+updated: 2026-11-20T06:32:25Z
 closed: 2026-11-20T06:30:49Z
 +++
 
@@ -2728,9 +2728,9 @@ status: closed
 priority: medium
 kind: feature
 labels: effort:l, area:renderer
-milestone: M003-Rendering
+milestone: Rendering
 created: 2026-10-16T02:37:54Z
-updated: 2026-11-20T06:10:38Z
+updated: 2026-11-20T06:32:25Z
 closed: 2026-11-20T06:10:38Z
 +++
 
@@ -2822,9 +2822,9 @@ status: open
 priority: medium
 kind: feature
 labels: effort:l, area:scenegraph
-milestone: M007-Performance
+milestone: Performance-2
 created: 2026-10-17T12:50:07Z
-updated: 2026-11-20T06:09:29Z
+updated: 2026-11-20T06:33:02Z
 +++
 
 The only way to draw many copies of a mesh is one Node per copy. Renderers then discover the repeats each frame (implicit instancing): flatten the tree into one MeshEntry per node, cull each entry, and group entries back into instance batches. Even with the cached batching from #134, the per-node cost remains: node traversal and world transforms, one MeshEntry and one frustum test per copy, and gathering one model matrix per copy every frame.
@@ -2846,9 +2846,9 @@ status: closed
 priority: medium
 kind: bug
 labels: effort:m, area:renderer
-milestone: M001-Correctness
+milestone: Correctness
 created: 2026-10-17T13:09:48Z
-updated: 2026-11-16T21:50:05Z
+updated: 2026-11-20T06:32:00Z
 closed: 2026-11-16T21:50:05Z
 +++
 
@@ -3880,9 +3880,9 @@ status: open
 priority: low
 kind: task
 labels: area:ui, effort:l
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-10-22T22:00:05Z
-updated: 2026-11-16T20:12:42Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 TransformGizmo (SceneSprocketsGizmos, #154) is mostly not about scene graphs: handle layout, picking, drag math along axes, planes and rings, snapping, and screen-size scaling. Other MetalSprockets apps could use it. Interaction3D is the home for 3D interaction (camera controls, rotation widget), so move the gizmo there, and keep a thin SceneSprockets adapter.
@@ -4003,9 +4003,9 @@ status: open
 priority: medium
 kind: feature
 labels: area:document, effort:l
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 created: 2026-10-23T13:53:20Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 Split from #161 (constraints are done there).
@@ -4106,9 +4106,9 @@ status: closed
 priority: low
 kind: task
 labels: investigate, area:composer, effort:s
-milestone: M001-Correctness
+milestone: Correctness
 created: 2026-10-24T14:09:41Z
-updated: 2026-11-16T22:41:36Z
+updated: 2026-11-20T06:32:00Z
 closed: 2026-11-16T22:41:36Z
 +++
 
@@ -5551,9 +5551,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:l, area:ui
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 created: 2026-10-30T14:40:29Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 Comparing two scenes side by side (TreeAppreciator shows two trees with a shared camera) needs two SceneViews. Each one makes its own RenderView, drawable, shadow maps, particle runtimes and pipeline setup, so a new pair pays the setup cost twice.
@@ -5685,9 +5685,9 @@ status: open
 priority: low
 kind: enhancement
 labels: area:scenegraph, effort:l, large-worlds
-milestone: M005-Big-World
+milestone: Big-World
 created: 2026-11-04T20:42:33Z
-updated: 2026-11-17T18:01:46Z
+updated: 2026-11-20T06:32:40Z
 +++
 
 Times, durations and delta times are plain `Float` across the public API: `Action` durations, `advanceActions(by:)`, `applyConstraints(deltaTime:)`, `Transaction.animate(duration:)`, particle `time` and `advanceParticles(by:)`, animation clip time and blending, `SceneView`, and physics stepping (~70 sites in Action, Animation, AnimationBlending, Particles, Constraint, Transaction, SceneView, SceneGraphPhysicsWorld, ModelIOSceneGraph).
@@ -5759,10 +5759,10 @@ status: open
 priority: low
 kind: feature
 labels: area:scenegraph, effort:xl, umbrella, large-worlds
-milestone: M005-Big-World
+milestone: Big-World
 depends: 256, 257, 258, 259, 260, 261, 253, 254, 252, 262
 created: 2026-11-04T21:06:11Z
-updated: 2026-11-17T18:01:46Z
+updated: 2026-11-20T06:32:40Z
 +++
 
 Node transforms and accumulated world transforms are simd_float4x4. Float32 resolves about 4-8 mm at 100 km and about 1 km at 1e10 m, so worlds at solar-system scale (Kerbal Space Program style; see #251 comments) cannot be represented, even though the renderers can now draw camera-relative (#251).
@@ -5797,9 +5797,9 @@ status: open
 priority: low
 kind: feature
 labels: area:scenegraph, effort:xl, subtask, large-worlds
-milestone: M005-Big-World
+milestone: Big-World
 created: 2026-11-04T21:10:37Z
-updated: 2026-11-17T18:01:46Z
+updated: 2026-11-20T06:32:40Z
 +++
 
 Node local transforms and accumulated world transforms (SceneGraph.visit/traverse, MeshEntry.worldTransform, bounds, hit testing) are simd_float4x4. Float32 resolves about 4-8 mm at 100 km and about 1 km at 1e10 m, so positions in very large worlds cannot be stored.
@@ -5863,9 +5863,9 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:l, subtask, large-worlds
-milestone: M005-Big-World
+milestone: Big-World
 created: 2026-11-04T21:10:37Z
-updated: 2026-11-17T18:01:46Z
+updated: 2026-11-20T06:32:40Z
 +++
 
 SceneSprocketsPhysics hands world-space Float positions to Jolt. Far from the origin, simulation near the active area loses precision. There is no floating origin or local physics frame around the active area.
@@ -5883,9 +5883,9 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:m, subtask, large-worlds
-milestone: M005-Big-World
+milestone: Big-World
 created: 2026-11-04T21:10:37Z
-updated: 2026-11-17T18:01:46Z
+updated: 2026-11-20T06:32:40Z
 +++
 
 At orbital speeds (several km/s) the active object's coordinates change by kilometers per second, so precision near it degrades and rendering and physics jitter. There is no reference frame that keeps the active object near rest (KSP's Krakensbane).
@@ -5904,9 +5904,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, large-worlds
-milestone: M005-Big-World
+milestone: Big-World
 created: 2026-11-04T21:10:38Z
-updated: 2026-11-17T18:01:46Z
+updated: 2026-11-20T06:32:40Z
 +++
 
 Reverse-Z Float depth cannot resolve both nearby parts and very distant bodies in one pass. There is no scaled-space pass or multi-range (nested frusta) rendering. Related: #248 (several viewports/passes in one view).
@@ -5925,9 +5925,9 @@ status: open
 priority: low
 kind: bug
 labels: area:renderer, effort:m, subtask, large-worlds
-milestone: M005-Big-World
+milestone: Big-World
 created: 2026-11-04T21:19:04Z
-updated: 2026-11-17T18:01:46Z
+updated: 2026-11-20T06:32:40Z
 +++
 
 Left over from #257. Particle simulation and drawing (SceneParticleSystem simulate(view:) and runtime render(projection:view:), MetalSprocketsParticles) and the transform gizmo (TransformGizmo, GraphicsContext3DRenderPipeline with projection * view) still work in world-space Float, so far from the origin they jitter or misplace like the other paths did before #251/#253/#257. Particle positions live in MetalSprocketsParticles buffers, so a fix spans that package.
@@ -6146,10 +6146,10 @@ status: open
 priority: low
 kind: enhancement
 labels: area:scenegraph, effort:m, subtask
-milestone: M007-Performance
+milestone: Performance-2
 depends: 265
 created: 2026-11-05T18:22:50Z
-updated: 2026-11-20T06:00:25Z
+updated: 2026-11-20T06:33:02Z
 +++
 
 Nodes in a scene graph store their fields in the SwiftECS World (#265). Per-node costs are fine for the scenes the demos and glTF samples use (hundreds to a few thousand nodes) but too high for large or heavily animated scenes.
@@ -6742,9 +6742,9 @@ status: closed
 priority: low
 kind: enhancement
 labels: area:renderer, effort:m
-milestone: M003-Rendering
+milestone: Rendering
 created: 2026-11-07T15:41:12Z
-updated: 2026-11-20T06:26:12Z
+updated: 2026-11-20T06:32:25Z
 closed: 2026-11-20T06:26:12Z
 +++
 
@@ -7307,9 +7307,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:m
-milestone: M003-Rendering
+milestone: Rendering
 created: 2026-11-07T17:54:10Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:32:25Z
 +++
 
 The renderer always uses reverse-Z (projection multiplied by .reverseZ, with a matching depth compare and clear value). There is no way to switch a view between reverse-Z and normal Z, and no automatic choice. Code that reads or writes depth (shadow maps, hit testing, depth debug views, post-processing, custom shader materials, gizmos, the sky background) assumes one convention, so changing it in one place gives wrong results somewhere else.
@@ -7358,9 +7358,9 @@ status: closed
 priority: medium
 kind: bug
 labels: area:demo, effort:s
-milestone: M001-Correctness
+milestone: Correctness
 created: 2026-11-07T17:55:57Z
-updated: 2026-11-16T21:40:40Z
+updated: 2026-11-20T06:32:00Z
 closed: 2026-11-16T21:40:40Z
 +++
 
@@ -7604,9 +7604,9 @@ status: closed
 priority: low
 kind: feature
 labels: area:scenegraph, effort:l, subtask, bounds
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-07T18:39:49Z
-updated: 2026-11-20T02:17:22Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-20T02:17:22Z
 +++
 
@@ -7822,9 +7822,9 @@ status: open
 priority: low
 kind: feature
 labels: area:scenegraph, effort:xl
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-07T18:54:15Z
-updated: 2026-11-16T20:12:42Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 All scene behavior (reacting to taps, per-frame updates, custom actions, game logic) must be written in Swift and compiled into the app. There is no way to attach logic to a scene as data, for example in a stored scene file or from a tool like Composer, without rebuilding.
@@ -7865,9 +7865,9 @@ status: open
 priority: low
 kind: feature
 labels: area:ui, effort:m
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 created: 2026-11-07T19:00:30Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 SceneView's camera control (configured with SceneCameraControl, #312) stops as soon as a drag or scroll ends: there is no inertia (the camera does not keep moving and slow down). It also has no fly or pan-only interaction modes, which SCNCameraController offers. Interaction3D, which SceneView uses for camera control, has neither.
@@ -8269,9 +8269,9 @@ status: open
 priority: low
 kind: task
 labels: effort:s, area:ui, research
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-10T18:37:12Z
-updated: 2026-11-16T20:12:42Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 SceneView takes most of its configuration as initializer arguments and an `Options` option set:
@@ -8297,9 +8297,9 @@ status: open
 priority: low
 kind: task
 labels: effort:m, area:scenegraph, research
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-10T18:39:06Z
-updated: 2026-11-16T20:12:42Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Building a hierarchy today means making each node and attaching it to its parent one at a time:
@@ -8902,10 +8902,10 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, area:renderer
-milestone: M004-VisionOS
+milestone: VisionOS
 depends: 380
 created: 2026-11-12T19:17:30Z
-updated: 2026-11-17T18:01:23Z
+updated: 2026-11-20T06:32:33Z
 +++
 
 Passes that read or write screen-space textures (outline via JumpFlood/SilhouetteMask, post effects, anything sampling depth) assume one non-layered target. A stereo drawable is a layered texture (one slice per eye) so these passes would break or only cover one eye.
@@ -8919,10 +8919,10 @@ status: open
 priority: low
 kind: feature
 labels: effort:s, area:renderer, subtask, bounds
-milestone: M004-VisionOS
+milestone: VisionOS
 depends: 380
 created: 2026-11-12T19:17:30Z
-updated: 2026-11-17T19:13:17Z
+updated: 2026-11-20T06:32:33Z
 +++
 
 Frustum culling and back-to-front transparency sorting are computed from a single camera. In stereo, objects visible to only one eye could be culled, and sort order should be consistent across both eyes.
@@ -8959,10 +8959,10 @@ status: open
 priority: medium
 kind: feature
 labels: area:demo, effort:m
-milestone: M004-VisionOS
+milestone: VisionOS
 depends: 386
 created: 2026-11-12T21:05:10Z
-updated: 2026-11-17T17:28:56Z
+updated: 2026-11-20T06:32:33Z
 +++
 
 SceneImmersiveElement (#381) exists but no app uses it. SceneSprocketsDemo has no ImmersiveSpace scene and no control to open one, so stereo rendering has never run on a device.
@@ -9112,9 +9112,9 @@ status: closed
 priority: high
 kind: bug
 labels: area:renderer, crash, effort:m
-milestone: M001-Correctness
+milestone: Correctness
 created: 2026-11-12T22:24:08Z
-updated: 2026-11-16T21:38:02Z
+updated: 2026-11-20T06:32:00Z
 closed: 2026-11-16T21:38:02Z
 +++
 
@@ -9177,10 +9177,10 @@ status: closed
 priority: medium
 kind: task
 labels: effort:m, area:ui
-milestone: M001-Correctness
+milestone: Correctness
 depends: 393
 created: 2026-11-14T21:37:01Z
-updated: 2026-11-16T21:52:47Z
+updated: 2026-11-20T06:32:00Z
 closed: 2026-11-16T21:52:47Z
 +++
 
@@ -9251,9 +9251,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, area:renderer
-milestone: M009-Rendering-2
+milestone: Rendering-2
 created: 2026-11-16T20:03:49Z
-updated: 2026-11-20T06:01:40Z
+updated: 2026-11-20T06:33:14Z
 +++
 
 There is no way to project an image onto existing meshes, for example bullet holes, footprints or road markings.
@@ -9269,9 +9269,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, area:renderer
-milestone: M009-Rendering-2
+milestone: Rendering-2
 created: 2026-11-16T20:03:49Z
-updated: 2026-11-20T06:01:40Z
+updated: 2026-11-20T06:33:14Z
 +++
 
 Shiny surfaces reflect only the environment map. They do not reflect other objects in the scene.
@@ -9287,9 +9287,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, area:renderer
-milestone: M009-Rendering-2
+milestone: Rendering-2
 created: 2026-11-16T20:03:49Z
-updated: 2026-11-20T06:01:40Z
+updated: 2026-11-20T06:33:14Z
 +++
 
 Post-processing has exposure, contrast, saturation, vignette and ambient occlusion. It has no bloom, depth of field or motion blur.
@@ -9307,9 +9307,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, area:renderer
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-16T20:03:49Z
-updated: 2026-11-17T17:51:42Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Distant meshes are drawn as full geometry or a lower LOD. They cannot be replaced by billboard imposters (pre-rendered views).
@@ -9321,18 +9321,21 @@ Moved from SceneSprocketsAddOns #33.
 ## 401: No GPU timing overlay per pass
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: effort:s, area:renderer
-milestone: M003-Rendering
+milestone: Rendering
 created: 2026-11-16T20:03:49Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:33:42Z
+closed: 2026-11-20T06:33:42Z
 +++
 
 There is no overlay that shows how much GPU time each pass (shadows, the scene pass, post-processing, pre-passes) takes.
 
 Moved from SceneSprocketsAddOns #38.
+
+- `2026-11-20T06:33:42Z`: SceneGraphElement wraps its pass groups in gpuTimed: Shadow Casters, Pre-Passes, Scene, Shadow Mask, Ambient Occlusion, Fog, Color Adjust (SceneGPUTimingLabel). SceneView's sceneFrameTiming() overlay (FrameTimingView .all) lists them; apps can read them with onSceneFrameTimingChange / FrameTimingStatistics.gpuTimings.
 
 ---
 
@@ -9343,9 +9346,9 @@ status: closed
 priority: low
 kind: enhancement
 labels: area:scenegraph, effort:s
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-16T20:06:43Z
-updated: 2026-11-17T13:57:44Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-17T13:57:44Z
 +++
 
@@ -9362,9 +9365,9 @@ status: closed
 priority: low
 kind: bug
 labels: area:scenegraph, effort:s
-milestone: M001-Correctness
+milestone: Correctness
 created: 2026-11-16T20:06:43Z
-updated: 2026-11-16T21:53:49Z
+updated: 2026-11-20T06:32:00Z
 closed: 2026-11-16T21:53:49Z
 +++
 
@@ -9384,9 +9387,9 @@ status: closed
 priority: low
 kind: bug
 labels: area:scenegraph, effort:s
-milestone: M001-Correctness
+milestone: Correctness
 created: 2026-11-16T20:06:43Z
-updated: 2026-11-16T21:55:08Z
+updated: 2026-11-20T06:32:00Z
 closed: 2026-11-16T21:55:08Z
 +++
 
@@ -9403,9 +9406,9 @@ status: open
 priority: low
 kind: enhancement
 labels: area:scenegraph, effort:m
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 created: 2026-11-16T20:06:43Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 MetalMesh.float3Values / float2Values return nil for any other format (half, packed, float4). Meshes with such positions give no hits; meshes with such UVs give nil from Hit.textureCoordinates. Line and point primitives are also never hit.
@@ -9419,9 +9422,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, area:ui
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 created: 2026-11-16T20:13:10Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 There is no ready-made set of editor aids: a ground grid, axes, icons for lights and cameras, and bounding boxes.
@@ -9437,9 +9440,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, area:scenegraph
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-16T20:14:04Z
-updated: 2026-11-17T17:51:43Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 There are no spline paths in the scene, and nothing that moves cameras or objects along a path.
@@ -9457,10 +9460,10 @@ status: closed
 priority: medium
 kind: bug
 labels: area:renderer, effort:m
-milestone: M001-Correctness
+milestone: Correctness
 depends: 136
 created: 2026-11-16T21:30:40Z
-updated: 2026-11-16T22:48:42Z
+updated: 2026-11-20T06:32:00Z
 closed: 2026-11-16T22:48:42Z
 +++
 
@@ -9488,9 +9491,9 @@ status: closed
 priority: medium
 kind: task
 labels: area:renderer, effort:l
-milestone: M001-Correctness
+milestone: Correctness
 created: 2026-11-16T23:06:43Z
-updated: 2026-11-17T06:10:00Z
+updated: 2026-11-20T06:32:00Z
 closed: 2026-11-17T06:10:00Z
 +++
 
@@ -9514,9 +9517,9 @@ status: closed
 priority: medium
 kind: task
 labels: area:physics, effort:s
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 created: 2026-11-16T23:33:44Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:32:46Z
 closed: 2026-11-17T06:14:47Z
 +++
 
@@ -9534,10 +9537,10 @@ status: open
 priority: medium
 kind: feature
 labels: area:physics, effort:s
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-16T23:34:11Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 SceneGraph.PhysicsBody has no way to make a body detect overlaps without colliding (a trigger volume, like SceneKit contact-only bodies). Every body blocks every other body.
@@ -9554,10 +9557,10 @@ status: open
 priority: medium
 kind: feature
 labels: area:physics, effort:m
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-16T23:34:11Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 All bodies in SceneGraphPhysicsWorld collide with all others (except static vs static). There is no equivalent of SceneKit's collisionBitMask, and no way to make, for example, debris pass through characters or parts of one ragdoll ignore each other.
@@ -9574,10 +9577,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:s
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-16T23:34:12Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 SceneGraph.PhysicsBody only has type, shape, mass, friction and restitution. Linear/angular damping, a gravity factor (or not affected by gravity), whether the body may sleep, and continuous collision for fast bodies cannot be set. SceneKit exposes damping, isAffectedByGravity, allowsResting and continuousCollisionDetectionThreshold.
@@ -9596,10 +9599,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:s
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-16T23:34:12Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 There is no way to lock a body's rotation or keep it in a plane (SceneKit angularVelocityFactor / velocityFactor). 2D-style scenes and upright characters need this.
@@ -9616,10 +9619,10 @@ status: closed
 priority: low
 kind: bug
 labels: area:physics, effort:m
-milestone: M001-Correctness
+milestone: Correctness
 depends: 410
 created: 2026-11-16T23:34:12Z
-updated: 2026-11-17T06:23:38Z
+updated: 2026-11-20T06:32:00Z
 closed: 2026-11-17T06:23:38Z
 +++
 
@@ -9644,10 +9647,10 @@ status: closed
 priority: low
 kind: enhancement
 labels: area:physics, effort:s
-milestone: M002-Performance
+milestone: Performance
 depends: 410
 created: 2026-11-16T23:34:12Z
-updated: 2026-11-17T14:11:45Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-17T14:11:45Z
 +++
 
@@ -9667,10 +9670,10 @@ status: closed
 priority: low
 kind: enhancement
 labels: area:physics, effort:xs
-milestone: M002-Performance
+milestone: Performance
 depends: 410
 created: 2026-11-16T23:34:12Z
-updated: 2026-11-17T13:47:36Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-17T13:47:36Z
 +++
 
@@ -9690,10 +9693,10 @@ status: closed
 priority: low
 kind: enhancement
 labels: area:physics, effort:s
-milestone: M002-Performance
+milestone: Performance
 depends: 410
 created: 2026-11-16T23:34:12Z
-updated: 2026-11-17T14:12:47Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-17T14:12:47Z
 +++
 
@@ -9713,10 +9716,10 @@ status: closed
 priority: low
 kind: enhancement
 labels: area:physics, effort:xs
-milestone: M002-Performance
+milestone: Performance
 depends: 410
 created: 2026-11-16T23:34:12Z
-updated: 2026-11-17T13:51:39Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-17T13:51:39Z
 +++
 
@@ -9736,10 +9739,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:m
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-16T23:34:13Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 Custom forces (wind, buoyancy, magnets, SceneKit-style physics fields) can only be applied once per step() call. With collisionSteps > 1 they are not re-applied per sub-step, and there is no hook that runs inside the simulation.
@@ -9758,10 +9761,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:xs
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-16T23:34:13Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 SceneGraphPhysicsWorld has no way to change solver iterations, baumgarte, penetration slop, sleep time or other world-wide settings. Stacks and joints that need more iterations cannot be fixed from SceneSprockets.
@@ -9778,10 +9781,10 @@ status: open
 priority: low
 kind: enhancement
 labels: area:physics, effort:xs
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-16T23:34:13Z
-updated: 2026-11-20T05:58:46Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 Jolt prints its trace messages to stdout. They don't reach os.Logger, so they are missing from Console and unified logging, unlike the rest of SceneSprockets.
@@ -9798,10 +9801,10 @@ status: open
 priority: medium
 kind: feature
 labels: area:physics, effort:m
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-16T23:34:13Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 There is no way to learn that two nodes' bodies started or stopped touching (SceneKit's SCNPhysicsContactDelegate). Games need this for hits, pickups and sounds; the Jolt world's contact listener is only reachable through `world` and reports BodyIDs, not nodes.
@@ -9818,9 +9821,9 @@ status: closed
 priority: low
 kind: bug
 labels: area:physics, effort:m
-milestone: M001-Correctness
+milestone: Correctness
 created: 2026-11-17T01:02:42Z
-updated: 2026-11-17T06:17:45Z
+updated: 2026-11-20T06:32:00Z
 closed: 2026-11-17T06:17:45Z
 +++
 
@@ -9844,9 +9847,9 @@ status: closed
 priority: low
 kind: bug
 labels: area:physics, effort:xs
-milestone: M001-Correctness
+milestone: Correctness
 created: 2026-11-17T01:02:42Z
-updated: 2026-11-17T06:12:11Z
+updated: 2026-11-20T06:32:00Z
 closed: 2026-11-17T06:12:11Z
 +++
 
@@ -9865,9 +9868,9 @@ status: closed
 priority: low
 kind: bug
 labels: area:physics, effort:xs
-milestone: M001-Correctness
+milestone: Correctness
 created: 2026-11-17T01:02:42Z
-updated: 2026-11-17T06:13:26Z
+updated: 2026-11-20T06:32:00Z
 closed: 2026-11-17T06:13:26Z
 +++
 
@@ -9889,9 +9892,9 @@ status: closed
 priority: low
 kind: bug
 labels: area:physics, effort:xs
-milestone: M001-Correctness
+milestone: Correctness
 created: 2026-11-17T01:02:42Z
-updated: 2026-11-17T06:16:06Z
+updated: 2026-11-20T06:32:00Z
 closed: 2026-11-17T06:16:06Z
 +++
 
@@ -9910,10 +9913,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:m
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 PhysicsBody.Shape only offers box, sphere, capsule, cylinder, boundingBox, convexHull and mesh. Terrain has to use a triangle mesh, ground planes need a large box, and there is no shape for a body that only exists to be jointed or moved.
@@ -9929,10 +9932,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:m
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-20T05:58:46Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 There is no way to tag a node's collision surface (or individual mesh triangles) and find out which surface a ray or contact hit, e.g. to choose footstep sounds or decals.
@@ -9948,10 +9951,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:s
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 Nothing tells the app how hard two bodies hit, so impact sounds, damage and particles can't be scaled by force.
@@ -9969,10 +9972,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:m
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 There is no way to see collision shapes, bounding boxes, velocities or constraint limits drawn over the scene, which makes physics setups hard to debug.
@@ -9988,10 +9991,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:l
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 Two nodes' bodies cannot be connected with hinges, sliders, ball joints, fixed welds, swing-twist or six-DOF joints, and there is no way to break a joint when the load gets too high.
@@ -10007,10 +10010,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:l
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-20T05:58:46Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 There is no way to drive a player or NPC node with a character controller (walking, slopes, stairs, standing on moving platforms); only plain rigid bodies.
@@ -10026,10 +10029,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:xl
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-17T06:04:51Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Cars, motorcycles and tracked vehicles cannot be built from scene nodes (body node + wheel nodes that follow the simulated wheels).
@@ -10045,10 +10048,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:xl
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-17T06:04:51Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 A skinned character cannot go limp into a ragdoll, or have its bodies follow a keyframed animation.
@@ -10064,10 +10067,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:s
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-17T06:04:51Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 There is no water/fluid volume, so floating objects need hand-written forces.
@@ -10085,10 +10088,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:xl
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-17T06:04:51Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Nodes cannot be simulated as cloth or other soft bodies.
@@ -10106,10 +10109,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:xs
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-20T05:58:46Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 SceneGraphPhysicsWorld always uses SwiftJolt's default job system and thread count; an app can't limit physics threads (e.g. on low-power devices) or pick Jolt's own pool.
@@ -10125,10 +10128,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:xs
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 There is no API to wake a sleeping body, put one to sleep, or wake everything in a region (e.g. after an explosion or when a level section becomes active).
@@ -10184,9 +10187,9 @@ status: open
 priority: medium
 kind: bug
 labels: area:physics, effort:m, investigate, deferred
-milestone: M008-Reliability
+milestone: Reliability
 created: 2026-11-17T01:25:42Z
-updated: 2026-11-20T06:00:25Z
+updated: 2026-11-20T06:33:09Z
 +++
 
 The physics test process sometimes crashes on CI. The crash is intermittent: the next CI run passed, and 3 local runs passed.
@@ -10231,9 +10234,9 @@ status: open
 priority: low
 kind: task
 labels: area:demo, effort:m
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T02:19:23Z
-updated: 2026-11-17T06:04:51Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 The demo app has standalone demos besides the keynote (Shadows, Gears, Dice, Metaballs, SceneKit Features, and others). Some show features the keynote already covers; others show features the keynote does not cover at all. Two places to maintain the same showcases.
@@ -10869,9 +10872,9 @@ status: closed
 priority: medium
 kind: task
 labels: area:ui, effort:m
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-17T06:04:19Z
-updated: 2026-11-17T06:52:40Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-17T06:52:40Z
 +++
 
@@ -10899,9 +10902,9 @@ status: closed
 priority: medium
 kind: task
 labels: area:scenegraph, effort:m
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-17T06:04:19Z
-updated: 2026-11-17T06:39:14Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-17T06:39:14Z
 +++
 
@@ -10930,10 +10933,10 @@ status: closed
 priority: medium
 kind: task
 labels: area:scenegraph, effort:m, has-subtasks
-milestone: M002-Performance
+milestone: Performance
 depends: 589, 590, 591, 592, 593
 created: 2026-11-17T06:04:19Z
-updated: 2026-11-20T05:52:58Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-20T05:52:58Z
 +++
 
@@ -10950,9 +10953,9 @@ status: closed
 priority: medium
 kind: bug
 labels: area:renderer, effort:m
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-17T06:39:06Z
-updated: 2026-11-17T07:05:50Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-17T07:05:50Z
 +++
 
@@ -10976,9 +10979,9 @@ status: closed
 priority: medium
 kind: bug
 labels: area:renderer, effort:m
-milestone: M007-PBR-Merged-Geometry
+milestone: PBR-Merged-Geometry
 created: 2026-11-17T06:39:06Z
-updated: 2026-11-19T03:27:32Z
+updated: 2026-11-20T06:32:53Z
 closed: 2026-11-17T19:58:58Z
 +++
 
@@ -11025,9 +11028,9 @@ status: closed
 priority: medium
 kind: bug
 labels: area:renderer, effort:m
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-17T06:39:06Z
-updated: 2026-11-17T07:17:15Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-17T07:17:15Z
 +++
 
@@ -11052,9 +11055,9 @@ status: open
 priority: low
 kind: bug
 labels: area:renderer, effort:l
-milestone: M008-Reliability
+milestone: Reliability
 created: 2026-11-17T06:39:06Z
-updated: 2026-11-20T06:00:25Z
+updated: 2026-11-20T06:33:09Z
 +++
 
 Each SceneView has its own render thread, and a visionOS immersive space has another (#392). When two of them draw the same scene graph, or share renderer objects, at the same time, these are written from two threads with no synchronization:
@@ -11078,9 +11081,9 @@ status: closed
 priority: low
 kind: bug
 labels: area:scenegraph, effort:s
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-17T06:39:06Z
-updated: 2026-11-17T13:33:58Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-17T13:33:58Z
 +++
 
@@ -11102,9 +11105,9 @@ status: closed
 priority: low
 kind: task
 labels: area:build, effort:xs
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-17T06:39:06Z
-updated: 2026-11-17T14:19:03Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-17T14:19:03Z
 +++
 
@@ -11123,9 +11126,9 @@ status: closed
 priority: low
 kind: bug
 labels: area:composer, effort:xs
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-17T06:39:06Z
-updated: 2026-11-17T13:23:00Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-17T13:23:00Z
 +++
 
@@ -11144,9 +11147,9 @@ status: closed
 priority: medium
 kind: enhancement
 labels: area:ui, effort:m
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-17T06:52:28Z
-updated: 2026-11-17T07:31:27Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-17T07:31:27Z
 +++
 
@@ -11173,9 +11176,9 @@ status: closed
 priority: medium
 kind: enhancement
 labels: area:composer, effort:s
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-17T06:52:28Z
-updated: 2026-11-17T07:24:48Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-17T07:24:48Z
 +++
 
@@ -11201,9 +11204,9 @@ status: closed
 priority: low
 kind: bug
 labels: area:renderer, effort:s
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-17T06:52:28Z
-updated: 2026-11-17T13:39:43Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-17T13:39:43Z
 +++
 
@@ -11232,9 +11235,9 @@ status: closed
 priority: low
 kind: enhancement
 labels: area:composer, effort:m
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-17T06:52:28Z
-updated: 2026-11-17T14:17:09Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-17T14:17:09Z
 +++
 
@@ -11259,9 +11262,9 @@ status: closed
 priority: low
 kind: bug
 labels: area:composer, effort:s
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-17T06:52:28Z
-updated: 2026-11-17T13:45:38Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-17T13:45:38Z
 +++
 
@@ -11286,9 +11289,9 @@ status: closed
 priority: low
 kind: bug
 labels: area:composer, effort:s
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-17T06:52:28Z
-updated: 2026-11-17T13:46:38Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-17T13:46:38Z
 +++
 
@@ -11314,9 +11317,9 @@ status: closed
 priority: low
 kind: bug
 labels: area:composer, effort:xs
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-17T06:52:28Z
-updated: 2026-11-17T13:25:00Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-17T13:25:00Z
 +++
 
@@ -11339,9 +11342,9 @@ status: closed
 priority: low
 kind: enhancement
 labels: area:demo, effort:s
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-17T06:52:28Z
-updated: 2026-11-17T14:15:06Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-17T14:15:06Z
 +++
 
@@ -11364,9 +11367,9 @@ status: closed
 priority: low
 kind: task
 labels: area:ui, effort:m
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-17T06:52:28Z
-updated: 2026-11-17T14:21:03Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-17T14:21:03Z
 +++
 
@@ -11393,9 +11396,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-17T17:59:21Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Weighted blended OIT is a practical starting point. (Moved from SceneSprocketsAddOns #47.)
@@ -11411,9 +11414,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:m
-milestone: M009-Rendering-2
+milestone: Rendering-2
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-20T06:01:40Z
+updated: 2026-11-20T06:33:14Z
 +++
 
 Small-scale shadows that conventional shadow maps miss. (Moved from SceneSprocketsAddOns #52.)
@@ -11427,9 +11430,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l
-milestone: M009-Rendering-2
+milestone: Rendering-2
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-20T06:01:40Z
+updated: 2026-11-20T06:33:14Z
 +++
 
 Stabilizes geometry, specular highlights, and fine detail. (Moved from SceneSprocketsAddOns #53.)
@@ -11443,9 +11446,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:m, subtask, lighting
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-17T19:13:15Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Projected lighting patterns and realistic light distributions. (Moved from SceneSprocketsAddOns #57.)
@@ -11461,9 +11464,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-17T17:51:38Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Glass, liquids, transparent solids. (Moved from SceneSprocketsAddOns #60.)
@@ -11477,9 +11480,9 @@ status: closed
 priority: low
 kind: task
 labels: area:renderer, effort:m
-milestone: M001-Correctness
+milestone: Correctness
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-17T18:25:50Z
+updated: 2026-11-20T06:32:00Z
 closed: 2026-11-17T18:25:50Z
 +++
 
@@ -11497,9 +11500,9 @@ status: closed
 priority: low
 kind: task
 labels: area:renderer, effort:m
-milestone: M001-Correctness
+milestone: Correctness
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-17T18:22:22Z
+updated: 2026-11-20T06:32:00Z
 closed: 2026-11-17T18:22:22Z
 +++
 
@@ -11516,9 +11519,9 @@ status: closed
 priority: low
 kind: task
 labels: area:renderer, effort:l
-milestone: M003-Rendering
+milestone: Rendering
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-18T23:41:34Z
+updated: 2026-11-20T06:32:25Z
 closed: 2026-11-18T23:41:34Z
 +++
 
@@ -11535,9 +11538,9 @@ status: closed
 priority: low
 kind: task
 labels: area:renderer, effort:m
-milestone: M001-Correctness
+milestone: Correctness
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-17T18:25:50Z
+updated: 2026-11-20T06:32:00Z
 closed: 2026-11-17T18:25:50Z
 +++
 
@@ -11555,9 +11558,9 @@ status: closed
 priority: low
 kind: task
 labels: area:renderer, effort:m
-milestone: M001-Correctness
+milestone: Correctness
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-17T18:26:19Z
+updated: 2026-11-20T06:32:00Z
 closed: 2026-11-17T18:26:19Z
 +++
 
@@ -11575,9 +11578,9 @@ status: closed
 priority: low
 kind: task
 labels: area:renderer, effort:m
-milestone: M001-Correctness
+milestone: Correctness
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-17T18:27:51Z
+updated: 2026-11-20T06:32:00Z
 closed: 2026-11-17T18:27:51Z
 +++
 
@@ -11595,9 +11598,9 @@ status: closed
 priority: low
 kind: task
 labels: area:renderer, effort:l, subtask, bounds
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-17T19:17:22Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-17T19:17:22Z
 +++
 
@@ -11617,9 +11620,9 @@ status: closed
 priority: low
 kind: feature
 labels: area:renderer, effort:m, subtask, lighting
-milestone: M003-Rendering
+milestone: Rendering
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-19T03:24:03Z
+updated: 2026-11-20T06:32:25Z
 closed: 2026-11-19T03:24:03Z
 +++
 
@@ -11636,9 +11639,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:s, subtask, lighting
-milestone: M003-Rendering
+milestone: Rendering
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-17T19:13:15Z
+updated: 2026-11-20T06:32:25Z
 +++
 
 Sensible default illumination for any scene. Complexity: low. (Moved from SceneSprocketsAddOns #70.)
@@ -11652,9 +11655,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:m
-milestone: M003-Rendering
+milestone: Rendering
 created: 2026-11-17T14:09:42Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:32:25Z
 +++
 
 Avoid manually tuning brightness for every scene. Complexity: low–medium. (Moved from SceneSprocketsAddOns #76.)
@@ -11668,9 +11671,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, lighting
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T14:09:42Z
-updated: 2026-11-17T19:13:16Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Softer, more natural illumination from large sources. Complexity: medium. (Moved from SceneSprocketsAddOns #77.)
@@ -11686,9 +11689,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l
-milestone: M009-Rendering-2
+milestone: Rendering-2
 created: 2026-11-17T14:09:42Z
-updated: 2026-11-20T06:01:40Z
+updated: 2026-11-20T06:33:14Z
 +++
 
 Effects such as SSR, SSGI, motion blur, decals, and contact shadows need per-pixel normals, motion vectors, or other G-buffer data. The renderer does not produce or expose them. Needed by several SceneSprocketsAddOns issues.
@@ -11702,9 +11705,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:s
-milestone: M009-Rendering-2
+milestone: Rendering-2
 created: 2026-11-17T14:09:42Z
-updated: 2026-11-20T06:01:40Z
+updated: 2026-11-20T06:33:14Z
 +++
 
 Refraction, transmission, and screen-space effects need the opaque scene color as a texture. The renderer does not provide one.
@@ -11718,9 +11721,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, lighting
-milestone: M009-Rendering-2
+milestone: Rendering-2
 created: 2026-11-17T14:09:42Z
-updated: 2026-11-20T06:01:40Z
+updated: 2026-11-20T06:33:14Z
 +++
 
 Add-on packages cannot insert passes at defined stages (after opaque, before transparent, post-process) or contribute indirect lighting (probes, lightmaps) to built-in materials.
@@ -11734,9 +11737,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:xl
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T14:09:59Z
-updated: 2026-11-17T17:51:38Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 The renderer is forward-only. There is no deferred path that writes a G-buffer (albedo, normal, roughness/metalness, depth) and shades in a separate pass. Related: #510.
@@ -11750,9 +11753,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:xl, subtask, lighting
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T14:09:59Z
-updated: 2026-11-17T19:13:16Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Lighting cost scales with lights × objects in the forward pass. Scenes with many local lights need deferred lighting (light volumes) or tiled/clustered light culling.
@@ -11766,9 +11769,9 @@ status: closed
 priority: medium
 kind: task
 labels: area:demo, area:testing, effort:m
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-17T14:10:26Z
-updated: 2026-11-17T18:59:01Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-17T18:59:01Z
 +++
 
@@ -11802,9 +11805,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:xl
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T02:26:59Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Draw selection, culling, and draw arguments are produced on the CPU. GPU-driven rendering would do this with compute and indirect commands.
@@ -11821,9 +11824,9 @@ status: open
 priority: medium
 kind: feature
 labels: area:renderer, effort:l, subtask, indirect-drawing
-milestone: M009-Rendering-2
+milestone: Rendering-2
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T06:01:40Z
+updated: 2026-11-20T06:33:14Z
 +++
 
 Draw commands are encoded on the CPU each frame. Indirect command buffers would let them be encoded once, or on the GPU. Part of #544.
@@ -11843,9 +11846,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:xl
-milestone: M009-Rendering-2
+milestone: Rendering-2
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T06:01:40Z
+updated: 2026-11-20T06:33:14Z
 +++
 
 Object and mesh shaders are not used for geometry amplification, culling, or LOD.
@@ -11861,9 +11864,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, lighting
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T02:26:59Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Every lit fragment loops over every light in the frame; lights are not assigned to screen or view-space clusters. Lights are shared by all renderers through MetalSprocketsLighting (#547), so a cluster grid built there could serve every renderer. No demo scene has enough lights to measure the benefit. Related: #514.
@@ -11880,9 +11883,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, bounds, indirect-drawing
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T02:26:59Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Hidden objects are still drawn: there is no depth pyramid (Hi-Z: a mip chain of the depth buffer, each level keeping the farthest depth of the level below) and compute pass to cull them. A GPU culling result only saves work if the GPU also issues the draws (indirect draws, #517); otherwise visibility would be read back to the CPU a frame late. PBR draws go through MetalSprockets DrawList (#582), so indirect drawing would replace those lists. Part of #543 and #544.
@@ -11899,9 +11902,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, indirect-drawing
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T02:26:59Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Particle simulation and draw counts are not driven by compute and indirect draws. The particle code lives in MetalSprocketsParticles, not here; MetalSprockets now has indirect draws (MetalSprockets#575, #576). Part of #544.
@@ -11918,10 +11921,10 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, indirect-drawing
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 depends: 545
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T02:26:59Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Mesh detail is chosen on the CPU (Node.levelsOfDetail, by camera distance), not on the GPU. Choosing it on the GPU only helps if the GPU also issues the draws (#517); how draws are fed depends on #545. Part of #544.
@@ -11935,9 +11938,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:xl
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-17T17:51:38Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 There is no path that writes primitive IDs and evaluates materials afterwards with compute.
@@ -11951,9 +11954,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:xl
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-17T17:51:38Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Lighting is not done in tile memory with imageblocks / tile shaders. Related: #513.
@@ -11967,9 +11970,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:xl
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-17T17:51:38Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Workload scheduling and dependencies are not driven on the GPU with indirect dispatch and GPU synchronization.
@@ -11983,9 +11986,9 @@ status: open
 priority: low
 kind: feature
 labels: area:materials, effort:l
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T14:23:29Z
-updated: 2026-11-17T17:51:38Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Custom materials can't be written as composable Swift expressions that build a shader.
@@ -12006,10 +12009,10 @@ status: open
 priority: low
 kind: feature
 labels: area:materials, effort:xl
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 depends: 526
 created: 2026-11-17T14:23:29Z
-updated: 2026-11-17T17:51:38Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 There is no visual node-based editor for building materials.
@@ -12029,9 +12032,9 @@ status: open
 priority: low
 kind: feature
 labels: area:materials, effort:l
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T14:27:02Z
-updated: 2026-11-17T17:51:38Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 SceneSprockets can't load or render MaterialX (.mtlx) materials. Assets authored with MaterialX (Substance, GPUOpen MaterialX Library, ambientCG, OpenUSD pipelines) have to be converted by hand to the existing PBR or Blinn-Phong materials.
@@ -12051,9 +12054,9 @@ status: open
 priority: low
 kind: task
 labels: area:demo, effort:s
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T17:11:50Z
-updated: 2026-11-17T17:51:39Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 ---
@@ -12065,9 +12068,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:l, area:renderer
-milestone: M009-Rendering-2
+milestone: Rendering-2
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-20T06:01:40Z
+updated: 2026-11-20T06:33:14Z
 +++
 
 No local cubemap reflections with parallax correction and probe blending. (Moved from SceneSprocketsAddOns#49.)
@@ -12083,9 +12086,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, area:renderer
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-19T01:35:56Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Mirrors, polished floors and water surfaces cannot show planar reflections. (Moved from SceneSprocketsAddOns#50.)
@@ -12101,9 +12104,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, area:renderer
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-19T01:35:56Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Objects do not receive indirect lighting appropriate to their location. (Moved from SceneSprocketsAddOns#71.)
@@ -12119,9 +12122,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:xl, area:renderer, subtask, lighting
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-19T01:35:56Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 No dynamic indirect lighting or color bleeding. (Moved from SceneSprocketsAddOns#72.)
@@ -12137,9 +12140,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:l, area:renderer
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-19T01:35:56Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 No approximate bounced light from visible surfaces. (Moved from SceneSprocketsAddOns#73.)
@@ -12155,9 +12158,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:l, area:renderer, subtask, lighting
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-19T01:35:56Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Static scenes cannot use precomputed indirect lighting. (Moved from SceneSprocketsAddOns#74.)
@@ -12173,9 +12176,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:xl, area:renderer, subtask, lighting
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-19T01:35:56Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Lighting for static environments cannot be generated automatically. (Moved from SceneSprocketsAddOns#75.)
@@ -12191,9 +12194,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:s, area:renderer
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-19T01:35:56Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Surfaces cannot show apparent depth without extra geometry. (Moved from SceneSprocketsAddOns#58.)
@@ -12207,9 +12210,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:l, area:renderer
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T17:55:40Z
-updated: 2026-11-19T01:35:56Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Skin, wax, leaves and other translucent materials cannot scatter light below the surface. (Moved from SceneSprocketsAddOns#59.)
@@ -12223,9 +12226,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, area:renderer
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T17:55:40Z
-updated: 2026-11-19T01:35:56Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Hair, foliage and dense overlapping transparent surfaces need order-independent transparency. (Moved from SceneSprocketsAddOns#61.)
@@ -12241,9 +12244,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:l, area:renderer
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-17T17:55:40Z
-updated: 2026-11-19T01:35:56Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Fog does not scatter light through participating media. (Moved from SceneSprocketsAddOns#56.)
@@ -12257,9 +12260,9 @@ status: closed
 priority: low
 kind: bug
 labels: area:renderer, effort:l
-milestone: M003-Rendering
+milestone: Rendering
 created: 2026-11-17T18:10:56Z
-updated: 2026-11-20T06:14:41Z
+updated: 2026-11-20T06:32:25Z
 closed: 2026-11-20T06:14:41Z
 +++
 
@@ -12286,10 +12289,10 @@ status: closed
 priority: medium
 kind: feature
 labels: umbrella, area:renderer, effort:xl, lighting
-milestone: M003-Rendering
+milestone: Rendering
 depends: 547
 created: 2026-11-17T19:13:03Z
-updated: 2026-11-20T01:57:40Z
+updated: 2026-11-20T06:32:25Z
 closed: 2026-11-19T01:40:57Z
 +++
 
@@ -12313,10 +12316,10 @@ status: open
 priority: medium
 kind: feature
 labels: umbrella, area:scenegraph, effort:xl, bounds
-milestone: M007-Performance
+milestone: Performance-2
 depends: 337, 505, 520, 383
 created: 2026-11-17T19:13:08Z
-updated: 2026-11-20T06:00:25Z
+updated: 2026-11-20T06:33:02Z
 +++
 
 SceneSprockets has no hierarchy of node bounds that follows scene changes. Every system that asks what a frustum, ray or region touches walks every node, and does its own bounds work:
@@ -12338,10 +12341,10 @@ status: open
 priority: medium
 kind: feature
 labels: umbrella, area:renderer, effort:xl, indirect-drawing
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 depends: 517, 520, 521, 522
 created: 2026-11-17T19:13:56Z
-updated: 2026-11-20T05:54:41Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Every SceneSprockets draw is chosen and encoded on the CPU each frame. No renderer issues indirect draws or uses indirect command buffers, so the GPU cannot decide what to draw, how many instances, or which level of detail.
@@ -12359,10 +12362,10 @@ status: closed
 priority: medium
 kind: task
 labels: area:renderer, area:performance, effort:l, investigate, deferred
-milestone: M007-PBR-Merged-Geometry
+milestone: PBR-Merged-Geometry
 depends: 572, 573
 created: 2026-11-18T18:13:33Z
-updated: 2026-11-20T00:24:09Z
+updated: 2026-11-20T06:32:53Z
 closed: 2026-11-20T00:24:09Z
 +++
 
@@ -12418,10 +12421,10 @@ status: closed
 priority: medium
 kind: feature
 labels: area:renderer, effort:xl, lighting, subtask
-milestone: M003-Rendering
+milestone: Rendering
 depends: 548, 549, 550, 551
 created: 2026-11-18T18:56:33Z
-updated: 2026-11-19T01:11:06Z
+updated: 2026-11-20T06:32:25Z
 closed: 2026-11-19T01:11:06Z
 +++
 
@@ -12543,9 +12546,9 @@ status: closed
 priority: low
 kind: task
 labels: proposal, effort:l
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-19T01:14:33Z
-updated: 2026-11-19T03:21:00Z
+updated: 2026-11-20T06:33:21Z
 closed: 2026-11-19T03:21:00Z
 +++
 
@@ -12578,9 +12581,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:l, area:extensions, deferred, gltf
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-19T02:12:55Z
-updated: 2026-11-20T05:54:41Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Primitives using KHR_draco_mesh_compression cannot be decoded; GLTFViewer lists glTF-Draco variants (about 20 sample models, none of them a default variant) as unsupported. Needs Google's Draco decoder (Apache-2.0, large C++), most likely in SwiftGLTF. Deferred: no default sample needs it. Meshopt split out to MetalSprocketsGLTF#104 (done).
@@ -12598,10 +12601,10 @@ status: closed
 priority: low
 kind: bug
 labels: area:performance, effort:m, gltf
-milestone: M002-Performance
+milestone: Performance
 depends: 573
 created: 2026-11-19T02:12:55Z
-updated: 2026-11-20T01:22:43Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-20T01:22:43Z
 +++
 
@@ -12623,9 +12626,9 @@ status: open
 priority: low
 kind: bug
 labels: area:performance, effort:s, deferred, gltf
-milestone: M007-Performance
+milestone: Performance-2
 created: 2026-11-19T02:12:55Z
-updated: 2026-11-20T06:00:25Z
+updated: 2026-11-20T06:33:02Z
 +++
 
 In GLTFViewer (Release, 120 Hz display) CarConcept runs at ~110 fps. Headless (ms-gltf-render --benchmark 60 --orbit, Release, M5 Max): ~3.8 ms CPU, <1 ms GPU per frame. 109 primitives, of which one has a transmissive material; that single material turns on the transmission pre-passes (opaque scene, back faces, mipmaps) for the whole scene. Likely the fixed cost of those passes; not yet profiled.
@@ -12645,9 +12648,9 @@ status: open
 priority: low
 kind: feature
 labels: area:extensions, effort:l, deferred, gltf
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-19T02:12:55Z
-updated: 2026-11-20T05:54:41Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Primitives using KHR_gaussian_splatting (point primitives with Gaussian splat attributes) are not drawn as splats. Supporting it means a separate splat renderer (sorting, splat rasterisation), not a material change.
@@ -12665,9 +12668,9 @@ status: open
 priority: low
 kind: feature
 labels: area:extensions, effort:m, deferred, gltf
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-19T02:12:55Z
-updated: 2026-11-20T05:54:41Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Photometric lights defined by EXT_lights_ies (IES light profiles) are ignored.
@@ -12683,9 +12686,9 @@ status: open
 priority: low
 kind: task
 labels: area:performance, area:testing, effort:s, gltf
-milestone: M007-Performance
+milestone: Performance-2
 created: 2026-11-19T02:12:55Z
-updated: 2026-11-20T06:00:25Z
+updated: 2026-11-20T06:33:02Z
 +++
 
 The bench suite (ms-gltf-render bench, GLTFBenchCommand.scenes) has 11 scenes picked by hand. Paths with no scene, so their regressions go unnoticed:
@@ -12710,9 +12713,9 @@ status: open
 priority: low
 kind: enhancement
 labels: effort:m, deferred, gltf, area:renderer
-milestone: M004-VisionOS
+milestone: VisionOS
 created: 2026-11-19T02:12:55Z
-updated: 2026-11-20T05:54:42Z
+updated: 2026-11-20T06:32:33Z
 +++
 
 In GLTFViewer's immersive space, edges show stair-stepping, more visible toward the edges of the view where foveation lowers resolution. MetalSprockets' ImmersiveLayerConfiguration does not request multisampling, and PBRImmersiveScene renders at one sample. Wanted: MSAA (or another antialiasing) in the immersive path, checking that CompositorServices layered targets and foveation (rasterization rate maps) support it, and the GPU cost on Vision Pro.
@@ -12730,9 +12733,9 @@ status: open
 priority: medium
 kind: task
 labels: effort:xs, deferred, gltf, area:renderer
-milestone: M004-VisionOS
+milestone: VisionOS
 created: 2026-11-19T02:12:56Z
-updated: 2026-11-20T05:54:42Z
+updated: 2026-11-20T06:32:33Z
 +++
 
 On Vision Pro, opening the model after the Showcase in the immersive space aborted with Metal validation: 'Only triangles may be drawn when using a rasterization rate map' (drawIndexedPrimitives). Fixed in e6f4bb6d: PBRImmersiveScene sets PBRRenderer.drawsTrianglesOnly, so point and line primitives are skipped in immersive (still drawn in windows); TrianglesOnlyTests covers it on macOS. To verify on device: open that model (and a points/lines sample such as MeshPrimitiveModes) in immersive with foveation on; no abort, triangles visible, lines and points absent.
@@ -12748,10 +12751,10 @@ status: open
 priority: medium
 kind: task
 labels: effort:xl, area:testing, has-subtasks, gltf
-milestone: M008-Reliability
+milestone: Reliability
 depends: 563, 564, 565, 566
 created: 2026-11-19T02:12:56Z
-updated: 2026-11-20T06:00:25Z
+updated: 2026-11-20T06:33:09Z
 +++
 
 Loading or animating a malformed or hostile glTF/GLB should produce an error or a warning, never a crash (precondition, fatalError, out-of-range index, force unwrap, integer overflow, unbounded allocation).
@@ -12771,9 +12774,9 @@ status: open
 priority: low
 kind: task
 labels: effort:l, area:architecture, gltf
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 created: 2026-11-19T02:12:56Z
-updated: 2026-11-20T05:54:42Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 GLTFAsset.Resources.load (GLTFAssetLoading.swift, about 90 lines) does all of these in one function:
@@ -12803,9 +12806,9 @@ status: open
 priority: medium
 kind: task
 labels: effort:m, area:testing, subtask, gltf
-milestone: M008-Reliability
+milestone: Reliability
 created: 2026-11-19T02:12:56Z
-updated: 2026-11-20T06:00:25Z
+updated: 2026-11-20T06:33:09Z
 +++
 
 Part of #561. Loading or posing malformed input in this area must produce an error or warning, never a crash (precondition, fatalError, out-of-range index, force unwrap, integer overflow, unbounded allocation). Acceptance: a fuzz or malformed-input test covers the area and finds no crash. Area: JSON structure, node hierarchy indices, skins and other cross-object indices.
@@ -12821,9 +12824,9 @@ status: open
 priority: medium
 kind: task
 labels: effort:m, area:testing, subtask, gltf
-milestone: M008-Reliability
+milestone: Reliability
 created: 2026-11-19T02:12:56Z
-updated: 2026-11-20T06:00:25Z
+updated: 2026-11-20T06:33:09Z
 +++
 
 Part of #561. Loading or posing malformed input in this area must produce an error or warning, never a crash (precondition, fatalError, out-of-range index, force unwrap, integer overflow, unbounded allocation). Acceptance: a fuzz or malformed-input test covers the area and finds no crash. Area: accessor and bufferView offsets, counts, strides, sparse accessors.
@@ -12839,9 +12842,9 @@ status: open
 priority: medium
 kind: task
 labels: effort:m, area:testing, subtask, gltf
-milestone: M008-Reliability
+milestone: Reliability
 created: 2026-11-19T02:12:56Z
-updated: 2026-11-20T06:00:25Z
+updated: 2026-11-20T06:33:09Z
 +++
 
 Part of #561. Loading or posing malformed input in this area must produce an error or warning, never a crash (precondition, fatalError, out-of-range index, force unwrap, integer overflow, unbounded allocation). Acceptance: a fuzz or malformed-input test covers the area and finds no crash. Area: animation samplers, channels and KHR_animation_pointer targets, through both loading and GLTFPoser.
@@ -12857,9 +12860,9 @@ status: open
 priority: medium
 kind: task
 labels: effort:m, area:testing, subtask, gltf
-milestone: M008-Reliability
+milestone: Reliability
 created: 2026-11-19T02:12:56Z
-updated: 2026-11-20T06:00:25Z
+updated: 2026-11-20T06:33:09Z
 +++
 
 Part of #561. Loading or posing malformed input in this area must produce an error or warning, never a crash (precondition, fatalError, out-of-range index, force unwrap, integer overflow, unbounded allocation). Acceptance: a fuzz or malformed-input test covers the area and finds no crash. Area: extensions (meshopt, Basis, EXT_mesh_gpu_instancing, KHR_lights_punctual, EXT_lights_image_based).
@@ -12875,9 +12878,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, deferred, pbr, area:materials
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-19T02:12:56Z
-updated: 2026-11-20T05:54:42Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 RoboCloth (https://github.com/theialab/robocloth, local copy in ~/Projects/Vendor) has 500 captured cloth materials. They are released as neural BRDFs (a 16-channel latent texture plus a shared MLP) and as a Disney PBR fit.
@@ -12928,9 +12931,9 @@ status: open
 priority: low
 kind: task
 labels: proposal, area:renderer, effort:m
-milestone: M003-Rendering
+milestone: Rendering
 created: 2026-11-19T02:43:31Z
-updated: 2026-11-20T05:54:42Z
+updated: 2026-11-20T06:32:25Z
 +++
 
 Since #552, both PBR modules live in this package:
@@ -12987,9 +12990,9 @@ status: closed
 priority: high
 kind: bug
 labels: area:performance, effort:m, gltf
-milestone: M007-PBR-Merged-Geometry
+milestone: PBR-Merged-Geometry
 created: 2026-11-19T03:53:06Z
-updated: 2026-11-19T05:54:20Z
+updated: 2026-11-20T06:32:53Z
 closed: 2026-11-19T05:54:20Z
 +++
 
@@ -13018,8 +13021,9 @@ status: closed
 priority: medium
 kind: task
 labels: area:performance, effort:s, gltf
-milestone: M007-PBR-Merged-Geometry
+milestone: PBR-Merged-Geometry
 created: 2026-11-19T03:58:37Z
+updated: 2026-11-20T06:32:53Z
 closed: 2026-11-19T03:58:37Z
 +++
 
@@ -13036,9 +13040,9 @@ status: closed
 priority: medium
 kind: enhancement
 labels: area:renderer, area:performance, effort:l
-milestone: M007-PBR-Merged-Geometry
+milestone: PBR-Merged-Geometry
 created: 2026-11-19T04:09:28Z
-updated: 2026-11-19T06:31:29Z
+updated: 2026-11-20T06:32:53Z
 closed: 2026-11-19T06:31:29Z
 +++
 
@@ -13069,9 +13073,9 @@ status: closed
 priority: medium
 kind: task
 labels: area:performance, effort:s, gltf
-milestone: M007-PBR-Merged-Geometry
+milestone: PBR-Merged-Geometry
 created: 2026-11-19T05:54:15Z
-updated: 2026-11-19T14:39:14Z
+updated: 2026-11-20T06:32:53Z
 closed: 2026-11-19T14:39:14Z
 +++
 
@@ -13090,9 +13094,9 @@ status: closed
 priority: low
 kind: task
 labels: area:renderer, effort:xs
-milestone: M007-PBR-Merged-Geometry
+milestone: PBR-Merged-Geometry
 created: 2026-11-19T05:54:15Z
-updated: 2026-11-19T06:01:40Z
+updated: 2026-11-20T06:32:53Z
 closed: 2026-11-19T06:01:40Z
 +++
 
@@ -13107,9 +13111,9 @@ status: closed
 priority: high
 kind: enhancement
 labels: area:renderer, area:performance, effort:m
-milestone: M007-PBR-Merged-Geometry
+milestone: PBR-Merged-Geometry
 created: 2026-11-19T05:54:15Z
-updated: 2026-11-19T14:35:48Z
+updated: 2026-11-20T06:32:53Z
 closed: 2026-11-19T14:35:48Z
 +++
 
@@ -13128,9 +13132,9 @@ status: closed
 priority: high
 kind: enhancement
 labels: area:renderer, area:performance, effort:s
-milestone: M007-PBR-Merged-Geometry
+milestone: PBR-Merged-Geometry
 created: 2026-11-19T05:54:15Z
-updated: 2026-11-20T00:29:59Z
+updated: 2026-11-20T06:32:53Z
 closed: 2026-11-20T00:29:59Z
 +++
 
@@ -13152,9 +13156,9 @@ status: closed
 priority: low
 kind: task
 labels: area:performance, effort:m, investigate
-milestone: M007-PBR-Merged-Geometry
+milestone: PBR-Merged-Geometry
 created: 2026-11-19T05:54:15Z
-updated: 2026-11-20T00:29:59Z
+updated: 2026-11-20T06:32:53Z
 closed: 2026-11-20T00:29:59Z
 +++
 
@@ -13171,9 +13175,9 @@ status: closed
 priority: high
 kind: task
 labels: area:renderer, effort:s
-milestone: M007-PBR-Merged-Geometry
+milestone: PBR-Merged-Geometry
 created: 2026-11-19T06:10:23Z
-updated: 2026-11-19T14:08:44Z
+updated: 2026-11-20T06:32:53Z
 closed: 2026-11-19T14:08:44Z
 +++
 
@@ -13208,10 +13212,10 @@ status: closed
 priority: medium
 kind: task
 labels: area:renderer, area:performance, tracking
-milestone: M007-PBR-Merged-Geometry
+milestone: PBR-Merged-Geometry
 depends: 545, 574, 576, 577, 578, 571, 572, 573, 575, 579, 582, 582, 583
 created: 2026-11-19T14:17:08Z
-updated: 2026-11-20T00:30:12Z
+updated: 2026-11-20T06:32:53Z
 closed: 2026-11-20T00:30:12Z
 +++
 
@@ -13230,9 +13234,9 @@ status: closed
 priority: low
 kind: task
 labels: area:renderer, area:performance, effort:l
-milestone: M007-PBR-Merged-Geometry
+milestone: PBR-Merged-Geometry
 created: 2026-11-19T14:51:02Z
-updated: 2026-11-20T00:24:09Z
+updated: 2026-11-20T06:32:53Z
 closed: 2026-11-20T00:24:09Z
 +++
 
@@ -13251,9 +13255,9 @@ status: open
 priority: low
 kind: bug
 labels: area:performance, effort:m, investigate, gltf
-milestone: M007-Performance
+milestone: Performance-2
 created: 2026-11-20T00:29:59Z
-updated: 2026-11-20T06:00:25Z
+updated: 2026-11-20T06:33:02Z
 +++
 
 After #582 (every batch through DrawList), ms-gltf-render bench CarConcept reports ~2.4 ms CPU per frame against ~1.67 ms for the merged path (56c82e9b), both on MetalSprockets main, Release, M5 Max. Sponza: 0.83 vs 0.69 ms. Reproduced over several runs.
@@ -13271,10 +13275,10 @@ status: closed
 priority: low
 kind: enhancement
 labels: area:renderer, area:performance, effort:m, bounds
-milestone: M002-Performance
+milestone: Performance
 depends: 337
 created: 2026-11-20T02:15:41Z
-updated: 2026-11-20T02:26:22Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-20T02:26:22Z
 +++
 
@@ -13291,10 +13295,10 @@ status: closed
 priority: low
 kind: enhancement
 labels: area:scenegraph, area:performance, effort:m, bounds
-milestone: M002-Performance
+milestone: Performance
 depends: 337
 created: 2026-11-20T02:15:41Z
-updated: 2026-11-20T02:23:49Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-20T02:23:49Z
 +++
 
@@ -13309,10 +13313,10 @@ status: closed
 priority: low
 kind: feature
 labels: area:scenegraph, effort:s, bounds
-milestone: M002-Performance
+milestone: Performance
 depends: 337
 created: 2026-11-20T02:15:41Z
-updated: 2026-11-20T02:20:28Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-20T02:20:28Z
 +++
 
@@ -13327,9 +13331,9 @@ status: closed
 priority: medium
 kind: bug
 labels: area:scenegraph, area:performance, effort:m, bounds
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-20T02:26:22Z
-updated: 2026-11-20T02:35:10Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-20T02:35:10Z
 +++
 
@@ -13350,9 +13354,9 @@ status: closed
 priority: medium
 kind: bug
 labels: area:scenegraph, area:performance, effort:m
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-20T02:46:36Z
-updated: 2026-11-20T02:57:45Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-20T02:57:45Z
 +++
 
@@ -13373,9 +13377,9 @@ status: closed
 priority: medium
 kind: task
 labels: area:architecture, effort:l, subtask
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-20T02:56:32Z
-updated: 2026-11-20T05:34:31Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-20T05:34:31Z
 +++
 
@@ -13396,9 +13400,9 @@ status: closed
 priority: medium
 kind: task
 labels: area:architecture, effort:l, subtask
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-20T02:56:48Z
-updated: 2026-11-20T05:52:31Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-20T05:52:31Z
 +++
 
@@ -13424,9 +13428,9 @@ status: closed
 priority: medium
 kind: task
 labels: area:architecture, effort:l, subtask
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-20T02:56:48Z
-updated: 2026-11-20T05:46:46Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-20T05:46:46Z
 +++
 
@@ -13449,9 +13453,9 @@ status: closed
 priority: low
 kind: task
 labels: area:architecture, effort:s, subtask
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-20T02:56:49Z
-updated: 2026-11-20T03:07:15Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-20T03:07:15Z
 +++
 
@@ -13478,9 +13482,9 @@ status: closed
 priority: low
 kind: task
 labels: area:architecture, effort:m, subtask
-milestone: M002-Performance
+milestone: Performance
 created: 2026-11-20T02:56:49Z
-updated: 2026-11-20T03:23:37Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-20T03:23:37Z
 +++
 
@@ -13508,9 +13512,9 @@ status: open
 priority: low
 kind: task
 labels: effort:s, area:scenegraph, area:architecture
-milestone: M006-Physics-and-Scene
+milestone: Physics-and-Scene
 created: 2026-11-20T03:23:37Z
-updated: 2026-11-20T05:54:42Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 After #593, NodeFieldSlot records each field's archive keys and clone() copies fields from worldFields, and NodeFieldListTests checks the lists agree. Two lists remain unchecked:
@@ -13527,9 +13531,9 @@ status: open
 priority: low
 kind: task
 labels: effort:m, area:renderer, area:architecture
-milestone: M003-Rendering
+milestone: Rendering
 created: 2026-11-20T05:52:31Z
-updated: 2026-11-20T05:54:42Z
+updated: 2026-11-20T06:32:25Z
 +++
 
 After #590, SceneGraphElement resolves deformation once for renderers that draw plain vertex buffers (MeshEntry.resolvingDeformation), and MeshEntry.validMorphs is the rule for valid morph targets and weights on the CPU and GPU paths. Two places still decide this on their own:
@@ -13547,8 +13551,9 @@ Found while working on #590.
 status: new
 priority: none
 kind: none
-milestone: M999-Nice-to-have
+milestone: Nice-to-have
 created: 2026-11-20T05:56:30Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Super easy way to make a billboard (with various options to align the billboard to various things - e.g. camera, “tree style” etc)
@@ -13562,9 +13567,9 @@ status: open
 priority: low
 kind: enhancement
 labels: area:renderer, effort:l
-milestone: M003-Rendering
+milestone: Rendering
 created: 2026-11-20T06:03:21Z
-updated: 2026-11-20T06:05:40Z
+updated: 2026-11-20T06:32:25Z
 +++
 
 Split out of #95.
@@ -13635,9 +13640,9 @@ status: new
 priority: low
 kind: enhancement
 labels: area:renderer, effort:m
-milestone: M003-Rendering
+milestone: Rendering
 created: 2026-11-20T06:30:55Z
-updated: 2026-11-20T06:30:57Z
+updated: 2026-11-20T06:32:25Z
 +++
 
 With SceneView.sceneAntialiasing(sampleCount:) or SceneGraphElement(sampleCount:) above 1, alpha-masked materials (PBR alphaMode MASK, Blinn-Phong diffuse texture alpha) still cut out with a hard edge per pixel. Their edges get no antialiasing from the extra samples.
@@ -13653,9 +13658,9 @@ status: new
 priority: low
 kind: enhancement
 labels: area:renderer, effort:m
-milestone: M003-Rendering
+milestone: Rendering
 created: 2026-11-20T06:30:55Z
-updated: 2026-11-20T06:30:57Z
+updated: 2026-11-20T06:32:25Z
 +++
 
 With sceneAntialiasing(sampleCount:) above 1, SceneFramePlan turns off the soft particle pass (it would need to reload the multisampled color after a depth copy). Soft particles are then drawn in the scene pass like hard particles, so they clip sharply against geometry.
@@ -13664,12 +13669,12 @@ Split out of #95.
 
 ---
 
-## Milestone M1: M001-Correctness
+## Milestone M1: Correctness
 
 +++
 status: closed
 created: 2026-11-16T20:12:42Z
-updated: 2026-11-17T18:32:37Z
+updated: 2026-11-20T06:32:00Z
 closed: 2026-11-17T18:32:37Z
 +++
 
@@ -13677,12 +13682,12 @@ Bugs and wrong behavior.
 
 ---
 
-## Milestone M2: M002-Performance
+## Milestone M2: Performance
 
 +++
 status: closed
 created: 2026-11-16T20:12:42Z
-updated: 2026-11-20T05:53:00Z
+updated: 2026-11-20T06:32:07Z
 closed: 2026-11-20T05:53:00Z
 +++
 
@@ -13690,12 +13695,12 @@ Speed and memory.
 
 ---
 
-## Milestone M3: M003-Features
+## Milestone M3: Features
 
 +++
 status: closed
 created: 2026-11-16T20:12:42Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:32:17Z
 closed: 2026-11-17T18:07:09Z
 +++
 
@@ -13703,66 +13708,70 @@ New capabilities and missing API.
 
 ---
 
-## Milestone M4: M999-Nice-to-have
+## Milestone M4: Nice-to-have
 
 +++
 status: open
 created: 2026-11-16T20:12:42Z
+updated: 2026-11-20T06:33:21Z
 +++
 
 Out of sequence. Large or speculative work.
 
 ---
 
-## Milestone M5: M004-VisionOS
+## Milestone M5: VisionOS
 
 +++
 status: open
 created: 2026-11-17T17:28:41Z
+updated: 2026-11-20T06:32:33Z
 +++
 
 ---
 
-## Milestone M6: M005-Big-World
+## Milestone M6: Big-World
 
 +++
 status: open
 created: 2026-11-17T18:01:46Z
+updated: 2026-11-20T06:32:40Z
 +++
 
 Very large worlds (solar-system scale): enough precision in transforms, time, depth, rendering and physics to make a KSP-style game doable.
 
 ---
 
-## Milestone M7: M003-Rendering
+## Milestone M7: Rendering
 
 +++
 status: open
 created: 2026-11-17T18:07:08Z
-updated: 2026-11-20T06:01:40Z
+updated: 2026-11-20T06:32:25Z
 +++
 
 Renderer gaps and fixes: lights, shadows, MSAA, exposure, depth, debug overlays and renderer structure.
 
 ---
 
-## Milestone M8: M006-Physics-and-Scene
+## Milestone M8: Physics-and-Scene
 
 +++
 status: open
 created: 2026-11-17T18:07:08Z
+updated: 2026-11-20T06:32:46Z
 +++
 
 Physics, scene graph, assets and UI features.
 
 ---
 
-## Milestone M9: M007-PBR-Merged-Geometry
+## Milestone M9: PBR-Merged-Geometry
 
 +++
 status: closed
 created: 2026-11-19T03:27:31Z
-updated: 2026-11-20T00:34:57Z
+updated: 2026-11-20T06:32:53Z
 closed: 2026-11-20T00:34:57Z
 +++
 
@@ -13770,33 +13779,36 @@ Decide whether PBR keeps the merged-geometry path (#545), and fix the issues it 
 
 ---
 
-## Milestone M10: M007-Performance
+## Milestone M10: Performance-2
 
 +++
 status: open
 created: 2026-11-20T06:00:25Z
+updated: 2026-11-20T06:33:02Z
 +++
 
 Frame time, CPU cost and scaling to large scenes, with benchmarks to measure them.
 
 ---
 
-## Milestone M11: M008-Reliability
+## Milestone M11: Reliability
 
 +++
 status: open
 created: 2026-11-20T06:00:25Z
+updated: 2026-11-20T06:33:09Z
 +++
 
 Crashes, races and flaky tests: malformed input, threading and CI stability.
 
 ---
 
-## Milestone M12: M009-Rendering-2
+## Milestone M12: Rendering-2
 
 +++
 status: open
 created: 2026-11-20T06:01:40Z
+updated: 2026-11-20T06:33:14Z
 +++
 
 Advanced rendering: post effects, screen-space techniques, probes, render targets, extension points and GPU-driven draws.

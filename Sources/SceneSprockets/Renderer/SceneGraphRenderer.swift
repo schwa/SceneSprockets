@@ -295,13 +295,15 @@ public struct SceneGraphElement: Element {
             }
             guard let postTargets, plan.hasPostPhase else {
                 if prePasses.isEmpty {
-                    return scenePass.eraseToAnyElement()
+                    return scenePass.gpuTimed(SceneGPUTimingLabel.scene).eraseToAnyElement()
                 }
                 return try MetalSprockets.Group {
                     ForEach(Array(prePasses.enumerated()), id: \.offset) { _, prePass in
                         prePass
                     }
+                    .gpuTimed(SceneGPUTimingLabel.prePasses)
                     scenePass
+                        .gpuTimed(SceneGPUTimingLabel.scene)
                 }
                 .eraseToAnyElement()
             }
@@ -309,17 +311,22 @@ public struct SceneGraphElement: Element {
             // precise far from the world origin (#257). Shadow views are camera-relative too.
             let relativeViewProjection = context.projectionMatrix * context.viewMatrix.rotationOnlyView
             let postPasses = plan.postPasses.compactMap { postPass in
-                makePostPass(postPass, shadowFrame: shadowFrame, ambientOcclusionApply: ambientOcclusionApply, postProcessing: postProcessing, postTargets: postTargets, relativeViewProjection: relativeViewProjection)
+                makePostPass(postPass, shadowFrame: shadowFrame, ambientOcclusionApply: ambientOcclusionApply, postProcessing: postProcessing, postTargets: postTargets, relativeViewProjection: relativeViewProjection)?
+                    .gpuTimed(postPass.gpuTimingLabel)
+                    .eraseToAnyElement()
             }
             // The shadow and post passes open their own encoders, so they are siblings of the scene pass.
             return try MetalSprockets.Group {
                 if let shadowFrame {
                     ShadowCasterDepthPass(frame: shadowFrame)
+                        .gpuTimed(SceneGPUTimingLabel.shadowCasters)
                 }
                 ForEach(Array(prePasses.enumerated()), id: \.offset) { _, prePass in
                     prePass
                 }
+                .gpuTimed(SceneGPUTimingLabel.prePasses)
                 scenePass
+                    .gpuTimed(SceneGPUTimingLabel.scene)
                 ForEach(Array(postPasses.enumerated()), id: \.offset) { _, postPass in
                     postPass
                 }
