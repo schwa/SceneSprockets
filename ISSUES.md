@@ -1821,6 +1821,10 @@ SceneGraphShadows is one global setting. Missing: shadowColor (today only intens
 
 - `2026-10-15T03:04:56Z`: Done: SceneGraphShadows.color (shadow tint) and softness (PCF radius). Left: cascades and per-light castsShadow/resolution/bias (ties into the #71 decision).
 - `2026-11-17T18:25:51Z`: From #502 (closed): when adding cascades, check cascade transitions (blend or seam between cascades) and that bias and PCF softness scale per cascade, since texel size changes between cascades.
+- `2026-11-20T06:27:02Z`: Autonomous run: scoped, not changed. Light.castsShadow already exists, so what is left is cascades and per-light resolution and bias. Findings: (1) All lights share one depth2d_array, so every slice has the same size. Per-light resolution means rendering into a sub-rectangle of a slice and folding the scale and offset into that slice's view-projection, or using one texture per light. (2) Lighting::shadow multiplies the PCF result of every slice a light owns. That is right for point lights, but with cascades the coarse cascade would still blur and darken the near region. The shader must pick the finest cascade that contains the point, in MetalSprocketsLighting.h and in ShadowMask.metal (which today knows only a flat slice count). Directional lights could be treated as cascaded whenever they own more than one slice, so LightingLight (80 bytes, shared with PBR) does not need to grow. (3) Per-light bias is easy: the depth pass already draws one render pass per slice. Punting because the API shape is a design decision.
+- `2026-11-20T06:27:02Z`: Question 1 (design): Where should the cascade and per-light shadow settings live: on Light (like SCNLight: shadowCascadeCount, shadowCascadeSplittingFactor, shadowMapSize, shadowBias), or as global settings on Shadows with optional per-light overrides? Recommended: On Light, as an optional Light.ShadowSettings (cascadeCount, splitFactor, resolutionScale, depthBias, slopeScale), with nil meaning use the Shadows defaults
+- `2026-11-20T06:27:02Z`: Question 2 (decision): For per-light resolution, is it OK to keep one shared shadow map array and give a light a smaller sub-rectangle of its slice (resolution can only go down from Shadows.resolution), instead of one texture per light? Recommended: Yes: sub-rectangles in the shared array; per-light resolution is a fraction of Shadows.resolution
+- `2026-11-20T06:27:02Z`: Question 3 (decision): Should cascade transitions blend between cascades (smoother, two samples near the boundary) or switch hard at the boundary (cheaper, a visible seam)? Recommended: Blend over a small band (about 10% of the cascade's depth range)
 
 ---
 
@@ -13582,14 +13586,37 @@ Expected: an app can ask for a scene graph (or a subtree, or a set of materials)
 
 ---
 
-## Milestone M1: M001-Correctness
+## 598: Metal libraries are not rebuilt when a shared shader header in another target changes
 
 +++
+status: new
+priority: low
+kind: bug
+labels: area:build, effort:s
+created: 2026-11-20T06:26:17Z
++++
+
+Changing Sources/MetalSprocketsLightingShaders/include/MetalSprocketsLightingTypes.h (kLightingMaxShadowSliceCount 8 -> 32) did not rebuild the metallibs of SceneSprocketsShaders and MetalSprocketsPBRShaders, which include it. Swift used the new struct layout and the shaders the old one, so every shadow test failed.
+
+Repro:
+1. Change the size of an array in LightingShadowUniforms.
+2. xcb test SceneSprockets.
+
+Expected: the shaders that include the header are recompiled.
+Actual: stale metallibs are used until a .metal file in each target is touched.
+
+Found while fixing #299.
+
+---
+
+## Milestone M1: M001-Correctness
+
+\+++
 status: closed
 created: 2026-11-16T20:12:42Z
 updated: 2026-11-17T18:32:37Z
 closed: 2026-11-17T18:32:37Z
-+++
+\+++
 
 Bugs and wrong behavior.
 
@@ -13597,12 +13624,12 @@ Bugs and wrong behavior.
 
 ## Milestone M2: M002-Performance
 
-+++
+\+++
 status: closed
 created: 2026-11-16T20:12:42Z
 updated: 2026-11-20T05:53:00Z
 closed: 2026-11-20T05:53:00Z
-+++
+\+++
 
 Speed and memory.
 
@@ -13610,12 +13637,12 @@ Speed and memory.
 
 ## Milestone M3: M003-Features
 
-+++
+\+++
 status: closed
 created: 2026-11-16T20:12:42Z
 updated: 2026-11-17T18:07:09Z
 closed: 2026-11-17T18:07:09Z
-+++
+\+++
 
 New capabilities and missing API.
 
@@ -13623,10 +13650,10 @@ New capabilities and missing API.
 
 ## Milestone M4: M999-Nice-to-have
 
-+++
+\+++
 status: open
 created: 2026-11-16T20:12:42Z
-+++
+\+++
 
 Out of sequence. Large or speculative work.
 
@@ -13634,19 +13661,19 @@ Out of sequence. Large or speculative work.
 
 ## Milestone M5: M004-VisionOS
 
-+++
+\+++
 status: open
 created: 2026-11-17T17:28:41Z
-+++
+\+++
 
 ---
 
 ## Milestone M6: M005-Big-World
 
-+++
+\+++
 status: open
 created: 2026-11-17T18:01:46Z
-+++
+\+++
 
 Very large worlds (solar-system scale): enough precision in transforms, time, depth, rendering and physics to make a KSP-style game doable.
 
@@ -13654,11 +13681,11 @@ Very large worlds (solar-system scale): enough precision in transforms, time, de
 
 ## Milestone M7: M003-Rendering
 
-+++
+\+++
 status: open
 created: 2026-11-17T18:07:08Z
 updated: 2026-11-20T06:01:40Z
-+++
+\+++
 
 Renderer gaps and fixes: lights, shadows, MSAA, exposure, depth, debug overlays and renderer structure.
 
@@ -13666,10 +13693,10 @@ Renderer gaps and fixes: lights, shadows, MSAA, exposure, depth, debug overlays 
 
 ## Milestone M8: M006-Physics-and-Scene
 
-+++
+\+++
 status: open
 created: 2026-11-17T18:07:08Z
-+++
+\+++
 
 Physics, scene graph, assets and UI features.
 
@@ -13677,12 +13704,12 @@ Physics, scene graph, assets and UI features.
 
 ## Milestone M9: M007-PBR-Merged-Geometry
 
-+++
+\+++
 status: closed
 created: 2026-11-19T03:27:31Z
 updated: 2026-11-20T00:34:57Z
 closed: 2026-11-20T00:34:57Z
-+++
+\+++
 
 Decide whether PBR keeps the merged-geometry path (#545), and fix the issues it causes or blocks.
 
@@ -13690,10 +13717,10 @@ Decide whether PBR keeps the merged-geometry path (#545), and fix the issues it 
 
 ## Milestone M10: M007-Performance
 
-+++
+\+++
 status: open
 created: 2026-11-20T06:00:25Z
-+++
+\+++
 
 Frame time, CPU cost and scaling to large scenes, with benchmarks to measure them.
 
@@ -13701,10 +13728,10 @@ Frame time, CPU cost and scaling to large scenes, with benchmarks to measure the
 
 ## Milestone M11: M008-Reliability
 
-+++
+\+++
 status: open
 created: 2026-11-20T06:00:25Z
-+++
+\+++
 
 Crashes, races and flaky tests: malformed input, threading and CI stability.
 
@@ -13712,11 +13739,25 @@ Crashes, races and flaky tests: malformed input, threading and CI stability.
 
 ## Milestone M12: M009-Rendering-2
 
-+++
+\+++
 status: open
 created: 2026-11-20T06:01:40Z
-+++
+\+++
 
 Advanced rendering: post effects, screen-space techniques, probes, render targets, extension points and GPU-driven draws.
+
+---
+
+## 599: Info panel lacks detail and has an unpolished, non-panel layout
+
++++
+status: new
+priority: none
+kind: none
+created: 2026-11-20T06:27:47Z
++++
+
+Make the info panel contain more info.
+Make it prettier and more panel like
 
 ---
