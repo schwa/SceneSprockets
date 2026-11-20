@@ -1757,9 +1757,8 @@ status: open
 priority: low
 kind: feature
 labels: effort:xl, area:renderer
-milestone: Nice-to-have
 created: 2026-10-15T02:28:07Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 SceneKit shader modifiers inject code at geometry, surface, lighting and fragment entry points of the built-in materials. ShaderMaterial (like SCNProgram) replaces the whole shader. Want a way to tweak the built-in Blinn-Phong/PBR shading without rewriting it. See docs/SceneKitComparison.md.
@@ -3880,9 +3879,8 @@ status: open
 priority: low
 kind: task
 labels: area:ui, effort:l
-milestone: Nice-to-have
 created: 2026-10-22T22:00:05Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 TransformGizmo (SceneSprocketsGizmos, #154) is mostly not about scene graphs: handle layout, picking, drag math along axes, planes and rings, snapping, and screen-size scaling. Other MetalSprockets apps could use it. Interaction3D is the home for 3D interaction (camera controls, rotation widget), so move the gizmo there, and keep a thin SceneSprockets adapter.
@@ -7322,6 +7320,8 @@ Switch between normal Z and reverse-Z automatically, with no side effects: every
 - `2026-11-20T05:58:14Z`: Question 2 (decision): Is it acceptable to change MetalSprocketsPBR, MetalSprocketsAddOns and MetalSprocketsParticles in step to support both depth modes?
 - `2026-11-20T05:59:06Z`: Answer 1: User controlled - need api
 - `2026-11-20T05:59:11Z`: Answer 2: Yes!
+- `2026-11-21T01:50:08Z`: Autonomous run: scoped again after the answers (user-controlled API; changing all three packages is fine). The reverse-Z assumption is now in about 45 files in this repo (SceneSprockets and MetalSprocketsPBR) and 24 in MetalSprocketsAddOns and MetalSprocketsParticles. SceneSprockets uses those two as remote packages (upToNextMinor 0.3.0 and 0.1.0), so their changes must be released before this repo can use them. I cannot push or tag releases. Doing only the in-repo part would break gizmos and particles in normal-Z views, which goes against 'no side effects'. Filed MetalSprocketsAddOns#137 and MetalSprocketsParticles#246 for the upstream work. Punting until they are released.
+- `2026-11-21T01:50:08Z`: Question 3 (decision): Should the upstream depth-direction work (MetalSprocketsAddOns#137, MetalSprocketsParticles#246) land and be released first, with this issue done afterwards against the new versions? Recommended: Yes: fix and release the two packages first, then do SceneSprockets and MetalSprocketsPBR in one change that bumps the dependency versions
 
 ---
 
@@ -7822,9 +7822,8 @@ status: open
 priority: low
 kind: feature
 labels: area:scenegraph, effort:xl
-milestone: Nice-to-have
 created: 2026-11-07T18:54:15Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 All scene behavior (reacting to taps, per-frame updates, custom actions, game logic) must be written in Swift and compiled into the app. There is no way to attach logic to a scene as data, for example in a stored scene file or from a tool like Composer, without rebuilding.
@@ -8269,9 +8268,8 @@ status: open
 priority: low
 kind: task
 labels: effort:s, area:ui, research
-milestone: Nice-to-have
 created: 2026-11-10T18:37:12Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 SceneView takes most of its configuration as initializer arguments and an `Options` option set:
@@ -8297,9 +8295,8 @@ status: open
 priority: low
 kind: task
 labels: effort:m, area:scenegraph, research
-milestone: Nice-to-have
 created: 2026-11-10T18:39:06Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Building a hierarchy today means making each node and attaching it to its parent one at a time:
@@ -9307,9 +9304,8 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, area:renderer
-milestone: Nice-to-have
 created: 2026-11-16T20:03:49Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Distant meshes are drawn as full geometry or a lower LOD. They cannot be replaced by billboard imposters (pre-rendered views).
@@ -9440,9 +9436,8 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, area:scenegraph
-milestone: Nice-to-have
 created: 2026-11-16T20:14:04Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 There are no spline paths in the scene, and nothing that moves cameras or objects along a path.
@@ -10029,10 +10024,9 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:xl
-milestone: Nice-to-have
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Cars, motorcycles and tracked vehicles cannot be built from scene nodes (body node + wheel nodes that follow the simulated wheels).
@@ -10048,10 +10042,9 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:xl
-milestone: Nice-to-have
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 A skinned character cannot go limp into a ragdoll, or have its bodies follow a keyframed animation.
@@ -10067,10 +10060,9 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:s
-milestone: Nice-to-have
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 There is no water/fluid volume, so floating objects need hand-written forces.
@@ -10088,10 +10080,9 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:xl
-milestone: Nice-to-have
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Nodes cannot be simulated as cloth or other soft bodies.
@@ -10234,9 +10225,8 @@ status: open
 priority: low
 kind: task
 labels: area:demo, effort:m
-milestone: Nice-to-have
 created: 2026-11-17T02:19:23Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 The demo app has standalone demos besides the keynote (Shadows, Gears, Dice, Metaballs, SceneKit Features, and others). Some show features the keynote already covers; others show features the keynote does not cover at all. Two places to maintain the same showcases.
@@ -11396,9 +11386,8 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l
-milestone: Nice-to-have
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Weighted blended OIT is a practical starting point. (Moved from SceneSprocketsAddOns #47.)
@@ -11446,9 +11435,8 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:m, subtask, lighting
-milestone: Nice-to-have
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Projected lighting patterns and realistic light distributions. (Moved from SceneSprocketsAddOns #57.)
@@ -11464,9 +11452,8 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l
-milestone: Nice-to-have
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Glass, liquids, transparent solids. (Moved from SceneSprocketsAddOns #60.)
@@ -11646,6 +11633,9 @@ updated: 2026-11-20T06:32:25Z
 
 Sensible default illumination for any scene. Complexity: low. (Moved from SceneSprocketsAddOns #70.)
 
+- `2026-11-21T01:49:43Z`: Autonomous run: scoped, not changed. The description is one line, and some default lighting already exists. PBRMaterialRenderer falls back to LightingEnvironment.studio when the scene has no environment map. sceneDefaultLighting adds a directional light at the camera when the scene has no lights. Blinn-Phong has a fixed ambient color. One unbuilt meaning of 'automatic environment lighting': build the image-based light from the scene's visible background, such as a SkyGradient (LightingEnvironment can be made from equirectangularPixels), so PBR reflections and ambient light match the sky. Punting because the intended behavior is not clear from the issue.
+- `2026-11-21T01:49:43Z`: Question 1: What should automatic environment lighting do, given that PBR already falls back to the studio environment and sceneDefaultLighting adds a camera light? Recommended: When the scene has no environment map, build one from its background (SkyGradient, or a uniform color for .color backgrounds) so PBR image-based light matches the visible sky, and give Blinn-Phong an ambient term from the same source
+
 ---
 
 ## 508: Automatic exposure
@@ -11671,9 +11661,8 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, lighting
-milestone: Nice-to-have
 created: 2026-11-17T14:09:42Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Softer, more natural illumination from large sources. Complexity: medium. (Moved from SceneSprocketsAddOns #77.)
@@ -11737,9 +11726,8 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:xl
-milestone: Nice-to-have
 created: 2026-11-17T14:09:59Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 The renderer is forward-only. There is no deferred path that writes a G-buffer (albedo, normal, roughness/metalness, depth) and shades in a separate pass. Related: #510.
@@ -11753,9 +11741,8 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:xl, subtask, lighting
-milestone: Nice-to-have
 created: 2026-11-17T14:09:59Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Lighting cost scales with lights × objects in the forward pass. Scenes with many local lights need deferred lighting (light volumes) or tiled/clustered light culling.
@@ -11805,9 +11792,8 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:xl
-milestone: Nice-to-have
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Draw selection, culling, and draw arguments are produced on the CPU. GPU-driven rendering would do this with compute and indirect commands.
@@ -11864,9 +11850,8 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, lighting
-milestone: Nice-to-have
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Every lit fragment loops over every light in the frame; lights are not assigned to screen or view-space clusters. Lights are shared by all renderers through MetalSprocketsLighting (#547), so a cluster grid built there could serve every renderer. No demo scene has enough lights to measure the benefit. Related: #514.
@@ -11883,9 +11868,8 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, bounds, indirect-drawing
-milestone: Nice-to-have
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Hidden objects are still drawn: there is no depth pyramid (Hi-Z: a mip chain of the depth buffer, each level keeping the farthest depth of the level below) and compute pass to cull them. A GPU culling result only saves work if the GPU also issues the draws (indirect draws, #517); otherwise visibility would be read back to the CPU a frame late. PBR draws go through MetalSprockets DrawList (#582), so indirect drawing would replace those lists. Part of #543 and #544.
@@ -11902,9 +11886,8 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, indirect-drawing
-milestone: Nice-to-have
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Particle simulation and draw counts are not driven by compute and indirect draws. The particle code lives in MetalSprocketsParticles, not here; MetalSprockets now has indirect draws (MetalSprockets#575, #576). Part of #544.
@@ -11921,10 +11904,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, indirect-drawing
-milestone: Nice-to-have
 depends: 545
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Mesh detail is chosen on the CPU (Node.levelsOfDetail, by camera distance), not on the GPU. Choosing it on the GPU only helps if the GPU also issues the draws (#517); how draws are fed depends on #545. Part of #544.
@@ -11938,9 +11920,8 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:xl
-milestone: Nice-to-have
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 There is no path that writes primitive IDs and evaluates materials afterwards with compute.
@@ -11954,9 +11935,8 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:xl
-milestone: Nice-to-have
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Lighting is not done in tile memory with imageblocks / tile shaders. Related: #513.
@@ -11970,9 +11950,8 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:xl
-milestone: Nice-to-have
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Workload scheduling and dependencies are not driven on the GPU with indirect dispatch and GPU synchronization.
@@ -11986,9 +11965,8 @@ status: open
 priority: low
 kind: feature
 labels: area:materials, effort:l
-milestone: Nice-to-have
 created: 2026-11-17T14:23:29Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Custom materials can't be written as composable Swift expressions that build a shader.
@@ -12009,10 +11987,9 @@ status: open
 priority: low
 kind: feature
 labels: area:materials, effort:xl
-milestone: Nice-to-have
 depends: 526
 created: 2026-11-17T14:23:29Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 There is no visual node-based editor for building materials.
@@ -12032,9 +12009,8 @@ status: open
 priority: low
 kind: feature
 labels: area:materials, effort:l
-milestone: Nice-to-have
 created: 2026-11-17T14:27:02Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 SceneSprockets can't load or render MaterialX (.mtlx) materials. Assets authored with MaterialX (Substance, GPUOpen MaterialX Library, ambientCG, OpenUSD pipelines) have to be converted by hand to the existing PBR or Blinn-Phong materials.
@@ -12054,9 +12030,8 @@ status: open
 priority: low
 kind: task
 labels: area:demo, effort:s
-milestone: Nice-to-have
 created: 2026-11-17T17:11:50Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 ---
@@ -12086,9 +12061,8 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, area:renderer
-milestone: Nice-to-have
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Mirrors, polished floors and water surfaces cannot show planar reflections. (Moved from SceneSprocketsAddOns#50.)
@@ -12104,9 +12078,8 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, area:renderer
-milestone: Nice-to-have
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Objects do not receive indirect lighting appropriate to their location. (Moved from SceneSprocketsAddOns#71.)
@@ -12122,9 +12095,8 @@ status: open
 priority: low
 kind: feature
 labels: effort:xl, area:renderer, subtask, lighting
-milestone: Nice-to-have
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 No dynamic indirect lighting or color bleeding. (Moved from SceneSprocketsAddOns#72.)
@@ -12140,9 +12112,8 @@ status: open
 priority: low
 kind: feature
 labels: effort:l, area:renderer
-milestone: Nice-to-have
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 No approximate bounced light from visible surfaces. (Moved from SceneSprocketsAddOns#73.)
@@ -12158,9 +12129,8 @@ status: open
 priority: low
 kind: feature
 labels: effort:l, area:renderer, subtask, lighting
-milestone: Nice-to-have
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Static scenes cannot use precomputed indirect lighting. (Moved from SceneSprocketsAddOns#74.)
@@ -12176,9 +12146,8 @@ status: open
 priority: low
 kind: feature
 labels: effort:xl, area:renderer, subtask, lighting
-milestone: Nice-to-have
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Lighting for static environments cannot be generated automatically. (Moved from SceneSprocketsAddOns#75.)
@@ -12194,9 +12163,8 @@ status: open
 priority: low
 kind: feature
 labels: effort:s, area:renderer
-milestone: Nice-to-have
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Surfaces cannot show apparent depth without extra geometry. (Moved from SceneSprocketsAddOns#58.)
@@ -12210,9 +12178,8 @@ status: open
 priority: low
 kind: feature
 labels: effort:l, area:renderer
-milestone: Nice-to-have
 created: 2026-11-17T17:55:40Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Skin, wax, leaves and other translucent materials cannot scatter light below the surface. (Moved from SceneSprocketsAddOns#59.)
@@ -12226,9 +12193,8 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, area:renderer
-milestone: Nice-to-have
 created: 2026-11-17T17:55:40Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Hair, foliage and dense overlapping transparent surfaces need order-independent transparency. (Moved from SceneSprocketsAddOns#61.)
@@ -12244,9 +12210,8 @@ status: open
 priority: low
 kind: feature
 labels: effort:l, area:renderer
-milestone: Nice-to-have
 created: 2026-11-17T17:55:40Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Fog does not scatter light through participating media. (Moved from SceneSprocketsAddOns#56.)
@@ -12341,10 +12306,9 @@ status: open
 priority: medium
 kind: feature
 labels: umbrella, area:renderer, effort:xl, indirect-drawing
-milestone: Nice-to-have
 depends: 517, 520, 521, 522
 created: 2026-11-17T19:13:56Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Every SceneSprockets draw is chosen and encoded on the CPU each frame. No renderer issues indirect draws or uses indirect command buffers, so the GPU cannot decide what to draw, how many instances, or which level of detail.
@@ -12581,9 +12545,8 @@ status: open
 priority: low
 kind: feature
 labels: effort:l, area:extensions, deferred, gltf
-milestone: Nice-to-have
 created: 2026-11-19T02:12:55Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Primitives using KHR_draco_mesh_compression cannot be decoded; GLTFViewer lists glTF-Draco variants (about 20 sample models, none of them a default variant) as unsupported. Needs Google's Draco decoder (Apache-2.0, large C++), most likely in SwiftGLTF. Deferred: no default sample needs it. Meshopt split out to MetalSprocketsGLTF#104 (done).
@@ -12648,9 +12611,8 @@ status: open
 priority: low
 kind: feature
 labels: area:extensions, effort:l, deferred, gltf
-milestone: Nice-to-have
 created: 2026-11-19T02:12:55Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Primitives using KHR_gaussian_splatting (point primitives with Gaussian splat attributes) are not drawn as splats. Supporting it means a separate splat renderer (sorting, splat rasterisation), not a material change.
@@ -12668,9 +12630,8 @@ status: open
 priority: low
 kind: feature
 labels: area:extensions, effort:m, deferred, gltf
-milestone: Nice-to-have
 created: 2026-11-19T02:12:55Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Photometric lights defined by EXT_lights_ies (IES light profiles) are ignored.
@@ -12878,9 +12839,8 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, deferred, pbr, area:materials
-milestone: Nice-to-have
 created: 2026-11-19T02:12:56Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 RoboCloth (https://github.com/theialab/robocloth, local copy in ~/Projects/Vendor) has 500 captured cloth materials. They are released as neural BRDFs (a 16-channel latent texture plus a shared MLP) and as a Disney PBR fit.
@@ -13551,9 +13511,8 @@ Found while working on #590.
 status: new
 priority: none
 kind: none
-milestone: Nice-to-have
 created: 2026-11-20T05:56:30Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:50Z
 +++
 
 Super easy way to make a billboard (with various options to align the billboard to various things - e.g. camera, “tree style” etc)
@@ -13711,9 +13670,10 @@ New capabilities and missing API.
 ## Milestone M4: Nice-to-have
 
 +++
-status: open
+status: closed
 created: 2026-11-16T20:12:42Z
-updated: 2026-11-20T06:33:21Z
+updated: 2026-11-20T06:33:54Z
+closed: 2026-11-20T06:33:54Z
 +++
 
 Out of sequence. Large or speculative work.
