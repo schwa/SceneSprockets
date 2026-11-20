@@ -3,8 +3,8 @@ import Metal
 import MetalSprocketsPBRShaders
 import simd
 
-// Per-frame rules shared by the draw plan, merged geometry and the renderer, so merged and per-batch drawing agree on
-// placement, visibility, bounds and materials.
+// Per-frame rules for placement, visibility, bounds and materials, shared by the renderer's frame draws and by scenes
+// that sort several models' batches.
 
 extension PBRPose {
     /// A node's world matrix; identity for nodes the pose does not cover.

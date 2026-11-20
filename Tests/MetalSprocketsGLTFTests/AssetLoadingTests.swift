@@ -53,7 +53,9 @@ struct AssetLoadingTests {
     // Residency covers every long-lived allocation exactly once (normal and occlusion share one texture here).
     @Test func residencyListsEachAllocationOnce() throws {
         let asset = try GLTFAsset(url: makeMaterialTriangleFile(normalScale: 1, occlusionStrength: 1))
-        let allocations = PBRModelBuilder.residencyAllocations(materials: asset.materials + [asset.resources.defaultMaterial], primitives: asset.meshes.flatMap(\.self), batches: asset.opaqueBatches + asset.blendedBatches, merged: [asset.merged, asset.mergedSkinned, asset.mergedTransmissive])
+        let model = asset.model
+        let tables = [model.instanceBuffer, model.instanceRecordBuffer, model.jointOffsetBuffer]
+        let allocations = PBRModelBuilder.residencyAllocations(materials: asset.materials + [asset.resources.defaultMaterial], primitives: asset.meshes.flatMap(\.self), buffers: tables)
         let identifiers = allocations.map { ObjectIdentifier($0) }
         #expect(Set(identifiers).count == identifiers.count)
         for material in asset.materials + [asset.resources.defaultMaterial] {
@@ -61,8 +63,9 @@ struct AssetLoadingTests {
                 #expect(identifiers.contains(ObjectIdentifier(binding.texture)))
             }
         }
-        for batch in asset.opaqueBatches + asset.blendedBatches {
-            #expect(identifiers.contains(ObjectIdentifier(batch.instanceBuffer)))
+        for table in tables {
+            #expect(identifiers.contains(ObjectIdentifier(table)))
         }
+        #expect(model.resourceCollection.contains(model.instanceBuffer))
     }
 }

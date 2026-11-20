@@ -91,7 +91,10 @@ public final class PBRModel: @unchecked Sendable {
 
     /// Instances drawn with one instanced draw call: same primitive, material and winding.
     public struct Batch: Identifiable {
+        /// Unique among the model's opaque batches, or among its blended batches.
         public var id: Int
+        /// Unique among all the model's batches: its element of the renderer's material table.
+        public var element: Int
         public var primitive: Primitive
         public var material: PBRMaterial
         public var isMirrored: Bool
@@ -102,8 +105,8 @@ public final class PBRModel: @unchecked Sendable {
         public var nodeIndices: [Int]
         /// Each instance's placement relative to its node (see ``Instance/instanceMatrix``), in instance order.
         public var instanceMatrices: [simd_float4x4]
-        /// `instanceCount` packed `PBRInstance` values for the rest pose.
-        public var instanceBuffer: MTLBuffer
+        /// The batch's first instance in ``PBRModel/instanceBuffer``.
+        public var firstInstance: Int
         public var worldBounds: BoundingBox3D
     }
 
@@ -124,31 +127,33 @@ public final class PBRModel: @unchecked Sendable {
     /// buffers), kept resident across frames. Material textures are only reached through argument buffers, so they
     /// must be resident. The renderer attaches it.
     public let resourceCollection: ResourceCollection
-    /// Static opaque batches drawn by one element (see ``PBRMergedGeometry``); nil when fewer than two can be merged.
-    public let merged: PBRMergedGeometry?
-    /// Skinned opaque batches merged the same way, reading joints from one per-frame palette.
-    public let mergedSkinned: PBRMergedGeometry?
-    /// Static transmissive opaque batches, merged apart from the rest for the transmission pre-pass.
-    public let mergedTransmissive: PBRMergedGeometry?
+    /// Every batch's rest-pose `PBRInstance` values, opaque batches first; each batch's start at its `firstInstance`.
+    public let instanceBuffer: MTLBuffer
+    /// The material table element (`Batch.element`) of each instance in ``instanceBuffer``, as `UInt32`.
+    public let instanceRecordBuffer: MTLBuffer
+    /// For each batch element, the first joint of its skin in a palette of every skin's joints in ``skins`` order
+    /// (``jointPalette(pose:)``), as `UInt32`; 0 for unskinned batches.
+    public let jointOffsetBuffer: MTLBuffer
+    /// Every batch, opaque then blended: index by `Batch.element`.
+    public var batches: [Batch] { opaqueBatches + blendedBatches }
 
     /// Whether any material uses transmission, i.e. whether a transmission pass is worth running.
-    public var hasTransmission: Bool {
-        (opaqueBatches + blendedBatches).contains { $0.material.uniforms.transmissionFactor > 0 }
-    }
+    public let hasTransmission: Bool
 
-    public init(opaqueInstances: [Instance], blendedInstances: [Instance], opaqueBatches: [Batch], blendedBatches: [Batch], skins: [Skin], lights: [LightingLight], restPose: PBRPose, bounds: BoundingBox3D, resourceCollection: ResourceCollection, merged: PBRMergedGeometry?, mergedSkinned: PBRMergedGeometry?, mergedTransmissive: PBRMergedGeometry?) {
+    public init(opaqueInstances: [Instance], blendedInstances: [Instance], opaqueBatches: [Batch], blendedBatches: [Batch], skins: [Skin], lights: [LightingLight], restPose: PBRPose, bounds: BoundingBox3D, resourceCollection: ResourceCollection, instanceBuffer: MTLBuffer, instanceRecordBuffer: MTLBuffer, jointOffsetBuffer: MTLBuffer) {
         self.opaqueInstances = opaqueInstances
         self.blendedInstances = blendedInstances
         self.opaqueBatches = opaqueBatches
         self.blendedBatches = blendedBatches
+        hasTransmission = (opaqueBatches + blendedBatches).contains { $0.material.uniforms.transmissionFactor > 0 }
         self.skins = skins
         self.lights = lights
         self.restPose = restPose
         self.bounds = bounds
         self.resourceCollection = resourceCollection
-        self.merged = merged
-        self.mergedSkinned = mergedSkinned
-        self.mergedTransmissive = mergedTransmissive
+        self.instanceBuffer = instanceBuffer
+        self.instanceRecordBuffer = instanceRecordBuffer
+        self.jointOffsetBuffer = jointOffsetBuffer
     }
 
     /// Vertex buffer index of skinning data. Vertex buffers share the table with `[[buffer(n)]]` arguments, and the
@@ -207,6 +212,11 @@ public extension PBRModel {
             return Self.skinnedBounds(batch.primitive, skin: skins[skinIndex], pose: pose)
         }
         return pose.bounds(of: batch.primitive.bounds, nodes: batch.nodeIndices, instanceMatrices: batch.instanceMatrices)
+    }
+
+    /// Every skin's joint matrices for `pose`, in ``skins`` order; ``jointOffsetBuffer`` indexes it.
+    func jointPalette(pose: PBRPose) -> [simd_float4x4] {
+        skins.flatMap { $0.jointMatrices(for: pose) }
     }
 
     /// Morph weights for `node` at rest.

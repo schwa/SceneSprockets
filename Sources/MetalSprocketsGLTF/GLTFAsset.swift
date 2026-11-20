@@ -236,12 +236,6 @@ public extension GLTFAsset {
     }
 }
 
-extension GLTFAsset {
-    var merged: PBRMergedGeometry? { model.merged }
-    var mergedSkinned: PBRMergedGeometry? { model.mergedSkinned }
-    var mergedTransmissive: PBRMergedGeometry? { model.mergedTransmissive }
-}
-
 extension LightingLight {
     init(_ light: SwiftGLTF.Light, worldMatrix: simd_float4x4) {
         self.init()

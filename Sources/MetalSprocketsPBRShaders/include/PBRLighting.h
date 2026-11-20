@@ -26,7 +26,7 @@ namespace PBR {
         float4 color;
         float modelScale; // Average axis scale of the model matrix, for volume thickness.
         float pointSize [[point_size]]; // Required when drawing point primitives.
-        uint record [[flat]]; // Draw record of merged static geometry; unused otherwise.
+        uint record [[flat]]; // The instance's element of the material table (PBRRenderer); 0 for other renderers.
         uint eye [[flat]]; // Which view (amplification ID) this is drawn for; selects the per-view uniforms.
     };
 

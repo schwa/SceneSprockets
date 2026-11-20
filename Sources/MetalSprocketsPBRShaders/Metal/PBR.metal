@@ -36,20 +36,12 @@ namespace PBR {
 
     Fragment skinnedFragment(SkinnedVertexIn in, float3 position, float3 normal, float4 tangent, constant float4x4 *jointMatrices, constant PBRViewUniforms &view, ushort eye);
 
-    // Primitives without morph targets use the variants without morph arguments, so their draws bind nothing for them.
+    // Every variant reads its instance from one table of the frame's instances and passes the instance's record (its
+    // element of the material table) to the fragment stage. Skinned variants read their joints from one palette of
+    // every skin, starting at the record's offset. Primitives without morph targets use the variants without morph
+    // arguments, so their draws bind nothing for them.
 
     [[vertex]] Fragment vertex_main(
-        VertexIn in [[stage_in]],
-        uint instanceID [[instance_id]],
-        ushort eye [[amplification_id]],
-        constant PBRViewUniforms &view [[buffer(1)]],
-        constant PBRInstance *instances [[buffer(2)]]
-    ) {
-        return instancedFragment(in, in.position, in.normal, in.tangent, instances[instanceID], view, eye);
-    }
-
-    // Merged static geometry: one instance buffer for every record, plus each instance's record index.
-    [[vertex]] Fragment vertex_merged(
         VertexIn in [[stage_in]],
         uint instanceID [[instance_id]],
         ushort eye [[amplification_id]],
@@ -71,27 +63,20 @@ namespace PBR {
         constant PBRInstance *instances [[buffer(2)]],
         constant PBRMorphUniforms &morph [[buffer(5)]],
         constant PBRMorphDelta *morphDeltas [[buffer(6)]],
-        constant float *morphWeights [[buffer(7)]]
+        constant float *morphWeights [[buffer(7)]],
+        constant uint *instanceRecords [[buffer(8)]]
     ) {
         float3 position = in.position;
         float3 normal = in.normal;
         float4 tangent = in.tangent;
         applyMorph(position, normal, tangent, vertexID, morph, morphDeltas, morphWeights);
-        return instancedFragment(in, position, normal, tangent, instances[instanceID], view, eye);
+        Fragment out = instancedFragment(in, position, normal, tangent, instances[instanceID], view, eye);
+        out.record = instanceRecords[instanceID];
+        return out;
     }
 
     // Skinned vertices are placed by their joints; the mesh node's transform is ignored, per the glTF spec.
     [[vertex]] Fragment vertex_skinned(
-        SkinnedVertexIn in [[stage_in]],
-        ushort eye [[amplification_id]],
-        constant PBRViewUniforms &view [[buffer(1)]],
-        constant float4x4 *jointMatrices [[buffer(3)]]
-    ) {
-        return skinnedFragment(in, in.position, in.normal, in.tangent, jointMatrices, view, eye);
-    }
-
-    // Merged skinned geometry: every skin's joint matrices in one palette; each record starts at its own offset.
-    [[vertex]] Fragment vertex_skinned_merged(
         SkinnedVertexIn in [[stage_in]],
         uint instanceID [[instance_id]],
         ushort eye [[amplification_id]],
@@ -109,19 +94,25 @@ namespace PBR {
     [[vertex]] Fragment vertex_skinned_morphed(
         SkinnedVertexIn in [[stage_in]],
         uint vertexID [[vertex_id]],
+        uint instanceID [[instance_id]],
         ushort eye [[amplification_id]],
         constant PBRViewUniforms &view [[buffer(1)]],
         constant float4x4 *jointMatrices [[buffer(3)]],
         constant PBRMorphUniforms &morph [[buffer(5)]],
         constant PBRMorphDelta *morphDeltas [[buffer(6)]],
-        constant float *morphWeights [[buffer(7)]]
+        constant float *morphWeights [[buffer(7)]],
+        constant uint *instanceRecords [[buffer(8)]],
+        constant uint *recordJointOffsets [[buffer(9)]]
     ) {
         // Morph targets apply before skinning, per the glTF spec.
         float3 position = in.position;
         float3 normal = in.normal;
         float4 tangent = in.tangent;
         applyMorph(position, normal, tangent, vertexID, morph, morphDeltas, morphWeights);
-        return skinnedFragment(in, position, normal, tangent, jointMatrices, view, eye);
+        const uint record = instanceRecords[instanceID];
+        Fragment out = skinnedFragment(in, position, normal, tangent, jointMatrices + recordJointOffsets[record], view, eye);
+        out.record = record;
+        return out;
     }
 
     Fragment skinnedFragment(SkinnedVertexIn in, float3 position, float3 normal, float4 tangent, constant float4x4 *jointMatrices, constant PBRViewUniforms &view, ushort eye) {
@@ -177,6 +168,7 @@ namespace PBR {
         return float4(mix(color.rgb, wire, edge), max(color.a, edge));
     }
 
+    // The material is the record's element of the material table, which the vertex stage passes along.
     [[fragment]] float4 fragment_main(
         Fragment in [[stage_in]],
         bool frontFacing [[front_facing]],
@@ -184,28 +176,10 @@ namespace PBR {
         constant PBRMaterialResources *materials [[buffer(0)]],
         constant PBRFrameUniforms &frame [[buffer(1)]],
         constant LightingLight *lights [[buffer(2)]],
-        constant uint &materialIndex [[buffer(3)]],
         constant LightingShadowUniforms &shadow [[buffer(4)]],
         constant LightingFrameResources &frameResources [[buffer(5)]]
     ) {
-        constant PBRMaterialResources &material = materials[materialIndex];
-        return withWireframe(shade(in, frontFacing, material.uniforms, frame, lights, material, shadow, frameResources), barycentric, frame, material.uniforms);
-    }
-
-    // Merged geometry: each draw record has its own material, selected by the record index the vertex stage passes
-    // along.
-    [[fragment]] float4 fragment_merged(
-        Fragment in [[stage_in]],
-        bool frontFacing [[front_facing]],
-        float3 barycentric [[barycentric_coord]],
-        constant PBRMaterialResources *materials [[buffer(0)]],
-        constant PBRFrameUniforms &frame [[buffer(1)]],
-        constant LightingLight *lights [[buffer(2)]],
-        constant uint *recordMaterials [[buffer(3)]],
-        constant LightingShadowUniforms &shadow [[buffer(4)]],
-        constant LightingFrameResources &frameResources [[buffer(5)]]
-    ) {
-        constant PBRMaterialResources &material = materials[recordMaterials[in.record]];
+        constant PBRMaterialResources &material = materials[in.record];
         return withWireframe(shade(in, frontFacing, material.uniforms, frame, lights, material, shadow, frameResources), barycentric, frame, material.uniforms);
     }
 

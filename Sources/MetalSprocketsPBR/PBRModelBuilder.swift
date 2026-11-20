@@ -5,8 +5,8 @@ import MetalSprocketsPBRShaders
 import simd
 
 /// Builds a ``PBRModel``: primitives (from ``PBRGeometryBuilder``) placed by nodes with materials, plus skins and
-/// lights. ``build()`` sorts instances into opaque and blended, groups them into instanced batches, merges what can
-/// share one draw element, and collects what must stay resident.
+/// lights. ``build()`` sorts instances into opaque and blended, groups them into instanced batches, lays out
+/// one table of every batch's instances, and collects what must stay resident.
 public struct PBRModelBuilder {
     public let device: MTLDevice
     /// Node transforms and morph weights at rest; instances without an explicit world matrix are placed by it.
@@ -54,18 +54,49 @@ public struct PBRModelBuilder {
             // swiftlint:disable:next force_unwrapping - every batch's material was ranked above
             (materialRanks[ObjectIdentifier($0.material)]!, $0.id) < (materialRanks[ObjectIdentifier($1.material)]!, $1.id)
         }
-        let opaqueBatches = try Self.makeBatches(opaque, merging: true, device: device)
-        let blendedBatches = try Self.makeBatches(blended, merging: false, device: device)
-        let merged = try PBRMergedGeometry(batches: opaqueBatches, skins: skins, skinned: false, device: device)
-        let mergedSkinned = try PBRMergedGeometry(batches: opaqueBatches, skins: skins, skinned: true, device: device)
-        let mergedTransmissive = try PBRMergedGeometry(batches: opaqueBatches, skins: skins, skinned: false, transmissive: true, device: device)
+        let opaqueGroups = Self.groupInstances(opaque, instancing: true)
+        let blendedGroups = Self.groupInstances(blended, instancing: false)
+
+        // One table of every batch's rest instances, and each instance's batch element, shared by every draw.
+        var instanceValues: [PBRInstance] = []
+        var instanceRecords: [UInt32] = []
+        var batches: [PBRModel.Batch] = []
+        for (element, group) in (opaqueGroups + blendedGroups).enumerated() {
+            let first = group[0]
+            batches.append(PBRModel.Batch(
+                id: element < opaqueGroups.count ? element : element - opaqueGroups.count,
+                element: element,
+                primitive: first.primitive,
+                material: first.material,
+                isMirrored: first.isMirrored,
+                skinIndex: first.skinIndex,
+                instanceCount: group.count,
+                nodeIndices: group.map(\.nodeIndex),
+                instanceMatrices: group.map(\.instanceMatrix),
+                firstInstance: instanceValues.count,
+                worldBounds: group.dropFirst().reduce(first.worldBounds) { $0.union($1.worldBounds) }
+            ))
+            instanceValues += group.map { PBRInstance(worldMatrix: $0.worldMatrix, normalMatrix: $0.normalMatrix) }
+            instanceRecords += repeatElement(UInt32(element), count: group.count)
+        }
+        var skinOffsets: [UInt32] = []
+        var paletteSize = 0
+        for skin in skins {
+            skinOffsets.append(UInt32(paletteSize))
+            paletteSize += skin.joints.count
+        }
+        let jointOffsets = batches.map { batch in
+            batch.skinIndex.flatMap { skinOffsets.indices.contains($0) ? skinOffsets[$0] : nil } ?? 0
+        }
+        let instanceBuffer = try Self.buffer(instanceValues, label: "PBR Instances", device: device)
+        let instanceRecordBuffer = try Self.buffer(instanceRecords, label: "PBR Instance Records", device: device)
+        let jointOffsetBuffer = try Self.buffer(jointOffsets, label: "PBR Joint Offsets", device: device)
 
         let resourceCollection = try ResourceCollection(device: device)
         let allocations = Self.residencyAllocations(
             materials: residentMaterials + placed.map(\.material),
             primitives: residentPrimitives + placed.map(\.primitive),
-            batches: opaqueBatches + blendedBatches,
-            merged: [merged, mergedSkinned, mergedTransmissive]
+            buffers: [instanceBuffer, instanceRecordBuffer, jointOffsetBuffer]
         )
         for allocation in allocations {
             try resourceCollection.register(allocation)
@@ -73,21 +104,38 @@ public struct PBRModelBuilder {
         return PBRModel(
             opaqueInstances: opaque,
             blendedInstances: blended,
-            opaqueBatches: opaqueBatches,
-            blendedBatches: blendedBatches,
+            opaqueBatches: Array(batches[..<opaqueGroups.count]),
+            blendedBatches: Array(batches[opaqueGroups.count...]),
             skins: skins,
             lights: lights,
             restPose: restPose,
             // What is drawn at rest: instances the rest pose hides do not count.
             bounds: placed.filter { restPose.isVisible($0.nodeIndex) }.reduce(BoundingBox3D.empty) { $0.union($1.worldBounds) },
             resourceCollection: resourceCollection,
-            merged: merged,
-            mergedSkinned: mergedSkinned,
-            mergedTransmissive: mergedTransmissive
+            instanceBuffer: instanceBuffer,
+            instanceRecordBuffer: instanceRecordBuffer,
+            jointOffsetBuffer: jointOffsetBuffer
         )
     }
 
-    static func makeBatches(_ instances: [PBRModel.Instance], merging: Bool, device: MTLDevice) throws -> [PBRModel.Batch] {
+    // A shared buffer holding `values`, at least one byte long.
+    static func buffer<T>(_ values: [T], label: String, device: MTLDevice) throws -> MTLBuffer {
+        let buffer = values.withUnsafeBytes { bytes in
+            if let address = bytes.baseAddress, !bytes.isEmpty {
+                return device.makeBuffer(bytes: address, length: bytes.count, options: .storageModeShared)
+            }
+            return device.makeBuffer(length: 1, options: .storageModeShared)
+        }
+        guard let buffer else {
+            throw PBRGeometryError.bufferAllocationFailed
+        }
+        buffer.label = label
+        return buffer
+    }
+
+    /// Groups instances into batches. With `instancing`, instances sharing primitive, material and winding share one
+    /// batch; skinned and morphed instances have their own joints or weights, so they always get their own.
+    static func groupInstances(_ instances: [PBRModel.Instance], instancing: Bool) -> [[PBRModel.Instance]] {
         struct Key: Hashable {
             var geometry: ObjectIdentifier
             var primitive: Int
@@ -95,9 +143,8 @@ public struct PBRModelBuilder {
             var isMirrored: Bool
         }
         var groups: [[PBRModel.Instance]] = []
-        if merging {
+        if instancing {
             var indices: [Key: Int] = [:]
-            // Skinned and morphed instances have their own joints or weights, so they are never merged.
             func isUnique(_ instance: PBRModel.Instance) -> Bool {
                 instance.skinIndex != nil || instance.primitive.morphTargetCount > 0
             }
@@ -116,31 +163,12 @@ public struct PBRModelBuilder {
         } else {
             groups = instances.map { [$0] }
         }
-        return try groups.enumerated().map { index, group in
-            let values = group.map { PBRInstance(worldMatrix: $0.worldMatrix, normalMatrix: $0.normalMatrix) }
-            guard let buffer = device.makeBuffer(bytes: values, length: MemoryLayout<PBRInstance>.stride * values.count, options: .storageModeShared) else {
-                throw PBRGeometryError.bufferAllocationFailed
-            }
-            buffer.label = "PBR Instances \(index)"
-            let first = group[0]
-            return PBRModel.Batch(
-                id: index,
-                primitive: first.primitive,
-                material: first.material,
-                isMirrored: first.isMirrored,
-                skinIndex: first.skinIndex,
-                instanceCount: group.count,
-                nodeIndices: group.map(\.nodeIndex),
-                instanceMatrices: group.map(\.instanceMatrix),
-                instanceBuffer: buffer,
-                worldBounds: group.dropFirst().reduce(first.worldBounds) { $0.union($1.worldBounds) }
-            )
-        }
+        return groups
     }
 
-    /// Every long-lived allocation, each once: material textures, geometry, skin and morph
-    /// buffers, batch instance buffers and merged geometry.
-    static func residencyAllocations(materials: [PBRMaterial], primitives: [PBRModel.Primitive], batches: [PBRModel.Batch], merged: [PBRMergedGeometry?]) -> [any MTLAllocation] {
+    /// Every long-lived allocation, each once: material textures, geometry, skin and morph buffers, and `buffers`
+    /// (the model's instance tables).
+    static func residencyAllocations(materials: [PBRMaterial], primitives: [PBRModel.Primitive], buffers: [MTLBuffer]) -> [any MTLAllocation] {
         var allocations: [any MTLAllocation] = []
         for material in materials {
             allocations += material.textureBindings.map(\.texture)
@@ -149,8 +177,7 @@ public struct PBRModelBuilder {
             allocations += primitive.geometry.allocations
             allocations += [primitive.morphBuffer].compactMap(\.self)
         }
-        allocations += batches.map(\.instanceBuffer)
-        allocations += merged.flatMap { $0?.allocations ?? [] }
+        allocations += buffers as [any MTLAllocation]
         var seen = Set<ObjectIdentifier>()
         return allocations.filter { seen.insert(ObjectIdentifier($0)).inserted }
     }

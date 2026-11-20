@@ -66,7 +66,7 @@ public struct PBRRenderState: Hashable, Sendable {
         self.fillMode = fillMode
     }
 
-    /// Nothing set beyond what the alpha mode implies; such materials can be merged.
+    /// Nothing set beyond what the alpha mode implies.
     public var isDefault: Bool {
         depthTest && depthWrite == .automatic && colorWriteMask == .all && fillMode == .fill && (blendMode == nil || blendMode == .opaque)
     }

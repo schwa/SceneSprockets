@@ -55,45 +55,60 @@ struct DrawPlanTests {
         models = try TestModels()
     }
 
-    func plan(_ model: PBRModel, pose: PBRPose? = nil, stage: PBRRenderer.TransmissionPrePassStage = .none, eye: SIMD3<Float> = [0, 0, 10], target: SIMD3<Float> = .zero, merging: Bool = true, overrides: PBRModel.MaterialOverrides = [:], modelMatrix: simd_float4x4 = matrix_identity_float4x4, trianglesOnly: Bool = false) -> PBRDrawPlan {
+    func plan(_ model: PBRModel, pose: PBRPose? = nil, stage: PBRRenderer.TransmissionPrePassStage = .none, eye: SIMD3<Float> = [0, 0, 10], target: SIMD3<Float> = .zero, overrides: PBRModel.MaterialOverrides = [:], modelMatrix: simd_float4x4 = matrix_identity_float4x4, trianglesOnly: Bool = false) -> PBRRenderer.FrameDraws {
         let view = LookAt(position: eye, target: target, up: [0, 1, 0]).viewMatrix
-        return PBRDrawPlan(model: model, pose: pose, stage: stage, viewProjections: [projection * view], cameraPosition: eye, modelMatrix: modelMatrix, usesMergedGeometry: merging, materialOverrides: overrides, drawsTrianglesOnly: trianglesOnly)
+        var renderer = PBRRenderer(model: model, viewMatrix: view, projectionMatrix: projection, modelMatrix: modelMatrix, pose: pose)
+        renderer.prePassStage = stage
+        renderer.materialOverrides = overrides
+        renderer.drawsTrianglesOnly = trianglesOnly
+        return renderer.frameDraws(cameraPosition: eye)
     }
 
-    func batchDraws(_ plan: PBRDrawPlan) -> [PBRDrawPlan.BatchDraw] {
-        plan.opaqueGroups.flatMap(\.draws) + plan.blendedRuns.flatMap(\.draws)
+    func batchDraws(_ plan: PBRRenderer.FrameDraws) -> [PBRRenderer.BatchDraw] {
+        plan.groups.flatMap(\.draws)
     }
 
-    func perBatchCount(_ plan: PBRDrawPlan) -> Int {
-        plan.opaqueGroups.map(\.batches.count).reduce(0, +) + plan.blendedRuns.map(\.batches.count).reduce(0, +)
+    func perBatchCount(_ plan: PBRRenderer.FrameDraws) -> Int {
+        batchDraws(plan).count
     }
 
     func twoOpaqueQuads() throws -> PBRModel {
         try models.model([([-1, 0, 0], models.material(color: [1, 0, 0, 1])), ([1, 0, 0], models.material(color: [0, 1, 0, 1]))])
     }
 
-    @Test func mergesStaticOpaqueBatches() throws {
+    // Opaque batches with one vertex variant and render state share one pipeline, and at rest read the model's tables.
+    @Test func opaqueBatchesShareAPipeline() throws {
         let model = try twoOpaqueQuads()
-        #expect(model.merged?.records.count == 2)
-        let merged = plan(model)
-        #expect(merged.mergedStatic?.visible == [true, true])
-        #expect(merged.mergedStatic?.instances == nil)
-        #expect(perBatchCount(merged) == 0)
-        let separate = plan(model, merging: false)
-        #expect(separate.mergedStatic == nil)
-        #expect(perBatchCount(separate) == 2)
+        let rest = plan(model)
+        #expect(rest.groups.count == 1 && rest.groups[0].draws.count == 2)
+        #expect(rest.instances == nil && rest.records == nil)
+        #expect(rest.groups[0].draws.allSatisfy { $0.isListed }) // swiftlint:disable:this prefer_key_path
+        let ranges = rest.groups[0].draws.map(\.ranges)
+        #expect(ranges == model.opaqueBatches.map { [.init(start: $0.firstInstance, count: $0.instanceCount, mirrored: false)] })
     }
 
-    @Test func customRenderStatesSplitPipelinesAndSkipMerging() throws {
+    // The model's instance table holds each batch's instances at its first instance, each recording its batch element.
+    @Test func instanceTablesLayOutEveryBatch() throws {
+        let blended = models.material(color: [1, 1, 1, 0.5], blended: true)
+        let red = models.material()
+        let model = try models.model([([-1, 0, 0], red), ([1, 0, 0], red), ([0, 0, 1], blended)])
+        #expect(model.batches.map(\.element) == [0, 1])
+        #expect(model.batches.map(\.firstInstance) == [0, 2])
+        let records = model.instanceRecordBuffer.contents().bindMemory(to: UInt32.self, capacity: 3)
+        #expect((0 ..< 3).map { records[$0] } == [0, 0, 1])
+        #expect(model.blendedBatches.map(\.id) == [0], "Blended batch IDs count from 0")
+    }
+
+    @Test func customRenderStatesSplitPipelines() throws {
         let plain = models.material(color: [1, 0, 0, 1])
         let wire = models.material(color: [0, 1, 0, 1]).with(renderState: PBRRenderState(fillMode: .lines))
         let additive = models.material(color: [0, 0, 1, 1]).with(renderState: PBRRenderState(blendMode: .additive))
         let model = try models.model([([-1, 0, 0], plain), ([-1, 1, 0], models.material(color: [1, 1, 0, 1])), ([1, 0, 0], wire), (.zero, additive)])
-        #expect(model.merged?.records.count == 2, "Only the default render state merges")
         #expect(model.blendedBatches.count == 1, "A blend mode makes an opaque alpha mode blended")
         let plan = plan(model)
         #expect(plan.opaqueGroups.map(\.state) == [.opaque])
-        #expect(plan.opaqueGroups.flatMap(\.batches).map(\.material.renderState.fillMode) == [.lines])
+        // The fill mode is per draw, and every draw resets it, so lines get their own element.
+        #expect(plan.opaqueGroups.flatMap(\.draws).filter { !$0.isListed }.map(\.fillMode) == [.lines])
         let blended = try #require(plan.blendedRuns.first)
         #expect(blended.state.blendMode == .additive && !blended.state.depthWrite)
         #expect(!plain.canOverride(wire))
@@ -113,32 +128,28 @@ struct DrawPlanTests {
 
     @Test func cullsOutsideTheView() throws {
         let model = try twoOpaqueQuads()
-        #expect(plan(model, target: [0, 0, 20]).mergedStatic?.visible == [false, false])
-        #expect(perBatchCount(plan(model, target: [0, 0, 20], merging: false)) == 0)
+        #expect(perBatchCount(plan(model, target: [0, 0, 20])) == 0)
     }
 
-    @Test func posesSupplyInstancesAndMirroringFallsBack() throws {
+    // A pose fills the frame's instance table; a mirrored instance draws with the other winding.
+    @Test func posesFillTheInstanceTable() throws {
         let model = try twoOpaqueQuads()
         let moved = PBRPose(worldMatrices: [simd_float4x4(translation: [-2, 0, 0]), simd_float4x4(translation: [2, 0, 0])])
-        #expect(plan(model, pose: moved).mergedStatic?.instances?.count == 2)
+        let posed = plan(model, pose: moved)
+        #expect(posed.instances?.count == 2)
+        #expect(posed.records?.sorted() == model.opaqueBatches.map { UInt32($0.element) }.sorted())
         let mirrored = PBRPose(worldMatrices: [simd_float4x4(scale: [-1, 1, 1]), matrix_identity_float4x4])
-        let fallback = plan(model, pose: mirrored)
-        #expect(fallback.mergedStatic == nil)
-        #expect(perBatchCount(fallback) == 2)
+        let draws = batchDraws(plan(model, pose: mirrored))
+        #expect(draws.count == 2)
+        #expect(Set(draws.map { $0.ranges.map(\.mirrored) }) == [[true], [false]])
     }
 
     @Test func hiddenNodesAreCulled() throws {
         let model = try twoOpaqueQuads()
         let pose = PBRPose(worldMatrices: model.restPose.worldMatrices, visibility: [true, false])
-        // Record order follows material identity, so compare by node.
-        let merged = try #require(plan(model, pose: pose).mergedStatic)
-        let nodes = merged.geometry.records.map { $0.nodeIndices[0] }
-        let instances = try #require(merged.instances)
-        // Merged records have a fixed instance count, so a hidden instance collapses to a point.
-        #expect(zip(nodes, instances).allSatisfy { node, instance in (instance.worldMatrix == simd_float4x4()) == (node == 1) })
-        // Merged and per-batch drawing agree: a record with no visible instance is culled.
-        #expect(merged.visible == nodes.map { $0 == 0 })
-        #expect(perBatchCount(plan(model, pose: pose, merging: false)) == 1)
+        let hidden = plan(model, pose: pose)
+        #expect(batchDraws(hidden).map { $0.batch.nodeIndices } == [[0]])
+        #expect(hidden.instances?.count == 1)
     }
 
     // A node the pose does not cover is drawn at identity, so its bounds are there too (not empty, which culled it).
@@ -148,36 +159,33 @@ struct DrawPlanTests {
         let uncovered = try #require(model.opaqueBatches.first { $0.nodeIndices == [1] })
         let bounds = model.worldBounds(of: uncovered, pose: pose)
         #expect(bounds.center == .zero)
-        #expect(plan(model, pose: pose).mergedStatic?.visible == [true, true])
-        #expect(perBatchCount(plan(model, pose: pose, merging: false)) == 2)
+        #expect(perBatchCount(plan(model, pose: pose)) == 2)
     }
 
-    @Test func overridesReplaceMergedMaterials() throws {
+    @Test func overridesReplaceMaterials() throws {
         let model = try twoOpaqueQuads()
         let replacement = models.material(color: [0, 0, 1, 1])
-        let overrides = [models.quad.key: replacement]
-        let merged = try #require(model.merged)
-        #expect(merged.isOverridden(by: overrides))
-        #expect(merged.records.map { merged.uniforms(of: $0, pose: nil, overrides: overrides).baseColorFactor } == [[0, 0, 1, 1], [0, 0, 1, 1]])
-        #expect(merged.records.allSatisfy { merged.material(of: $0, overrides: overrides) === replacement })
-        #expect(merged.records.map(\.batchID).sorted() == model.opaqueBatches.map(\.id).sorted())
+        let draws = batchDraws(plan(model, overrides: [models.quad.key: replacement]))
+        #expect(draws.count == 2)
+        #expect(draws.allSatisfy { $0.material === replacement })
+        #expect(draws.map(\.uniforms.baseColorFactor) == [[0, 0, 1, 1], [0, 0, 1, 1]])
     }
 
     @Test func transmissionStagesSelectBatches() throws {
         let model = try models.model([([0, 0, -1], models.material()), ([0, 0, 1], models.material(transmission: 1))])
-        func transmissiveCount(_ plan: PBRDrawPlan) -> Int {
+        func transmissiveCount(_ plan: PBRRenderer.FrameDraws) -> Int {
             plan.opaqueGroups.flatMap(\.batches).filter(\.material.isTransmissive).count
         }
-        let main = plan(model, merging: false)
+        let main = plan(model)
         #expect(perBatchCount(main) == 2 && transmissiveCount(main) == 1)
-        let opaque = plan(model, stage: .opaque, merging: false)
+        let opaque = plan(model, stage: .opaque)
         #expect(perBatchCount(opaque) == 1 && transmissiveCount(opaque) == 0)
-        #expect(perBatchCount(plan(model, stage: .transmissiveBackFaces, merging: false)) == 0, "Single-sided glass has no back faces")
+        #expect(perBatchCount(plan(model, stage: .transmissiveBackFaces)) == 0, "Single-sided glass has no back faces")
     }
 
     @Test func doubleSidedGlassDrawsBackFaces() throws {
         let model = try models.model([([0, 0, -1], models.material()), ([0, 0, 1], models.material(transmission: 1, doubleSided: true))])
-        let backFaces = plan(model, stage: .transmissiveBackFaces, merging: false)
+        let backFaces = plan(model, stage: .transmissiveBackFaces)
         #expect(perBatchCount(backFaces) == 1)
         let batches = backFaces.opaqueGroups.flatMap(\.batches)
         // A key path fails to compile inside #expect (rethrows expansion).
@@ -192,21 +200,22 @@ struct DrawPlanTests {
         builder.addInstance(models.quad, material: material, node: 1)
         let model = try builder.build()
         let pose = PBRPose(worldMatrices: [simd_float4x4(translation: [-1, 0, 0]) * simd_float4x4(scale: [-1, 1, 1]), worldMatrices[1]])
-        let draw = try #require(batchDraws(plan(model, pose: pose, merging: false)).first)
+        let posed = plan(model, pose: pose)
+        let draw = try #require(batchDraws(posed).first)
         #expect(draw.ranges == [.init(start: 0, count: 1, mirrored: false), .init(start: 1, count: 1, mirrored: true)])
-        let instanceX = draw.instances?.map(\.worldMatrix.columns.3.x)
+        let instanceX = posed.instances?.map(\.worldMatrix.columns.3.x)
         #expect(instanceX == [1, -1], "Unmirrored instances come first")
         // A mirroring model matrix flips every range.
-        let flipped = try #require(batchDraws(plan(model, pose: pose, merging: false, modelMatrix: simd_float4x4(scale: [-1, 1, 1]))).first)
+        let flipped = try #require(batchDraws(plan(model, pose: pose, modelMatrix: simd_float4x4(scale: [-1, 1, 1]))).first)
         #expect(flipped.ranges.map(\.mirrored) == [true, false])
         let hidden = PBRPose(worldMatrices: worldMatrices, visibility: [false, true])
-        #expect(batchDraws(plan(model, pose: hidden, merging: false)).first?.ranges == [.init(start: 0, count: 1, mirrored: false)])
+        #expect(batchDraws(plan(model, pose: hidden)).first?.ranges == [.init(start: 0, count: 1, mirrored: false)])
     }
 
     @Test func cullModeFollowsStageAndSidedness() throws {
         let model = try models.model([([0, 0, -1], models.material()), ([0, 0, 1], models.material(transmission: 1, doubleSided: true))])
-        #expect(Set(batchDraws(plan(model, merging: false)).map(\.cullMode)) == [.back, .none])
-        #expect(batchDraws(plan(model, stage: .transmissiveBackFaces, merging: false)).map(\.cullMode) == [.front])
+        #expect(Set(batchDraws(plan(model)).map(\.cullMode)) == [.back, .none])
+        #expect(batchDraws(plan(model, stage: .transmissiveBackFaces)).map(\.cullMode) == [.front])
     }
 
     @Test func pointsAreUnlitAndLeftOutWhenOnlyTrianglesDraw() throws {
@@ -217,13 +226,13 @@ struct DrawPlanTests {
         builder.addInstance(points, material: models.material(), node: 0)
         builder.addInstance(models.quad, material: models.material(), node: 1)
         let model = try builder.build()
-        let pointDraw = batchDraws(plan(model, merging: false)).first { $0.batch.primitive.primitiveType == .point }
+        let pointDraw = batchDraws(plan(model)).first { $0.batch.primitive.primitiveType == .point }
         #expect(pointDraw?.uniforms.unlit == 1 && pointDraw?.uniforms.isPointOrLine == 1 && pointDraw?.cullMode == MTLCullMode.none)
-        let trianglesOnly = plan(model, merging: false, trianglesOnly: true)
+        let trianglesOnly = plan(model, trianglesOnly: true)
         #expect(batchDraws(trianglesOnly).map(\.batch.primitive.primitiveType) == [.triangle])
         var pointsBuilder = PBRModelBuilder(device: models.device, restPose: PBRPose(worldMatrices: [matrix_identity_float4x4]))
         pointsBuilder.addInstance(points, material: models.material(), node: 0)
-        #expect(plan(try pointsBuilder.build(), merging: false, trianglesOnly: true).opaqueGroups.isEmpty, "No pipeline for points alone")
+        #expect(plan(try pointsBuilder.build(), trianglesOnly: true).opaqueGroups.isEmpty, "No pipeline for points alone")
     }
 
     @Test func ordersBlendedBatchesBackToFront() throws {
@@ -324,9 +333,7 @@ struct SceneOrderingTests {
         }
         // Which model each draw comes from, in draw order.
         let order = renderers.flatMap { renderer -> [ObjectIdentifier] in
-            let plan = renderer.drawPlan(cameraPosition: eye)
-            let merged = [plan.mergedStatic?.geometry, plan.mergedTransmissive?.geometry, plan.mergedSkinned?.geometry].compactMap(\.self)
-            let count = merged.count + plan.opaqueGroups.flatMap(\.draws).count + plan.blendedRuns.flatMap(\.draws).count
+            let count = renderer.frameDraws(cameraPosition: eye).groups.flatMap(\.draws).count
             return Array(repeating: ObjectIdentifier(renderer.model), count: count)
         }
         #expect(order == [ObjectIdentifier(second), ObjectIdentifier(first)])

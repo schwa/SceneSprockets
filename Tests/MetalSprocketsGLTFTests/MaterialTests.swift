@@ -289,30 +289,6 @@ struct MaterialTests {
         #expect(target.depth.width == 640 && target.depth.height == 360)
     }
 
-    // Merged transmissive drawing (main pass and back-face pre-pass) renders exactly like per-batch drawing.
-    @Test(.enabled(if: SampleAssets.isAvailable)) func mergedTransmissionMatchesPerBatchDrawing() throws {
-        let asset = try GLTFAsset(url: SampleAssets.modelsDirectory.appending(path: "TransmissionTest/glTF-Binary/TransmissionTest.glb"))
-        #expect(asset.mergedTransmissive != nil)
-        let camera = PBRCamera.framing(asset.bounds, aspectRatio: 1)
-        let lighting = PBRLighting(asset: asset)
-        func render(merging: Bool) throws -> CGImage {
-            let target = try GLTFTransmissionTarget(size: 256)
-            var prePass = GLTFTransmissionPass(asset: asset, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix, lighting: lighting, target: target)
-            prePass.renderer.usesMergedGeometry = merging
-            var renderer = GLTFRenderer(asset: asset, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix, lighting: lighting, transmissionTarget: target)
-            renderer.usesMergedGeometry = merging
-            return try OffscreenRenderer(size: CGSize(width: 128, height: 128), clearDepth: 0).render(try Group {
-                prePass
-                try RenderPass { renderer }
-            }).cgImage
-        }
-        let space = try #require(CGColorSpace(name: CGColorSpace.extendedLinearSRGB))
-        let merged = try #require(try render(merging: true).copy(colorSpace: space))
-        let separate = try #require(try render(merging: false).copy(colorSpace: space))
-        let psnr = try ImageComparison().compare(merged, separate).psnr
-        #expect(psnr > 60, "Merged and per-batch transmission renders differ: \(psnr) dB")
-    }
-
     // Without a pre-pass, transmission falls back to refracting the (blue) environment.
     @Test func transmissionFallsBackToEnvironment() throws {
         let pixel = try renderGlassCenter(withTransmissionPass: false)

@@ -145,26 +145,6 @@ func makeBlendedSkinnedAndStaticFile() throws -> URL {
 
 @Suite(.requiresMetal4, .metalValidation)
 struct SkinningTests {
-    // Merged skinned drawing (one joint palette for every skin) renders an animated frame exactly like drawing each
-    // skinned primitive on its own. BrainStem has 59 skinned primitives.
-    @Test(.enabled(if: SampleAssets.isAvailable)) func mergedSkinnedMatchesPerBatchDrawing() throws {
-        let asset = try GLTFAsset(url: SampleAssets.modelsDirectory.appending(path: "BrainStem/glTF-Binary/BrainStem.glb"))
-        let merged = try #require(asset.mergedSkinned)
-        #expect(merged.records.count > 1)
-        let pose = asset.pose(animation: 0, time: 1.3)
-        let camera = PBRCamera.framing(asset.bounds, aspectRatio: 1)
-        func render(merging: Bool) throws -> CGImage {
-            var renderer = GLTFRenderer(asset: asset, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix, pose: pose)
-            renderer.usesMergedGeometry = merging
-            return try OffscreenRenderer(size: CGSize(width: 128, height: 128), clearDepth: 0).render(try RenderPass { renderer }).cgImage
-        }
-        let mergedImage = try render(merging: true)
-        let separateImage = try render(merging: false)
-        let space = try #require(CGColorSpace(name: CGColorSpace.extendedLinearSRGB))
-        let psnr = try ImageComparison().compare(try #require(mergedImage.copy(colorSpace: space)), try #require(separateImage.copy(colorSpace: space))).psnr
-        #expect(psnr > 60, "Merged and per-batch skinned renders differ: \(psnr) dB")
-    }
-
     // Skinned and static blended primitives share one back-to-front order: the far skinned red triangle draws
     // before the near static green one, so green dominates where they overlap.
     @Test func blendedSkinnedAndStaticShareOneSortOrder() throws {

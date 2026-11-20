@@ -8,13 +8,12 @@ import Testing
 
 @Suite(.requiresMetal4, .metalValidation)
 struct MaterialOverrideTests {
-    func render(_ asset: GLTFAsset, overrides: PBRModel.MaterialOverrides = [:], merging: Bool = true) throws -> [UInt8] {
+    func render(_ asset: GLTFAsset, overrides: PBRModel.MaterialOverrides = [:]) throws -> [UInt8] {
         let size = 96
         let camera = PBRCamera.framing(asset.bounds, aspectRatio: 1)
         let lighting = PBRLighting(lights: [.directional(direction: [-1, -1, -1], intensity: 2)], environment: try LightingEnvironment(source: .uniform([0.5, 0.5, 0.5]), specularSize: 16, irradianceSize: 4))
         var renderer = PBRRenderer(model: asset.model, viewMatrix: camera.viewMatrix, projectionMatrix: camera.projectionMatrix, lighting: lighting)
         renderer.materialOverrides = overrides
-        renderer.usesMergedGeometry = merging
         let image = try OffscreenRenderer(size: CGSize(width: size, height: size), clearDepth: 0).render(try RenderPass { renderer }).cgImage
         let context = try #require(CGContext(data: nil, width: size, height: size, bitsPerComponent: 8, bytesPerRow: size * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
         context.draw(image, in: CGRect(x: 0, y: 0, width: size, height: size))
@@ -46,20 +45,17 @@ struct MaterialOverrideTests {
         #expect(throws: (any Error).self) { try asset.material(for: primitive, variant: 2) }
     }
 
-    // Merged geometry applies overrides per record, the same as per-batch drawing.
-    @Test func mergedGeometryAppliesOverrides() throws {
+    // Overrides apply to batches drawn from one list.
+    @Test func listedBatchesApplyOverrides() throws {
         let asset = try GLTFAsset(url: makeTwoMaterialAnimatedFile())
-        #expect(asset.merged != nil)
         let batches = asset.opaqueBatches
         #expect(batches.count >= 2)
         // Draw the first batch's primitive with the second batch's material.
         let overrides = [batches[0].primitive.key: batches[1].material]
-        let merged = try render(asset, overrides: overrides, merging: true)
-        #expect(try merged == render(asset, overrides: overrides, merging: false))
-        #expect(try merged != render(asset, merging: true))
+        #expect(try render(asset, overrides: overrides) != render(asset))
     }
 
-    // With textures and merged geometry: every variant of the shoe, through overrides, both merged and per batch.
+    // With textures: every variant of the shoe, through overrides.
     @Test(.enabled(if: SampleAssets.isAvailable)) func overridesMatchRebuiltShoeVariants() throws {
         let url = SampleAssets.modelsDirectory.appending(path: "MaterialsVariantsShoe/glTF-Binary/MaterialsVariantsShoe.glb")
         let asset = try GLTFAsset(url: url)
@@ -69,11 +65,9 @@ struct MaterialOverrideTests {
         for variant in asset.variantNames.indices {
             let overrides = try #require(try asset.materialOverrides(variant: variant))
             let rebuilt = try asset.variant(variant)
-            for merging in [true, false] {
-                let image = try render(asset, overrides: overrides, merging: merging)
-                #expect(try image == render(rebuilt, merging: merging), "variant \(variant), merging \(merging)")
-                differs = differs || image != defaultImage
-            }
+            let image = try render(asset, overrides: overrides)
+            #expect(try image == render(rebuilt), "variant \(variant)")
+            differs = differs || image != defaultImage
         }
         #expect(differs, "No variant changed the image, so the test checks nothing")
     }

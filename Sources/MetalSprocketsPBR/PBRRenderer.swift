@@ -50,8 +50,6 @@ public struct PBRRenderer: Element {
     var usesAmbientOcclusion: Bool { !views.isStereo && !isTransmissionPrePass }
     /// Depth is reversed (near 1, far 0), so nearer is greater.
     var depthFunction: MTLCompareFunction { .greater }
-    /// Draw eligible batches from merged buffers. Tests turn it off to compare against per-batch drawing.
-    var usesMergedGeometry = true
     /// Which part of the model to draw; ``PBRScene`` splits several models' drawing so blended batches of all of
     /// them can be sorted together.
     var phase: DrawPhase = .all
@@ -122,28 +120,22 @@ public struct PBRRenderer: Element {
         bindings.transmissionScene = transmissionScene ?? shaders.placeholderTexture
         bindings.view = PBRViewUniforms(viewProjectionMatrices: viewPair(viewProjections), modelMatrix: modelMatrix, modelNormalMatrix: modelMatrix.inverse.transpose)
 
-        let plan = drawPlan(cameraPosition: views.centerPosition)
-        let context = PipelineContext(shaders: shaders, bindings: bindings, frameResources: bindings.makeFrameResources(), modelIsMirrored: modelMatrix.isMirroring, materials: materialTables.table(for: model))
+        let draws = frameDraws(cameraPosition: views.centerPosition)
+        let materials = materialTables.table(for: model)
+        for group in draws.groups {
+            for draw in group.draws {
+                materials.write(draw)
+            }
+        }
+        let context = PipelineContext(shaders: shaders, bindings: bindings, frameResources: bindings.makeFrameResources(), materials: materials, draws: draws)
 
         return try Group {
             if transmissionScene != nil {
                 // Wait for PBRTransmissionPass to finish writing and mipmapping the scene texture.
                 QueueBarrier(after: [.fragment, .blit], before: .fragment)
             }
-            if let merged = plan.mergedStatic {
-                try mergedPipeline(merged, context: context)
-            }
-            if let merged = plan.mergedTransmissive {
-                try mergedPipeline(merged, context: context)
-            }
-            if let merged = plan.mergedSkinned {
-                try skinnedMergedPipeline(merged, context: context)
-            }
-            ForEach(plan.opaqueGroups) { group in
-                try pipeline("PBR Opaque\(group.variant.labelSuffix)\(group.state.labelSuffix)", group.draws, variant: group.variant, state: group.state, context: context)
-            }
-            ForEach(plan.blendedRuns) { run in
-                try pipeline("PBR Blended\(run.variant.labelSuffix)\(run.state.labelSuffix)", run.draws, variant: run.variant, state: run.state, context: context)
+            ForEach(draws.groups) { group in
+                try pipeline(group, context: context)
             }
         }
         // Long-lived buffers and textures stay resident across frames, including the material textures that are only
@@ -155,41 +147,85 @@ public struct PBRRenderer: Element {
         var shaders: PBRShaders
         var bindings: PBRFrameBindings
         var frameResources: ArgumentBuffer
-        var modelIsMirrored: Bool
         var materials: PBRMaterialTable
+        var draws: FrameDraws
     }
 
-    @ElementBuilder
-    private func pipeline(_ label: String, _ draws: [PBRDrawPlan.BatchDraw], variant: VertexVariant, state: PBRPipelineState, context: PipelineContext) throws -> some Element {
-        // Morphed and unmorphed draws are different element types; choosing per pipeline, not per draw, keeps the
-        // per-draw tree small.
-        if variant.morphed {
-            try pipeline(label, draws, variant: variant, state: state, context: context) { draw in
-                morphedDraw(draw, materials: context.materials)
+    /// Consecutive draws of a group that one ``DrawList`` issues (same geometry buffers), or one draw that needs its
+    /// own element.
+    enum DrawSegment: Identifiable {
+        case list(id: Int, geometry: PBRGeometryBuffers, draws: [BatchDraw])
+        case single(BatchDraw)
+
+        var id: Int {
+            switch self {
+            case let .list(id, _, _): id
+            case let .single(draw): draw.id
             }
-        } else {
-            try pipeline(label, draws, variant: variant, state: state, context: context) { draw in
-                self.draw(draw, materials: context.materials)
+        }
+
+        static func segments(_ draws: [BatchDraw]) -> [Self] {
+            var segments: [Self] = []
+            var listed: [BatchDraw] = []
+            func flush() {
+                if let first = listed.first {
+                    segments.append(.list(id: first.id, geometry: first.batch.primitive.geometry, draws: listed))
+                    listed.removeAll(keepingCapacity: true)
+                }
             }
+            for draw in draws {
+                if draw.isListed {
+                    if let first = listed.first, first.batch.primitive.geometry !== draw.batch.primitive.geometry {
+                        flush()
+                    }
+                    listed.append(draw)
+                } else {
+                    flush()
+                    segments.append(.single(draw))
+                }
+            }
+            flush()
+            return segments
         }
     }
 
-    @ElementBuilder
-    private func pipeline<Content: Element>(_ label: String, _ draws: [PBRDrawPlan.BatchDraw], variant: VertexVariant, state: PBRPipelineState, context: PipelineContext, draw: @escaping (PBRDrawPlan.BatchDraw) -> Content) throws -> some Element {
+    // One pipeline for a group: the frame's instance, record, joint and material tables are bound once, around one
+    // DrawList per run of listed draws.
+    private func pipeline(_ group: DrawGroup, context: PipelineContext) throws -> some Element {
+        let variant = group.variant
+        let segments = DrawSegment.segments(group.draws)
         // visionOS shows our color only where depth is written. In stereo, blended surfaces write depth so glass over
         // passthrough stays visible (see PBRPipelineState). They draw back to front, so nearer ones still pass.
-        try RenderPipeline(label: label, vertexShader: context.shaders.vertexShader(variant), fragmentShader: context.shaders.fragment) {
-            let content = ForEach(draws) { batchDraw in
-                draw(batchDraw)
+        return try RenderPipeline(label: group.label, vertexShader: context.shaders.vertexShader(variant), fragmentShader: context.shaders.fragment) {
+            let content = ForEach(segments) { segment in
+                if case let .list(_, geometry, draws) = segment {
+                    drawList(draws, geometry: geometry, skinned: variant.skinned)
+                } else if case let .single(draw) = segment {
+                    singleDraw(draw)
+                }
             }
             .parameter("view", value: context.bindings.view)
-            context.bindings.apply(to: content, frameResources: context.frameResources)
+            .parameter("materials", argumentBuffer: context.materials.resources)
+            .parameter("instanceRecords", values: context.draws.records, else: model.instanceRecordBuffer)
+            context.bindings.apply(to: tables(content, variant: variant, draws: context.draws), frameResources: context.frameResources)
         }
         .vertexDescriptor(variant.skinned ? PBRModel.skinnedVertexDescriptor : PBRModel.vertexDescriptor)
         .renderPipelineDescriptorTransformer { descriptor in
-            state.apply(to: descriptor)
+            group.state.apply(to: descriptor)
         }
-        .depthStencilDescriptor(state.depthStencilDescriptor(function: depthFunction))
+        .depthStencilDescriptor(group.state.depthStencilDescriptor(function: depthFunction))
+    }
+
+    // Skinned shaders read joints from the palette; the others read instances.
+    @ElementBuilder
+    private func tables(_ content: some Element, variant: VertexVariant, draws: FrameDraws) -> some Element {
+        if variant.skinned {
+            content
+                .parameter("jointMatrices", values: draws.palette)
+                .parameter("recordJointOffsets", buffer: model.jointOffsetBuffer)
+        } else {
+            content.parameter("instances", values: draws.instances, else: model.instanceBuffer)
+        }
     }
 
     /// The bindings that depend only on the lighting, views, debug view and pre-pass stage.
@@ -204,83 +240,48 @@ public struct PBRRenderer: Element {
         )
     }
 
-    /// What this renderer draws this frame; see ``PBRDrawPlan``.
-    func drawPlan(cameraPosition: SIMD3<Float>) -> PBRDrawPlan {
-        PBRDrawPlan(model: model, pose: pose, stage: prePassStage, viewProjections: viewProjections, cameraPosition: cameraPosition, modelMatrix: modelMatrix, usesMergedGeometry: usesMergedGeometry, materialOverrides: materialOverrides, phase: phase, transmissionAsCoverage: transmissionAsCoverage, writesBlendedDepth: writesBlendedDepth, drawsTrianglesOnly: drawsTrianglesOnly)
-    }
-
-    /// One Metal draw per visible record of `merged`, all in one element.
-    private func mergedDrawCalls(_ merged: PBRMergedGeometry, visible: [Bool]?, doubleSided: [Bool], backFaces: Bool, modelIsMirrored: Bool) -> some Element { // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
-        // The plan already culled (frustum, and the back-face pre-pass's double-sided filter), so the list does not.
-        let rows = merged.records.indices.compactMap { index -> DrawRow? in
-            guard visible?[index] ?? true else {
-                return nil
+    /// Every draw of `draws`, all sharing `geometry`, from one element: a row per instance range. Draws are already
+    /// culled, so the list does not cull.
+    @ElementBuilder
+    private func drawList(_ draws: [BatchDraw], geometry: PBRGeometryBuffers, skinned: Bool) -> some Element {
+        let rows = draws.flatMap { draw in
+            let primitive = draw.batch.primitive
+            return draw.ranges.map { range in
+                DrawRow(
+                    primitiveType: primitive.primitiveType,
+                    geometry: .indexed(primitive.indexStart ..< primitive.indexStart + primitive.indexCount, baseVertex: primitive.baseVertex),
+                    instances: range.start ..< range.start + range.count,
+                    cullMode: draw.cullMode,
+                    // glTF front faces are counter-clockwise; a mirroring transform flips that.
+                    winding: range.mirrored ? .clockwise : .counterClockwise
+                )
             }
-            let record = merged.records[index]
-            return DrawRow(
-                geometry: .indexed(record.indexStart ..< record.indexStart + record.indexCount, baseVertex: record.baseVertex),
-                instances: record.firstInstance ..< record.firstInstance + record.instanceCount,
-                cullMode: backFaces ? .front : doubleSided[index] ? .none : .back,
-                // glTF front faces are counter-clockwise; a mirroring transform flips that.
-                winding: record.mirrored != modelIsMirrored ? .clockwise : .counterClockwise
-            )
         }
-        return DrawList(indexBuffer: merged.indexBuffer, indexType: .uint32, stereoViews: stereo, rows: rows)
-    }
-
-    /// Every merged skinned record, drawn by one element. Not culled: skinned bounds move with the joints.
-    private func skinnedMergedPipeline(_ plan: PBRDrawPlan.SkinnedMergedDraw, context: PipelineContext) throws -> some Element {
-        let merged = plan.geometry
-        let draw = mergedDrawCalls(merged, visible: plan.visible, doubleSided: plan.doubleSided, backFaces: false, modelIsMirrored: context.modelIsMirrored)
-            // swiftlint:disable:next force_unwrapping - skinned merged geometry always has skin vertices
-            .vertexBuffer(merged.skinVertexBuffer!, index: PBRModel.skinBufferIndex)
-            .parameter("jointMatrices", values: plan.palette)
-            // swiftlint:disable:next force_unwrapping - skinned merged geometry always has joint offsets
-            .parameter("recordJointOffsets", buffer: merged.recordJointOffsetBuffer!)
-        return try mergedPipeline("PBR Opaque Skinned Merged", vertexShader: context.shaders.skinnedMergedVertex, vertexDescriptor: PBRModel.skinnedVertexDescriptor, merged: merged, context: context) {
-            draw
+        let list = DrawList(indexBuffer: geometry.indexBuffer, indexType: .uint32, stereoViews: stereo, rows: rows)
+            .vertexBuffer(geometry.vertexBuffer, index: 0)
+        if skinned, let skinBuffer = geometry.skinBuffer {
+            list.vertexBuffer(skinBuffer, index: PBRModel.skinBufferIndex)
+        } else {
+            list
         }
     }
 
-    /// Culled records skip their Metal draw, which adds no elements.
-    private func mergedPipeline(_ plan: PBRDrawPlan.MergedDraw, context: PipelineContext) throws -> some Element {
-        let merged = plan.geometry
-        let draw = mergedDrawCalls(merged, visible: plan.visible, doubleSided: plan.doubleSided, backFaces: plan.backFaces, modelIsMirrored: context.modelIsMirrored)
-            .parameter("instances", values: plan.instances, else: merged.instanceBuffer)
-        return try mergedPipeline("PBR Opaque Merged", vertexShader: context.shaders.mergedVertex, vertexDescriptor: PBRModel.vertexDescriptor, merged: merged, context: context) {
-            draw
-        }
-    }
-
-    /// A merged pipeline: the record inputs every merged draw shares, the material table (with this frame's record
-    /// materials written) and the frame's bindings, around `draw`.
-    private func mergedPipeline(_ label: String, vertexShader: VertexShader, vertexDescriptor: MTLVertexDescriptor, merged: PBRMergedGeometry, context: PipelineContext, draw: () -> some Element) throws -> some Element {
-        context.materials.write(merged, pose: pose, overrides: materialOverrides)
-        let content = draw()
-            .vertexBuffer(merged.vertexBuffer, index: 0)
-            .parameter("instanceRecords", buffer: merged.instanceRecordBuffer)
-            .parameter("recordMaterials", buffer: merged.recordMaterialBuffer)
-            .parameter("materials", argumentBuffer: context.materials.resources)
-        return try RenderPipeline(label: label, vertexShader: vertexShader, fragmentShader: context.shaders.mergedFragment) {
-            context.bindings.apply(to: content.parameter("view", value: context.bindings.view), frameResources: context.frameResources)
-        }
-        .vertexDescriptor(vertexDescriptor)
-        .depthCompare(function: depthFunction, writes: true)
-    }
-
-    /// ``draw(_:)`` plus the morph target inputs, for batches with morph targets.
-    func morphedDraw(_ batchDraw: PBRDrawPlan.BatchDraw, materials: PBRMaterialTable) -> some Element {
+    /// A draw with its own element: morph targets, which need their own inputs, or a lines fill mode.
+    @ElementBuilder
+    private func singleDraw(_ batchDraw: BatchDraw) -> some Element {
         let primitive = batchDraw.batch.primitive
-        let morph = PBRMorphUniforms(targetCount: UInt32(primitive.morphTargetCount), vertexCount: UInt32(primitive.vertexCount))
-        return draw(batchDraw, materials: materials)
-            .parameter("morph", value: morph)
-            // swiftlint:disable:next force_unwrapping - morphed primitives always have a morph buffer
-            .parameter("morphDeltas", buffer: primitive.morphBuffer!)
-            .parameter("morphWeights", values: batchDraw.morphWeights ?? [0])
+        if let morphBuffer = primitive.morphBuffer, primitive.morphTargetCount > 0 {
+            draw(batchDraw)
+                .parameter("morph", value: PBRMorphUniforms(targetCount: UInt32(primitive.morphTargetCount), vertexCount: UInt32(primitive.vertexCount)))
+                .parameter("morphDeltas", buffer: morphBuffer)
+                .parameter("morphWeights", values: batchDraw.morphWeights ?? [0])
+        } else {
+            draw(batchDraw)
+        }
     }
 
     /// One instanced draw per range of `batchDraw`.
-    func draw(_ batchDraw: PBRDrawPlan.BatchDraw, materials: PBRMaterialTable) -> some Element {
+    private func draw(_ batchDraw: BatchDraw) -> some Element {
         let primitive = batchDraw.batch.primitive
         // The primitive's range of the model's shared buffers. Vertex buffers are bound at the primitive's first vertex
         // (baseVertex 0), so vertex_id stays local, as the per-primitive morph buffer expects.
@@ -313,10 +314,17 @@ public struct PBRRenderer: Element {
         // The index buffer is only referenced by address; the model's resource collection keeps it resident and the
         // model keeps it alive.
         .vertexBuffer(geometry.vertexBuffer, index: 0, offset: primitive.baseVertex * MemoryLayout<PBRVertex>.stride)
+        return skinVertices(of: batchDraw, on: draw)
+    }
 
-        return instances(of: batchDraw, on: draw)
-            .parameter("materials", argumentBuffer: materials.resources)
-            .parameter("materialIndex", value: materials.write(batchDraw))
+    @ElementBuilder
+    private func skinVertices(of batchDraw: BatchDraw, on content: some Element) -> some Element {
+        let primitive = batchDraw.batch.primitive
+        if batchDraw.batch.skinIndex != nil, let skinBuffer = primitive.geometry.skinBuffer {
+            content.vertexBuffer(skinBuffer, index: PBRModel.skinBufferIndex, offset: primitive.baseVertex * MemoryLayout<PBRSkinVertex>.stride)
+        } else {
+            content
+        }
     }
 }
 
@@ -365,21 +373,6 @@ extension PBRRenderer {
         renderers[0]
         ForEach(renderers.indices.dropFirst(), id: \.self) { index in
             renderers[index]
-        }
-    }
-
-    /// Binds joint matrices for skinned batches; otherwise posed instances, or the batch's rest-pose instance buffer.
-    @ElementBuilder
-    func instances(of batchDraw: PBRDrawPlan.BatchDraw, on content: some Element) -> some Element {
-        let primitive = batchDraw.batch.primitive
-        if let jointMatrices = batchDraw.jointMatrices, let skinBuffer = primitive.geometry.skinBuffer {
-            content
-                .vertexBuffer(skinBuffer, index: PBRModel.skinBufferIndex, offset: primitive.baseVertex * MemoryLayout<PBRSkinVertex>.stride)
-                .parameter("jointMatrices", values: jointMatrices)
-        } else if let instances = batchDraw.instances {
-            content.parameter("instances", values: instances)
-        } else {
-            content.parameter("instances", buffer: batchDraw.batch.instanceBuffer)
         }
     }
 }
@@ -499,9 +492,6 @@ struct PBRShaders {
     var fragment: FragmentShader
     var skinnedVertex: VertexShader
     var morphedVertex: VertexShader
-    var mergedVertex: VertexShader
-    var skinnedMergedVertex: VertexShader
-    var mergedFragment: FragmentShader
     var skinnedMorphedVertex: VertexShader
     var backgroundVertex: VertexShader
     var backgroundFragment: FragmentShader
@@ -603,9 +593,6 @@ struct PBRShaders {
             fragment: try pbr.fragment_main,
             skinnedVertex: try pbr.vertex_skinned,
             morphedVertex: try pbr.vertex_main_morphed,
-            mergedVertex: try pbr.vertex_merged,
-            skinnedMergedVertex: try pbr.vertex_skinned_merged,
-            mergedFragment: try pbr.fragment_merged,
             skinnedMorphedVertex: try pbr.vertex_skinned_morphed,
             backgroundVertex: try ibl.background_vertex,
             backgroundFragment: try ibl.background_fragment,

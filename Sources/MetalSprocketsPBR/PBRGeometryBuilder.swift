@@ -6,7 +6,7 @@ import simd
 import SwiftMesh
 
 /// Collects primitives' vertex data and places them all in one set of shared buffers (``PBRGeometryBuffers``), so
-/// they can be drawn with few bindings and merged draws. Build once; the primitives can be used by several models.
+/// draw lists can draw many of them with one binding. Build once; the primitives can be used by several models.
 public struct PBRGeometryBuilder {
     /// One primitive's data, packed in the renderer's vertex layout.
     struct PrimitiveData {

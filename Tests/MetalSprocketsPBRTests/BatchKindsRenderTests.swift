@@ -10,7 +10,7 @@ import Testing
 
 @Suite(.requiresMetal4)
 @MainActor
-struct MergedRenderTests {
+struct BatchKindsRenderTests {
     let models: TestModels
     let size = CGSize(width: 32, height: 32)
     let view = LookAt(position: [0, 0, 3], target: .zero, up: [0, 1, 0]).viewMatrix
@@ -20,9 +20,8 @@ struct MergedRenderTests {
         models = try TestModels()
     }
 
-    /// Two opaque quads, two double-sided glass quads, and two skinned quads (two skins), all in one geometry, so each
-    /// set merges.
-    func mergeableModel() throws -> PBRModel {
+    /// Two opaque quads, two double-sided glass quads, and two skinned quads (two skins), all in one geometry.
+    func mixedModel() throws -> PBRModel {
         var geometry = PBRGeometryBuilder(device: models.device)
         let positions: [SIMD3<Float>] = [[-0.2, -0.2, 0], [0.2, -0.2, 0], [0.2, 0.2, 0], [-0.2, 0.2, 0]]
         let normals = [SIMD3<Float>](repeating: [0, 0, 1], count: 4)
@@ -49,16 +48,15 @@ struct MergedRenderTests {
     }
 
     @Test
-    func mergedSetsRender() throws {
-        let model = try mergeableModel()
-        #expect(model.merged != nil && model.mergedTransmissive != nil && model.mergedSkinned != nil)
-        #expect(model.mergedSkinned?.jointPalette(skins: model.skins, pose: model.restPose).count == 2)
+    func everyBatchKindRenders() throws {
+        let model = try mixedModel()
+        #expect(model.jointPalette(pose: model.restPose).count == 2)
         var scene = PBRScene(model: model, viewMatrix: view, projectionMatrix: projection, viewportSize: size)
         scene.showsBackground = true
         let pixels = try render(scene)
-        #expect(pixels.contains { Int($0.y) > Int($0.x) + 50 }, "The green merged quad is drawn")
+        #expect(pixels.contains { Int($0.y) > Int($0.x) + 50 }, "The green quad is drawn")
 
-        // Hiding nodes hides their merged records.
+        // Hiding nodes hides their batches.
         var pose = model.restPose
         pose.visibility = [true, false, true, true, true, false]
         scene.pose = pose
@@ -96,7 +94,7 @@ struct MergedRenderTests {
             projectionMatrices: [projection, projection],
             viewports: [viewport, viewport]
         )
-        let model = try mergeableModel()
+        let model = try mixedModel()
         let target = try PBRTransmissionTarget(device: device, width: 32, height: 32, viewCount: 2)
         let pbr = PBRRenderer(model: model, viewMatrix: stereo.viewMatrices[0], projectionMatrix: projection, transmissionTarget: target).viewing(stereo)
         var background = PBREnvironmentBackground(lighting: pbr.lighting, viewMatrix: stereo.viewMatrices[0], projectionMatrix: projection)

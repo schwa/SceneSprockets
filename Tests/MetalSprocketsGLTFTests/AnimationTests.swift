@@ -222,27 +222,22 @@ struct AnimationTests {
         }
     }
 
-    // Static opaque primitives with different materials are merged and drawn by one element, at rest and posed.
-    @Test func mergedGeometryFollowsThePose() throws {
+    // Static opaque primitives with different materials are drawn by one list, at rest and posed.
+    @Test func listedBatchesFollowThePose() throws {
         let asset = try GLTFAsset(url: makeTwoMaterialAnimatedFile())
-        let merged = try #require(asset.merged)
-        #expect(merged.records.count == 2)
-
         let rest = try colors(asset, pose: nil, at: [[-2, -0.1, 0], [2, -0.1, 0]])
         #expect(rest[0].red > 200 && rest[1].green > 200, "Rest: \(rest)")
 
         let moved = asset.pose(animation: 0, time: 1)
-        #expect(merged.instances(pose: moved) != nil)
         let posed = try colors(asset, pose: moved, at: [[-2, -0.1, 0], [-2, 1.9, 0], [2, -0.1, 0]])
         #expect(posed[0].red < 30, "Red triangle still at rest: \(posed)")
         #expect(posed[1].red > 200 && posed[2].green > 200, "Posed: \(posed)")
     }
 
-    // A pose that mirrors an instance away from its rest winding falls back to per-batch drawing, which handles it.
-    @Test func mergedGeometryFallsBackWhenMirrored() throws {
+    // A pose that mirrors an instance away from its rest winding draws it with the other winding.
+    @Test func mirroringPoseKeepsFrontFaces() throws {
         let asset = try GLTFAsset(url: makeTwoMaterialAnimatedFile())
         let mirrored = asset.pose(animation: 1, time: 1)
-        #expect(try #require(asset.merged).instances(pose: mirrored) == nil)
         let colors = try colors(asset, pose: mirrored, at: [[-2, -0.1, 0], [2, -0.1, 0]])
         #expect(colors[0].red > 200 && colors[1].green > 200, "Mirrored: \(colors)")
     }

@@ -2,7 +2,8 @@ import Metal
 import MetalSprocketsPBRShaders
 
 /// Every primitive of an asset in one vertex buffer and one index buffer (and a skin buffer when any primitive is
-/// skinned), so per-batch draws bind ranges of them and merged draws index into them directly, without copies.
+/// skinned). Draw lists index into them by each primitive's base vertex and first index, without copies; draws with
+/// morph targets bind them at the primitive's first vertex.
 public final class PBRGeometryBuffers: @unchecked Sendable {
     /// `PBRVertex` values.
     public let vertexBuffer: MTLBuffer
