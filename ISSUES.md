@@ -6149,6 +6149,18 @@ Decided: keep open and measure later.
 
 Next: re-run the node-access benchmark and compare with the table above.
 
+- `2026-11-20T01:45:21Z`: Re-measured 2026-11-19 (SCENESPROCKETS_BENCHMARK=1, Release, M5 Max, High Power Mode, two runs), ns per node, lower is faster:
+
+| | Now | 2026-11-06 | Before ECS |
+|---|---|---|---|
+| Traversal | 141 | ~142 | ~100 |
+| Read | ~51 | ~38 | ~30 |
+| Write | ~242 | ~192 | ~180 |
+| Flatten | ~170 | - | - |
+| Create + attach | ~13,400 | - | - |
+
+Traversal unchanged since Nov 6. Read and write are 25-35% slower than Nov 6; cause unknown. Create + attach (~1.3 s for 100k nodes) was not measured before. Earlier runs today in Low Power Mode were ~30% slower across the board.
+
 ---
 
 ## 271: Node keeps its parent after its entity is destroyed outside the scene graph
