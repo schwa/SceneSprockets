@@ -136,6 +136,48 @@ public struct BVH: Sendable {
         }
     }
 
+    /// Calls `visit` with items in order of their boxes' distance from `point`, nearest box first. `visit` returns the
+    /// squared distance to the item itself, or nil to ignore it. Items whose boxes are farther than the nearest item
+    /// found so far are skipped. Returns the nearest item and its squared distance.
+    @discardableResult
+    public func nearest(to point: SIMD3<Float>, maximumDistance: Float = .infinity, _ visit: (Int) -> Float?) -> (item: Int, distanceSquared: Float)? {
+        guard !nodes.isEmpty else {
+            return nil
+        }
+        var best: (item: Int, distanceSquared: Float)?
+        var limit = maximumDistance == .infinity ? Float.infinity : maximumDistance * maximumDistance
+        var stack: [(index: Int, distanceSquared: Float)] = [(0, Self.distanceSquared(point, nodes[0].bounds))]
+        while let (index, distanceSquared) = stack.popLast() {
+            guard distanceSquared <= limit else {
+                continue
+            }
+            let node = nodes[index]
+            if node.isLeaf {
+                for position in node.start ..< node.start + node.leafItems {
+                    let item = itemIndices[position]
+                    guard Self.distanceSquared(point, itemBounds[item]) <= limit, let distance = visit(item), distance <= limit else {
+                        continue
+                    }
+                    limit = distance
+                    best = (item, distance)
+                }
+                continue
+            }
+            // Push the farther child first, so the nearer one is visited next.
+            let children = [index + 1, node.start].map { ($0, Self.distanceSquared(point, nodes[$0].bounds)) }
+            for child in children.sorted(by: { $0.1 > $1.1 }) where child.1 <= limit {
+                stack.append(child)
+            }
+        }
+        return best
+    }
+
+    // Squared distance from `point` to the nearest point of `box`; 0 inside.
+    static func distanceSquared(_ point: SIMD3<Float>, _ box: BoundingBox3D) -> Float {
+        let outside = simd.max(simd.max(box.min - point, point - box.max), SIMD3<Float>.zero)
+        return simd_length_squared(outside)
+    }
+
     // Distance along the ray to where it enters `box` (0 from inside), or nil if it misses.
     static func entryDistance(_ ray: Ray3D, _ box: BoundingBox3D) -> Float? {
         let inverseDirection = 1 / ray.direction

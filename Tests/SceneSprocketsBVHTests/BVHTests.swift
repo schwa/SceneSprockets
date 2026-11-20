@@ -82,6 +82,25 @@ struct BVHTests {
         #expect(visited.sorted() == [0, 1, 2])
     }
 
+    // The nearest item matches a brute-force scan, using each box's center as the item.
+    @Test func nearestMatchesBruteForce() throws {
+        var generator = SystemRandomNumberGenerator()
+        let centers = (0 ..< 300).map { _ in SIMD3<Float>.random(in: -50 ... 50, using: &generator) }
+        let bvh = BVH(itemBounds: centers.map { BoundingBox3D(min: $0 - 0.5, max: $0 + 0.5) })
+        for _ in 0 ..< 50 {
+            let point = SIMD3<Float>.random(in: -60 ... 60, using: &generator)
+            var visits = 0
+            let found = try #require(bvh.nearest(to: point) { item in
+                visits += 1
+                return simd_distance_squared(point, centers[item])
+            })
+            let expected = centers.indices.min { simd_distance_squared(point, centers[$0]) < simd_distance_squared(point, centers[$1]) }
+            #expect(found.item == expected)
+            #expect(visits < 100, "Visited \(visits) of 300")
+        }
+        #expect(bvh.nearest(to: .zero, maximumDistance: 0.1) { _ in 1_000 } == nil)
+    }
+
     @Test func frustumQuery() {
         let boxes = row(20)
         let bvh = BVH(itemBounds: boxes)

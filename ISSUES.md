@@ -13188,9 +13188,9 @@ status: new
 priority: low
 kind: bug
 labels: area:performance, effort:m, investigate, gltf
-milestone: M002-Performance
+milestone: M999-Nice-to-have
 created: 2026-11-20T00:29:59Z
-updated: 2026-11-20T00:34:53Z
+updated: 2026-11-20T02:18:18Z
 +++
 
 After #582 (every batch through DrawList), ms-gltf-render bench CarConcept reports ~2.4 ms CPU per frame against ~1.67 ms for the merged path (56c82e9b), both on MetalSprockets main, Release, M5 Max. Sponza: 0.83 vs 0.69 ms. Reproduced over several runs.
@@ -13234,13 +13234,15 @@ SceneGraph's mesh entry index (#337) always returns skinned and morphed entries,
 ## 586: No scene query for the mesh nearest to a point
 
 +++
-status: new
+status: closed
 priority: low
 kind: feature
 labels: area:scenegraph, effort:s, bounds
 milestone: M002-Performance
 depends: 337
 created: 2026-11-20T02:15:41Z
+updated: 2026-11-20T02:20:28Z
+closed: 2026-11-20T02:20:28Z
 +++
 
 SceneGraph has box, frustum and ray queries over mesh entries (#337), but no query for the entry or surface point nearest to a world point, as SwiftMesh's TriangleBVH.closestPoint offers for one mesh.

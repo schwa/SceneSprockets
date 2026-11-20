@@ -69,6 +69,20 @@ struct MeshEntryIndexTests {
         #expect(labels(graph.meshEntries(overlapping: query)) == ["0,0"])
     }
 
+    // #586: the nearest mesh point is on the nearest box's surface.
+    @Test func nearestPointFindsTheNearestSurface() throws {
+        let graph = grid()
+        // In front of box 2,3 (center [4, 6, -5], half size 0.5), 3 units away from its front face.
+        let found = try #require(graph.nearestPoint(to: [4, 6, -1.5]))
+        #expect(found.node.label == "2,3")
+        #expect(abs(found.distance - 3) < 1e-4, "\(found.distance)")
+        #expect(simd_distance(found.position, [4, 6, -4.5]) < 1e-4)
+        #expect(graph.nearestPoint(to: [4, 6, -1.5], maximumDistance: 2) == nil)
+        // Between boxes, the nearest of several.
+        let between = try #require(graph.nearestPoint(to: [5.1, 6, -5]))
+        #expect(between.node.label == "3,3")
+    }
+
     @Test func hitTestUsesTheIndex() {
         let graph = grid()
         let hits = graph.hitTest(Ray3D(origin: [4, 6, 10], direction: [0, 0, -1]))
