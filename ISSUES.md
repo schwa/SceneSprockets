@@ -10888,10 +10888,10 @@ Checked and found sound: the 22 nonisolated(unsafe) static caches (all lock-guar
 status: open
 priority: medium
 kind: task
-labels: deferred, area:scenegraph, effort:m
+labels: area:scenegraph, effort:m
 milestone: M002-Performance
 created: 2026-11-17T06:04:19Z
-updated: 2026-11-17T07:00:51Z
+updated: 2026-11-20T00:54:47Z
 +++
 
 The codebase has not had an architecture review with the improve-codebase-architecture skill. Coupling, shallow modules and logic spread over many places (for example demos listed twice, #115; each material renderer handling scene-wide techniques on its own, #409) are found only one at a time.
@@ -12573,11 +12573,11 @@ Was MetalSprocketsGLTF#8 (moved with the package, #552).
 status: new
 priority: low
 kind: bug
-labels: area:performance, effort:m, deferred, gltf
+labels: area:performance, effort:m, gltf
 milestone: M002-Performance
 depends: 573
 created: 2026-11-19T02:12:55Z
-updated: 2026-11-19T14:01:47Z
+updated: 2026-11-20T00:54:47Z
 +++
 
 In GLTFViewer (Release, 120 Hz display) AnimationPointerUVs runs at ~90 fps with its animation playing. Headless (ms-gltf-render --benchmark 60 --orbit --animation 0, Release, M5 Max): ~4.8 ms CPU, <1 ms GPU per frame. The scene has 132 primitives, 82 materials (9 transmissive, 3 blended) and animates material texture transforms through KHR_animation_pointer, so each frame also pays for the transmission pre-passes, per-batch drawing of the 3 blended primitives, and per-frame material uniform arrays for the merged sets. Not yet profiled.
@@ -13196,8 +13196,9 @@ status: new
 priority: low
 kind: bug
 labels: area:performance, effort:m, investigate, gltf
-milestone: M007-PBR-Merged-Geometry
+milestone: M002-Performance
 created: 2026-11-20T00:29:59Z
+updated: 2026-11-20T00:34:53Z
 +++
 
 After #582 (every batch through DrawList), ms-gltf-render bench CarConcept reports ~2.4 ms CPU per frame against ~1.67 ms for the merged path (56c82e9b), both on MetalSprockets main, Release, M5 Max. Sponza: 0.83 vs 0.69 ms. Reproduced over several runs.
@@ -13299,8 +13300,10 @@ Physics, scene graph, assets and UI features.
 ## Milestone: M007-PBR-Merged-Geometry
 
 +++
-status: open
+status: closed
 created: 2026-11-19T03:27:31Z
+updated: 2026-11-20T00:34:57Z
+closed: 2026-11-20T00:34:57Z
 +++
 
 Decide whether PBR keeps the merged-geometry path (#545), and fix the issues it causes or blocks.
