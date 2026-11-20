@@ -13197,6 +13197,55 @@ The bench's CPU figure is frame wall time minus GPU time. Time Profiler runs of 
 
 ---
 
+## 584: Renderer frustum culling tests every mesh entry
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:renderer, area:performance, effort:m, bounds
+milestone: M002-Performance
+depends: 337
+created: 2026-11-20T02:15:41Z
++++
+
+meshEntriesInFrustum and culledMeshEntries (Renderer/Culling.swift) test every entry's world bounds each frame. SceneGraph's mesh entry index (#337) has a BVH over the same bounds, but it is rebuilt whenever the graph's revision changes, which is every frame in an animated scene, so the renderer does not use it. Cost of culling on large scenes is not measured.
+
+---
+
+## 585: Skinned and morphed mesh entries are never culled by the mesh entry index
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:scenegraph, area:performance, effort:m, bounds
+milestone: M002-Performance
+depends: 337
+created: 2026-11-20T02:15:41Z
++++
+
+SceneGraph's mesh entry index (#337) always returns skinned and morphed entries, because they move outside their rest bounds and the index has no posed bounds for them. Box, frustum and ray queries therefore include every skinned and morphed entry.
+
+---
+
+## 586: No scene query for the mesh nearest to a point
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:scenegraph, effort:s, bounds
+milestone: M002-Performance
+depends: 337
+created: 2026-11-20T02:15:41Z
+updated: 2026-11-20T02:15:41Z
++++
+
+SceneGraph has box, frustum and ray queries over mesh entries (#337), but no query for the entry or surface point nearest to a world point, as SwiftMesh's TriangleBVH.closestPoint offers for one mesh.
+
+---
+
 ## Milestone: M001-Correctness
 
 +++
