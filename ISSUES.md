@@ -7575,13 +7575,14 @@ SceneGraph.Shape has no teapot. The Utah teapot is the usual test object in 3D g
 ## 337: No spatial acceleration structure for culling, hit testing and queries
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:scenegraph, effort:l, subtask, bounds
 milestone: M002-Performance
 created: 2026-11-07T18:39:49Z
-updated: 2026-11-20T01:57:11Z
+updated: 2026-11-20T02:17:22Z
+closed: 2026-11-20T02:17:22Z
 +++
 
 SceneSprockets has no spatial acceleration structure. Queries go through every node or every triangle:
@@ -7606,6 +7607,7 @@ Related: #402 (positions re-read per hit test).
 - `2026-11-20T01:57:11Z`: Answer 1: No (schwa): no SwiftMesh work for now. Both levels (per-mesh triangle BVH with an all-hits query, and the node-level bounds hierarchy) go in a new BVH target in SceneSprockets; it may move later.
 - `2026-11-20T02:10:54Z`: Progress: new SceneSprocketsBVH target (static BVH over item boxes: box, frustum and ray queries; c8539a66). hitTest tests only triangles from a cached per-submesh BVH for static meshes (f1bc8833), and only mesh entries whose world bounds the ray enters; new SceneGraph.meshEntries(overlapping:) and meshEntries(in:) (49b5959b). Not done: nearest-to-point query; renderer frustum culling still tests every entry (the index is rebuilt on every revision change, so animated scenes would rebuild it each frame; needs refitting); skinned and morphed entries are never culled by the index.
 - `2026-11-20T02:15:00Z`: Measured with Tests/SceneSprocketsTests/HitTestBenchmark.swift (SCENESPROCKETS_BENCHMARK=1, Release, M5 Max): 400 spheres of ~16k triangles, 500 rays. Per ray: before the BVH 108.8 us (115.9 first pass); with it 2.2 us (23.4 first pass, which builds the BVHs). Rays are random per run, so hit counts are not compared.
+- `2026-11-20T02:17:22Z`: Done: SceneSprocketsBVH target, BVH-backed hitTest, mesh entry index with box/frustum/ray queries. Remaining work filed as #584, #585, #586.
 
 ---
 
@@ -13239,7 +13241,6 @@ labels: area:scenegraph, effort:s, bounds
 milestone: M002-Performance
 depends: 337
 created: 2026-11-20T02:15:41Z
-updated: 2026-11-20T02:15:41Z
 +++
 
 SceneGraph has box, frustum and ray queries over mesh entries (#337), but no query for the entry or surface point nearest to a world point, as SwiftMesh's TriangleBVH.closestPoint offers for one mesh.
