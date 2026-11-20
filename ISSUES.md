@@ -1935,13 +1935,14 @@ Missing SceneKit renderer APIs: projectPoint, unprojectPoint (Ray(viewPoint:) co
 ## 95: SceneView / SceneGraphElement have no multisample antialiasing (MSAA)
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: effort:l, area:renderer
 milestone: M003-Rendering
 created: 2026-10-15T02:28:08Z
-updated: 2026-11-20T06:03:26Z
+updated: 2026-11-20T06:30:49Z
+closed: 2026-11-20T06:30:49Z
 +++
 
 `SceneView` / `SceneGraphElement` have no multisampling. `Sources/SceneSprockets` has no `sampleCount` or `.msaa` setting. The lower-level `PBRScene` in MetalSprocketsPBR already supports one (`PBRScene.sampleCount`, which uses `.msaa(sampleCount:)` in `Sources/MetalSprocketsPBR/PBRScene.swift`), and `AntialiasingTests` covers it there. See docs/SceneKitComparison.md (compare SceneKit's `antialiasingMode`).
@@ -1958,6 +1959,7 @@ updated: 2026-11-20T06:03:26Z
 - `2026-10-15T03:09:12Z`: Done: SceneViewDelegate.sceneView(didApplyConstraintsAtTime:), SceneView.Options.showsStatistics overlay, SceneGraph.statistics. Not verified on screen (did not run the app). Left: MSAA (the shadow and fog passes read depth, so they would need resolved or multisample-aware depth) and a prepare step.
 - `2026-11-17T18:26:19Z`: From #503 (closed): when adding MSAA, verify the resolve with transparent draws, alpha-to-coverage for alpha-masked materials, and that depth-reading passes (shadow mask, fog, AO, soft particles) use resolved or multisample-aware depth.
 - `2026-11-20T06:03:27Z`: Split: the prepare/precompile step is now tracked in #597. This issue now covers only MSAA.
+- `2026-11-20T06:30:49Z`: SceneView.sceneAntialiasing(sampleCount:) and SceneGraphElement(sampleCount:). The scene pass draws multisampled and resolves color, and also depth (max filter, reversed depth) when later passes read it, so the shadow mask, fog and AO see resolved depth. Transparent draws are in the scene pass, before the resolve. Follow-ups: alpha-to-coverage and soft particles under MSAA, filed separately.
 
 ---
 
@@ -13609,145 +13611,6 @@ Found while fixing #299.
 
 ---
 
-## Milestone M1: M001-Correctness
-
-\+++
-status: closed
-created: 2026-11-16T20:12:42Z
-updated: 2026-11-17T18:32:37Z
-closed: 2026-11-17T18:32:37Z
-\+++
-
-Bugs and wrong behavior.
-
----
-
-## Milestone M2: M002-Performance
-
-\+++
-status: closed
-created: 2026-11-16T20:12:42Z
-updated: 2026-11-20T05:53:00Z
-closed: 2026-11-20T05:53:00Z
-\+++
-
-Speed and memory.
-
----
-
-## Milestone M3: M003-Features
-
-\+++
-status: closed
-created: 2026-11-16T20:12:42Z
-updated: 2026-11-17T18:07:09Z
-closed: 2026-11-17T18:07:09Z
-\+++
-
-New capabilities and missing API.
-
----
-
-## Milestone M4: M999-Nice-to-have
-
-\+++
-status: open
-created: 2026-11-16T20:12:42Z
-\+++
-
-Out of sequence. Large or speculative work.
-
----
-
-## Milestone M5: M004-VisionOS
-
-\+++
-status: open
-created: 2026-11-17T17:28:41Z
-\+++
-
----
-
-## Milestone M6: M005-Big-World
-
-\+++
-status: open
-created: 2026-11-17T18:01:46Z
-\+++
-
-Very large worlds (solar-system scale): enough precision in transforms, time, depth, rendering and physics to make a KSP-style game doable.
-
----
-
-## Milestone M7: M003-Rendering
-
-\+++
-status: open
-created: 2026-11-17T18:07:08Z
-updated: 2026-11-20T06:01:40Z
-\+++
-
-Renderer gaps and fixes: lights, shadows, MSAA, exposure, depth, debug overlays and renderer structure.
-
----
-
-## Milestone M8: M006-Physics-and-Scene
-
-\+++
-status: open
-created: 2026-11-17T18:07:08Z
-\+++
-
-Physics, scene graph, assets and UI features.
-
----
-
-## Milestone M9: M007-PBR-Merged-Geometry
-
-\+++
-status: closed
-created: 2026-11-19T03:27:31Z
-updated: 2026-11-20T00:34:57Z
-closed: 2026-11-20T00:34:57Z
-\+++
-
-Decide whether PBR keeps the merged-geometry path (#545), and fix the issues it causes or blocks.
-
----
-
-## Milestone M10: M007-Performance
-
-\+++
-status: open
-created: 2026-11-20T06:00:25Z
-\+++
-
-Frame time, CPU cost and scaling to large scenes, with benchmarks to measure them.
-
----
-
-## Milestone M11: M008-Reliability
-
-\+++
-status: open
-created: 2026-11-20T06:00:25Z
-\+++
-
-Crashes, races and flaky tests: malformed input, threading and CI stability.
-
----
-
-## Milestone M12: M009-Rendering-2
-
-\+++
-status: open
-created: 2026-11-20T06:01:40Z
-\+++
-
-Advanced rendering: post effects, screen-space techniques, probes, render targets, extension points and GPU-driven draws.
-
----
-
 ## 599: Info panel lacks detail and has an unpolished, non-panel layout
 
 +++
@@ -13759,5 +13622,144 @@ created: 2026-11-20T06:27:47Z
 
 Make the info panel contain more info.
 Make it prettier and more panel like
+
+---
+
+## Milestone M1: M001-Correctness
+
++++
+status: closed
+created: 2026-11-16T20:12:42Z
+updated: 2026-11-17T18:32:37Z
+closed: 2026-11-17T18:32:37Z
++++
+
+Bugs and wrong behavior.
+
+---
+
+## Milestone M2: M002-Performance
+
++++
+status: closed
+created: 2026-11-16T20:12:42Z
+updated: 2026-11-20T05:53:00Z
+closed: 2026-11-20T05:53:00Z
++++
+
+Speed and memory.
+
+---
+
+## Milestone M3: M003-Features
+
++++
+status: closed
+created: 2026-11-16T20:12:42Z
+updated: 2026-11-17T18:07:09Z
+closed: 2026-11-17T18:07:09Z
++++
+
+New capabilities and missing API.
+
+---
+
+## Milestone M4: M999-Nice-to-have
+
++++
+status: open
+created: 2026-11-16T20:12:42Z
++++
+
+Out of sequence. Large or speculative work.
+
+---
+
+## Milestone M5: M004-VisionOS
+
++++
+status: open
+created: 2026-11-17T17:28:41Z
++++
+
+---
+
+## Milestone M6: M005-Big-World
+
++++
+status: open
+created: 2026-11-17T18:01:46Z
++++
+
+Very large worlds (solar-system scale): enough precision in transforms, time, depth, rendering and physics to make a KSP-style game doable.
+
+---
+
+## Milestone M7: M003-Rendering
+
++++
+status: open
+created: 2026-11-17T18:07:08Z
+updated: 2026-11-20T06:01:40Z
++++
+
+Renderer gaps and fixes: lights, shadows, MSAA, exposure, depth, debug overlays and renderer structure.
+
+---
+
+## Milestone M8: M006-Physics-and-Scene
+
++++
+status: open
+created: 2026-11-17T18:07:08Z
++++
+
+Physics, scene graph, assets and UI features.
+
+---
+
+## Milestone M9: M007-PBR-Merged-Geometry
+
++++
+status: closed
+created: 2026-11-19T03:27:31Z
+updated: 2026-11-20T00:34:57Z
+closed: 2026-11-20T00:34:57Z
++++
+
+Decide whether PBR keeps the merged-geometry path (#545), and fix the issues it causes or blocks.
+
+---
+
+## Milestone M10: M007-Performance
+
++++
+status: open
+created: 2026-11-20T06:00:25Z
++++
+
+Frame time, CPU cost and scaling to large scenes, with benchmarks to measure them.
+
+---
+
+## Milestone M11: M008-Reliability
+
++++
+status: open
+created: 2026-11-20T06:00:25Z
++++
+
+Crashes, races and flaky tests: malformed input, threading and CI stability.
+
+---
+
+## Milestone M12: M009-Rendering-2
+
++++
+status: open
+created: 2026-11-20T06:01:40Z
++++
+
+Advanced rendering: post effects, screen-space techniques, probes, render targets, extension points and GPU-driven draws.
 
 ---

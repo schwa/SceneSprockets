@@ -34,6 +34,7 @@ struct SceneViewEquatableTests {
         #expect(view(id: nil) != view(id: nil))
         #expect(view(id: "a") != view(id: "b"))
         #expect(view().sceneStatistics() != view())
+        #expect(view().sceneAntialiasing(sampleCount: 4) != view())
         #expect(view().sceneCameraControl() != view())
         #expect(view().sceneDefaultLighting() != view())
         #expect(view(shadows: Shadows()) != view(shadows: Shadows()))

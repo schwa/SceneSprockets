@@ -86,6 +86,7 @@ public struct SceneView: View {
     private var overlay: (@MainActor (Viewport) throws -> AnyElement?)?
     private var overlayID: AnyHashable?
     private var debugMode: DebugMode?
+    private var sampleCount = 1
     private var materialChannel: MaterialChannel?
     // Whether the scene had fog or post-processing when this view was made. The body reads them to configure the
     // drawable, so == must notice when they change (#235).
@@ -160,7 +161,8 @@ public struct SceneView: View {
                     storesDepth: inputs.storesDepth,
                     decorations: inputs.decorations.map { element in { _ in element } },
                     debugMode: inputs.debugMode,
-                    materialChannel: inputs.materialChannel
+                    materialChannel: inputs.materialChannel,
+                    sampleCount: inputs.sampleCount
                 )
                 if let overlay = inputs.overlay {
                     overlay
@@ -283,6 +285,7 @@ public struct SceneView: View {
             decorations: decorationElement,
             debugMode: debugMode,
             materialChannel: materialChannel,
+            sampleCount: sampleCount,
             overlay: overlayElement,
             manipulatorOverlay: manipulatorOverlay(drawableSize: drawableSize)
         ))
@@ -490,6 +493,7 @@ final class SceneViewFrames: @unchecked Sendable {
         var decorations: AnyElement?
         var debugMode: DebugMode?
         var materialChannel: MaterialChannel?
+        var sampleCount: Int
         var overlay: AnyElement?
         var manipulatorOverlay: AnyElement?
     }
@@ -698,6 +702,11 @@ public extension SceneView {
         }
     }
 
+    /// Multisample antialiasing, like SCNView.antialiasingMode: 1 (off), 2, 4 or 8 samples per pixel (#95).
+    func sceneAntialiasing(sampleCount: Int) -> Self {
+        with { $0.sampleCount = sampleCount }
+    }
+
     /// Draws every mesh in a debug view instead of its material (#132).
     func sceneDebugMode(_ mode: DebugMode?) -> Self {
         with { $0.debugMode = mode }
@@ -769,6 +778,7 @@ extension SceneView: @MainActor Equatable {
             && lhs.cameraTarget == rhs.cameraTarget
             && lhs.debugMode == rhs.debugMode
             && lhs.materialChannel == rhs.materialChannel
+            && lhs.sampleCount == rhs.sampleCount
     }
 
     // HitTestOptions holds a node, so it is not Equatable; the node compares by identity.

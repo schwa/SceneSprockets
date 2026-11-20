@@ -62,9 +62,9 @@ private func makeScene(boxCastsShadow: Bool = true, skinned: Bool = false, light
 }
 
 @MainActor
-private func brightness(_ sceneGraph: SceneGraph, at pixel: SIMD2<Int>, shadows: Shadows?, renderers: [any MaterialRenderer] = [BlinnPhongMaterialRenderer()]) throws -> Int {
+private func brightness(_ sceneGraph: SceneGraph, at pixel: SIMD2<Int>, shadows: Shadows?, renderers: [any MaterialRenderer] = [BlinnPhongMaterialRenderer()], sampleCount: Int = 1) throws -> Int {
     let renderer = try OffscreenRenderer(size: size, colorUsage: Shadows.requiredColorUsage, depthUsage: Shadows.requiredDepthUsage)
-    let element = SceneGraphElement(sceneGraph: sceneGraph, aspectRatio: 1, renderers: renderers, shadows: shadows)
+    let element = SceneGraphElement(sceneGraph: sceneGraph, aspectRatio: 1, renderers: renderers, shadows: shadows, sampleCount: sampleCount)
     let texture = try renderer.render(element).texture
     var value = SIMD4<UInt8>.zero
     texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(pixel.x, pixel.y, 1, 1), mipmapLevel: 0)
@@ -77,6 +77,26 @@ func boxCastsShadowOnFloor() throws {
     let (sceneGraph, pixel) = try makeScene()
     let lit = try brightness(sceneGraph, at: pixel, shadows: nil)
     let shadowed = try brightness(sceneGraph, at: pixel, shadows: Shadows(intensity: 0.8))
+    #expect(lit > 30)
+    #expect(Double(shadowed) < Double(lit) * 0.6)
+}
+
+// #95: with MSAA the scene pass resolves depth, so in-shader shadows and the screen-space mask (which reads depth)
+// still work.
+@Test(.enabled(if: deviceSupportsMetal4), arguments: [false, true])
+@MainActor
+func boxCastsShadowWithMultisampling(usesMask: Bool) throws {
+    let (sceneGraph, pixel) = try makeScene()
+    let renderers: [any MaterialRenderer] = [BlinnPhongMaterialRenderer(), ShaderMaterialRenderer()]
+    if usesMask {
+        // A floor that does not sample shadows itself, so the screen-space mask pass must darken it.
+        let floor = try #require(sceneGraph.nodesWithWorldTransforms().first { $0.node.label == "Floor" }?.node)
+        if case let .mesh(mesh, _, castsShadow, receivesShadow) = floor.content {
+            floor.content = .mesh(mesh, materials: [ShaderMaterial.rim(color: [0.5, 0.5, 0.5])], castsShadow: castsShadow, receivesShadow: receivesShadow)
+        }
+    }
+    let lit = try brightness(sceneGraph, at: pixel, shadows: nil, renderers: renderers, sampleCount: 4)
+    let shadowed = try brightness(sceneGraph, at: pixel, shadows: Shadows(intensity: 0.8), renderers: renderers, sampleCount: 4)
     #expect(lit > 30)
     #expect(Double(shadowed) < Double(lit) * 0.6)
 }

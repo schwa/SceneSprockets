@@ -112,6 +112,8 @@ public struct SceneGraphElement: Element {
     var materialChannel: MaterialChannel?
     // Draws these views at once instead of the camera's (#380).
     var stereoViews: StereoViews?
+    // Multisample antialiasing of the scene pass (#95).
+    var sampleCount = 1
     #if os(visionOS)
     // Set by SceneImmersiveContent: the scene pass is the compositor's pass (#381).
     var immersiveContext: ImmersiveContext?
@@ -141,17 +143,21 @@ public struct SceneGraphElement: Element {
     ///   - materialChannel: A material value to show instead of lighting.
     ///   - stereoViews: Views to draw at once, such as a visionOS immersive space's eyes. They replace the camera's view
     ///     and projection; the camera still supplies the category mask.
+    ///   - sampleCount: Multisample antialiasing samples per pixel (1, 2, 4 or 8). Above 1, the scene pass draws into
+    ///     multisampled targets and resolves color and depth into the view's, so post passes read resolved depth.
+    ///     Leave RenderView's own sample count at 1.
     ///
     /// Makes the scene's ``SceneGraph/presentation()`` snapshot, so call it on the thread that edits the graph.
-    public init(sceneGraph: SceneGraph, camera: SceneGraph.Node? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any MaterialRenderer], defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, shadows: Shadows? = nil, storesDepth: Bool = false, decorations: ((RenderContext) throws -> AnyElement?)? = nil, debugMode: DebugMode? = nil, materialChannel: MaterialChannel? = nil, stereoViews: StereoViews? = nil) {
-        self.init(presentation: sceneGraph.presentation(), cameraID: camera?.id, cameraMatrix: cameraMatrix, aspectRatio: aspectRatio, renderers: renderers, defaultCamera: defaultCamera, cameraOverride: cameraOverride, defaultLight: defaultLight, shadows: shadows, storesDepth: storesDepth, decorations: decorations, debugMode: debugMode, materialChannel: materialChannel, stereoViews: stereoViews)
+    public init(sceneGraph: SceneGraph, camera: SceneGraph.Node? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any MaterialRenderer], defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, shadows: Shadows? = nil, storesDepth: Bool = false, decorations: ((RenderContext) throws -> AnyElement?)? = nil, debugMode: DebugMode? = nil, materialChannel: MaterialChannel? = nil, stereoViews: StereoViews? = nil, sampleCount: Int = 1) {
+        self.init(presentation: sceneGraph.presentation(), cameraID: camera?.id, cameraMatrix: cameraMatrix, aspectRatio: aspectRatio, renderers: renderers, defaultCamera: defaultCamera, cameraOverride: cameraOverride, defaultLight: defaultLight, shadows: shadows, storesDepth: storesDepth, decorations: decorations, debugMode: debugMode, materialChannel: materialChannel, stereoViews: stereoViews, sampleCount: sampleCount)
     }
 
     /// Creates an element that draws a snapshot of a scene graph, from ``SceneGraph/presentation()``. The snapshot can
     /// be drawn on any thread. `cameraID` picks the camera node (the first camera if `nil`); the other parameters are
-    /// as in ``init(sceneGraph:camera:cameraMatrix:aspectRatio:renderers:defaultCamera:cameraOverride:defaultLight:shadows:storesDepth:decorations:debugMode:materialChannel:stereoViews:)``.
-    public init(presentation: SceneGraph.Presentation, cameraID: SceneGraph.Node.ID? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any MaterialRenderer], defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, shadows: Shadows? = nil, storesDepth: Bool = false, decorations: ((RenderContext) throws -> AnyElement?)? = nil, debugMode: DebugMode? = nil, materialChannel: MaterialChannel? = nil, stereoViews: StereoViews? = nil) {
+    /// as in ``init(sceneGraph:camera:cameraMatrix:aspectRatio:renderers:defaultCamera:cameraOverride:defaultLight:shadows:storesDepth:decorations:debugMode:materialChannel:stereoViews:sampleCount:)``.
+    public init(presentation: SceneGraph.Presentation, cameraID: SceneGraph.Node.ID? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any MaterialRenderer], defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, shadows: Shadows? = nil, storesDepth: Bool = false, decorations: ((RenderContext) throws -> AnyElement?)? = nil, debugMode: DebugMode? = nil, materialChannel: MaterialChannel? = nil, stereoViews: StereoViews? = nil, sampleCount: Int = 1) {
         self.presentation = presentation
+        self.sampleCount = max(sampleCount, 1)
         self.cameraID = cameraID
         self.stereoViews = stereoViews
         self.debugMode = debugMode
@@ -228,7 +234,7 @@ public struct SceneGraphElement: Element {
                 hasFog: presentation.fog != nil,
                 adjustsColor: postProcessing?.adjustsColor ?? false,
                 hasSoftParticles: visibleParticleFrames.contains(where: \.isSoft),
-                resolvesMultisample: renderPassDescriptor?.colorAttachments[0].resolveTexture != nil,
+                resolvesMultisample: renderPassDescriptor?.colorAttachments[0].resolveTexture != nil || sampleCount > 1,
                 storesDepthRequested: storesDepth,
                 depthIsMemoryless: renderPassDescriptor?.depthAttachment.texture?.storageMode == .memoryless
             ))
@@ -472,6 +478,9 @@ public struct SceneGraphElement: Element {
             .eraseToAnyElement()
         }
         #endif
+        // The view's depth, where a multisampled pass resolves its depth for the passes that read it.
+        let resolvedDepth = renderPassDescriptor?.depthAttachment.texture
+        let sampleCount = self.sampleCount
         // Reversed depth (near 1, far 0) for every renderer, because MetalSprocketsPBR requires it.
         return try RenderPass {
             if storesDepth {
@@ -491,13 +500,21 @@ public struct SceneGraphElement: Element {
             descriptor.depthAttachment.clearDepth = 0
             // The shadow mask pass reads depth afterwards. Memoryless depth (the default) cannot be stored.
             if storesDepth {
-                descriptor.depthAttachment.storeAction = .store
+                if sampleCount > 1, let resolvedDepth {
+                    // Reversed depth: the nearest sample is the largest.
+                    descriptor.depthAttachment.resolveTexture = resolvedDepth
+                    descriptor.depthAttachment.depthResolveFilter = .max
+                    descriptor.depthAttachment.storeAction = .multisampleResolve
+                } else {
+                    descriptor.depthAttachment.storeAction = .store
+                }
             }
             if let clearColor {
                 descriptor.colorAttachments[0].clearColor = clearColor
                 descriptor.colorAttachments[0].loadAction = .clear
             }
         }
+        .msaa(sampleCount: sampleCount)
         .eraseToAnyElement()
     }
 }
