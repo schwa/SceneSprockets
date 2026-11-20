@@ -13069,13 +13069,14 @@ RFC 0001 option 3.
 ## 577: Per-batch PBR draws are not grouped by material
 
 +++
-status: new
+status: closed
 priority: high
 kind: enhancement
 labels: area:renderer, area:performance, effort:s
 milestone: M007-PBR-Merged-Geometry
 created: 2026-11-19T05:54:15Z
-updated: 2026-11-19T14:35:53Z
+updated: 2026-11-20T00:29:59Z
+closed: 2026-11-20T00:29:59Z
 +++
 
 Opaque per-batch draws are grouped by vertex variant and pipeline state (PBRDrawPlan.OpaqueGroup), but not ordered by material within a group, so state and bindings change between neighbouring draws more than needed.
@@ -13085,21 +13086,26 @@ RFC 0001 option 4.
 - `2026-11-19T14:35:48Z`: Not tried. #576 showed binds are a small part of per-batch time (2-6% on large scenes); ordering draws by material saves only binds and state changes, so it is not expected to help until per-element cost drops (MetalSprockets#583).
 - `2026-11-19T14:51:01Z`: Could be solved generally by MetalSprockets#585 (a List-like container for many similar draws that owns ordering by state).
 - `2026-11-20T00:24:09Z`: With DrawList (#582) a group's batches are one element; ordering rows by material would only save binds the GPU does per draw, which are now per row, not per element.
+- `2026-11-20T00:29:59Z`: Closing: obsolete. A pipeline group's batches are now one DrawList element (#582); there are no per-batch binds left to save by ordering.
 
 ---
 
 ## 578: Per-batch PBR drawing uses more GPU time than merged drawing
 
 +++
-status: new
+status: closed
 priority: low
 kind: task
 labels: area:performance, effort:m, investigate
 milestone: M007-PBR-Merged-Geometry
 created: 2026-11-19T05:54:15Z
+updated: 2026-11-20T00:29:59Z
+closed: 2026-11-20T00:29:59Z
 +++
 
 bench --no-merging uses more GPU time than bench on several scenes with about the same number of Metal draws (Release, M5 Max, MetalSprockets 0.3.6 with the material table): NodePerformanceTest 6.0 vs 1.5 ms, AnimationPointerUVs 1.2 vs 0.3 ms, CarConcept 1.35 vs 0.57 ms, BrainStem 0.31 vs 0.12 ms. Cause not known; not profiled on the GPU.
+
+- `2026-11-20T00:29:59Z`: Closing: obsolete. There is no separate per-batch path any more (#582).
 
 ---
 
@@ -13143,20 +13149,22 @@ MetalSprockets/README.md:205 has the same problem (`xcb test`, `xcb test -e MTL_
 ## 581: RFC 0001: PBR performance without forced merging
 
 +++
-status: new
+status: closed
 priority: medium
 kind: task
 labels: area:renderer, area:performance, tracking
 milestone: M007-PBR-Merged-Geometry
-depends: 545, 574, 576, 577, 578, 571, 572, 573, 575, 579, 582
+depends: 545, 574, 576, 577, 578, 571, 572, 573, 575, 579, 582, 582, 583
 created: 2026-11-19T14:17:08Z
-updated: 2026-11-19T14:51:02Z
+updated: 2026-11-20T00:30:12Z
+closed: 2026-11-20T00:30:12Z
 +++
 
 Umbrella for RFCs/0001-pbr-performance.md: per-batch PBR drawing is too slow for merged sets to be optional. The work is in its dependencies.
 
 - `2026-11-19T14:20:17Z`: MetalSprockets side: MetalSprockets#583.
 - `2026-11-19T14:51:02Z`: MetalSprockets#585 proposes a general container for many similar draws, which would replace the merged path's hand-rolled batching.
+- `2026-11-20T00:30:12Z`: Done: RFC 0001 is implemented (#582). Remaining follow-up: #583.
 
 ---
 
@@ -13178,6 +13186,23 @@ PBRRenderer issues the draws of merged sets from one Draw closure over shared bu
 MetalSprockets#585 proposes a container for many similar draws. If it is implemented, PBR could draw opaque and blended batches through it and drop the hand-rolled merged path.
 
 - `2026-11-20T00:24:09Z`: Done in the commit above: PBRMergedGeometry and PBRDrawPlan are gone; every batch draws through DrawList except morphed batches and lines fill mode (own elements; DrawList has no per-row fill mode and morphs need per-draw inputs). Merged vs list CPU ms on MetalSprockets main: NodePerformanceTest 10.1 -> 10.7, CarConcept 1.67 -> 2.4, Sponza 0.69 -> 0.83. Profiles show about equal CPU work for CarConcept; the gap is wall time (waiting), not investigated. Still pinned to MetalSprockets main until DrawList is released.
+
+---
+
+## 583: CarConcept frame time is 0.7 ms longer with DrawList than with merged sets
+
++++
+status: new
+priority: low
+kind: bug
+labels: area:performance, effort:m, investigate, gltf
+milestone: M007-PBR-Merged-Geometry
+created: 2026-11-20T00:29:59Z
++++
+
+After #582 (every batch through DrawList), ms-gltf-render bench CarConcept reports ~2.4 ms CPU per frame against ~1.67 ms for the merged path (56c82e9b), both on MetalSprockets main, Release, M5 Max. Sponza: 0.83 vs 0.69 ms. Reproduced over several runs.
+
+The bench's CPU figure is frame wall time minus GPU time. Time Profiler runs of 3000 frames of each show about the same CPU samples in measureFrames (4839 vs 4936), so the extra time is not CPU work; it is waiting somewhere in submission or completion. Cause not known.
 
 ---
 
