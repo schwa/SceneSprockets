@@ -23,6 +23,8 @@ let package = Package(
         .library(name: "SceneSprocketsShaders", targets: ["SceneSprocketsShaders"]),
         // Lights, shadows, environment and tone mapping shared by every renderer (#547).
         .library(name: "MetalSprocketsLighting", targets: ["MetalSprocketsLighting"]),
+        // Animation blending, playback and state machines shared by glTF and the scene graph (#589).
+        .library(name: "MetalSprocketsAnimation", targets: ["MetalSprocketsAnimation"]),
         .library(name: "MetalSprocketsLightingShaders", targets: ["MetalSprocketsLightingShaders"]),
         // glTF 2.0 PBR renderer.
         .library(name: "MetalSprocketsPBR", targets: ["MetalSprocketsPBR"]),
@@ -72,6 +74,10 @@ let package = Package(
             dependencies: ["MetalSprocketsLighting"]
         ),
 
+        // MARK: MetalSprocketsAnimation
+
+        .target(name: "MetalSprocketsAnimation"),
+
         // MARK: MetalSprocketsPBR
 
         .target(
@@ -117,6 +123,7 @@ let package = Package(
         .target(
             name: "MetalSprocketsGLTF",
             dependencies: [
+                "MetalSprocketsAnimation",
                 "MetalSprocketsPBR",
                 "MetalSprocketsPBRShaders",
                 .product(name: "SwiftGLTF", package: "SwiftGLTF"),
@@ -206,6 +213,7 @@ let package = Package(
                 "SceneSprocketsAudio",
                 "SceneSprocketsBVH",
                 "SceneSprocketsShaders",
+                "MetalSprocketsAnimation",
                 "MetalSprocketsLighting",
                 .product(name: "MetalSprocketsParticles", package: "MetalSprocketsParticles"),
                 // Slug text for SceneText (#119).

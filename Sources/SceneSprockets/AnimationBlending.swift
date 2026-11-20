@@ -1,15 +1,13 @@
+import MetalSprocketsAnimation
 import simd
+
+// The blending, playback and state logic is shared with MetalSprocketsGLTF through MetalSprocketsAnimation (#589).
 
 extension SceneGraph {
     /// The contribution of one clip to a mix.
     public struct AnimationLayer: Sendable, Equatable {
         /// How a layer combines with the other layers.
-        public enum Mode: Sendable, Equatable {
-            /// The layer blends with the other override layers by normalized weight.
-            case override
-            /// The layer adds the clip's offset from the rest pose, scaled by the weight, on top of the override layers.
-            case additive
-        }
+        public typealias Mode = AnimationBlendMode
 
         /// The index of the clip in ``AnimationMixer/clips``.
         public var clip: Int
@@ -77,7 +75,7 @@ extension SceneGraph {
                 values[key] = value
             }
             for layer in active where layer.mode == .additive {
-                addDeltas(of: layer, to: &values)
+                AnimationBlending.addDeltas(sampled(layer), weight: layer.weight, to: &values, rest: { self.rest[$0] }, kind: Self.kind)
             }
             if let rootMotionNode {
                 let key = Key(node: ObjectIdentifier(rootMotionNode), path: .translation)
@@ -91,7 +89,7 @@ extension SceneGraph {
                 guard let node = nodes[key.node] else {
                     continue
                 }
-                Self.set(value, on: node, path: key.path)
+                key.path.set(value, on: node)
             }
         }
 
@@ -113,77 +111,15 @@ extension SceneGraph {
         }
 
         private func blendedValues(_ layers: [AnimationLayer]) -> [Key: [Float]] {
-            let totalWeight = layers.reduce(0) { $0 + $1.weight }
-            guard totalWeight > 0 else {
-                return [:]
-            }
-            var contributions: [Key: [(weight: Float, value: [Float])]] = [:]
-            for layer in layers {
-                for (key, value) in sampled(layer) {
-                    contributions[key, default: []].append((layer.weight / totalWeight, value))
-                }
-            }
-            var result: [Key: [Float]] = [:]
-            for (key, list) in contributions {
-                var list = list
-                let covered = list.reduce(0) { $0 + $1.weight }
-                if covered < 1 - 1e-6, let restValue = rest[key] {
-                    list.append((1 - covered, restValue))
-                }
-                result[key] = Self.blend(list, isRotation: key.path == .rotation)
-            }
-            return result
+            AnimationBlending.blendedValues(layers.map { ($0.weight, sampled($0)) }, rest: { rest[$0] }, kind: Self.kind)
         }
 
-        private func addDeltas(of layer: AnimationLayer, to values: inout [Key: [Float]]) {
-            let weight = layer.weight
-            for (key, sample) in sampled(layer) {
-                guard let restValue = rest[key], let base = values[key], sample.count == restValue.count, base.count == restValue.count else {
-                    continue
-                }
-                switch key.path {
-                case .rotation where restValue.count == 4:
-                    let restRotation = simd_quatf(vector: SIMD4(restValue[0], restValue[1], restValue[2], restValue[3]))
-                    let sampledRotation = simd_quatf(vector: SIMD4(sample[0], sample[1], sample[2], sample[3]))
-                    let baseRotation = simd_quatf(vector: SIMD4(base[0], base[1], base[2], base[3]))
-                    let delta = simd_slerp(simd_quatf(ix: 0, iy: 0, iz: 0, r: 1), restRotation.inverse * sampledRotation, weight)
-                    let result = simd_normalize(baseRotation * delta).vector
-                    values[key] = [result.x, result.y, result.z, result.w]
-                case .scale:
-                    values[key] = (0..<3).map { index in
-                        restValue[index] == 0 ? base[index] : base[index] * pow(sample[index] / restValue[index], weight)
-                    }
-                default:
-                    values[key] = (0..<restValue.count).map { base[$0] + (sample[$0] - restValue[$0]) * weight }
-                }
+        private static func kind(_ key: Key) -> AnimationValueKind {
+            switch key.path {
+            case .rotation: .rotation
+            case .scale: .scale
+            default: .linear
             }
-        }
-
-        // Weighted average; rotations use normalized linear interpolation on the first value's side.
-        private static func blend(_ list: [(weight: Float, value: [Float])], isRotation: Bool) -> [Float] {
-            guard list.count > 1 else {
-                return list.first?.value ?? []
-            }
-            let count = list.map(\.value.count).min() ?? 0
-            let reference = list[0].value
-            var result = [Float](repeating: 0, count: count)
-            var totalWeight: Float = 0
-            for (weight, value) in list {
-                var sign: Float = 1
-                if isRotation {
-                    let dot = zip(reference.prefix(count), value.prefix(count)).reduce(0) { $0 + $1.0 * $1.1 }
-                    sign = dot < 0 ? -1 : 1
-                }
-                for index in 0..<count {
-                    result[index] += value[index] * weight * sign
-                }
-                totalWeight += weight
-            }
-            if isRotation {
-                let length = sqrt(result.reduce(0) { $0 + $1 * $1 })
-                return length > 0 ? result.map { $0 / length } : reference
-            }
-            return totalWeight > 0 ? result.map { $0 / totalWeight } : reference
         }
 
         private static func value(of node: Node, path: AnimationClip.Path) -> [Float] {
@@ -201,10 +137,6 @@ extension SceneGraph {
                 return property.get(node)
             }
         }
-
-        private static func set(_ value: [Float], on node: Node, path: AnimationClip.Path) {
-            path.set(value, on: node)
-        }
     }
 
     /// A controller that plays clips by index, with cross-fades, blends and additive clips.
@@ -214,35 +146,24 @@ extension SceneGraph {
     /// layers with an ``AnimationMixer``.
     public struct AnimationController: Sendable {
         /// A clip that the controller plays, with its time and weight.
-        public struct Track: Sendable, Equatable {
-            /// The index of the clip.
-            public var clip: Int
-            /// The time in the clip, in seconds.
-            public var time: Float = 0
-            /// The playback speed. 1 is normal speed.
-            public var speed: Float = 1
-            /// Whether the clip repeats.
-            public var loops = true
-            /// The current weight of the track. It changes during a cross-fade.
-            public internal(set) var weight: Float
-            var targetWeight: Float
-            var fadeRate: Float = 0
-        }
+        public typealias Track = AnimationPlayback.Track
+
+        var playback: AnimationPlayback
 
         /// The duration of each clip, in seconds, by clip index.
-        public let durations: [Float]
+        public var durations: [Float] { playback.durations }
         /// The override tracks that play now, including tracks that fade out.
-        public private(set) var tracks: [Track] = []
+        public var tracks: [Track] { playback.tracks }
         /// The shared fraction of the cycle of a phase-synced blend, or `nil` when no synced blend plays.
-        public private(set) var syncedPhase: Float?
+        public var syncedPhase: Float? { playback.syncedPhase }
         /// The additive tracks that play on top of the override tracks.
-        public private(set) var additiveTracks: [Track] = []
+        public var additiveTracks: [Track] { playback.additiveTracks }
         /// How far the root node moved (x, z) during the last advance(by:mixer:rootMotionNode:).
         public private(set) var rootMotion: SIMD3<Float> = .zero
 
         /// Creates a controller for clips with these durations, in seconds.
         public init(durations: [Float]) {
-            self.durations = durations
+            playback = AnimationPlayback(durations: durations)
         }
 
         /// Creates a controller for these clips.
@@ -252,165 +173,42 @@ extension SceneGraph {
 
         /// Fades `clip` in and every other track out over `fadeDuration` (0 cuts).
         public mutating func play(_ clip: Int, fadeDuration: Float = 0.25, speed: Float = 1, loops: Bool = true, restarts: Bool = false) {
-            guard durations.indices.contains(clip) else {
-                return
-            }
-            syncedPhase = nil
-            let rate: Float = fadeDuration > 0 ? 1 / fadeDuration : .infinity
-            for index in tracks.indices {
-                tracks[index].targetWeight = 0
-                tracks[index].fadeRate = rate
-            }
-            if let index = tracks.firstIndex(where: { $0.clip == clip }) {
-                tracks[index].targetWeight = 1
-                tracks[index].speed = speed
-                tracks[index].loops = loops
-                if restarts {
-                    tracks[index].time = 0
-                }
-            } else {
-                tracks.append(Track(clip: clip, speed: speed, loops: loops, weight: 0, targetWeight: 1, fadeRate: rate))
-            }
-            if fadeDuration <= 0 {
-                for index in tracks.indices {
-                    tracks[index].weight = tracks[index].targetWeight
-                }
-                tracks.removeAll { $0.weight <= 0 }
-            }
+            playback.play(clip, fadeDuration: fadeDuration, speed: speed, loops: loops, restarts: restarts)
         }
 
         /// Plays `clips` together, weighted by `parameter` along them. With `syncsPhase`, all clips stay at the same
         /// fraction of their cycle, and the cycle lasts the weighted mix of their durations.
         public mutating func blend(_ clips: [Int], parameter: Float, speed: Float = 1, syncsPhase: Bool = true) {
-            let clips = clips.filter { durations.indices.contains($0) }
-            let weights = Self.blendWeights(parameter: parameter, count: clips.count)
-            var blended: [Track] = []
-            for (clip, weight) in zip(clips, weights) {
-                var track = tracks.first { $0.clip == clip } ?? Track(clip: clip, weight: weight, targetWeight: weight)
-                track.weight = weight
-                track.targetWeight = weight
-                track.fadeRate = 0
-                track.speed = speed
-                track.loops = true
-                blended.append(track)
-            }
-            tracks = blended
-            if syncsPhase {
-                let phase = syncedPhase ?? blended.first.map { durations[$0.clip] > 0 ? $0.time / durations[$0.clip] : 0 } ?? 0
-                syncedPhase = phase
-                applyPhase(phase)
-            } else {
-                syncedPhase = nil
-            }
+            playback.blend(clips, parameter: parameter, speed: speed, syncsPhase: syncsPhase)
         }
 
         /// Weights for `count` clips evenly spaced along `parameter` (clamped to 0...1); they sum to 1.
         public static func blendWeights(parameter: Float, count: Int) -> [Float] {
-            guard count > 1 else {
-                return count == 1 ? [1] : []
-            }
-            let position = min(max(parameter, 0), 1) * Float(count - 1)
-            let lower = min(Int(position), count - 2)
-            let fraction = position - Float(lower)
-            var weights = [Float](repeating: 0, count: count)
-            weights[lower] = 1 - fraction
-            weights[lower + 1] = fraction
-            return weights
+            AnimationPlayback.blendWeights(parameter: parameter, count: count)
         }
 
         /// Adds `clip` on top of the playing clips at `weight` (0 removes it).
         public mutating func setAdditive(_ clip: Int, weight: Float, speed: Float = 1) {
-            guard durations.indices.contains(clip) else {
-                return
-            }
-            if weight <= 0 {
-                additiveTracks.removeAll { $0.clip == clip }
-            } else if let index = additiveTracks.firstIndex(where: { $0.clip == clip }) {
-                additiveTracks[index].weight = weight
-                additiveTracks[index].speed = speed
-            } else {
-                additiveTracks.append(Track(clip: clip, speed: speed, weight: weight, targetWeight: weight))
-            }
+            playback.setAdditive(clip, weight: weight, speed: speed)
         }
 
         /// Advances like advance(by:), and measures how far the clips moved `rootMotionNode` horizontally.
         public mutating func advance(by seconds: Float, mixer: AnimationMixer, rootMotionNode node: Node) {
-            let before = tracks
+            let before = playback.tracks
             advance(by: seconds)
-            func translation(_ clip: Int, _ time: Float) -> SIMD3<Float> {
+            rootMotion = playback.rootMotion(since: before) { clip, time in
                 mixer.rootTranslation(layers: [AnimationLayer(clip: clip, time: time)], node: node)
             }
-            var motion = SIMD3<Float>.zero
-            var totalWeight: Float = 0
-            for track in tracks {
-                guard let old = before.first(where: { $0.clip == track.clip }) else {
-                    continue
-                }
-                let duration = durations[track.clip]
-                var delta = translation(track.clip, track.time) - translation(track.clip, old.time)
-                // Moving forward but ending up earlier means the clip looped: add the end-to-start jump back.
-                if track.loops, track.speed > 0, track.time < old.time {
-                    delta += translation(track.clip, duration) - translation(track.clip, 0)
-                } else if track.loops, track.speed < 0, track.time > old.time {
-                    delta -= translation(track.clip, duration) - translation(track.clip, 0)
-                }
-                motion += delta * track.weight
-                totalWeight += track.weight
-            }
-            rootMotion = totalWeight > 0 ? motion / totalWeight : .zero
-            rootMotion.y = 0
         }
 
         /// Moves clip times and fades forward; fully faded-out tracks are dropped.
         public mutating func advance(by seconds: Float) {
-            for index in additiveTracks.indices {
-                additiveTracks[index].time = wrapped(additiveTracks[index].time + seconds * additiveTracks[index].speed, duration: durations[additiveTracks[index].clip])
-            }
-            if let phase = syncedPhase {
-                let cycle = tracks.reduce(0) { $0 + $1.weight * durations[$1.clip] }
-                let speed = tracks.first?.speed ?? 1
-                let next = cycle > 0 ? phase + seconds * speed / cycle : phase
-                syncedPhase = next - next.rounded(.down)
-                applyPhase(syncedPhase ?? 0)
-            } else {
-                for index in tracks.indices {
-                    let duration = durations[tracks[index].clip]
-                    let time = tracks[index].time + seconds * tracks[index].speed
-                    tracks[index].time = tracks[index].loops ? wrapped(time, duration: duration) : min(max(time, 0), duration)
-                }
-            }
-            for index in tracks.indices {
-                let step = tracks[index].fadeRate * seconds
-                let target = tracks[index].targetWeight
-                let weight = tracks[index].weight
-                tracks[index].weight = weight < target ? min(weight + step, target) : max(weight - step, target)
-            }
-            tracks.removeAll { $0.weight <= 0 && $0.targetWeight <= 0 }
+            playback.advance(by: seconds)
         }
 
         /// Override weights normalized to sum to 1, then the additive tracks.
         public var layers: [AnimationLayer] {
-            let additive = additiveTracks.map { AnimationLayer(clip: $0.clip, time: $0.time, weight: $0.weight, mode: .additive) }
-            let total = tracks.reduce(0) { $0 + $1.weight }
-            guard total > 0 else {
-                // Mid cut with nothing faded in yet: show the newest clip.
-                return (tracks.last.map { [AnimationLayer(clip: $0.clip, time: $0.time)] } ?? []) + additive
-            }
-            return tracks.filter { $0.weight > 0 }.map { AnimationLayer(clip: $0.clip, time: $0.time, weight: $0.weight / total) } + additive
-        }
-
-        private func wrapped(_ time: Float, duration: Float) -> Float {
-            guard duration > 0 else {
-                return time
-            }
-            let result = time.truncatingRemainder(dividingBy: duration)
-            return result < 0 ? result + duration : result
-        }
-
-        private mutating func applyPhase(_ phase: Float) {
-            for index in tracks.indices {
-                tracks[index].time = phase * durations[tracks[index].clip]
-            }
+            playback.layers.map { AnimationLayer(clip: $0.clip, time: $0.time, weight: $0.weight, mode: $0.mode) }
         }
     }
 
@@ -445,16 +243,7 @@ extension SceneGraph {
         }
 
         /// The values that a transition condition can test.
-        public struct Context: Sendable {
-            /// The parameters of the state machine, by name.
-            public var parameters: [String: Float]
-            /// How far through its clip the current state is, from 0 to 1.
-            ///
-            /// The value is more than 1 after a clip that does not loop has finished.
-            public var normalizedTime: Float
-            /// The time since the current state started, in seconds.
-            public var stateTime: Float
-        }
+        public typealias Context = AnimationStateContext
 
         /// A change from one state to another when a condition is true.
         public struct Transition {
@@ -488,10 +277,11 @@ extension SceneGraph {
         public let transitions: [Transition]
         /// Values that transition conditions can test, by name. Set them from your game logic.
         public var parameters: [String: Float] = [:]
+        private var core: AnimationStates
         /// The name of the current state.
-        public private(set) var currentState: String
+        public var currentState: String { core.currentState }
         /// The time since the current state started, in seconds.
-        public private(set) var stateTime: Float = 0
+        public var stateTime: Float { core.stateTime }
         /// The controller that plays the clips. Apply its layers with an ``AnimationMixer``.
         public var controller: AnimationController
 
@@ -505,46 +295,24 @@ extension SceneGraph {
         ///   - transitions: The transitions, in the order to test them.
         ///   - initial: The name of the first state. It must be one of `states`.
         public init(controller: AnimationController, states: [State], transitions: [Transition], initial: String) {
-            precondition(states.contains { $0.name == initial }, "The initial state must be one of the states")
             self.states = Dictionary(states.map { ($0.name, $0) }) { first, _ in first }
             self.transitions = transitions
+            var controller = controller
+            core = AnimationStates(states: self.states.mapValues { .init(clip: $0.clip, speed: $0.speed, loops: $0.loops) }, initial: initial, playback: &controller.playback)
             self.controller = controller
-            currentState = initial
-            enter(initial, fadeDuration: 0)
         }
 
         /// The values that transition conditions test now.
         public var context: Context {
-            let state = states[currentState]
-            let duration = state.map { controller.durations[$0.clip] } ?? 0
-            let time = state.flatMap { state in controller.tracks.first { $0.clip == state.clip } }?.time ?? 0
-            let normalized: Float
-            if let state, !state.loops, duration > 0 {
-                // A finished non-looping clip holds its last frame; report it past the end so "on finish" fires.
-                normalized = stateTime * abs(state.speed) >= duration ? max(time / duration, 1) + 1e-6 : time / duration
-            } else {
-                normalized = duration > 0 ? time / duration : 0
-            }
-            return Context(parameters: parameters, normalizedTime: normalized, stateTime: stateTime)
+            core.context(parameters: parameters, playback: controller.playback)
         }
 
         /// Takes at most one transition, then advances the controller.
         public mutating func advance(by seconds: Float) {
             let context = context
-            if let transition = transitions.first(where: { ($0.from == nil || $0.from == currentState) && $0.to != currentState && states[$0.to] != nil && $0.condition(context) }) {
-                enter(transition.to, fadeDuration: transition.fadeDuration)
-            }
-            stateTime += seconds
+            let transition = transitions.first { core.canTake(from: $0.from, to: $0.to) && $0.condition(context) }
+            core.advance(by: seconds, transitionTo: transition.map { ($0.to, $0.fadeDuration) }, playback: &controller.playback)
             controller.advance(by: seconds)
-        }
-
-        private mutating func enter(_ name: String, fadeDuration: Float) {
-            guard let state = states[name] else {
-                return
-            }
-            currentState = name
-            stateTime = 0
-            controller.play(state.clip, fadeDuration: fadeDuration, speed: state.speed, loops: state.loops, restarts: true)
         }
     }
 }

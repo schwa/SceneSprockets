@@ -1,3 +1,4 @@
+import MetalSprocketsAnimation
 import MetalSprocketsPBR
 import MetalSprocketsPBRShaders
 import simd
@@ -137,90 +138,37 @@ struct GLTFPoser: @unchecked Sendable {
 
     /// Override layers blended by normalized weight; a node a layer does not animate counts as its rest transform.
     private func blendedValues(_ active: [GLTFAnimationLayer]) -> [GLTFAnimationClip.Target: [Float]] {
-        let totalWeight = active.reduce(0) { $0 + $1.weight }
-        guard totalWeight > 0 else {
-            return [:]
-        }
-        var contributions: [GLTFAnimationClip.Target: [(weight: Float, value: [Float])]] = [:]
-        for layer in active {
-            // Within one clip a later channel for the same target wins.
-            var sampled: [GLTFAnimationClip.Target: [Float]] = [:]
-            for channel in animations[layer.animation].channels {
-                sampled[channel.target] = channel.keyframes.sample(at: layer.time, isRotation: channel.target.isRotation)
-            }
-            for (target, value) in sampled {
-                contributions[target, default: []].append((layer.weight / totalWeight, value))
-            }
-        }
-        var values: [GLTFAnimationClip.Target: [Float]] = [:]
-        for (target, list) in contributions {
-            var list = list
-            let covered = list.reduce(0) { $0 + $1.weight }
-            if covered < 1 - 1e-6, case let .node(node, path) = target, let rest = hierarchy.restValue(node: node, path: path) {
-                list.append((1 - covered, rest))
-            }
-            values[target] = Self.blend(list, isRotation: target.isRotation)
-        }
-        return values
+        AnimationBlending.blendedValues(active.map { ($0.weight, sampled($0)) }, rest: restValue, kind: Self.kind)
     }
 
     /// Adds `layer`'s offsets from rest, scaled by its weight, to the node values in `values`.
     private func addDeltas(of layer: GLTFAnimationLayer, to values: inout [GLTFAnimationClip.Target: [Float]]) {
-        let weight = layer.weight
-        for channel in animations[layer.animation].channels {
-            guard case let .node(node, path) = channel.target, let rest = hierarchy.restValue(node: node, path: path) else {
-                continue
-            }
-            let sample = channel.keyframes.sample(at: layer.time, isRotation: path == .rotation)
-            let base = values[channel.target] ?? rest
-            guard sample.count == rest.count, base.count == rest.count else {
-                continue
-            }
-            switch path {
-            case .rotation where rest.count == 4:
-                let restRotation = simd_quatf(vector: SIMD4(rest[0], rest[1], rest[2], rest[3]))
-                let sampled = simd_quatf(vector: SIMD4(sample[0], sample[1], sample[2], sample[3]))
-                let baseRotation = simd_quatf(vector: SIMD4(base[0], base[1], base[2], base[3]))
-                let delta = simd_slerp(simd_quatf.identity, restRotation.inverse * sampled, weight)
-                let result = simd_normalize(baseRotation * delta).vector
-                values[channel.target] = [result.x, result.y, result.z, result.w]
-
-            case .scale:
-                values[channel.target] = (0 ..< 3).map { index in
-                    rest[index] == 0 ? base[index] : base[index] * pow(sample[index] / rest[index], weight)
-                }
-
-            default:
-                values[channel.target] = (0 ..< rest.count).map { base[$0] + (sample[$0] - rest[$0]) * weight }
-            }
-        }
+        AnimationBlending.addDeltas(sampled(layer), weight: layer.weight, to: &values, rest: restValue, kind: Self.kind)
     }
 
-    private static func blend(_ list: [(weight: Float, value: [Float])], isRotation: Bool) -> [Float] {
-        guard list.count > 1 else {
-            return list.first?.value ?? []
+    private func sampled(_ layer: GLTFAnimationLayer) -> [GLTFAnimationClip.Target: [Float]] {
+        // Within one clip a later channel for the same target wins.
+        var result: [GLTFAnimationClip.Target: [Float]] = [:]
+        for channel in animations[layer.animation].channels {
+            result[channel.target] = channel.keyframes.sample(at: layer.time, isRotation: channel.target.isRotation)
         }
-        let count = list.map(\.value.count).min() ?? 0
-        let reference = list[0].value
-        var result = [Float](repeating: 0, count: count)
-        var totalWeight: Float = 0
-        for (weight, value) in list {
-            // q and -q are the same rotation: blend each on the reference's side.
-            var sign: Float = 1
-            if isRotation {
-                let dot = zip(reference.prefix(count), value.prefix(count)).reduce(0) { $0 + $1.0 * $1.1 }
-                sign = dot < 0 ? -1 : 1
-            }
-            for index in 0 ..< count {
-                result[index] += value[index] * weight * sign
-            }
-            totalWeight += weight
+        return result
+    }
+
+    // Only node values have a rest value; others blend over the layers that animate them.
+    private func restValue(_ target: GLTFAnimationClip.Target) -> [Float]? { // swiftlint:disable:this discouraged_optional_collection - nil means no rest value
+        guard case let .node(node, path) = target else {
+            return nil
         }
-        if isRotation {
-            let length = sqrt(result.reduce(0) { $0 + $1 * $1 })
-            return length > 0 ? result.map { $0 / length } : reference
+        return hierarchy.restValue(node: node, path: path)
+    }
+
+    private static func kind(_ target: GLTFAnimationClip.Target) -> AnimationValueKind {
+        switch target {
+        case .node(_, .rotation): .rotation
+        case .node(_, .scale): .scale
+        default: .linear
         }
-        return totalWeight > 0 ? result.map { $0 / totalWeight } : reference
     }
 
     private func pose(values: some Sequence<(GLTFAnimationClip.Target, [Float])>) -> PBRPose {

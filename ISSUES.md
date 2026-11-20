@@ -13305,13 +13305,14 @@ Possibly related to node access cost (#270): flattening reads several fields of 
 ## 589: Animation blending, controller and state machine are implemented twice (glTF and scene graph)
 
 +++
-status: new
+status: closed
 priority: medium
 kind: task
 labels: area:architecture, effort:l, subtask
 milestone: M002-Performance
 created: 2026-11-20T02:56:32Z
-updated: 2026-11-20T02:56:53Z
+updated: 2026-11-20T05:34:31Z
+closed: 2026-11-20T05:34:31Z
 +++
 
 MetalSprocketsGLTF (GLTFAnimationController, the blending in GLTFPoser, GLTFAnimationStateMachine) and SceneSprockets/AnimationBlending.swift (AnimationController, AnimationMixer, AnimationStateMachine) hold near line-for-line copies of the same logic. A diff of `advance` and of `blendedValues`/`addDeltas` shows only renames (`animation` → `clip`, `Target` → `Key`).
