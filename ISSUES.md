@@ -12293,7 +12293,7 @@ labels: umbrella, area:scenegraph, effort:xl, bounds
 milestone: M002-Performance
 depends: 337, 505, 520, 383
 created: 2026-11-17T19:13:08Z
-updated: 2026-11-20T01:57:11Z
+updated: 2026-11-20T01:57:26Z
 +++
 
 SceneSprockets has no hierarchy of node bounds that follows scene changes. Every system that asks what a frustum, ray or region touches walks every node, and does its own bounds work:
@@ -12305,12 +12305,6 @@ SceneSprockets has no hierarchy of node bounds that follows scene changes. Every
 - visionOS immersive culling uses one camera.
 
 The BVHs (per-mesh triangles and node bounds) go in a new BVH target in SceneSprockets (#337); no work in other repositories for now.
-
-Sub-issues:
-- #337 No spatial acceleration structure for culling, hit testing and queries
-- #505 Instancing, frustum culling, and depth prepasses
-- #520 No GPU-driven occlusion culling
-- #383 visionOS immersive: culling and transparency sorting use one camera
 
 ---
 
