@@ -12333,14 +12333,15 @@ Related: #516 No GPU-driven rendering (overlapping umbrella), #518 No mesh shadi
 ## 545: PBR issues opaque draws from merged sets that may not be needed
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: area:renderer, area:performance, effort:l, investigate, deferred
 milestone: M007-PBR-Merged-Geometry
 depends: 572, 573
 created: 2026-11-18T18:13:33Z
-updated: 2026-11-19T14:37:55Z
+updated: 2026-11-20T00:24:09Z
+closed: 2026-11-20T00:24:09Z
 +++
 
 MetalSprocketsPBR draws eligible opaque batches from merged sets (PBRMergedGeometry): one element issues one Metal draw per batch, using the asset's own vertex and index buffers. Meshes are not combined; batches keep their own draw calls and instancing. Each set copies its batches' instances, material uniforms and material textures into shared buffers at build time. The reason: MetalSprockets' per-frame cost grows with the number of elements, not Metal draw calls.
@@ -12359,6 +12360,7 @@ Measurements and alternatives: RFCs/0001-pbr-performance.md. bench --no-merging 
 - `2026-11-19T03:59:13Z`: RFC: RFCs/0001-pbr-performance.md (keep merging optional; alternative ways to cut per-draw cost).
 - `2026-11-19T14:37:39Z`: Answer 1: yes
 - `2026-11-19T14:37:55Z`: Decision (Q1): keep the merged path for now. Revisit when MetalSprockets' per-element cost drops (MetalSprockets#583, #519, #522): re-run bench --no-merging then.
+- `2026-11-20T00:24:09Z`: Superseded by #582: there is no merged path any more; every batch draws through MetalSprockets DrawList.
 
 ---
 
@@ -13082,6 +13084,7 @@ RFC 0001 option 4.
 
 - `2026-11-19T14:35:48Z`: Not tried. #576 showed binds are a small part of per-batch time (2-6% on large scenes); ordering draws by material saves only binds and state changes, so it is not expected to help until per-element cost drops (MetalSprockets#583).
 - `2026-11-19T14:51:01Z`: Could be solved generally by MetalSprockets#585 (a List-like container for many similar draws that owns ordering by state).
+- `2026-11-20T00:24:09Z`: With DrawList (#582) a group's batches are one element; ordering rows by material would only save binds the GPU does per draw, which are now per row, not per element.
 
 ---
 
@@ -13160,18 +13163,21 @@ Umbrella for RFCs/0001-pbr-performance.md: per-batch PBR drawing is too slow for
 ## 582: PBR batches draws by hand instead of with a MetalSprockets draw container
 
 +++
-status: new
+status: closed
 priority: low
 kind: task
 labels: area:renderer, area:performance, effort:l
 milestone: M007-PBR-Merged-Geometry
 created: 2026-11-19T14:51:02Z
-updated: 2026-11-19T14:52:01Z
+updated: 2026-11-20T00:24:09Z
+closed: 2026-11-20T00:24:09Z
 +++
 
 PBRRenderer issues the draws of merged sets from one Draw closure over shared buffers (PBRMergedGeometry, mergedDrawCalls), with its own per-record tables (instances, material indices, cull mode, winding) and eligibility rules, and draws everything else one element per batch. This is a second draw path that exists only to work around MetalSprockets' per-element cost.
 
 MetalSprockets#585 proposes a container for many similar draws. If it is implemented, PBR could draw opaque and blended batches through it and drop the hand-rolled merged path.
+
+- `2026-11-20T00:24:09Z`: Done in the commit above: PBRMergedGeometry and PBRDrawPlan are gone; every batch draws through DrawList except morphed batches and lines fill mode (own elements; DrawList has no per-row fill mode and morphs need per-draw inputs). Merged vs list CPU ms on MetalSprockets main: NodePerformanceTest 10.1 -> 10.7, CarConcept 1.67 -> 2.4, Sponza 0.69 -> 0.83. Profiles show about equal CPU work for CarConcept; the gap is wall time (waiting), not investigated. Still pinned to MetalSprockets main until DrawList is released.
 
 ---
 
