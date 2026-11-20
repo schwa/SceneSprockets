@@ -10907,7 +10907,7 @@ kind: task
 labels: area:scenegraph, effort:m
 milestone: M002-Performance
 created: 2026-11-17T06:04:19Z
-updated: 2026-11-20T00:54:47Z
+updated: 2026-11-20T02:27:18Z
 +++
 
 The codebase has not had an architecture review with the improve-codebase-architecture skill. Coupling, shallow modules and logic spread over many places (for example demos listed twice, #115; each material renderer handling scene-wide techniques on its own, #409) are found only one at a time.
@@ -11775,9 +11775,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:xl
-milestone: M002-Performance
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-17T18:02:34Z
+updated: 2026-11-20T02:26:59Z
 +++
 
 Draw selection, culling, and draw arguments are produced on the CPU. GPU-driven rendering would do this with compute and indirect commands.
@@ -11794,9 +11794,9 @@ status: open
 priority: medium
 kind: feature
 labels: area:renderer, effort:l, subtask, indirect-drawing
-milestone: M002-Performance
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-19T14:14:34Z
+updated: 2026-11-20T02:26:59Z
 +++
 
 Draw commands are encoded on the CPU each frame. Indirect command buffers would let them be encoded once, or on the GPU. Part of #544.
@@ -11834,9 +11834,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, lighting
-milestone: M002-Performance
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-17T19:13:16Z
+updated: 2026-11-20T02:26:59Z
 +++
 
 Every lit fragment loops over every light in the frame; lights are not assigned to screen or view-space clusters. Lights are shared by all renderers through MetalSprocketsLighting (#547), so a cluster grid built there could serve every renderer. No demo scene has enough lights to measure the benefit. Related: #514.
@@ -11852,9 +11852,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, bounds, indirect-drawing
-milestone: M002-Performance
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T01:55:12Z
+updated: 2026-11-20T02:26:59Z
 +++
 
 Hidden objects are still drawn: there is no depth pyramid (Hi-Z: a mip chain of the depth buffer, each level keeping the farthest depth of the level below) and compute pass to cull them. A GPU culling result only saves work if the GPU also issues the draws (indirect draws, #517); otherwise visibility would be read back to the CPU a frame late. PBR draws go through MetalSprockets DrawList (#582), so indirect drawing would replace those lists. Part of #543 and #544.
@@ -11870,9 +11870,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, indirect-drawing
-milestone: M002-Performance
+milestone: M999-Nice-to-have
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-17T19:14:02Z
+updated: 2026-11-20T02:26:59Z
 +++
 
 Particle simulation and draw counts are not driven by compute and indirect draws. The particle code lives in MetalSprocketsParticles, not here; MetalSprockets now has indirect draws (MetalSprockets#575, #576). Part of #544.
@@ -11888,10 +11888,10 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, indirect-drawing
-milestone: M002-Performance
+milestone: M999-Nice-to-have
 depends: 545
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-19T14:01:26Z
+updated: 2026-11-20T02:26:59Z
 +++
 
 Mesh detail is chosen on the CPU (Node.levelsOfDetail, by camera distance), not on the GPU. Choosing it on the GPU only helps if the GPU also issues the draws (#517); how draws are fed depends on #545. Part of #544.
@@ -12281,10 +12281,10 @@ status: new
 priority: medium
 kind: feature
 labels: umbrella, area:scenegraph, effort:xl, bounds
-milestone: M002-Performance
+milestone: M999-Nice-to-have
 depends: 337, 505, 520, 383
 created: 2026-11-17T19:13:08Z
-updated: 2026-11-20T01:57:26Z
+updated: 2026-11-20T02:26:59Z
 +++
 
 SceneSprockets has no hierarchy of node bounds that follows scene changes. Every system that asks what a frustum, ray or region touches walks every node, and does its own bounds work:
@@ -12306,10 +12306,10 @@ status: new
 priority: medium
 kind: feature
 labels: umbrella, area:renderer, effort:xl, indirect-drawing
-milestone: M002-Performance
+milestone: M999-Nice-to-have
 depends: 517, 520, 521, 522
 created: 2026-11-17T19:13:56Z
-updated: 2026-11-20T01:59:19Z
+updated: 2026-11-20T02:26:59Z
 +++
 
 Every SceneSprockets draw is chosen and encoded on the CPU each frame. No renderer issues indirect draws or uses indirect command buffers, so the GPU cannot decide what to draw, how many instances, or which level of detail.
@@ -13202,16 +13202,20 @@ The bench's CPU figure is frame wall time minus GPU time. Time Profiler runs of 
 ## 584: Renderer frustum culling tests every mesh entry
 
 +++
-status: new
+status: closed
 priority: low
 kind: enhancement
 labels: area:renderer, area:performance, effort:m, bounds
 milestone: M002-Performance
 depends: 337
 created: 2026-11-20T02:15:41Z
+updated: 2026-11-20T02:26:22Z
+closed: 2026-11-20T02:26:22Z
 +++
 
 meshEntriesInFrustum and culledMeshEntries (Renderer/Culling.swift) test every entry's world bounds each frame. SceneGraph's mesh entry index (#337) has a BVH over the same bounds, but it is rebuilt whenever the graph's revision changes, which is every frame in an animated scene, so the renderer does not use it. Cost of culling on large scenes is not measured.
+
+- `2026-11-20T02:26:22Z`: Measured with Tests/SceneSprocketsTests/CullingBenchmark.swift (Release, M5 Max, 10,000 boxes): linear meshEntriesInFrustum 62 us; index query 5 us; index build 1,713 us; both find the same 144 entries. Linear culling is under 1% of a 120 Hz frame, and moving renderers to the index would lose the camera-relative precision (#257). Not worth doing; the index build cost is filed separately.
 
 ---
 
@@ -13248,6 +13252,25 @@ closed: 2026-11-20T02:20:28Z
 +++
 
 SceneGraph has box, frustum and ray queries over mesh entries (#337), but no query for the entry or surface point nearest to a world point, as SwiftMesh's TriangleBVH.closestPoint offers for one mesh.
+
+---
+
+## 587: Mesh entry index is rebuilt from scratch whenever the graph changes
+
++++
+status: new
+priority: medium
+kind: bug
+labels: area:scenegraph, area:performance, effort:m, bounds
+milestone: M002-Performance
+created: 2026-11-20T02:26:22Z
++++
+
+SceneGraph's mesh entry index (MeshEntryIndex, #337) is rebuilt whenever the graph's revision changes, including transform-only changes. In an animated scene that is every frame, so the first hitTest, nearestPoint or box/frustum query of each frame pays the full build.
+
+Measured (Tests/SceneSprocketsTests/CullingBenchmark.swift, Release, M5 Max): building the index for 10,000 boxes takes ~1.7 ms; a query takes ~5 us. Before #337, hitTest tested each entry's bounds linearly instead (not measured; a linear frustum test of the same entries takes 62 us).
+
+So hover picking in a large animated scene is likely slower than before #337.
 
 ---
 
