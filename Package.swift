@@ -17,6 +17,8 @@ let package = Package(
         .library(name: "SceneSprocketsShaderMaterial", targets: ["SceneSprocketsShaderMaterial"]),
         .library(name: "SceneSprocketsAudio", targets: ["SceneSprocketsAudio"]),
         .library(name: "SceneSprocketsGizmos", targets: ["SceneSprocketsGizmos"]),
+        // Bounding volume hierarchies for culling, hit testing and spatial queries (#337).
+        .library(name: "SceneSprocketsBVH", targets: ["SceneSprocketsBVH"]),
         // For other packages' shaders that use the scene's lighting headers, such as BlinnPhongLighting.h.
         .library(name: "SceneSprocketsShaders", targets: ["SceneSprocketsShaders"]),
         // Lights, shadows, environment and tone mapping shared by every renderer (#547).
@@ -281,6 +283,8 @@ let package = Package(
         ),
         .target(name: "SceneSprocketsAudio"),
         .testTarget(name: "SceneSprocketsAudioTests", dependencies: ["SceneSprocketsAudio"]),
+        .target(name: "SceneSprocketsBVH", dependencies: [.product(name: "GeometryLite3D", package: "GeometryLite3D")]),
+        .testTarget(name: "SceneSprocketsBVHTests", dependencies: ["SceneSprocketsBVH", .product(name: "GeometryLite3D", package: "GeometryLite3D")]),
         .target(
             name: "SceneSprocketsPhysics",
             dependencies: [
