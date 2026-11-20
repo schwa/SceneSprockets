@@ -131,45 +131,42 @@ extension SceneGraph {
             guard !positions.isEmpty else {
                 continue
             }
-            let indices = geometry.indices(of: submesh)
-            let triangleCount = submesh.primitiveType == .triangle ? indices.count / 3 : max(indices.count - 2, 0)
-            // Strips break at the primitive restart index, and each piece keeps its own winding (#404).
-            let restartIndex: UInt32 = submesh.indexType == .uint16 ? 0xFFFF : 0xFFFF_FFFF
-            var stripStart = 0
-            for triangle in 0..<triangleCount {
-                let (a, b, c): (UInt32, UInt32, UInt32)
-                if submesh.primitiveType == .triangle {
-                    (a, b, c) = (indices[triangle * 3], indices[triangle * 3 + 1], indices[triangle * 3 + 2])
-                } else {
-                    if indices[triangle] == restartIndex {
-                        stripStart = triangle + 1
-                    }
-                    guard indices[triangle + 1] != restartIndex, indices[triangle + 2] != restartIndex, indices[triangle] != restartIndex else {
-                        continue
-                    }
-                    // Odd strip triangles swap their first two vertices to keep the strip's winding (#403).
-                    (a, b, c) = (triangle - stripStart).isMultiple(of: 2)
-                        ? (indices[triangle], indices[triangle + 1], indices[triangle + 2])
-                        : (indices[triangle + 1], indices[triangle], indices[triangle + 2])
-                }
+            // Tests one triangle; returns its local hit distance, for the BVH to skip farther boxes.
+            func test(_ vertices: SIMD3<UInt32>, number: Int) -> Float? {
+                let (a, b, c) = (vertices.x, vertices.y, vertices.z)
                 guard Int(max(a, b, c)) < positions.count,
                       let triangleHit = localRay.intersect(triangle: positions[Int(a)], positions[Int(b)], positions[Int(c)], cullBackFaces: options.backFaceCulling)
                 else {
-                    continue
+                    return nil
                 }
                 let localPosition = localRay.point(at: triangleHit.distance)
                 let position = (modelMatrix * SIMD4(localPosition, 1)).xyz
                 let distance = simd_distance(ray.origin, position)
                 guard distance <= options.maximumDistance else {
-                    continue
+                    return nil
                 }
                 let localNormal = simd_cross(positions[Int(b)] - positions[Int(a)], positions[Int(c)] - positions[Int(a)])
                 var normal = simd_normalize((inverse.transpose * SIMD4(localNormal, 0)).xyz)
                 if simd_dot(normal, ray.direction) > 0 {
                     normal = -normal
                 }
-                hits.append(Hit(node: entry.node, submeshIndex: entry.submeshIndex, triangleIndex: triangle, distance: distance, position: position, normal: normal, localPosition: localPosition, barycentric: triangleHit.barycentrics, vertexIndices: [a, b, c], mesh: mesh))
-                if options.firstFoundOnly {
+                hits.append(Hit(node: entry.node, submeshIndex: entry.submeshIndex, triangleIndex: number, distance: distance, position: position, normal: normal, localPosition: localPosition, barycentric: triangleHit.barycentrics, vertexIndices: vertices, mesh: mesh))
+                return triangleHit.distance
+            }
+            if deformed == nil, let triangles = geometry.triangles(of: mesh, submesh: submesh) {
+                // Static meshes: only triangles whose boxes the ray enters (#337).
+                let hitCount = hits.count
+                triangles.bvh.items(hitBy: localRay, nearestOnly: options.firstFoundOnly) { item in
+                    guard !options.firstFoundOnly || hits.count == hitCount else {
+                        return nil
+                    }
+                    return test(triangles.vertices[item], number: triangles.numbers[item])
+                }
+            } else {
+                // Deformed meshes get new buffers every pose, so a BVH would be built for one test.
+                let restartIndex: UInt32 = submesh.indexType == .uint16 ? 0xFFFF : 0xFFFF_FFFF
+                let (vertices, numbers) = assembleTriangles(geometry.indices(of: submesh), isStrip: submesh.primitiveType == .triangleStrip, restartIndex: restartIndex)
+                for (vertices, number) in zip(vertices, numbers) where test(vertices, number: number) != nil && options.firstFoundOnly {
                     break
                 }
             }

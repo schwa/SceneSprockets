@@ -204,6 +204,7 @@ let package = Package(
             name: "SceneSprockets",
             dependencies: [
                 "SceneSprocketsAudio",
+                "SceneSprocketsBVH",
                 "SceneSprocketsShaders",
                 "MetalSprocketsLighting",
                 .product(name: "MetalSprocketsParticles", package: "MetalSprocketsParticles"),
