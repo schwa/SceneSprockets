@@ -905,9 +905,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l
-milestone: M003-Rendering
+milestone: M009-Rendering-2
 created: 2026-10-13T20:20:23Z
-updated: 2026-11-17T18:07:08Z
+updated: 2026-11-20T06:01:40Z
 +++
 
 Cameras have only a projection. SceneKit cameras have HDR, exposure, bloom, depth of field, motion blur, SSAO, vignette and color grading.
@@ -1928,7 +1928,7 @@ Missing SceneKit renderer APIs: projectPoint, unprojectPoint (Ray(viewPoint:) co
 
 ---
 
-## 95: Renderer and view gaps: MSAA, prepare
+## 95: SceneView / SceneGraphElement have no multisample antialiasing (MSAA)
 
 +++
 status: open
@@ -1937,13 +1937,23 @@ kind: enhancement
 labels: effort:l, area:renderer
 milestone: M003-Rendering
 created: 2026-10-15T02:28:08Z
-updated: 2026-11-17T18:26:19Z
+updated: 2026-11-20T06:03:26Z
 +++
 
-SceneView/SceneGraphElement have no multisampling, no debug overlays or statistics, and no way to build pipelines/PBR models ahead of time (like SCNSceneRenderer.prepare). SceneViewDelegate has only two callbacks: there are none for constraints applied or will/did render. See docs/SceneKitComparison.md.
+`SceneView` / `SceneGraphElement` have no multisampling. `Sources/SceneSprockets` has no `sampleCount` or `.msaa` setting. The lower-level `PBRScene` in MetalSprocketsPBR already supports one (`PBRScene.sampleCount`, which uses `.msaa(sampleCount:)` in `Sources/MetalSprocketsPBR/PBRScene.swift`), and `AntialiasingTests` covers it there. See docs/SceneKitComparison.md (compare SceneKit's `antialiasingMode`).
+
+## Things to handle
+- Several passes read scene depth: the shadow mask, fog, AO and soft particles. They need resolved depth or multisample-aware depth.
+- Check that the resolve works with transparent draws.
+- Use alpha-to-coverage for alpha-masked materials.
+
+## History
+- Delegate callbacks (`sceneView(didApplyConstraintsAtTime:)`), the `showsStatistics` overlay and `SceneGraph.statistics` were done under this issue earlier.
+- The prepare/precompile step was split out into #597.
 
 - `2026-10-15T03:09:12Z`: Done: SceneViewDelegate.sceneView(didApplyConstraintsAtTime:), SceneView.Options.showsStatistics overlay, SceneGraph.statistics. Not verified on screen (did not run the app). Left: MSAA (the shadow and fog passes read depth, so they would need resolved or multisample-aware depth) and a prepare step.
 - `2026-11-17T18:26:19Z`: From #503 (closed): when adding MSAA, verify the resolve with transparent draws, alpha-to-coverage for alpha-masked materials, and that depth-reading passes (shadow mask, fog, AO, soft particles) use resolved or multisample-aware depth.
+- `2026-11-20T06:03:27Z`: Split: the prepare/precompile step is now tracked in #597. This issue now covers only MSAA.
 
 ---
 
@@ -5767,7 +5777,7 @@ No orbit work planned.
 Doable now without a huge refactor: #253, #254, #257, #258. These work with today's Float world transforms (camera-relative rendering helps SidraLine-scale scenes immediately) and do not depend on #256.
 Blocked or big: #256 (core refactor); #259 and #260 build on #256 and #258; #261 is a renderer architecture change; #252 waits on a decision.
 
-- `2026-11-07T16:59:58Z`: Question 1 (design): How should origin shifts work across node transforms, physics and rendering (floating origin, Double node transforms, or a moving reference frame)? #256, #259, #260 and #261 depend on it.
+- `2026-11-07T16:59:58Z`: Question 1 (design): #256, #259, #260 and #261 depend on this. How should origin shifts work across node transforms, physics and rendering (floating origin, Double node transforms, or a moving reference frame)?
 
 ---
 
@@ -6127,10 +6137,10 @@ status: open
 priority: low
 kind: enhancement
 labels: area:scenegraph, effort:m, subtask
-milestone: M999-Nice-to-have
+milestone: M007-Performance
 depends: 265
 created: 2026-11-05T18:22:50Z
-updated: 2026-11-20T01:53:33Z
+updated: 2026-11-20T06:00:25Z
 +++
 
 Nodes in a scene graph store their fields in the SwiftECS World (#265). Per-node costs are fine for the scenes the demos and glTF samples use (hundreds to a few thousand nodes) but too high for large or heavily animated scenes.
@@ -7296,7 +7306,11 @@ The renderer always uses reverse-Z (projection multiplied by .reverseZ, with a m
 ## Proposed behavior (per schwa)
 Switch between normal Z and reverse-Z automatically, with no side effects: everything that uses depth keeps working in both modes.
 
-- `2026-11-08T02:42:54Z`: Autonomous run: scoped, not changed. The reverse-Z assumption is in 11 SceneSprockets source files plus 16 in MetalSprocketsPBR, MetalSprocketsAddOns (ShadowMaskPass, grid) and MetalSprocketsParticles (depth compare, clear value, projection, or shaders that read depth). Supporting both modes means a depth-mode value passed through all of them and shader variants in three external packages. Punting: cross-package, and 'automatic' needs a rule. Question: what should pick the mode automatically (for example normal Z only when the depth format is not float, or a SceneView option with an automatic default), and is changing MetalSprocketsPBR, MetalSprocketsAddOns and MetalSprocketsParticles in step acceptable?
+- `2026-11-08T02:42:54Z`: Autonomous run: scoped, not changed. The reverse-Z assumption is in 11 SceneSprockets source files plus 16 in MetalSprocketsPBR, MetalSprocketsAddOns (ShadowMaskPass, grid) and MetalSprocketsParticles (depth compare, clear value, projection, or shaders that read depth). Supporting both modes means a depth-mode value passed through all of them and shader variants in three external packages. Punting: cross-package, and 'automatic' needs a rule.
+- `2026-11-20T05:58:14Z`: Question 1 (design): What should pick the depth mode automatically: normal Z only when the depth format is not float, or a SceneView option with an automatic default?
+- `2026-11-20T05:58:14Z`: Question 2 (decision): Is it acceptable to change MetalSprocketsPBR, MetalSprocketsAddOns and MetalSprocketsParticles in step to support both depth modes?
+- `2026-11-20T05:59:06Z`: Answer 1: User controlled - need api
+- `2026-11-20T05:59:11Z`: Answer 2: Yes!
 
 ---
 
@@ -9226,9 +9240,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, area:renderer
-milestone: M003-Rendering
+milestone: M009-Rendering-2
 created: 2026-11-16T20:03:49Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:01:40Z
 +++
 
 There is no way to project an image onto existing meshes, for example bullet holes, footprints or road markings.
@@ -9244,9 +9258,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, area:renderer
-milestone: M003-Rendering
+milestone: M009-Rendering-2
 created: 2026-11-16T20:03:49Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:01:40Z
 +++
 
 Shiny surfaces reflect only the environment map. They do not reflect other objects in the scene.
@@ -9262,9 +9276,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, area:renderer
-milestone: M003-Rendering
+milestone: M009-Rendering-2
 created: 2026-11-16T20:03:49Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:01:40Z
 +++
 
 Post-processing has exposure, contrast, saturation, vignette and ambient occlusion. It has no bloom, depth of field or motion blur.
@@ -9753,10 +9767,10 @@ status: open
 priority: low
 kind: enhancement
 labels: area:physics, effort:xs
-milestone: M999-Nice-to-have
+milestone: M006-Physics-and-Scene
 depends: 410
 created: 2026-11-16T23:34:13Z
-updated: 2026-11-17T06:04:51Z
+updated: 2026-11-20T05:58:46Z
 +++
 
 Jolt prints its trace messages to stdout. They don't reach os.Logger, so they are missing from Console and unified logging, unlike the rest of SceneSprockets.
@@ -9904,10 +9918,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:m
-milestone: M999-Nice-to-have
+milestone: M006-Physics-and-Scene
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-17T06:04:51Z
+updated: 2026-11-20T05:58:46Z
 +++
 
 There is no way to tag a node's collision surface (or individual mesh triangles) and find out which surface a ray or contact hit, e.g. to choose footstep sounds or decals.
@@ -9982,10 +9996,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:l
-milestone: M999-Nice-to-have
+milestone: M006-Physics-and-Scene
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-17T06:04:51Z
+updated: 2026-11-20T05:58:46Z
 +++
 
 There is no way to drive a player or NPC node with a character controller (walking, slopes, stairs, standing on moving platforms); only plain rigid bodies.
@@ -10081,10 +10095,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:xs
-milestone: M999-Nice-to-have
+milestone: M006-Physics-and-Scene
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-17T06:04:51Z
+updated: 2026-11-20T05:58:46Z
 +++
 
 SceneGraphPhysicsWorld always uses SwiftJolt's default job system and thread count; an app can't limit physics threads (e.g. on low-power devices) or pick Jolt's own pool.
@@ -10159,9 +10173,9 @@ status: open
 priority: medium
 kind: bug
 labels: area:physics, effort:m, investigate, deferred
-milestone: M006-Physics-and-Scene
+milestone: M008-Reliability
 created: 2026-11-17T01:25:42Z
-updated: 2026-11-17T18:31:53Z
+updated: 2026-11-20T06:00:25Z
 +++
 
 The physics test process sometimes crashes on CI. The crash is intermittent: the next CI run passed, and 3 local runs passed.
@@ -11027,9 +11041,9 @@ status: open
 priority: low
 kind: bug
 labels: area:renderer, effort:l
-milestone: M999-Nice-to-have
+milestone: M008-Reliability
 created: 2026-11-17T06:39:06Z
-updated: 2026-11-17T19:08:54Z
+updated: 2026-11-20T06:00:25Z
 +++
 
 Each SceneView has its own render thread, and a visionOS immersive space has another (#392). When two of them draw the same scene graph, or share renderer objects, at the same time, these are written from two threads with no synchronization:
@@ -11386,9 +11400,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:m
-milestone: M999-Nice-to-have
+milestone: M009-Rendering-2
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-17T17:51:38Z
+updated: 2026-11-20T06:01:40Z
 +++
 
 Small-scale shadows that conventional shadow maps miss. (Moved from SceneSprocketsAddOns #52.)
@@ -11402,9 +11416,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l
-milestone: M999-Nice-to-have
+milestone: M009-Rendering-2
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-17T17:51:38Z
+updated: 2026-11-20T06:01:40Z
 +++
 
 Stabilizes geometry, specular highlights, and fine detail. (Moved from SceneSprocketsAddOns #53.)
@@ -11661,9 +11675,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l
-milestone: M003-Rendering
+milestone: M009-Rendering-2
 created: 2026-11-17T14:09:42Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:01:40Z
 +++
 
 Effects such as SSR, SSGI, motion blur, decals, and contact shadows need per-pixel normals, motion vectors, or other G-buffer data. The renderer does not produce or expose them. Needed by several SceneSprocketsAddOns issues.
@@ -11677,9 +11691,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:s
-milestone: M003-Rendering
+milestone: M009-Rendering-2
 created: 2026-11-17T14:09:42Z
-updated: 2026-11-17T18:07:09Z
+updated: 2026-11-20T06:01:40Z
 +++
 
 Refraction, transmission, and screen-space effects need the opaque scene color as a texture. The renderer does not provide one.
@@ -11693,9 +11707,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, lighting
-milestone: M003-Rendering
+milestone: M009-Rendering-2
 created: 2026-11-17T14:09:42Z
-updated: 2026-11-17T19:13:16Z
+updated: 2026-11-20T06:01:40Z
 +++
 
 Add-on packages cannot insert passes at defined stages (after opaque, before transparent, post-process) or contribute indirect lighting (probes, lightmaps) to built-in materials.
@@ -11796,9 +11810,9 @@ status: open
 priority: medium
 kind: feature
 labels: area:renderer, effort:l, subtask, indirect-drawing
-milestone: M999-Nice-to-have
+milestone: M009-Rendering-2
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T02:26:59Z
+updated: 2026-11-20T06:01:40Z
 +++
 
 Draw commands are encoded on the CPU each frame. Indirect command buffers would let them be encoded once, or on the GPU. Part of #544.
@@ -11818,9 +11832,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:xl
-milestone: M003-Rendering
+milestone: M009-Rendering-2
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-17T19:09:41Z
+updated: 2026-11-20T06:01:40Z
 +++
 
 Object and mesh shaders are not used for geometry amplification, culling, or LOD.
@@ -11844,6 +11858,7 @@ updated: 2026-11-20T02:26:59Z
 Every lit fragment loops over every light in the frame; lights are not assigned to screen or view-space clusters. Lights are shared by all renderers through MetalSprocketsLighting (#547), so a cluster grid built there could serve every renderer. No demo scene has enough lights to measure the benefit. Related: #514.
 
 - `2026-11-19T01:50:43Z`: Question 2 (decision): Build clustered light assignment in MetalSprocketsLighting (a compute pass producing per-cluster light lists that every renderer reads), measured with a many-lights demo scene? Recommended: Yes
+- `2026-11-20T05:59:25Z`: Answer 2: Yes
 
 ---
 
@@ -11862,6 +11877,7 @@ updated: 2026-11-20T02:26:59Z
 Hidden objects are still drawn: there is no depth pyramid (Hi-Z: a mip chain of the depth buffer, each level keeping the farthest depth of the level below) and compute pass to cull them. A GPU culling result only saves work if the GPU also issues the draws (indirect draws, #517); otherwise visibility would be read back to the CPU a frame late. PBR draws go through MetalSprockets DrawList (#582), so indirect drawing would replace those lists. Part of #543 and #544.
 
 - `2026-11-17T19:05:45Z`: Question 1 (decision): Wait for #517 indirect draws instead of an interim one-frame-late CPU readback of visibility? Recommended: Yes, wait for #517
+- `2026-11-20T06:00:32Z`: Answer 1: Yeah lets wait
 
 ---
 
@@ -11880,6 +11896,7 @@ updated: 2026-11-20T02:26:59Z
 Particle simulation and draw counts are not driven by compute and indirect draws. The particle code lives in MetalSprocketsParticles, not here; MetalSprockets now has indirect draws (MetalSprockets#575, #576). Part of #544.
 
 - `2026-11-17T19:05:45Z`: Question 1 (decision): Move this issue to the MetalSprocketsParticles tracker? Recommended: Yes
+- `2026-11-20T05:59:32Z`: Answer 1: Yes
 
 ---
 
@@ -12037,9 +12054,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:l, area:renderer
-milestone: M003-Rendering
+milestone: M009-Rendering-2
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-19T01:35:45Z
+updated: 2026-11-20T06:01:40Z
 +++
 
 No local cubemap reflections with parallax correction and probe blending. (Moved from SceneSprocketsAddOns#49.)
@@ -12279,14 +12296,14 @@ Not included: shadows (#88, #299, #495, #541) and exposure/tone mapping (#501, #
 ## 543: Umbrella: no bounds hierarchy for culling, hit testing and spatial queries
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
 labels: umbrella, area:scenegraph, effort:xl, bounds
-milestone: M999-Nice-to-have
+milestone: M007-Performance
 depends: 337, 505, 520, 383
 created: 2026-11-17T19:13:08Z
-updated: 2026-11-20T02:26:59Z
+updated: 2026-11-20T06:00:25Z
 +++
 
 SceneSprockets has no hierarchy of node bounds that follows scene changes. Every system that asks what a frustum, ray or region touches walks every node, and does its own bounds work:
@@ -12304,14 +12321,14 @@ The BVHs (per-mesh triangles and node bounds) go in a new BVH target in SceneSpr
 ## 544: Umbrella: draws are never issued indirectly from GPU-written arguments
 
 +++
-status: new
+status: open
 priority: medium
 kind: feature
 labels: umbrella, area:renderer, effort:xl, indirect-drawing
 milestone: M999-Nice-to-have
 depends: 517, 520, 521, 522
 created: 2026-11-17T19:13:56Z
-updated: 2026-11-20T02:26:59Z
+updated: 2026-11-20T05:54:41Z
 +++
 
 Every SceneSprockets draw is chosen and encoded on the CPU each frame. No renderer issues indirect draws or uses indirect command buffers, so the GPU cannot decide what to draw, how many instances, or which level of detail.
@@ -12544,11 +12561,13 @@ Costs: one-time migration (history, issue trackers, manifests), shared versionin
 ## 553: Draco compressed meshes are not supported
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
 labels: effort:l, area:extensions, deferred, gltf
+milestone: M999-Nice-to-have
 created: 2026-11-19T02:12:55Z
+updated: 2026-11-20T05:54:41Z
 +++
 
 Primitives using KHR_draco_mesh_compression cannot be decoded; GLTFViewer lists glTF-Draco variants (about 20 sample models, none of them a default variant) as unsupported. Needs Google's Draco decoder (Apache-2.0, large C++), most likely in SwiftGLTF. Deferred: no default sample needs it. Meshopt split out to MetalSprocketsGLTF#104 (done).
@@ -12587,11 +12606,13 @@ Was MetalSprocketsGLTF#75 (moved with the package, #552).
 ## 555: CarConcept runs at ~110 fps
 
 +++
-status: new
+status: open
 priority: low
 kind: bug
 labels: area:performance, effort:s, deferred, gltf
+milestone: M007-Performance
 created: 2026-11-19T02:12:55Z
+updated: 2026-11-20T06:00:25Z
 +++
 
 In GLTFViewer (Release, 120 Hz display) CarConcept runs at ~110 fps. Headless (ms-gltf-render --benchmark 60 --orbit, Release, M5 Max): ~3.8 ms CPU, <1 ms GPU per frame. 109 primitives, of which one has a transmissive material; that single material turns on the transmission pre-passes (opaque scene, back faces, mipmaps) for the whole scene. Likely the fixed cost of those passes; not yet profiled.
@@ -12600,16 +12621,20 @@ State: the benchmark measures 3.4 ms CPU per frame (Release, M5 Max), within 120
 
 Was MetalSprocketsGLTF#76 (moved with the package, #552).
 
+- `2026-11-20T05:54:42Z`: Related: #583 (also CarConcept frame time).
+
 ---
 
 ## 556: KHR_gaussian_splatting is not supported
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
 labels: area:extensions, effort:l, deferred, gltf
+milestone: M999-Nice-to-have
 created: 2026-11-19T02:12:55Z
+updated: 2026-11-20T05:54:41Z
 +++
 
 Primitives using KHR_gaussian_splatting (point primitives with Gaussian splat attributes) are not drawn as splats. Supporting it means a separate splat renderer (sorting, splat rasterisation), not a material change.
@@ -12623,11 +12648,13 @@ Was MetalSprocketsGLTF#85 (moved with the package, #552).
 ## 557: EXT_lights_ies is not supported
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
 labels: area:extensions, effort:m, deferred, gltf
+milestone: M999-Nice-to-have
 created: 2026-11-19T02:12:55Z
+updated: 2026-11-20T05:54:41Z
 +++
 
 Photometric lights defined by EXT_lights_ies (IES light profiles) are ignored.
@@ -12639,11 +12666,13 @@ Was MetalSprocketsGLTF#87 (moved with the package, #552).
 ## 558: Benchmark suite misses several draw paths
 
 +++
-status: new
+status: open
 priority: low
 kind: task
 labels: area:performance, area:testing, effort:s, gltf
+milestone: M007-Performance
 created: 2026-11-19T02:12:55Z
+updated: 2026-11-20T06:00:25Z
 +++
 
 The bench suite (ms-gltf-render bench, GLTFBenchCommand.scenes) has 11 scenes picked by hand. Paths with no scene, so their regressions go unnoticed:
@@ -12664,11 +12693,13 @@ Was MetalSprocketsGLTF#113 (moved with the package, #552).
 ## 559: Immersive rendering has no antialiasing
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
-labels: area:rendering, effort:m, deferred, gltf
+labels: effort:m, deferred, gltf, area:renderer
+milestone: M004-VisionOS
 created: 2026-11-19T02:12:55Z
+updated: 2026-11-20T05:54:42Z
 +++
 
 In GLTFViewer's immersive space, edges show stair-stepping, more visible toward the edges of the view where foveation lowers resolution. MetalSprockets' ImmersiveLayerConfiguration does not request multisampling, and PBRImmersiveScene renders at one sample. Wanted: MSAA (or another antialiasing) in the immersive path, checking that CompositorServices layered targets and foveation (rasterization rate maps) support it, and the GPU cost on Vision Pro.
@@ -12682,11 +12713,13 @@ Was MetalSprocketsGLTF#146 (moved with the package, #552).
 ## 560: Verify on device that immersive no longer aborts on line and point primitives
 
 +++
-status: new
+status: open
 priority: medium
 kind: task
-labels: area:rendering, effort:xs, deferred, gltf
+labels: effort:xs, deferred, gltf, area:renderer
+milestone: M004-VisionOS
 created: 2026-11-19T02:12:56Z
+updated: 2026-11-20T05:54:42Z
 +++
 
 On Vision Pro, opening the model after the Showcase in the immersive space aborted with Metal validation: 'Only triangles may be drawn when using a rasterization rate map' (drawIndexedPrimitives). Fixed in e6f4bb6d: PBRImmersiveScene sets PBRRenderer.drawsTrianglesOnly, so point and line primitives are skipped in immersive (still drawn in windows); TrianglesOnlyTests covers it on macOS. To verify on device: open that model (and a points/lines sample such as MeshPrimitiveModes) in immersive with foveation on; no abort, triangles visible, lines and points absent.
@@ -12698,13 +12731,14 @@ Was MetalSprocketsGLTF#152 (moved with the package, #552).
 ## 561: Malformed glTF input can crash the loader
 
 +++
-status: new
+status: open
 priority: medium
 kind: task
 labels: effort:xl, area:testing, has-subtasks, gltf
+milestone: M008-Reliability
 depends: 563, 564, 565, 566
 created: 2026-11-19T02:12:56Z
-updated: 2026-11-19T02:13:03Z
+updated: 2026-11-20T06:00:25Z
 +++
 
 Loading or animating a malformed or hostile glTF/GLB should produce an error or a warning, never a crash (precondition, fatalError, out-of-range index, force unwrap, integer overflow, unbounded allocation).
@@ -12720,11 +12754,13 @@ Was MetalSprocketsGLTF#180 (moved with the package, #552).
 ## 562: Resources.load does every loading step in one function; non-material extensions are spread across files
 
 +++
-status: new
+status: open
 priority: low
 kind: task
 labels: effort:l, area:architecture, gltf
+milestone: M006-Physics-and-Scene
 created: 2026-11-19T02:12:56Z
+updated: 2026-11-20T05:54:42Z
 +++
 
 GLTFAsset.Resources.load (GLTFAssetLoading.swift, about 90 lines) does all of these in one function:
@@ -12750,11 +12786,13 @@ Was MetalSprocketsGLTF#188 (moved with the package, #552).
 ## 563: Malformed JSON structure and indices can crash the loader
 
 +++
-status: new
+status: open
 priority: medium
 kind: task
 labels: effort:m, area:testing, subtask, gltf
+milestone: M008-Reliability
 created: 2026-11-19T02:12:56Z
+updated: 2026-11-20T06:00:25Z
 +++
 
 Part of #561. Loading or posing malformed input in this area must produce an error or warning, never a crash (precondition, fatalError, out-of-range index, force unwrap, integer overflow, unbounded allocation). Acceptance: a fuzz or malformed-input test covers the area and finds no crash. Area: JSON structure, node hierarchy indices, skins and other cross-object indices.
@@ -12766,11 +12804,13 @@ Was MetalSprocketsGLTF#191 (moved with the package, #552).
 ## 564: Malformed accessors and buffer views can crash the loader
 
 +++
-status: new
+status: open
 priority: medium
 kind: task
 labels: effort:m, area:testing, subtask, gltf
+milestone: M008-Reliability
 created: 2026-11-19T02:12:56Z
+updated: 2026-11-20T06:00:25Z
 +++
 
 Part of #561. Loading or posing malformed input in this area must produce an error or warning, never a crash (precondition, fatalError, out-of-range index, force unwrap, integer overflow, unbounded allocation). Acceptance: a fuzz or malformed-input test covers the area and finds no crash. Area: accessor and bufferView offsets, counts, strides, sparse accessors.
@@ -12782,11 +12822,13 @@ Was MetalSprocketsGLTF#192 (moved with the package, #552).
 ## 565: Malformed animations can crash loading or posing
 
 +++
-status: new
+status: open
 priority: medium
 kind: task
 labels: effort:m, area:testing, subtask, gltf
+milestone: M008-Reliability
 created: 2026-11-19T02:12:56Z
+updated: 2026-11-20T06:00:25Z
 +++
 
 Part of #561. Loading or posing malformed input in this area must produce an error or warning, never a crash (precondition, fatalError, out-of-range index, force unwrap, integer overflow, unbounded allocation). Acceptance: a fuzz or malformed-input test covers the area and finds no crash. Area: animation samplers, channels and KHR_animation_pointer targets, through both loading and GLTFPoser.
@@ -12798,11 +12840,13 @@ Was MetalSprocketsGLTF#193 (moved with the package, #552).
 ## 566: Malformed extension data can crash the loader
 
 +++
-status: new
+status: open
 priority: medium
 kind: task
 labels: effort:m, area:testing, subtask, gltf
+milestone: M008-Reliability
 created: 2026-11-19T02:12:56Z
+updated: 2026-11-20T06:00:25Z
 +++
 
 Part of #561. Loading or posing malformed input in this area must produce an error or warning, never a crash (precondition, fatalError, out-of-range index, force unwrap, integer overflow, unbounded allocation). Acceptance: a fuzz or malformed-input test covers the area and finds no crash. Area: extensions (meshopt, Basis, EXT_mesh_gpu_instancing, KHR_lights_punctual, EXT_lights_image_based).
@@ -12814,11 +12858,13 @@ Was MetalSprocketsGLTF#194 (moved with the package, #552).
 ## 567: Explore RoboCloth cloth materials
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
-labels: effort:m, area:shading, deferred, pbr
+labels: effort:m, deferred, pbr, area:materials
+milestone: M999-Nice-to-have
 created: 2026-11-19T02:12:56Z
+updated: 2026-11-20T05:54:42Z
 +++
 
 RoboCloth (https://github.com/theialab/robocloth, local copy in ~/Projects/Vendor) has 500 captured cloth materials. They are released as neural BRDFs (a 16-channel latent texture plus a shared MLP) and as a Disney PBR fit.
@@ -12865,11 +12911,13 @@ Each imported folder has a .swiftlint.yml that disables those 12 rules, so the c
 ## 569: PBR is split across two modules, MetalSprocketsPBR and SceneSprocketsPBR
 
 +++
-status: new
+status: open
 priority: low
 kind: task
 labels: proposal, area:renderer, effort:m
+milestone: M003-Rendering
 created: 2026-11-19T02:43:31Z
+updated: 2026-11-20T05:54:42Z
 +++
 
 Since #552, both PBR modules live in this package:
@@ -13186,18 +13234,20 @@ MetalSprockets#585 proposes a container for many similar draws. If it is impleme
 ## 583: CarConcept frame time is 0.7 ms longer with DrawList than with merged sets
 
 +++
-status: new
+status: open
 priority: low
 kind: bug
 labels: area:performance, effort:m, investigate, gltf
-milestone: M999-Nice-to-have
+milestone: M007-Performance
 created: 2026-11-20T00:29:59Z
-updated: 2026-11-20T02:18:18Z
+updated: 2026-11-20T06:00:25Z
 +++
 
 After #582 (every batch through DrawList), ms-gltf-render bench CarConcept reports ~2.4 ms CPU per frame against ~1.67 ms for the merged path (56c82e9b), both on MetalSprockets main, Release, M5 Max. Sponza: 0.83 vs 0.69 ms. Reproduced over several runs.
 
 The bench's CPU figure is frame wall time minus GPU time. Time Profiler runs of 3000 frames of each show about the same CPU samples in measureFrames (4839 vs 4936), so the extra time is not CPU work; it is waiting somewhere in submission or completion. Cause not known.
+
+- `2026-11-20T05:54:42Z`: Related: #555 (also CarConcept frame time).
 
 ---
 
@@ -13441,10 +13491,13 @@ Found in the architecture review (#477).
 ## 594: MeshEntry's copies of node render fields and the archive encode/decode are not checked against the node field list
 
 +++
-status: new
+status: open
 priority: low
-kind: none
+kind: task
+labels: effort:s, area:scenegraph, area:architecture
+milestone: M006-Physics-and-Scene
 created: 2026-11-20T03:23:37Z
+updated: 2026-11-20T05:54:42Z
 +++
 
 After #593, NodeFieldSlot records each field's archive keys and clone() copies fields from worldFields, and NodeFieldListTests checks the lists agree. Two lists remain unchecked:
@@ -13457,10 +13510,13 @@ After #593, NodeFieldSlot records each field's archive keys and clone() copies f
 ## 595: Shadow casters and PBR primitives still resolve skinned and morphed geometry on their own
 
 +++
-status: new
+status: open
 priority: low
 kind: task
+labels: effort:m, area:renderer, area:architecture
+milestone: M003-Rendering
 created: 2026-11-20T05:52:31Z
+updated: 2026-11-20T05:54:42Z
 +++
 
 After #590, SceneGraphElement resolves deformation once for renderers that draw plain vertex buffers (MeshEntry.resolvingDeformation), and MeshEntry.validMorphs is the rule for valid morph targets and weights on the CPU and GPU paths. Two places still decide this on their own:
@@ -13469,6 +13525,53 @@ After #590, SceneGraphElement resolves deformation once for renderers that draw 
 - The PBR primitive input (PBRSceneGraph.swift) keeps morph targets only when every target is valid, which differs from validMorphs.
 
 Found while working on #590.
+
+---
+
+## 596: No simple way to create billboards with alignment options
+
++++
+status: new
+priority: none
+kind: none
+milestone: M999-Nice-to-have
+created: 2026-11-20T05:56:30Z
++++
+
+Super easy way to make a billboard (with various options to align the billboard to various things - e.g. camera, “tree style” etc)
+
+---
+
+## 597: No way to pre-warm a scene before its first frame (pipelines, models, shaders, caches)
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:renderer, effort:l
+milestone: M003-Rendering
+created: 2026-11-20T06:03:21Z
+updated: 2026-11-20T06:05:40Z
++++
+
+Split out of #95.
+
+SceneView and SceneGraphElement cannot do their setup before content is first drawn, the way SCNSceneRenderer.prepare(_:shouldAbortBlock:) and prepare(_:completionHandler:) do in SceneKit. The first frame that shows new content or a new material pays for all of it, which can cause a hitch. See docs/SceneKitComparison.md.
+
+Work that happens lazily on first use today:
+
+- Render and compute pipelines, compiled by MetalSprockets' per-view PipelineCache. Only MetalSprockets can fill that cache: MetalSprockets#596.
+- Shader libraries and kernels loaded once into static caches (Blinn-Phong, ShaderMaterial, fog, shadow mask, GPU deformation, post-processing).
+- PBR models built from the scene graph.
+- CPU-readable mesh copies, shape meshes and text meshes.
+- GPU deformation state, shadow maps, ambient occlusion targets, and the BRDF lookup table for environment lighting.
+
+Sources/SceneSprockets has no public prepare API. The only prepare functions are per-frame internals (Shadows.prepare, GPUDeformation.prepare).
+
+Expected: an app can ask for a scene graph (or a subtree, or a set of materials) to be pre-warmed ahead of time, for example during loading, so that showing it later does not stall. Preferably async or with a completion. Whether it can be cancelled, like SceneKit's shouldAbortBlock, is still to be decided.
+
+- `2026-11-20T06:04:47Z`: Could this be generalise to a pre-warming function that does all sorts of work before first frame? Is this a metalsprockets thing?
+- `2026-11-20T06:05:40Z`: Generalized from pipelines and PBR models to all first-frame work, per the question above. Pipeline compilation needs MetalSprockets#596.
 
 ---
 
@@ -13547,9 +13650,10 @@ Very large worlds (solar-system scale): enough precision in transforms, time, de
 +++
 status: open
 created: 2026-11-17T18:07:08Z
+updated: 2026-11-20T06:01:40Z
 +++
 
-Rendering features and missing renderer API.
+Renderer gaps and fixes: lights, shadows, MSAA, exposure, depth, debug overlays and renderer structure.
 
 ---
 
@@ -13574,5 +13678,38 @@ closed: 2026-11-20T00:34:57Z
 +++
 
 Decide whether PBR keeps the merged-geometry path (#545), and fix the issues it causes or blocks.
+
+---
+
+## Milestone: M007-Performance
+
++++
+status: open
+created: 2026-11-20T06:00:25Z
++++
+
+Frame time, CPU cost and scaling to large scenes, with benchmarks to measure them.
+
+---
+
+## Milestone: M008-Reliability
+
++++
+status: open
+created: 2026-11-20T06:00:25Z
++++
+
+Crashes, races and flaky tests: malformed input, threading and CI stability.
+
+---
+
+## Milestone: M009-Rendering-2
+
++++
+status: open
+created: 2026-11-20T06:01:40Z
++++
+
+Advanced rendering: post effects, screen-space techniques, probes, render targets, extension points and GPU-driven draws.
 
 ---
