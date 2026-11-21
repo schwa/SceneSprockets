@@ -1768,18 +1768,20 @@ SceneKit shader modifiers inject code at geometry, surface, lighting and fragmen
 ## 86: Light gaps: ambient node, attenuation, temperature, IES and area lights
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: effort:l, area:renderer, subtask, lighting
 milestone: Rendering
 created: 2026-10-15T02:28:07Z
-updated: 2026-11-20T06:32:25Z
+updated: 2026-11-21T01:58:39Z
+closed: 2026-11-21T01:58:39Z
 +++
 
 Missing SceneKit equivalents: an ambient light type as a node (today it is per renderer: BlinnPhongMaterialRenderer.ambientLightColor), attenuationStartDistance and attenuationFalloffExponent, color temperature, and IES, area and probe lights. See docs/SceneKitComparison.md.
 
 - `2026-11-17T17:51:39Z`: Related: #497, #509.
+- `2026-11-21T01:58:39Z`: Done: Light.temperature (kelvin; 6500 K is white) and Light.attenuation (SceneKit start, end and falloff exponent, passed to every renderer through LightingLight, which grows from 80 to 96 bytes). Split or covered elsewhere: the ambient light node is #602, IES is #497, area lights are #509, probes are #530 and #532.
 
 ---
 
@@ -13628,6 +13630,24 @@ updated: 2026-11-20T06:32:25Z
 With sceneAntialiasing(sampleCount:) above 1, SceneFramePlan turns off the soft particle pass (it would need to reload the multisampled color after a depth copy). Soft particles are then drawn in the scene pass like hard particles, so they clip sharply against geometry.
 
 Split out of #95.
+
+---
+
+## 602: Ambient light cannot be a scene node
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:renderer, effort:m, lighting
+milestone: Rendering
+created: 2026-11-21T01:58:35Z
+updated: 2026-11-21T01:58:39Z
++++
+
+Light.Kind has directional, point and spot only. Ambient light is a renderer setting (BlinnPhongMaterialRenderer.ambientLightColor) rather than a light node like SCNLight's .ambient type, so it cannot be animated, archived with the scene, or masked by category like other lights. PBR and ShaderMaterial have no constant ambient term.
+
+Split out of #86.
 
 ---
 

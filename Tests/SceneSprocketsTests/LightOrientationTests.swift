@@ -1,3 +1,4 @@
+import Foundation
 import MetalSprocketsPBR
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
@@ -32,4 +33,32 @@ func pbrSpotLightUsesConeAngles() {
     #expect(abs(light.innerConeCos - cos(0.2)) < 0.0001)
     #expect(abs(light.outerConeCos - cos(0.4)) < 0.0001)
     #expect(simd_distance(light.direction, [0, -1, 0]) < 0.0001)
+}
+
+// #86: temperature tints the color the renderers get; 6500 K is white, low is warm, high is cool.
+@Test
+func temperatureTintsLightColor() {
+    #expect(simd_distance(Light.color(temperature: 6_500), [1, 1, 1]) < 1e-4)
+    let warm = Light.color(temperature: 2_700)
+    #expect(warm.x > warm.z)
+    let cool = Light.color(temperature: 12_000)
+    #expect(cool.z > cool.x)
+    var light = Light(type: .point, color: [0.5, 0.5, 0.5])
+    light.temperature = 2_700
+    #expect(simd_distance(LightingLight(light, worldTransform: matrix_identity_float4x4).color, warm * 0.5) < 1e-5)
+}
+
+// #86: SceneKit-style attenuation reaches the shader as start distance, falloff exponent and the end in `range`.
+@Test
+func attenuationIsPassedToShaders() throws {
+    var light = Light(type: .spot, range: 20)
+    light.attenuation = .init(startDistance: 2, endDistance: 10, falloffExponent: 1)
+    light.temperature = 4_000
+    let converted = LightingLight(light, worldTransform: matrix_identity_float4x4)
+    #expect(converted.range == 10)
+    #expect(converted.attenuationStartDistance == 2)
+    #expect(converted.attenuationFalloffExponent == 1)
+    #expect(LightingLight(Light(type: .point), worldTransform: matrix_identity_float4x4).attenuationFalloffExponent == 0)
+    let decoded = try JSONDecoder().decode(Light.self, from: JSONEncoder().encode(light))
+    #expect(decoded == light)
 }

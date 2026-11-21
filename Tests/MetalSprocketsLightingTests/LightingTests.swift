@@ -115,8 +115,8 @@ struct LightingTests {
 
     // Same layout as MetalSprocketsPBR's PBRLight and PBRShadowUniforms, so renderers can share buffers.
     @Test func layoutsMatchPBR() {
-        #expect(MemoryLayout<LightingLight>.size == 80)
-        #expect(MemoryLayout<LightingLight>.stride == 80)
+        #expect(MemoryLayout<LightingLight>.size == 96)
+        #expect(MemoryLayout<LightingLight>.stride == 96)
         #expect(MemoryLayout<LightingShadowUniforms>.offset(of: \.mapSize) == 64 * Int(kLightingMaxShadowSliceCount))
         #expect(MemoryLayout<LightingShadowUniforms>.offset(of: \.color) == 64 * Int(kLightingMaxShadowSliceCount) + 16)
     }
@@ -161,6 +161,38 @@ struct LightingTests {
         // On the spot's axis, inside the inner cone.
         #expect(close(radiances[4], full / 4))
         #expect(close(radiances[5], .zero))
+    }
+
+    // #86: SceneKit-style falloff: full up to the start distance, none past the end, (fraction)^exponent between.
+    @Test func falloffAttenuationFollowsSceneKit() throws {
+        func falloff(start: Float, end: Float, exponent: Float, distance: Float) -> LightingLight {
+            var light = LightingLight.point(position: [0, distance, 0], color: [1, 1, 1], intensity: 1, range: end)
+            light.attenuationStartDistance = start
+            light.attenuationFalloffExponent = exponent
+            return light
+        }
+        let lights = [
+            falloff(start: 1, end: 5, exponent: 2, distance: 0.5),
+            falloff(start: 1, end: 5, exponent: 2, distance: 3),
+            falloff(start: 1, end: 5, exponent: 1, distance: 3),
+            falloff(start: 1, end: 5, exponent: 2, distance: 6)
+        ]
+        let positions = [SIMD3<Float>](repeating: .zero, count: lights.count)
+        let toLight = try #require(device.makeBuffer(length: MemoryLayout<SIMD3<Float>>.stride * lights.count, options: .storageModeShared))
+        let radiance = try #require(device.makeBuffer(length: MemoryLayout<SIMD3<Float>>.stride * lights.count, options: .storageModeShared))
+        let lightBuffer = try buffer(lights)
+        let positionBuffer = try buffer(positions)
+        try run("sample_lights", count: lights.count) { encoder in
+            encoder.setBuffer(lightBuffer, offset: 0, index: 0)
+            encoder.setBuffer(positionBuffer, offset: 0, index: 1)
+            encoder.setBuffer(toLight, offset: 0, index: 2)
+            encoder.setBuffer(radiance, offset: 0, index: 3)
+        }
+        let values = UnsafeBufferPointer(start: radiance.contents().assumingMemoryBound(to: SIMD3<Float>.self), count: lights.count).map(\.x)
+        #expect(abs(values[0] - 1) < 1e-4)
+        #expect(abs(values[1] - 0.25) < 1e-4)
+        #expect(abs(values[2] - 0.5) < 1e-4)
+        #expect(values[3] == 0)
     }
 
     @Test func shadowsMultiplySlicesAndTint() throws {

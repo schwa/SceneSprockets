@@ -32,6 +32,10 @@ struct LightingLight {
     // This light's slices in the shadow map; count 0 casts no shadow.
     int shadowSliceStart;
     int shadowSliceCount;
+    // SceneKit-style falloff, used when attenuationFalloffExponent > 0: full intensity up to
+    // attenuationStartDistance, none from `range` on, with this exponent between. 0 keeps inverse-square falloff.
+    float attenuationStartDistance;
+    float attenuationFalloffExponent;
 };
 typedef struct LightingLight LightingLight;
 

@@ -9,10 +9,16 @@ package extension LightingLight {
         position = SIMD3(worldTransform.columns.3.x, worldTransform.columns.3.y, worldTransform.columns.3.z)
         let forward = -SIMD3(worldTransform.columns.2.x, worldTransform.columns.2.y, worldTransform.columns.2.z)
         direction = simd_length(forward) > 0 ? simd_normalize(forward) : [0, 0, -1]
-        color = light.color
+        color = light.tintedColor
         intensity = light.intensity
         // 0 is infinite in KHR_lights_punctual.
         range = light.range.isFinite ? light.range : 0
+        if let attenuation = light.attenuation {
+            // The shader reads the end distance from `range`.
+            range = attenuation.endDistance
+            attenuationStartDistance = attenuation.startDistance
+            attenuationFalloffExponent = max(attenuation.falloffExponent, 1e-3)
+        }
         innerConeCos = cos(light.innerConeAngle)
         outerConeCos = cos(light.outerConeAngle)
         type = switch light.type {

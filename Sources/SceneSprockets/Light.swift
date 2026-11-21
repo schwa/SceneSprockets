@@ -1,3 +1,6 @@
+import Foundation
+import simd
+
 /// A light's color and shape, like SCNLight. Its node places it: lights point down their node's -Z axis.
 public struct Light: Sendable, Equatable, Codable {
     /// The shape of a light.
@@ -29,6 +32,51 @@ public struct Light: Sendable, Equatable, Codable {
     /// Whether the light casts shadows when the scene has shadows, like SCNLight.castsShadow. Each shadow-casting light
     /// draws the casters again (a point light six times), so turn it off for fill and decorative lights.
     public var castsShadow: Bool
+    /// A color temperature in kelvin that tints ``color``, like SCNLight.temperature: 6500 is white, lower is warmer,
+    /// higher is cooler. Nil leaves the color unchanged.
+    public var temperature: Float?
+    /// SceneKit-style distance falloff for point and spot lights, instead of physical inverse-square falloff with
+    /// ``range``. Nil keeps the physical falloff.
+    public var attenuation: Attenuation?
+
+    /// Distance falloff like SCNLight's attenuationStartDistance, attenuationEndDistance and
+    /// attenuationFalloffExponent.
+    public struct Attenuation: Sendable, Equatable, Codable {
+        /// Full intensity up to this distance.
+        public var startDistance: Float
+        /// No light from this distance on.
+        public var endDistance: Float
+        /// The curve between: 1 is linear, 2 (the default) is quadratic.
+        public var falloffExponent: Float
+
+        public init(startDistance: Float = 0, endDistance: Float, falloffExponent: Float = 2) {
+            self.startDistance = startDistance
+            self.endDistance = endDistance
+            self.falloffExponent = falloffExponent
+        }
+    }
+
+    /// ``color`` tinted by ``temperature``.
+    public var tintedColor: SIMD3<Float> {
+        temperature.map { color * Self.color(temperature: $0) } ?? color
+    }
+
+    /// The linear RGB of a black body at `kelvin`, scaled so 6500 K is white. Tanner Helland's fit, 1000 K to 40000 K.
+    public static func color(temperature kelvin: Float) -> SIMD3<Float> {
+        func blackBody(_ kelvin: Float) -> SIMD3<Float> {
+            let value = min(max(kelvin, 1_000), 40_000) / 100
+            let red: Float = value <= 66 ? 255 : 329.698727446 * pow(value - 60, -0.1332047592)
+            let green: Float = value <= 66 ? 99.4708025861 * log(value) - 161.1195681661 : 288.1221695283 * pow(value - 60, -0.0755148492)
+            let blue: Float = value >= 66 ? 255 : (value <= 19 ? 0 : 138.5177312231 * log(value - 10) - 305.0447927307)
+            let srgb = simd_clamp(SIMD3(red, green, blue) / 255, .zero, .one)
+            // sRGB to linear.
+            return SIMD3(srgb.indices.map { index in
+                let channel = srgb[index]
+                return channel <= 0.04045 ? channel / 12.92 : pow((channel + 0.055) / 1.055, 2.4)
+            })
+        }
+        return blackBody(kelvin) / blackBody(6_500)
+    }
 
     /// Creates a light.
     ///
@@ -51,7 +99,7 @@ public struct Light: Sendable, Equatable, Codable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case type, color, intensity, range, innerConeAngle, outerConeAngle, castsShadow
+        case type, color, intensity, range, innerConeAngle, outerConeAngle, castsShadow, temperature, attenuation
     }
 
     /// Decodes a light. Archives from before `castsShadow` decode with shadows on.
@@ -64,6 +112,8 @@ public struct Light: Sendable, Equatable, Codable {
         innerConeAngle = try container.decode(Float.self, forKey: .innerConeAngle)
         outerConeAngle = try container.decode(Float.self, forKey: .outerConeAngle)
         castsShadow = try container.decodeIfPresent(Bool.self, forKey: .castsShadow) ?? true
+        temperature = try container.decodeIfPresent(Float.self, forKey: .temperature)
+        attenuation = try container.decodeIfPresent(Attenuation.self, forKey: .attenuation)
     }
 
     /// Creates a spot light. It shines along its node's -Z axis.

@@ -17,6 +17,14 @@ namespace Lighting {
         return metal::clamp(1.0 - metal::pow(distance / range, 4.0), 0.0, 1.0) * inverseSquare;
     }
 
+    // SceneKit's attenuation: 1 up to `start`, 0 from `end` on, (remaining fraction)^exponent between.
+    inline float falloffAttenuation(float start, float end, float exponent, float distance) {
+        if (end <= start) {
+            return distance <= start ? 1.0 : 0.0;
+        }
+        return metal::pow(metal::saturate((end - distance) / (end - start)), exponent);
+    }
+
     inline float spotAttenuation(LightingLight light, float3 toLight) {
         const float cosine = metal::dot(metal::normalize(light.direction), -toLight);
         return metal::smoothstep(light.outerConeCos, light.innerConeCos, cosine);
@@ -39,7 +47,9 @@ namespace Lighting {
             const float3 delta = light.position - position;
             const float distance = metal::length(delta);
             result.toLight = delta / metal::max(distance, 1e-6);
-            attenuation = rangeAttenuation(light.range, distance);
+            attenuation = light.attenuationFalloffExponent > 0.0
+                ? falloffAttenuation(light.attenuationStartDistance, light.range, light.attenuationFalloffExponent, distance)
+                : rangeAttenuation(light.range, distance);
             if (light.type == kLightingLightTypeSpot) {
                 attenuation *= spotAttenuation(light, result.toLight);
             }
