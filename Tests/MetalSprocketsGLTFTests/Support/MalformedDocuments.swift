@@ -2,6 +2,8 @@ import Foundation
 @testable import MetalSprocketsGLTF
 import simd
 
+// swiftlint:disable legacy_objc_type - JSONSerialization works in NSNumber
+
 // Builds malformed variants of a small valid glTF and checks that loading and posing each one never crashes.
 // Throwing or warning is fine.
 
@@ -21,6 +23,22 @@ struct MalformedFixture {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
         try JSONSerialization.data(withJSONObject: json).write(to: url)
         return url
+    }
+
+    /// The document as GLB bytes, the buffer in the BIN chunk.
+    func glb() throws -> Data {
+        func padded(_ data: Data, with byte: UInt8) -> Data {
+            data + Data(repeating: byte, count: (4 - data.count % 4) % 4)
+        }
+        func uint32(_ value: Int) -> Data {
+            withUnsafeBytes(of: UInt32(value).littleEndian) { Data($0) }
+        }
+        let jsonChunk = try padded(JSONSerialization.data(withJSONObject: json), with: 0x20)
+        let binChunk = padded(buffer, with: 0)
+        let length = 12 + 8 + jsonChunk.count + 8 + binChunk.count
+        return Data("glTF".utf8) + uint32(2) + uint32(length)
+            + uint32(jsonChunk.count) + Data("JSON".utf8) + jsonChunk
+            + uint32(binChunk.count) + Data([0x42, 0x49, 0x4E, 0]) + binChunk
     }
 }
 
@@ -186,7 +204,7 @@ extension MalformedFixture {
                 buffer.append(0)
             }
         }
-        let identity = (0 ..< 16).map { Float($0 % 5 == 0 ? 1 : 0) }
+        let identity = (0 ..< 16).map { Float($0.isMultiple(of: 5) ? 1 : 0) }
         append([Float](arrayLiteral: -1, -1, 0, 1, -1, 0, 0, 1, 0)) // 0: positions, 36
         append([UInt16](arrayLiteral: 0, 1, 2)) // 36: indices, 6
         append([UInt8](arrayLiteral: 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0)) // 44: joints, 12
@@ -202,6 +220,9 @@ extension MalformedFixture {
         append([Float](arrayLiteral: 0, 0, 0, 2, 0, 0)) // 356: instance translations, 24
         append([Float](arrayLiteral: 1, 0, 0, 0.5, 0.5, 0.5)) // 380: color keyframes, 24
         let views: [(Int, Int)] = [(0, 36), (36, 6), (44, 12), (56, 48), (104, 128), (232, 8), (240, 24), (264, 32), (296, 36), (332, 8), (340, 2), (344, 12), (356, 24), (380, 24)]
+        let viewsJSON = views.enumerated()
+            .map { index, view in "{\"buffer\": 0, \"byteOffset\": \(view.0), \"byteLength\": \(view.1)\(index == 0 ? ", \"byteStride\": 12" : "")}" }
+            .joined(separator: ", ")
         let json = """
         {
           "asset": {"version": "2.0"},
@@ -265,9 +286,7 @@ extension MalformedFixture {
             {"bufferView": 0, "byteOffset": 4, "componentType": 5126, "count": 2, "type": "VEC2"},
             {"bufferView": 13, "componentType": 5126, "count": 2, "type": "VEC3"}
           ],
-          "bufferViews": [\(views.enumerated().map { index, view in
-                "{\"buffer\": 0, \"byteOffset\": \(view.0), \"byteLength\": \(view.1)\(index == 0 ? ", \"byteStride\": 12" : "")}"
-            }.joined(separator: ", "))],
+          "bufferViews": [\(viewsJSON)],
           "buffers": [{"byteLength": \(buffer.count)}]
         }
         """
@@ -277,3 +296,5 @@ extension MalformedFixture {
         return Self(json: object, buffer: buffer)
     }
 }
+
+// swiftlint:enable legacy_objc_type

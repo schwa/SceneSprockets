@@ -12789,18 +12789,21 @@ Was MetalSprocketsGLTF#191 (moved with the package, #552).
 ## 564: Malformed accessors and buffer views can crash the loader
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: effort:m, area:testing, subtask, gltf
 milestone: Reliability
 created: 2026-11-19T02:12:56Z
-updated: 2026-11-20T06:33:09Z
+updated: 2026-11-21T02:28:31Z
+closed: 2026-11-21T02:28:31Z
 +++
 
 Part of #561. Loading or posing malformed input in this area must produce an error or warning, never a crash (precondition, fatalError, out-of-range index, force unwrap, integer overflow, unbounded allocation). Acceptance: a fuzz or malformed-input test covers the area and finds no crash. Area: accessor and bufferView offsets, counts, strides, sparse accessors.
 
 Was MetalSprocketsGLTF#192 (moved with the package, #552).
+
+- `2026-11-21T02:28:31Z`: MalformedDocumentTests.accessorsAndBufferViews and glbContainer cover accessors, buffer views, sparse data and GLB framing; the loader now checks them before SwiftGLTF reads.
 
 ---
 

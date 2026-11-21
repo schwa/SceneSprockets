@@ -76,7 +76,7 @@ struct GLTFPoser: @unchecked Sendable {
     init(container: Container, sceneIndex: Int, materials: [Material] = []) throws {
         let document = container.document
         let hierarchy = try GLTFNodeHierarchy(document: document, sceneIndex: sceneIndex)
-        try self.init(document: document, hierarchy: hierarchy, animations: try GLTFAnimationClip.load(container: container).clips, materials: materials)
+        try self.init(document: document, hierarchy: hierarchy, animations: GLTFAnimationClip.load(container: container).clips, materials: materials)
     }
 
     // MARK: Posing
@@ -99,7 +99,7 @@ struct GLTFPoser: @unchecked Sendable {
             addDeltas(of: layer, to: &values)
         }
         if let node = rootMotionNode, let rest = hierarchy.restValue(node: node, path: .translation), rest.count == 3 {
-            var translation = values[.node(node, .translation)] ?? rest
+            var translation = values[.node(node, .translation)].flatMap { $0.count == 3 ? $0 : nil } ?? rest
             translation[0] = rest[0]
             translation[2] = rest[2]
             values[.node(node, .translation)] = translation

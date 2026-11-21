@@ -32,7 +32,7 @@ enum GLTFGeometry {
             guard components.contains(componentCount) else {
                 throw GLTFError.invalidDocument("\(semantic.rawValue) has \(accessor.type) values")
             }
-            let values = try container.floatComponents(for: accessor)
+            let values = try container.checkedFloatComponents(for: accessor)
             guard values.count == vertexCount * componentCount else {
                 throw GLTFError.invalidDocument("\(semantic.rawValue) has \(values.count / componentCount) values for \(vertexCount) vertices")
             }
@@ -78,7 +78,7 @@ enum GLTFGeometry {
                 guard let index = target[semantic] else {
                     return nil
                 }
-                let values = try container.floatComponents(for: index.resolve(in: document))
+                let values = try container.checkedFloatComponents(for: index.resolve(in: document))
                 guard values.count == vertexCount * 3 else {
                     throw GLTFError.invalidDocument("Morph target \(semantic.rawValue) count mismatch")
                 }
@@ -101,7 +101,8 @@ enum GLTFGeometry {
 
         var indices: [UInt32]
         if let indicesIndex = primitive.indices {
-            indices = try readIndices(container.data(for: indicesIndex.resolve(in: document)), componentType: indicesIndex.resolve(in: document).componentType)
+            let indicesAccessor = try indicesIndex.resolve(in: document)
+            indices = try readIndices(container.checkedData(for: indicesAccessor), componentType: indicesAccessor.componentType)
             if let bad = indices.first(where: { Int($0) >= vertexCount }) {
                 throw GLTFError.invalidDocument("Index \(bad) is out of range for \(vertexCount) vertices")
             }

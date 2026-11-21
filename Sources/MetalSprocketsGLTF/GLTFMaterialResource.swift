@@ -214,7 +214,7 @@ final class GLTFTextureCache {
         }
         let image = document.images[imageIndex]
         if let bufferView = image.bufferView {
-            return try container.data(for: bufferView.resolve(in: document))
+            return try container.checkedData(for: bufferView)
         }
         if let uri = image.uri {
             return try container.data(for: uri)

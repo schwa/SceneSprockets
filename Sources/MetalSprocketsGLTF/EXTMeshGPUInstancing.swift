@@ -41,7 +41,7 @@ extension Container {
             guard accessor.type.componentCount == components else {
                 throw GLTFError.invalidDocument("EXT_mesh_gpu_instancing \(name) must have \(components) components")
             }
-            return try floatComponents(for: accessor)
+            return try checkedFloatComponents(for: accessor)
         }
         let translations = try values("TRANSLATION", components: 3)
         let rotations = try values("ROTATION", components: 4)

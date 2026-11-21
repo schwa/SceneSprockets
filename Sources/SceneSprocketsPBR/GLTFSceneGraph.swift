@@ -378,7 +378,7 @@ private struct GLTFSceneGraphBuilder {
             guard document.accessors.indices.contains(index), document.accessors[index].type.componentCount == components else {
                 throw GLTFSceneGraphError.invalidInstancing(name)
             }
-            return try asset.container.floatComponents(for: document.accessors[index])
+            return try asset.container.checkedFloatComponents(for: document.accessors[index])
         }
         let translations = try values("TRANSLATION", components: 3)
         let rotations = try values("ROTATION", components: 4)

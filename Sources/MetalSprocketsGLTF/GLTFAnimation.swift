@@ -71,11 +71,15 @@ public struct GLTFAnimationClip: Sendable {
     public internal(set) var channels: [Channel]
     /// KHR_animation_pointer targets this renderer cannot animate.
     public var unsupportedPointers: [String]
+    /// Why channels with malformed keyframes were skipped.
+    var skippedChannels: [String] = []
 
-    init(_ animation: Animation, index: Int, container: Container) throws {
-        name = animation.name ?? "Animation \(index)"
+    init(_ animation: Animation, index: Int, container: Container) {
+        let name = animation.name ?? "Animation \(index)"
+        self.name = name
         var unsupported: [String] = []
-        channels = try animation.channels.compactMap { channel in
+        var skipped: [String] = []
+        channels = animation.channels.enumerated().compactMap { channelIndex, channel in
             guard animation.samplers.indices.contains(channel.sampler) else {
                 return nil
             }
@@ -94,10 +98,39 @@ public struct GLTFAnimationClip: Sendable {
             } else {
                 return nil
             }
-            return Channel(target: target, keyframes: try container.keyframes(for: animation.samplers[channel.sampler]))
+            do {
+                let keyframes = try container.checkedKeyframes(for: animation.samplers[channel.sampler])
+                if let expected = target.componentsPerValue, keyframes.componentsPerValue != expected {
+                    throw GLTFError.invalidDocument("\(keyframes.componentsPerValue) components per value; expected \(expected)")
+                }
+                return Channel(target: target, keyframes: keyframes)
+            } catch {
+                skipped.append("Skipped \(name) channel \(channelIndex): \(error)")
+                return nil
+            }
         }
         unsupportedPointers = unsupported
+        skippedChannels = skipped
         duration = channels.map(\.keyframes.duration).max() ?? 0
+    }
+}
+
+extension Container {
+    /// A sampler's keyframes, after checking that sampling them cannot trap: accessors in range, at least one time,
+    /// finite times in ascending order, and a whole number of values per keyframe.
+    func checkedKeyframes(for sampler: Animation.Sampler) throws -> AnimationKeyframes {
+        try checkAccessor(sampler.input.resolve(in: document))
+        try checkAccessor(sampler.output.resolve(in: document))
+        let keyframes = try keyframes(for: sampler)
+        let times = keyframes.times
+        guard !times.isEmpty, times.allSatisfy(\.isFinite), zip(times, times.dropFirst()).allSatisfy({ $0 <= $1 }) else {
+            throw GLTFError.invalidDocument("Keyframe times must be finite and ascending")
+        }
+        let perKeyframe = sampler.interpolation == .CUBICSPLINE ? 3 : 1
+        guard keyframes.componentsPerValue >= 1, keyframes.values.count == times.count * perKeyframe * keyframes.componentsPerValue else {
+            throw GLTFError.invalidDocument("Keyframe output has \(keyframes.values.count) values for \(times.count) keyframes")
+        }
+        return keyframes
     }
 }
 
@@ -119,6 +152,15 @@ extension Node {
 }
 
 extension GLTFAnimationClip.Target {
+    /// The fixed size of this target's values; nil when it varies (morph weights, pointer properties).
+    var componentsPerValue: Int? {
+        switch self {
+        case .node(_, .translation), .node(_, .scale): 3
+        case .node(_, .rotation): 4
+        default: nil
+        }
+    }
+
     var isRotation: Bool {
         if case .node(_, .rotation) = self {
             true
@@ -167,7 +209,7 @@ struct GLTFNodeHierarchy: Sendable {
     /// The most node visits one walk may make.
     static let maximumVisits = 1 << 22
     /// The deepest node hierarchy accepted.
-    static let maximumDepth = 1024
+    static let maximumDepth = 1_024
 
     /// Throws when a node reachable from `roots` is out of range or is its own ancestor; the walks below rely on this.
     init(document: Document, roots: [Int]) throws {
@@ -280,12 +322,13 @@ extension GLTFNodeHierarchy {
 
 extension GLTFAnimationClip {
     /// Every animation of the document, with warnings for channels that cannot be used.
-    static func load(container: Container) throws -> (clips: [Self], warnings: [String]) {
+    static func load(container: Container) -> (clips: [Self], warnings: [String]) {
         let document = container.document
         var warnings: [String] = []
-        var clips = try document.animations.enumerated().map { index, animation in
-            try GLTFAnimationClip(animation, index: index, container: container)
+        var clips = document.animations.enumerated().map { index, animation in
+            GLTFAnimationClip(animation, index: index, container: container)
         }
+        warnings += clips.flatMap(\.skippedChannels)
         // glTF forbids animating translation, rotation or scale of a node that uses `matrix`.
         for index in clips.indices {
             let name = clips[index].name

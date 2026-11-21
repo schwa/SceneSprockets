@@ -60,7 +60,7 @@ public final class GLTFAsset: @unchecked Sendable {
     /// `variant` selects a KHR_materials_variants variant by index into ``variantNames``; nil uses the default materials.
     /// `options` registers extension support from other targets, such as texture decoders.
     public convenience init(url: URL, device: MTLDevice? = nil, sceneIndex: Int? = nil, variant: Int? = nil, options: GLTFLoadOptions = GLTFLoadOptions()) throws {
-        try self.init(container: Container(url: url, bufferViewDecoders: options.bufferViewDecoders), device: device, sceneIndex: sceneIndex, variant: variant, options: options)
+        try self.init(container: Container(checkingURL: url, bufferViewDecoders: options.bufferViewDecoders), device: device, sceneIndex: sceneIndex, variant: variant, options: options)
     }
 
     /// Everything loaded from the file that does not depend on the scene or variant, shared by ``scene(_:)``.

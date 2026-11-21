@@ -70,7 +70,7 @@ public struct GLTFMeshCodec: ArchivableMeshCodec {
     }
 
     public func decode(path: String, context: ArchiveContext) throws -> MetalMesh {
-        let container = try Container(url: context.url(forPath: path))
+        let container = try Container(checkingURL: context.url(forPath: path))
         let document = container.document
         guard let mesh = document.meshes.first, let first = mesh.primitives.first else {
             throw ArchiveError.unsupportedMesh("\(path) has no mesh")

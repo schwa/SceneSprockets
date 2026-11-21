@@ -56,7 +56,7 @@ extension GLTFAsset.Resources {
         let skins = try document.skins.map { skin in
             PBRModel.Skin(joints: skin.joints.map(\.index), inverseBindMatrices: try container.checkedInverseBindMatrices(for: skin))
         }
-        let (animations, animationWarnings) = try GLTFAnimationClip.load(container: container)
+        let (animations, animationWarnings) = GLTFAnimationClip.load(container: container)
         warnings += animationWarnings
         var nodeInstanceMatrices: [Int: [simd_float4x4]] = [:]
         for (index, node) in document.nodes.enumerated() where node.mesh != nil {
@@ -86,7 +86,7 @@ extension Container {
         guard accessor.type == .MAT4, accessor.count >= skin.joints.count else {
             throw GLTFError.invalidDocument("Skin inverseBindMatrices must be a MAT4 for each of its \(skin.joints.count) joints")
         }
-        let floats = try floatComponents(for: accessor)
+        let floats = try checkedFloatComponents(for: accessor)
         return (0 ..< skin.joints.count).map { joint in
             floats.withUnsafeBufferPointer { floats in
                 let base = joint * 16

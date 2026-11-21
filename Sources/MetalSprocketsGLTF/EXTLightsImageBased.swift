@@ -154,7 +154,7 @@ extension GLTFImageBasedLight {
         let image = document.images[imageIndex]
         let data: Data
         if let bufferView = image.bufferView {
-            data = try container.data(for: bufferView.resolve(in: document))
+            data = try container.checkedData(for: bufferView)
         } else if let uri = image.uri {
             data = try container.data(for: uri)
         } else {
