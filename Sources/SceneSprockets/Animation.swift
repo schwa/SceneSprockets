@@ -276,7 +276,8 @@ extension SceneGraph {
                 func value(_ key: Int) -> [Float] {
                     Array(values[(key * stride + valueOffset)..<(key * stride + valueOffset + count)])
                 }
-                if time <= first {
+                // Written as !(time > first) so NaN gets the first key too, rather than reaching the search below.
+                if !(time > first) || times.count == 1 {
                     return value(0)
                 }
                 if time >= last {

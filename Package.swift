@@ -196,6 +196,8 @@ let package = Package(
                 "MetalSprocketsPBR",
                 "MetalSprocketsPBRShaders",
                 "MetalSprocketsGLTF",
+                // The malformed-input tests also import into a scene graph.
+                "SceneSprocketsPBR",
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
                 .product(name: "MetalSupport", package: "MetalSupport"),
                 .product(name: "GoldenImage", package: "GoldenImage")

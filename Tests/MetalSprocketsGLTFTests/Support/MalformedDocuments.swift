@@ -1,5 +1,7 @@
 import Foundation
 @testable import MetalSprocketsGLTF
+import SceneSprockets
+@testable import SceneSprocketsPBR
 import simd
 
 // swiftlint:disable legacy_objc_type - JSONSerialization works in NSNumber
@@ -141,7 +143,8 @@ enum MalformedDocuments {
     }
 
     /// Loads `url` and poses every animation at hostile times, blended and alone, and builds every scene and variant.
-    static func exercise(_ url: URL) {
+    /// With `importsScene`, also imports it into a scene graph and plays its clips there.
+    static func exercise(_ url: URL, importsScene: Bool = true) {
         guard let asset = try? GLTFAsset(url: url) else {
             return
         }
@@ -178,6 +181,24 @@ enum MalformedDocuments {
             _ = asset.restMorphWeights(node: node)
         }
         _ = try? asset.environment()
+
+        guard importsScene, let imported = try? asset.importScene() else {
+            return
+        }
+        for clip in imported.animations {
+            for time in times {
+                clip.apply(at: time, looping: true)
+                clip.apply(at: time)
+            }
+        }
+        let mixer = SceneGraph.AnimationMixer(clips: imported.animations)
+        for clip in [-1, 0, 1, 99] {
+            mixer.apply([.init(clip: clip, time: 0.5, weight: 0.5), .init(clip: 0, time: 0.25, weight: 0.5), .init(clip: clip, time: 0.75, mode: .additive)], rootMotionNode: imported.nodes.compactMap(\.self).first)
+        }
+        for variant in [nil, -1, 0, 1, 99] {
+            try? imported.selectVariant(variant)
+        }
+        _ = imported.sceneGraph.meshEntries()
     }
 
     /// Writes and exercises every mutation, logging each label first so a crash names its case.

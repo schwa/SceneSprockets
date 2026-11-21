@@ -12810,18 +12810,21 @@ Was MetalSprocketsGLTF#192 (moved with the package, #552).
 ## 565: Malformed animations can crash loading or posing
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: effort:m, area:testing, subtask, gltf
 milestone: Reliability
 created: 2026-11-19T02:12:56Z
-updated: 2026-11-20T06:33:09Z
+updated: 2026-11-21T02:33:00Z
+closed: 2026-11-21T02:33:00Z
 +++
 
 Part of #561. Loading or posing malformed input in this area must produce an error or warning, never a crash (precondition, fatalError, out-of-range index, force unwrap, integer overflow, unbounded allocation). Acceptance: a fuzz or malformed-input test covers the area and finds no crash. Area: animation samplers, channels and KHR_animation_pointer targets, through both loading and GLTFPoser.
 
 Was MetalSprocketsGLTF#193 (moved with the package, #552).
+
+- `2026-11-21T02:33:00Z`: MalformedDocumentTests.animations and samplerShapes fuzz samplers, channels and KHR_animation_pointer targets through GLTFPoser and the scene graph import; fixes landed here and in #564.
 
 ---
 

@@ -167,3 +167,13 @@ func animatingBumpsTransformRevisionOnly() {
     #expect(sceneGraph.revision.structure == before.structure)
     #expect(sceneGraph.revision.transform != before.transform)
 }
+
+// #565: a NaN time used to index before the first key, which trapped for a single key.
+@Test func samplerHandlesNaNTime() {
+    for interpolation in [SceneGraph.AnimationClip.Interpolation.step, .linear, .cubicSpline] {
+        let single = SceneGraph.AnimationClip.Sampler(times: [0.5], values: [1, 2, 3], interpolation: interpolation)
+        #expect(single.sample(at: .nan) == (interpolation == .cubicSpline ? [2] : [1, 2, 3]))
+        let pair = SceneGraph.AnimationClip.Sampler(times: [0, 1], values: interpolation == .cubicSpline ? [0, 0, 0, 0, 4, 0] : [0, 4], interpolation: interpolation)
+        #expect(pair.sample(at: .nan) == [0])
+    }
+}

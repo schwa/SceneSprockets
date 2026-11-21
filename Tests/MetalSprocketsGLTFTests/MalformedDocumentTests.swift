@@ -45,6 +45,48 @@ struct MalformedDocumentTests {
         #expect(count > 100)
     }
 
+    // Animation samplers, channels and KHR_animation_pointer targets, through loading and posing.
+    @Test func animations() throws {
+        let pointers = [
+            "/", "//", "/nodes", "/nodes/-1/translation", "/nodes/99/rotation", "/nodes/9223372036854775807/scale", "/nodes/0/weights",
+            "/nodes/2/translation", "/nodes/3/extensions/KHR_node_visibility/visible", "/nodes/-1/extensions/KHR_node_visibility/visible",
+            "/materials/-1/pbrMetallicRoughness/baseColorFactor", "/materials/99/emissiveFactor", "/materials/0/emissiveFactor",
+            "/materials/0/pbrMetallicRoughness/baseColorTexture/extensions/KHR_texture_transform/offset",
+            "/materials/0/pbrMetallicRoughness/baseColorTexture/extensions/KHR_texture_transform/rotation",
+            "/extensions/KHR_lights_punctual/lights/-1/color", "/extensions/KHR_lights_punctual/lights/99/intensity",
+            "/extensions/KHR_lights_punctual/lights/0/spot/innerConeAngle", "/cameras/-1/perspective/yfov", "/cameras/99/perspective/znear",
+            "/cameras/0/orthographic/xmag", "/cameras/0/perspective/aspectRatio", "STEP", "CUBICSPLINE", "weights", "rotation"
+        ]
+        let count = try MalformedDocuments.run(.full(), hostileStrings: pointers) { path in
+            Self.topLevelKey(path) == "animations"
+        }
+        #expect(count > 100)
+    }
+
+    // Every sampler output reused for every channel and interpolation: mismatched value sizes, CUBICSPLINE counts.
+    @Test func samplerShapes() throws {
+        let fixture = try MalformedFixture.full()
+        var cases: [[String: Any]] = []
+        for output in 0 ..< 14 {
+            for input in [5, 9, 1, 6, 11, 12] {
+                for interpolation in ["LINEAR", "STEP", "CUBICSPLINE"] {
+                    var json = fixture.json
+                    var animations = json["animations"] as? [[String: Any]] ?? []
+                    let samplers = (animations[0]["samplers"] as? [Any] ?? []).map { _ in ["input": input, "output": output, "interpolation": interpolation] }
+                    animations[0]["samplers"] = samplers
+                    json["animations"] = animations
+                    cases.append(json)
+                }
+            }
+        }
+        for (index, json) in cases.enumerated() {
+            FileHandle.standardError.write(Data("malformed: sampler case \(index)\n".utf8))
+            let url = try MalformedFixture(json: json, buffer: fixture.buffer).write()
+            defer { try? FileManager.default.removeItem(at: url) }
+            MalformedDocuments.exercise(url)
+        }
+    }
+
     // GLB container: header and chunk lengths, chunk types and truncation.
     @Test func glbContainer() throws {
         let glb = try MalformedFixture.full().glb()
@@ -88,7 +130,8 @@ struct MalformedDocumentTests {
         }
         fixture.json["nodes"] = nodes
         fixture.json["scenes"] = [["nodes": [0, first]]]
-        MalformedDocuments.exercise(try fixture.write())
+        // Scene graphs recurse over the hierarchy (#603).
+        MalformedDocuments.exercise(try fixture.write(), importsScene: false)
     }
 
     // Each node lists the next one twice, so a walk would visit the last node 2^64 times.
