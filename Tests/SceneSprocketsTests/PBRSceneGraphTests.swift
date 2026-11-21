@@ -91,6 +91,26 @@ func morphTargetsWithWrongVertexCountAreIgnored() throws {
     #expect(primitive.morphTargets == nil)
 }
 
+// #595: PBR keeps the valid targets with their own weights, like MeshEntry.validMorphs and the CPU and GPU paths,
+// instead of dropping every target when one is invalid.
+@Test
+func pbrKeepsValidMorphTargetsWhenOneIsInvalid() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let box = MetalMesh(mesh: .box(), device: device)
+    let node = SceneGraph.Node(content: .mesh(box, material: PBRSceneMaterial()))
+    node.morphTargets = [
+        SceneGraph.MorphTarget(positionDeltas: [[0, 1, 0]]),
+        SceneGraph.MorphTarget(positionDeltas: Array(repeating: [1, 0, 0], count: box.vertexCount))
+    ]
+    node.morphWeights = [0.25, 0.75]
+    let entries = SceneGraph(root: node).meshEntries()
+    let primitive = pbrPrimitiveInput(entry: entries[0], attributes: box.vertexAttributeData(), skinned: false)
+    let targets = try #require(primitive.morphTargets).targets
+    #expect(targets.count == 1)
+    #expect(targets[0].positionOffsets?[0] == [1, 0, 0])
+    #expect(pbrPose(for: entries).morphWeights == [[0.75]])
+}
+
 @Test(.enabled(if: deviceSupportsMetal4))
 func pbrModelIsBuiltForEachBufferLayout() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())

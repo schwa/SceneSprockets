@@ -37,7 +37,7 @@ extension SceneGraph.MeshEntry {
 
     // The morph targets that fit the mesh, in order, each with its weight (0 when there is none). The one rule for
     // which targets and weights the CPU and GPU paths use (#590).
-    var validMorphs: [(target: SceneGraph.MorphTarget, weight: Float)] {
+    package var validMorphs: [(target: SceneGraph.MorphTarget, weight: Float)] {
         let vertexCount = mesh.vertexCount
         let weights = morphWeights
         return morphTargets.enumerated().compactMap { index, target in

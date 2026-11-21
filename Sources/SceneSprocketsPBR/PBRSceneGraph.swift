@@ -224,7 +224,8 @@ public struct PBRNodeLayout {
     public func pose(cameraPosition: SIMD3<Float> = .zero) -> PBRPose {
         PBRPose(
             worldMatrices: (entries.map(\.worldTransform) + jointWorldTransforms).map { $0.cameraRelative(to: cameraPosition) },
-            morphWeights: entries.map(\.morphWeights) + jointIDs.map { _ in [] }
+            // Parallel to the primitive's targets: only the valid ones (#595).
+            morphWeights: entries.map { $0.validMorphs.map(\.weight) } + jointIDs.map { _ in [] }
         )
     }
 }
@@ -644,10 +645,10 @@ func pbrPrimitiveInput(entry: SceneGraph.MeshEntry, attributes: [MetalMesh.Verte
         attributes.append(.init(semantic: .jointIndices(0), format: .ushort4, values: skinVertices.map(\.joints)))
         attributes.append(.init(semantic: .jointWeights(0), format: .float4, values: skinVertices.map(\.weights)))
     }
-    // Invalid targets are dropped as a whole, so target indices stay aligned with weights only when all are valid.
-    let targets = entry.morphTargets
+    // The same targets as the CPU and GPU paths; the pose's weights are parallel to them (#595).
+    let targets = entry.validMorphs.map(\.target)
     var morphTargets: MetalMesh.MorphTargets?
-    if !targets.isEmpty, targets.allSatisfy({ $0.isValid(vertexCount: mesh.vertexCount) }) {
+    if !targets.isEmpty {
         morphTargets = MetalMesh.MorphTargets(targets: targets.map { target in
             MetalMesh.MorphTargets.Target(
                 positionOffsets: target.positionDeltas.isEmpty ? nil : target.positionDeltas,
