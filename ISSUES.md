@@ -12090,6 +12090,7 @@ updated: 2026-11-20T06:33:50Z
 Objects do not receive indirect lighting appropriate to their location. (Moved from SceneSprocketsAddOns#71.)
 
 - `2026-11-17T17:59:21Z`: Related: #533, #530.
+- `2026-11-22T13:04:15Z`: Related: #602 (ambient light as a scene node).
 
 ---
 
@@ -12713,14 +12714,15 @@ Was MetalSprocketsGLTF#152 (moved with the package, #552).
 ## 561: Malformed glTF input can crash the loader
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: effort:xl, area:testing, has-subtasks, gltf
 milestone: Reliability
 depends: 563, 564, 565, 566
 created: 2026-11-19T02:12:56Z
-updated: 2026-11-20T06:33:09Z
+updated: 2026-11-21T02:41:45Z
+closed: 2026-11-21T02:41:45Z
 +++
 
 Loading or animating a malformed or hostile glTF/GLB should produce an error or a warning, never a crash (precondition, fatalError, out-of-range index, force unwrap, integer overflow, unbounded allocation).
@@ -12730,6 +12732,8 @@ There is no fuzz coverage of the load and pose paths today, so crashes on bad in
 Areas to cover: JSON structure, accessor/bufferView offsets, counts and strides, sparse accessors, node hierarchy indices, skins, animation samplers and pointers, extensions (meshopt, Basis, instancing, lights, image-based lights), and texture data.
 
 Was MetalSprocketsGLTF#180 (moved with the package, #552).
+
+- `2026-11-21T02:41:45Z`: All areas covered by fuzz tests (#563 structure/indices, #564 accessors/buffer views/GLB, #565 animations/posing, #566 extensions/KTX2; texture data by MalformedTextureTests). Deep SceneGraph hierarchies remain open as #603.
 
 ---
 
@@ -13529,13 +13533,16 @@ Found while working on #590.
 
 +++
 status: new
-priority: none
-kind: none
+priority: low
+kind: enhancement
+labels: effort:s, area:scenegraph
 created: 2026-11-20T05:56:30Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-22T13:04:14Z
 +++
 
 Super easy way to make a billboard (with various options to align the billboard to various things - e.g. camera, “tree style” etc)
+
+- `2026-11-22T13:04:15Z`: Question 1: SceneGraph.Constraint.billboard(freeAxes:) already exists (freeAxes: .y gives tree-style). Is the gap a one-call billboard node (quad + material + constraint) plus more alignment modes such as screen-aligned vs camera-position-facing? Recommended: Yes: add a convenience billboard node with screen-aligned, camera-facing and axis-locked modes
 
 ---
 
@@ -13578,11 +13585,12 @@ Expected: an app can ask for a scene graph (or a subtree, or a set of materials)
 ## 598: Metal libraries are not rebuilt when a shared shader header in another target changes
 
 +++
-status: new
+status: open
 priority: low
 kind: bug
 labels: area:build, effort:s
 created: 2026-11-20T06:26:17Z
+updated: 2026-11-22T13:04:15Z
 +++
 
 Changing Sources/MetalSprocketsLightingShaders/include/MetalSprocketsLightingTypes.h (kLightingMaxShadowSliceCount 8 -> 32) did not rebuild the metallibs of SceneSprocketsShaders and MetalSprocketsPBRShaders, which include it. Swift used the new struct layout and the shaders the old one, so every shadow test failed.
@@ -13601,27 +13609,33 @@ Found while fixing #299.
 ## 599: Info panel lacks detail and has an unpolished, non-panel layout
 
 +++
-status: new
-priority: none
-kind: none
+status: open
+priority: low
+kind: enhancement
+labels: effort:s, area:ui
 created: 2026-11-20T06:27:47Z
+updated: 2026-11-22T13:05:02Z
 +++
 
 Make the info panel contain more info.
 Make it prettier and more panel like
+
+- `2026-11-22T13:04:15Z`: Question 1: Which info panel: the SceneSprocketsDemo overlay, GLTFViewer inspector, or the Composer? And what extra info should it show? Recommended: SceneSprocketsDemo info overlay; add node/mesh/draw counts, frame timing and camera info
+- `2026-11-22T13:05:02Z`: Answer 1: The frameworks' info panel (e.g. SceneStatisticsOverlay in SceneSprockets), not the demos.
+- `2026-11-22T13:05:02Z`: Scope: framework info panel (Sources/SceneSprockets/UI/SceneStatisticsOverlay.swift), not the demo apps.
 
 ---
 
 ## 600: Alpha-masked materials do not use alpha-to-coverage with MSAA
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
 labels: area:renderer, effort:m
 milestone: Rendering
 created: 2026-11-20T06:30:55Z
-updated: 2026-11-20T06:32:25Z
+updated: 2026-11-22T13:04:15Z
 +++
 
 With SceneView.sceneAntialiasing(sampleCount:) or SceneGraphElement(sampleCount:) above 1, alpha-masked materials (PBR alphaMode MASK, Blinn-Phong diffuse texture alpha) still cut out with a hard edge per pixel. Their edges get no antialiasing from the extra samples.
@@ -13633,13 +13647,13 @@ Split out of #95.
 ## 601: Soft particles draw as hard particles with MSAA
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
 labels: area:renderer, effort:m
 milestone: Rendering
 created: 2026-11-20T06:30:55Z
-updated: 2026-11-20T06:32:25Z
+updated: 2026-11-22T13:04:15Z
 +++
 
 With sceneAntialiasing(sampleCount:) above 1, SceneFramePlan turns off the soft particle pass (it would need to reload the multisampled color after a depth copy). Soft particles are then drawn in the scene pass like hard particles, so they clip sharply against geometry.
@@ -13651,29 +13665,32 @@ Split out of #95.
 ## 602: Ambient light cannot be a scene node
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:m, lighting
 milestone: Rendering
 created: 2026-11-21T01:58:35Z
-updated: 2026-11-21T01:58:39Z
+updated: 2026-11-22T13:04:15Z
 +++
 
 Light.Kind has directional, point and spot only. Ambient light is a renderer setting (BlinnPhongMaterialRenderer.ambientLightColor) rather than a light node like SCNLight's .ambient type, so it cannot be animated, archived with the scene, or masked by category like other lights. PBR and ShaderMaterial have no constant ambient term.
 
 Split out of #86.
 
+- `2026-11-22T13:04:15Z`: Related: #532 (ambient/irradiance probes).
+
 ---
 
 ## 603: Deep node hierarchies overflow the stack in SceneGraph
 
 +++
-status: new
-priority: medium
+status: open
+priority: high
 kind: bug
-labels: area:scenegraph
+labels: area:scenegraph, crash, effort:m
 created: 2026-11-21T02:14:42Z
+updated: 2026-11-22T12:58:28Z
 +++
 
 Importing a glTF whose node hierarchy is a chain about 64 levels deep crashes with EXC_BAD_ACCESS (stack overflow) in a debug build when run on a Swift Testing thread. SceneGraph walks the hierarchy recursively in several places (Node.attach, SceneGraph.traverse, childNode(withLabel:), and others).
