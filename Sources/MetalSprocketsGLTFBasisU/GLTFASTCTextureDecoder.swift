@@ -33,6 +33,7 @@ public struct GLTFASTCTextureDecoder: GLTFTextureDecoder {
     /// The material slot decides sRGB or linear, as glTF requires, not the KTX2 file's own flag. The spec requires a
     /// full mip chain where the sampler uses mipmaps; files without one get a generated chain (stored uncompressed).
     public func makeTexture(data: Data, sRGB: Bool, device: MTLDevice) throws -> MTLTexture {
-        try BasisTextureLoader(device: device).makeTexture(from: data, colorSpace: sRGB ? .sRGB : .linear, generateMipmaps: true)
+        try KTX2Validation.validate(data)
+        return try BasisTextureLoader(device: device).makeTexture(from: data, colorSpace: sRGB ? .sRGB : .linear, generateMipmaps: true)
     }
 }

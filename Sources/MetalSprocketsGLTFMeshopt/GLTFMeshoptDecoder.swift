@@ -101,12 +101,13 @@ public struct GLTFMeshoptDecoder: BufferViewDecoder {
         guard document.buffers.indices.contains(compression.buffer) else {
             throw GLTFMeshoptError.sourceOutOfRange(buffer: compression.buffer)
         }
+        try check(compression)
         let buffer = try bufferData(document.buffers[compression.buffer])
-        let range = compression.byteOffset ..< compression.byteOffset + compression.byteLength
-        guard range.upperBound <= buffer.count else {
+        let (end, endOverflows) = compression.byteOffset.addingReportingOverflow(compression.byteLength)
+        guard compression.byteOffset >= 0, compression.byteLength >= 0, !endOverflows, end <= buffer.count else {
             throw GLTFMeshoptError.sourceOutOfRange(buffer: compression.buffer)
         }
-        let source = buffer.subdata(in: range)
+        let source = buffer.subdata(in: buffer.startIndex + compression.byteOffset ..< buffer.startIndex + end)
         var output = Data(count: compression.count * compression.byteStride)
         let code: Int32 = output.withUnsafeMutableBytes { destination in
             source.withUnsafeBytes { source in
@@ -138,5 +139,37 @@ public struct GLTFMeshoptDecoder: BufferViewDecoder {
             }
         }
         return output
+    }
+
+    /// The most bytes one buffer view may decode to; larger ones are refused instead of allocated.
+    static let maximumOutputBytes = 1 << 30
+
+    /// Throws for counts, strides and filters that meshoptimizer asserts on or that would overflow the output.
+    static func check(_ compression: MeshoptCompression) throws {
+        let (size, overflows) = compression.count.multipliedReportingOverflow(by: compression.byteStride)
+        guard (0...).contains(compression.count), compression.byteStride > 0, !overflows, size <= maximumOutputBytes else {
+            throw GLTFMeshoptError.unsupported("count \(compression.count) and byteStride \(compression.byteStride) are invalid")
+        }
+        let strideIsValid = switch compression.mode {
+        case .attributes: compression.byteStride <= 256 && compression.byteStride.isMultiple(of: 4)
+        case .triangles, .indices: compression.byteStride == 2 || compression.byteStride == 4
+        }
+        guard strideIsValid else {
+            throw GLTFMeshoptError.unsupported("byteStride \(compression.byteStride) is invalid for \(compression.mode.rawValue)")
+        }
+        if compression.mode == .triangles, !compression.count.isMultiple(of: 3) {
+            throw GLTFMeshoptError.unsupported("TRIANGLES count \(compression.count) is not a multiple of 3")
+        }
+        guard compression.mode == .attributes else {
+            return
+        }
+        let filterIsValid = switch compression.filter {
+        case .none, .exponential: true
+        case .octahedral, .color: compression.byteStride == 4 || compression.byteStride == 8
+        case .quaternion: compression.byteStride == 8
+        }
+        guard filterIsValid else {
+            throw GLTFMeshoptError.unsupported("filter \(compression.filter.rawValue) does not support byteStride \(compression.byteStride)")
+        }
     }
 }

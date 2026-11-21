@@ -1,8 +1,13 @@
+import CMeshoptimizer
+import CoreGraphics
 import Foundation
+import ImageIO
 @testable import MetalSprocketsGLTF
+import MetalSprocketsGLTFMeshopt
 import SceneSprockets
 @testable import SceneSprocketsPBR
 import simd
+import UniformTypeIdentifiers
 
 // swiftlint:disable legacy_objc_type - JSONSerialization works in NSNumber
 
@@ -145,7 +150,7 @@ enum MalformedDocuments {
     /// Loads `url` and poses every animation at hostile times, blended and alone, and builds every scene and variant.
     /// With `importsScene`, also imports it into a scene graph and plays its clips there.
     static func exercise(_ url: URL, importsScene: Bool = true) {
-        guard let asset = try? GLTFAsset(url: url) else {
+        guard let asset = try? GLTFAsset(url: url, options: GLTFLoadOptions(bufferViewDecoders: [GLTFMeshoptDecoder()])) else {
             return
         }
         let times: [Float] = [-1, 0, 0.25, 0.5, 1, 1e9, .nan, .infinity, -.infinity]
@@ -215,6 +220,115 @@ enum MalformedDocuments {
 }
 
 extension MalformedFixture {
+    /// A square PNG of one opaque color.
+    static func png(size: Int = 4, gray: UInt8 = 128) throws -> Data {
+        let pixels = [UInt8](repeating: gray, count: size * size * 4)
+        guard let provider = CGDataProvider(data: Data(pixels) as CFData), let space = CGColorSpace(name: CGColorSpace.sRGB),
+              let image = CGImage(width: size, height: size, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: size * 4, space: space, bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue), provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent) else {
+            throw CocoaError(.coderInvalidValue)
+        }
+        let data = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(data, UTType.png.identifier as CFString, 1, nil) else {
+            throw CocoaError(.coderInvalidValue)
+        }
+        CGImageDestinationAddImage(destination, image, nil)
+        guard CGImageDestinationFinalize(destination) else {
+            throw CocoaError(.coderInvalidValue)
+        }
+        return data as Data
+    }
+
+    /// A triangle using extensions: meshopt-compressed positions and indices, an image-based light, punctual lights of
+    /// every type, instancing with all three attributes, and textured material extensions.
+    static func extensions() throws -> Self {
+        var buffer = Data()
+        func append(_ data: Data) -> (offset: Int, length: Int) {
+            let offset = buffer.count
+            buffer.append(data)
+            while !buffer.count.isMultiple(of: 4) {
+                buffer.append(0)
+            }
+            return (offset, data.count)
+        }
+        func bytes<T>(_ values: [T]) -> Data {
+            values.withUnsafeBytes { Data($0) }
+        }
+        let positions: [Float] = [-1, -1, 0, 1, -1, 0, 0, 1, 0]
+        var encodedPositions = [UInt8](repeating: 0, count: meshopt_encodeVertexBufferBound(3, 12))
+        encodedPositions.removeLast(encodedPositions.count - positions.withUnsafeBytes { meshopt_encodeVertexBuffer(&encodedPositions, encodedPositions.count, $0.baseAddress, 3, 12) })
+        let indices: [UInt32] = [0, 1, 2]
+        var encodedIndices = [UInt8](repeating: 0, count: meshopt_encodeIndexBufferBound(3, 3))
+        encodedIndices.removeLast(encodedIndices.count - meshopt_encodeIndexBuffer(&encodedIndices, encodedIndices.count, indices, 3))
+        let compressedPositions = append(Data(encodedPositions))
+        let compressedIndices = append(Data(encodedIndices))
+        let instances = append(bytes([Float](arrayLiteral: 0, 0, 0, 2, 0, 0)))
+        let rotations = append(bytes([Float](arrayLiteral: 0, 0, 0, 1, 0, 0.7071, 0, 0.7071)))
+        let scales = append(bytes([Float](arrayLiteral: 1, 1, 1, 2, 2, 2)))
+        let face = try png().base64EncodedString()
+        let texture = #"{"index": 0, "extensions": {"KHR_texture_transform": {"offset": [0.5, 0], "rotation": 1, "scale": [2, 2], "texCoord": 0}}}"#
+        let json = """
+        {
+          "asset": {"version": "2.0"},
+          "extensionsUsed": ["EXT_meshopt_compression", "EXT_lights_image_based", "KHR_lights_punctual", "EXT_mesh_gpu_instancing", "KHR_texture_transform",
+            "KHR_materials_clearcoat", "KHR_materials_sheen", "KHR_materials_iridescence", "KHR_materials_anisotropy", "KHR_materials_transmission",
+            "KHR_materials_volume", "KHR_materials_specular", "KHR_materials_ior", "KHR_materials_emissive_strength", "KHR_materials_dispersion",
+            "KHR_materials_diffuse_transmission", "KHR_materials_pbrSpecularGlossiness", "KHR_materials_unlit"],
+          "extensionsRequired": ["EXT_meshopt_compression"],
+          "extensions": {
+            "EXT_lights_image_based": {"lights": [{"rotation": [0, 0, 0, 1], "intensity": 1, "irradianceCoefficients": [\(Array(repeating: "[0, 0, 0]", count: 9).joined(separator: ", "))],
+              "specularImageSize": 4, "specularImages": [[1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1]]}]},
+            "KHR_lights_punctual": {"lights": [{"type": "directional", "intensity": 1}, {"type": "point", "range": 5}, {"type": "spot", "spot": {"innerConeAngle": 0.2, "outerConeAngle": 0.4}}]}
+          },
+          "scene": 0,
+          "scenes": [{"nodes": [0, 1, 2], "extensions": {"EXT_lights_image_based": {"light": 0}}}],
+          "nodes": [
+            {"mesh": 0, "extensions": {"EXT_mesh_gpu_instancing": {"attributes": {"TRANSLATION": 2, "ROTATION": 3, "SCALE": 4, "_ID": 2}}}},
+            {"extensions": {"KHR_lights_punctual": {"light": 0}}, "children": [3]},
+            {"extensions": {"KHR_lights_punctual": {"light": 1}}},
+            {"extensions": {"KHR_lights_punctual": {"light": 2}}}
+          ],
+          "meshes": [{"primitives": [{"attributes": {"POSITION": 0}, "indices": 1, "material": 0}, {"attributes": {"POSITION": 0}, "material": 1}]}],
+          "materials": [
+            {"pbrMetallicRoughness": {"baseColorTexture": \(texture)}, "extensions": {
+              "KHR_materials_clearcoat": {"clearcoatFactor": 1, "clearcoatTexture": \(texture), "clearcoatNormalTexture": {"index": 0}},
+              "KHR_materials_sheen": {"sheenColorFactor": [1, 1, 1], "sheenRoughnessTexture": {"index": 0}},
+              "KHR_materials_iridescence": {"iridescenceFactor": 1, "iridescenceThicknessTexture": {"index": 0}, "iridescenceThicknessMinimum": 100, "iridescenceThicknessMaximum": 400},
+              "KHR_materials_anisotropy": {"anisotropyStrength": 0.5, "anisotropyRotation": 1, "anisotropyTexture": {"index": 0}},
+              "KHR_materials_transmission": {"transmissionFactor": 0.5, "transmissionTexture": {"index": 0}},
+              "KHR_materials_volume": {"thicknessFactor": 1, "attenuationDistance": 2, "attenuationColor": [1, 0.5, 0.5]},
+              "KHR_materials_specular": {"specularFactor": 0.5, "specularColorTexture": {"index": 0}},
+              "KHR_materials_ior": {"ior": 1.5},
+              "KHR_materials_emissive_strength": {"emissiveStrength": 4},
+              "KHR_materials_dispersion": {"dispersion": 0.1},
+              "KHR_materials_diffuse_transmission": {"diffuseTransmissionFactor": 0.5, "diffuseTransmissionColorTexture": {"index": 0}}
+            }},
+            {"extensions": {"KHR_materials_pbrSpecularGlossiness": {"diffuseFactor": [1, 1, 1, 1], "specularGlossinessTexture": {"index": 0}}, "KHR_materials_unlit": {}}}
+          ],
+          "textures": [{"source": 0}],
+          "images": [{"uri": "data:image/png;base64,\(face)"}, {"uri": "data:image/png;base64,\(face)"}],
+          "accessors": [
+            {"bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3", "min": [-1, -1, 0], "max": [1, 1, 0]},
+            {"bufferView": 1, "componentType": 5125, "count": 3, "type": "SCALAR"},
+            {"bufferView": 2, "componentType": 5126, "count": 2, "type": "VEC3"},
+            {"bufferView": 3, "componentType": 5126, "count": 2, "type": "VEC4"},
+            {"bufferView": 4, "componentType": 5126, "count": 2, "type": "VEC3"}
+          ],
+          "bufferViews": [
+            {"buffer": 1, "byteLength": 36, "byteStride": 12, "extensions": {"EXT_meshopt_compression": {"buffer": 0, "byteOffset": \(compressedPositions.offset), "byteLength": \(compressedPositions.length), "byteStride": 12, "count": 3, "mode": "ATTRIBUTES"}}},
+            {"buffer": 1, "byteLength": 12, "extensions": {"EXT_meshopt_compression": {"buffer": 0, "byteOffset": \(compressedIndices.offset), "byteLength": \(compressedIndices.length), "byteStride": 4, "count": 3, "mode": "TRIANGLES"}}},
+            {"buffer": 0, "byteOffset": \(instances.offset), "byteLength": 24},
+            {"buffer": 0, "byteOffset": \(rotations.offset), "byteLength": 32},
+            {"buffer": 0, "byteOffset": \(scales.offset), "byteLength": 24}
+          ],
+          "buffers": [{"byteLength": \(buffer.count)}, {"byteLength": 48, "extensions": {"EXT_meshopt_compression": {"fallback": true}}}]
+        }
+        """
+        guard let object = try JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any] else {
+            throw CocoaError(.coderReadCorrupt)
+        }
+        return Self(json: object, buffer: buffer)
+    }
+
     /// A skinned, morphed, animated, instanced triangle with a camera, a spot light and a material variant: most of
     /// what the loader reads, in one small file.
     static func full() throws -> Self {

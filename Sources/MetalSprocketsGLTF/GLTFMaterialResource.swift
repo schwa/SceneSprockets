@@ -21,11 +21,11 @@ extension PBRMaterial {
                 return textures.defaultBinding
             }
             slot.enabled = 1
-            slot.texCoord = Int32(info.texCoord)
+            slot.texCoord = Int32(clamping: info.texCoord)
             if let transform = info.textureTransform {
                 slot.transform = transform.matrix
                 if let texCoord = transform.texCoord {
-                    slot.texCoord = Int32(texCoord)
+                    slot.texCoord = Int32(clamping: texCoord)
                 }
             }
             return binding

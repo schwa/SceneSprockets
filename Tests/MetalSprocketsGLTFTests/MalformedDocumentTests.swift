@@ -1,5 +1,6 @@
 import Foundation
 @testable import MetalSprocketsGLTF
+import MetalSprocketsGLTFMeshopt
 import SwiftGLTF
 import Testing
 
@@ -85,6 +86,23 @@ struct MalformedDocumentTests {
             defer { try? FileManager.default.removeItem(at: url) }
             MalformedDocuments.exercise(url)
         }
+    }
+
+    @Test func extensionsFixtureLoadsCleanly() throws {
+        let url = try MalformedFixture.extensions().write()
+        let asset = try GLTFAsset(url: url, options: GLTFLoadOptions(bufferViewDecoders: [GLTFMeshoptDecoder()]))
+        #expect(asset.warnings.isEmpty)
+        #expect(asset.imageBasedLight != nil)
+        #expect(asset.lights.count == 3)
+        #expect(asset.opaqueInstances.count + asset.blendedInstances.count == 4)
+    }
+
+    // meshopt, image-based lights, punctual lights, instancing and material extensions.
+    @Test func extensionData() throws {
+        let count = try MalformedDocuments.run(.extensions(), hostileStrings: ["NONE", "OCTAHEDRAL", "QUATERNION", "EXPONENTIAL", "COLOR", "INDICES", "TRIANGLES", "ATTRIBUTES", "spot", "point"]) { path in
+            Self.isExtensionPath(path) || ["extensionsUsed", "extensionsRequired", "images"].contains(Self.topLevelKey(path))
+        }
+        #expect(count > 100)
     }
 
     // GLB container: header and chunk lengths, chunk types and truncation.

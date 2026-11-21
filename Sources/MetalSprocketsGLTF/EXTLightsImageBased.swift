@@ -88,8 +88,9 @@ extension GLTFImageBasedLight {
 
         /// Bilinear, clamped to the face.
         func sample(u: Float, v: Float) -> SIMD3<Float> {
-            let x = min(max(u * Float(size) - 0.5, 0), Float(size - 1))
-            let y = min(max(v * Float(size) - 0.5, 0), Float(size - 1))
+            // A degenerate rotation gives NaN coordinates, which Int() traps on.
+            let x = min(max(u.isFinite ? u * Float(size) - 0.5 : 0, 0), Float(size - 1))
+            let y = min(max(v.isFinite ? v * Float(size) - 0.5 : 0, 0), Float(size - 1))
             let x0 = Int(x), y0 = Int(y)
             let x1 = min(x0 + 1, size - 1), y1 = min(y0 + 1, size - 1)
             let fx = x - Float(x0), fy = y - Float(y0)
@@ -144,6 +145,9 @@ extension GLTFImageBasedLight {
         return (face, (s / major + 1) / 2, (t / major + 1) / 2)
     }
 
+    /// The largest face accepted; the equirectangular image is 4 x 2 faces of half floats.
+    static let maximumFaceSize = 2_048
+
     /// A face image as linear RGB. Four-channel PNGs hold RGBD (as Babylon.js writes it: rgb in gamma 2.2 divided by
     /// alpha); others are LDR sRGB.
     static func decodeFace(container: Container, imageIndex: Int) throws -> Face {
@@ -164,6 +168,9 @@ extension GLTFImageBasedLight {
             throw GLTFError.invalidDocument("EXT_lights_image_based image \(imageIndex) is not a square image")
         }
         let size = cgImage.width
+        guard size <= maximumFaceSize else {
+            throw GLTFError.invalidDocument("EXT_lights_image_based image \(imageIndex) is larger than \(maximumFaceSize) pixels")
+        }
         let hasAlpha = ![.none, .noneSkipFirst, .noneSkipLast].contains(cgImage.alphaInfo)
         // Draw unpremultiplied 8-bit RGBA so the alpha divisor survives intact: draw without alpha for RGB, and for
         // RGBD read the decoded bytes directly.

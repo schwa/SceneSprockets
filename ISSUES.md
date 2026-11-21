@@ -12831,18 +12831,21 @@ Was MetalSprocketsGLTF#193 (moved with the package, #552).
 ## 566: Malformed extension data can crash the loader
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: effort:m, area:testing, subtask, gltf
 milestone: Reliability
 created: 2026-11-19T02:12:56Z
-updated: 2026-11-20T06:33:09Z
+updated: 2026-11-21T02:41:41Z
+closed: 2026-11-21T02:41:41Z
 +++
 
 Part of #561. Loading or posing malformed input in this area must produce an error or warning, never a crash (precondition, fatalError, out-of-range index, force unwrap, integer overflow, unbounded allocation). Acceptance: a fuzz or malformed-input test covers the area and finds no crash. Area: extensions (meshopt, Basis, EXT_mesh_gpu_instancing, KHR_lights_punctual, EXT_lights_image_based).
 
 Was MetalSprocketsGLTF#194 (moved with the package, #552).
+
+- `2026-11-21T02:41:41Z`: MalformedDocumentTests.extensionData fuzzes meshopt, image-based lights, punctual lights, instancing and material extensions; MalformedKTX2Tests fuzzes KTX2 (Basis and ASTC) headers and bytes.
 
 ---
 
