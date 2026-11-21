@@ -13508,6 +13508,9 @@ After #590, SceneGraphElement resolves deformation once for renderers that draw 
 
 Found while working on #590.
 
+- `2026-11-21T02:00:59Z`: Autonomous run: part 1 done in 'PBR uses MeshEntry.validMorphs…': the PBR primitive and pose now use validMorphs (test pbrKeepsValidMorphTargetsWhenOneIsInvalid). Part 2 (shadow casters) not changed. To share GPUDeformation, three things would change. (1) The deformation pass would have to run for every skinned or morphed caster, not only DrawsDeformedVertices materials, and before ShadowCasterDepthPass (today it runs after it). (2) Casters would draw the deformed mesh's own vertex buffers with its vertex layout, instead of the position-only Packed3 buffers that Shadows builds by reading positions on the CPU, because deformed GPU buffers are private and cannot be read back each frame. (3) The receiver mask and see-through (#541) caster pipelines change the same way. PBR skinned meshes would then be deformed once in compute for shadows while the PBR shader skins them again. That costs memory, but is cheaper than skinning in the caster vertex shader for each of a point light's six views, and removes CPU morphing for morphed casters. Punting part 2: it is a design trade-off.
+- `2026-11-21T02:00:59Z`: Question 1 (design): For shadow casters, should skinned and morphed meshes go through the shared GPUDeformation pass (run before the shadow pass, for every deformed caster, with casters drawing the deformed vertex buffers directly), at the cost of extra deformed-buffer memory for PBR meshes? Recommended: Yes: one deformation path; casters and the mask draw deformed buffers with the mesh's vertex layout; the shadow-specific skinning shaders and CPU morphing are removed
+
 ---
 
 ## 596: No simple way to create billboards with alignment options
