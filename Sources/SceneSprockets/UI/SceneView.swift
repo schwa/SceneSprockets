@@ -87,6 +87,7 @@ public struct SceneView: View {
     private var overlayID: AnyHashable?
     private var debugMode: DebugMode?
     private var sampleCount = 1
+    private var autoExposure: AutoExposure?
     private var materialChannel: MaterialChannel?
     // Whether the scene had fog or post-processing when this view was made. The body reads them to configure the
     // drawable, so == must notice when they change (#235).
@@ -162,7 +163,8 @@ public struct SceneView: View {
                     decorations: inputs.decorations.map { element in { _ in element } },
                     debugMode: inputs.debugMode,
                     materialChannel: inputs.materialChannel,
-                    sampleCount: inputs.sampleCount
+                    sampleCount: inputs.sampleCount,
+                    autoExposure: inputs.autoExposure
                 )
                 if let overlay = inputs.overlay {
                     overlay
@@ -286,6 +288,7 @@ public struct SceneView: View {
             debugMode: debugMode,
             materialChannel: materialChannel,
             sampleCount: sampleCount,
+            autoExposure: autoExposure,
             overlay: overlayElement,
             manipulatorOverlay: manipulatorOverlay(drawableSize: drawableSize)
         ))
@@ -427,7 +430,7 @@ public struct SceneView: View {
 
     // Read when SwiftUI updates the view; setting fog later needs a view update to take effect.
     private var needsPostPasses: Bool {
-        shadows != nil || sceneGraph.fog != nil || sceneGraph.postProcessing != nil
+        shadows != nil || sceneGraph.fog != nil || sceneGraph.postProcessing != nil || autoExposure != nil
     }
 
     /// The camera that the view uses when the scene has no camera node.
@@ -494,6 +497,7 @@ final class SceneViewFrames: @unchecked Sendable {
         var debugMode: DebugMode?
         var materialChannel: MaterialChannel?
         var sampleCount: Int
+        var autoExposure: AutoExposure?
         var overlay: AnyElement?
         var manipulatorOverlay: AnyElement?
     }
@@ -707,6 +711,11 @@ public extension SceneView {
         with { $0.sampleCount = sampleCount }
     }
 
+    /// Adjusts exposure automatically each frame (#508). Keep the same instance across updates: it holds the state.
+    func sceneAutoExposure(_ autoExposure: AutoExposure?) -> Self {
+        with { $0.autoExposure = autoExposure }
+    }
+
     /// Draws every mesh in a debug view instead of its material (#132).
     func sceneDebugMode(_ mode: DebugMode?) -> Self {
         with { $0.debugMode = mode }
@@ -779,6 +788,7 @@ extension SceneView: @MainActor Equatable {
             && lhs.debugMode == rhs.debugMode
             && lhs.materialChannel == rhs.materialChannel
             && lhs.sampleCount == rhs.sampleCount
+            && lhs.autoExposure === rhs.autoExposure
     }
 
     // HitTestOptions holds a node, so it is not Equatable; the node compares by identity.

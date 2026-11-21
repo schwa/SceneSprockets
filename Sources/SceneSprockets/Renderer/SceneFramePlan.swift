@@ -11,6 +11,7 @@ public enum SceneGPUTimingLabel {
     public static let ambientOcclusion = "Ambient Occlusion"
     public static let fog = "Fog"
     public static let colorAdjust = "Color Adjust"
+    public static let autoExposure = "Auto Exposure"
 }
 
 // Which passes a SceneGraphElement frame has and in what order, decided from plain facts about the frame so it can be
@@ -30,6 +31,7 @@ struct SceneFramePlan: Equatable {
         var hasFog = false
         var adjustsColor = false
         var hasSoftParticles = false
+        var hasAutoExposure = false
         // The scene pass resolves MSAA, so a second pass could not reload its samples.
         var resolvesMultisample = false
         var storesDepthRequested = false
@@ -43,7 +45,7 @@ struct SceneFramePlan: Equatable {
     }
 
     enum PostPass: Equatable {
-        case shadowMask, ambientOcclusion, fog, colorAdjust
+        case shadowMask, ambientOcclusion, fog, colorAdjust, autoExposure
 
         var gpuTimingLabel: String {
             switch self {
@@ -51,6 +53,7 @@ struct SceneFramePlan: Equatable {
             case .ambientOcclusion: SceneGPUTimingLabel.ambientOcclusion
             case .fog: SceneGPUTimingLabel.fog
             case .colorAdjust: SceneGPUTimingLabel.colorAdjust
+            case .autoExposure: SceneGPUTimingLabel.autoExposure
             }
         }
     }
@@ -87,6 +90,10 @@ struct SceneFramePlan: Equatable {
         }
         if inputs.hasPostTargets, inputs.adjustsColor {
             postPasses.append(.colorAdjust)
+        }
+        // Last: it meters the finished frame.
+        if inputs.hasPostTargets, inputs.hasAutoExposure, !inputs.isDebug {
+            postPasses.append(.autoExposure)
         }
         self.postPasses = postPasses
         // The view's depth storage can lag behind the request when the frame is built on a render thread (#393):

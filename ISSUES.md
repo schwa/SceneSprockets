@@ -11641,16 +11641,19 @@ Sensible default illumination for any scene. Complexity: low. (Moved from SceneS
 ## 508: Automatic exposure
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:renderer, effort:m
 milestone: Rendering
 created: 2026-11-17T14:09:42Z
-updated: 2026-11-20T06:32:25Z
+updated: 2026-11-21T01:54:03Z
+closed: 2026-11-21T01:54:03Z
 +++
 
 Avoid manually tuning brightness for every scene. Complexity: low–medium. (Moved from SceneSprocketsAddOns #76.)
+
+- `2026-11-21T01:54:03Z`: AutoExposure (targetLuminance, adaptationSpeed, range) via SceneView.sceneAutoExposure(_:) and SceneGraphElement(autoExposure:). A compute pass meters the finished frame (geometric mean luminance of a 32x32 grid, background skipped) after the post passes; the result is read back when its frame slot comes round and moves the exposure, which multiplies Environment.exposure. Metering is after tone mapping in the LDR target (there is no HDR buffer), so it converges more slowly on very bright scenes.
 
 ---
 

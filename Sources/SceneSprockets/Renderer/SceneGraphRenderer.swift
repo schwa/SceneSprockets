@@ -114,6 +114,8 @@ public struct SceneGraphElement: Element {
     var stereoViews: StereoViews?
     // Multisample antialiasing of the scene pass (#95).
     var sampleCount = 1
+    // Meters each frame and scales the environment's exposure (#508).
+    var autoExposure: AutoExposure?
     #if os(visionOS)
     // Set by SceneImmersiveContent: the scene pass is the compositor's pass (#381).
     var immersiveContext: ImmersiveContext?
@@ -146,17 +148,19 @@ public struct SceneGraphElement: Element {
     ///   - sampleCount: Multisample antialiasing samples per pixel (1, 2, 4 or 8). Above 1, the scene pass draws into
     ///     multisampled targets and resolves color and depth into the view's, so post passes read resolved depth.
     ///     Leave RenderView's own sample count at 1.
+    ///   - autoExposure: Automatic exposure state, or `nil` for the environment's exposure only.
     ///
     /// Makes the scene's ``SceneGraph/presentation()`` snapshot, so call it on the thread that edits the graph.
-    public init(sceneGraph: SceneGraph, camera: SceneGraph.Node? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any MaterialRenderer], defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, shadows: Shadows? = nil, storesDepth: Bool = false, decorations: ((RenderContext) throws -> AnyElement?)? = nil, debugMode: DebugMode? = nil, materialChannel: MaterialChannel? = nil, stereoViews: StereoViews? = nil, sampleCount: Int = 1) {
-        self.init(presentation: sceneGraph.presentation(), cameraID: camera?.id, cameraMatrix: cameraMatrix, aspectRatio: aspectRatio, renderers: renderers, defaultCamera: defaultCamera, cameraOverride: cameraOverride, defaultLight: defaultLight, shadows: shadows, storesDepth: storesDepth, decorations: decorations, debugMode: debugMode, materialChannel: materialChannel, stereoViews: stereoViews, sampleCount: sampleCount)
+    public init(sceneGraph: SceneGraph, camera: SceneGraph.Node? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any MaterialRenderer], defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, shadows: Shadows? = nil, storesDepth: Bool = false, decorations: ((RenderContext) throws -> AnyElement?)? = nil, debugMode: DebugMode? = nil, materialChannel: MaterialChannel? = nil, stereoViews: StereoViews? = nil, sampleCount: Int = 1, autoExposure: AutoExposure? = nil) {
+        self.init(presentation: sceneGraph.presentation(), cameraID: camera?.id, cameraMatrix: cameraMatrix, aspectRatio: aspectRatio, renderers: renderers, defaultCamera: defaultCamera, cameraOverride: cameraOverride, defaultLight: defaultLight, shadows: shadows, storesDepth: storesDepth, decorations: decorations, debugMode: debugMode, materialChannel: materialChannel, stereoViews: stereoViews, sampleCount: sampleCount, autoExposure: autoExposure)
     }
 
     /// Creates an element that draws a snapshot of a scene graph, from ``SceneGraph/presentation()``. The snapshot can
     /// be drawn on any thread. `cameraID` picks the camera node (the first camera if `nil`); the other parameters are
-    /// as in ``init(sceneGraph:camera:cameraMatrix:aspectRatio:renderers:defaultCamera:cameraOverride:defaultLight:shadows:storesDepth:decorations:debugMode:materialChannel:stereoViews:sampleCount:)``.
-    public init(presentation: SceneGraph.Presentation, cameraID: SceneGraph.Node.ID? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any MaterialRenderer], defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, shadows: Shadows? = nil, storesDepth: Bool = false, decorations: ((RenderContext) throws -> AnyElement?)? = nil, debugMode: DebugMode? = nil, materialChannel: MaterialChannel? = nil, stereoViews: StereoViews? = nil, sampleCount: Int = 1) {
+    /// as in ``init(sceneGraph:camera:cameraMatrix:aspectRatio:renderers:defaultCamera:cameraOverride:defaultLight:shadows:storesDepth:decorations:debugMode:materialChannel:stereoViews:sampleCount:autoExposure:)``.
+    public init(presentation: SceneGraph.Presentation, cameraID: SceneGraph.Node.ID? = nil, cameraMatrix: simd_float4x4? = nil, aspectRatio: Float, renderers: [any MaterialRenderer], defaultCamera: Camera? = nil, cameraOverride: Camera? = nil, defaultLight: Light? = nil, shadows: Shadows? = nil, storesDepth: Bool = false, decorations: ((RenderContext) throws -> AnyElement?)? = nil, debugMode: DebugMode? = nil, materialChannel: MaterialChannel? = nil, stereoViews: StereoViews? = nil, sampleCount: Int = 1, autoExposure: AutoExposure? = nil) {
         self.presentation = presentation
+        self.autoExposure = autoExposure
         self.sampleCount = max(sampleCount, 1)
         self.cameraID = cameraID
         self.stereoViews = stereoViews
@@ -181,6 +185,15 @@ public struct SceneGraphElement: Element {
             }
             let cameraPosition = context.cameraMatrix.columns.3.xyz
             context.materialChannel = debugMode == nil ? materialChannel : nil
+            // Metered into after the post passes; needs the view's color and depth to be readable.
+            let autoExposureBuffer: MTLBuffer? = try {
+                guard let autoExposure, debugMode == nil, let device = renderPassDescriptor?.colorAttachments[0].texture?.device else {
+                    return nil
+                }
+                let (exposure, buffer) = try autoExposure.update(submissionIndex: submissionIndex, device: device)
+                context.environment.exposure *= exposure
+                return buffer
+            }()
             var entries = applyLevelsOfDetail(presentation.meshes.filter { $0.categoryBitMask & context.categoryBitMask != 0 }, cameraPosition: cameraPosition)
             if let debugMode {
                 entries = entries.map { entry in
@@ -234,6 +247,7 @@ public struct SceneGraphElement: Element {
                 hasFog: presentation.fog != nil,
                 adjustsColor: postProcessing?.adjustsColor ?? false,
                 hasSoftParticles: visibleParticleFrames.contains(where: \.isSoft),
+                hasAutoExposure: autoExposureBuffer != nil,
                 resolvesMultisample: renderPassDescriptor?.colorAttachments[0].resolveTexture != nil || sampleCount > 1,
                 storesDepthRequested: storesDepth,
                 depthIsMemoryless: renderPassDescriptor?.depthAttachment.texture?.storageMode == .memoryless
@@ -311,7 +325,7 @@ public struct SceneGraphElement: Element {
             // precise far from the world origin (#257). Shadow views are camera-relative too.
             let relativeViewProjection = context.projectionMatrix * context.viewMatrix.rotationOnlyView
             let postPasses = plan.postPasses.compactMap { postPass in
-                makePostPass(postPass, shadowFrame: shadowFrame, ambientOcclusionApply: ambientOcclusionApply, postProcessing: postProcessing, postTargets: postTargets, relativeViewProjection: relativeViewProjection)?
+                makePostPass(postPass, shadowFrame: shadowFrame, ambientOcclusionApply: ambientOcclusionApply, postProcessing: postProcessing, postTargets: postTargets, relativeViewProjection: relativeViewProjection, autoExposureBuffer: autoExposureBuffer)?
                     .gpuTimed(postPass.gpuTimingLabel)
                     .eraseToAnyElement()
             }
@@ -411,7 +425,7 @@ public struct SceneGraphElement: Element {
         return elements
     }
 
-    private func makePostPass(_ postPass: SceneFramePlan.PostPass, shadowFrame: Shadows.Frame?, ambientOcclusionApply: ApplyAmbientOcclusionPass?, postProcessing: SceneGraph.PostProcessing?, postTargets: (color: MTLTexture, depth: MTLTexture), relativeViewProjection: simd_float4x4) -> AnyElement? {
+    private func makePostPass(_ postPass: SceneFramePlan.PostPass, shadowFrame: Shadows.Frame?, ambientOcclusionApply: ApplyAmbientOcclusionPass?, postProcessing: SceneGraph.PostProcessing?, postTargets: (color: MTLTexture, depth: MTLTexture), relativeViewProjection: simd_float4x4, autoExposureBuffer: MTLBuffer?) -> AnyElement? {
         switch postPass {
         case .shadowMask:
             guard let shadows, let shadowFrame else {
@@ -427,6 +441,8 @@ public struct SceneGraphElement: Element {
             return FogPass(fog: fog, depthTexture: postTargets.depth, colorTexture: postTargets.color, inverseViewProjection: relativeViewProjection.inverse, cameraPosition: .zero).eraseToAnyElement()
         case .colorAdjust:
             return postProcessing.map { ColorAdjustPass(settings: $0, colorTexture: postTargets.color).eraseToAnyElement() }
+        case .autoExposure:
+            return autoExposureBuffer.map { AutoExposurePass(colorTexture: postTargets.color, depthTexture: postTargets.depth, buffer: $0).eraseToAnyElement() }
         }
     }
 
