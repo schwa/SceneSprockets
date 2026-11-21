@@ -21,21 +21,34 @@ enum GLTFGeometry {
     /// `defaultWeights` are the mesh's morph weights (glTF mesh.weights); used when they match the targets.
     static func makePrimitive(_ primitive: SwiftGLTF.Mesh.Primitive, container: Container, defaultWeights: [Float]) throws -> Primitive? {
         let document = container.document
-        func floats(_ semantic: SwiftGLTF.Mesh.Primitive.Semantic) throws -> (values: [Float], components: Int)? {
+        // Every attribute must have one value per vertex, with one of `components` components.
+        var vertexCount = 0
+        func floats(_ semantic: SwiftGLTF.Mesh.Primitive.Semantic, components: Set<Int>) throws -> (values: [Float], components: Int)? {
             guard let index = primitive.attributes[semantic] else {
                 return nil
             }
             let accessor = try index.resolve(in: document)
-            return (try container.floatComponents(for: accessor), accessor.type.componentCount)
+            let componentCount = accessor.type.componentCount
+            guard components.contains(componentCount) else {
+                throw GLTFError.invalidDocument("\(semantic.rawValue) has \(accessor.type) values")
+            }
+            let values = try container.floatComponents(for: accessor)
+            guard values.count == vertexCount * componentCount else {
+                throw GLTFError.invalidDocument("\(semantic.rawValue) has \(values.count / componentCount) values for \(vertexCount) vertices")
+            }
+            return (values, componentCount)
         }
 
-        guard let positions = try floats(.POSITION) else {
+        guard let positionIndex = primitive.attributes[.POSITION] else {
             throw PBRGeometryError.missingPositions
         }
-        let vertexCount = positions.values.count / 3
+        vertexCount = try positionIndex.resolve(in: document).count
+        guard let positions = try floats(.POSITION, components: [3]) else {
+            throw PBRGeometryError.missingPositions
+        }
         // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         func vectors2(_ data: (values: [Float], components: Int)?) -> [SIMD2<Float>]? {
-            data.map { data in (0 ..< vertexCount).map { SIMD2(data.values[$0 * 2], data.values[$0 * 2 + 1]) } }
+            data.map { data in (0 ..< vertexCount).map { SIMD2(data.values[$0 * data.components], data.values[$0 * data.components + 1]) } }
         }
         func vectors3(_ values: [Float]) -> [SIMD3<Float>] {
             (0 ..< vertexCount).map { SIMD3(values[$0 * 3], values[$0 * 3 + 1], values[$0 * 3 + 2]) }
@@ -52,11 +65,12 @@ enum GLTFGeometry {
             }
         }
         var positionValues = vectors3(positions.values)
-        var normals = try floats(.NORMAL).map { vectors3($0.values) }
-        var tangents = try vectors4(floats(.TANGENT))
-        var texCoords0 = try vectors2(floats(.TEXCOORD_0))
-        var texCoords1 = try vectors2(floats(.TEXCOORD_1))
-        var colors = try vectors4(floats(.COLOR_0))
+        var normals = try floats(.NORMAL, components: [3]).map { vectors3($0.values) }
+        var tangents = try vectors4(floats(.TANGENT, components: [4]))
+        // Only VEC2 is valid; extra components are ignored.
+        var texCoords0 = try vectors2(floats(.TEXCOORD_0, components: [2, 3, 4]))
+        var texCoords1 = try vectors2(floats(.TEXCOORD_1, components: [2, 3, 4]))
+        var colors = try vectors4(floats(.COLOR_0, components: [3, 4]))
         // Missing attributes in a target contribute nothing.
         var morphTargets: [MetalMesh.MorphTargets.Target] = try primitive.targets.map { target in
             // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
@@ -76,14 +90,21 @@ enum GLTFGeometry {
         var joints: [SIMD4<UInt16>]?
         // swiftlint:disable:next discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         var weights: [SIMD4<Float>]?
-        if let jointData = try floats(.JOINTS_0), let weightData = try floats(.WEIGHTS_0), jointData.components == 4, weightData.components == 4 {
-            joints = vectors4(jointData)?.map { SIMD4<UInt16>($0, rounding: .toNearestOrEven) }
+        if let jointData = try floats(.JOINTS_0, components: [1, 2, 3, 4]), let weightData = try floats(.WEIGHTS_0, components: [1, 2, 3, 4]), jointData.components == 4, weightData.components == 4 {
+            // Clamped first: the conversion traps on NaN and on values outside UInt16.
+            joints = vectors4(jointData)?.map { joint in
+                let finite = joint.replacing(with: 0, where: .!(joint .== joint))
+                return SIMD4<UInt16>(finite.clamped(lowerBound: .zero, upperBound: SIMD4(repeating: 65_535)), rounding: .toNearestOrEven)
+            }
             weights = vectors4(weightData)
         }
 
         var indices: [UInt32]
         if let indicesIndex = primitive.indices {
             indices = try readIndices(container.data(for: indicesIndex.resolve(in: document)), componentType: indicesIndex.resolve(in: document).componentType)
+            if let bad = indices.first(where: { Int($0) >= vertexCount }) {
+                throw GLTFError.invalidDocument("Index \(bad) is out of range for \(vertexCount) vertices")
+            }
         } else {
             indices = (0 ..< UInt32(vertexCount)).map(\.self)
         }
@@ -129,7 +150,7 @@ enum GLTFGeometry {
         var hasTangents = tangents != nil
         let materialIndices = [primitive.material?.index].compactMap(\.self) + primitive.variantMaterials.values
         let normalMapTexCoord = materialIndices.lazy.compactMap { index in
-            index < document.materials.count ? document.materials[index].normalTexture?.texCoord : nil
+            document.materials.indices.contains(index) ? document.materials[index].normalTexture?.texCoord : nil
         }.first
         if !hasTangents, let normalValues = normals, primitiveType == .triangle, let normalMapTexCoord {
             let texCoords = (normalMapTexCoord == 1 ? texCoords1 : texCoords0) ?? Array(repeating: .zero, count: vertexCount)

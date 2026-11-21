@@ -54,7 +54,7 @@ extension GLTFAsset.Resources {
         let meshes = meshPrimitiveIndices.map { $0.map { primitives[$0] } }
         let primitiveMaterials = Dictionary(uniqueKeysWithValues: materialIndices.map { (primitives[$0.key].key, $0.value) })
         let skins = try document.skins.map { skin in
-            PBRModel.Skin(joints: skin.joints.map(\.index), inverseBindMatrices: try container.inverseBindMatrices(for: skin))
+            PBRModel.Skin(joints: skin.joints.map(\.index), inverseBindMatrices: try container.checkedInverseBindMatrices(for: skin))
         }
         let (animations, animationWarnings) = try GLTFAnimationClip.load(container: container)
         warnings += animationWarnings
@@ -72,6 +72,32 @@ extension GLTFAsset.Resources {
             }
         }
         return Self(device: device, materials: materials, defaultMaterial: defaultMaterial, meshes: meshes, primitiveMaterials: primitiveMaterials, skins: skins, animations: animations, warnings: warnings + textures.warnings, nodeInstanceMatrices: nodeInstanceMatrices, imageBasedLights: imageBasedLights)
+    }
+}
+
+extension Container {
+    /// One inverse bind matrix per joint (identity when the skin has none). Throws unless the accessor holds a MAT4
+    /// for every joint.
+    func checkedInverseBindMatrices(for skin: Skin) throws -> [simd_float4x4] {
+        guard let index = skin.inverseBindMatrices else {
+            return Array(repeating: matrix_identity_float4x4, count: skin.joints.count)
+        }
+        let accessor = try index.resolve(in: document)
+        guard accessor.type == .MAT4, accessor.count >= skin.joints.count else {
+            throw GLTFError.invalidDocument("Skin inverseBindMatrices must be a MAT4 for each of its \(skin.joints.count) joints")
+        }
+        let floats = try floatComponents(for: accessor)
+        return (0 ..< skin.joints.count).map { joint in
+            floats.withUnsafeBufferPointer { floats in
+                let base = joint * 16
+                return simd_float4x4(
+                    SIMD4(floats[base], floats[base + 1], floats[base + 2], floats[base + 3]),
+                    SIMD4(floats[base + 4], floats[base + 5], floats[base + 6], floats[base + 7]),
+                    SIMD4(floats[base + 8], floats[base + 9], floats[base + 10], floats[base + 11]),
+                    SIMD4(floats[base + 12], floats[base + 13], floats[base + 14], floats[base + 15])
+                )
+            }
+        }
     }
 }
 
@@ -106,7 +132,7 @@ struct GLTFSceneContents {
         // `visible` is false under a node hidden by KHR_node_visibility; its meshes and its descendants' are skipped.
         hierarchy.walk(hierarchy.rest) { nodeIndex, world, visible in
             let node = document.nodes[nodeIndex]
-            if visible || animatesVisibility, let meshIndex = node.mesh?.index, meshIndex < resources.meshes.count {
+            if visible || animatesVisibility, let meshIndex = node.mesh?.index, resources.meshes.indices.contains(meshIndex) {
                 for primitive in resources.meshes[meshIndex] {
                     let material = resources.material(for: primitive, variant: variant)
                     // Only primitives with joint data can be skinned; others ignore the node's skin.

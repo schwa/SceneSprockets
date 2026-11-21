@@ -12768,18 +12768,21 @@ Was MetalSprocketsGLTF#188 (moved with the package, #552).
 ## 563: Malformed JSON structure and indices can crash the loader
 
 +++
-status: open
+status: closed
 priority: medium
 kind: task
 labels: effort:m, area:testing, subtask, gltf
 milestone: Reliability
 created: 2026-11-19T02:12:56Z
-updated: 2026-11-20T06:33:09Z
+updated: 2026-11-21T02:22:02Z
+closed: 2026-11-21T02:22:02Z
 +++
 
 Part of #561. Loading or posing malformed input in this area must produce an error or warning, never a crash (precondition, fatalError, out-of-range index, force unwrap, integer overflow, unbounded allocation). Acceptance: a fuzz or malformed-input test covers the area and finds no crash. Area: JSON structure, node hierarchy indices, skins and other cross-object indices.
 
 Was MetalSprocketsGLTF#191 (moved with the package, #552).
+
+- `2026-11-21T02:22:02Z`: Fuzz test MalformedDocumentTests.structureAndIndices covers structure and cross-object indices; crashes it found are fixed.
 
 ---
 
@@ -13651,6 +13654,28 @@ updated: 2026-11-21T01:58:39Z
 Light.Kind has directional, point and spot only. Ambient light is a renderer setting (BlinnPhongMaterialRenderer.ambientLightColor) rather than a light node like SCNLight's .ambient type, so it cannot be animated, archived with the scene, or masked by category like other lights. PBR and ShaderMaterial have no constant ambient term.
 
 Split out of #86.
+
+---
+
+## 603: Deep node hierarchies overflow the stack in SceneGraph
+
++++
+status: new
+priority: medium
+kind: bug
+labels: area:scenegraph
+created: 2026-11-21T02:14:42Z
++++
+
+Importing a glTF whose node hierarchy is a chain about 64 levels deep crashes with EXC_BAD_ACCESS (stack overflow) in a debug build when run on a Swift Testing thread. SceneGraph walks the hierarchy recursively in several places (Node.attach, SceneGraph.traverse, childNode(withLabel:), and others).
+
+Repro (debug build, Swift Testing test):
+1. Write a .gltf with 64 nodes, each the only child of the previous, the last holding a mesh.
+2. GLTFAsset(url:).importScene().
+
+Expected: the scene imports. Actual: crash in SceneGraph.Node.init / getCache with EXC_BAD_ACCESS code 2 on a stack address. 48 levels works.
+
+The glTF loader itself accepts up to 1024 levels (found while working on #563).
 
 ---
 

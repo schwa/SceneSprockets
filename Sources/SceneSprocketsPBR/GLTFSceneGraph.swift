@@ -99,7 +99,7 @@ private struct GLTFSceneGraphBuilder {
         }
 
         let roots: [Int]
-        if asset.sceneIndex < document.scenes.count {
+        if document.scenes.indices.contains(asset.sceneIndex) {
             roots = document.scenes[asset.sceneIndex].nodes.map(\.index)
         } else {
             let children = Set(document.nodes.flatMap { $0.children.map(\.index) })
@@ -112,15 +112,16 @@ private struct GLTFSceneGraphBuilder {
         var lightNodes: [Int: [SceneGraph.Node]] = [:]
         var cameraNodes: [Int: [SceneGraph.Node]] = [:]
         var meshNodeList: [(node: SceneGraph.Node, mesh: Int)] = []
-        var path = Set<Int>()
-        func visit(_ index: Int, parent: SceneGraph.Node) throws {
+        // Nodes still to visit, depth first. A stack instead of recursion, so deep hierarchies cannot overflow the
+        // call stack. A path longer than the node count must repeat a node, so it means a cycle.
+        var pending: [(index: Int, parent: SceneGraph.Node, depth: Int)] = []
+        func visit(_ index: Int, parent: SceneGraph.Node, depth: Int) throws {
             guard document.nodes.indices.contains(index) else {
                 throw GLTFSceneGraphError.invalidNode(index)
             }
-            guard path.insert(index).inserted else {
+            guard depth <= document.nodes.count else {
                 throw GLTFSceneGraphError.cycle(index)
             }
-            defer { path.remove(index) }
             let source = document.nodes[index]
             let node = parent.addChild(SceneGraph.Node(label: source.name))
             if let matrix = source.matrix, matrix != matrix_identity_float4x4 {
@@ -174,13 +175,14 @@ private struct GLTFSceneGraphBuilder {
             if let light = source.punctualLight(in: document), let lightIndex = (try? source.extensionValue(KHRLightsPunctualNodeRef.self))??.light {
                 lightNodes[lightIndex, default: []].append(addContent(.light(SceneSprockets.Light(light))))
             }
-            for child in source.children {
-                try visit(child.index, parent: node)
-            }
+            pending += source.children.reversed().map { ($0.index, node, depth + 1) }
         }
         let root = SceneGraph.Node(label: document.scenes.indices.contains(asset.sceneIndex) ? document.scenes[asset.sceneIndex].name : nil)
         for index in roots {
-            try visit(index, parent: root)
+            pending.append((index, root, 1))
+            while let (index, parent, depth) = pending.popLast() {
+                try visit(index, parent: parent, depth: depth)
+            }
         }
 
         var skins: [Int: SceneGraph.Skin] = [:]

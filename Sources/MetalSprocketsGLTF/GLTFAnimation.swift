@@ -164,24 +164,58 @@ struct GLTFNodeHierarchy: Sendable {
     var children: [[Int]]
     var roots: [Int]
 
+    /// The most node visits one walk may make.
+    static let maximumVisits = 1 << 22
+    /// The deepest node hierarchy accepted.
+    static let maximumDepth = 1024
+
     /// Throws when a node reachable from `roots` is out of range or is its own ancestor; the walks below rely on this.
     init(document: Document, roots: [Int]) throws {
-        // Nodes on the path from the root to the current node; meeting one again means the hierarchy has a cycle.
-        var path = Set<Int>()
-        func validate(_ node: Int) throws {
-            guard document.nodes.indices.contains(node) else {
-                throw GLTFError.invalidDocument("Node index \(node) is out of range")
+        // Depth first without recursion, so deep hierarchies cannot overflow the stack. `onPath` holds the nodes from
+        // the root to the current node; meeting one again means the hierarchy has a cycle. Nodes already checked
+        // (reached through another parent) are not walked again.
+        var onPath = Set<Int>()
+        var checked = Set<Int>()
+        // How many visits a walk makes below each checked node. Nodes with several parents are visited once per
+        // path, which grows exponentially in a hostile file, so the total is capped.
+        var visits: [Int: Int] = [:]
+        for root in roots {
+            var stack: [(node: Int, nextChild: Int)] = []
+            func enter(_ node: Int) throws {
+                guard document.nodes.indices.contains(node) else {
+                    throw GLTFError.invalidDocument("Node index \(node) is out of range")
+                }
+                guard onPath.insert(node).inserted else {
+                    throw GLTFError.invalidDocument("Node \(node) is its own ancestor")
+                }
+                // Scene graphs built from the hierarchy are walked recursively.
+                guard stack.count < Self.maximumDepth else {
+                    throw GLTFError.invalidDocument("Node hierarchy is deeper than \(Self.maximumDepth) levels")
+                }
+                stack.append((node, 0))
             }
-            guard path.insert(node).inserted else {
-                throw GLTFError.invalidDocument("Node \(node) is its own ancestor")
+            if checked.contains(root) {
+                continue
             }
-            defer { path.remove(node) }
-            for child in document.nodes[node].children {
-                try validate(child.index)
+            try enter(root)
+            while let (node, nextChild) = stack.last {
+                let children = document.nodes[node].children
+                guard nextChild < children.count else {
+                    stack.removeLast()
+                    onPath.remove(node)
+                    checked.insert(node)
+                    visits[node] = children.reduce(1) { total, child in min(total + (visits[child.index] ?? 0), Self.maximumVisits + 1) }
+                    continue
+                }
+                stack[stack.count - 1].nextChild += 1
+                let child = children[nextChild].index
+                if !checked.contains(child) {
+                    try enter(child)
+                }
             }
         }
-        for root in roots {
-            try validate(root)
+        if roots.reduce(0, { min($0 + (visits[$1] ?? 0), Self.maximumVisits + 1) }) > Self.maximumVisits {
+            throw GLTFError.invalidDocument("Node hierarchy reaches nodes through too many paths")
         }
         rest = document.nodes.map { node in
             if node.usesMatrix, let matrix = node.matrix {
@@ -204,16 +238,16 @@ struct GLTFNodeHierarchy: Sendable {
     /// through two parents is visited twice.
     func walk(_ transforms: [Transform3D], visible: [Bool]? = nil, _ body: (_ node: Int, _ world: simd_float4x4, _ visible: Bool) throws -> Void) rethrows { // swiftlint:disable:this discouraged_optional_collection - nil means absent or not overridden, which differs from empty
         let ownVisible = visible ?? restVisible
-        func visit(_ node: Int, parent: simd_float4x4, parentVisible: Bool) throws {
+        // An explicit stack instead of recursion, so deep hierarchies cannot overflow the call stack. Children are
+        // pushed in reverse so they are visited in order.
+        var stack: [(node: Int, parent: simd_float4x4, parentVisible: Bool)] = roots.reversed().filter { transforms.indices.contains($0) }.map { ($0, matrix_identity_float4x4, true) }
+        while let (node, parent, parentVisible) = stack.popLast() {
             let world = parent * transforms[node].matrix
             let visible = parentVisible && (ownVisible.indices.contains(node) ? ownVisible[node] : true)
             try body(node, world, visible)
-            for child in children[node] {
-                try visit(child, parent: world, parentVisible: visible)
+            for child in children[node].reversed() {
+                stack.append((child, world, visible))
             }
-        }
-        for root in roots where transforms.indices.contains(root) {
-            try visit(root, parent: matrix_identity_float4x4, parentVisible: true)
         }
     }
 
@@ -234,7 +268,7 @@ extension GLTFNodeHierarchy {
     /// The nodes of scene `sceneIndex`, or every root node when the document has no such scene.
     init(document: Document, sceneIndex: Int) throws {
         let roots: [Int]
-        if sceneIndex < document.scenes.count {
+        if document.scenes.indices.contains(sceneIndex) {
             roots = document.scenes[sceneIndex].nodes.map(\.index)
         } else {
             let children = Set(document.nodes.flatMap { $0.children.map(\.index) })
