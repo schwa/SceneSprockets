@@ -501,6 +501,23 @@ func bodyMotionOptions() throws {
     #expect(floating.worldPosition.y < 2)
 }
 
+// #414: bodies can be limited to some axes: no rotation, or the XY plane.
+@Test
+func bodiesCanBeLimitedToSomeAxes() throws {
+    let root = SceneGraph.Node()
+    let upright = root.addChild(SceneGraph.Node(transform: .init(translation: [-3, 0, 0])))
+    upright.physicsBody = .init(type: .dynamic, shape: .box(size: [1, 1, 1]), gravityFactor: 0, allowedMotion: .translation)
+    let flat = root.addChild(SceneGraph.Node(transform: .init(translation: [3, 0, 0])))
+    flat.physicsBody = .init(type: .dynamic, shape: .box(size: [1, 1, 1]), gravityFactor: 0, allowedMotion: .plane2D)
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+    physics.setAngularVelocity([0, 5, 0], of: upright)
+    physics.setVelocity([1, 1, 3], of: flat)
+    run(physics, seconds: 1)
+    #expect(abs(upright.transform.rotation.quaternion.real) > 0.9999, "\(upright.transform.rotation)")
+    #expect(abs(flat.worldPosition.z) < 1e-4, "\(flat.worldPosition)")
+    #expect(flat.worldPosition.x > 3.5)
+}
+
 // #413: a fast body with continuous collision does not tunnel through a thin wall.
 @Test
 func continuousCollisionStopsTunneling() throws {

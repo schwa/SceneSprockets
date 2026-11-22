@@ -341,8 +341,8 @@ public final class SceneGraphPhysicsWorld {
         if description.type == .dynamic, description.shape == .mesh {
             return false
         }
-        // Jolt sets this only when it creates a body.
-        guard description.allowsSleeping == old.allowsSleeping else {
+        // Jolt sets these only when it creates a body.
+        guard description.allowsSleeping == old.allowsSleeping, description.allowedMotion == old.allowedMotion else {
             return false
         }
         let body = entry.body
@@ -411,6 +411,20 @@ public final class SceneGraphPhysicsWorld {
         }
     }
 
+    // Jolt needs at least one degree of freedom; empty counts as all.
+    private static func degreesOfFreedom(_ axes: SceneGraph.PhysicsBody.Axes) -> AllowedDegreesOfFreedom {
+        let pairs: [(SceneGraph.PhysicsBody.Axes, AllowedDegreesOfFreedom)] = [
+            (.translationX, .translationX), (.translationY, .translationY), (.translationZ, .translationZ),
+            (.rotationX, .rotationX), (.rotationY, .rotationY), (.rotationZ, .rotationZ)
+        ]
+        let result = pairs.reduce(into: AllowedDegreesOfFreedom()) { result, pair in
+            if axes.contains(pair.0) {
+                result.insert(pair.1)
+            }
+        }
+        return result.isEmpty ? .all : result
+    }
+
     private static let logger = Logger(subsystem: "io.schwa.SceneSprockets", category: "Physics")
 
     // Sends Jolt's trace messages, which print to stdout by default, to unified logging (#422). Installed once; the
@@ -443,6 +457,7 @@ public final class SceneGraphPhysicsWorld {
         options.gravityFactor = description.gravityFactor
         options.allowSleeping = description.allowsSleeping
         options.motionQuality = description.usesContinuousCollision ? .linearCast : .discrete
+        options.allowedDegreesOfFreedom = Self.degreesOfFreedom(description.allowedMotion)
         let body = world.addBody(shape, position: pose.translation, rotation: pose.rotation.quaternion, motionType: motionType, restitution: description.restitution, friction: description.friction, options: options)
         if description.type == .dynamic, let mass = description.mass {
             world.setMass(of: body, to: mass)

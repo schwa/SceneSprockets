@@ -9625,20 +9625,23 @@ Pass SwiftJolt's `BodyOptions` (linearDamping, angularDamping, gravityFactor, al
 ## 414: Physics bodies cannot be limited to some axes
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:physics, effort:s
 milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-16T23:34:12Z
-updated: 2026-11-20T06:32:46Z
+updated: 2026-11-22T16:34:09Z
+closed: 2026-11-22T16:34:09Z
 +++
 
 There is no way to lock a body's rotation or keep it in a plane (SceneKit angularVelocityFactor / velocityFactor). 2D-style scenes and upright characters need this.
 
 ## Proposed fix (per schwa)
 Use SwiftJolt's `BodyOptions.allowedDegreesOfFreedom` (e.g. `.plane2D`, or translation only).
+
+- `2026-11-22T16:34:09Z`: PhysicsBody.allowedMotion (Axes option set: per-axis translation/rotation, .translation, .plane2D, .all) maps to Jolt's allowed degrees of freedom; set at creation (changing it rebuilds the body); archived.
 
 ---
 

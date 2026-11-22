@@ -14,6 +14,29 @@ extension SceneGraph {
             case kinematic
         }
 
+        /// The axes a body can move along and rotate about, like SceneKit's `velocityFactor` and
+        /// `angularVelocityFactor` set to 0 or 1 per axis.
+        public struct Axes: OptionSet, Sendable, Hashable, Codable {
+            public let rawValue: UInt8
+
+            public init(rawValue: UInt8) {
+                self.rawValue = rawValue
+            }
+
+            public static let translationX = Self(rawValue: 1 << 0)
+            public static let translationY = Self(rawValue: 1 << 1)
+            public static let translationZ = Self(rawValue: 1 << 2)
+            public static let rotationX = Self(rawValue: 1 << 3)
+            public static let rotationY = Self(rawValue: 1 << 4)
+            public static let rotationZ = Self(rawValue: 1 << 5)
+            /// Moves freely but never rotates, for example an upright character.
+            public static let translation: Self = [.translationX, .translationY, .translationZ]
+            public static let rotation: Self = [.rotationX, .rotationY, .rotationZ]
+            /// Stays in the XY plane and rotates only about Z, for 2D-style scenes.
+            public static let plane2D: Self = [.translationX, .translationY, .rotationZ]
+            public static let all: Self = [.translation, .rotation]
+        }
+
         /// The collision shape of a body.
         ///
         /// Sizes are in the node's local space. The simulation applies the node's world scale when it creates the body.
@@ -56,6 +79,8 @@ extension SceneGraph {
         public var allowsSleeping: Bool
         /// Sweeps the body along its motion each step so a fast body does not pass through thin ones, at some cost.
         public var usesContinuousCollision: Bool
+        /// The axes a dynamic body can move along and rotate about. Empty counts as `.all`.
+        public var allowedMotion: Axes
         /// A trigger detects overlaps with other bodies but does not collide with them or push them, like a SceneKit
         /// contact-only body.
         public var isTrigger: Bool
@@ -78,10 +103,11 @@ extension SceneGraph {
         ///   - gravityFactor: Multiplies gravity for this body; 0 ignores gravity.
         ///   - allowsSleeping: Whether the body may sleep at rest.
         ///   - usesContinuousCollision: Whether a fast body is swept so it does not tunnel through thin bodies.
+        ///   - allowedMotion: The axes a dynamic body can move along and rotate about.
         ///   - isTrigger: Whether the body only detects overlaps instead of colliding.
         ///   - categoryBitMask: The categories the body belongs to.
         ///   - collisionBitMask: The categories the body collides with. The default is all of them.
-        public init(type: BodyType, shape: Shape, mass: Float? = nil, friction: Float = 0.5, restitution: Float = 0, linearDamping: Float = 0.05, angularDamping: Float = 0.05, gravityFactor: Float = 1, allowsSleeping: Bool = true, usesContinuousCollision: Bool = false, isTrigger: Bool = false, categoryBitMask: UInt32 = 1, collisionBitMask: UInt32 = .max) {
+        public init(type: BodyType, shape: Shape, mass: Float? = nil, friction: Float = 0.5, restitution: Float = 0, linearDamping: Float = 0.05, angularDamping: Float = 0.05, gravityFactor: Float = 1, allowsSleeping: Bool = true, usesContinuousCollision: Bool = false, allowedMotion: Axes = .all, isTrigger: Bool = false, categoryBitMask: UInt32 = 1, collisionBitMask: UInt32 = .max) {
             self.type = type
             self.shape = shape
             self.mass = mass
@@ -92,6 +118,7 @@ extension SceneGraph {
             self.gravityFactor = gravityFactor
             self.allowsSleeping = allowsSleeping
             self.usesContinuousCollision = usesContinuousCollision
+            self.allowedMotion = allowedMotion
             self.isTrigger = isTrigger
             self.categoryBitMask = categoryBitMask
             self.collisionBitMask = collisionBitMask
