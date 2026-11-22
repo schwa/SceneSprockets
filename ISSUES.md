@@ -9329,6 +9329,9 @@ Post-processing has exposure, contrast, saturation, vignette and ambient occlusi
 Moved from SceneSprocketsAddOns #26.
 
 - `2026-11-17T17:51:43Z`: Related: #45.
+- `2026-11-22T16:57:38Z`: Autonomous run: punted for design. Since #501 every renderer tone-maps its own output into the view's 8-bit target, so a bloom pass would only see clipped, tone-mapped color (thresholding near white, no real HDR highlights). Proper bloom needs: renderers in their existing linearOutput mode drawing into a float (rgba16Float) intermediate target, a bright-pass + downsample/upsample blur chain, then tone mapping and exposure moved into a final post pass that writes the view. That changes where tone mapping happens for every renderer and adds a full-screen float target in frames that use it. Depth of field and motion blur need depth (available as post targets) and, for motion blur, per-pixel velocity (#510). Overlaps #45, which tracks the same HDR/bloom/DoF goals.
+- `2026-11-22T16:57:38Z`: Question 1 (design): For bloom, may the renderer switch to an HDR path when bloom is on: scene drawn linear into an rgba16Float target, then bloom and tone mapping as post passes into the view (renderers skip their own tone mapping in that path)? Recommended: Yes, only when bloom (or later DoF) is enabled; the default path stays as today
+- `2026-11-22T16:57:38Z`: Question 2 (decision): Should #399 be merged into #45 (same goals), keeping one issue per effect: bloom, depth of field, motion blur (after #510)? Recommended: Yes: close #399 as a duplicate of #45 and split #45 into bloom / DoF / motion blur subtasks
 
 ---
 
@@ -9346,6 +9349,10 @@ updated: 2026-11-20T06:33:50Z
 Distant meshes are drawn as full geometry or a lower LOD. They cannot be replaced by billboard imposters (pre-rendered views).
 
 Moved from SceneSprocketsAddOns #33.
+
+- `2026-11-22T16:57:55Z`: Autonomous run: punted for design. Pieces: (1) a bake step that renders a node's mesh from N directions into an atlas with OffscreenRenderer (color + alpha, optionally normals and depth for relighting); (2) an impostor material/shader that turns a quad toward the camera and picks (or blends) the atlas cell nearest the view direction; (3) LevelOfDetail integration: today a level is only a MetalMesh (or nil), so it needs a way to name an impostor instead. Open choices: view layout (a horizontal ring of 8-16 views for upright objects like trees, or an octahedral hemisphere for any object), baked lighting vs a normal atlas lit at runtime, and when baking runs (on demand, cached per mesh+material). Billboards themselves overlap #596 (billboards with alignment options).
+- `2026-11-22T16:57:55Z`: Question 1 (design): Which impostor kind first: horizontal ring of views with baked lighting (cheap, fits trees and buildings seen from the ground), or octahedral views with a normal atlas lit at runtime (any angle, matches scene lighting)? Recommended: Ring of 8 views, baked unlit color + alpha, lit with the node's normal-free ambient; octahedral later
+- `2026-11-22T16:57:55Z`: Question 2 (design): How should a level of detail name an impostor: a new LevelOfDetail(impostor: Impostor, distance:) where Impostor holds the baked atlas, made by Impostor.bake(node:views:size:)? Recommended: Yes: LevelOfDetail gains an impostor alternative to mesh; Impostor.bake renders the atlas once with OffscreenRenderer
 
 ---
 
