@@ -501,6 +501,42 @@ func bodyMotionOptions() throws {
     #expect(floating.worldPosition.y < 2)
 }
 
+// #431: Jolt's debug drawing comes out as world-space geometry and as a mesh node to add to the scene.
+@Test
+func debugVisualizationOfBodies() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let root = SceneGraph.Node()
+    let box = root.addChild(SceneGraph.Node(transform: .init(translation: [5, 0, 0])))
+    box.physicsBody = .init(type: .dynamic, shape: .box(size: [2, 2, 2]), gravityFactor: 0)
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+    physics.sync()
+    var settings = DebugDrawSettings()
+    settings.wireframe = true
+    let geometry = physics.debugGeometry(settings: settings)
+    #expect(!geometry.lines.isEmpty)
+    // The box's wireframe lies on its surface, around x = 5.
+    let points = geometry.lines.flatMap { [$0.from, $0.to] }
+    #expect(points.allSatisfy { abs($0.x - 5) <= 1.01 && abs($0.y) <= 1.01 && abs($0.z) <= 1.01 }, "\(points.prefix(4))")
+
+    struct PlainMaterial: SceneMaterial {}
+    let debugNode = root.addChild(SceneGraph.Node(label: "Physics Debug"))
+    physics.updateDebugNode(debugNode, material: PlainMaterial(), settings: settings, device: device)
+    guard case let .mesh(mesh, _, castsShadow, _) = debugNode.content else {
+        Issue.record("no debug mesh")
+        return
+    }
+    #expect(!castsShadow)
+    #expect(mesh.submeshes.contains { $0.primitiveType == .line })
+    // The debug node itself has no body, so it does not draw itself next time.
+    #expect(debugNode.physicsBody == nil)
+    box.physicsBody = nil
+    physics.sync()
+    physics.updateDebugNode(debugNode, material: PlainMaterial(), settings: settings, device: device)
+    if case .mesh = debugNode.content {
+        Issue.record("no bodies, so no debug mesh")
+    }
+}
+
 // #436: a body floats in a fluid, and only inside the fluid's horizontal bounds.
 @Test
 func bodiesFloatInFluids() throws {

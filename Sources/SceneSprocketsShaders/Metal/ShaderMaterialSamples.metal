@@ -30,6 +30,29 @@ namespace ShaderMaterialSamples {
         return out;
     }
 
+    // Per-vertex colors, unlit (#431). Meshes made by SwiftMesh's array initializer keep attribute order, so
+    // position, normal, texture coordinate and color are attributes 0 to 3.
+    struct ColorVertexIn {
+        float3 position [[attribute(0)]];
+        float4 color [[attribute(3)]];
+    };
+
+    struct ColorVertexOut {
+        float4 position [[position]];
+        float4 color;
+    };
+
+    [[vertex]] ColorVertexOut vertex_colors(ColorVertexIn in [[stage_in]], ushort view [[amplification_id]], constant ShaderMaterialTransforms &transforms [[buffer(10)]]) {
+        ColorVertexOut out;
+        out.position = transforms.modelViewProjectionMatrices[view] * float4(in.position, 1);
+        out.color = in.color;
+        return out;
+    }
+
+    [[fragment]] float4 fragment_vertex_colors(ColorVertexOut in [[stage_in]]) {
+        return in.color;
+    }
+
     // World-space normal as color.
     [[fragment]] float4 fragment_normals(VertexOut in [[stage_in]], constant ShaderMaterialTransforms &transforms [[buffer(10)]]) {
         return float4(normalize(in.worldNormal) * 0.5 + 0.5, transforms.opacity);

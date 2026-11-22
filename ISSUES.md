@@ -10024,19 +10024,22 @@ Context: SwiftJolt now has Contact.estimateResponse (predicted impulses and velo
 ## 431: No debug visualization of physics bodies
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:physics, effort:m
 milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-20T06:32:46Z
+updated: 2026-11-22T16:49:06Z
+closed: 2026-11-22T16:49:06Z
 +++
 
 There is no way to see collision shapes, bounding boxes, velocities or constraint limits drawn over the scene, which makes physics setups hard to debug.
 
 Context: SwiftJolt's debugDraw now supports a body filter, constraint limits/frames, and a DebugDrawer with arrows, boxes, spheres, cones, etc.
+
+- `2026-11-22T16:49:06Z`: SceneGraphPhysicsWorld.debugGeometry(settings:) (Jolt debugDraw collected as world-space lines/triangles), updateDebugNode(_:material:settings:device:) to show it as a mesh node, and ShaderMaterial.vertexColors() to draw it unlit in Jolt's colors.
 
 ---
 

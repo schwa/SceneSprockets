@@ -31,6 +31,29 @@ func normalsMaterialShowsFrontFaceNormal() throws {
     #expect(value.y > 100 && value.y < 220)
 }
 
+// #431: vertexColors draws each vertex's color, unlit, including line primitives.
+@Test(.enabled(if: deviceSupportsMetal4))
+@MainActor
+func vertexColorsMaterialDrawsColoredLines() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    // A horizontal red line and a vertical green one through the center.
+    let positions: [SIMD3<Float>] = [[-1, 0, 0], [1, 0, 0], [0, -1, 0], [0, 1, 0]]
+    let colors: [SIMD4<Float>] = [[1, 0, 0, 1], [1, 0, 0, 1], [0, 1, 0, 1], [0, 1, 0, 1]]
+    let zeros = [SIMD3<Float>](repeating: .zero, count: 4)
+    let mesh = MetalMesh(device: device, attributes: [.positions(positions), .normals(zeros), .textureCoordinates(Array(repeating: .zero, count: 4)), .colors(colors)], submeshes: [.init(indices: [0, 1, 2, 3], primitiveType: .line)])
+    let root = SceneGraph.Node()
+    root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 4]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
+    root.addChild(SceneGraph.Node(content: .mesh(mesh, material: ShaderMaterial.vertexColors())))
+    let size = 32
+    let texture = try OffscreenRenderer(size: CGSize(width: size, height: size)).render(SceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1, renderers: [ShaderMaterialRenderer()])).texture
+    var pixels = [SIMD4<UInt8>](repeating: .zero, count: size * size)
+    texture.getBytes(&pixels, bytesPerRow: size * 4, from: MTLRegionMake2D(0, 0, size, size), mipmapLevel: 0)
+    // BGRA: red is z, green is y.
+    #expect(pixels.contains { $0.z > 200 && $0.y < 50 }, "a red line")
+    #expect(pixels.contains { $0.y > 200 && $0.z < 50 }, "a green line")
+    #expect(pixels.count { $0.y > 100 || $0.z > 100 } < size * 4, "only thin lines")
+}
+
 // Two half-transparent quads over black at the same spot; whichever draws last dominates the blend.
 @Test(.enabled(if: deviceSupportsMetal4), arguments: [true, false])
 @MainActor

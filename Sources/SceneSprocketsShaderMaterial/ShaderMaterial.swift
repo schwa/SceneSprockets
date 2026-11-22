@@ -95,6 +95,13 @@ public struct ShaderMaterial: SceneMaterial, SamplesShadowsInShader, DrawsDeform
         true
     }
 
+    /// A sample material that draws each vertex's color (attribute 3), unlit, for example physics debug geometry. The
+    /// mesh needs position at attribute 0 and a float4 color at attribute 3.
+    public static func vertexColors() -> Self {
+        let shaders = ShaderMaterialSampleLibrary.functions(vertex: "vertex_colors", fragment: "fragment_vertex_colors")
+        return Self(vertexShader: shaders.vertex, fragmentShader: shaders.fragment)
+    }
+
     /// A sample material that shows world-space normals as colors.
     public static func normals() -> Self {
         let shaders = ShaderMaterialSampleLibrary.functions(fragment: "fragment_normals")
@@ -257,10 +264,10 @@ enum ShaderMaterialSampleLibrary {
 
     // The sample vertex function and a sample fragment function. They ship in this package's bundle, so failing to load
     // them is a packaging bug and traps.
-    static func functions(fragment name: String) -> (vertex: VertexShader, fragment: FragmentShader) {
+    static func functions(vertex vertexName: String = "vertex_main", fragment name: String) -> (vertex: VertexShader, fragment: FragmentShader) {
         do {
             let library = try shared()
-            return (try library.function(named: "vertex_main", type: VertexShader.self), try library.function(named: name, type: FragmentShader.self))
+            return (try library.function(named: vertexName, type: VertexShader.self), try library.function(named: name, type: FragmentShader.self))
         } catch {
             fatalError("Could not load the ShaderMaterial sample shaders: \(error)")
         }
