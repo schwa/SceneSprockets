@@ -113,7 +113,7 @@ extension SceneGraph.PhysicsBody.BodyType: Codable {
 
 extension SceneGraph.PhysicsBody: Codable {
     enum ArchiveKeys: String, CodingKey {
-        case type, shape, mass, friction, restitution, isTrigger
+        case type, shape, mass, friction, restitution, isTrigger, categoryBitMask, collisionBitMask
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -126,6 +126,12 @@ extension SceneGraph.PhysicsBody: Codable {
         if isTrigger {
             try container.encode(isTrigger, forKey: .isTrigger)
         }
+        if categoryBitMask != 1 {
+            try container.encode(categoryBitMask, forKey: .categoryBitMask)
+        }
+        if collisionBitMask != .max {
+            try container.encode(collisionBitMask, forKey: .collisionBitMask)
+        }
     }
 
     public init(from decoder: Decoder) throws {
@@ -136,7 +142,9 @@ extension SceneGraph.PhysicsBody: Codable {
             mass: try container.decodeIfPresent(Float.self, forKey: .mass),
             friction: try container.decodeIfPresent(Float.self, forKey: .friction) ?? 0.5,
             restitution: try container.decodeIfPresent(Float.self, forKey: .restitution) ?? 0,
-            isTrigger: try container.decodeIfPresent(Bool.self, forKey: .isTrigger) ?? false
+            isTrigger: try container.decodeIfPresent(Bool.self, forKey: .isTrigger) ?? false,
+            categoryBitMask: try container.decodeIfPresent(UInt32.self, forKey: .categoryBitMask) ?? 1,
+            collisionBitMask: try container.decodeIfPresent(UInt32.self, forKey: .collisionBitMask) ?? .max
         )
     }
 }

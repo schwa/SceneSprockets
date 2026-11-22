@@ -49,6 +49,11 @@ extension SceneGraph {
         /// A trigger detects overlaps with other bodies but does not collide with them or push them, like a SceneKit
         /// contact-only body.
         public var isTrigger: Bool
+        /// The categories the body belongs to, one per bit, like SceneKit's `categoryBitMask`.
+        public var categoryBitMask: UInt32
+        /// The categories the body collides with. Two bodies collide only when each one's category is in the other's
+        /// collision mask. Bodies that do not collide also do not report contacts.
+        public var collisionBitMask: UInt32
 
         /// Creates a physics body description.
         ///
@@ -59,13 +64,17 @@ extension SceneGraph {
         ///   - friction: The friction coefficient.
         ///   - restitution: The bounciness, from 0 (no bounce) to 1 (full bounce).
         ///   - isTrigger: Whether the body only detects overlaps instead of colliding.
-        public init(type: BodyType, shape: Shape, mass: Float? = nil, friction: Float = 0.5, restitution: Float = 0, isTrigger: Bool = false) {
+        ///   - categoryBitMask: The categories the body belongs to.
+        ///   - collisionBitMask: The categories the body collides with. The default is all of them.
+        public init(type: BodyType, shape: Shape, mass: Float? = nil, friction: Float = 0.5, restitution: Float = 0, isTrigger: Bool = false, categoryBitMask: UInt32 = 1, collisionBitMask: UInt32 = .max) {
             self.type = type
             self.shape = shape
             self.mass = mass
             self.friction = friction
             self.restitution = restitution
             self.isTrigger = isTrigger
+            self.categoryBitMask = categoryBitMask
+            self.collisionBitMask = collisionBitMask
         }
     }
 }

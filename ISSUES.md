@@ -9556,20 +9556,23 @@ Use SwiftJolt's `BodyOptions.isSensor` / `PhysicsWorld.setIsSensor` together wit
 ## 412: Nodes cannot choose which other nodes their bodies collide with
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: area:physics, effort:m
 milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-16T23:34:11Z
-updated: 2026-11-20T06:32:46Z
+updated: 2026-11-22T15:15:36Z
+closed: 2026-11-22T15:15:36Z
 +++
 
 All bodies in SceneGraphPhysicsWorld collide with all others (except static vs static). There is no equivalent of SceneKit's collisionBitMask, and no way to make, for example, debris pass through characters or parts of one ragdoll ignore each other.
 
 ## Proposed fix (per schwa)
 Map node categories to SwiftJolt `CollisionLayers` (fixed when the world is created) and/or `CollisionGroup` + `CollisionGroupFilter`.
+
+- `2026-11-22T15:15:36Z`: PhysicsBody.categoryBitMask/collisionBitMask (SceneKit names). Bodies collide only when each one's category is in the other's mask, enforced by a contact-validate listener; mask changes invalidate the contact cache and wake nearby bodies. Archived.
 
 ---
 

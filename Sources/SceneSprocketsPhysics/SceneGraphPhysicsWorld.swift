@@ -4,6 +4,7 @@ import os
 import SceneSprockets
 import simd
 import SwiftMesh
+import Synchronization
 
 /// A Jolt simulation of the nodes in a scene graph that have a `physicsBody`.
 ///
@@ -20,6 +21,8 @@ public final class SceneGraphPhysicsWorld {
     /// The scene graph whose nodes the world simulates.
     public let sceneGraph: SceneGraph
     /// The Jolt world, for anything this type does not wrap (constraints, contacts, queries).
+    ///
+    /// Do not replace its `contactListener`: the world uses it to apply collision masks.
     public let world: PhysicsWorld
 
     struct Entry {
@@ -35,6 +38,9 @@ public final class SceneGraphPhysicsWorld {
     private(set) var entryKeysByBody: [BodyID: ObjectIdentifier] = [:]
     // Nodes already warned about, so a rejected body is reported once, not every step.
     private var warnedNodes: Set<SceneGraph.Node.ID> = []
+    // Rejects contacts between bodies whose collision masks leave each other out (#412). Jolt calls it from its
+    // worker threads, so it reads masks from its own locked table.
+    private let collisionFilter = CollisionMaskFilter()
 
     /// Creates a physics world for a scene graph.
     ///
@@ -45,6 +51,7 @@ public final class SceneGraphPhysicsWorld {
     public init(sceneGraph: SceneGraph, gravity: SIMD3<Float> = [0, -9.81, 0]) throws {
         self.sceneGraph = sceneGraph
         world = PhysicsWorld(engine: try JoltEngine(), gravity: gravity)
+        world.contactListener = collisionFilter
     }
 
     /// The acceleration of gravity in world space, in meters per second squared.
@@ -217,8 +224,16 @@ public final class SceneGraphPhysicsWorld {
         if description.restitution != old.restitution {
             world.setRestitution(of: body, to: description.restitution)
         }
+        let masksChanged = description.categoryBitMask != old.categoryBitMask || description.collisionBitMask != old.collisionBitMask
+        if masksChanged {
+            collisionFilter.setMasks(of: body, to: description)
+            // Contacts already found are kept without being validated again.
+            world.invalidateContactCache(of: body)
+        }
         if description.isTrigger != old.isTrigger {
             world.setIsSensor(body, to: description.isTrigger)
+        }
+        if masksChanged || description.isTrigger != old.isTrigger {
             // Bodies resting on it are asleep and would stay put; wake them so they react to the change.
             if let bounds = world.readBody(body, { $0.worldSpaceBounds }) {
                 world.activateBodies(inBoxFrom: bounds.min, to: bounds.max)
@@ -233,6 +248,7 @@ public final class SceneGraphPhysicsWorld {
 
     private func destroy(_ entry: Entry) {
         entryKeysByBody[entry.body] = nil
+        collisionFilter.removeMasks(of: entry.body)
         if world.isAdded(entry.body) {
             world.removeBody(entry.body)
         } else {
@@ -267,6 +283,7 @@ public final class SceneGraphPhysicsWorld {
         if description.isTrigger {
             world.setIsSensor(body, to: true)
         }
+        collisionFilter.setMasks(of: body, to: description)
         return body
     }
 

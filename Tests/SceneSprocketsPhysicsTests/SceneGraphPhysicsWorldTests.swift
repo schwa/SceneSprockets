@@ -422,6 +422,28 @@ func dynamicBoxFallsThroughTriggerFloor() throws {
     #expect(box.worldPosition.y < -2, "box at \(box.worldPosition)")
 }
 
+// #412: bodies collide only when each body's category is in the other's collision mask.
+@Test
+func collisionMasksChooseWhichBodiesCollide() throws {
+    let root = SceneGraph.Node()
+    let floor = makeFloor(in: root)
+    floor.physicsBody?.categoryBitMask = 0b10
+    // Collides with the floor.
+    let solid = root.addChild(SceneGraph.Node(transform: .init(translation: [-3, 2, 0])))
+    solid.physicsBody = .init(type: .dynamic, shape: .box(size: [1, 1, 1]))
+    // Its mask leaves out the floor's category, so it falls through.
+    let ghost = root.addChild(SceneGraph.Node(transform: .init(translation: [3, 2, 0])))
+    ghost.physicsBody = .init(type: .dynamic, shape: .box(size: [1, 1, 1]), collisionBitMask: 0b01)
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+    run(physics, seconds: 2)
+    #expect(abs(solid.worldPosition.y - 0.5) < 0.05, "solid at \(solid.worldPosition)")
+    #expect(ghost.worldPosition.y < -2, "ghost at \(ghost.worldPosition)")
+    // Changing the mask of an existing body takes effect: the floor now leaves out the solid box's category.
+    floor.physicsBody?.collisionBitMask = 0
+    run(physics, seconds: 2)
+    #expect(solid.worldPosition.y < -2, "solid at \(solid.worldPosition)")
+}
+
 // #411: turning a body into a trigger after it was created lets bodies pass through it.
 @Test
 func floorBecomesTriggerAfterCreation() throws {
