@@ -13910,6 +13910,24 @@ SceneGraph.Spline and Action.follow(_:duration:orientsToPath:) (#407) move a nod
 
 ---
 
+## 608: glTF benchmarks do not cover variant switching, the environment background, or GPU-bound resolutions
+
++++
+status: new
+priority: low
+kind: task
+labels: area:performance,area:testing,effort:s,gltf
+created: 2026-11-22T17:36:41Z
++++
+
+After #558 the ms-gltf-render bench suite covers morph targets, material lobes, point/line primitives, many lights, many textures and load time. Still not measured:
+- KHR_materials_variants switching and node visibility changes during a run (e.g. MaterialsVariantsShoe switching each frame);
+- the environment background (--background) and the transmission pre-pass at larger sizes;
+- a second, GPU-bound resolution (4K) and GPU-heavy rather than CPU-heavy scenes.
+Split from #558.
+
+---
+
 ## Milestone M1: Correctness
 
 +++
