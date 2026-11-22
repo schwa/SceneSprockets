@@ -8972,6 +8972,9 @@ The visionOS build of SceneSprocketsDemo also fails: CodeSign of SceneSprocketsD
 - `2026-11-12T21:25:34Z`: Immersive space and toolbar toggle committed. Known: crashes when the window edits the scene while immersive (data race, #386). Leave open until #386 lands.
 - `2026-11-12T21:46:10Z`: #386 is fixed: the demo's immersive space now renders ScenePresenter snapshots. Needs a device check: open immersive, then use the window (keynote slides) while immersive.
 - `2026-11-16T19:43:27Z`: Related: #392 (particle crash seen in a session that used the immersive space).
+- `2026-11-22T15:12:55Z`: visionOS build failure fixed: the codesign error had moved to SceneSprocketsAddOns_SceneSprocketsTerrain.bundle, whose top-level 'Resources' folder codesign rejects in shallow bundles. Renamed it to Heightmaps in SceneSprocketsAddOns (0f5cd695, committed, not pushed). With local packages (MetalSprockets Workspaces/SceneSprocketsDemo.xcworkspace) the demo builds for generic/platform=visionOS. Not closing: the immersive space has still never run on a device, and the demo here only picks up the fix once SceneSprocketsAddOns is pushed.
+- `2026-11-22T15:12:55Z`: Question 1 (verify): On a Vision Pro, does the demo's immersive space open and render, and can you use the window (keynote slides) while immersive without a crash? Recommended: Run from MetalSprockets Workspaces/SceneSprocketsDemo.xcworkspace on device and report the result
+- `2026-11-22T15:12:55Z`: Question 2 (decision): May I push SceneSprocketsAddOns 0f5cd695 (Terrain Resources folder rename) so the demo builds for visionOS from GitHub? Recommended: Yes, push it and update SceneSprockets' resolved SceneSprocketsAddOns
 
 ---
 
