@@ -122,6 +122,12 @@ public final class SceneGraphPhysicsWorld {
     /// The fluids that dynamic bodies float in.
     public var fluids: [Fluid] = []
 
+    /// The joints added with ``addJoint(_:between:and:breakingImpulse:)`` that still hold.
+    public internal(set) var joints: [PhysicsJoint] = []
+    /// Called after a step for each joint that broke because its load went over its `breakingImpulse`. A joint
+    /// whose node's body is removed or rebuilt is dropped without calling it.
+    public var jointBreakHandler: ((PhysicsJoint) -> Void)?
+
     /// Called before every sub-step of ``step(deltaTime:collisionSteps:)`` with the sub-step's duration, for forces
     /// that must act all the time, such as wind, magnets or custom fields: Jolt clears forces after each sub-step. Add
     /// them with ``applyForce(_:to:at:)``. While it is set, each sub-step runs as its own Jolt update.
@@ -277,6 +283,7 @@ public final class SceneGraphPhysicsWorld {
             entry.node.worldTransform = pose.matrix
         }
         reportContacts()
+        breakOverloadedJoints()
     }
 
     // Buoyancy and drag for awake dynamic bodies whose bounds overlap a fluid. Jolt computes the submerged part.
@@ -508,6 +515,7 @@ public final class SceneGraphPhysicsWorld {
     }
 
     private func destroy(_ entry: Entry) {
+        detachJoints(using: entry.body)
         entryKeysByBody[entry.body] = nil
         contactListener.removeMasks(of: entry.body)
         touchingPairs = touchingPairs.filter { !$0.key.contains(entry.body) }

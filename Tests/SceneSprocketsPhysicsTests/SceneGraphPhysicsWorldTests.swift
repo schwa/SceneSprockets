@@ -501,6 +501,54 @@ func bodyMotionOptions() throws {
     #expect(floating.worldPosition.y < 2)
 }
 
+// #432: joints connect bodies to each other or to the world, and can break under load.
+@Test
+func jointsConnectAndBreak() throws {
+    let root = SceneGraph.Node()
+    // A pendulum: a ball joint to the world at (0, 5, 0), starting 2 units to the side.
+    let bob = root.addChild(SceneGraph.Node(transform: .init(translation: [2, 5, 0])))
+    bob.physicsBody = .init(type: .dynamic, shape: .sphere(radius: 0.2), linearDamping: 0)
+    // A slider: free to move along X only.
+    let carriage = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 10, 5])))
+    carriage.physicsBody = .init(type: .dynamic, shape: .box(size: [0.5, 0.5, 0.5]))
+    // A weld that breaks: a heavy box held only by a fixed joint with a low breaking impulse.
+    let anvil = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 20, -5])))
+    anvil.physicsBody = .init(type: .dynamic, shape: .box(size: [1, 1, 1]), mass: 100)
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+    _ = try #require(physics.addJoint(.ball(anchor: [0, 5, 0]), between: nil, and: bob))
+    _ = try #require(physics.addJoint(.slider(axis: [1, 0, 0]), between: nil, and: carriage))
+    let weld = try #require(physics.addJoint(.fixed, between: nil, and: anvil, breakingImpulse: 1))
+    var broken: [PhysicsJoint] = []
+    physics.jointBreakHandler = { broken.append($0) }
+    physics.setVelocity([3, 0, 1], of: carriage)
+    var lowest: Float = 5
+    for _ in 0..<120 {
+        physics.step(deltaTime: 1 / 60)
+        lowest = min(lowest, bob.worldPosition.y)
+        #expect(abs(simd_distance(bob.worldPosition, [0, 5, 0]) - 2) < 0.05)
+    }
+    // It swung down through the bottom of its arc.
+    #expect(lowest < 3.2)
+    // The carriage moved along X but not down or along Z.
+    #expect(carriage.worldPosition.x > 1)
+    #expect(abs(carriage.worldPosition.y - 10) < 0.01 && abs(carriage.worldPosition.z - 5) < 0.01, "\(carriage.worldPosition)")
+    // Gravity on 100 kg is far more than the weld holds, so it broke and the anvil fell.
+    #expect(broken.count == 1 && broken.first === weld && weld.isBroken)
+    #expect(anvil.worldPosition.y < 15)
+    // Hiding a jointed node pauses its body; stepping with the joint still in place is safe, and the pendulum
+    // resumes on its joint when shown again.
+    bob.isVisible = false
+    run(physics, seconds: 0.5)
+    bob.isVisible = true
+    run(physics, seconds: 0.5)
+    #expect(abs(simd_distance(bob.worldPosition, [0, 5, 0]) - 2) < 0.05)
+    // Removing the body drops the joint.
+    let swing = try #require(physics.joints.first { $0.nodeB === bob })
+    bob.physicsBody = nil
+    physics.step(deltaTime: 1 / 60)
+    #expect(swing.isBroken)
+}
+
 // #420: a hook runs before every sub-step, so a force applied there acts for the whole step.
 @Test
 func subStepHandlerAppliesForcesEverySubStep() throws {

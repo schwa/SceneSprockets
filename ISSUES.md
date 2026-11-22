@@ -10061,19 +10061,22 @@ Context: SwiftJolt's debugDraw now supports a body filter, constraint limits/fra
 ## 432: Nodes cannot be joined with physics joints
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:physics, effort:l
 milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-20T06:32:46Z
+updated: 2026-11-22T17:01:39Z
+closed: 2026-11-22T17:01:39Z
 +++
 
 Two nodes' bodies cannot be connected with hinges, sliders, ball joints, fixed welds, swing-twist or six-DOF joints, and there is no way to break a joint when the load gets too high.
 
 Context: SwiftJolt wraps these constraints, and now exposes motor/limit accessors and the impulse each joint applied per step.
+
+- `2026-11-22T17:01:39Z`: SceneGraphPhysicsWorld.addJoint(_:between:and:breakingImpulse:) with PhysicsJoint.Kind fixed, ball, hinge, slider, distance, swingTwist and sixDOF (world-space anchors/axes; nil node = world), removeJoint, joints, jointBreakHandler; joints break when their per-step impulse passes breakingImpulse, and are dropped when a body is removed. PhysicsJoint.constraint exposes Jolt's motors/limits. Joints are runtime-only, not archived (like SCNPhysicsBehavior).
 
 ---
 
