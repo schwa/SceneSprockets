@@ -81,6 +81,9 @@ extension SceneGraph {
         public var usesContinuousCollision: Bool
         /// The axes a dynamic body can move along and rotate about. Empty counts as `.all`.
         public var allowedMotion: Axes
+        /// A tag for the body's surface, such as "grass" or "metal", that ray hits and contacts report, for example to
+        /// pick footstep sounds. Mesh shapes also report which submesh was hit.
+        public var surface: String?
         /// A trigger detects overlaps with other bodies but does not collide with them or push them, like a SceneKit
         /// contact-only body.
         public var isTrigger: Bool
@@ -104,10 +107,11 @@ extension SceneGraph {
         ///   - allowsSleeping: Whether the body may sleep at rest.
         ///   - usesContinuousCollision: Whether a fast body is swept so it does not tunnel through thin bodies.
         ///   - allowedMotion: The axes a dynamic body can move along and rotate about.
+        ///   - surface: A tag for the body's surface that ray hits and contacts report.
         ///   - isTrigger: Whether the body only detects overlaps instead of colliding.
         ///   - categoryBitMask: The categories the body belongs to.
         ///   - collisionBitMask: The categories the body collides with. The default is all of them.
-        public init(type: BodyType, shape: Shape, mass: Float? = nil, friction: Float = 0.5, restitution: Float = 0, linearDamping: Float = 0.05, angularDamping: Float = 0.05, gravityFactor: Float = 1, allowsSleeping: Bool = true, usesContinuousCollision: Bool = false, allowedMotion: Axes = .all, isTrigger: Bool = false, categoryBitMask: UInt32 = 1, collisionBitMask: UInt32 = .max) {
+        public init(type: BodyType, shape: Shape, mass: Float? = nil, friction: Float = 0.5, restitution: Float = 0, linearDamping: Float = 0.05, angularDamping: Float = 0.05, gravityFactor: Float = 1, allowsSleeping: Bool = true, usesContinuousCollision: Bool = false, allowedMotion: Axes = .all, surface: String? = nil, isTrigger: Bool = false, categoryBitMask: UInt32 = 1, collisionBitMask: UInt32 = .max) {
             self.type = type
             self.shape = shape
             self.mass = mass
@@ -119,6 +123,7 @@ extension SceneGraph {
             self.allowsSleeping = allowsSleeping
             self.usesContinuousCollision = usesContinuousCollision
             self.allowedMotion = allowedMotion
+            self.surface = surface
             self.isTrigger = isTrigger
             self.categoryBitMask = categoryBitMask
             self.collisionBitMask = collisionBitMask

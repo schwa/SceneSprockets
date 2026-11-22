@@ -66,6 +66,34 @@ public final class SceneGraphPhysicsWorld {
         /// seconds, summed over the contact points. Use it to scale impact sounds, damage or particles. Zero for
         /// `.ended` and for triggers.
         public var impulse: Float = 0
+        /// For a `.mesh` shape, the submesh of `nodeA`'s mesh that is touched (#429); nil for other shapes and `.ended`.
+        public var submeshIndexA: Int?
+        /// The same for `nodeB`.
+        public var submeshIndexB: Int?
+    }
+
+    /// Where a ray first hits a body.
+    public struct RayHit {
+        public var node: SceneGraph.Node
+        /// The world-space hit point.
+        public var position: SIMD3<Float>
+        /// How far along the ray, from 0 at its origin to 1 at `origin + direction`.
+        public var fraction: Float
+        /// The node's ``SceneGraph/PhysicsBody/surface`` tag.
+        public var surface: String?
+        /// For a `.mesh` shape, the submesh of the node's mesh that is hit; nil for other shapes.
+        public var submeshIndex: Int?
+    }
+
+    /// The first body that the segment from `origin` to `origin + direction` hits, or nil.
+    ///
+    /// The method calls ``sync()`` first, so it sees nodes added since the last step.
+    public func castRay(from origin: SIMD3<Float>, direction: SIMD3<Float>) -> RayHit? {
+        sync()
+        guard let hit = world.castRay(origin: origin, direction: direction), let node = node(of: hit.body) else {
+            return nil
+        }
+        return RayHit(node: node, position: hit.position, fraction: hit.fraction, surface: node.physicsBody?.surface, submeshIndex: world.triangleUserData(of: hit.body, at: hit.subShape).map(Int.init))
     }
 
     /// A body of water (or other fluid): an axis-aligned world-space region whose top face is the surface. Dynamic
@@ -262,7 +290,7 @@ public final class SceneGraphPhysicsWorld {
     private func reportContacts() {
         for event in contactListener.takeEvents() {
             switch event {
-            case let .added(pair, point, normal, penetrationDepth, impulse):
+            case let .added(pair, point, normal, penetrationDepth, impulse, subShapes):
                 if let slept = sleptContacts[pair] {
                     // The pair woke up still touching.
                     sleptContacts[pair] = slept > 1 ? slept - 1 : nil
@@ -271,7 +299,10 @@ public final class SceneGraphPhysicsWorld {
                 let count = touchingPairs[pair, default: 0]
                 touchingPairs[pair] = count + 1
                 if count == 0, let nodeA = node(of: pair.first), let nodeB = node(of: pair.second) {
-                    contactHandler?(Contact(phase: .began, nodeA: nodeA, nodeB: nodeB, point: point, normal: normal, penetrationDepth: penetrationDepth, impulse: impulse))
+                    // Looked up here, on the caller's thread: Jolt's body interface is not safe inside its callbacks.
+                    let submeshA = world.triangleUserData(of: pair.first, at: subShapes.0).map(Int.init)
+                    let submeshB = world.triangleUserData(of: pair.second, at: subShapes.1).map(Int.init)
+                    contactHandler?(Contact(phase: .began, nodeA: nodeA, nodeB: nodeB, point: point, normal: normal, penetrationDepth: penetrationDepth, impulse: impulse, submeshIndexA: submeshA, submeshIndexB: submeshB))
                 }
             case let .removed(pair):
                 guard let count = touchingPairs[pair] else {
@@ -545,12 +576,18 @@ public final class SceneGraphPhysicsWorld {
             guard case let .mesh(mesh, _, _, _) = node.content else {
                 return nil
             }
-            let indices = mesh.submeshes.filter { $0.primitiveType == .triangle }.flatMap(\.indices)
+            let triangleSubmeshes = mesh.submeshes.enumerated().filter { $0.element.primitiveType == .triangle }
+            let indices = triangleSubmeshes.flatMap(\.element.indices)
             guard !indices.isEmpty else {
                 return nil
             }
+            // Each triangle remembers its submesh, so hits and contacts can report it (#429).
+            var options = MeshOptions()
+            options.triangleUserData = triangleSubmeshes.flatMap { index, submesh in
+                Array(repeating: UInt32(index), count: submesh.indices.count / 3)
+            }
             // Jolt scales triangle meshes exactly, so the vertices are not copied to scale them (#416).
-            let shape = Shape.mesh(vertices: mesh.positions(), indices: indices)
+            let shape = Shape.mesh(vertices: mesh.positions(), indices: indices, options: options)
             return scale == .one ? shape : .scaled(shape, scale: scale)
         }
     }

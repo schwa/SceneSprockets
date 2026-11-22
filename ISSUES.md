@@ -9981,19 +9981,22 @@ Context: SwiftJolt now has Shape.heightField (with block size / bits-per-sample 
 ## 429: Physics surfaces cannot be tagged with a material
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:physics, effort:m
 milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-20T06:32:46Z
+updated: 2026-11-22T16:51:37Z
+closed: 2026-11-22T16:51:37Z
 +++
 
 There is no way to tag a node's collision surface (or individual mesh triangles) and find out which surface a ray or contact hit, e.g. to choose footstep sounds or decals.
 
 Context: SwiftJolt now has PhysicsMaterial on plane/tapered-cylinder shapes, per-triangle user data on mesh shapes, and lookups from a hit's sub-shape (physicsMaterial(of:at:), triangleUserData(of:at:)).
+
+- `2026-11-22T16:51:37Z`: PhysicsBody.surface tag; mesh shapes store each triangle's submesh index (Jolt triangle user data). SceneGraphPhysicsWorld.castRay(from:direction:) returns node, position, fraction, surface and submeshIndex; contacts report submeshIndexA/B. Archived.
 
 ---
 

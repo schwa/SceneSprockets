@@ -14,7 +14,8 @@ final class SceneContactListener: ContactListener {
     // What Jolt reported during a step. Jolt reports each touching pair of sub-shapes, so one body pair can be added
     // or removed several times.
     enum Event {
-        case added(BodyPair, point: SIMD3<Float>, normal: SIMD3<Float>, penetrationDepth: Float, impulse: Float)
+        // `subShapes` are the parts of the pair's first and second bodies that touch.
+        case added(BodyPair, point: SIMD3<Float>, normal: SIMD3<Float>, penetrationDepth: Float, impulse: Float, subShapes: (SubShapeID, SubShapeID))
         case removed(BodyPair)
     }
 
@@ -74,7 +75,8 @@ final class SceneContactListener: ContactListener {
         // The impulse the solver will apply along the normal, summed over the contact points (#430). Only valid inside
         // this callback. Sensors do not push.
         let impulse = settings.isSensor ? 0 : contact.estimateResponse(friction: settings.combinedFriction, restitution: settings.combinedRestitution).impulses.reduce(0) { $0 + $1.contact }
-        let event = Event.added(pair, point: point, normal: normal, penetrationDepth: contact.penetrationDepth, impulse: impulse)
+        let subShapes = pair.first == contact.body1 ? (contact.subShapeID1, contact.subShapeID2) : (contact.subShapeID2, contact.subShapeID1)
+        let event = Event.added(pair, point: point, normal: normal, penetrationDepth: contact.penetrationDepth, impulse: impulse, subShapes: subShapes)
         events.withLock { $0.append(event) }
     }
 

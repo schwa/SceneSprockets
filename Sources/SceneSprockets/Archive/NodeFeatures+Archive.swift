@@ -114,7 +114,7 @@ extension SceneGraph.PhysicsBody.BodyType: Codable {
 extension SceneGraph.PhysicsBody: Codable {
     enum ArchiveKeys: String, CodingKey {
         case type, shape, mass, friction, restitution, isTrigger, categoryBitMask, collisionBitMask
-        case linearDamping, angularDamping, gravityFactor, allowsSleeping, usesContinuousCollision, allowedMotion
+        case linearDamping, angularDamping, gravityFactor, allowsSleeping, usesContinuousCollision, allowedMotion, surface
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -152,6 +152,7 @@ extension SceneGraph.PhysicsBody: Codable {
         if allowedMotion != defaults.allowedMotion {
             try container.encode(allowedMotion, forKey: .allowedMotion)
         }
+        try container.encodeIfPresent(surface, forKey: .surface)
     }
 
     public init(from decoder: Decoder) throws {
@@ -168,6 +169,7 @@ extension SceneGraph.PhysicsBody: Codable {
             allowsSleeping: try container.decodeIfPresent(Bool.self, forKey: .allowsSleeping) ?? true,
             usesContinuousCollision: try container.decodeIfPresent(Bool.self, forKey: .usesContinuousCollision) ?? false,
             allowedMotion: try container.decodeIfPresent(SceneGraph.PhysicsBody.Axes.self, forKey: .allowedMotion) ?? .all,
+            surface: try container.decodeIfPresent(String.self, forKey: .surface),
             isTrigger: try container.decodeIfPresent(Bool.self, forKey: .isTrigger) ?? false,
             categoryBitMask: try container.decodeIfPresent(UInt32.self, forKey: .categoryBitMask) ?? 1,
             collisionBitMask: try container.decodeIfPresent(UInt32.self, forKey: .collisionBitMask) ?? .max

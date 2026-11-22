@@ -501,6 +501,43 @@ func bodyMotionOptions() throws {
     #expect(floating.worldPosition.y < 2)
 }
 
+// #429: ray hits and contacts report the body's surface tag and, for mesh shapes, the submesh they hit.
+@Test
+func surfacesReportSubmeshAndTag() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    // A 4 x 4 floor at y = 0: the left half (x < 0) is submesh 0, the right half submesh 1.
+    let positions: [SIMD3<Float>] = [[-2, 0, -2], [0, 0, -2], [0, 0, 2], [-2, 0, 2], [2, 0, -2], [2, 0, 2]]
+    let floorMesh = MetalMesh(device: device, attributes: [.positions(positions)], submeshes: [.init(indices: [0, 3, 2, 0, 2, 1]), .init(indices: [1, 2, 5, 1, 5, 4])])
+    struct PlainMaterial: SceneMaterial {}
+    let root = SceneGraph.Node()
+    let floor = root.addChild(SceneGraph.Node(content: .mesh(floorMesh, material: PlainMaterial())))
+    floor.physicsBody = .init(type: .static, shape: .mesh, surface: "grass")
+    let box = root.addChild(SceneGraph.Node(transform: .init(translation: [1, 1, 0])))
+    box.physicsBody = .init(type: .dynamic, shape: .box(size: [0.5, 0.5, 0.5]))
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+    physics.sync()
+    let left = try #require(physics.castRay(from: [-1, 5, 0], direction: [0, -10, 0]))
+    #expect(left.node === floor)
+    #expect(left.submeshIndex == 0)
+    #expect(left.surface == "grass")
+    #expect(abs(left.position.y) < 1e-3)
+    #expect(physics.castRay(from: [1.5, 5, 1], direction: [0, -10, 0])?.submeshIndex == 1)
+    #expect(physics.castRay(from: [9, 5, 0], direction: [0, -10, 0]) == nil)
+    // The box lands on the right half.
+    var landing: SceneGraphPhysicsWorld.Contact?
+    physics.contactHandler = { contact in
+        if contact.phase == .began, landing == nil {
+            landing = contact
+        }
+    }
+    run(physics, seconds: 2)
+    let contact = try #require(landing)
+    let floorSubmesh = contact.nodeA === floor ? contact.submeshIndexA : contact.submeshIndexB
+    let boxSubmesh = contact.nodeA === floor ? contact.submeshIndexB : contact.submeshIndexA
+    #expect(floorSubmesh == 1)
+    #expect(boxSubmesh == nil)
+}
+
 // #431: Jolt's debug drawing comes out as world-space geometry and as a mesh node to add to the scene.
 @Test
 func debugVisualizationOfBodies() throws {

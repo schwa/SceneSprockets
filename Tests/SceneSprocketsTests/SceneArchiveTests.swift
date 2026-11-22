@@ -323,7 +323,7 @@ struct SceneArchiveTests {
         box.morphWeights = [0.25]
         box.skin = .init(joints: [jointA, jointB], inverseBindMatrices: [.init(diagonal: [1, 1, 1, 1]), .init(diagonal: [2, 2, 2, 1])])
         box.skinVertices = [.init(joints: [0, 1, 0, 0], weights: [0.75, 0.25, 0, 0])]
-        box.physicsBody = .init(type: .dynamic, shape: .capsule(height: 2, radius: 0.5), mass: 3, friction: 0.2, restitution: 0.6, linearDamping: 0.5, angularDamping: 0.25, gravityFactor: 0.5, allowsSleeping: false, usesContinuousCollision: true, allowedMotion: .plane2D)
+        box.physicsBody = .init(type: .dynamic, shape: .capsule(height: 2, radius: 0.5), mass: 3, friction: 0.2, restitution: 0.6, linearDamping: 0.5, angularDamping: 0.25, gravityFactor: 0.5, allowsSleeping: false, usesContinuousCollision: true, allowedMotion: .plane2D, surface: "rubber")
         jointA.physicsBody = .init(type: .static, shape: .convexHull, isTrigger: true, categoryBitMask: 0b100, collisionBitMask: 0b011)
         jointB.particleSystems = [SceneParticleSystem(ParticleSystem("Glow") { EmitterDescription("Glow") { RateModule(birthRate: 10) } }, seed: 7)]
         jointB.particleSystems[0].usesNodeTransform = false
