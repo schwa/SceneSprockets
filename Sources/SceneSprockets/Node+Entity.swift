@@ -53,6 +53,8 @@ typealias NodeFieldStorageKeyPath<Field: NodeField> = ReferenceWritableKeyPath<S
 // Type-erased access to one node field, for code that handles every field.
 struct NodeFieldSlot: Sendable {
     let componentType: ComponentType
+    // The Node property's name, such as "opacity", for tests that check other per-field lists (#594).
+    let name: String
     // Whether clone() copies the field.
     let isCloned: Bool
     // The archive keys the field is saved under; empty when archives do not save it. Checked by tests (#593).
@@ -73,6 +75,8 @@ struct NodeFieldSlot: Sendable {
         archiveKeys: [SceneGraph.Node.ArchiveKeys]
     ) {
         componentType = ComponentType(Field.self)
+        // A key path describes itself as `\Node.opacity`.
+        name = String(describing: wrappedKeyPath).split(separator: ".").last.map(String.init) ?? ""
         self.isCloned = isCloned
         self.archiveKeys = archiveKeys
         copyToClone = { source, copy in

@@ -13591,19 +13591,22 @@ Found in the architecture review (#477).
 ## 594: MeshEntry's copies of node render fields and the archive encode/decode are not checked against the node field list
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: effort:s, area:scenegraph, area:architecture
 milestone: Physics-and-Scene
 created: 2026-11-20T03:23:37Z
-updated: 2026-11-20T06:32:46Z
+updated: 2026-11-22T17:10:53Z
+closed: 2026-11-22T17:10:53Z
 +++
 
 After #593, NodeFieldSlot records each field's archive keys and clone() copies fields from worldFields, and NodeFieldListTests checks the lists agree. Two lists remain unchecked:
 
 - MeshEntry copies render fields (opacity, categoryBitMask, renderingOrder, ...) by hand. A new render field missing there is silently not drawn with.
 - The test only checks that every ArchiveKeys case belongs to a field. It does not check that encode(to:) and decodeArchive(from:) actually write and read each field, so a field can still be dropped from an archive.
+
+- `2026-11-22T17:10:53Z`: NodeFieldSlot.name (from the key path). everyWorldFieldIsPlacedForDrawing maps every world field to the MeshEntry property it is drawn from (checked by Mirror) or to an explicit not-in-MeshEntry reason; everyArchivedFieldRoundTrips gives each archived field a sample (or names the round-trip test that covers it) and checks it is written and read back unchanged. Both fail for a new field until it is placed. Verified: dropping renderingOrder's decode makes the archive test fail.
 
 ---
 
