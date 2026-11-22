@@ -433,6 +433,7 @@ public final class KeynoteDemo: DemoScene {
         "Gizmos": """
         • Transform gizmos move, rotate and scale nodes; a selection outline shows what is selected.
         • Both come from SceneSprocketsGizmos and plug into SceneView.
+        • Editor gizmos draw what has no geometry: a ground grid, axes, line icons for lights and the selection's bounds.
         """,
         "Debug Views": """
         • One switch replaces every material with a debug view: normals, texture coordinates, UV checker, world position and more.
@@ -524,7 +525,7 @@ public final class KeynoteDemo: DemoScene {
         case "SwiftECS World":
             [.slider("Cohesion", 0...2, default: 0.6), .slider("Alignment", 0...2, default: 0.8), .slider("Separation", 0...1, default: 0.35)]
         case "Gizmos":
-            [.choice("Gizmo Mode", ["Cycle", "Translate", "Rotate", "Scale"])]
+            [.choice("Gizmo Mode", ["Cycle", "Translate", "Rotate", "Scale"]), .toggle("Editor Gizmos", default: true)]
         case "Debug Views":
             [.choice("Debug View", ["Cycle"] + debugModes.map { $0?.name ?? "Materials" })]
         case "Point Clouds":
@@ -708,6 +709,7 @@ public final class KeynoteDemo: DemoScene {
         showsSelectionOutline = showsGizmo
         selectedNodeID = showsGizmo ? gizmoTarget?.id : nil
         gizmoMode = showsGizmo ? .translate : nil
+        applyEditorGizmos()
         // A debug view replaces every material in the view, so it is on only for its slide.
         debugIndex = 0
         sinceDebugMode = 0
@@ -724,6 +726,16 @@ public final class KeynoteDemo: DemoScene {
             sinceGrade = 0
         } else {
             sceneGraph.postProcessing = nil
+        }
+    }
+
+    // Editor gizmos on the Gizmos slide (#406, #617), with the grid and axes at the slide's origin.
+    private func applyEditorGizmos() {
+        let shows = currentTitle == "Gizmos" && self[flag: "Editor Gizmos"]
+        editorGizmos = shows ? [.grid, .axes, .lightsAndCameras, .bounds] : []
+        if shows, let index = Self.titles.firstIndex(of: "Gizmos"), slides.indices.contains(index) {
+            // Half size and set back, so the grid stays behind the code panel's line of sight.
+            editorGridTransform = slides[index].worldTransform * Transform3D(translation: [0, 0, -3], scale: [0.5, 0.5, 0.5]).matrix
         }
     }
 
@@ -872,6 +884,10 @@ public final class KeynoteDemo: DemoScene {
             Self.descendants(of: slides[current]).forEach { $0.actionSpeed = self[value: name] }
         }
         switch title {
+        case "Gizmos":
+            if changed("Editor Gizmos") {
+                applyEditorGizmos()
+            }
         case "Scene Graph":
             if changed("Orbit Paths") {
                 orbitPaths.forEach { $0.isVisible = self[flag: "Orbit Paths"] }
@@ -1324,6 +1340,9 @@ public final class KeynoteDemo: DemoScene {
                 .sceneManipulator(TransformGizmo(target: box, mode: .rotate))
                 .sceneOverlay { viewport in
                     try outline.element(nodes: [box], sceneGraph: scene, viewport: viewport)
+                }
+                .sceneDecorations { context, size in
+                    try EditorGizmos.element(sceneGraph: scene, viewport: viewport(context, size), selected: [box.id])
                 }
             """, to: slide)
         case "Debug Views":
@@ -2775,6 +2794,8 @@ public final class KeynoteDemo: DemoScene {
     // A selected box with its outline and the transform gizmo, which cycles through its modes.
     private func gizmosSlide(_ slide: SceneGraph.Node) {
         addLight(to: slide, at: [2, 6, 5], intensity: 60)
+        // A spot light, so the editor gizmos show a cone icon as well as the point light's.
+        slide.addChild(SceneGraph.Node(label: "Spot", transform: Transform3D(position: [-4.5, 3, 1.5], lookingAt: [-3.2, 0.9, 0]), content: .light(.spot(color: [1, 0.9, 0.7], intensity: 15, range: 10))))
         slide.addChild(SceneGraph.Node(shape: .sphere(radius: 0.6), material: BlinnPhongSceneMaterial.plastic([0.4, 0.75, 0.45], shininess: 32), transform: .init(translation: [-3.2, 0.9, 0])))
         slide.addChild(SceneGraph.Node(shape: .cone(topRadius: 0, bottomRadius: 0.6, height: 1.3), material: BlinnPhongSceneMaterial.plastic([0.4, 0.55, 0.95], shininess: 32), transform: .init(translation: [3.2, 0.9, 0])))
         gizmoTarget = slide.addChild(SceneGraph.Node(label: "Box", shape: .box(width: 1.2, height: 1.2, length: 1.2), material: BlinnPhongSceneMaterial.plastic([0.95, 0.55, 0.3], shininess: 32), transform: .init(translation: [0, 0.9, 0], rotation: simd_quatf(angle: 0.5, axis: [0, 1, 0]))))

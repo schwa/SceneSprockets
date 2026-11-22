@@ -14178,15 +14178,18 @@ Ambient light as a scene node (Light.Kind.ambient, #602) is not shown in the key
 ## 617: Keynote Gizmos slide does not show the editor gizmos
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:demo, effort:s
 created: 2026-11-22T19:47:49Z
-updated: 2026-11-22T19:59:11Z
+updated: 2026-11-22T21:27:27Z
+closed: 2026-11-22T21:27:27Z
 +++
 
 The editor gizmos (grid, axes, light and camera icons, bounds; #406) are not shown in the keynote's Gizmos slide.
+
+- `2026-11-22T21:27:27Z`: Gizmos slide shows the editor gizmos (grid, axes, light icons, selection bounds) with an Editor Gizmos toggle; a spot light was added so both icon kinds show. DemoScene gained editorGizmos/editorGridTransform, drawn by SceneDemoView through sceneDecorations and by DemoSnapshot. EditorGizmos.shapes/element gained gridTransform so the grid sits at the slide instead of the world origin. Tests: gizmosSlideShowsEditorGizmos, gridTransformMovesGridAndAxes. At small render sizes the 48-point light icons are large.
 
 ---
 

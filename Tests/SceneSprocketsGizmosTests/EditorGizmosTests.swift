@@ -46,6 +46,18 @@ struct EditorGizmosTests {
         #expect(EditorGizmos.hitTest([2, 2], sceneGraph: graph, viewport: viewport) == nil)
     }
 
+    // #617: gridTransform moves the grid and axes.
+    @Test
+    func gridTransformMovesGridAndAxes() throws {
+        let graph = SceneGraph(root: SceneGraph.Node())
+        let offset = Transform3D(translation: [100, 0, 0]).matrix
+        let shapes = EditorGizmos.shapes(sceneGraph: graph, viewport: viewport, options: [.grid, .axes], gridTransform: offset)
+        let points = shapes.flatMap(\.lines).flatMap(\.self)
+        #expect(!points.isEmpty && points.allSatisfy { abs($0.x - 100) <= EditorGizmos.gridExtent + 1e-3 })
+        let xAxis = try #require(shapes.first { $0.color.x == 1 }?.lines.first)
+        #expect(xAxis.first == [100, 0, 0])
+    }
+
     // #607: a node's path is drawn in world space, moves with the node, and picks the node when clicked.
     @Test
     func pathsAreDrawnAndPicked() throws {

@@ -1,5 +1,6 @@
 import GeometryLite3D
 import Metal
+import MetalSprockets
 import MetalSprocketsSupport
 import MetalSupport
 import Observation
@@ -117,6 +118,10 @@ open class DemoScene {
     public var showsSelectionOutline = false
     // Overrides the view's gizmo mode picker while set, so a demo can show each mode.
     public var gizmoMode: TransformGizmo.Mode?
+    // Editor aids drawn over the scene (grid, axes, light and camera icons, bounds of the selection); none by default.
+    public var editorGizmos: EditorGizmos.Options = []
+    // Where the editor grid and axes are drawn; identity is the world origin.
+    public var editorGridTransform = matrix_identity_float4x4
     // Only nodes in these categories can be picked.
     public var pickCategoryBitMask: UInt = .max
     // True when the demo moves its own camera node: the view then turns off user camera control.
@@ -156,6 +161,15 @@ open class DemoScene {
     // Selects the hit node (nil clears the selection), then calls `didPick`.
     public var selectedNode: SceneGraph.Node? {
         selectedNodeID.flatMap(sceneGraph.node(withID:))
+    }
+
+    // The editor aids for `viewport`, or nil when the demo shows none.
+    @MainActor
+    func editorGizmosElement(viewport: Viewport) throws -> AnyElement? {
+        guard !editorGizmos.isEmpty else {
+            return nil
+        }
+        return try EditorGizmos.element(sceneGraph: sceneGraph, viewport: viewport, options: editorGizmos, selected: selectedNodeID.map { [$0] } ?? [], gridTransform: editorGridTransform)
     }
 
     public func pick(_ hit: SceneGraph.Hit?) {

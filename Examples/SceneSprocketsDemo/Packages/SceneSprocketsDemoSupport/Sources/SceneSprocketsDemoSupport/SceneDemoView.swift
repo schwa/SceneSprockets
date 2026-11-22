@@ -133,6 +133,7 @@ private struct DemoSceneContent: View {
     @Binding var cameraMatrix: simd_float4x4?
     let gizmo: TransformGizmo
     let selectionOutline: SelectionOutline
+    @Environment(\.displayScale) private var displayScale
 
     var body: some View {
         if isImmersive {
@@ -154,6 +155,11 @@ private struct DemoSceneContent: View {
                 .sceneOverlay(scene.showsSelectionOutline ? { @MainActor @Sendable [scene, selectionOutline] viewport in
                     try selectionOutline.element(nodes: scene.selectedNode.map { [$0] } ?? [], sceneGraph: scene.sceneGraph, viewport: viewport)
                 } : nil)
+                .sceneDecorations(id: scene.editorGizmos.rawValue, scene.editorGizmos.isEmpty ? nil : { [scene, displayScale] context, drawableSize in
+                    // Sized in view points, like hit testing.
+                    let viewport = Viewport(cameraMatrix: context.cameraMatrix, projectionMatrix: context.projectionMatrix, viewSize: drawableSize / Float(displayScale), drawableSize: drawableSize)
+                    return try scene.editorGizmosElement(viewport: viewport)
+                })
         }
     }
 }

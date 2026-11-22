@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `EditorGizmos.shapes` and `element` take a `gridTransform` that places the grid and axes, which were fixed at the world origin (#617).
 - MaterialX node graphs and shaders (#609). Math nodes on constants (`constant`, `add`, `subtract`, `multiply`, `divide`, `min`, `max`, `power`, `mix`, `clamp`, `invert`, `extract`, `combine2`–`4`, `convert`, `dot`) are folded, nodegraph `interfacename` inputs are followed, and an image multiplied by a constant becomes a texture with that factor. `gltf_pbr` and `open_pbr_surface` load too (OpenPBR emission luminance is mapped as 1000 nits = factor 1). Per-pixel nodes are still skipped (#620).
 - Path nodes (#607). `Node.path` holds a `SceneGraph.Spline` in the node's space; it moves with the node and is saved in archives. `Constraint.followPath(_:fraction:orientsToPath:)` keeps a node at a fraction along a path node's curve. `EditorGizmos` draws paths (`.paths`, in `.all`) and picks their nodes on click.
 - Hit testing lines and points (#605). Set `HitTestOptions.lineAndPointTolerance` (world units) to hit line, line strip and point submeshes the ray passes within that distance of. The hit is the nearest point on the primitive; `triangleIndex` is the segment or point index. 0, the default, never hits them, as before.

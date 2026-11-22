@@ -85,6 +85,26 @@ func keynoteShowing(_ title: String) throws -> KeynoteDemo {
     return keynote
 }
 
+// #617: the Gizmos slide shows the editor gizmos, with the grid at the slide; the toggle and other slides hide them.
+@Test
+@MainActor
+func gizmosSlideShowsEditorGizmos() throws {
+    let index = try #require(KeynoteDemo.titles.firstIndex(of: "Gizmos"))
+    let keynote = try keynoteShowing("Gizmos")
+    #expect(keynote.editorGizmos.contains(.grid) && keynote.editorGizmos.contains(.lightsAndCameras))
+    let slide = try #require(keynote.sceneGraph.root.children.first { $0.label == "Slide \(index + 1): Gizmos" })
+    // At the slide, along X.
+    #expect(keynote.editorGridTransform.columns.3.x == slide.worldTransform.columns.3.x)
+    keynote[flag: "Editor Gizmos"] = false
+    keynote.update(time: 0, deltaTime: 1.0 / 60)
+    #expect(keynote.editorGizmos.isEmpty)
+    keynote[flag: "Editor Gizmos"] = true
+    keynote.update(time: 0, deltaTime: 1.0 / 60)
+    #expect(!keynote.editorGizmos.isEmpty)
+    keynote.show(slide: 0)
+    #expect(keynote.editorGizmos.isEmpty)
+}
+
 // #616: the Lights slide has an ambient light node that the Ambient Light slider sets.
 @Test
 @MainActor

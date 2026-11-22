@@ -100,13 +100,15 @@ public enum DemoSnapshot {
         let cameraNode = scene.usesSceneCamera ? scene.sceneGraph.cameraNodes().first : nil
         let cameraMatrix = cameraNode?.worldTransform ?? scene.initialCameraMatrix
         let selected = scene.selectedNode
-        let element = SceneGraphElement(sceneGraph: scene.sceneGraph, cameraMatrix: cameraMatrix, aspectRatio: Float(width) / Float(height), renderers: scene.renderers, shadows: scene.shadows, storesDepth: selected != nil && scene.showsSelectionOutline, debugMode: scene.debugMode)
-        guard let selected else {
-            return element.eraseToAnyElement()
-        }
         let camera = cameraNode?.camera ?? Camera.default
         let size = SIMD2<Float>(Float(width), Float(height))
         let viewport = Viewport(cameraMatrix: cameraMatrix, camera: camera, viewSize: size, drawableSize: size)
+        // Editor aids draw with the scene, depth-tested against it, as SceneView's decorations do.
+        let decorations = try scene.editorGizmosElement(viewport: viewport)
+        let element = SceneGraphElement(sceneGraph: scene.sceneGraph, cameraMatrix: cameraMatrix, aspectRatio: Float(width) / Float(height), renderers: scene.renderers, shadows: scene.shadows, storesDepth: selected != nil && scene.showsSelectionOutline, decorations: decorations.map { element in { _ in element } }, debugMode: scene.debugMode)
+        guard let selected else {
+            return element.eraseToAnyElement()
+        }
         let outlineElement = scene.showsSelectionOutline ? try outline.element(nodes: [selected], sceneGraph: scene.sceneGraph, viewport: viewport) : nil
         let gizmoOverlay = try TransformGizmo(target: selected, mode: scene.gizmoMode ?? .translate).overlay(viewport: viewport)
         return try MetalSprockets.Group {

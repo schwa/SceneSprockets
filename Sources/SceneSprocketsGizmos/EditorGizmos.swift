@@ -61,8 +61,9 @@ public enum EditorGizmos {
     ///   - viewport: The view, which sizes the icons.
     ///   - options: Which aids to include.
     ///   - selected: Nodes whose bounds `.bounds` draws, and whose icons are highlighted.
+    ///   - gridTransform: Where the grid and axes are drawn: identity puts them at the world origin on the XZ plane.
     @MainActor
-    public static func shapes(sceneGraph: SceneGraph, viewport: Viewport, options: Options = .all, selected: Set<SceneGraph.Node.ID> = []) -> [Shape] {
+    public static func shapes(sceneGraph: SceneGraph, viewport: Viewport, options: Options = .all, selected: Set<SceneGraph.Node.ID> = [], gridTransform: simd_float4x4 = matrix_identity_float4x4) -> [Shape] {
         var result: [Shape] = []
         if options.contains(.grid) {
             var lines: [[SIMD3<Float>]] = []
@@ -72,13 +73,13 @@ public enum EditorGizmos {
                 lines.append([[offset, 0, -gridExtent], [offset, 0, gridExtent]])
                 lines.append([[-gridExtent, 0, offset], [gridExtent, 0, offset]])
             }
-            result.append(Shape(node: nil, lines: lines, color: gridColor, isOverlay: false))
+            result.append(Shape(node: nil, lines: lines.map { transform($0, by: gridTransform) }, color: gridColor, isOverlay: false))
         }
         if options.contains(.axes) {
             let length = gridExtent
-            result.append(Shape(node: nil, lines: [[.zero, [length, 0, 0]]], color: [1, 0.2, 0.2, 1], isOverlay: false))
-            result.append(Shape(node: nil, lines: [[.zero, [0, length, 0]]], color: [0.2, 1, 0.2, 1], isOverlay: false))
-            result.append(Shape(node: nil, lines: [[.zero, [0, 0, length]]], color: [0.3, 0.5, 1, 1], isOverlay: false))
+            result.append(Shape(node: nil, lines: [transform([.zero, [length, 0, 0]], by: gridTransform)], color: [1, 0.2, 0.2, 1], isOverlay: false))
+            result.append(Shape(node: nil, lines: [transform([.zero, [0, length, 0]], by: gridTransform)], color: [0.2, 1, 0.2, 1], isOverlay: false))
+            result.append(Shape(node: nil, lines: [transform([.zero, [0, 0, length]], by: gridTransform)], color: [0.3, 0.5, 1, 1], isOverlay: false))
         }
         if options.contains(.lightsAndCameras) {
             let aspect = viewport.viewSize.y > 0 ? viewport.viewSize.x / viewport.viewSize.y : 1
@@ -115,8 +116,8 @@ public enum EditorGizmos {
 
     /// An element that draws the aids, for `SceneView.sceneDecorations`. Nil when there is nothing to draw.
     @MainActor
-    public static func element(sceneGraph: SceneGraph, viewport: Viewport, options: Options = .all, selected: Set<SceneGraph.Node.ID> = []) throws -> AnyElement? {
-        let shapes = shapes(sceneGraph: sceneGraph, viewport: viewport, options: options, selected: selected)
+    public static func element(sceneGraph: SceneGraph, viewport: Viewport, options: Options = .all, selected: Set<SceneGraph.Node.ID> = [], gridTransform: simd_float4x4 = matrix_identity_float4x4) throws -> AnyElement? {
+        let shapes = shapes(sceneGraph: sceneGraph, viewport: viewport, options: options, selected: selected, gridTransform: gridTransform)
         guard !shapes.isEmpty else {
             return nil
         }
