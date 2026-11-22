@@ -122,6 +122,9 @@ public final class SceneGraphPhysicsWorld {
     /// The fluids that dynamic bodies float in.
     public var fluids: [Fluid] = []
 
+    /// The character controllers added with ``addCharacter(for:height:radius:mass:maxSlopeAngle:)``.
+    public internal(set) var characters: [CharacterController] = []
+
     /// The joints added with ``addJoint(_:between:and:breakingImpulse:)`` that still hold.
     public internal(set) var joints: [PhysicsJoint] = []
     /// Called after a step for each joint that broke because its load went over its `breakingImpulse`. A joint
@@ -281,6 +284,11 @@ public final class SceneGraphPhysicsWorld {
             pose.translation = world.position(of: entry.body)
             pose.rotation = Rotation3D(world.rotation(of: entry.body))
             entry.node.worldTransform = pose.matrix
+        }
+        // After the bodies move, so characters stand on platforms where they are now.
+        let gravity = world.gravity
+        for character in characters {
+            character.update(deltaTime: deltaTime, gravity: gravity)
         }
         reportContacts()
         breakOverloadedJoints()

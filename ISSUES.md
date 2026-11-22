@@ -10083,19 +10083,22 @@ Context: SwiftJolt wraps these constraints, and now exposes motor/limit accessor
 ## 433: No character controller for nodes
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:physics, effort:l
 milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-20T06:32:46Z
+updated: 2026-11-22T17:05:25Z
+closed: 2026-11-22T17:05:25Z
 +++
 
 There is no way to drive a player or NPC node with a character controller (walking, slopes, stairs, standing on moving platforms); only plain rigid bodies.
 
 Context: SwiftJolt has Character and VirtualCharacter, now including ground material/user data, slope checks, shape swapping (crouch) and full transform accessors.
+
+- `2026-11-22T17:05:25Z`: CharacterController (Jolt VirtualCharacter wrapper, like RealityKit's CharacterControllerComponent): SceneGraphPhysicsWorld.addCharacter(for:height:radius:mass:maxSlopeAngle:), desiredVelocity, jump(speed:), isOnGround, walksStairs; updated after each physics update, writes the node's position (origin at the feet), rides moving platforms; removeCharacter. Inner capsule body so other bodies and rays see it.
 
 ---
 

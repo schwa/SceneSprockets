@@ -501,6 +501,61 @@ func bodyMotionOptions() throws {
     #expect(floating.worldPosition.y < 2)
 }
 
+// #433: a character controller stands, walks, climbs a low step and jumps.
+@Test
+func characterControllerWalksAndJumps() throws {
+    let root = SceneGraph.Node()
+    _ = makeFloor(in: root)
+    // A 0.2 high step from x = 3 on.
+    let step = root.addChild(SceneGraph.Node(transform: .init(translation: [6, 0.1, 0])))
+    step.physicsBody = .init(type: .static, shape: .box(size: [6, 0.2, 6]))
+    let player = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 1, 0])))
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+    let character = try #require(physics.addCharacter(for: player, height: 1.8, radius: 0.3))
+    run(physics, seconds: 1)
+    // Feet on the floor.
+    #expect(character.isOnGround)
+    #expect(abs(player.worldPosition.y) < 0.05, "\(player.worldPosition)")
+    // Walks to x = 4, up onto the step.
+    character.desiredVelocity = [2, 0, 0]
+    run(physics, seconds: 2)
+    #expect(player.worldPosition.x > 3.5, "\(player.worldPosition)")
+    #expect(abs(player.worldPosition.y - 0.2) < 0.05, "\(player.worldPosition)")
+    character.desiredVelocity = .zero
+    run(physics, seconds: 0.5)
+    character.jump(speed: 5)
+    var highest: Float = 0
+    // In the air for 2v/g, about 1 s.
+    for _ in 0..<90 {
+        physics.step(deltaTime: 1 / 60)
+        highest = max(highest, player.worldPosition.y)
+    }
+    // v^2 / 2g: about 1.27 above the step.
+    #expect(highest > 1.2, "\(highest)")
+    #expect(character.isOnGround)
+    physics.removeCharacter(character)
+    #expect(physics.characters.isEmpty)
+}
+
+// #433: a character standing on a moving kinematic platform rides along.
+@Test
+func characterRidesMovingPlatform() throws {
+    let root = SceneGraph.Node()
+    let platform = root.addChild(SceneGraph.Node(transform: .init(translation: [0, -0.25, 0])))
+    platform.physicsBody = .init(type: .kinematic, shape: .box(size: [4, 0.5, 4]))
+    let player = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0.2, 0])))
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+    let character = try #require(physics.addCharacter(for: player))
+    run(physics, seconds: 0.5)
+    #expect(character.isOnGround)
+    // The platform moves 1 unit along X over a second.
+    for _ in 0..<60 {
+        platform.transform.translation.x += 1.0 / 60
+        physics.step(deltaTime: 1 / 60)
+    }
+    #expect(abs(player.worldPosition.x - 1) < 0.1, "\(player.worldPosition)")
+}
+
 // #432: joints connect bodies to each other or to the world, and can break under load.
 @Test
 func jointsConnectAndBreak() throws {
