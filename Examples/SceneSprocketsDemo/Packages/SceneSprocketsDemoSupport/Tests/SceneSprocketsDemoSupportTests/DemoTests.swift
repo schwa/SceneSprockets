@@ -85,6 +85,29 @@ func keynoteShowing(_ title: String) throws -> KeynoteDemo {
     return keynote
 }
 
+// #614: Explicit Instancing swaps the crate nodes for instancedMesh nodes that draw the same crates.
+@Test
+@MainActor
+func performanceSlideExplicitInstancingDrawsTheSameCrates() throws {
+    let keynote = try keynoteShowing("Performance")
+    keynote.update(time: 0.5, deltaTime: 1.0 / 60)
+    func crateEntries() -> [SceneGraph.MeshEntry] {
+        keynote.sceneGraph.meshEntries().filter { $0.node.label == "Crate" || $0.node.label == "Instanced Crates" }
+    }
+    let separate = crateEntries()
+    #expect(!separate.isEmpty && separate.allSatisfy { $0.instanceIndex == nil })
+    keynote[flag: "Explicit Instancing"] = true
+    keynote.update(time: 0.5, deltaTime: 1.0 / 60)
+    let instanced = crateEntries()
+    #expect(instanced.count == separate.count)
+    #expect(instanced.allSatisfy { $0.node.label == "Instanced Crates" && $0.instanceIndex != nil })
+    // Same crates in the same places.
+    let sortKey: (SIMD3<Float>) -> [Float] = { [($0.x * 100).rounded(), ($0.y * 100).rounded(), ($0.z * 100).rounded()] }
+    let before = separate.map { sortKey($0.worldTransform.columns.3.xyz) }.sorted { $0.lexicographicallyPrecedes($1) }
+    let after = instanced.map { sortKey($0.worldTransform.columns.3.xyz) }.sorted { $0.lexicographicallyPrecedes($1) }
+    #expect(before == after)
+}
+
 // #613: the Fog slide shows volumetric fog, with shadows on for its shafts; the toggle turns it off and other slides
 // have no fog.
 @Test

@@ -148,6 +148,9 @@ public final class KeynoteDemo: DemoScene {
     private var slideEmitters: [String: (node: SceneGraph.Node, system: SceneParticleSystem)] = [:]
     private var crateCountLabel: SceneGraph.Node?
     private var crateGrid: SceneGraph.Node?
+    // Explicit instancing on the Performance slide (#614): one instancedMesh node per material, with the indices of
+    // its crates in `crates`.
+    private var instancedCrateGroups: [(node: SceneGraph.Node, mesh: MetalMesh, material: any SceneMaterial, crateIndices: [Int])] = []
     private var galaxy: SceneGraph.Node?
     private var terrainNode: SceneGraph.Node?
 
@@ -411,6 +414,8 @@ public final class KeynoteDemo: DemoScene {
         "Performance": """
         • The same mesh and material draw as one instanced call.
         • Nodes outside the view are culled, so thousands of nodes stay fast.
+        • Explicit Instancing swaps the crate nodes for three instancedMesh nodes, one per color: one node holds
+          every copy's transform, so there is no node per crate to update.
         """,
         "SwiftECS World": """
         • The scene graph's nodes live in a SwiftECS world, which you can use directly.
@@ -509,7 +514,7 @@ public final class KeynoteDemo: DemoScene {
         case "Level of Detail":
             [.toggle("Animate Distance", default: true), .slider("Distance", 11...27, default: 15)]
         case "Performance":
-            [.toggle("Wave", default: true), .slider("Crate Grid", 1...Float(crateGridSize), default: Float(crateGridSize))]
+            [.toggle("Wave", default: true), .slider("Crate Grid", 1...Float(crateGridSize), default: Float(crateGridSize)), .toggle("Explicit Instancing", default: false)]
         case "SwiftECS World":
             [.slider("Cohesion", 0...2, default: 0.6), .slider("Alignment", 0...2, default: 0.8), .slider("Separation", 0...1, default: 0.35)]
         case "Gizmos":
@@ -641,7 +646,9 @@ public final class KeynoteDemo: DemoScene {
                 node.transform.translation.z = animates ? -6 + sin(time * 0.8 + Float(index) * 2.1) * 8 : 13 - self[value: "Distance"]
             }
         case "Performance":
-            if self[flag: "Wave"] {
+            if self[flag: "Explicit Instancing"] {
+                updateInstancedCrates(time: self[flag: "Wave"] ? time : nil)
+            } else if self[flag: "Wave"] {
                 waveCrates(time: time)
             }
         case "Post-Processing":
@@ -951,7 +958,7 @@ public final class KeynoteDemo: DemoScene {
                 }
             }
         case "Performance":
-            if changed("Crate Grid") {
+            if changed("Crate Grid", "Explicit Instancing") {
                 setCrateCount(Int(self[value: "Crate Grid"].rounded()))
             }
         case "SwiftECS World":
@@ -1003,14 +1010,21 @@ public final class KeynoteDemo: DemoScene {
     // Shows the first `size` × `size` crates of the grid, and says how many show.
     private func setCrateCount(_ size: Int) {
         let full = Self.crateGridSize
+        let isInstanced = values["Explicit Instancing"].map { $0 != 0 } ?? false
         for (index, crate) in crates.enumerated() {
-            crate.isVisible = index / full < size && index % full < size
+            crate.isVisible = !isInstanced && index / full < size && index % full < size
+        }
+        for group in instancedCrateGroups {
+            group.node.isVisible = isInstanced
+        }
+        if isInstanced {
+            updateInstancedCrates(time: nil)
         }
         guard let crateCountLabel else {
             return
         }
         crateCountLabel.removeAllChildren()
-        addTitle("\(size * size) crates, 3 draw calls", size: 0.35, y: 3, color: [0.6, 0.65, 0.75], to: crateCountLabel)
+        addTitle(isInstanced ? "\(size * size) crates, 3 instanced-mesh nodes" : "\(size * size) crates, 3 draw calls", size: 0.35, y: 3, color: [0.6, 0.65, 0.75], to: crateCountLabel)
         // While building, the slide is not in `slides` yet; init tags it afterwards.
         if let index = Self.titles.firstIndex(of: "Performance"), slides.indices.contains(index) {
             Self.isolateLights(of: slides[index], index: index)
@@ -1277,6 +1291,8 @@ public final class KeynoteDemo: DemoScene {
             // Same mesh + material: one instanced draw per color.
             // Nodes outside the view are culled.
             grid.addChild(SceneGraph.Node(content: .mesh(box, material: crate)))
+            // Or one node for every copy:
+            grid.addChild(SceneGraph.Node(content: .instancedMesh(box, material: crate, transforms: matrices)))
             """, to: slide)
         case "SwiftECS World":
             addLight(to: slide, at: [2, 6, 5], intensity: 70)
@@ -2620,8 +2636,32 @@ public final class KeynoteDemo: DemoScene {
                 crates.append(grid.addChild(SceneGraph.Node(label: "Crate", transform: trs, content: .mesh(box, material: materials[(row + column) % materials.count]))))
             }
         }
+        instancedCrateGroups = materials.indices.map { materialIndex in
+            let indices = crates.indices.filter { ($0 / size + $0 % size) % materials.count == materialIndex }
+            let node = grid.addChild(SceneGraph.Node(label: "Instanced Crates", content: .instancedMesh(box, material: materials[materialIndex], transforms: indices.map { crates[$0].transform.matrix })))
+            node.isVisible = false
+            return (node, box, materials[materialIndex], indices)
+        }
         crateCountLabel = slide.addChild(SceneGraph.Node(label: "Crate Count"))
         setCrateCount(size)
+    }
+
+    // Sets each instanced node's transforms: the crates inside the Crate Grid size, waving at `time` if given. The
+    // crate nodes are hidden; their transforms are only the rest positions here.
+    private func updateInstancedCrates(time: Float?) {
+        let full = Self.crateGridSize
+        let size = Int(self[value: "Crate Grid"].rounded())
+        for group in instancedCrateGroups {
+            let transforms = group.crateIndices.filter { $0 / full < size && $0 % full < size }.map { index in
+                var transform = crates[index].transform
+                if let time {
+                    let position = transform.translation
+                    transform.translation.y = sin(time * 2 + (position.x + position.z) * 0.8) * 0.4
+                }
+                return transform.matrix
+            }
+            group.node.content = .instancedMesh(group.mesh, materials: [group.material], transforms: transforms)
+        }
     }
 
     private func waveCrates(time: Float) {

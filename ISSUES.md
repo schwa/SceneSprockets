@@ -14124,15 +14124,18 @@ The Fog slide shows distance fog only. Volumetric fog with light beams and shado
 ## 614: Keynote Performance slide does not show explicit instancing
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:demo, effort:s
 created: 2026-11-22T19:47:48Z
-updated: 2026-11-22T19:59:11Z
+updated: 2026-11-22T21:15:11Z
+closed: 2026-11-22T21:15:11Z
 +++
 
 Explicit instancing (Node.Content.instancedMesh, #135) is not shown in the keynote's Performance slide.
+
+- `2026-11-22T21:15:11Z`: Performance slide: an Explicit Instancing toggle swaps the crate nodes for three instancedMesh nodes (one per material) that hold every crate's transform; the wave and Crate Grid size still apply, and the label says which mode is on. Code panel shows .instancedMesh. Test: performanceSlideExplicitInstancingDrawsTheSameCrates. keynote-performance golden re-recorded (code panel only).
 
 ---
 
