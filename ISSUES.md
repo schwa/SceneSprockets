@@ -1672,6 +1672,10 @@ updated: 2026-11-20T06:32:46Z
 
 SceneGraph.Shape has no segment counts, no box chamferRadius, no sphere isGeodesic, and no plane corner radius. SCNText's chamfer, flatness, container frame and wrapping are missing too. Needs SwiftMesh support for some of these. See docs/SceneKitComparison.md.
 
+- `2026-11-22T15:58:26Z`: Autonomous run: punted. SwiftMesh has no chamfered box, geodesic sphere or rounded quad, so these would be built in Shape.swift like tube and pyramid (doable). The blocker is the API: Shape uses synthesized Codable, which does not apply defaults for missing keys, so adding associated values to .box/.sphere/.plane (chamferRadius, isGeodesic, cornerRadius, segment counts) breaks loading every existing archive with a shape and 18 'case let .box(...)'-style pattern matches in Sources/Examples/Tests, unless Shape gets a hand-written Codable. Text options (chamfer, flatness, container frame, wrapping) are a separate, larger piece of work.
+- `2026-11-22T15:58:26Z`: Question 1 (design): How should the new options be expressed: (a) extra associated values with defaults on the existing cases (.box(width:height:length:chamferRadius:segments:), .sphere(radius:segments:isGeodesic:), .plane(width:height:cornerRadius:)) plus a hand-written Codable that keeps old archives loading, or (b) new cases (.roundedBox, .geodesicSphere, .roundedPlane) leaving existing cases untouched? Recommended: (a) with a hand-written Codable: matches SceneKit's properties-on-one-shape model; old archives still load
+- `2026-11-22T15:58:26Z`: Question 2 (decision): Are SCNText's chamfer, flatness, container frame and wrapping part of this issue, or should they be split into their own issue? Recommended: Split text options into a new issue; do box/sphere/plane/segments here
+
 ---
 
 ## 81: New shapes: tube, pyramid, floor, extruded Bézier path
@@ -6183,6 +6187,10 @@ Findings:
 - Observation (Node is @Observable) is not the main cost: with access/withMutation removed, write was 218-234 ns (from ~242). The rest is the SwiftECS store write, didChangeInWorld bookkeeping and the Transform3D update; not yet split.
 - Create + attach (~13 us per node) is the largest per-node cost and was not measured before.
 - Low Power Mode runs are ~30% slower across the board; measure in High Power Mode.
+
+- `2026-11-22T16:07:20Z`: Autonomous run: punted with findings. Added teardown_ns to NodePerformanceBenchmark (committed). Release, 20k-node graphs: create_attach ~21 us/node, of which teardown (dropping the SceneGraph) is ~16-17 us/node. Instrumented Node.detach: copying the 25 world fields back to local storage is ~14.5 us/node, ~580-650 ns per field for every field type alike; destroying entities is ~1.7 us/node. Each copyBack takes NodeFieldSlot's slow path: fields never read have no cached ComponentRef, so readField does currentBinding + World.componentRef (generic metadata lookups, location hash) per field. Copying every node's fields before destroying any entity (to keep refs valid) saved only ~3%, so it was not kept. Bigger wins need a design choice: read all of an entity's components in one World lookup (needs a SwiftECS API that walks an entity's row once), or skip copy-back for nodes that die with the graph (only nodes still referenced from outside need their values back).
+- `2026-11-22T16:07:20Z`: Question 1 (design): To cut graph teardown (~14.5 us/node spent copying 25 fields out of the World), which approach: (a) a SwiftECS API that reads/exports a whole entity row in one lookup, used by copyBack; (b) skip copy-back for nodes that are not referenced outside the graph when it deinits; or (c) keep the World alive while any detached node still points into it, so detaching copies nothing? Recommended: (a): fixes teardown and also speeds clone/archive paths; no lifetime tricks
+- `2026-11-22T16:07:20Z`: Question 2 (decision): What per-node targets close this issue (e.g. create+attach+teardown under 2 us/node, write under 200 ns, traversal under 120 ns at 100k nodes, Release, High Power Mode)? Recommended: Teardown under 2 us/node and create+attach under 5 us/node; read/write/traversal back to the 2026-11-06 numbers
 
 ---
 
@@ -13756,6 +13764,20 @@ Related gaps in the first cut:
 - glTF EXT_mesh_gpu_instancing is still imported as child nodes, not as an instanced mesh.
 - Physics bodies (convex hull, mesh shapes) and subdivision ignore instanced meshes.
 - No per-instance colors.
+
+---
+
+## 605: Hit testing never hits line or point primitives
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:scenegraph,effort:s
+created: 2026-11-22T16:12:40Z
++++
+
+SceneGraph.hitTest skips submeshes whose primitive type is .line, .lineStrip or .point, so wireframe helpers, curves and point clouds can never be picked. SceneKit-style picking of lines and points needs a distance tolerance (in world units or screen points), which HitTestOptions does not have. Split from #405.
 
 ---
 
