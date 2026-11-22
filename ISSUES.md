@@ -3888,9 +3888,9 @@ Blocked on Interaction3D #38. Related: #154.
 status: open
 priority: low
 kind: task
-labels: area:ui, effort:l
+labels: area:ui, effort:l, deferred
 created: 2026-10-22T22:00:05Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-22T18:17:29Z
 +++
 
 TransformGizmo (SceneSprocketsGizmos, #154) is mostly not about scene graphs: handle layout, picking, drag math along axes, planes and rings, snapping, and screen-size scaling. Other MetalSprockets apps could use it. Interaction3D is the home for 3D interaction (camera controls, rotation widget), so move the gizmo there, and keep a thin SceneSprockets adapter.
@@ -5874,10 +5874,10 @@ For #259 the alternative needs no SwiftJolt change: keep Jolt in float and simul
 status: open
 priority: low
 kind: feature
-labels: area:physics, effort:l, subtask, large-worlds
+labels: area:physics, effort:l, subtask, large-worlds, blocked
 milestone: Big-World
 created: 2026-11-04T21:10:37Z
-updated: 2026-11-20T06:32:40Z
+updated: 2026-11-22T18:17:43Z
 +++
 
 SceneSprocketsPhysics hands world-space Float positions to Jolt. Far from the origin, simulation near the active area loses precision. There is no floating origin or local physics frame around the active area.
@@ -5885,6 +5885,7 @@ SceneSprocketsPhysics hands world-space Float positions to Jolt. Far from the or
 Part of #255.
 
 - `2026-11-07T16:53:42Z`: Autonomous run: scoped, not changed. A local physics frame is easy to add (subtract an origin from node world positions before Jolt, add it back when writing poses), but node world transforms are Float (#256): at 2^20 m a position can only change in 0.125 m steps, so writing the precise result back to the nodes still quantizes it, and dynamic bodies would visibly jump. A real fix needs Double (or origin-relative) node transforms and the #255 origin-shift design that #260 also depends on. Punting: depends on #256/#255. Unblocker: settle how origin shifts work across nodes, physics and rendering (#255), or do #256 first.
+- `2026-11-22T18:17:43Z`: Autonomous run: unchanged; depends on #256 (effort:xl) and the open origin-shift design question on #255 (Q1). Labelled blocked.
 
 ---
 
@@ -5894,10 +5895,10 @@ Part of #255.
 status: open
 priority: low
 kind: feature
-labels: area:physics, effort:m, subtask, large-worlds
+labels: area:physics, effort:m, subtask, large-worlds, blocked
 milestone: Big-World
 created: 2026-11-04T21:10:37Z
-updated: 2026-11-20T06:32:40Z
+updated: 2026-11-22T18:17:37Z
 +++
 
 At orbital speeds (several km/s) the active object's coordinates change by kilometers per second, so precision near it degrades and rendering and physics jitter. There is no reference frame that keeps the active object near rest (KSP's Krakensbane).
@@ -5906,6 +5907,7 @@ Part of #255.
 
 - `2026-11-07T16:30:16Z`: Autonomous run: not changed. A Krakensbane-style moving reference frame (subtract the active object's velocity from the whole world each step, keep the object near rest) needs a world-space origin that can shift, which is #259 (physics far from the origin, floating origin) and #256 (Double transforms, effort:xl). Without those, the frame offset just moves the precision loss elsewhere. Punting: depends on #259 and #256 and on the #255 design for how origin shifts reach physics, rendering and node transforms. Unblocker: settle #255's origin-shift design (or do #259 first).
 - `2026-11-17T06:02:51Z`: Related: #413 (continuous collision / motion quality option for fast bodies).
+- `2026-11-22T18:17:37Z`: Autonomous run: unchanged; still depends on #259 -> #256 (effort:xl) and the #255 design. Labelled blocked.
 
 ---
 
@@ -9302,15 +9304,17 @@ Moved from SceneSprocketsAddOns #24.
 status: open
 priority: low
 kind: feature
-labels: effort:m, area:renderer
+labels: effort:m, area:renderer, blocked
 milestone: Rendering-2
 created: 2026-11-16T20:03:49Z
-updated: 2026-11-20T06:33:14Z
+updated: 2026-11-22T18:17:48Z
 +++
 
 Shiny surfaces reflect only the environment map. They do not reflect other objects in the scene.
 
 Moved from SceneSprocketsAddOns #25.
+
+- `2026-11-22T18:17:48Z`: Autonomous run: skipped. SSR traces reflected rays through the depth buffer, so it needs per-pixel normals and roughness, which the renderer does not produce (#510, questions pending); without a temporal filter (#496, blocked on #510) rough reflections are noisy. Labelled blocked on #510.
 
 ---
 
@@ -10333,6 +10337,12 @@ updated: 2026-11-20T06:33:50Z
 The demo app has standalone demos besides the keynote (Shadows, Gears, Dice, Metaballs, SceneKit Features, and others). Some show features the keynote already covers; others show features the keynote does not cover at all. Two places to maintain the same showcases.
 
 Expected: each standalone demo is either merged into the keynote as a slide (or slide controls), or removed if the keynote already covers it well.
+
+- `2026-11-22T18:17:21Z`: Autonomous run: compared the catalog (DemoKitDemos.swift) with the keynote's slides (KeynoteDemo.build). The keynote has slides for shadows, fog, metaballs/SDF, performance, post-processing, particles, glass, PBR extensions and more. Standalone: Shadows (overlaps the shadows and fog slides; now also has a Volumetric Fog toggle, #540), SDF (overlaps the metaballs slide), Dice (Jolt physics, not in the keynote), Gears (generated meshes, not in the keynote), SceneKit Features (overlaps several slides), Tree Appreciator (its own SwiftUI layout with two views; cannot be a slide, #248 is deferred) and Many Lights (new in #519, clustered lighting). Which to merge, keep or drop is a product choice; not changed.
+- `2026-11-22T18:17:21Z`: Question 1 (decision): Fold the Shadows and SDF demos into the keynote (their parameters become the shadows/fog and metaballs slide controls) and remove them from the catalog? Recommended: Yes
+- `2026-11-22T18:17:21Z`: Question 2 (decision): Remove the SceneKit Features demo, since the keynote's slides now cover shapes, lights, actions, constraints, fog, shaders and category masks? Recommended: Yes
+- `2026-11-22T18:17:22Z`: Question 3 (decision): Add keynote slides for physics (Dice), generated meshes (Gears) and many lights (Many Lights), then remove those standalone demos? Recommended: Yes for physics and many lights; keep Gears and Dice as standalone showcases since they are full scenes
+- `2026-11-22T18:17:22Z`: Question 4 (decision): Keep Tree Appreciator standalone, since it uses its own two-view SwiftUI layout that a keynote slide cannot host (#248 deferred)? Recommended: Yes
 
 ---
 
@@ -14009,6 +14019,132 @@ created: 2026-11-22T18:08:09Z
 +++
 
 MaterialXDocument (#528) loads standard_surface and UsdPreviewSurface materials with constant inputs and image textures (directly, through nodegraph outputs, or behind a normalmap node). Any other node feeding a shader input (math such as add/multiply, mix, procedural noise, texcoord transforms, extract/swizzle, image nodes with UV scale/offset inputs) is not evaluated: the input keeps the shader's default and a warning is reported. Images on inputs without a texture slot (opacity, coat, sheen, transmission, specular) are also ignored. Other surface shaders (open_pbr_surface, gltf_pbr) are skipped. Split from #528.
+
+---
+
+## 610: Keynote has no slide for physics joints, characters, triggers and buoyancy
+
++++
+status: new
+priority: low
+kind: task
+labels: area:demo, effort:s
+created: 2026-11-22T19:47:47Z
++++
+
+The keynote's only physics slide is the dice tray. It does not show physics joints (#432), the character controller (#433), trigger bodies (#411), contact reporting with impact strength (#423, #430), buoyancy (#436), axis locks (#414) or physics debug drawing (#431).
+
+---
+
+## 611: Keynote has no slide for clustered lighting with many lights
+
++++
+status: new
+priority: low
+kind: task
+labels: area:demo, effort:s
+created: 2026-11-22T19:47:48Z
++++
+
+Clustered light assignment (#519) is only shown by the standalone Many Lights demo. The keynote has no slide with many lights. Related: #443 (standalone demos outside the keynote).
+
+---
+
+## 612: Keynote has no slide for paths and splines
+
++++
+status: new
+priority: low
+kind: task
+labels: area:demo, effort:s
+created: 2026-11-22T19:47:48Z
++++
+
+Spline nodes and the follow-path constraint (#407, #607) are not shown in the keynote.
+
+---
+
+## 613: Keynote Fog slide does not show volumetric fog
+
++++
+status: new
+priority: low
+kind: task
+labels: area:demo, effort:s
+created: 2026-11-22T19:47:48Z
++++
+
+The Fog slide shows distance fog only. Volumetric fog with light beams and shadow shafts (SceneGraph.Fog.scattering, #540) is only reachable through a toggle in the standalone Shadows demo.
+
+---
+
+## 614: Keynote Performance slide does not show explicit instancing
+
++++
+status: new
+priority: low
+kind: task
+labels: area:demo, effort:s
+created: 2026-11-22T19:47:48Z
++++
+
+Explicit instancing (Node.Content.instancedMesh, #135) is not shown in the keynote's Performance slide.
+
+---
+
+## 615: Keynote Materials slide does not show parallax occlusion mapping
+
++++
+status: new
+priority: low
+kind: task
+labels: area:demo, effort:s
+created: 2026-11-22T19:47:48Z
++++
+
+Parallax occlusion mapping (#537) is not shown in the keynote.
+
+---
+
+## 616: Keynote Lights slide does not show ambient light nodes
+
++++
+status: new
+priority: low
+kind: task
+labels: area:demo, effort:s
+created: 2026-11-22T19:47:49Z
++++
+
+Ambient light as a scene node (Light.Kind.ambient, #602) is not shown in the keynote's Lights slide.
+
+---
+
+## 617: Keynote Gizmos slide does not show the editor gizmos
+
++++
+status: new
+priority: low
+kind: task
+labels: area:demo, effort:s
+created: 2026-11-22T19:47:49Z
++++
+
+The editor gizmos (grid, axes, light and camera icons, bounds; #406) are not shown in the keynote's Gizmos slide.
+
+---
+
+## 618: Keynote glTF & Model I/O slide does not mention MaterialX
+
++++
+status: new
+priority: low
+kind: task
+labels: area:demo,effort:s
+created: 2026-11-22T19:47:49Z
++++
+
+MaterialX loading (MaterialXDocument, #528) is not shown in the keynote. The demo has no sample .mtlx asset.
 
 ---
 
