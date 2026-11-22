@@ -12011,9 +12011,9 @@ Every lit fragment loops over every light in the frame; lights are not assigned 
 status: open
 priority: low
 kind: feature
-labels: area:renderer, effort:l, subtask, bounds, indirect-drawing
+labels: area:renderer, effort:l, subtask, bounds, indirect-drawing, blocked
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-22T18:03:19Z
 +++
 
 Hidden objects are still drawn: there is no depth pyramid (Hi-Z: a mip chain of the depth buffer, each level keeping the farthest depth of the level below) and compute pass to cull them. A GPU culling result only saves work if the GPU also issues the draws (indirect draws, #517); otherwise visibility would be read back to the CPU a frame late. PBR draws go through MetalSprockets DrawList (#582), so indirect drawing would replace those lists. Part of #543 and #544.
@@ -12026,18 +12026,20 @@ Hidden objects are still drawn: there is no depth pyramid (Hi-Z: a mip chain of 
 ## 521: GPU particles do not use indirect draws
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, indirect-drawing
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-22T18:03:30Z
+closed: 2026-11-22T18:03:30Z
 +++
 
 Particle simulation and draw counts are not driven by compute and indirect draws. The particle code lives in MetalSprocketsParticles, not here; MetalSprockets now has indirect draws (MetalSprockets#575, #576). Part of #544.
 
 - `2026-11-17T19:05:45Z`: Question 1 (decision): Move this issue to the MetalSprocketsParticles tracker? Recommended: Yes
 - `2026-11-20T05:59:32Z`: Answer 1: Yes
+- `2026-11-22T18:03:30Z`: Moved to MetalSprocketsParticles#247 (decided in Q1).
 
 ---
 
@@ -12047,13 +12049,15 @@ Particle simulation and draw counts are not driven by compute and indirect draws
 status: open
 priority: low
 kind: feature
-labels: area:renderer, effort:l, subtask, indirect-drawing
+labels: area:renderer, effort:l, subtask, indirect-drawing, blocked
 depends: 545
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-22T18:03:35Z
 +++
 
 Mesh detail is chosen on the CPU (Node.levelsOfDetail, by camera distance), not on the GPU. Choosing it on the GPU only helps if the GPU also issues the draws (#517); how draws are fed depends on #545. Part of #544.
+
+- `2026-11-22T18:03:35Z`: Autonomous run: skipped. Depends on #545 (open) and only helps once the GPU issues draws (#517, open). Labelled blocked.
 
 ---
 
@@ -12121,6 +12125,11 @@ Prior art in ~/Projects:
 - MetalSprocketsParticles stitched modules (Documentation/Modules.md).
 
 Related: ISSUES.md Materials list, "Shader modifiers / node-based material graph" (RealityKit Shader Graph, three.js TSL, Babylon Node Material).
+
+- `2026-11-22T18:03:45Z`: Autonomous run: looked at the prior art. MetalSprocketsShaderGraphSupport builds a typed Node<T> expression graph and stitches it into an MTLFunction (graph.makeFunction). Using it for scene materials needs: a dependency on that package (or moving the DSL here), a material type whose fragment function is the stitched graph, and a defined set of graph inputs (position, normal, UV, time, camera, lights) and outputs (just a color, or surface inputs such as base color/roughness/normal that a built-in lighting model shades). ShaderMaterial already takes hand-written Metal functions, so the graph could produce one. Scope and packaging are not specified; not started.
+- `2026-11-22T18:03:45Z`: Question 1 (decision): Should SceneSprockets depend on the MetalSprocketsShaderGraph package (published separately), rather than copying the DSL into this repo? Recommended: Depend on it, in a new SceneSprocketsShaderGraph target so the core does not
+- `2026-11-22T18:03:46Z`: Question 2 (design): Should a graph produce the final color (unlit, like ShaderMaterial today), or surface inputs (base color, roughness, metallic, normal, emission) that the PBR lighting model shades? Recommended: Surface inputs shaded by PBR, with an unlit color output as the simpler first step
+- `2026-11-22T18:03:53Z`: Path note: the package is at ~/Projects/MetalSprockets/MetalSprocketsShaderGraph/Packages/MetalSprocketsShaderGraphSupport (not ~/Projects/MetalSprocketsShaderGraph). Checked: Node<T> (Node.swift) and ShaderGraph.makeFunction(_:node:) returning an MTLFunction and library, as described.
 
 ---
 
@@ -13968,6 +13977,20 @@ After #558 the ms-gltf-render bench suite covers morph targets, material lobes, 
 - the environment background (--background) and the transmission pre-pass at larger sizes;
 - a second, GPU-bound resolution (4K) and GPU-heavy rather than CPU-heavy scenes.
 Split from #558.
+
+---
+
+## 609: MaterialX node graphs are not evaluated
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:materials,effort:l
+created: 2026-11-22T18:08:09Z
++++
+
+MaterialXDocument (#528) loads standard_surface and UsdPreviewSurface materials with constant inputs and image textures (directly, through nodegraph outputs, or behind a normalmap node). Any other node feeding a shader input (math such as add/multiply, mix, procedural noise, texcoord transforms, extract/swizzle, image nodes with UV scale/offset inputs) is not evaluated: the input keeps the shader's default and a warning is reported. Images on inputs without a texture slot (opacity, coat, sheen, transmission, specular) are also ignored. Other surface shaders (open_pbr_surface, gltf_pbr) are skipped. Split from #528.
 
 ---
 
