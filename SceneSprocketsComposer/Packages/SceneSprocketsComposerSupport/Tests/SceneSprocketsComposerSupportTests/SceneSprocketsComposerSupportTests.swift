@@ -259,7 +259,8 @@ struct SceneEditBoundaryTests {
         drawableSize: [800, 800]
     )
     let shapes = DebugShapes.shapes(sceneGraph: model.sceneGraph, viewport: viewport)
-    #expect(shapes.count == 4)
+    // One per light kind, and the camera.
+    #expect(shapes.count == Light.Kind.allCases.count + 1)
     #expect(shapes.allSatisfy { !$0.lines.isEmpty })
 
     // Only a camera, at the origin facing -Z (away from the viewer): its frustum outline surrounds the center.
@@ -1196,9 +1197,9 @@ struct SceneEditBoundaryTests {
             #expect(node.transform.matrix.columns.2.y > 0)
         }
     }
-    #expect(model.sceneGraph.root.children.count == 3)
+    #expect(model.sceneGraph.root.children.count == Light.Kind.allCases.count)
     undoManager.undo()
-    #expect(model.sceneGraph.root.children.count == 2)
+    #expect(model.sceneGraph.root.children.count == Light.Kind.allCases.count - 1)
 }
 
 // #187
