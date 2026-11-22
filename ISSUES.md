@@ -9962,19 +9962,22 @@ Expected: state for removed nodes is dropped.
 ## 428: Physics shapes lack height fields, planes, tapered cylinders and empty shapes
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:physics, effort:m
 milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-20T06:32:46Z
+updated: 2026-11-22T16:55:29Z
+closed: 2026-11-22T16:55:29Z
 +++
 
 PhysicsBody.Shape only offers box, sphere, capsule, cylinder, boundingBox, convexHull and mesh. Terrain has to use a triangle mesh, ground planes need a large box, and there is no shape for a body that only exists to be jointed or moved.
 
 Context: SwiftJolt now has Shape.heightField (with block size / bits-per-sample options), .plane, .taperedCylinder and .empty.
+
+- `2026-11-22T16:55:29Z`: PhysicsBody.Shape gains .heightField(samples:sampleCount:spacing:) (static/kinematic, centered on the node), .plane (node's +Y, static only), .taperedCylinder(height:topRadius:bottomRadius:) and .empty. Shape.allowedTypes says which body types can use each; unsupported combinations log once and get no body.
 
 ---
 

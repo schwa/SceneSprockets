@@ -419,7 +419,9 @@ public final class SceneGraphPhysicsWorld {
         guard description.mass != nil || old.mass == nil else {
             return false
         }
-        if description.type == .dynamic, description.shape == .mesh {
+        // Changing to a shape the body type cannot use, or to or from shapes with their own rules (planes, height
+        // fields, empty), rebuilds the body.
+        guard description.shape.allowedTypes.contains(description.type), description.shape.allowedTypes == old.shape.allowedTypes else {
             return false
         }
         // Jolt sets these only when it creates a body.
@@ -515,12 +517,13 @@ public final class SceneGraphPhysicsWorld {
     }
 
     private func makeBody(for node: SceneGraph.Node, description: SceneGraph.PhysicsBody) -> BodyID? {
-        // Jolt supports triangle-mesh shapes only on static and kinematic bodies (#425).
-        if description.type == .dynamic, description.shape == .mesh {
+        // Jolt supports mesh and height field shapes only on static and kinematic bodies, planes only on static ones
+        // (#425, #428).
+        guard description.shape.allowedTypes.contains(description.type) else {
             guard warnedNodes.insert(node.id).inserted else {
                 return nil
             }
-            Self.logger.warning("Node \(node.label ?? "(unlabeled)", privacy: .public) has a dynamic physics body with shape .mesh, which Jolt does not support; it gets no body. Use .convexHull instead.")
+            Self.logger.warning("Node \(node.label ?? "(unlabeled)", privacy: .public) has a \(String(describing: description.type), privacy: .public) physics body with a shape Jolt does not support for that body type; it gets no body. Use .convexHull for moving meshes.")
             return nil
         }
         let pose = Transform3D(nearestTo: node.worldTransform)
@@ -572,6 +575,23 @@ public final class SceneGraphPhysicsWorld {
         case .convexHull:
             let points = meshPositions(node).map { $0 * scale }
             return Self.spansVolume(points) ? .convexHull(points: points) : nil
+        case let .heightField(samples, sampleCount, spacing):
+            // Jolt needs whole blocks of 2 samples and one sample per grid point.
+            guard sampleCount >= 2, sampleCount.isMultiple(of: 2), samples.count == sampleCount * sampleCount else {
+                return nil
+            }
+            let half = Float(sampleCount - 1) * spacing / 2
+            return .heightField(samples: samples, sampleCount: sampleCount, offset: [-half * scale.x, 0, -half * scale.z], scale: [spacing * scale.x, scale.y, spacing * scale.z])
+        case .plane:
+            // In body space; the body's rotation turns it.
+            return .plane()
+        case let .taperedCylinder(height, topRadius, bottomRadius):
+            let radial = max(scale.x, scale.z)
+            // Jolt keeps a convex radius inside the smaller end.
+            let convexRadius = min(0.05, min(topRadius, bottomRadius) * radial)
+            return .taperedCylinder(halfHeight: height * scale.y / 2, topRadius: topRadius * radial, bottomRadius: bottomRadius * radial, convexRadius: convexRadius)
+        case .empty:
+            return .empty()
         case .mesh:
             guard case let .mesh(mesh, _, _, _) = node.content else {
                 return nil

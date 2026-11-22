@@ -57,6 +57,24 @@ extension SceneGraph {
             /// The node's triangles. Only static and kinematic bodies can use this shape; a dynamic body with it is not
             /// created, and a warning is logged.
             case mesh
+            /// Terrain: a square grid of heights, `sampleCount` by `sampleCount`, row by row along +Z, `spacing` apart and
+            /// centered on the node in X and Z. `sampleCount` must be even. Static and kinematic bodies only, like `.mesh`.
+            case heightField(samples: [Float], sampleCount: Int, spacing: Float = 1)
+            /// A ground plane through the node's origin, facing the node's +Y, solid below. Static bodies only.
+            case plane
+            /// A cylinder along local Y whose top and bottom radii differ; a cone when one radius is near 0.
+            case taperedCylinder(height: Float, topRadius: Float, bottomRadius: Float)
+            /// No collision geometry, for a body that only exists to be jointed or moved. Give dynamic ones a `mass`.
+            case empty
+
+            /// The body types that can use the shape: meshes and height fields are static or kinematic, planes static.
+            public var allowedTypes: [BodyType] {
+                switch self {
+                case .mesh, .heightField: [.static, .kinematic]
+                case .plane: [.static]
+                default: [.static, .dynamic, .kinematic]
+                }
+            }
         }
 
         /// How the simulation moves the body.

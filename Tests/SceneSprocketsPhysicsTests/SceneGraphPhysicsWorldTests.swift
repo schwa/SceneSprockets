@@ -501,6 +501,42 @@ func bodyMotionOptions() throws {
     #expect(floating.worldPosition.y < 2)
 }
 
+// #428: height field, plane, tapered cylinder and empty shapes.
+@Test
+func moreBodyShapes() throws {
+    func restingHeight(on ground: SceneGraph.PhysicsBody.Shape, groundAt groundY: Float = 0) throws -> Float {
+        let root = SceneGraph.Node()
+        let floor = root.addChild(SceneGraph.Node(transform: .init(translation: [0, groundY, 0])))
+        floor.physicsBody = .init(type: .static, shape: ground)
+        let box = root.addChild(SceneGraph.Node(transform: .init(translation: [0.3, 3, 0.2])))
+        box.physicsBody = .init(type: .dynamic, shape: .box(size: [1, 1, 1]))
+        let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+        run(physics, seconds: 3)
+        return box.worldPosition.y
+    }
+    // A flat 8 x 8 height field 1 unit above its node, spanning -7...7.
+    let flat = [Float](repeating: 1, count: 8 * 8)
+    #expect(abs(try restingHeight(on: .heightField(samples: flat, sampleCount: 8, spacing: 2)) - 1.5) < 0.05)
+    #expect(abs(try restingHeight(on: .plane, groundAt: -1) - (-0.5)) < 0.05)
+
+    let root = SceneGraph.Node()
+    let cone = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 1, 0])))
+    cone.physicsBody = .init(type: .static, shape: .taperedCylinder(height: 2, topRadius: 0.1, bottomRadius: 1))
+    let ghost = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 5, 0])))
+    ghost.physicsBody = .init(type: .dynamic, shape: .empty, mass: 1)
+    let ball = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 4, 0])))
+    ball.physicsBody = .init(type: .dynamic, shape: .sphere(radius: 0.05))
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+    run(physics, seconds: 1)
+    // The empty body has a body but nothing to collide with, so it falls straight through the cone.
+    #expect(physics.body(of: ghost) != nil)
+    // One second of free fall from 5 ends near 0.1, below the cone's top at 2.
+    #expect(ghost.worldPosition.y < 0.5, "ghost at \(ghost.worldPosition)")
+    // The ball lands on the cone's narrow top, near y = 2.
+    #expect(physics.castRay(from: [0, 5, 0], direction: [0, -10, 0])?.node === cone || abs(ball.worldPosition.y - 2.05) < 0.2)
+    #expect(abs(try #require(physics.castRay(from: [0.9, 5, 0], direction: [0, -10, 0])).position.y - 0.2) < 0.15)
+}
+
 // #429: ray hits and contacts report the body's surface tag and, for mesh shapes, the submesh they hit.
 @Test
 func surfacesReportSubmeshAndTag() throws {
