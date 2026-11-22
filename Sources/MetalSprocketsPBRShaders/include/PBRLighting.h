@@ -293,10 +293,14 @@ namespace PBR {
         }
 
         if (material.alphaMode == kPBRAlphaModeMask) {
-            if (baseColor.a < material.alphaCutoff) {
+            // Alpha sharpened to a one-pixel ramp around the cutoff. Mask pipelines use alpha to coverage (#600), so
+            // the ramp antialiases the edge across MSAA samples; at 0.5 it cuts where `alpha < cutoff` did.
+            const float width = max(fwidth(baseColor.a), 1e-4);
+            const float coverage = saturate((baseColor.a - material.alphaCutoff) / width + 0.5);
+            if (coverage <= 0.0) {
                 discard_fragment();
             }
-            baseColor.a = 1.0;
+            baseColor.a = coverage;
         } else if (material.alphaMode == kPBRAlphaModeOpaque) {
             baseColor.a = 1.0;
         }

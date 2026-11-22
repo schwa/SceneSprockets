@@ -82,14 +82,18 @@ struct PBRPipelineState: Hashable {
     var colorWriteMask: PBRRenderState.ColorWriteMask
     var depthTest: Bool
     var depthWrite: Bool
+    // Alpha-masked (glTF MASK) and not blended: the fragment's alpha decides sample coverage, so cutout edges are
+    // antialiased with MSAA (#600). With one sample it cuts at the same alpha as discarding did.
+    var alphaToCoverage = false
 
     static let opaque = Self(blendMode: .opaque, colorWriteMask: .all, depthTest: true, depthWrite: true)
 
-    init(blendMode: PBRRenderState.BlendMode, colorWriteMask: PBRRenderState.ColorWriteMask, depthTest: Bool, depthWrite: Bool) {
+    init(blendMode: PBRRenderState.BlendMode, colorWriteMask: PBRRenderState.ColorWriteMask, depthTest: Bool, depthWrite: Bool, alphaToCoverage: Bool = false) {
         self.blendMode = blendMode
         self.colorWriteMask = colorWriteMask
         self.depthTest = depthTest
         self.depthWrite = depthWrite
+        self.alphaToCoverage = alphaToCoverage
     }
 
     /// - Parameter writesBlendedDepth: Stereo: blended surfaces write depth whatever the material says.
@@ -100,6 +104,7 @@ struct PBRPipelineState: Hashable {
         depthTest = state.depthTest
         let blended = blendMode != .opaque
         depthWrite = blended && writesBlendedDepth ? true : state.depthWrite.resolved(blended: blended)
+        alphaToCoverage = !blended && material.uniforms.alphaMode == .mask
     }
 
     var labelSuffix: String {
@@ -114,6 +119,9 @@ struct PBRPipelineState: Hashable {
         }
         if !depthTest {
             suffix += " No Depth Test"
+        }
+        if alphaToCoverage {
+            suffix += " Alpha To Coverage"
         }
         return suffix
     }
@@ -135,6 +143,9 @@ struct PBRPipelineState: Hashable {
             mask.insert(.alpha)
         }
         attachment.writeMask = mask
+        // Alpha to one keeps the stored alpha at 1, as discarding did.
+        descriptor.alphaToCoverageState = alphaToCoverage ? .enabled : .disabled
+        descriptor.alphaToOneState = alphaToCoverage ? .enabled : .disabled
         guard blendMode != .opaque else {
             return
         }

@@ -259,3 +259,40 @@ func pbrSceneMaterialHasReferenceSemantics() {
     b.renderState.blendMode = .additive
     #expect(a.renderState.blendMode == .additive)
 }
+
+// #600: with MSAA, a masked material's cutout edge is antialiased (alpha to coverage) instead of cut per pixel.
+@MainActor
+private func maskedEdgePixelCount(sampleCount: Int) throws -> Int {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    // White with alpha rising from left to right; the 0.5 cutoff falls across the middle of the quad.
+    let width = 256
+    let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba8Unorm, width: width, height: 1, mipmapped: false)
+    let texture = try #require(device.makeTexture(descriptor: descriptor))
+    let texels = (0..<width).map { SIMD4<UInt8>(255, 255, 255, UInt8($0)) }
+    texture.replace(region: MTLRegionMake2D(0, 0, width, 1), mipmapLevel: 0, withBytes: texels, bytesPerRow: width * 4)
+    let material = try PBRSceneMaterial(textures: .init(baseColor: texture))
+    var uniforms = material.uniforms
+    uniforms.alphaMode = .mask
+    uniforms.alphaCutoff = 0.5
+    uniforms.unlit = 1
+    material.uniforms = uniforms
+    let root = SceneGraph.Node()
+    // Larger than the view, so only the cutout edge can be partly covered; turned so it crosses pixels diagonally.
+    root.addChild(SceneGraph.Node(transform: .init(rotation: simd_quatf(angle: .pi / 6, axis: [0, 0, 1])), content: .mesh(MetalMesh(mesh: .quad(extents: [12, 12]), device: device), material: material)))
+    let camera = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, 4]), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(50))))))
+    let element = SceneGraphElement(sceneGraph: SceneGraph(linearRoot: root), camera: camera, aspectRatio: 1, renderers: [PBRMaterialRenderer(environmentIntensity: 0)], sampleCount: sampleCount)
+    let rendered = try OffscreenRenderer(size: CGSize(width: 64, height: 64)).render(element).texture
+    var pixels = [SIMD4<UInt8>](repeating: .zero, count: 64 * 64)
+    rendered.getBytes(&pixels, bytesPerRow: 64 * 4, from: MTLRegionMake2D(0, 0, 64, 64), mipmapLevel: 0)
+    #expect(pixels.contains { $0.x > 235 } && pixels.contains { $0.x < 20 }, "the edge is in view")
+    return pixels.count { (40...215).contains($0.x) }
+}
+
+@Test(.enabled(if: deviceSupportsMetal4))
+@MainActor
+func maskedMaterialsAntialiasTheirCutoutWithMultisampling() throws {
+    let single = try maskedEdgePixelCount(sampleCount: 1)
+    let multi = try maskedEdgePixelCount(sampleCount: 4)
+    #expect(single < 3, "\(single)")
+    #expect(multi > 20, "\(multi)")
+}

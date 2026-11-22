@@ -13672,18 +13672,21 @@ Make it prettier and more panel like
 ## 600: Alpha-masked materials do not use alpha-to-coverage with MSAA
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:renderer, effort:m
 milestone: Rendering
 created: 2026-11-20T06:30:55Z
-updated: 2026-11-22T13:04:15Z
+updated: 2026-11-22T16:20:08Z
+closed: 2026-11-22T16:20:08Z
 +++
 
 With SceneView.sceneAntialiasing(sampleCount:) or SceneGraphElement(sampleCount:) above 1, alpha-masked materials (PBR alphaMode MASK, Blinn-Phong diffuse texture alpha) still cut out with a hard edge per pixel. Their edges get no antialiasing from the extra samples.
 
 Split out of #95.
+
+- `2026-11-22T16:20:08Z`: PBR MASK materials draw with alpha-to-coverage (and alpha-to-one) pipelines; the shader outputs alpha sharpened to a one-pixel ramp around the cutoff, so MSAA antialiases cutout edges and one sample cuts where discard did. Blinn-Phong has no alpha-cutout path (texture alpha blends), so nothing to change there.
 
 ---
 
@@ -13790,7 +13793,7 @@ SceneGraph.hitTest skips submeshes whose primitive type is .line, .lineStrip or 
 status: new
 priority: medium
 kind: bug
-labels: area:renderer,area:testing,effort:s
+labels: area:renderer, area:testing, effort:s
 created: 2026-11-22T16:14:54Z
 +++
 

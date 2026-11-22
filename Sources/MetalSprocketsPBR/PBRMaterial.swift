@@ -131,7 +131,9 @@ public final class PBRMaterial: @unchecked Sendable {
     /// Whether `other` can be drawn in place of this material without rebuilding the model: it is drawn in the same
     /// passes (``PBRModel/MaterialOverrides``).
     public func canOverride(_ other: PBRMaterial) -> Bool {
+        // Masked materials draw with an alpha-to-coverage pipeline (#600).
         isBlended == other.isBlended && isTransmissive == other.isTransmissive && renderState.isDefault == other.renderState.isDefault
+            && (uniforms.alphaMode == .mask) == (other.uniforms.alphaMode == .mask)
     }
 
     /// `textureBindings` must have one binding per `PBRMaterialTextureIndex` (`kPBRMaterialTextureCount`); enable

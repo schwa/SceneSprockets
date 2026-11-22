@@ -125,6 +125,7 @@ private struct FrameDrawBuilder {
         var state = PBRPipelineState(material, writesBlendedDepth: renderer.writesBlendedDepth)
         if coverage {
             state.blendMode = .premultiplied
+            state.alphaToCoverage = false
             state.depthWrite = renderer.writesBlendedDepth || material.renderState.depthWrite.resolved(blended: true)
         }
         return state
