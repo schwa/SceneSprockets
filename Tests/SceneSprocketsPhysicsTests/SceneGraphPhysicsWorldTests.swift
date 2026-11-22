@@ -444,6 +444,33 @@ func collisionMasksChooseWhichBodiesCollide() throws {
     #expect(solid.worldPosition.y < -2, "solid at \(solid.worldPosition)")
 }
 
+// #423: contacts are reported once when two nodes start touching and once when they stop, after the step.
+@Test
+func contactsReportBeginAndEndByNode() throws {
+    let root = SceneGraph.Node()
+    let floor = makeFloor(in: root)
+    let box = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 2, 0])))
+    box.physicsBody = .init(type: .dynamic, shape: .box(size: [1, 1, 1]))
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+    var events: [SceneGraphPhysicsWorld.Contact] = []
+    physics.contactHandler = { events.append($0) }
+    run(physics, seconds: 2)
+    // Landing can bounce, so a pair may begin and end more than once, but phases alternate.
+    let phases = events.map(\.phase)
+    #expect(phases.first == .began)
+    #expect(phases.last == .began)
+    #expect(zip(phases, phases.dropFirst()).allSatisfy { $0 != $1 }, "\(phases)")
+    #expect(events.allSatisfy { Set([ObjectIdentifier($0.nodeA), ObjectIdentifier($0.nodeB)]) == Set([ObjectIdentifier(floor), ObjectIdentifier(box)]) })
+    #expect(physics.contacts(of: box).map(ObjectIdentifier.init) == [ObjectIdentifier(floor)])
+    // Asleep: Jolt removed the contact and adds it again on waking; neither is reported.
+    #expect(!physics.world.isActive(try #require(physics.body(of: box))))
+    events.removeAll()
+    physics.setVelocity([0, 8, 0], of: box)
+    run(physics, seconds: 0.25)
+    #expect(events.map(\.phase) == [.ended], "\(events.map(\.phase))")
+    #expect(physics.contacts(of: box).isEmpty)
+}
+
 // #411: turning a body into a trigger after it was created lets bodies pass through it.
 @Test
 func floorBecomesTriggerAfterCreation() throws {

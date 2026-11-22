@@ -38,9 +38,36 @@ public final class SceneGraphPhysicsWorld {
     private(set) var entryKeysByBody: [BodyID: ObjectIdentifier] = [:]
     // Nodes already warned about, so a rejected body is reported once, not every step.
     private var warnedNodes: Set<SceneGraph.Node.ID> = []
-    // Rejects contacts between bodies whose collision masks leave each other out (#412). Jolt calls it from its
-    // worker threads, so it reads masks from its own locked table.
-    private let collisionFilter = CollisionMaskFilter()
+    // Applies collision masks (#412) and records contacts (#423).
+    private let contactListener = SceneContactListener()
+    // The touching body pairs, with how many sub-shape pairs touch. A pair begins at 1 and ends at 0.
+    private var touchingPairs: [SceneContactListener.BodyPair: Int] = [:]
+    // Sub-shape contacts Jolt removed because the bodies fell asleep, which it adds again when they wake.
+    private var sleptContacts: [SceneContactListener.BodyPair: Int] = [:]
+
+    /// Two nodes' bodies starting or stopping touching.
+    public struct Contact {
+        /// Whether the bodies started or stopped touching.
+        public enum Phase: Sendable, Equatable {
+            case began
+            case ended
+        }
+
+        public var phase: Phase
+        public var nodeA: SceneGraph.Node
+        public var nodeB: SceneGraph.Node
+        /// The world-space contact point, on `nodeA`'s body. Zero for `.ended`.
+        public var point: SIMD3<Float>
+        /// The world-space contact normal, from `nodeA` toward `nodeB`. Zero for `.ended`.
+        public var normal: SIMD3<Float>
+        /// How far the bodies overlap. Zero for `.ended`.
+        public var penetrationDepth: Float
+    }
+
+    /// Called after each step for every pair of nodes whose bodies started or stopped touching during it, like
+    /// SceneKit's `SCNPhysicsContactDelegate`. It runs on the thread that called ``step(deltaTime:collisionSteps:)``.
+    /// Triggers report contacts too. A body that is removed or rebuilt reports no `.ended`.
+    public var contactHandler: ((Contact) -> Void)?
 
     /// Creates a physics world for a scene graph.
     ///
@@ -51,7 +78,7 @@ public final class SceneGraphPhysicsWorld {
     public init(sceneGraph: SceneGraph, gravity: SIMD3<Float> = [0, -9.81, 0]) throws {
         self.sceneGraph = sceneGraph
         world = PhysicsWorld(engine: try JoltEngine(), gravity: gravity)
-        world.contactListener = collisionFilter
+        world.contactListener = contactListener
     }
 
     /// The acceleration of gravity in world space, in meters per second squared.
@@ -121,6 +148,70 @@ public final class SceneGraphPhysicsWorld {
             pose.translation = world.position(of: entry.body)
             pose.rotation = Rotation3D(world.rotation(of: entry.body))
             entry.node.worldTransform = pose.matrix
+        }
+        reportContacts()
+    }
+
+    /// The nodes whose bodies touch the body of `node` after the last step.
+    public func contacts(of node: SceneGraph.Node) -> [SceneGraph.Node] {
+        guard let body = body(of: node) else {
+            return []
+        }
+        return touchingPairs.keys.compactMap { pair in
+            guard pair.contains(body) else {
+                return nil
+            }
+            return self.node(of: pair.first == body ? pair.second : pair.first)
+        }
+    }
+
+    // Turns the sub-shape contacts Jolt reported during the step into per-node-pair began and ended events.
+    private func reportContacts() {
+        for event in contactListener.takeEvents() {
+            switch event {
+            case let .added(pair, point, normal, penetrationDepth):
+                if let slept = sleptContacts[pair] {
+                    // The pair woke up still touching.
+                    sleptContacts[pair] = slept > 1 ? slept - 1 : nil
+                    continue
+                }
+                let count = touchingPairs[pair, default: 0]
+                touchingPairs[pair] = count + 1
+                if count == 0, let nodeA = node(of: pair.first), let nodeB = node(of: pair.second) {
+                    contactHandler?(Contact(phase: .began, nodeA: nodeA, nodeB: nodeB, point: point, normal: normal, penetrationDepth: penetrationDepth))
+                }
+            case let .removed(pair):
+                guard let count = touchingPairs[pair] else {
+                    continue
+                }
+                // Jolt removes the contacts of bodies that fall asleep and adds them again when they wake. They still
+                // touch, so neither is reported.
+                if !world.isActive(pair.first), !world.isActive(pair.second), entryKeysByBody[pair.first] != nil, entryKeysByBody[pair.second] != nil {
+                    sleptContacts[pair, default: 0] += 1
+                    continue
+                }
+                touchingPairs[pair] = count > 1 ? count - 1 : nil
+                if count == 1 {
+                    reportEnded(pair)
+                }
+            }
+        }
+        // A pair that woke without Jolt adding its contacts again no longer touches.
+        for (pair, slept) in sleptContacts where world.isActive(pair.first) || world.isActive(pair.second) {
+            sleptContacts[pair] = nil
+            guard let count = touchingPairs[pair] else {
+                continue
+            }
+            touchingPairs[pair] = count > slept ? count - slept : nil
+            if count <= slept {
+                reportEnded(pair)
+            }
+        }
+    }
+
+    private func reportEnded(_ pair: SceneContactListener.BodyPair) {
+        if let nodeA = node(of: pair.first), let nodeB = node(of: pair.second) {
+            contactHandler?(Contact(phase: .ended, nodeA: nodeA, nodeB: nodeB, point: .zero, normal: .zero, penetrationDepth: 0))
         }
     }
 
@@ -226,7 +317,7 @@ public final class SceneGraphPhysicsWorld {
         }
         let masksChanged = description.categoryBitMask != old.categoryBitMask || description.collisionBitMask != old.collisionBitMask
         if masksChanged {
-            collisionFilter.setMasks(of: body, to: description)
+            contactListener.setMasks(of: body, to: description)
             // Contacts already found are kept without being validated again.
             world.invalidateContactCache(of: body)
         }
@@ -248,7 +339,9 @@ public final class SceneGraphPhysicsWorld {
 
     private func destroy(_ entry: Entry) {
         entryKeysByBody[entry.body] = nil
-        collisionFilter.removeMasks(of: entry.body)
+        contactListener.removeMasks(of: entry.body)
+        touchingPairs = touchingPairs.filter { !$0.key.contains(entry.body) }
+        sleptContacts = sleptContacts.filter { !$0.key.contains(entry.body) }
         if world.isAdded(entry.body) {
             world.removeBody(entry.body)
         } else {
@@ -283,7 +376,7 @@ public final class SceneGraphPhysicsWorld {
         if description.isTrigger {
             world.setIsSensor(body, to: true)
         }
-        collisionFilter.setMasks(of: body, to: description)
+        contactListener.setMasks(of: body, to: description)
         return body
     }
 

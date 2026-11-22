@@ -9803,20 +9803,23 @@ Install SwiftJolt's `JoltEngine.setTraceHandler` and forward to the package logg
 ## 423: Physics contacts are not reported to the scene graph
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: area:physics, effort:m
 milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-16T23:34:13Z
-updated: 2026-11-20T06:32:46Z
+updated: 2026-11-22T15:24:18Z
+closed: 2026-11-22T15:24:18Z
 +++
 
 There is no way to learn that two nodes' bodies started or stopped touching (SceneKit's SCNPhysicsContactDelegate). Games need this for hits, pickups and sounds; the Jolt world's contact listener is only reachable through `world` and reports BodyIDs, not nodes.
 
 ## Proposed fix (per schwa)
 Wrap SwiftJolt's `ContactListener` (and `wereBodiesInContact`), map BodyIDs to nodes (user data), and deliver events on the caller's thread after step().
+
+- `2026-11-22T15:24:18Z`: SceneGraphPhysicsWorld.contactHandler delivers Contact(phase: .began/.ended, nodeA, nodeB, point, normal, penetrationDepth) after each step on the caller's thread; contacts(of:) lists touching nodes. Sub-shape contacts are counted per body pair; Jolt's remove/re-add around sleep is not reported.
 
 ---
 
