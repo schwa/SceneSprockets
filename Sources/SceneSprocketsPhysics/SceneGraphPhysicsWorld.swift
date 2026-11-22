@@ -62,6 +62,10 @@ public final class SceneGraphPhysicsWorld {
         public var normal: SIMD3<Float>
         /// How far the bodies overlap. Zero for `.ended`.
         public var penetrationDepth: Float
+        /// How hard the bodies hit: the impulse along the normal that the solver is predicted to apply, in newton
+        /// seconds, summed over the contact points. Use it to scale impact sounds, damage or particles. Zero for
+        /// `.ended` and for triggers.
+        public var impulse: Float = 0
     }
 
     /// Called after each step for every pair of nodes whose bodies started or stopped touching during it, like
@@ -212,7 +216,7 @@ public final class SceneGraphPhysicsWorld {
     private func reportContacts() {
         for event in contactListener.takeEvents() {
             switch event {
-            case let .added(pair, point, normal, penetrationDepth):
+            case let .added(pair, point, normal, penetrationDepth, impulse):
                 if let slept = sleptContacts[pair] {
                     // The pair woke up still touching.
                     sleptContacts[pair] = slept > 1 ? slept - 1 : nil
@@ -221,7 +225,7 @@ public final class SceneGraphPhysicsWorld {
                 let count = touchingPairs[pair, default: 0]
                 touchingPairs[pair] = count + 1
                 if count == 0, let nodeA = node(of: pair.first), let nodeB = node(of: pair.second) {
-                    contactHandler?(Contact(phase: .began, nodeA: nodeA, nodeB: nodeB, point: point, normal: normal, penetrationDepth: penetrationDepth))
+                    contactHandler?(Contact(phase: .began, nodeA: nodeA, nodeB: nodeB, point: point, normal: normal, penetrationDepth: penetrationDepth, impulse: impulse))
                 }
             case let .removed(pair):
                 guard let count = touchingPairs[pair] else {

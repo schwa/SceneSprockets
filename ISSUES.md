@@ -9989,14 +9989,15 @@ Context: SwiftJolt now has PhysicsMaterial on plane/tapered-cylinder shapes, per
 ## 430: Physics contacts report no impact strength
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:physics, effort:s
 milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-20T06:32:46Z
+updated: 2026-11-22T16:35:37Z
+closed: 2026-11-22T16:35:37Z
 +++
 
 Nothing tells the app how hard two bodies hit, so impact sounds, damage and particles can't be scaled by force.
@@ -10004,6 +10005,8 @@ Nothing tells the app how hard two bodies hit, so impact sounds, damage and part
 Related: #423 (contacts are not reported at all).
 
 Context: SwiftJolt now has Contact.estimateResponse (predicted impulses and velocities) and per-constraint applied impulses.
+
+- `2026-11-22T16:35:37Z`: SceneGraphPhysicsWorld.Contact.impulse: the normal impulse Jolt's estimateResponse predicts for the first touch (N·s, summed over contact points), on .began; 0 for .ended and triggers.
 
 ---
 

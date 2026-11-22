@@ -501,6 +501,31 @@ func bodyMotionOptions() throws {
     #expect(floating.worldPosition.y < 2)
 }
 
+// #430: a contact reports how hard the bodies hit: a box dropped from higher has a larger impulse.
+@Test
+func contactsReportImpactImpulse() throws {
+    func impulse(droppedFrom height: Float) throws -> Float {
+        let root = SceneGraph.Node()
+        _ = makeFloor(in: root)
+        let box = root.addChild(SceneGraph.Node(transform: .init(translation: [0, height, 0])))
+        box.physicsBody = .init(type: .dynamic, shape: .box(size: [1, 1, 1]), mass: 2)
+        let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+        var first: Float?
+        physics.contactHandler = { contact in
+            if contact.phase == .began, first == nil {
+                first = contact.impulse
+            }
+        }
+        run(physics, seconds: 3)
+        return try #require(first)
+    }
+    let low = try impulse(droppedFrom: 1)
+    let high = try impulse(droppedFrom: 8)
+    #expect(low > 0)
+    // Impulse grows with impact speed, which grows with the square root of the height.
+    #expect(high > low * 2, "low \(low) high \(high)")
+}
+
 // #414: bodies can be limited to some axes: no rotation, or the XY plane.
 @Test
 func bodiesCanBeLimitedToSomeAxes() throws {

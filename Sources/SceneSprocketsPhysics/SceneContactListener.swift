@@ -14,7 +14,7 @@ final class SceneContactListener: ContactListener {
     // What Jolt reported during a step. Jolt reports each touching pair of sub-shapes, so one body pair can be added
     // or removed several times.
     enum Event {
-        case added(BodyPair, point: SIMD3<Float>, normal: SIMD3<Float>, penetrationDepth: Float)
+        case added(BodyPair, point: SIMD3<Float>, normal: SIMD3<Float>, penetrationDepth: Float, impulse: Float)
         case removed(BodyPair)
     }
 
@@ -65,13 +65,16 @@ final class SceneContactListener: ContactListener {
         return collides ? .acceptAllContactsForThisBodyPair : .rejectAllContactsForThisBodyPair
     }
 
-    func contactAdded(_ contact: Contact, settings _: inout ContactSettings) {
+    func contactAdded(_ contact: Contact, settings: inout ContactSettings) {
         let points = contact.pointsOn1
         let point = points.isEmpty ? .zero : points.reduce(.zero, +) / Float(points.count)
         let pair = BodyPair(contact.body1, contact.body2)
         // Jolt's normal points from body1 to body2; keep it pointing from the pair's first body to its second.
         let normal = pair.first == contact.body1 ? contact.normal : -contact.normal
-        let event = Event.added(pair, point: point, normal: normal, penetrationDepth: contact.penetrationDepth)
+        // The impulse the solver will apply along the normal, summed over the contact points (#430). Only valid inside
+        // this callback. Sensors do not push.
+        let impulse = settings.isSensor ? 0 : contact.estimateResponse(friction: settings.combinedFriction, restitution: settings.combinedRestitution).impulses.reduce(0) { $0 + $1.contact }
+        let event = Event.added(pair, point: point, normal: normal, penetrationDepth: contact.penetrationDepth, impulse: impulse)
         events.withLock { $0.append(event) }
     }
 
