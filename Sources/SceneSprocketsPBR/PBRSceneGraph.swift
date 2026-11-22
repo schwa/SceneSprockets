@@ -606,6 +606,7 @@ extension PBRMaterialRenderer: BackgroundRenderer {
             toneMapping: context.environment.toneMapping
         )
         lighting.environmentRotation = context.environment.rotation
+        lighting.ambientLight = context.ambientLight
         // Darkens only image-based light (#408). The visibility already includes the setting's intensity.
         lighting.ambientOcclusion = context.ambientOcclusion.map { LightingAmbientOcclusion(texture: $0) }
         return lighting

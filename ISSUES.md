@@ -13781,13 +13781,14 @@ Split out of #95.
 ## 602: Ambient light cannot be a scene node
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:renderer, effort:m, lighting
 milestone: Rendering
 created: 2026-11-21T01:58:35Z
-updated: 2026-11-22T13:04:15Z
+updated: 2026-11-22T17:15:53Z
+closed: 2026-11-22T17:15:53Z
 +++
 
 Light.Kind has directional, point and spot only. Ambient light is a renderer setting (BlinnPhongMaterialRenderer.ambientLightColor) rather than a light node like SCNLight's .ambient type, so it cannot be animated, archived with the scene, or masked by category like other lights. PBR and ShaderMaterial have no constant ambient term.
@@ -13795,6 +13796,7 @@ Light.Kind has directional, point and spot only. Ambient light is a renderer set
 Split out of #86.
 
 - `2026-11-22T13:04:15Z`: Related: #532 (ambient/irradiance probes).
+- `2026-11-22T17:15:53Z`: Light.Kind.ambient; RenderContext.ambientLight sums a batch's ambient lights (so light category masks apply) and lightingLights leaves them out; Blinn-Phong adds it to ambientLightColor, PBR adds a diffuse ambient term (PBRLighting.ambientLight, occluded like IBL), ShaderMaterialLighting.ambientLight (used by lit). No shadows. Demo/Composer handle the case.
 
 ---
 

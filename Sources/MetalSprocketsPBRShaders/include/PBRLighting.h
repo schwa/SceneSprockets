@@ -693,6 +693,8 @@ namespace PBR {
         // transmittedRadiance is already absolute radiance (scene or environment), so it is not scaled again.
         const float3 ambientDiffuse = mix(diffuseIrradiance * diffuseWeight * frame.environmentIntensity, transmittedRadiance * (1.0 - specularWeight), transmission);
         float3 ambient = ambientDiffuse + (prefiltered * specularWeight + irradiance * multiScatterWeight) * frame.environmentIntensity;
+        // Constant ambient light lights the diffuse lobe evenly, and occlusion darkens it like image-based light.
+        ambient += diffuseColor * diffuseWeight * frame.ambientLight * (1.0 - transmission);
         // The irradiance map holds irradiance / pi; three.js's sheen term expects irradiance.
         float3 ambientSheen = hasSheen ? irradiance * kPi * sheenColor * environmentSheenBRDF(NdotV, sheenRoughness) * frame.environmentIntensity : float3(0.0);
         float3 ambientClearcoat = float3(0.0);

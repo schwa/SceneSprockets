@@ -24,7 +24,8 @@ public struct BlinnPhongShading {
         let cameraPosition = context.cameraMatrix.columns.3.xyz
         let lights = context.lightingLights(cameraPosition: cameraPosition)
         var frame = BlinnPhongFrame()
-        frame.ambientLightColor = ambientLightColor
+        // The renderer's own ambient color plus the scene's ambient light nodes (#602).
+        frame.ambientLightColor = ambientLightColor + context.ambientLight
         frame.lightCount = Int32(lights.count)
         frame.materialChannel = context.materialChannel?.rawValue ?? 0
         frame.exposure = context.environment.exposure

@@ -203,7 +203,8 @@ struct ShaderMaterialDrawsElement: Element {
             receivesShadow: context.shadow != nil && receivesShadow ? 1 : 0,
             exposure: context.environment.exposure,
             toneMapping: context.environment.toneMapping.shaderValue,
-            linearOutput: context.outputIsLinear ? 1 : 0
+            linearOutput: context.outputIsLinear ? 1 : 0,
+            ambientLight: context.ambientLight
         )
     }
 

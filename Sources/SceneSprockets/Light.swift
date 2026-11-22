@@ -11,6 +11,9 @@ public struct Light: Sendable, Equatable, Codable {
         case point
         /// A cone of light along the node's -Z axis.
         case spot
+        /// Even light from every direction, like SCNLight's `.ambient`: it lights every surface in its categories by
+        /// `color * intensity`, without shading or shadows. The node's position and direction do not matter (#602).
+        case ambient
     }
 
     /// The former name of ``Kind``.

@@ -24,7 +24,8 @@ package extension LightingLight {
         type = switch light.type {
         case .directional: .directional
         case .spot: .spot
-        case .point: .point
+        // Ambient lights are summed into RenderContext.ambientLight and never reach shaders as lights.
+        case .point, .ambient: .point
         }
         shadowSliceStart = Int32(shadowSlices.lowerBound)
         shadowSliceCount = Int32(shadowSlices.count)
@@ -32,11 +33,25 @@ package extension LightingLight {
 }
 
 package extension RenderContext {
-    // The context's lights with their shadow slices, positions relative to `cameraPosition`.
+    // The context's direct lights with their shadow slices, positions relative to `cameraPosition`. Ambient lights are
+    // left out; they are in `ambientLight`.
     func lightingLights(cameraPosition: SIMD3<Float>) -> [LightingLight] {
-        lights.enumerated().map { index, entry in
+        lights.enumerated().compactMap { index, entry in
+            guard entry.light.type != .ambient else {
+                return nil
+            }
             let slices = shadow != nil && index < lightShadowSlices.count ? lightShadowSlices[index] : 0..<0
             return LightingLight(entry.light, worldTransform: entry.worldTransform.cameraRelative(to: cameraPosition), shadowSlices: slices)
+        }
+    }
+}
+
+public extension RenderContext {
+    /// The sum of the context's ambient lights' `color * intensity`, in linear RGB. A batch's context holds only the
+    /// lights whose categories match its entries, so category masks apply (#602).
+    var ambientLight: SIMD3<Float> {
+        lights.reduce(.zero) { sum, entry in
+            entry.light.type == .ambient ? sum + entry.light.tintedColor * entry.light.intensity : sum
         }
     }
 }

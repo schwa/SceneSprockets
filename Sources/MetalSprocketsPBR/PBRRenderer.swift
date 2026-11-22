@@ -432,6 +432,7 @@ public struct PBRFrameBindings {
         frame.debugView = debugView.shaderValue
         frame.transmissionSceneMipCount = 1
         frame.ambientOcclusionStrength = ambientOcclusion?.strength ?? 0
+        frame.ambientLight = lighting.ambientLight
         self.frame = frame
         lights = lighting.lights.isEmpty ? [LightingLight()] : lighting.lights
         view = PBRViewUniforms(viewProjectionMatrices: viewPair(viewProjections), modelMatrix: matrix_identity_float4x4, modelNormalMatrix: matrix_identity_float4x4)

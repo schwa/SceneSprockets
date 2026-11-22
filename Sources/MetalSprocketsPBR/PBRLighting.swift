@@ -63,6 +63,8 @@ public struct PBRLighting: Sendable {
     public var shadows: PBRShadows?
     /// Nil: no screen-space occlusion.
     public var ambientOcclusion: LightingAmbientOcclusion?
+    /// Constant ambient light in linear RGB, added to the environment's diffuse light.
+    public var ambientLight: SIMD3<Float> = .zero
 
     public init(lights: [LightingLight] = [], environment: LightingEnvironment = .studio, environmentIntensity: Float = 1, exposure: Float = 1, toneMapping: LightingToneMapping = .pbrNeutral) {
         self.lights = lights

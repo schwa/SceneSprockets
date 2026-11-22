@@ -45,6 +45,8 @@ struct ShaderMaterialLighting {
     LightingShaderToneMapping toneMapping;
     // 1 when the output must stay linear (an intermediate target); skip exposure and tone mapping then.
     int linearOutput;
+    // The scene's ambient light nodes summed, linear RGB (#602). Add `color * ambientLight` for an even ambient term.
+    simd_float3 ambientLight;
 };
 typedef struct ShaderMaterialLighting ShaderMaterialLighting;
 

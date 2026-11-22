@@ -476,6 +476,9 @@ public final class Shadows {
             let far = max(simd_distance(position, center) + radius, 0.1)
             let near = max(far * 0.001, 0.01)
             switch light.type {
+            case .ambient:
+                // No direction, no shadows.
+                continue
             case .directional:
                 let eye = center - forward * radius * 2
                 let projection = OrthographicProjection(halfHeight: radius, depthMode: .reversed(zClip: radius * 0.5 ... radius * 3.5))

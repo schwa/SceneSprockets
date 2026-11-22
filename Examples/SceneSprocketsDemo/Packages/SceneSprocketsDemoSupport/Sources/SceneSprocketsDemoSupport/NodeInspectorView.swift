@@ -82,6 +82,7 @@ private struct LightSectionView: View {
         case .directional: "Directional"
         case .point: "Point"
         case .spot: "Spot"
+        case .ambient: "Ambient"
         @unknown default: "Unknown"
         }
     }

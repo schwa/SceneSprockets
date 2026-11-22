@@ -77,7 +77,7 @@ namespace ShaderMaterialSamples {
         sampler shadowSampler [[sampler(0)]]
     ) {
         float3 normal = normalize(in.worldNormal);
-        float3 diffuse = 0;
+        float3 diffuse = color.rgb * lighting.ambientLight;
         for (int index = 0; index < lighting.lightCount; index++) {
             const Lighting::LightSample incoming = Lighting::sample(lights[index], in.cameraRelativePosition);
             float lambertian = max(dot(incoming.toLight, normal), 0.0);

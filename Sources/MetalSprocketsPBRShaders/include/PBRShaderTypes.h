@@ -235,6 +235,8 @@ struct PBRFrameUniforms {
     simd_float3x3 environmentRotation;
     // Scales the screen-space occlusion texture's effect on indirect light. Zero disables it.
     float ambientOcclusionStrength;
+    // Constant ambient light (scene ambient light nodes), linear RGB; lights the diffuse color like irradiance.
+    simd_float3 ambientLight;
 };
 typedef struct PBRFrameUniforms PBRFrameUniforms;
 

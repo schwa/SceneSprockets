@@ -45,6 +45,11 @@ enum DebugShapes {
             lines.append([[head * 0.5, 0, -length + head], [0, 0, -length], [-head * 0.5, 0, -length + head]])
             return lines
 
+        case .ambient:
+            // No position or direction: a small star of lines marks the node.
+            let size = length * 0.15
+            return [[[-size, 0, 0], [size, 0, 0]], [[0, -size, 0], [0, size, 0]], [[0, 0, -size], [0, 0, size]]]
+
         case .point:
             let radius = length * 0.25
             var lines = [circle(radius: radius, z: 0), circle(radius: radius, z: 0).map { [$0.x, $0.z, $0.y] }, circle(radius: radius, z: 0).map { [$0.z, $0.y, $0.x] }]
