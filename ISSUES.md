@@ -14088,15 +14088,18 @@ Clustered light assignment (#519) is only shown by the standalone Many Lights de
 ## 612: Keynote has no slide for paths and splines
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:demo, effort:s
 created: 2026-11-22T19:47:48Z
-updated: 2026-11-22T19:59:11Z
+updated: 2026-11-22T21:06:12Z
+closed: 2026-11-22T21:06:12Z
 +++
 
 Spline nodes and the follow-path constraint (#407, #607) are not shown in the keynote.
+
+- `2026-11-22T21:06:12Z`: Added a Paths keynote slide after Constraints: a closed spline on a turning, tilted Track node (shown with dots), four cars kept on it by followPath constraints with orientsToPath, and a ball running Action.follow along an arc. Car Speed and Track Spin controls. Test: pathsSlideCarsFollowTheTrack. keynote-particles golden re-recorded (the slide moved along X).
 
 ---
 

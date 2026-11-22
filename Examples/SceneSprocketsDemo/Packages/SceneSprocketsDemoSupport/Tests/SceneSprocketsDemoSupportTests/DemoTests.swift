@@ -85,6 +85,30 @@ func keynoteShowing(_ title: String) throws -> KeynoteDemo {
     return keynote
 }
 
+// #612: the Paths slide's cars stay on the turning track's path and move along it.
+@Test
+@MainActor
+func pathsSlideCarsFollowTheTrack() throws {
+    let keynote = try keynoteShowing("Paths")
+    let nodes = keynote.sceneGraph.nodesWithWorldTransforms().map(\.node)
+    let track = try #require(nodes.first { $0.label == "Track" })
+    let path = try #require(track.path)
+    let car = try #require(nodes.first { $0.label == "Car" })
+    func onPath() -> Bool {
+        let local = (track.worldTransform.inverse * SIMD4(car.worldTransform.columns.3.xyz, 1)).xyz
+        return (0 ..< 400).contains { simd_distance(path.position(at: Float($0) / 400), local) < 0.05 }
+    }
+    var positions: [SIMD3<Float>] = []
+    for frame in 0 ..< 30 {
+        keynote.update(time: Float(frame) / 60, deltaTime: 1.0 / 60)
+        keynote.sceneGraph.advanceActions(by: 1.0 / 60)
+        keynote.sceneGraph.applyConstraints(pointOfView: matrix_identity_float4x4)
+        #expect(onPath(), "car left the track at frame \(frame)")
+        positions.append(car.worldTransform.columns.3.xyz)
+    }
+    #expect(simd_distance(positions[0], positions[29]) > 0.2, "the car did not move")
+}
+
 // #611: the Many Lights slide shows enough lights to be clustered, and every one lights the whole slide, so its batches
 // keep the clusters (batches lit by only some of the frame's lights do not use them).
 @Test

@@ -32,7 +32,7 @@ public final class KeynoteDemo: DemoScene {
     public static let titles = [
         "SceneSprockets", "SceneView", "Scene Graph", "Shapes", "Materials", "Lights", "Many Lights",
         "Shadows", "Fog", "Opacity & Fades", "Blend Modes", "Glass", "PBR Extensions", "Custom Shaders", "Video Textures", "glTF & Model I/O",
-        "Actions", "Implicit Animation", "Constraints", "Animation Blending", "Deformation",
+        "Actions", "Implicit Animation", "Constraints", "Paths", "Animation Blending", "Deformation",
         "Particles", "Mesh Emitters",
         "Physics", "More Physics", "Post-Processing", "Level of Detail", "Performance", "SwiftECS World",
         "Hit Testing", "Gizmos", "Debug Views",
@@ -142,6 +142,9 @@ public final class KeynoteDemo: DemoScene {
     private var hopCubes: [SceneGraph.Node] = []
     private var fadeSpheres: [SceneGraph.Node] = []
     private var lookAtCones: [(node: SceneGraph.Node, constraint: SceneGraph.Constraint)] = []
+    // The Paths slide (#612).
+    private var trackNode: SceneGraph.Node?
+    private var cars: [(node: SceneGraph.Node, fraction: Float)] = []
     private var slideEmitters: [String: (node: SceneGraph.Node, system: SceneParticleSystem)] = [:]
     private var crateCountLabel: SceneGraph.Node?
     private var crateGrid: SceneGraph.Node?
@@ -332,6 +335,12 @@ public final class KeynoteDemo: DemoScene {
         • Constraints run after actions: look at, distance, follow and more.
         • Each cone points its tip at the moving ball.
         """,
+        "Paths": """
+        • A node's path is a smooth curve (Catmull-Rom) through points, in the node's own space.
+        • The followPath constraint keeps each car at a fraction along it, facing the way it goes.
+        • The whole track turns and tilts; the path, and the cars on it, move with its node.
+        • The ball runs an Action.follow along a curve given in code.
+        """,
         "Animation Blending": """
         • Animation clips mix with weights, for example walk into run.
         • The controller blends a bounce and a sway; the mixer applies the result.
@@ -479,6 +488,8 @@ public final class KeynoteDemo: DemoScene {
             [.toggle("Auto-shuffle", default: true), .slider("Shuffle Duration", 0.1...3, default: 0.8)]
         case "Constraints":
             [.toggle("Look At", default: true), .slider("Ball Speed", 0...3, default: 1)]
+        case "Paths":
+            [.slider("Car Speed", 0...3, default: 1), .slider("Track Spin", 0...3, default: 1)]
         case "Animation Blending":
             [.toggle("Auto Blend", default: true), .slider("Blend", 0...1, default: 0.5), .slider("Clip Speed", 0...3, default: 1)]
         case "Deformation":
@@ -660,6 +671,8 @@ public final class KeynoteDemo: DemoScene {
             updateMorePhysics(deltaTime: deltaTime)
         case "Many Lights":
             updateSwarm(time: time)
+        case "Paths":
+            updateCars(deltaTime: deltaTime)
         default:
             break
         }
@@ -1087,6 +1100,14 @@ public final class KeynoteDemo: DemoScene {
             addCode("""
             // Point each cone's tip (+Y) at the ball.
             cone.constraints = [.lookAt(target: ball, localFront: [0, 1, 0])]
+            """, to: slide)
+        case "Paths":
+            addTitle(title, y: 4, to: slide)
+            pathsSlide(slide)
+            addCode("""
+            track.path = SceneGraph.Spline(points: points, isClosed: true)
+            car.constraints = [.followPath(track, fraction: 0.25, orientsToPath: true)]
+            ball.run(.follow(arc, duration: 3, orientsToPath: false))
             """, to: slide)
         case "Opacity & Fades":
             addTitle(title, y: 4, to: slide)
@@ -1704,6 +1725,53 @@ public final class KeynoteDemo: DemoScene {
             let constraint = SceneGraph.Constraint.lookAt(target: ball, localFront: [0, 1, 0])
             cone.constraints = [constraint]
             lookAtCones.append((cone, constraint))
+        }
+    }
+
+    // A closed track with cars kept on it by followPath constraints, and a ball on an Action.follow arc (#612).
+    private func pathsSlide(_ slide: SceneGraph.Node) {
+        addLight(to: slide, at: [0, 6, 6], intensity: 70)
+        // Tilted toward the camera so the loop reads as a loop; the inner node turns it about its own up axis.
+        let tilt = slide.addChild(SceneGraph.Node(label: "Track Tilt", transform: .init(translation: [0, 1.4, 0], rotation: simd_quatf(angle: 0.5, axis: [1, 0, 0]))))
+        let track = tilt.addChild(SceneGraph.Node(label: "Track"))
+        let points: [SIMD3<Float>] = [[-4, 0, 0], [-2.5, 0.7, -1.6], [0, 0, -0.6], [2.5, -0.7, -1.6], [4, 0, 0], [2.5, 0.7, 1.6], [0, 0, 0.6], [-2.5, -0.7, 1.6]]
+        let spline = SceneGraph.Spline(points: points, isClosed: true)
+        track.path = spline
+        track.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 24)))
+        trackNode = track
+        // The path itself draws nothing; dots show it.
+        let dot = BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color([0.4, 0.75, 1]))
+        for index in 0 ..< 90 {
+            track.addChild(SceneGraph.Node(label: "Track Dot", shape: .sphere(radius: 0.04), material: dot, transform: .init(translation: spline.position(at: Float(index) / 90))))
+        }
+        let colors: [SIMD3<Float>] = [[0.95, 0.35, 0.3], [0.95, 0.8, 0.25], [0.35, 0.85, 0.45], [0.75, 0.45, 0.95]]
+        cars = colors.enumerated().map { index, color in
+            let car = slide.addChild(SceneGraph.Node(label: "Car"))
+            let paint = BlinnPhongSceneMaterial.plastic(color, shininess: 48)
+            car.addChild(SceneGraph.Node(shape: .box(width: 0.32, height: 0.22, length: 0.6), material: paint))
+            // The nose points along -Z, the direction of travel.
+            car.addChild(SceneGraph.Node(shape: .cone(bottomRadius: 0.14, height: 0.3), material: paint, transform: .init(translation: [0, 0, -0.42], rotation: simd_quatf(angle: -.pi / 2, axis: [1, 0, 0]))))
+            let fraction = Float(index) / Float(colors.count)
+            car.constraints = [.followPath(track, fraction: fraction, orientsToPath: true)]
+            return (car, fraction)
+        }
+        // An open arc above the track, given in the slide's space.
+        let arc = SceneGraph.Spline(points: [[-3, 3, -1], [-1.5, 3.6, -1], [0, 3.2, -1], [1.5, 3.6, -1], [3, 3, -1]])
+        let ball = slide.addChild(SceneGraph.Node(label: "Arc Ball", shape: .sphere(radius: 0.18), material: BlinnPhongSceneMaterial.plastic([1, 0.6, 0.2], shininess: 64), transform: .init(translation: [-3, 3, -1])))
+        ball.run(.repeatForever(.sequence([.follow(arc, duration: 3), .follow(arc.reversed, duration: 3)])))
+    }
+
+    // Moves each car along the track by changing its constraint's fraction.
+    private func updateCars(deltaTime: Float) {
+        guard let trackNode else {
+            return
+        }
+        trackNode.actionSpeed = self[value: "Track Spin"]
+        // About 6 seconds per lap at speed 1.
+        let step = deltaTime * self[value: "Car Speed"] / 6
+        for index in cars.indices {
+            cars[index].fraction = (cars[index].fraction + step).truncatingRemainder(dividingBy: 1)
+            cars[index].node.constraints = [.followPath(trackNode, fraction: cars[index].fraction, orientsToPath: true)]
         }
     }
 
