@@ -14142,15 +14142,18 @@ Explicit instancing (Node.Content.instancedMesh, #135) is not shown in the keyno
 ## 615: Keynote Materials slide does not show parallax occlusion mapping
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:demo, effort:s
 created: 2026-11-22T19:47:48Z
-updated: 2026-11-22T19:59:11Z
+updated: 2026-11-22T21:19:47Z
+closed: 2026-11-22T21:19:47Z
 +++
 
 Parallax occlusion mapping (#537) is not shown in the keynote.
+
+- `2026-11-22T21:19:47Z`: Materials slide: a swinging brick tile on the right with a generated height map and parallaxDepth 0.06 (BlinnPhongSceneMaterial.heightMap), labelled Parallax; the grid moved left to make room. Notes and code panel mention it. Test: materialsSlideHasParallaxTile. keynote-materials golden re-recorded.
 
 ---
 

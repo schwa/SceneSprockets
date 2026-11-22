@@ -277,6 +277,8 @@ public final class KeynoteDemo: DemoScene {
         • Middle row: PBR metals, from rough to polished.
         • Bottom row: PBR plastics; the last two have a clear coat, like car paint.
         • Both material types render in the same scene.
+        • Right: a flat tile with a brick height map. Parallax occlusion mapping makes the bricks look deep,
+          with no extra geometry and no tangents.
         """,
         "Lights": """
         • Point, spot and directional lights are nodes like everything else.
@@ -1097,6 +1099,7 @@ public final class KeynoteDemo: DemoScene {
                                     specular: .color(0.5), shininess: 44)
             PBRSceneMaterial(baseColor: [0.95, 0.75, 0.3],
                                  metallic: 1, roughness: 0.3)
+            bricks.heightMap = .texture(heights) // parallax occlusion mapping
             """, to: slide)
         case "Lights":
             addTitle(title, y: 4, to: slide)
@@ -1684,7 +1687,8 @@ public final class KeynoteDemo: DemoScene {
         let metals: [SIMD3<Float>] = [[1, 0.77, 0.34], [0.95, 0.64, 0.54], [0.97, 0.96, 0.91], [0.56, 0.57, 0.58], [0.62, 0.6, 0.66], [1, 0.86, 0.57]]
         let plastics: [SIMD3<Float>] = [[0.8, 0.1, 0.1], [0.1, 0.1, 0.12], [0.95, 0.95, 0.95], [0.1, 0.5, 0.8], [0.2, 0.7, 0.3], [0.9, 0.5, 0.1]]
         for column in 0..<6 {
-            let x = Float(column) * 1.6 - 4
+            // Left of center, leaving room for the parallax tile on the right.
+            let x = Float(column) * 1.5 - 5
             let smoothness = Float(column) / 5
             var materials: [any SceneMaterial] = [BlinnPhongSceneMaterial.plastic(paints[column], shininess: 4 + smoothness * 120)]
             materials.append(PBRSceneMaterial(baseColor: metals[column], metallic: 1, roughness: 0.75 - smoothness * 0.7))
@@ -1700,6 +1704,70 @@ public final class KeynoteDemo: DemoScene {
                 node.run(.repeatForever(.rotate(by: .pi * 2, around: simd_normalize([0.3, 1, 0.2]), duration: 8 + Float(column + row))))
             }
         }
+        addParallaxTile(to: slide)
+    }
+
+    // A thin brick tile with parallax occlusion mapping (#537, #615), swinging so the bricks' depth shows.
+    private func addParallaxTile(to slide: SceneGraph.Node) {
+        guard let textures = Self.brickTextures(device: demoDevice) else {
+            return
+        }
+        var material = BlinnPhongSceneMaterial(ambient: .color(0.05), diffuse: .texture(textures.color), specular: .color(0.15), shininess: 24)
+        material.heightMap = .texture(textures.height)
+        material.parallaxDepth = 0.06
+        let swing = slide.addChild(SceneGraph.Node(label: "Parallax Swing", transform: .init(translation: [4.6, 1.6, 0])))
+        swing.run(.repeatForever(.sequence([
+            .rotate(by: 0.9, around: [0, 1, 0], duration: 3).timingMode(.easeInEaseOut),
+            .rotate(by: -0.9, around: [0, 1, 0], duration: 3).timingMode(.easeInEaseOut)
+        ])))
+        swing.addChild(SceneGraph.Node(label: "Parallax Tile", shape: .box(width: 2, height: 2, length: 0.1), material: material, transform: .init(rotation: simd_quatf(angle: -0.45, axis: [0, 1, 0]))))
+        addTitle("Parallax", size: 0.25, y: 0.1, color: [0.6, 0.65, 0.75], to: slide).transform.translation.x = 4.6
+    }
+
+    // Running-bond bricks: color with mortar lines, and heights 1 on the brick faces, bevelled down to 0 in the mortar.
+    private static func brickTextures(device: MTLDevice) -> (color: MTLTexture, height: MTLTexture)? {
+        let size = 256
+        let rows = 8
+        let columns = 4
+        let brickHeight = size / rows
+        let brickWidth = size / columns
+        var color = [UInt8](repeating: 0, count: size * size * 4)
+        var height = [UInt8](repeating: 0, count: size * size)
+        for y in 0 ..< size {
+            let row = y / brickHeight
+            let offset = row.isMultiple(of: 2) ? 0 : brickWidth / 2
+            for x in 0 ..< size {
+                let localX = (x + offset) % brickWidth
+                let localY = y % brickHeight
+                // Distance in pixels to the nearest mortar line.
+                let edge = min(localX, brickWidth - 1 - localX, localY, brickHeight - 1 - localY)
+                let level = min(max(Float(edge - 2) / 4, 0), 1)
+                height[y * size + x] = UInt8(level * 255)
+                // A little variation per brick.
+                let brick = (row * 7 + (x + offset) / brickWidth * 13) % 5
+                let brickColor: SIMD3<Float> = [0.55 + Float(brick) * 0.04, 0.22 + Float(brick) * 0.02, 0.15]
+                let mortar: SIMD3<Float> = [0.6, 0.58, 0.55]
+                let rgb = level > 0 ? brickColor : mortar
+                let index = (y * size + x) * 4
+                color[index] = UInt8(rgb.x * 255)
+                color[index + 1] = UInt8(rgb.y * 255)
+                color[index + 2] = UInt8(rgb.z * 255)
+                color[index + 3] = 255
+            }
+        }
+        func texture(_ format: MTLPixelFormat, _ bytes: [UInt8], bytesPerPixel: Int, label: String) -> MTLTexture? {
+            let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: format, width: size, height: size, mipmapped: false)
+            guard let texture = device.makeTexture(descriptor: descriptor) else {
+                return nil
+            }
+            texture.label = label
+            texture.replace(region: MTLRegionMake2D(0, 0, size, size), mipmapLevel: 0, withBytes: bytes, bytesPerRow: size * bytesPerPixel)
+            return texture
+        }
+        guard let colorTexture = texture(.rgba8Unorm_srgb, color, bytesPerPixel: 4, label: "Bricks"), let heightTexture = texture(.r8Unorm, height, bytesPerPixel: 1, label: "Brick Heights") else {
+            return nil
+        }
+        return (colorTexture, heightTexture)
     }
 
     private func lightsSlide(_ slide: SceneGraph.Node) {

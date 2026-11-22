@@ -85,6 +85,16 @@ func keynoteShowing(_ title: String) throws -> KeynoteDemo {
     return keynote
 }
 
+// #615: the Materials slide has a parallax-mapped tile.
+@Test
+@MainActor
+func materialsSlideHasParallaxTile() throws {
+    let keynote = try keynoteShowing("Materials")
+    let tile = try #require(keynote.sceneGraph.meshEntries().first { $0.node.label == "Parallax Tile" })
+    let material = try #require(tile.material as? BlinnPhongSceneMaterial)
+    #expect(material.heightMap != nil && material.parallaxDepth > 0)
+}
+
 // #614: Explicit Instancing swaps the crate nodes for instancedMesh nodes that draw the same crates.
 @Test
 @MainActor
