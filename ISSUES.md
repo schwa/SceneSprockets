@@ -13945,6 +13945,8 @@ Related gaps in the first cut:
 - Physics bodies (convex hull, mesh shapes) and subdivision ignore instanced meshes.
 - No per-instance colors.
 
+- `2026-11-22T20:46:29Z`: Skipped in the autonomous run (2026-11-22) on the user's call. The fix changes MeshEntry for every renderer (BlinnPhong, PBR, Toon, ShaderMaterial, shadows, culling, hit testing, BVH): an instanced mesh would become one entry per submesh carrying all instance transforms, so meshEntries() would no longer return one entry per copy.
+
 ---
 
 ## 605: Hit testing never hits line or point primitives
