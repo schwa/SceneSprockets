@@ -122,6 +122,11 @@ public final class SceneGraphPhysicsWorld {
     /// The fluids that dynamic bodies float in.
     public var fluids: [Fluid] = []
 
+    /// Called before every sub-step of ``step(deltaTime:collisionSteps:)`` with the sub-step's duration, for forces
+    /// that must act all the time, such as wind, magnets or custom fields: Jolt clears forces after each sub-step. Add
+    /// them with ``applyForce(_:to:at:)``. While it is set, each sub-step runs as its own Jolt update.
+    public var subStepHandler: ((_ physics: SceneGraphPhysicsWorld, _ deltaTime: Float) -> Void)?
+
     /// Called after each step for every pair of nodes whose bodies started or stopped touching during it, like
     /// SceneKit's `SCNPhysicsContactDelegate`. It runs on the thread that called ``step(deltaTime:collisionSteps:)``.
     /// Triggers report contacts too. A body that is removed or rebuilt reports no `.ended`.
@@ -218,6 +223,14 @@ public final class SceneGraphPhysicsWorld {
         world.activateBodies(inBoxFrom: bounds.min, to: bounds.max)
     }
 
+    /// Adds a force, in newtons, to the node's body for the next sub-step, at its center of mass or at a world-space
+    /// point. Call it from ``subStepHandler`` to keep it acting; Jolt clears forces after every sub-step.
+    public func applyForce(_ force: SIMD3<Float>, to node: SceneGraph.Node, at point: SIMD3<Float>? = nil) {
+        if let body = body(of: node), world.isAdded(body) {
+            world.addForce(to: body, force: force, at: point)
+        }
+    }
+
     /// Adds an impulse to the node's body at its center of mass.
     ///
     /// The method calls ``sync()`` first, like ``setVelocity(_:of:)``.
@@ -242,8 +255,20 @@ public final class SceneGraphPhysicsWorld {
             let pose = Transform3D(nearestTo: entry.node.worldTransform)
             world.moveKinematic(entry.body, to: pose.translation, rotation: pose.rotation.quaternion, deltaTime: deltaTime)
         }
-        applyFluids(deltaTime: deltaTime)
-        world.update(deltaTime: deltaTime, collisionSteps: collisionSteps)
+        if let subStepHandler {
+            // One update per sub-step, so forces added before each one act on it; Jolt clears forces after every
+            // update (#420). Fluids join in, so buoyancy also acts per sub-step.
+            let steps = max(collisionSteps, 1)
+            let subStep = deltaTime / Float(steps)
+            for _ in 0..<steps {
+                applyFluids(deltaTime: subStep)
+                subStepHandler(self, subStep)
+                world.update(deltaTime: subStep, collisionSteps: 1)
+            }
+        } else {
+            applyFluids(deltaTime: deltaTime)
+            world.update(deltaTime: deltaTime, collisionSteps: collisionSteps)
+        }
         // Sleeping bodies do not move; writing their nodes would only bump the transform revision (#419).
         for entry in entries.values where entry.description.type == .dynamic && world.isAdded(entry.body) && world.isActive(entry.body) {
             var pose = Transform3D(nearestTo: entry.node.worldTransform)

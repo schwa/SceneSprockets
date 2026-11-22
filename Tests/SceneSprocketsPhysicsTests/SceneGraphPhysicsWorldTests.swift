@@ -501,6 +501,29 @@ func bodyMotionOptions() throws {
     #expect(floating.worldPosition.y < 2)
 }
 
+// #420: a hook runs before every sub-step, so a force applied there acts for the whole step.
+@Test
+func subStepHandlerAppliesForcesEverySubStep() throws {
+    let root = SceneGraph.Node()
+    let box = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 5, 0])))
+    box.physicsBody = .init(type: .dynamic, shape: .box(size: [1, 1, 1]), mass: 2, linearDamping: 0)
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+    var calls = 0
+    var subStepTimes: Set<Float> = []
+    physics.subStepHandler = { physics, deltaTime in
+        calls += 1
+        subStepTimes.insert(deltaTime)
+        // Cancels gravity.
+        physics.applyForce(-physics.gravity * 2, to: box)
+    }
+    for _ in 0..<60 {
+        physics.step(deltaTime: 1 / 60, collisionSteps: 4)
+    }
+    #expect(calls == 240)
+    #expect(subStepTimes.count == 1 && abs((subStepTimes.first ?? 0) - 1 / 240) < 1e-6)
+    #expect(abs(box.worldPosition.y - 5) < 0.01, "box at \(box.worldPosition)")
+}
+
 // #428: height field, plane, tapered cylinder and empty shapes.
 @Test
 func moreBodyShapes() throws {

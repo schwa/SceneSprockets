@@ -9779,14 +9779,15 @@ Write only awake bodies, e.g. via SwiftJolt's `PhysicsWorld.activeBodies` or `is
 ## 420: No way to apply forces every physics sub-step
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:physics, effort:m
 milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-16T23:34:13Z
-updated: 2026-11-20T06:32:46Z
+updated: 2026-11-22T16:57:20Z
+closed: 2026-11-22T16:57:20Z
 +++
 
 Custom forces (wind, buoyancy, magnets, SceneKit-style physics fields) can only be applied once per step() call. With collisionSteps > 1 they are not re-applied per sub-step, and there is no hook that runs inside the simulation.
@@ -9795,6 +9796,7 @@ Custom forces (wind, buoyancy, magnets, SceneKit-style physics fields) can only 
 Expose SwiftJolt's `StepListener` (`addStepListener`) through SceneGraphPhysicsWorld.
 
 - `2026-11-17T06:02:51Z`: Related: #436 (buoyancy).
+- `2026-11-22T16:57:20Z`: SceneGraphPhysicsWorld.subStepHandler runs before every sub-step (each sub-step is its own Jolt update while it is set), with applyForce(_:to:at:) to add forces that Jolt clears after each sub-step. Fluids apply per sub-step too. SwiftJolt has no general StepListener wrapper, so this is done in SceneGraphPhysicsWorld.
 
 ---
 
