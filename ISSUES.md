@@ -14106,15 +14106,18 @@ Spline nodes and the follow-path constraint (#407, #607) are not shown in the ke
 ## 613: Keynote Fog slide does not show volumetric fog
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:demo, effort:s
 created: 2026-11-22T19:47:48Z
-updated: 2026-11-22T19:59:11Z
+updated: 2026-11-22T21:11:35Z
+closed: 2026-11-22T21:11:35Z
 +++
 
 The Fog slide shows distance fog only. Volumetric fog with light beams and shadow shafts (SceneGraph.Fog.scattering, #540) is only reachable through a toggle in the standalone Shadows demo.
+
+- `2026-11-22T21:11:35Z`: The Fog slide now adds volumetric fog (Fog.scattering) on top of the distance fog: the moon sits low behind the pillars, shadows are on for the slide, and the pillars' shadows darken the lit haze. Volumetric Fog toggle and Fog Density slider. The fill light was dimmed because every light scatters in the fog. Test: fogSlideShowsVolumetricFog. At the 320x200 test render the shafts are subtle; the haze and its shadowed regions are clear.
 
 ---
 

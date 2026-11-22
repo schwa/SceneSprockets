@@ -85,6 +85,23 @@ func keynoteShowing(_ title: String) throws -> KeynoteDemo {
     return keynote
 }
 
+// #613: the Fog slide shows volumetric fog, with shadows on for its shafts; the toggle turns it off and other slides
+// have no fog.
+@Test
+@MainActor
+func fogSlideShowsVolumetricFog() throws {
+    let keynote = try keynoteShowing("Fog")
+    keynote.update(time: 0, deltaTime: 1.0 / 60)
+    #expect(keynote.sceneGraph.fog?.scattering != nil)
+    #expect(keynote.shadows != nil)
+    keynote[flag: "Volumetric Fog"] = false
+    keynote.update(time: 0, deltaTime: 1.0 / 60)
+    #expect(keynote.sceneGraph.fog != nil && keynote.sceneGraph.fog?.scattering == nil)
+    keynote.show(slide: 0)
+    keynote.update(time: 0, deltaTime: 1.0 / 60)
+    #expect(keynote.sceneGraph.fog == nil)
+}
+
 // #612: the Paths slide's cars stay on the turning track's path and move along it.
 @Test
 @MainActor

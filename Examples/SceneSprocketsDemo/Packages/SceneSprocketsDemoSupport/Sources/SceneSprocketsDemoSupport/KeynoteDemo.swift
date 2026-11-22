@@ -49,7 +49,7 @@ public final class KeynoteDemo: DemoScene {
 
     // Per-slide state: each is used only while its slide is showing.
     private let shadowRenderer = Shadows(intensity: 0.75, softness: 2)
-    private static let shadowedTitles: Set<String> = ["Shadows", "Metaballs", "Voxels", "Toon"]
+    private static let shadowedTitles: Set<String> = ["Shadows", "Fog", "Metaballs", "Voxels", "Toon"]
     private var shuffleCubes: [SceneGraph.Node] = []
     private var sinceShuffle: Float = 0
     private var blendMixer: SceneGraph.AnimationMixer?
@@ -293,6 +293,8 @@ public final class KeynoteDemo: DemoScene {
         "Fog": """
         • Distance fog: one property on the scene graph.
         • The pillars fade into the fog between the start and end distances.
+        • Volumetric fog scatters the moonlight in the air; the pillars' shadows cut shafts through it.
+        • It marches each pixel's ray through the shadow map, so it needs shadows on.
         """,
         "Opacity & Fades": """
         • Node opacity is inherited: fade a parent and its children fade too.
@@ -466,7 +468,10 @@ public final class KeynoteDemo: DemoScene {
         case "Shadows":
             [.toggle("Cast Shadows", default: true), .slider("Sun Angle", -90...90, default: 0), .slider("Shadow Spin", 0...3, default: 1)]
         case "Fog":
-            [.toggle("Fog", default: true), .slider("Fog Start", 0...40, default: 12), .slider("Fog End", 5...80, default: 34)]
+            [
+                .toggle("Fog", default: true), .slider("Fog Start", 0...40, default: 12), .slider("Fog End", 5...80, default: 34),
+                .toggle("Volumetric Fog", default: true), .slider("Fog Density", 0...0.2, default: 0.06)
+            ]
         case "Opacity & Fades":
             [.slider("Fade Speed", 0...3, default: 1)]
         case "Blend Modes":
@@ -581,7 +586,10 @@ public final class KeynoteDemo: DemoScene {
         let distance = (1 - fogAmount) * 300
         let start = self[value: "Fog Start"]
         let end = max(self[value: "Fog End"], start + 0.1)
-        sceneGraph.fog = SceneGraph.Fog(color: [0.05, 0.06, 0.1, 1], startDistance: start + distance, endDistance: end + distance)
+        // Volumetric fog (#540, #613): the moon's light scatters in the air, with shafts where the pillars shadow it.
+        // Its density eases with the distance fog.
+        let scattering = self[flag: "Volumetric Fog"] ? SceneGraph.Fog.Scattering(density: self[value: "Fog Density"] * fogAmount, intensity: 0.5, anisotropy: 0.6, stepCount: 48, maximumDistance: 30) : nil
+        sceneGraph.fog = SceneGraph.Fog(color: [0.05, 0.06, 0.1, 1], startDistance: start + distance, endDistance: end + distance, scattering: scattering)
     }
 
     private func updateSlide(time: Float, deltaTime: Float) {
@@ -1307,7 +1315,8 @@ public final class KeynoteDemo: DemoScene {
             fogSlide(slide)
             addCode("""
             sceneGraph.fog = SceneGraph.Fog(color: [0.05, 0.06, 0.1, 1],
-                                            startDistance: 12, endDistance: 34)
+                                            startDistance: 12, endDistance: 34,
+                                            scattering: .init(density: 0.06, intensity: 0.5, anisotropy: 0.6))
             """, to: slide)
         case "Implicit Animation":
             implicitAnimationSlide(slide)
@@ -2014,7 +2023,11 @@ public final class KeynoteDemo: DemoScene {
     }
 
     private func fogSlide(_ slide: SceneGraph.Node) {
-        slide.addChild(SceneGraph.Node(label: "Moon", transform: Transform3D(position: [2, 5, 6], lookingAt: .zero), content: .light(Light(type: .directional, color: [0.8, 0.85, 1], intensity: 1.2))))
+        // Low and behind the pillars, shining toward the camera, so forward scattering shows the shafts between them.
+        slide.addChild(SceneGraph.Node(label: "Moon", transform: Transform3D(position: [-6, 6, -30], lookingAt: [0, 0, -8]), content: .light(Light(type: .directional, color: [0.8, 0.85, 1], intensity: 1.2))))
+        // A dim fill from the camera side, so the pillars' near faces are not black. Every light scatters in the
+        // volumetric fog, so it stays faint.
+        addLight(to: slide, at: [0, 4, 6], color: [0.4, 0.45, 0.6], intensity: 2, castsShadow: false)
         // Two rows of pillars running away from the camera, fading into the fog.
         for row in 0..<8 {
             for side in [-1, 1] as [Float] {
