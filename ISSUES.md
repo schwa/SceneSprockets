@@ -14035,15 +14035,18 @@ MaterialXDocument (#528) loads standard_surface and UsdPreviewSurface materials 
 ## 610: Keynote has no slide for physics joints, characters, triggers and buoyancy
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:demo, effort:s
 created: 2026-11-22T19:47:47Z
-updated: 2026-11-22T19:59:11Z
+updated: 2026-11-22T20:12:57Z
+closed: 2026-11-22T20:12:57Z
 +++
 
 The keynote's only physics slide is the dice tray. It does not show physics joints (#432), the character controller (#433), trigger bodies (#411), contact reporting with impact strength (#423, #430), buoyancy (#436), axis locks (#414) or physics debug drawing (#431).
+
+- `2026-11-22T20:12:57Z`: Added the More Physics keynote slide: joints, buoyancy, axis locks, triggers, contact impulse, character controller, physics debug drawing.
 
 ---
 

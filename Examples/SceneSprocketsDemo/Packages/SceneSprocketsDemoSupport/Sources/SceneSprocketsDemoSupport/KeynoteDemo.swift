@@ -34,7 +34,7 @@ public final class KeynoteDemo: DemoScene {
         "Shadows", "Fog", "Opacity & Fades", "Blend Modes", "Glass", "PBR Extensions", "Custom Shaders", "Video Textures", "glTF & Model I/O",
         "Actions", "Implicit Animation", "Constraints", "Animation Blending", "Deformation",
         "Particles", "Mesh Emitters",
-        "Physics", "Post-Processing", "Level of Detail", "Performance", "SwiftECS World",
+        "Physics", "More Physics", "Post-Processing", "Level of Detail", "Performance", "SwiftECS World",
         "Hit Testing", "Gizmos", "Debug Views",
         "Point Clouds", "Terrain", "Metaballs", "Voxels", "Toon",
         "Thank You"
@@ -60,6 +60,22 @@ public final class KeynoteDemo: DemoScene {
     private var physicsDice: SceneGraph.Node?
     private var sincePhysicsReset: Float = 0
     private var diceGenerator = SystemRandomNumberGenerator()
+    // The More Physics slide (#610): static parts are built once, moving bodies on each arrival.
+    private var morePhysicsBodies: SceneGraph.Node?
+    private var tankRegion: BoundingBox3D?
+    private var walker: SceneGraph.Node?
+    private var walkerController: CharacterController?
+    private var walkerRange: ClosedRange<Float> = 0...0
+    private var triggerRing: SceneGraph.Node?
+    private var impactStep: SceneGraph.Node?
+    private var bouncingBall: SceneGraph.Node?
+    private var triggerGlow: Float = 0
+    private var impactGlow: Float = 0
+    private let impactForFullGlow: Float = 100
+    private var sinceMorePhysicsReset: Float = 0
+    private var sinceBallDrop: Float = 0
+    private var physicsDebugNode: SceneGraph.Node?
+    private let debugDrawMaterial = ShaderMaterial.vertexColors()
     private static let tubeJointCount = 7
     private var pbrExtensionPieces: [(node: SceneGraph.Node, axis: SIMD3<Float>, speed: Float)] = []
     private var videoTexture: VideoTexture?
@@ -158,6 +174,9 @@ public final class KeynoteDemo: DemoScene {
         // Only the physics slide steps it. Gravity points down the tilted tray, so the dice fall as in a flat tray seen
         // at an angle.
         physics = try? SceneGraphPhysicsWorld(sceneGraph: sceneGraph, gravity: Self.trayTilt.act([0, -9.81, 0]))
+        physics?.contactHandler = { [weak self] contact in self?.morePhysicsContact(contact) }
+        physicsDebugNode = sceneGraph.root.addChild(SceneGraph.Node(label: "Physics Debug"))
+        physicsDebugNode?.opacity = 0.45
         actions = [
             DemoAction("Previous", systemImage: "chevron.left", shortcut: .leftArrow) { [weak self] in self?.go(by: -1) },
             DemoAction("Next", systemImage: "chevron.right", shortcut: .rightArrow) { [weak self] in self?.go(by: 1) }
@@ -353,6 +372,14 @@ public final class KeynoteDemo: DemoScene {
         • Rigid body physics: give a node a physics body and step the world.
         • Each die uses a convex hull collision shape. They land on real faces.
         """,
+        "More Physics": """
+        • Joints: a chain of ball joints hangs from the world and swings.
+        • Buoyancy: crates float in a fluid region. One crate is locked to move only up and down (axis locks).
+        • Triggers: the ring above the tank only detects crates passing through it, and glows.
+        • Contacts report impact strength: the step flashes brighter the harder the ball hits.
+        • A character controller walks back and forth and climbs the step.
+        • Physics Debug draws Jolt's own view of the bodies.
+        """,
         "Post-Processing": """
         • Post-processing on the whole frame: color grading, contrast, saturation, vignette and more.
         • The slide cycles through a few looks, such as noir.
@@ -470,6 +497,8 @@ public final class KeynoteDemo: DemoScene {
             [.slider("Terrain Speed", 0...5, default: 1), .slider("Height Exaggeration", 0...8, default: 3), .choice("Terrain Style", terrainStyles.map(\.name), default: 3)]
         case "Physics":
             [.toggle("Auto-roll", default: true)]
+        case "More Physics":
+            [.toggle("Physics Debug", default: false), .slider("Walk Speed", 0...4, default: 1.5)]
         case "Metaballs":
             [.slider("Metaball Count", 1...16, default: 7), .slider("Metaball Size", 0.15...0.7, default: 0.38), .slider("Smoothing", 0.05...1.5, default: 0.7), .choice("Metaball Lighting", lightingModels, default: 0)]
         case "Voxels":
@@ -510,6 +539,8 @@ public final class KeynoteDemo: DemoScene {
             [action("Reset Box", "arrow.counterclockwise") { $0.resetGizmoTarget() }]
         case "Physics":
             [action("Roll Dice", "dice") { $0.resetPhysics() }]
+        case "More Physics":
+            [action("Restart Physics", "arrow.counterclockwise") { $0.resetMorePhysics() }]
         case "Thank You":
             [action("Replay Finale", "party.popper") { $0.startFinale(after: 0) }]
         default:
@@ -614,6 +645,8 @@ public final class KeynoteDemo: DemoScene {
             }
             // As in DiceDemo: small fixed steps keep fast, small dice from passing through the walls.
             physics?.step(deltaTime: min(deltaTime, 1.0 / 30.0), collisionSteps: 2)
+        case "More Physics":
+            updateMorePhysics(deltaTime: deltaTime)
         default:
             break
         }
@@ -635,6 +668,10 @@ public final class KeynoteDemo: DemoScene {
         if currentTitle != "Video Textures" {
             videoTexture?.player.pause()
         }
+        if currentTitle != "More Physics" {
+            removeWalker()
+            physicsDebugNode?.content = .empty
+        }
         if currentTitle == "Post-Processing" {
             gradeIndex = 0
             sinceGrade = 0
@@ -649,7 +686,11 @@ public final class KeynoteDemo: DemoScene {
             startFinale(after: visibleAfter + 0.5)
         }
         if currentTitle == "Physics" {
+            physics?.gravity = Self.trayTilt.act([0, -9.81, 0])
             resetPhysics()
+        }
+        if currentTitle == "More Physics" {
+            resetMorePhysics()
         }
         // The fox walks in unharmed each time its slide comes up, then catches fire.
         if currentTitle == "Mesh Emitters" {
@@ -1276,6 +1317,15 @@ public final class KeynoteDemo: DemoScene {
             let physics = try SceneGraphPhysicsWorld(sceneGraph: sceneGraph)
             physics.setAngularVelocity(spin, of: die)
             physics.step(deltaTime: deltaTime)
+            """, to: slide)
+        case "More Physics":
+            morePhysicsSlide(slide)
+            addCode("""
+            physics.addJoint(.ball(anchor: anchor), between: linkA, and: linkB)
+            physics.fluids = [.init(region: tank, buoyancy: 1.5)]
+            ring.physicsBody = .init(type: .static, shape: .cylinder(height: 0.2, radius: 1), isTrigger: true)
+            physics.contactHandler = { contact in flash(contact.impulse) }
+            physics.addCharacter(for: walker)?.desiredVelocity = [1.5, 0, 0]
             """, to: slide)
         case "SceneView":
             sceneViewSlide(slide)
@@ -2054,6 +2104,172 @@ public final class KeynoteDemo: DemoScene {
             // Velocities are in world space; the throw is in the tilted tray's.
             physics.setVelocity(Self.trayTilt.act(velocity), of: die)
             physics.setAngularVelocity(SIMD3<Float>.random(in: -15...15, using: &diceGenerator), of: die)
+        }
+    }
+
+    // A chain on ball joints, crates floating in a tank under a trigger ring, and a character walking over a step that
+    // flashes when a ball hits it (#610). Left to right: joints, buoyancy and triggers, contacts and the character.
+    private func morePhysicsSlide(_ slide: SceneGraph.Node) {
+        addLight(to: slide, at: [0, 6, 6], intensity: 80)
+        addLight(to: slide, at: [-6, 3, 4], color: [0.6, 0.7, 1], intensity: 25)
+        let origin = slide.transform.translation
+        let stone = BlinnPhongSceneMaterial.plastic([0.35, 0.36, 0.4], shininess: 8)
+        func addStatic(_ label: String, size: SIMD3<Float>, at position: SIMD3<Float>, material: any SceneMaterial = stone) -> SceneGraph.Node {
+            let node = slide.addChild(SceneGraph.Node(label: label, shape: .box(width: size.x, height: size.y, length: size.z), material: material, transform: .init(translation: position)))
+            node.physicsBody = .init(type: .static, shape: .box(size: size))
+            return node
+        }
+        _ = addStatic("Floor", size: [13, 0.2, 3], at: [0, -0.1, 0])
+
+        // The tank: four glass-like walls around a fluid region.
+        let tankCenter: SIMD3<Float> = [-1, 0, 0]
+        let tankSize: SIMD3<Float> = [2.4, 1.3, 1.6]
+        let wall = BlinnPhongSceneMaterial.plastic([0.6, 0.7, 0.8], shininess: 64)
+        for side: Float in [-1, 1] {
+            addStatic("Tank Wall", size: [0.1, tankSize.y, tankSize.z], at: tankCenter + [side * tankSize.x / 2, tankSize.y / 2, 0], material: wall).opacity = 0.25
+            addStatic("Tank Wall", size: [tankSize.x, tankSize.y, 0.1], at: tankCenter + [0, tankSize.y / 2, side * tankSize.z / 2], material: wall).opacity = 0.25
+        }
+        let waterHeight: Float = 1
+        let water = slide.addChild(SceneGraph.Node(label: "Water", shape: .box(width: tankSize.x - 0.1, height: waterHeight, length: tankSize.z - 0.1), material: BlinnPhongSceneMaterial.plastic([0.15, 0.45, 0.9], shininess: 64), transform: .init(translation: tankCenter + [0, waterHeight / 2, 0])))
+        water.opacity = 0.3
+        tankRegion = BoundingBox3D(min: origin + tankCenter + [-tankSize.x / 2, 0, -tankSize.z / 2], max: origin + tankCenter + [tankSize.x / 2, waterHeight, tankSize.z / 2])
+        let ring = slide.addChild(SceneGraph.Node(label: "Trigger Ring", shape: .torus(ringRadius: 0.9, pipeRadius: 0.05), material: Self.glowMaterial([0.3, 0.9, 0.6], glow: 0), transform: .init(translation: tankCenter + [0, 2.2, 0])))
+        ring.physicsBody = .init(type: .static, shape: .cylinder(height: 0.2, radius: 0.9), isTrigger: true)
+        triggerRing = ring
+
+        // The step the character climbs and the ball hits.
+        let step = addStatic("Impact Step", size: [0.8, 0.3, 1.2], at: [3.5, 0.15, 0], material: Self.glowMaterial([1, 0.55, 0.2], glow: 0))
+        impactStep = step
+        walkerRange = (origin.x + 2)...(origin.x + 5.5)
+        morePhysicsBodies = slide.addChild(SceneGraph.Node(label: "More Physics Bodies"))
+    }
+
+    private static func glowMaterial(_ color: SIMD3<Float>, glow: Float) -> BlinnPhongSceneMaterial {
+        BlinnPhongSceneMaterial(ambient: .color(color * 0.1), diffuse: .color(color * 0.6), specular: .color(0.3), shininess: 32, emission: .color(color * min(glow, 1.5)))
+    }
+
+    private static func setGlow(of node: SceneGraph.Node?, color: SIMD3<Float>, glow: Float) {
+        guard let node, case let .mesh(mesh, _, castsShadow, receivesShadow) = node.content else {
+            return
+        }
+        node.content = .mesh(mesh, materials: [glowMaterial(color, glow: glow)], castsShadow: castsShadow, receivesShadow: receivesShadow)
+    }
+
+    // Rebuilds the chain, crates, ball and character. Hidden slides drop out of the physics world, so this runs on
+    // arrival.
+    private func resetMorePhysics() {
+        guard let morePhysicsBodies, let physics, let slide = morePhysicsBodies.parent else {
+            return
+        }
+        physics.gravity = [0, -9.81, 0]
+        if let tankRegion {
+            physics.fluids = [.init(region: tankRegion, buoyancy: 1.6, linearDrag: 0.8, angularDrag: 0.1)]
+        }
+        sinceMorePhysicsReset = 0
+        sinceBallDrop = 0
+        morePhysicsBodies.removeAllChildren()
+        removeWalker()
+        let origin = slide.transform.translation
+
+        // A chain of ball joints, the first held to the world.
+        let anchor: SIMD3<Float> = [-4.5, 3.4, 0]
+        let linkMaterial = BlinnPhongSceneMaterial.plastic([0.8, 0.8, 0.85], shininess: 96)
+        var links: [SceneGraph.Node] = []
+        for index in 0..<6 {
+            let isBob = index == 5
+            let radius: Float = isBob ? 0.3 : 0.14
+            let link = morePhysicsBodies.addChild(SceneGraph.Node(label: isBob ? "Chain Bob" : "Chain Link", shape: .sphere(radius: radius), material: isBob ? BlinnPhongSceneMaterial.plastic([0.9, 0.35, 0.3], shininess: 64) : linkMaterial, transform: .init(translation: anchor - [0, Float(index + 1) * 0.4, 0])))
+            link.physicsBody = .init(type: .dynamic, shape: .sphere(radius: radius), linearDamping: 0.01, angularDamping: 0.01, collisionBitMask: 0)
+            links.append(link)
+        }
+        physics.sync()
+        physics.addJoint(.ball(anchor: origin + anchor), between: nil, and: links[0])
+        for (linkA, linkB) in zip(links, links.dropFirst()) {
+            let midpoint = (linkA.transform.translation + linkB.transform.translation) / 2
+            physics.addJoint(.ball(anchor: origin + midpoint), between: linkA, and: linkB)
+        }
+        if let bob = links.last {
+            physics.setVelocity([5, 0, 1], of: bob)
+        }
+
+        // Crates dropped into the tank through the trigger ring. The red one only moves up and down.
+        let crateColors: [SIMD3<Float>] = [[0.75, 0.55, 0.3], [0.9, 0.3, 0.25], [0.65, 0.5, 0.3]]
+        for (index, color) in crateColors.enumerated() {
+            let crate = morePhysicsBodies.addChild(SceneGraph.Node(label: "Crate", shape: .box(width: 0.45, height: 0.45, length: 0.45), material: BlinnPhongSceneMaterial.plastic(color, shininess: 16), transform: .init(translation: [-1.6 + Float(index) * 0.6, 3 + Float(index) * 0.8, Float(index - 1) * 0.2], rotation: simd_quatf(angle: Float(index) * 0.7, axis: simd_normalize([1, 1, 0])))))
+            crate.physicsBody = .init(type: .dynamic, shape: .box(size: [0.45, 0.45, 0.45]), mass: 4, allowedMotion: index == 1 ? [.translationY] : .all)
+        }
+        dropBall()
+
+        // The character: a capsule whose origin is at its feet.
+        let walker = morePhysicsBodies.addChild(SceneGraph.Node(label: "Character", transform: .init(translation: [2.2, 0.05, 0.3])))
+        walker.addChild(SceneGraph.Node(shape: .capsule(capRadius: 0.3, height: 1.4), material: BlinnPhongSceneMaterial.plastic([0.35, 0.6, 1], shininess: 48), transform: .init(translation: [0, 0.7, 0])))
+        walker.addChild(SceneGraph.Node(label: "Visor", shape: .box(width: 0.2, height: 0.12, length: 0.4), material: BlinnPhongSceneMaterial.plastic([0.1, 0.1, 0.12], shininess: 96), transform: .init(translation: [0.24, 1.15, 0])))
+        self.walker = walker
+        walkerController = physics.addCharacter(for: walker, height: 1.4, radius: 0.3)
+        walkerController?.desiredVelocity = [self[value: "Walk Speed"], 0, 0]
+    }
+
+    private func dropBall() {
+        bouncingBall?.removeFromParent()
+        let ball = morePhysicsBodies?.addChild(SceneGraph.Node(label: "Bouncing Ball", shape: .sphere(radius: 0.2), material: BlinnPhongSceneMaterial.plastic([1, 0.85, 0.3], shininess: 96), transform: .init(translation: [3.5, 3.2, -0.3])))
+        ball?.physicsBody = .init(type: .dynamic, shape: .sphere(radius: 0.2), restitution: 0.75)
+        bouncingBall = ball
+        sinceBallDrop = 0
+    }
+
+    private func removeWalker() {
+        if let walkerController {
+            physics?.removeCharacter(walkerController)
+        }
+        walkerController = nil
+    }
+
+    private func morePhysicsContact(_ contact: SceneGraphPhysicsWorld.Contact) {
+        guard contact.phase == .began else {
+            return
+        }
+        let nodes = [contact.nodeA, contact.nodeB]
+        if let triggerRing, nodes.contains(where: { $0 === triggerRing }) {
+            triggerGlow = 1.5
+        }
+        if let impactStep, let bouncingBall, nodes.contains(where: { $0 === impactStep }), nodes.contains(where: { $0 === bouncingBall }) {
+            // Harder hits flash brighter.
+            impactGlow = max(impactGlow, contact.impulse / impactForFullGlow)
+        }
+    }
+
+    private func updateMorePhysics(deltaTime: Float) {
+        sinceMorePhysicsReset += deltaTime
+        sinceBallDrop += deltaTime
+        if sinceMorePhysicsReset > 12 {
+            resetMorePhysics()
+        } else if sinceBallDrop > 3 {
+            dropBall()
+        }
+        // Turns around at the ends of its walk, facing the way it walks.
+        if let walker, let walkerController {
+            let speed = self[value: "Walk Speed"]
+            var direction: Float = walkerController.desiredVelocity.x < 0 ? -1 : 1
+            let x = walker.worldTransform.columns.3.x
+            if x > walkerRange.upperBound {
+                direction = -1
+            } else if x < walkerRange.lowerBound {
+                direction = 1
+            }
+            walkerController.desiredVelocity = [direction * speed, 0, 0]
+            walker.transform.rotation = Rotation3D(simd_quatf(angle: direction > 0 ? 0 : .pi, axis: [0, 1, 0]))
+        }
+        physics?.step(deltaTime: min(deltaTime, 1.0 / 30.0), collisionSteps: 2)
+        triggerGlow = max(triggerGlow - deltaTime * 2, 0)
+        impactGlow = max(impactGlow - deltaTime * 3, 0)
+        Self.setGlow(of: triggerRing, color: [0.3, 0.9, 0.6], glow: triggerGlow)
+        Self.setGlow(of: impactStep, color: [1, 0.55, 0.2], glow: impactGlow)
+        if let physicsDebugNode, let physics {
+            if self[flag: "Physics Debug"] {
+                physics.updateDebugNode(physicsDebugNode, material: debugDrawMaterial, device: demoDevice)
+            } else {
+                physicsDebugNode.content = .empty
+            }
         }
     }
 

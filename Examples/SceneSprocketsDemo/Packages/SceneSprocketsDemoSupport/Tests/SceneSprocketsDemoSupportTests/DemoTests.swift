@@ -85,6 +85,32 @@ func keynoteShowing(_ title: String) throws -> KeynoteDemo {
     return keynote
 }
 
+// #610: the More Physics slide's chain holds, crates float and the character walks.
+@Test
+@MainActor
+func morePhysicsSlideSimulates() throws {
+    let keynote = try keynoteShowing("More Physics")
+    func nodes(_ label: String) -> [SceneGraph.Node] {
+        keynote.sceneGraph.nodesWithWorldTransforms().map(\.node).filter { $0.label == label }
+    }
+    let slide = try #require(nodes("Slide \(KeynoteDemo.titles.firstIndex(of: "More Physics")! + 1): More Physics").first)
+    let origin = slide.transform.translation
+    let walker = try #require(nodes("Character").first)
+    let walkerStart = walker.worldTransform.columns.3.x
+    for frame in 0..<240 {
+        keynote.update(time: Float(frame) / 60, deltaTime: 1.0 / 60)
+    }
+    let bob = try #require(nodes("Chain Bob").first)
+    let bobOffset = bob.worldTransform.columns.3.xyz - (origin + [-4.5, 3.4, 0])
+    #expect(simd_length(bobOffset) < 2.6, "the chain came apart")
+    for crate in nodes("Crate") {
+        let y = crate.worldTransform.columns.3.y
+        #expect(y > 0.4 && y < 1.6, "crate at \(y) is not floating")
+    }
+    #expect(abs(walker.worldTransform.columns.3.x - walkerStart) > 0.5, "the character did not walk")
+    #expect(walker.worldTransform.columns.3.y > -0.1, "the character fell through the floor")
+}
+
 // #329: picking a slide from the settings switches at once, with no transition.
 @Test
 @MainActor
