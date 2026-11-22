@@ -14010,12 +14010,13 @@ SceneGraph.Spline and Action.follow(_:duration:orientsToPath:) (#407) move a nod
 ## 608: glTF benchmarks do not cover variant switching, the environment background, or GPU-bound resolutions
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:performance, area:testing, effort:s, gltf
 created: 2026-11-22T17:36:41Z
-updated: 2026-11-22T19:59:11Z
+updated: 2026-11-22T20:56:07Z
+closed: 2026-11-22T20:56:07Z
 +++
 
 After #558 the ms-gltf-render bench suite covers morph targets, material lobes, point/line primitives, many lights, many textures and load time. Still not measured:
@@ -14023,6 +14024,8 @@ After #558 the ms-gltf-render bench suite covers morph targets, material lobes, 
 - the environment background (--background) and the transmission pre-pass at larger sizes;
 - a second, GPU-bound resolution (4K) and GPU-heavy rather than CPU-heavy scenes.
 Split from #558.
+
+- `2026-11-22T20:56:07Z`: Added bench scenes: MaterialsVariantsShoe (switches KHR_materials_variants each frame), CubeVisibility (animated KHR_node_visibility), Sponza-4K, TransmissionTest-4K-bg and FlightHelmet-4K-bg (4K, environment background, transmission pre-pass). Scenes can now override the size and show the background. Baselines recorded for the new scenes on Mac17,6. No unit test: the bench needs the downloaded sample assets and a Release build; verified by running it.
 
 ---
 

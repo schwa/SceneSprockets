@@ -19,7 +19,15 @@ struct GLTFBenchCommand: ParsableCommand {
         var path: String
         var animation: Int?
         var orbit = true
+        /// Draws a different KHR_materials_variants variant each frame (#608).
+        var switchesVariants = false
+        /// Draws the environment behind the scene (`render --background`).
+        var showsBackground = false
+        /// Overrides --width and --height, for GPU-bound sizes.
+        var size: (width: Int, height: Int)?
     }
+
+    private static let size4K = (width: 3_840, height: 2_160)
 
     static let scenes: [Scene] = [
         Scene(name: "ABeautifulGame", path: "ABeautifulGame/glTF-Binary/ABeautifulGame.glb"),
@@ -48,7 +56,16 @@ struct GLTFBenchCommand: ParsableCommand {
         // Many punctual lights.
         Scene(name: "LightsPunctualLamp", path: "LightsPunctualLamp/glTF-Binary/LightsPunctualLamp.glb"),
         // Many large textures and materials.
-        Scene(name: "FlightHelmet", path: "FlightHelmet/glTF/FlightHelmet.gltf")
+        Scene(name: "FlightHelmet", path: "FlightHelmet/glTF/FlightHelmet.gltf"),
+        // #608: paths the scenes above still miss.
+        // KHR_materials_variants switched every frame.
+        Scene(name: "MaterialsVariantsShoe", path: "MaterialsVariantsShoe/glTF-Binary/MaterialsVariantsShoe.glb", switchesVariants: true),
+        // KHR_node_visibility animated.
+        Scene(name: "CubeVisibility", path: "CubeVisibility/glTF/CubeVisibility.gltf", animation: 0),
+        // GPU-bound: 4K, the environment background and the transmission pre-pass.
+        Scene(name: "Sponza-4K", path: "Sponza/glTF/Sponza.gltf", size: size4K),
+        Scene(name: "TransmissionTest-4K-bg", path: "TransmissionTest/glTF-Binary/TransmissionTest.glb", showsBackground: true, size: size4K),
+        Scene(name: "FlightHelmet-4K-bg", path: "FlightHelmet/glTF/FlightHelmet.gltf", showsBackground: true, size: size4K)
     ]
 
     struct Baseline: Codable {
@@ -126,7 +143,18 @@ struct GLTFBenchCommand: ParsableCommand {
             print("No baseline for \(machine) at \(baselineURL.path); run with --record to make one.")
         }
 
-        let renderer = try OffscreenRenderer(size: CGSize(width: width, height: height), clearDepth: 0)
+        // One renderer per size; scenes may override the default size.
+        var renderers: [String: OffscreenRenderer] = [:]
+        func renderer(for scene: Scene) throws -> OffscreenRenderer {
+            let size = scene.size ?? (width, height)
+            let key = "\(size.width)x\(size.height)"
+            if let existing = renderers[key] {
+                return existing
+            }
+            let made = try OffscreenRenderer(size: CGSize(width: size.width, height: size.height), clearDepth: 0)
+            renderers[key] = made
+            return made
+        }
         var results: [String: FrameTimings] = [:]
         var regressions: [String] = []
         var loaded: [(scene: Scene, asset: GLTFAsset)] = []
@@ -152,13 +180,16 @@ struct GLTFBenchCommand: ParsableCommand {
             if let animation = scene.animation, !loadedAsset.animations.indices.contains(animation) {
                 throw ValidationError("\(scene.name) has no animation \(animation)")
             }
+            if scene.switchesVariants, loadedAsset.variantNames.count < 2 {
+                throw ValidationError("\(scene.name) has fewer than two material variants")
+            }
             loaded.append((scene, loadedAsset))
         }
         // Run every scene once per round, not one scene many times. A cold start then affects only the first round.
         // Each scene keeps its fastest round.
         var rounds: [[FrameTimings]] = []
         for _ in 0 ..< max(repeats, 1) {
-            rounds.append(try loaded.map { try measure($0.scene, asset: $0.asset, renderer: renderer) })
+            rounds.append(try loaded.map { try measure($0.scene, asset: $0.asset, renderer: try renderer(for: $0.scene)) })
         }
         print("scene".padding(toLength: 26, withPad: " ", startingAt: 0) + "     cpu ms     gpu ms    load ms   vs baseline (median)")
         for (index, (scene, _)) in loaded.enumerated() {
@@ -209,17 +240,22 @@ struct GLTFBenchCommand: ParsableCommand {
 
     @MainActor
     func measure(_ scene: Scene, asset: GLTFAsset, renderer: OffscreenRenderer) throws -> FrameTimings {
-        let camera = PBRCamera.framing(asset.bounds, aspectRatio: Float(width) / Float(height))
+        let size = scene.size ?? (width, height)
+        let camera = PBRCamera.framing(asset.bounds, aspectRatio: Float(size.width) / Float(size.height))
         let lighting = PBRLighting(asset: asset)
-        let viewportSize = CGSize(width: width, height: height)
+        let viewportSize = CGSize(width: size.width, height: size.height)
+        // Variants share the asset's resources; switching picks another asset each frame.
+        let variants = scene.switchesVariants ? try asset.variantNames.indices.map { try asset.variant($0) } : [asset]
         return try measureFrames(frames: frames, warmUpFrames: 30, renderer: renderer) { frame in
-            GLTFScene(
+            let asset = variants[frame % variants.count]
+            return GLTFScene(
                 asset: asset,
                 viewMatrix: camera.viewMatrix,
                 projectionMatrix: camera.projectionMatrix,
                 modelMatrix: scene.orbit ? orbitMatrix(center: asset.bounds.center, frame: frame) : matrix_identity_float4x4,
                 lighting: lighting,
                 pose: scene.animation.map { asset.pose(animation: $0, time: Float(frame) / 60) },
+                showsBackground: scene.showsBackground,
                 viewportSize: viewportSize
             )
         }
