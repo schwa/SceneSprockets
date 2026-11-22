@@ -120,33 +120,32 @@ public class SceneGraph {
         _ = try Self.traverse(node: root, parentTransform: initialTransform, includeHidden: includeHidden, visitor)
     }
 
-    // Returns false when the traversal stopped.
+    // Returns false when the traversal stopped. Uses an explicit stack, not recursion, so deep hierarchies do not
+    // overflow the thread's stack (#603).
     private static func traverse(node: Node, parentTransform: float4x4, includeHidden: Bool, _ visitor: (Node, float4x4) throws -> VisitResult) rethrows -> Bool {
-        guard let composedTransform = node.traversalTransform(includeHidden: includeHidden) else {
-            return true
-        }
-        let worldTransform = parentTransform * composedTransform
-        switch try visitor(node, worldTransform) {
-        case .stop:
-            return false
-        case .skipChildren:
-            return true
-        case .continue:
-            for child in node.children where try !traverse(node: child, parentTransform: worldTransform, includeHidden: includeHidden, visitor) {
-                return false
+        var stack: [(Node, float4x4)] = [(node, parentTransform)]
+        while let (node, parentTransform) = stack.popLast() {
+            guard let composedTransform = node.traversalTransform(includeHidden: includeHidden) else {
+                continue
             }
-            return true
+            let worldTransform = parentTransform * composedTransform
+            switch try visitor(node, worldTransform) {
+            case .stop:
+                return false
+            case .skipChildren:
+                continue
+            case .continue:
+                // Reversed, so the first child is popped first.
+                stack.append(contentsOf: node.children.reversed().map { ($0, worldTransform) })
+            }
         }
+        return true
     }
 
     private static func visit(node: Node, parentTransform: float4x4, includeHidden: Bool, _ visitor: (Node, float4x4) throws -> Void) rethrows {
-        guard let composedTransform = node.traversalTransform(includeHidden: includeHidden) else {
-            return
-        }
-        let worldTransform = parentTransform * composedTransform
-        try visitor(node, worldTransform)
-        for child in node.children {
-            try visit(node: child, parentTransform: worldTransform, includeHidden: includeHidden, visitor)
+        _ = try traverse(node: node, parentTransform: parentTransform, includeHidden: includeHidden) { node, worldTransform in
+            try visitor(node, worldTransform)
+            return .continue
         }
     }
 

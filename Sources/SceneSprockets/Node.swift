@@ -328,13 +328,16 @@ extension SceneGraph.Node {
     /// The first node named `label` in depth-first order (this node excluded), like
     /// SCNNode.childNode(withName:recursively:).
     public func childNode(withLabel label: String, recursively: Bool = true) -> SceneGraph.Node? {
-        for child in children {
-            if child.label == label {
-                return child
+        guard recursively else {
+            return children.first { $0.label == label }
+        }
+        // An explicit stack, not recursion, so deep hierarchies do not overflow the thread's stack (#603).
+        var stack = Array(children.reversed())
+        while let node = stack.popLast() {
+            if node.label == label {
+                return node
             }
-            if recursively, let found = child.childNode(withLabel: label) {
-                return found
-            }
+            stack.append(contentsOf: node.children.reversed())
         }
         return nil
     }

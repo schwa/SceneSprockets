@@ -55,15 +55,31 @@ extension SceneGraph.Node {
         if let cache = boundsCache.subtree, cache.revision == revision {
             return cache.bounds
         }
+        // Fills the caches of stale descendants first, deepest last in `stale`, so each node below reads its children's
+        // caches. An explicit stack, not recursion, so deep hierarchies do not overflow the stack (#603).
+        var stale: [SceneGraph.Node] = []
+        var stack: [SceneGraph.Node] = [self]
+        while let node = stack.popLast() {
+            stale.append(node)
+            for child in node.children where child.isShown && child.boundsCache.subtree?.revision != child.revision {
+                stack.append(child)
+            }
+        }
+        for node in stale.reversed() {
+            node.computeSubtreeBounds()
+        }
+        return boundsCache.subtree?.bounds
+    }
+
+    // Assumes every shown child's cache is current.
+    private func computeSubtreeBounds() {
         var local = meshBounds
-        for child in children {
-            if let childBounds = child.subtreeBounds {
+        for child in children where child.isShown {
+            if let childBounds = child.boundsCache.subtree?.bounds {
                 local = local.map { $0.union(childBounds) } ?? childBounds
             }
         }
-        let bounds = local?.transformed(by: composedTransform)
-        boundsCache.subtree = (revision, bounds)
-        return bounds
+        boundsCache.subtree = (revision, local?.transformed(by: composedTransform))
     }
 }
 

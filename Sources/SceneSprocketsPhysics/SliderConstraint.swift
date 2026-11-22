@@ -42,13 +42,14 @@ extension SceneGraphPhysicsWorld {
         // Jolt skips the bodies of the node and its descendants instead of the sweep computing hits that are thrown
         // away (#418). Found by walking the subtree, so the cost does not grow with the rest of the scene.
         var excluded: Set<BodyID> = []
-        func exclude(_ node: SceneGraph.Node) {
-            if let body = body(of: node) {
+        // An explicit stack, not recursion, so deep hierarchies do not overflow the stack (#603).
+        var stack = [node]
+        while let next = stack.popLast() {
+            if let body = body(of: next) {
                 excluded.insert(body)
             }
-            node.children.forEach(exclude)
+            stack.append(contentsOf: next.children)
         }
-        exclude(node)
         let filter = QueryFilter(excludedBodies: excluded)
         // Three passes: hit one surface, slide, maybe hit a second (a corner), slide again.
         for _ in 0..<3 {

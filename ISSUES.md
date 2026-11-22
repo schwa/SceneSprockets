@@ -13685,12 +13685,13 @@ Split out of #86.
 ## 603: Deep node hierarchies overflow the stack in SceneGraph
 
 +++
-status: open
+status: closed
 priority: high
 kind: bug
 labels: area:scenegraph, crash, effort:m
 created: 2026-11-21T02:14:42Z
-updated: 2026-11-22T12:58:28Z
+updated: 2026-11-22T14:53:22Z
+closed: 2026-11-22T14:53:22Z
 +++
 
 Importing a glTF whose node hierarchy is a chain about 64 levels deep crashes with EXC_BAD_ACCESS (stack overflow) in a debug build when run on a Swift Testing thread. SceneGraph walks the hierarchy recursively in several places (Node.attach, SceneGraph.traverse, childNode(withLabel:), and others).
@@ -13702,6 +13703,8 @@ Repro (debug build, Swift Testing test):
 Expected: the scene imports. Actual: crash in SceneGraph.Node.init / getCache with EXC_BAD_ACCESS code 2 on a stack address. 48 levels works.
 
 The glTF loader itself accepts up to 1024 levels (found while working on #563).
+
+- `2026-11-22T14:53:22Z`: Fixed: traverse/visit, childNode, attach, detach, subtreeBounds and the slider sweep walk with explicit stacks. Regression test imports a 1024-deep chain.
 
 ---
 

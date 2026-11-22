@@ -505,3 +505,45 @@ func modelFileLoadsGLTFAndOBJ() throws {
     #expect(ModelFile.isFile(external, inside: directory))
     #expect(!ModelFile.isFile(external, inside: directory.appendingPathComponent("Other")))
 }
+
+// #603: a chain of nodes as deep as the glTF loader allows imports and traverses without overflowing the stack.
+@Test(.enabled(if: deviceSupportsMetal4))
+func gltfDeepNodeChainImports() throws {
+    let depth = 1_024
+    var data = Data()
+    [Float](arrayLiteral: -1, -1, 0, 1, -1, 0, 0, 1, 0).withUnsafeBytes { data.append(contentsOf: $0) }
+    let nodes = (0..<depth).map { index in
+        index == depth - 1 ? #"{"name": "Leaf", "mesh": 0}"# : #"{"name": "N\#(index)", "children": [\#(index + 1)]}"#
+    }
+    let json = """
+    {
+      "asset": {"version": "2.0"},
+      "scene": 0,
+      "scenes": [{"nodes": [0]}],
+      "nodes": [\(nodes.joined(separator: ","))],
+      "meshes": [{"primitives": [{"attributes": {"POSITION": 0}}]}],
+      "accessors": [{"bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3", "min": [-1, -1, 0], "max": [1, 1, 0]}],
+      "bufferViews": [{"buffer": 0, "byteLength": 36}],
+      "buffers": [{"byteLength": 36, "uri": "data:application/octet-stream;base64,\(data.base64EncodedString())"}]
+    }
+    """
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gltf")
+    try Data(json.utf8).write(to: url)
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let result = try GLTFAsset(url: url, device: device).importScene()
+    let leaf = try #require(result.sceneGraph.root.childNode(withLabel: "Leaf"))
+    var count = 0
+    result.sceneGraph.traverse { _, _ in
+        count += 1
+        return .continue
+    }
+    #expect(count >= depth)
+    #expect(leaf.parent?.label == "N\(depth - 2)")
+    #expect(result.sceneGraph.root.subtreeBounds != nil)
+    #expect(result.sceneGraph.meshEntries().count == 1)
+    _ = result.sceneGraph.presentation()
+    let top = try #require(result.sceneGraph.root.childNode(withLabel: "N0"))
+    top.removeFromParent()
+    result.sceneGraph.root.addChild(top)
+    #expect(result.sceneGraph.meshEntries().count == 1)
+}

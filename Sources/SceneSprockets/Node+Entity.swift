@@ -348,11 +348,24 @@ extension SceneGraph.Node {
     }
 
     // Gives this node and its subtree entities in `store`'s World. A subtree in another World leaves it first.
+    // Walks the subtree with an explicit stack, not recursion, so deep hierarchies do not overflow the stack (#603).
     func attach(to store: SceneGraph.NodeStore, parent: SceneGraph.Node?, siblingIndex: Int) {
+        var stack: [(node: SceneGraph.Node, parent: SceneGraph.Node?, siblingIndex: Int)] = [(self, parent, siblingIndex)]
+        while let (node, parent, siblingIndex) = stack.popLast() {
+            guard node.attachSelf(to: store, parent: parent, siblingIndex: siblingIndex) else {
+                continue
+            }
+            // Reversed, so the first child is attached first.
+            stack.append(contentsOf: node.children.enumerated().reversed().map { ($1, node, $0) })
+        }
+    }
+
+    // Attaches this node alone. Returns false when it was already in `store`, so its subtree needs no attaching.
+    private func attachSelf(to store: SceneGraph.NodeStore, parent: SceneGraph.Node?, siblingIndex: Int) -> Bool {
         if let binding = currentBinding() {
             if binding.store === store {
                 linkInWorld(parent: parent, siblingIndex: siblingIndex)
-                return
+                return false
             }
             detach()
         }
@@ -367,16 +380,24 @@ extension SceneGraph.Node {
         store.register(self)
         entityBinding = EntityBinding(store: store, id: id)
         linkInWorld(parent: parent, siblingIndex: siblingIndex)
-        for (index, child) in children.enumerated() {
-            child.attach(to: store, parent: self, siblingIndex: index)
+        return true
+    }
+
+    // Copies values back to local storage and destroys this subtree's entities, descendants before ancestors. Uses an
+    // explicit stack, not recursion, so deep hierarchies do not overflow the stack (#603).
+    func detach() {
+        var preorder: [SceneGraph.Node] = []
+        var stack = [self]
+        while let node = stack.popLast() {
+            preorder.append(node)
+            stack.append(contentsOf: node.children.reversed())
+        }
+        for node in preorder.reversed() {
+            node.detachSelf()
         }
     }
 
-    // Copies values back to local storage and destroys this subtree's entities.
-    func detach() {
-        for child in children {
-            child.detach()
-        }
+    private func detachSelf() {
         guard let binding = currentBinding() else {
             return
         }
