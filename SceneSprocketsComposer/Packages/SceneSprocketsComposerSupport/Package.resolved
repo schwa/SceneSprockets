@@ -60,8 +60,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprockets",
       "state" : {
-        "revision" : "6d08697b6576260a8f9bfe0a62461ad72919e935",
-        "version" : "0.3.8"
+        "revision" : "1c9a73700ce717a66c6108ceb322bc7bbef87ae1",
+        "version" : "0.3.9"
       }
     },
     {
@@ -159,8 +159,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/SwiftECS",
       "state" : {
-        "revision" : "e22b81a287363fc0a92d05088840e4db0961ded2",
-        "version" : "0.1.2"
+        "revision" : "514dd5e65530fc1461ef870b377d0238cb6b89db",
+        "version" : "0.2.0"
       }
     },
     {

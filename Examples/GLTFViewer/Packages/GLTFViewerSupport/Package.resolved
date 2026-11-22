@@ -150,8 +150,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/SwiftECS",
       "state" : {
-        "revision" : "e22b81a287363fc0a92d05088840e4db0961ded2",
-        "version" : "0.1.2"
+        "revision" : "514dd5e65530fc1461ef870b377d0238cb6b89db",
+        "version" : "0.2.0"
       }
     },
     {

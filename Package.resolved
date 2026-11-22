@@ -1,5 +1,5 @@
 {
-  "originHash" : "d1357238a6eb8388749f170c5e6e4619cfda7d17ef59711eba867e9c82d3824e",
+  "originHash" : "180ee666b279489b30ac3c656247a87aa4f9b2afeb1aab9b08ed986f0450366e",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -60,8 +60,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprockets",
       "state" : {
-        "revision" : "6d08697b6576260a8f9bfe0a62461ad72919e935",
-        "version" : "0.3.8"
+        "revision" : "1c9a73700ce717a66c6108ceb322bc7bbef87ae1",
+        "version" : "0.3.9"
       }
     },
     {
@@ -69,8 +69,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsAddOns",
       "state" : {
-        "revision" : "7dd864ed2aa3bd43b7563103e54c58bc942ac558",
-        "version" : "0.3.1"
+        "revision" : "2afe2f0cdc8de8ac0dceb29dc971256ec5cd6097",
+        "version" : "0.3.2"
       }
     },
     {
@@ -177,8 +177,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/SwiftECS",
       "state" : {
-        "revision" : "e22b81a287363fc0a92d05088840e4db0961ded2",
-        "version" : "0.1.2"
+        "revision" : "514dd5e65530fc1461ef870b377d0238cb6b89db",
+        "version" : "0.2.0"
       }
     },
     {
@@ -204,8 +204,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/SwiftJolt.git",
       "state" : {
-        "revision" : "e044cf48c7e262b0a33d8a57fd9ebe8be60190df",
-        "version" : "0.0.3"
+        "revision" : "3382e3425c48596f3b659a6439789278f9cdcf4b",
+        "version" : "0.0.4"
       }
     },
     {

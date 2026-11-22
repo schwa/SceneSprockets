@@ -18,14 +18,14 @@ let package = Package(
         .package(path: "../../../.."),
         .package(url: "https://github.com/schwa/SceneSprocketsAddOns", branch: "main"),
         .package(url: "https://github.com/schwa/GeometryLite3D", .upToNextMinor(from: "0.3.1")),
-        .package(url: "https://github.com/schwa/MetalSprockets", .upToNextMinor(from: "0.3.0")),
+        .package(url: "https://github.com/schwa/MetalSprockets", .upToNextMinor(from: "0.3.9")),
         .package(url: "https://github.com/schwa/SwiftMesh", .upToNextMinor(from: "0.1.0")),
         .package(url: "https://github.com/schwa/MetalSupport", .upToNextMinor(from: "1.0.7")),
-        .package(url: "https://github.com/schwa/Interaction3D", .upToNextMinor(from: "0.2.1")),
+        .package(url: "https://github.com/schwa/Interaction3D", .upToNextMinor(from: "0.2.2")),
         .package(url: "https://github.com/schwa/DemoKit", .upToNextMinor(from: "0.1.7")),
         .package(url: "https://github.com/schwa/GoldenImage", .upToNextMinor(from: "0.1.7")),
         .package(url: "https://github.com/schwa/MetalSprocketsParticles", .upToNextMinor(from: "0.1.0")),
-        .package(url: "https://github.com/schwa/SwiftECS", .upToNextMinor(from: "0.1.1")),
+        .package(url: "https://github.com/schwa/SwiftECS", .upToNextMinor(from: "0.2.0")),
     ],
     targets: [
         .target(

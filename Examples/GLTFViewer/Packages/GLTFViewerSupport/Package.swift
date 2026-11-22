@@ -16,7 +16,7 @@ let package = Package(
         .package(path: "../../../.."),
         .package(url: "https://github.com/schwa/MetalSprockets", branch: "main"),
         .package(url: "https://github.com/schwa/SwiftGLTF", branch: "main"),
-        .package(url: "https://github.com/schwa/Interaction3D", .upToNextMinor(from: "0.2.1")),
+        .package(url: "https://github.com/schwa/Interaction3D", .upToNextMinor(from: "0.2.2")),
         .package(url: "https://github.com/schwa/SwiftMesh", branch: "main"),
         .package(url: "https://github.com/schwa/GeometryLite3D", .upToNextMinor(from: "0.3.0"))
     ],

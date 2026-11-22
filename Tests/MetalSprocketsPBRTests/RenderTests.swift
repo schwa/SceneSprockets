@@ -387,7 +387,7 @@ struct RenderTests {
             try LightingEnvironment(source: .equirectangular(URL(fileURLWithPath: "/nonexistent.exr")), device: models.device)
         }
         #expect(throws: LightingEnvironmentError.self) {
-            try OffscreenRenderer(size: size, device: models.device).colorTexture.float16Pixels()
+            try OffscreenRenderer(size: size).colorTexture.float16Pixels()
         }
         #expect(throws: LightingEnvironmentError.self) {
             try image.writeEXR(to: URL(fileURLWithPath: "/nonexistent/directory/image.exr"))
