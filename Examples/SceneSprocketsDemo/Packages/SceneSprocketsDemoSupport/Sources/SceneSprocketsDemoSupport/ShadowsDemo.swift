@@ -60,7 +60,8 @@ final class ShadowsDemo: DemoScene {
                 .slider("Light Angle", 0...(2 * .pi), default: 0.6),
                 .toggle("Ambient Occlusion", default: false),
                 .toggle("PBR Materials", default: false),
-                .slider("Vignette", 0...1, default: 0)
+                .slider("Vignette", 0...1, default: 0),
+                .toggle("Volumetric Fog", default: false)
             ]
         )
     }
@@ -93,6 +94,11 @@ final class ShadowsDemo: DemoScene {
                     set.node.content = .mesh(mesh, materials: [usesPBR ? set.pbr : set.blinnPhong], castsShadow: castsShadow, receivesShadow: receivesShadow)
                 }
             }
+        }
+        // Light beams and shadow shafts through the air (#540); the distance fog stays off.
+        let volumetric: SceneGraph.Fog? = self[flag: "Volumetric Fog"] ? SceneGraph.Fog(color: [0, 0, 0, 0], scattering: .init(density: 0.08, intensity: 0.6, anisotropy: 0.4, stepCount: 48, maximumDistance: 25)) : nil
+        if sceneGraph.fog != volumetric {
+            sceneGraph.fog = volumetric
         }
         let vignette = self[value: "Vignette"]
         sceneGraph.postProcessing = vignette == 0 ? nil : SceneGraph.PostProcessing(vignetteIntensity: vignette)

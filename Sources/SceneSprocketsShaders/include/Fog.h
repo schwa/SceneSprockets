@@ -14,3 +14,14 @@ struct FogUniforms {
     float densityExponent;
 };
 typedef struct FogUniforms FogUniforms;
+
+// Volumetric scattering (#540), for fog_scatter_compute. Positions are camera-relative, like the lights.
+struct FogScatteringUniforms {
+    float density;
+    float intensity;
+    float anisotropy;
+    float maximumDistance;
+    int stepCount;
+    int lightCount;
+};
+typedef struct FogScatteringUniforms FogScatteringUniforms;

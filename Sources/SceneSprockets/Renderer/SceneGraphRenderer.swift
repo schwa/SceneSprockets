@@ -337,8 +337,10 @@ public struct SceneGraphElement: Element {
             // Post passes rebuild positions from depth in camera-relative space (camera at the origin), so they stay
             // precise far from the world origin (#257). Shadow views are camera-relative too.
             let relativeViewProjection = context.projectionMatrix * context.viewMatrix.rotationOnlyView
+            // Volumetric fog scatters every direct light, camera-relative like the post passes (#540).
+            let fogLighting = (lights: context.lightingLights(cameraPosition: context.cameraMatrix.columns.3.xyz), shadow: context.shadow)
             let postPasses = plan.postPasses.compactMap { postPass in
-                makePostPass(postPass, shadowFrame: shadowFrame, ambientOcclusionApply: ambientOcclusionApply, postProcessing: postProcessing, postTargets: postTargets, relativeViewProjection: relativeViewProjection, autoExposureBuffer: autoExposureBuffer)?
+                makePostPass(postPass, shadowFrame: shadowFrame, ambientOcclusionApply: ambientOcclusionApply, postProcessing: postProcessing, postTargets: postTargets, relativeViewProjection: relativeViewProjection, autoExposureBuffer: autoExposureBuffer, fogLighting: fogLighting)?
                     .gpuTimed(postPass.gpuTimingLabel)
                     .eraseToAnyElement()
             }
@@ -438,7 +440,7 @@ public struct SceneGraphElement: Element {
         return elements
     }
 
-    private func makePostPass(_ postPass: SceneFramePlan.PostPass, shadowFrame: Shadows.Frame?, ambientOcclusionApply: ApplyAmbientOcclusionPass?, postProcessing: SceneGraph.PostProcessing?, postTargets: (color: MTLTexture, depth: MTLTexture), relativeViewProjection: simd_float4x4, autoExposureBuffer: MTLBuffer?) -> AnyElement? {
+    private func makePostPass(_ postPass: SceneFramePlan.PostPass, shadowFrame: Shadows.Frame?, ambientOcclusionApply: ApplyAmbientOcclusionPass?, postProcessing: SceneGraph.PostProcessing?, postTargets: (color: MTLTexture, depth: MTLTexture), relativeViewProjection: simd_float4x4, autoExposureBuffer: MTLBuffer?, fogLighting: (lights: [LightingLight], shadow: Shadows.Sampling?)) -> AnyElement? {
         switch postPass {
         case .shadowMask:
             guard let shadows, let shadowFrame else {
@@ -451,7 +453,7 @@ public struct SceneGraphElement: Element {
             guard let fog = presentation.fog else {
                 return nil
             }
-            return FogPass(fog: fog, depthTexture: postTargets.depth, colorTexture: postTargets.color, inverseViewProjection: relativeViewProjection.inverse, cameraPosition: .zero).eraseToAnyElement()
+            return FogPass(fog: fog, depthTexture: postTargets.depth, colorTexture: postTargets.color, inverseViewProjection: relativeViewProjection.inverse, cameraPosition: .zero, lights: fogLighting.lights, shadow: fogLighting.shadow).eraseToAnyElement()
         case .colorAdjust:
             return postProcessing.map { ColorAdjustPass(settings: $0, colorTexture: postTargets.color).eraseToAnyElement() }
         case .autoExposure:

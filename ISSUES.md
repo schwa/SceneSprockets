@@ -12394,15 +12394,18 @@ Hair, foliage and dense overlapping transparent surfaces need order-independent 
 ## 540: No volumetric fog
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: effort:l, area:renderer
 created: 2026-11-17T17:55:40Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-22T18:17:00Z
+closed: 2026-11-22T18:17:00Z
 +++
 
 Fog does not scatter light through participating media. (Moved from SceneSprocketsAddOns#56.)
+
+- `2026-11-22T18:17:00Z`: SceneGraph.Fog.scattering: single-scattering raymarch in the fog pass (fog_scatter_compute) with extinction, Henyey-Greenstein phase, per-light shadows from the scene's shadow map (with a lookup that treats air beyond the shadow map's far plane as behind the casters), jittered steps, background rays to maximumDistance. Tests: beam brightens only rays through the light cone, transmittance matches exp(-density * distance), an occluder's shadow darkens the beam. Shadows demo toggle. Not done: scattering is added after tone mapping (no HDR target, #399), no temporal filtering (#496), no height/noise density variation.
 
 ---
 
