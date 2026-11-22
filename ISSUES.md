@@ -13720,6 +13720,25 @@ The glTF loader itself accepts up to 1024 levels (found while working on #563).
 
 ---
 
+## 604: Instanced meshes still cost one mesh entry, frustum test and model-matrix gather per copy each frame
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:scenegraph,effort:l
+created: 2026-11-22T15:31:03Z
++++
+
+Node.Content.instancedMesh (#135) removes the node, entity, traversal and world-transform cost of one node per copy, but the scene graph still expands it into one MeshEntry per copy and submesh. Each frame the renderers then cull every copy's entry on its own and gather one model matrix per copy before grouping the copies back into an instanced draw. For thousands of copies the CPU cost per frame still grows with the copy count, unlike SCNGeometry with an instance buffer or EXT_mesh_gpu_instancing, where one draw carries the whole instance buffer.
+
+Related gaps in the first cut:
+- glTF EXT_mesh_gpu_instancing is still imported as child nodes, not as an instanced mesh.
+- Physics bodies (convex hull, mesh shapes) and subdivision ignore instanced meshes.
+- No per-instance colors.
+
+---
+
 ## Milestone M1: Correctness
 
 +++
