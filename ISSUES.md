@@ -13639,12 +13639,13 @@ Found while fixing #299.
 ## 599: Info panel lacks detail and has an unpolished, non-panel layout
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: effort:s, area:ui
 created: 2026-11-20T06:27:47Z
-updated: 2026-11-22T13:05:02Z
+updated: 2026-11-22T15:57:59Z
+closed: 2026-11-22T15:57:59Z
 +++
 
 Make the info panel contain more info.
@@ -13653,6 +13654,7 @@ Make it prettier and more panel like
 - `2026-11-22T13:04:15Z`: Question 1: Which info panel: the SceneSprocketsDemo overlay, GLTFViewer inspector, or the Composer? And what extra info should it show? Recommended: SceneSprocketsDemo info overlay; add node/mesh/draw counts, frame timing and camera info
 - `2026-11-22T13:05:02Z`: Answer 1: The frameworks' info panel (e.g. SceneStatisticsOverlay in SceneSprockets), not the demos.
 - `2026-11-22T13:05:02Z`: Scope: framework info panel (Sources/SceneSprockets/UI/SceneStatisticsOverlay.swift), not the demo apps.
+- `2026-11-22T15:57:59Z`: SceneStatisticsOverlay is a material panel: a header (fps, frame time, sparkline, chevron) that expands to Frame (fps, frame/avg/min-max, GPU, frames), Scene (nodes, meshes, triangles, vertices, lights, cameras) and timed GPU passes, plus the phase donut with the total inside the ring.
 
 ---
 
