@@ -11895,6 +11895,8 @@ updated: 2026-11-20T06:33:50Z
 
 Lighting cost scales with lights × objects in the forward pass. Scenes with many local lights need deferred lighting (light volumes) or tiled/clustered light culling.
 
+- `2026-11-22T19:59:11Z`: Related: #611 (keynote slide).
+
 ---
 
 ## 515: Demo package unit tests take over 3 minutes
@@ -13928,11 +13930,12 @@ The glTF loader itself accepts up to 1024 levels (found while working on #563).
 ## 604: Instanced meshes still cost one mesh entry, frustum test and model-matrix gather per copy each frame
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
 labels: area:scenegraph, effort:l
 created: 2026-11-22T15:31:03Z
+updated: 2026-11-22T19:59:10Z
 +++
 
 Node.Content.instancedMesh (#135) removes the node, entity, traversal and world-transform cost of one node per copy, but the scene graph still expands it into one MeshEntry per copy and submesh. Each frame the renderers then cull every copy's entry on its own and gather one model matrix per copy before grouping the copies back into an instanced draw. For thousands of copies the CPU cost per frame still grows with the copy count, unlike SCNGeometry with an instance buffer or EXT_mesh_gpu_instancing, where one draw carries the whole instance buffer.
@@ -13947,11 +13950,12 @@ Related gaps in the first cut:
 ## 605: Hit testing never hits line or point primitives
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
 labels: area:scenegraph, effort:s
 created: 2026-11-22T16:12:40Z
+updated: 2026-11-22T19:59:10Z
 +++
 
 SceneGraph.hitTest skips submeshes whose primitive type is .line, .lineStrip or .point, so wireframe helpers, curves and point clouds can never be picked. SceneKit-style picking of lines and points needs a distance tolerance (in world units or screen points), which HitTestOptions does not have. Split from #405.
@@ -13961,11 +13965,12 @@ SceneGraph.hitTest skips submeshes whose primitive type is .line, .lineStrip or 
 ## 606: autoExposureBrightensDarkScene fails
 
 +++
-status: new
+status: open
 priority: medium
 kind: bug
 labels: area:renderer, area:testing, effort:s
 created: 2026-11-22T16:14:54Z
+updated: 2026-11-22T19:59:10Z
 +++
 
 AutoExposureTests.autoExposureBrightensDarkScene fails in most full runs since the dependency update to MetalSprockets 0.3.9/0.3.10 (2026-11-22), also on a clean working copy:
@@ -13979,11 +13984,12 @@ It passed in some earlier full runs the same day, so it may be timing-dependent.
 ## 607: Splines cannot be placed in the scene as nodes, and no constraint follows a path
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
 labels: area:scenegraph, effort:m
 created: 2026-11-22T17:19:47Z
+updated: 2026-11-22T19:59:11Z
 +++
 
 SceneGraph.Spline and Action.follow(_:duration:orientsToPath:) (#407) move a node along a curve given in code. A spline still cannot be a node in the scene (visible and editable like a light or camera, saved in archives, moved with its node), and Constraint has no follow-path kind that keeps a node at a fraction along a path node. #81 (extruded Bézier path shape) could share the type. Split from #407.
@@ -13993,11 +13999,12 @@ SceneGraph.Spline and Action.follow(_:duration:orientsToPath:) (#407) move a nod
 ## 608: glTF benchmarks do not cover variant switching, the environment background, or GPU-bound resolutions
 
 +++
-status: new
+status: open
 priority: low
 kind: task
 labels: area:performance, area:testing, effort:s, gltf
 created: 2026-11-22T17:36:41Z
+updated: 2026-11-22T19:59:11Z
 +++
 
 After #558 the ms-gltf-render bench suite covers morph targets, material lobes, point/line primitives, many lights, many textures and load time. Still not measured:
@@ -14011,25 +14018,29 @@ Split from #558.
 ## 609: MaterialX node graphs are not evaluated
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
 labels: area:materials, effort:l
 created: 2026-11-22T18:08:09Z
+updated: 2026-11-22T19:59:11Z
 +++
 
 MaterialXDocument (#528) loads standard_surface and UsdPreviewSurface materials with constant inputs and image textures (directly, through nodegraph outputs, or behind a normalmap node). Any other node feeding a shader input (math such as add/multiply, mix, procedural noise, texcoord transforms, extract/swizzle, image nodes with UV scale/offset inputs) is not evaluated: the input keeps the shader's default and a warning is reported. Images on inputs without a texture slot (opacity, coat, sheen, transmission, specular) are also ignored. Other surface shaders (open_pbr_surface, gltf_pbr) are skipped. Split from #528.
+
+- `2026-11-22T19:59:11Z`: Related: #526, #527 (material shader graphs).
 
 ---
 
 ## 610: Keynote has no slide for physics joints, characters, triggers and buoyancy
 
 +++
-status: new
+status: open
 priority: low
 kind: task
 labels: area:demo, effort:s
 created: 2026-11-22T19:47:47Z
+updated: 2026-11-22T19:59:11Z
 +++
 
 The keynote's only physics slide is the dice tray. It does not show physics joints (#432), the character controller (#433), trigger bodies (#411), contact reporting with impact strength (#423, #430), buoyancy (#436), axis locks (#414) or physics debug drawing (#431).
@@ -14039,25 +14050,29 @@ The keynote's only physics slide is the dice tray. It does not show physics join
 ## 611: Keynote has no slide for clustered lighting with many lights
 
 +++
-status: new
+status: open
 priority: low
 kind: task
 labels: area:demo, effort:s
 created: 2026-11-22T19:47:48Z
+updated: 2026-11-22T19:59:11Z
 +++
 
 Clustered light assignment (#519) is only shown by the standalone Many Lights demo. The keynote has no slide with many lights. Related: #443 (standalone demos outside the keynote).
+
+- `2026-11-22T19:59:11Z`: Related: #514 (clustered lighting).
 
 ---
 
 ## 612: Keynote has no slide for paths and splines
 
 +++
-status: new
+status: open
 priority: low
 kind: task
 labels: area:demo, effort:s
 created: 2026-11-22T19:47:48Z
+updated: 2026-11-22T19:59:11Z
 +++
 
 Spline nodes and the follow-path constraint (#407, #607) are not shown in the keynote.
@@ -14067,11 +14082,12 @@ Spline nodes and the follow-path constraint (#407, #607) are not shown in the ke
 ## 613: Keynote Fog slide does not show volumetric fog
 
 +++
-status: new
+status: open
 priority: low
 kind: task
 labels: area:demo, effort:s
 created: 2026-11-22T19:47:48Z
+updated: 2026-11-22T19:59:11Z
 +++
 
 The Fog slide shows distance fog only. Volumetric fog with light beams and shadow shafts (SceneGraph.Fog.scattering, #540) is only reachable through a toggle in the standalone Shadows demo.
@@ -14081,11 +14097,12 @@ The Fog slide shows distance fog only. Volumetric fog with light beams and shado
 ## 614: Keynote Performance slide does not show explicit instancing
 
 +++
-status: new
+status: open
 priority: low
 kind: task
 labels: area:demo, effort:s
 created: 2026-11-22T19:47:48Z
+updated: 2026-11-22T19:59:11Z
 +++
 
 Explicit instancing (Node.Content.instancedMesh, #135) is not shown in the keynote's Performance slide.
@@ -14095,11 +14112,12 @@ Explicit instancing (Node.Content.instancedMesh, #135) is not shown in the keyno
 ## 615: Keynote Materials slide does not show parallax occlusion mapping
 
 +++
-status: new
+status: open
 priority: low
 kind: task
 labels: area:demo, effort:s
 created: 2026-11-22T19:47:48Z
+updated: 2026-11-22T19:59:11Z
 +++
 
 Parallax occlusion mapping (#537) is not shown in the keynote.
@@ -14109,11 +14127,12 @@ Parallax occlusion mapping (#537) is not shown in the keynote.
 ## 616: Keynote Lights slide does not show ambient light nodes
 
 +++
-status: new
+status: open
 priority: low
 kind: task
 labels: area:demo, effort:s
 created: 2026-11-22T19:47:49Z
+updated: 2026-11-22T19:59:11Z
 +++
 
 Ambient light as a scene node (Light.Kind.ambient, #602) is not shown in the keynote's Lights slide.
@@ -14123,11 +14142,12 @@ Ambient light as a scene node (Light.Kind.ambient, #602) is not shown in the key
 ## 617: Keynote Gizmos slide does not show the editor gizmos
 
 +++
-status: new
+status: open
 priority: low
 kind: task
 labels: area:demo, effort:s
 created: 2026-11-22T19:47:49Z
+updated: 2026-11-22T19:59:11Z
 +++
 
 The editor gizmos (grid, axes, light and camera icons, bounds; #406) are not shown in the keynote's Gizmos slide.
@@ -14137,11 +14157,12 @@ The editor gizmos (grid, axes, light and camera icons, bounds; #406) are not sho
 ## 618: Keynote glTF & Model I/O slide does not mention MaterialX
 
 +++
-status: new
+status: open
 priority: low
 kind: task
-labels: area:demo,effort:s
+labels: area:demo, effort:s
 created: 2026-11-22T19:47:49Z
+updated: 2026-11-22T19:59:11Z
 +++
 
 MaterialX loading (MaterialXDocument, #528) is not shown in the keynote. The demo has no sample .mtlx asset.
