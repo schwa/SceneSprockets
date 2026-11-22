@@ -14160,15 +14160,18 @@ Parallax occlusion mapping (#537) is not shown in the keynote.
 ## 616: Keynote Lights slide does not show ambient light nodes
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:demo, effort:s
 created: 2026-11-22T19:47:49Z
-updated: 2026-11-22T19:59:11Z
+updated: 2026-11-22T21:21:47Z
+closed: 2026-11-22T21:21:47Z
 +++
 
 Ambient light as a scene node (Light.Kind.ambient, #602) is not shown in the keynote's Lights slide.
+
+- `2026-11-22T21:21:47Z`: Lights slide: a faint blue ambient light node (Light type .ambient, intensity 0.15) with an Ambient Light slider; notes and code panel mention it. Test: lightsSlideHasAmbientLightNode.
 
 ---
 

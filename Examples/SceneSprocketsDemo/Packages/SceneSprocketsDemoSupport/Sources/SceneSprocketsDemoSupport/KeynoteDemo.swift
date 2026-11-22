@@ -148,6 +148,8 @@ public final class KeynoteDemo: DemoScene {
     private var slideEmitters: [String: (node: SceneGraph.Node, system: SceneParticleSystem)] = [:]
     private var crateCountLabel: SceneGraph.Node?
     private var crateGrid: SceneGraph.Node?
+    // The Lights slide's ambient light node (#616).
+    private var ambientLight: SceneGraph.Node?
     // Explicit instancing on the Performance slide (#614): one instancedMesh node per material, with the indices of
     // its crates in `crates`.
     private var instancedCrateGroups: [(node: SceneGraph.Node, mesh: MetalMesh, material: any SceneMaterial, crateIndices: [Int])] = []
@@ -284,6 +286,7 @@ public final class KeynoteDemo: DemoScene {
         • Point, spot and directional lights are nodes like everything else.
         • These three colored point lights orbit because their parent node spins.
         • Range limits how far each light reaches.
+        • An ambient light node adds even light everywhere, so the sides away from the lights are not black.
         """,
         "Many Lights": """
         • Hundreds of short-range point lights, with no special setup.
@@ -470,7 +473,8 @@ public final class KeynoteDemo: DemoScene {
         case "Lights":
             [
                 .slider("Light Orbit Speed", 0...3, default: 1), .slider("Light Intensity", 0...3, default: 1), .slider("Light Range", 1...14, default: 14),
-                .toggle("Red Light", default: true), .toggle("Green Light", default: true), .toggle("Blue Light", default: true)
+                .toggle("Red Light", default: true), .toggle("Green Light", default: true), .toggle("Blue Light", default: true),
+                .slider("Ambient Light", 0...1, default: 0.15)
             ]
         case "Shadows":
             [.toggle("Cast Shadows", default: true), .slider("Sun Angle", -90...90, default: 0), .slider("Shadow Spin", 0...3, default: 1)]
@@ -887,6 +891,10 @@ public final class KeynoteDemo: DemoScene {
                     pivot.isVisible = self[flag: name]
                 }
             }
+            if changed("Ambient Light"), let ambientLight, case var .light(light) = ambientLight.content {
+                light.intensity = self[value: "Ambient Light"]
+                ambientLight.content = .light(light)
+            }
         case "Shadows":
             if changed("Sun Angle"), let shadowSun {
                 let angle = self[value: "Sun Angle"] * .pi / 180
@@ -1108,6 +1116,7 @@ public final class KeynoteDemo: DemoScene {
             var light = Light(type: .point, color: [1, 0.2, 0.2], intensity: 25)
             light.range = 14
             pivot.addChild(SceneGraph.Node(content: .light(light)))
+            slide.addChild(SceneGraph.Node(content: .light(Light(type: .ambient, intensity: 0.15))))
             """, to: slide)
         case "Actions":
             addTitle(title, y: 4, to: slide)
@@ -1783,6 +1792,8 @@ public final class KeynoteDemo: DemoScene {
             addLight(to: pivot, at: [3, 1.5, 0], color: color, intensity: 25)
             pivot.addChild(SceneGraph.Node(shape: .sphere(radius: 0.1), material: BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color(color)), transform: .init(translation: [3, 1.5, 0])))
         }
+        // A faint blue ambient light node (#602, #616): even light on every surface, so the unlit sides are not black.
+        ambientLight = slide.addChild(SceneGraph.Node(label: "Ambient Light", content: .light(Light(type: .ambient, color: [0.4, 0.5, 1], intensity: 0.15))))
     }
 
     private func actionsSlide(_ slide: SceneGraph.Node) {

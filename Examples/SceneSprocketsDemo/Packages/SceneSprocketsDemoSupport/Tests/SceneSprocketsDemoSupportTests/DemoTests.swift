@@ -85,6 +85,20 @@ func keynoteShowing(_ title: String) throws -> KeynoteDemo {
     return keynote
 }
 
+// #616: the Lights slide has an ambient light node that the Ambient Light slider sets.
+@Test
+@MainActor
+func lightsSlideHasAmbientLightNode() throws {
+    let keynote = try keynoteShowing("Lights")
+    func ambient() -> Light? {
+        keynote.sceneGraph.lightNodes().map(\.light).first { $0.type == .ambient }
+    }
+    #expect(ambient()?.intensity == 0.15)
+    keynote[value: "Ambient Light"] = 0.6
+    keynote.update(time: 0, deltaTime: 1.0 / 60)
+    #expect(ambient()?.intensity == 0.6)
+}
+
 // #615: the Materials slide has a parallax-mapped tile.
 @Test
 @MainActor
