@@ -7891,6 +7891,9 @@ SceneView's camera control (configured with SceneCameraControl, #312) stops as s
 
 - `2026-11-08T01:33:09Z`: Related: #313. Interaction3D now has an FPV fly mode that can start from the bound camera matrix (Interaction3D #39-#42, on main after 0.1.16, untagged). That covers the fly-mode part of this issue once SceneSprockets uses it; inertia and pan-only modes are still missing.
 - `2026-11-08T02:43:06Z`: Autonomous run: checked, not changed. Inertia: SceneView's orbit drag already has momentum (Interaction3D InteractiveCameraModifier uses CoreDragModifier with momentum: true for rotation); pan (Command-drag, momentum: false) and zoom have none, and Interaction3D exposes no option to turn momentum on or off, so SceneCameraControl cannot make it configurable without an Interaction3D change. Fly mode: same as #313, waiting on an Interaction3D release (0.1.17) with the FPV fixes. Punting: both parts need Interaction3D. Unblocker: tag Interaction3D 0.1.17, and decide whether pan and zoom should coast too (an Interaction3D issue).
+- `2026-11-22T16:44:56Z`: Autonomous run (Interaction3D 0.2.2): fly mode is done (CameraControl.Mode.fly, #313). Inertia and pan-only are still blocked in Interaction3D: InteractiveCameraModifier hard-codes CoreDragModifier momentum (true for orbit, false for the Command-drag pan) and the zoom gesture has none, with no parameter; InteractiveCameraMode only has turntable and arcball, so there is no pan-only (map-style) camera. Interaction3D's RTSMovementModifier pans with one finger and coasts, but it drives an RTSCameraPose, not SceneView's camera matrix binding.
+- `2026-11-22T16:44:56Z`: Question 1 (decision): May I add to Interaction3D (and release it) a momentum option for interactiveCamera's orbit, pan and zoom gestures, and a pan-only InteractiveCameraMode, then expose them as CameraControl.inertia and CameraControl.Mode.pan? Recommended: Yes: Interaction3D gets per-gesture momentum flags plus a .pan mode; CameraControl gets inertia: Bool (default true for all three) and Mode.pan
+- `2026-11-22T16:44:57Z`: Question 2 (decision): Should pan and zoom coast after release by default (like orbit does today), or keep stopping immediately unless inertia is turned on? Recommended: Coast by default for orbit, pan and zoom, matching SCNCameraController's inertia
 
 ---
 
@@ -8925,6 +8928,10 @@ updated: 2026-11-20T06:32:33Z
 
 Passes that read or write screen-space textures (outline via JumpFlood/SilhouetteMask, post effects, anything sampling depth) assume one non-layered target. A stereo drawable is a layered texture (one slice per eye) so these passes would break or only cover one eye.
 
+- `2026-11-22T16:45:20Z`: Autonomous run: punted for scope. Current behavior: SceneGraphElement sets postTargets to nil whenever stereoViews is set (SceneGraphRenderer.swift ~208), so in stereo the post passes do not break, they are skipped for both eyes: shadow mask (renderers that rely on it lose shadows unless the casters' material samples shadows in shader), ambient occlusion, fog, color adjust, auto exposure, and the soft particle pass. SelectionOutline (JumpFlood/SilhouetteMask) has no stereo path. Supporting stereo means each pass reads and writes texture2d_array targets (one slice per eye, layered render or per-slice dispatch, per-eye view-projection for depth reconstruction). That is testable on macOS with layered offscreen targets (as StereoRenderTests do), but it is separate work per pass.
+- `2026-11-22T16:45:20Z`: Question 1 (decision): May I split this into one issue per pass (stereo shadow mask, stereo fog, ...) and close #382 as an umbrella? Recommended: Yes: one subtask per pass under #382
+- `2026-11-22T16:45:29Z`: Question 2 (decision): Which screen-space pass should work in stereo first (options listed in the comment above)? Recommended: Shadow mask, then fog
+
 ---
 
 ## 383: visionOS immersive: culling and transparency sorting use one camera
@@ -9280,6 +9287,10 @@ updated: 2026-11-20T06:33:14Z
 There is no way to project an image onto existing meshes, for example bullet holes, footprints or road markings.
 
 Moved from SceneSprocketsAddOns #24.
+
+- `2026-11-22T16:45:55Z`: Autonomous run: punted for design. Mechanics: a deferred-style decal draws its projector box, reads scene depth, rebuilds the world position (camera-relative, as fog does), maps it into the decal's unit box, samples the decal texture and blends it onto color. Scene depth is only readable after the scene pass, so decals need the second pass that soft particles already use (ParticleDepthCopyPass + a load-color pass), and post targets, which are off in stereo (#382) and with memoryless depth. Open: the API (a new Node.Content case breaks exhaustive switches again; a DecalMaterial on a box mesh with its own renderer fits MaterialRenderer but must run in that later pass; or a Node.decals field), whether decals are lit (unlit blend is simple; lit needs the surface normal, i.e. a normal target, #510), and angle fade / normal-map decals.
+- `2026-11-22T16:45:55Z`: Question 1 (design): How should a decal be expressed: a DecalMaterial on a box-mesh node (the node's transform is the projector box; drawn by a DecalRenderer after the scene pass), or a dedicated Node field/content case? Recommended: DecalMaterial on a box node: no new Content case, works with archives and the inspector
+- `2026-11-22T16:45:55Z`: Question 2 (decision): For the first version, are unlit decals enough: the texture is blended onto the lit scene color, with alpha and an angle fade? Recommended: Yes, unlit with angle fade; lit and normal-map decals after #510 provides normals
 
 ---
 
