@@ -13877,6 +13877,20 @@ It passed in some earlier full runs the same day, so it may be timing-dependent.
 
 ---
 
+## 607: Splines cannot be placed in the scene as nodes, and no constraint follows a path
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:scenegraph,effort:m
+created: 2026-11-22T17:19:47Z
++++
+
+SceneGraph.Spline and Action.follow(_:duration:orientsToPath:) (#407) move a node along a curve given in code. A spline still cannot be a node in the scene (visible and editable like a light or camera, saved in archives, moved with its node), and Constraint has no follow-path kind that keeps a node at a fraction along a path node. #81 (extruded Bézier path shape) could share the type. Split from #407.
+
+---
+
 ## Milestone M1: Correctness
 
 +++
