@@ -113,7 +113,7 @@ extension SceneGraph.PhysicsBody.BodyType: Codable {
 
 extension SceneGraph.PhysicsBody: Codable {
     enum ArchiveKeys: String, CodingKey {
-        case type, shape, mass, friction, restitution
+        case type, shape, mass, friction, restitution, isTrigger
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -123,6 +123,9 @@ extension SceneGraph.PhysicsBody: Codable {
         try container.encodeIfPresent(mass, forKey: .mass)
         try container.encode(friction, forKey: .friction)
         try container.encode(restitution, forKey: .restitution)
+        if isTrigger {
+            try container.encode(isTrigger, forKey: .isTrigger)
+        }
     }
 
     public init(from decoder: Decoder) throws {
@@ -132,7 +135,8 @@ extension SceneGraph.PhysicsBody: Codable {
             shape: try container.decode(Shape.self, forKey: .shape),
             mass: try container.decodeIfPresent(Float.self, forKey: .mass),
             friction: try container.decodeIfPresent(Float.self, forKey: .friction) ?? 0.5,
-            restitution: try container.decodeIfPresent(Float.self, forKey: .restitution) ?? 0
+            restitution: try container.decodeIfPresent(Float.self, forKey: .restitution) ?? 0,
+            isTrigger: try container.decodeIfPresent(Bool.self, forKey: .isTrigger) ?? false
         )
     }
 }

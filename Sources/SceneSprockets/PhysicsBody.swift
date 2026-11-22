@@ -46,6 +46,9 @@ extension SceneGraph {
         public var friction: Float
         /// 0 does not bounce, 1 bounces fully.
         public var restitution: Float
+        /// A trigger detects overlaps with other bodies but does not collide with them or push them, like a SceneKit
+        /// contact-only body.
+        public var isTrigger: Bool
 
         /// Creates a physics body description.
         ///
@@ -55,12 +58,14 @@ extension SceneGraph {
         ///   - mass: The mass in kilograms, or `nil` for the shape's volume at the density of water.
         ///   - friction: The friction coefficient.
         ///   - restitution: The bounciness, from 0 (no bounce) to 1 (full bounce).
-        public init(type: BodyType, shape: Shape, mass: Float? = nil, friction: Float = 0.5, restitution: Float = 0) {
+        ///   - isTrigger: Whether the body only detects overlaps instead of colliding.
+        public init(type: BodyType, shape: Shape, mass: Float? = nil, friction: Float = 0.5, restitution: Float = 0, isTrigger: Bool = false) {
             self.type = type
             self.shape = shape
             self.mass = mass
             self.friction = friction
             self.restitution = restitution
+            self.isTrigger = isTrigger
         }
     }
 }

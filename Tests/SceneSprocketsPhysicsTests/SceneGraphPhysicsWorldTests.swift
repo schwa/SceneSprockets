@@ -408,3 +408,31 @@ func tumblingScaledBodyKeepsItsScale() throws {
     let scale = die.transform.scale
     #expect(simd_distance(scale, [0.0625, 0.0625, 0.0625]) < 1e-4, "scale drifted to \(scale)")
 }
+
+// #411: a trigger body detects overlaps but does not block other bodies.
+@Test
+func dynamicBoxFallsThroughTriggerFloor() throws {
+    let root = SceneGraph.Node()
+    let floor = makeFloor(in: root)
+    floor.physicsBody?.isTrigger = true
+    let box = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 2, 0])))
+    box.physicsBody = .init(type: .dynamic, shape: .box(size: [1, 1, 1]))
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+    run(physics, seconds: 2)
+    #expect(box.worldPosition.y < -2, "box at \(box.worldPosition)")
+}
+
+// #411: turning a body into a trigger after it was created lets bodies pass through it.
+@Test
+func floorBecomesTriggerAfterCreation() throws {
+    let root = SceneGraph.Node()
+    let floor = makeFloor(in: root)
+    let box = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 2, 0])))
+    box.physicsBody = .init(type: .dynamic, shape: .box(size: [1, 1, 1]))
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+    run(physics, seconds: 2)
+    #expect(abs(box.worldPosition.y - 0.5) < 0.05)
+    floor.physicsBody?.isTrigger = true
+    run(physics, seconds: 2)
+    #expect(box.worldPosition.y < -2, "box at \(box.worldPosition)")
+}

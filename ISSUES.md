@@ -9530,20 +9530,23 @@ Release a new SwiftJolt version and raise the dependency.
 ## 411: Physics bodies cannot be triggers
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: area:physics, effort:s
 milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-16T23:34:11Z
-updated: 2026-11-20T06:32:46Z
+updated: 2026-11-22T15:03:38Z
+closed: 2026-11-22T15:03:38Z
 +++
 
 SceneGraph.PhysicsBody has no way to make a body detect overlaps without colliding (a trigger volume, like SceneKit contact-only bodies). Every body blocks every other body.
 
 ## Proposed fix (per schwa)
 Use SwiftJolt's `BodyOptions.isSensor` / `PhysicsWorld.setIsSensor` together with its contact listener.
+
+- `2026-11-22T15:03:38Z`: PhysicsBody.isTrigger makes a Jolt sensor body (set at creation or on change, waking bodies it overlaps), archived as isTrigger. Reporting the overlaps to the scene graph is #423.
 
 ---
 

@@ -217,6 +217,13 @@ public final class SceneGraphPhysicsWorld {
         if description.restitution != old.restitution {
             world.setRestitution(of: body, to: description.restitution)
         }
+        if description.isTrigger != old.isTrigger {
+            world.setIsSensor(body, to: description.isTrigger)
+            // Bodies resting on it are asleep and would stay put; wake them so they react to the change.
+            if let bounds = world.readBody(body, { $0.worldSpaceBounds }) {
+                world.activateBodies(inBoxFrom: bounds.min, to: bounds.max)
+            }
+        }
         // A new shape recomputed the mass, so set it again.
         if description.type == .dynamic, let mass = description.mass, mass != old.mass || description.shape != old.shape {
             world.setMass(of: body, to: mass)
@@ -256,6 +263,9 @@ public final class SceneGraphPhysicsWorld {
         let body = world.addBody(shape, position: pose.translation, rotation: pose.rotation.quaternion, motionType: motionType, restitution: description.restitution, friction: description.friction)
         if description.type == .dynamic, let mass = description.mass {
             world.setMass(of: body, to: mass)
+        }
+        if description.isTrigger {
+            world.setIsSensor(body, to: true)
         }
         return body
     }
