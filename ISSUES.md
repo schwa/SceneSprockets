@@ -14239,6 +14239,195 @@ MaterialXDocument folds math nodes on constants and image-times-constant (#609),
 
 ---
 
+## 621: Frame statistics panel is hard to read: GPU pass rows wrap one letter per line, collapsed bar spans the whole window
+
++++
+status: new
+priority: low
+kind: bug
+labels: area:ui, effort:s
+created: 2026-11-22T22:59:50Z
+updated: 2026-11-22T22:59:57Z
++++
+
+The SceneView statistics panel (Sources/SceneSprockets/UI/SceneStatisticsOverlay.swift, shown with sceneStatistics) has layout problems, seen in the demo app on macOS (screenshots from 2026-11-22):
+
+Expanded panel, GPU passes section:
+- Pass names and times wrap one or two characters per line ("P r e - P a …", "0 . 5 1 m s"), so the section is several times taller than the rest of the panel and unreadable.
+- The passes are laid out side by side in a squeezed grid instead of one row per pass.
+- The same label appears many times (six "Simulate" entries) with no way to tell them apart.
+- "Pre-Pass" is truncated to "Pre-Pa…".
+
+Collapsed panel:
+- The bar stretches across the full window width, with the fps text at the far left and the sparkline and disclosure chevron at the far right, leaving a wide empty gap.
+
+Expected: one readable row per pass with name and time, distinguishable repeated passes, and a collapsed bar sized to its content.
+
+Steps:
+1. Run the demo app (scenesprockets-demos) and open a demo with particles, e.g. the keynote.
+2. Turn on statistics and expand the panel.
+3. Look at the GPU passes section; collapse the panel and look at the bar.
+
+---
+
+## 622: Keynote MaterialX spheres sit on the glTF & Model I/O slide instead of their own slide
+
++++
+status: new
+priority: low
+kind: task
+labels: area:demo, effort:s
+created: 2026-11-22T23:01:40Z
++++
+
+The three MaterialX spheres (gold standard_surface, blue open_pbr_surface car paint, jade gltf_pbr from DemoAssets/Materials.mtlx, added in #618) are placed beside the pedestal on the keynote's glTF & Model I/O slide, where they look unrelated to the plant and pedestal.
+
+## Proposed fix (per schwa)
+Give MaterialX its own keynote slide, and remove the spheres from the glTF & Model I/O slide.
+
+---
+
+## 623: Keynote Materials slide shows a large "Parallax" label under the brick tile
+
++++
+status: new
+priority: low
+kind: task
+labels: area:demo, effort:xs
+created: 2026-11-22T23:03:19Z
++++
+
+The parallax brick tile added to the keynote's Materials slide in #615 has a gray "Parallax" title under it (addTitle in addParallaxTile, KeynoteDemo.swift). None of the other materials on the slide are labelled, so the text stands out and draws attention away from the grid.
+
+## Proposed fix (per schwa)
+Remove the "Parallax" text.
+
+---
+
+## 624: Keynote More Physics slide: objects lose their materials after the first run
+
++++
+status: new
+priority: low
+kind: bug
+labels: area:demo, effort:s
+created: 2026-11-22T23:03:49Z
++++
+
+On the keynote's More Physics slide (#610), the objects look right the first time the slide runs, but their materials vanish after that.
+
+Steps:
+1. Run the demo app and open the keynote.
+2. Go to the More Physics slide and watch it run.
+3. Wait for the slide to restart (it restarts every 12 seconds), press Restart Physics, or leave the slide and come back.
+
+Expected: the chain, crates, ball and character keep their colors on every run.
+Actual: the objects' materials vanish after the first run.
+
+---
+
+## 625: Keynote More Physics slide: the character capsule gets stuck on the step
+
++++
+status: new
+priority: low
+kind: bug
+labels: area:demo, effort:s
+created: 2026-11-22T23:03:49Z
++++
+
+On the keynote's More Physics slide (#610), the walking character (a capsule using the physics character controller) should walk back and forth and climb over the orange step. It gets stuck on the step instead.
+
+Steps:
+1. Run the demo app and open the keynote.
+2. Go to the More Physics slide.
+3. Watch the character walk toward the step.
+
+Expected: the character climbs the step and keeps walking between the ends of its path.
+Actual: the character gets stuck at the step.
+
+---
+
+## 626: Keynote Gizmos slide shows every transform gizmo mode on the center box only
+
++++
+status: new
+priority: low
+kind: task
+labels: area:demo, effort:s
+created: 2026-11-22T23:04:21Z
++++
+
+The keynote's Gizmos slide has three objects (sphere, box, cone), but the transform gizmo is only ever on the center box. Its mode cycles through translate, rotate and scale over time, so only one gizmo kind is visible at a time and the other two objects never get one.
+
+## Proposed fix (per schwa)
+Put one gizmo on each object (one per mode), shown at the same time, instead of cycling the modes on the box.
+
+---
+
+## 627: Keynote Fog slide shows distance fog and volumetric fog together, which causes problems
+
++++
+status: new
+priority: low
+kind: task
+labels: area:demo, effort:s
+created: 2026-11-23T00:39:35Z
++++
+
+Since #613, the keynote's Fog slide applies distance fog (Fog Start / Fog End) and volumetric fog (Fog.scattering, Volumetric Fog toggle and Fog Density) at the same time on the same pillars. The two together cause problems on the slide.
+
+## Proposed fix (per schwa)
+Show only volumetric fog on the Fog slide.
+
+---
+
+## 628: Many Lights keynote slide shows rectangular tiles where lighting cuts off
+
++++
+status: new
+priority: medium
+kind: bug
+labels: area:renderer, lighting, effort:s
+created: 2026-11-23T00:42:41Z
+updated: 2026-11-23T00:42:47Z
++++
+
+On the keynote's Many Lights slide (#611), the lit floor and pillars show hard-edged rectangular blocks: inside a block the colored point lights are missing or different from the neighboring block, so lighting changes abruptly along straight screen-aligned edges. The pillars are cut across horizontally at the same edges. Screenshot from 2026-11-22 (macOS demo app, 120 fps).
+
+The blocks line up with a screen-space grid, which looks like the light clusters used from 16 lights on (#519, 16 x 9 x 24 grid). Not verified.
+
+Steps:
+1. Run the demo app (scenesprockets-demos) and open Introduction to SceneSprockets.
+2. Pick the Many Lights slide (defaults: Swarm Size 300, Swarm Range 1.6).
+3. Look at the floor and the near pillars.
+
+Expected: smooth lighting with no visible tile edges, as with clustering off.
+Actual: rectangular tiles with missing or different lighting.
+
+---
+
+## 629: Keynote code panels run past the edges of the view on several slides
+
++++
+status: new
+priority: low
+kind: bug
+labels: area:demo, effort:s
+created: 2026-11-23T00:48:41Z
++++
+
+Several keynote slides now have code panels wider than the view, so the start and end of their lines are cut off at the window edges. Seen on the Many Lights slide (screenshot from 2026-11-22: the lines start left of the view and "range: 1.6))))" reaches the right edge); other slides added or changed recently have similarly long lines (for example Gizmos, More Physics, Paths, Fog, Performance).
+
+Steps:
+1. Run the demo app (scenesprockets-demos) and open Introduction to SceneSprockets.
+2. Step through the slides at the default window size.
+
+Expected: every code panel fits inside the view.
+Actual: on several slides the code panel is wider than the view and its lines are cut off.
+
+---
+
 ## Milestone M1: Correctness
 
 +++
