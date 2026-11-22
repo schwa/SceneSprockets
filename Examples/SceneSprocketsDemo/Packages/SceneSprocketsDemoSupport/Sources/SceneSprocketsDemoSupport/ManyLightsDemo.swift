@@ -19,7 +19,7 @@ final class ManyLightsDemo: DemoScene {
         let eye: SIMD3<Float> = [0, 14, 18]
         root.addChild(.camera(.demo, label: "Camera", transform: .init(position: eye, lookingAt: .zero)))
         // A dim key light, so the scene reads without the point lights.
-        root.addChild(SceneGraph.Node(label: "Moon", content: .light(Light(type: .directional, color: [0.6, 0.7, 1], intensity: 0.05)), transform: .init(position: [3, 10, 4], lookingAt: .zero)))
+        root.addChild(SceneGraph.Node(label: "Moon", transform: .init(position: [3, 10, 4], lookingAt: .zero), content: .light(Light(type: .directional, color: [0.6, 0.7, 1], intensity: 0.05))))
         let floorColor: SIMD3<Float> = [0.55, 0.55, 0.6]
         let floor = root.addChild(SceneGraph.Node(label: "Floor", shape: .box(width: 30, height: 0.1, length: 30), material: BlinnPhongSceneMaterial.plastic(floorColor, shininess: 16), transform: .init(translation: [0, -0.05, 0])))
         materialSets.append((floor, BlinnPhongSceneMaterial.plastic(floorColor, shininess: 16), PBRSceneMaterial(baseColor: floorColor, roughness: 0.5)))
