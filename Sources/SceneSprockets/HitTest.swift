@@ -182,21 +182,10 @@ extension MetalMesh {
     // float2 values of `semantic` read from the vertex buffers; nil if there is no such float2 attribute.
     // swiftlint:disable:next discouraged_optional_collection - nil means the attribute is absent
     func float2Values(_ semantic: VertexDescriptor.Attribute.Semantic) -> [SIMD2<Float>]? {
-        guard let attribute = vertexDescriptor.attributes.first(where: { $0.semantic == semantic }),
-              attribute.format == .float2,
-              let buffer = vertexBuffers[attribute.bufferIndex]
-        else {
-            return nil
-        }
-        let stride = vertexDescriptor.layouts[attribute.bufferIndex]?.stride ?? 8
-        let base = buffer.cpuReadable.contents().advanced(by: (vertexBufferOffsets[attribute.bufferIndex] ?? 0) + attribute.offset)
-        return (0..<vertexCount).map { index in
-            let pointer = base.advanced(by: index * stride)
-            return SIMD2(pointer.loadUnaligned(fromByteOffset: 0, as: Float.self), pointer.loadUnaligned(fromByteOffset: 4, as: Float.self))
-        }
+        floatValues(semantic, minimumComponents: 2)?.map { SIMD2($0.x, $0.y) }
     }
 
-    /// float3 positions read from the vertex buffers; empty if there are none.
+    /// Positions read from the vertex buffers as floats, whatever their vertex format; empty if there are none.
     public func positions() -> [SIMD3<Float>] {
         float3Values(.position) ?? []
     }
@@ -204,17 +193,109 @@ extension MetalMesh {
     // float3 values of `semantic` read from the vertex buffers; nil if there is no such float3 attribute.
     // swiftlint:disable:next discouraged_optional_collection - nil means the attribute is absent
     func float3Values(_ semantic: VertexDescriptor.Attribute.Semantic) -> [SIMD3<Float>]? {
+        floatValues(semantic, minimumComponents: 3)?.map { SIMD3($0.x, $0.y, $0.z) }
+    }
+
+    // The values of `semantic` as floats, whatever their vertex format: float, half, or normalized or plain
+    // integers (#405). Missing components are zero. Nil if there is no such attribute, it has fewer than
+    // `minimumComponents` components, or its format is not one of these.
+    // swiftlint:disable:next discouraged_optional_collection - nil means the attribute is absent or unreadable
+    func floatValues(_ semantic: VertexDescriptor.Attribute.Semantic, minimumComponents: Int) -> [SIMD4<Float>]? {
         guard let attribute = vertexDescriptor.attributes.first(where: { $0.semantic == semantic }),
-              attribute.format == .float3,
+              let decoding = VertexComponentDecoding(attribute.format),
+              decoding.count >= minimumComponents,
               let buffer = vertexBuffers[attribute.bufferIndex]
         else {
             return nil
         }
-        let stride = vertexDescriptor.layouts[attribute.bufferIndex]?.stride ?? 12
+        let stride = vertexDescriptor.layouts[attribute.bufferIndex]?.stride ?? attribute.format.size
         let base = buffer.cpuReadable.contents().advanced(by: (vertexBufferOffsets[attribute.bufferIndex] ?? 0) + attribute.offset)
         return (0..<vertexCount).map { index in
-            let pointer = base.advanced(by: index * stride)
-            return SIMD3(pointer.loadUnaligned(fromByteOffset: 0, as: Float.self), pointer.loadUnaligned(fromByteOffset: 4, as: Float.self), pointer.loadUnaligned(fromByteOffset: 8, as: Float.self))
+            decoding.decode(UnsafeRawPointer(base.advanced(by: index * stride)))
         }
+    }
+}
+
+// How to turn one vertex attribute of a Metal vertex format into floats.
+private struct VertexComponentDecoding {
+    enum Scalar {
+        case float, half
+        case uint8(normalized: Bool), int8(normalized: Bool), uint16(normalized: Bool), int16(normalized: Bool)
+        case uint32, int32
+
+        var size: Int {
+            switch self {
+            case .float, .uint32, .int32: 4
+            case .half, .uint16, .int16: 2
+            case .uint8, .int8: 1
+            }
+        }
+    }
+
+    var scalar: Scalar
+    var count: Int
+
+    init?(_ format: MTLVertexFormat) {
+        switch format {
+        case .float: (scalar, count) = (.float, 1)
+        case .float2: (scalar, count) = (.float, 2)
+        case .float3: (scalar, count) = (.float, 3)
+        case .float4: (scalar, count) = (.float, 4)
+        case .half: (scalar, count) = (.half, 1)
+        case .half2: (scalar, count) = (.half, 2)
+        case .half3: (scalar, count) = (.half, 3)
+        case .half4: (scalar, count) = (.half, 4)
+        case .ucharNormalized, .uchar: (scalar, count) = (.uint8(normalized: format == .ucharNormalized), 1)
+        case .uchar2Normalized, .uchar2: (scalar, count) = (.uint8(normalized: format == .uchar2Normalized), 2)
+        case .uchar3Normalized, .uchar3: (scalar, count) = (.uint8(normalized: format == .uchar3Normalized), 3)
+        case .uchar4Normalized, .uchar4: (scalar, count) = (.uint8(normalized: format == .uchar4Normalized), 4)
+        case .charNormalized, .char: (scalar, count) = (.int8(normalized: format == .charNormalized), 1)
+        case .char2Normalized, .char2: (scalar, count) = (.int8(normalized: format == .char2Normalized), 2)
+        case .char3Normalized, .char3: (scalar, count) = (.int8(normalized: format == .char3Normalized), 3)
+        case .char4Normalized, .char4: (scalar, count) = (.int8(normalized: format == .char4Normalized), 4)
+        case .ushortNormalized, .ushort: (scalar, count) = (.uint16(normalized: format == .ushortNormalized), 1)
+        case .ushort2Normalized, .ushort2: (scalar, count) = (.uint16(normalized: format == .ushort2Normalized), 2)
+        case .ushort3Normalized, .ushort3: (scalar, count) = (.uint16(normalized: format == .ushort3Normalized), 3)
+        case .ushort4Normalized, .ushort4: (scalar, count) = (.uint16(normalized: format == .ushort4Normalized), 4)
+        case .shortNormalized, .short: (scalar, count) = (.int16(normalized: format == .shortNormalized), 1)
+        case .short2Normalized, .short2: (scalar, count) = (.int16(normalized: format == .short2Normalized), 2)
+        case .short3Normalized, .short3: (scalar, count) = (.int16(normalized: format == .short3Normalized), 3)
+        case .short4Normalized, .short4: (scalar, count) = (.int16(normalized: format == .short4Normalized), 4)
+        case .uint: (scalar, count) = (.uint32, 1)
+        case .uint2: (scalar, count) = (.uint32, 2)
+        case .uint3: (scalar, count) = (.uint32, 3)
+        case .uint4: (scalar, count) = (.uint32, 4)
+        case .int: (scalar, count) = (.int32, 1)
+        case .int2: (scalar, count) = (.int32, 2)
+        case .int3: (scalar, count) = (.int32, 3)
+        case .int4: (scalar, count) = (.int32, 4)
+        default: return nil
+        }
+    }
+
+    func decode(_ pointer: UnsafeRawPointer) -> SIMD4<Float> {
+        var result = SIMD4<Float>.zero
+        for component in 0..<count {
+            let offset = component * scalar.size
+            result[component] = switch scalar {
+            case .float: pointer.loadUnaligned(fromByteOffset: offset, as: Float.self)
+            case .half: Float(pointer.loadUnaligned(fromByteOffset: offset, as: Float16.self))
+            case let .uint8(normalized): Float(pointer.loadUnaligned(fromByteOffset: offset, as: UInt8.self)) / (normalized ? 255 : 1)
+            case let .uint16(normalized): Float(pointer.loadUnaligned(fromByteOffset: offset, as: UInt16.self)) / (normalized ? 65_535 : 1)
+            case let .int8(normalized): Self.signed(Float(pointer.loadUnaligned(fromByteOffset: offset, as: Int8.self)), maximum: 127, normalized: normalized)
+            case let .int16(normalized): Self.signed(Float(pointer.loadUnaligned(fromByteOffset: offset, as: Int16.self)), maximum: 32_767, normalized: normalized)
+            case .uint32: Float(pointer.loadUnaligned(fromByteOffset: offset, as: UInt32.self))
+            case .int32: Float(pointer.loadUnaligned(fromByteOffset: offset, as: Int32.self))
+            }
+        }
+        return result
+    }
+
+    // Signed normalized values clamp -128 and -32768 to -1, as Metal does.
+    private static func signed(_ value: Float, maximum: Float, normalized: Bool) -> Float {
+        guard normalized else {
+            return value
+        }
+        return max(value / maximum, -1)
     }
 }

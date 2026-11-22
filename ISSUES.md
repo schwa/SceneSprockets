@@ -9419,16 +9419,19 @@ SceneGraph.hitTest does not handle primitive restart indices (0xFFFF / 0xFFFFFFF
 ## 405: Hit testing only reads float3 positions and float2 texture coordinates
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:scenegraph, effort:m
 milestone: Physics-and-Scene
 created: 2026-11-16T20:06:43Z
-updated: 2026-11-20T06:32:46Z
+updated: 2026-11-22T16:14:54Z
+closed: 2026-11-22T16:14:54Z
 +++
 
 MetalMesh.float3Values / float2Values return nil for any other format (half, packed, float4). Meshes with such positions give no hits; meshes with such UVs give nil from Hit.textureCoordinates. Line and point primitives are also never hit.
+
+- `2026-11-22T16:14:54Z`: Hit testing and Hit.textureCoordinates read positions and texture coordinates in any float, half, or (normalized) integer vertex format. Line and point primitives split to #605.
 
 ---
 
@@ -13773,7 +13776,7 @@ Related gaps in the first cut:
 status: new
 priority: low
 kind: enhancement
-labels: area:scenegraph,effort:s
+labels: area:scenegraph, effort:s
 created: 2026-11-22T16:12:40Z
 +++
 

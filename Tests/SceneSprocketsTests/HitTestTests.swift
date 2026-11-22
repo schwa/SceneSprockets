@@ -1,5 +1,6 @@
 import GeometryLite3D
 import Metal
+import MetalSupport
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
 import simd
@@ -208,6 +209,41 @@ func stripsRestartAtPrimitiveRestartIndices(indexType: MTLIndexType) throws {
     }
     // Nothing between the quads, where a triangle across the restart would be.
     #expect(sceneGraph.hitTest(Ray3D(origin: [1.5, 0.5, 1], direction: [0, 0, -1])).isEmpty)
+}
+
+// #405: positions and texture coordinates in half, normalized integer and float4 formats are hit and read.
+@Test
+func hitTestReadsNonFloatVertexFormats() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let positions: [SIMD3<Float>] = [[0, 0, 0], [1, 0, 0], [0, 1, 0]]
+    let coordinates: [SIMD2<Float>] = [[0, 0], [1, 0], [0, 1]]
+    let cases: [(MetalMesh.VertexAttributeData, MetalMesh.VertexAttributeData)] = [
+        (.init(semantic: .position, format: .half3, values: positions.map { SIMD3<Float16>($0) }), .init(semantic: .texcoord(0), format: .half2, values: coordinates.map { SIMD2<Float16>($0) })),
+        (.init(semantic: .position, format: .float4, values: positions.map { SIMD4($0, 1) }), .init(semantic: .texcoord(0), format: .uchar2Normalized, values: coordinates.map { SIMD2<UInt8>($0 * 255) })),
+        (.positions(positions), .init(semantic: .texcoord(0), format: .ushort2Normalized, values: coordinates.map { SIMD2<UInt16>($0 * 65_535) }))
+    ]
+    for (position, texcoord) in cases {
+        // The array initializer only takes float3 positions, so each attribute gets its own buffer afterwards.
+        var mesh = MetalMesh(device: device, attributes: [.positions(positions)], submeshes: [.init(indices: [0, 1, 2])])
+        func buffer(_ data: MetalMesh.VertexAttributeData) throws -> MTLBuffer {
+            try #require(device.makeBuffer(bytes: data.bytes, length: data.bytes.count, options: .storageModeShared))
+        }
+        mesh.vertexBuffers = [0: try buffer(position), 1: try buffer(texcoord)]
+        mesh.vertexBufferOffsets = [:]
+        mesh.vertexDescriptor = VertexDescriptor(attributes: [
+            .init(semantic: .position, format: position.format, offset: 0, bufferIndex: 0),
+            .init(semantic: .texcoord(0), format: texcoord.format, offset: 0, bufferIndex: 1)
+        ], layouts: [
+            .init(bufferIndex: 0, stride: position.format.size, stepFunction: .perVertex, stepRate: 1),
+            .init(bufferIndex: 1, stride: texcoord.format.size, stepFunction: .perVertex, stepRate: 1)
+        ])
+        let root = SceneGraph.Node()
+        root.addChild(SceneGraph.Node(content: .mesh(mesh, material: material())))
+        let hit = SceneGraph(root: root).hitTest(Ray3D(origin: [0.25, 0.5, 1], direction: [0, 0, -1])).first
+        #expect(hit != nil, "\(position.format) positions")
+        let uv = try #require(hit?.textureCoordinates(), "\(texcoord.format) coordinates")
+        #expect(simd_distance(uv, [0.25, 0.5]) < 0.01, "\(uv)")
+    }
 }
 
 // #403: odd triangles of a strip have reversed index order, so their front face follows the even triangles'.

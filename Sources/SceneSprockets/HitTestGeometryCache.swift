@@ -64,9 +64,9 @@ final class HitTestGeometryCache: @unchecked Sendable {
         return made
     }
 
-    // The mesh's float3 positions; empty if it has none. Reads CPU-visible buffers; see `MetalMesh.cpuReadable()`.
+    // The mesh's positions as floats; empty if it has none. Reads CPU-visible buffers; see `MetalMesh.cpuReadable()`.
     func positions(of mesh: MetalMesh) -> [SIMD3<Float>] {
-        guard let attribute = mesh.vertexDescriptor.attributes.first(where: { $0.semantic == .position }), attribute.format == .float3, let buffer = mesh.vertexBuffers[attribute.bufferIndex] else {
+        guard let attribute = mesh.vertexDescriptor.attributes.first(where: { $0.semantic == .position }), let buffer = mesh.vertexBuffers[attribute.bufferIndex] else {
             return []
         }
         let key = PositionsKey(offset: (mesh.vertexBufferOffsets[attribute.bufferIndex] ?? 0) + attribute.offset, stride: mesh.vertexDescriptor.layouts[attribute.bufferIndex]?.stride ?? 12, vertexCount: mesh.vertexCount)
