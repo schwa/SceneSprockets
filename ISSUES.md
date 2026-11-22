@@ -13965,12 +13965,13 @@ SceneGraph.hitTest skips submeshes whose primitive type is .line, .lineStrip or 
 ## 606: autoExposureBrightensDarkScene fails
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:renderer, area:testing, effort:s
 created: 2026-11-22T16:14:54Z
-updated: 2026-11-22T19:59:10Z
+updated: 2026-11-22T20:19:42Z
+closed: 2026-11-22T20:19:42Z
 +++
 
 AutoExposureTests.autoExposureBrightensDarkScene fails in most full runs since the dependency update to MetalSprockets 0.3.9/0.3.10 (2026-11-22), also on a clean working copy:
@@ -13978,6 +13979,8 @@ AutoExposureTests.autoExposureBrightensDarkScene fails in most full runs since t
 Expectation failed: last > first + 20 (AutoExposureTests.swift:53)
 
 It passed in some earlier full runs the same day, so it may be timing-dependent.
+
+- `2026-11-22T20:19:42Z`: Root cause: metering is read back 3 frames late, and the test's 1000 stops/s moved ~1.5 stops per frame, so exposure oscillated between ~0.84 and 16 and the end value depended on timing. AutoExposure now records the exposure each slot was drawn with and takes the change since then off the error (latency compensation). New test autoExposureSettlesWithLatentMetering fails before the fix (overshoot) and passes after.
 
 ---
 

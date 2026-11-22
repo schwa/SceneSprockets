@@ -27,6 +27,8 @@ public final class AutoExposure: @unchecked Sendable {
     private var settings: Settings
     // One result buffer per frame in flight, read back when its slot comes round again.
     private var buffers: [MTLBuffer] = []
+    // The exposure each slot's frame was drawn with.
+    private var slotExposures: [Float] = Array(repeating: 1, count: frameSlotCount)
 
     /// The linear luminance, from 0 to 1, that the metered geometry averages to (geometric mean).
     public var targetLuminance: Float {
@@ -76,7 +78,8 @@ public final class AutoExposure: @unchecked Sendable {
                     return buffer
                 }
             }
-            let buffer = buffers[Int(submissionIndex % UInt64(Self.frameSlotCount))]
+            let slot = Int(submissionIndex % UInt64(Self.frameSlotCount))
+            let buffer = buffers[slot]
             guard settings.lastSubmission != submissionIndex else {
                 return (settings.exposure, buffer)
             }
@@ -86,16 +89,20 @@ public final class AutoExposure: @unchecked Sendable {
             let metered = buffer.contents().load(as: SIMD2<Float>.self)
             // y is the number of metered samples; 0 when nothing but background was drawn or the slot is new.
             if metered.y > 0 {
-                settings.exposure = Self.adapted(exposure: settings.exposure, meteredLog2Luminance: metered.x, settings: settings, elapsed: elapsed)
+                settings.exposure = Self.adapted(exposure: settings.exposure, meteredLog2Luminance: metered.x, meteredExposure: slotExposures[slot], settings: settings, elapsed: elapsed)
             }
+            slotExposures[slot] = settings.exposure
             buffer.contents().storeBytes(of: SIMD2<Float>.zero, as: SIMD2<Float>.self)
             return (settings.exposure, buffer)
         }
     }
 
-    // One step towards the target, at most `adaptationSpeed * elapsed` stops.
-    static func adapted(exposure: Float, meteredLog2Luminance: Float, settings: Settings, elapsed: Float) -> Float {
-        let error = log2(max(settings.targetLuminance, 1e-4)) - meteredLog2Luminance
+    // One step towards the target, at most `adaptationSpeed * elapsed` stops. The metered frame was drawn a few frames
+    // ago with `meteredExposure`; the change since then is taken off the error, or fast adaptation overshoots and
+    // oscillates (#606).
+    static func adapted(exposure: Float, meteredLog2Luminance: Float, meteredExposure: Float, settings: Settings, elapsed: Float) -> Float {
+        let current = meteredLog2Luminance + log2(exposure / max(meteredExposure, 1e-6))
+        let error = log2(max(settings.targetLuminance, 1e-4)) - current
         let limit = max(settings.adaptationSpeed * max(elapsed, 0), 0)
         let step = min(max(error, -limit), limit)
         return min(max(exposure * pow(2, step), settings.range.lowerBound), settings.range.upperBound)
