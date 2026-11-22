@@ -7,7 +7,7 @@ extension BlinnPhongSceneMaterial: ArchivableMaterial {
     public static let archiveTypeName = "blinnPhong"
 
     enum ArchiveKeys: String, CodingKey {
-        case ambient, diffuse, specular, shininess, opacity, usesDiffuseTextureAlpha, emission, normalMap, cullMode, renderState
+        case ambient, diffuse, specular, shininess, opacity, usesDiffuseTextureAlpha, emission, normalMap, heightMap, parallaxDepth, cullMode, renderState
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -20,6 +20,10 @@ extension BlinnPhongSceneMaterial: ArchivableMaterial {
         try container.encode(usesDiffuseTextureAlpha, forKey: .usesDiffuseTextureAlpha)
         try container.encode(emission, forKey: .emission)
         try container.encodeIfPresent(normalMap, forKey: .normalMap)
+        if let heightMap {
+            try container.encode(heightMap, forKey: .heightMap)
+            try container.encode(parallaxDepth, forKey: .parallaxDepth)
+        }
         try container.encode(renderState, forKey: .renderState)
     }
 
@@ -42,6 +46,8 @@ extension BlinnPhongSceneMaterial: ArchivableMaterial {
             normalMap: normalMap,
             renderState: try container.decode(MaterialRenderState.self, forKey: .renderState)
         )
+        heightMap = try container.decodeIfPresent(Source.self, forKey: .heightMap)
+        parallaxDepth = try container.decodeIfPresent(Float.self, forKey: .parallaxDepth) ?? parallaxDepth
         // Before #377 the cull mode was a top-level key, not part of renderState.
         if let cullMode = try container.decodeIfPresent(UInt.self, forKey: .cullMode).flatMap(MTLCullMode.init(rawValue:)) {
             renderState.cullMode = cullMode

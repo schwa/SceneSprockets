@@ -14,7 +14,9 @@ namespace BlinnPhong {
 
     // Tangent frame from screen-space derivatives (Christian Schuler, "Followup: Normal Mapping Without Precomputed
     // Tangents"), so meshes need no tangent attribute. Texture v runs down, and normal maps point +Y up, hence -B.
-    static float3 perturbedNormal(float3 normal, float3 position, float2 uv, float3 mapped) {
+    // Columns: the world directions of +u and +v on the surface, and the normal. False if the derivatives are
+    // degenerate.
+    static bool tangentFrame(float3 normal, float3 position, float2 uv, thread float3x3 &frame) {
         float3 dp1 = dfdx(position);
         float3 dp2 = dfdy(position);
         float2 duv1 = dfdx(uv);
@@ -25,11 +27,56 @@ namespace BlinnPhong {
         float3 bitangent = dp2perp * duv1.y + dp1perp * duv2.y;
         float scale = max(dot(tangent, tangent), dot(bitangent, bitangent));
         if (scale <= 0) {
-            return normal;
+            return false;
         }
         float inverse = rsqrt(scale);
-        float3x3 frame = float3x3(tangent * inverse, -bitangent * inverse, normal);
+        frame = float3x3(tangent * inverse, bitangent * inverse, normal);
+        return true;
+    }
+
+    static float3 perturbedNormal(float3 normal, float3 position, float2 uv, float3 mapped) {
+        float3x3 frame;
+        if (!tangentFrame(normal, position, uv, frame)) {
+            return normal;
+        }
+        frame[1] = -frame[1];
         return normalize(frame * mapped);
+    }
+
+    // Parallax occlusion mapping (#537): steps the view ray down through the height field in texture space and
+    // returns the texture coordinate where it meets the surface.
+    static float2 parallaxCoordinate(float2 uv, float3 normal, float3 position, float3 cameraPosition, texture2d<float> heightTexture, sampler textureSampler, float heightScale, float depth) {
+        float3x3 frame;
+        if (depth <= 0 || !tangentFrame(normal, position, uv, frame)) {
+            return uv;
+        }
+        // The view direction in texture space: x along +u, y along +v, z out of the surface.
+        float3 view = normalize(cameraPosition - position);
+        float3 tangentView = float3(dot(view, frame[0]), dot(view, frame[1]), dot(view, normal));
+        if (tangentView.z <= 1e-3) {
+            return uv;
+        }
+        // More steps at grazing angles, where the ray crosses more of the texture.
+        const float steps = mix(32.0, 8.0, tangentView.z);
+        const float layer = 1.0 / steps;
+        const float2 delta = -tangentView.xy / tangentView.z * depth * layer;
+        // Gradients from the original coordinate keep mip selection stable while the coordinate moves.
+        const float2 gradientX = dfdx(uv);
+        const float2 gradientY = dfdy(uv);
+        float2 current = uv;
+        float rayDepth = 0;
+        float surfaceDepth = 1 - saturate(heightTexture.sample(textureSampler, current, gradient2d(gradientX, gradientY)).r * heightScale);
+        for (int index = 0; index < 32 && rayDepth < surfaceDepth; index++) {
+            current += delta;
+            rayDepth += layer;
+            surfaceDepth = 1 - saturate(heightTexture.sample(textureSampler, current, gradient2d(gradientX, gradientY)).r * heightScale);
+        }
+        // Interpolates between the last two steps for a smooth result.
+        const float2 previous = current - delta;
+        const float after = surfaceDepth - rayDepth;
+        const float before = (1 - saturate(heightTexture.sample(textureSampler, previous, gradient2d(gradientX, gradientY)).r * heightScale)) - (rayDepth - layer);
+        const float weight = after - before == 0 ? 0 : after / (after - before);
+        return mix(current, previous, saturate(weight));
     }
 
     struct Vertex {
@@ -107,23 +154,27 @@ namespace BlinnPhong {
         const texture2d<float> emissionTexture = materialResources.emissionTexture;
         const texture2d<float> normalTexture = materialResources.normalTexture;
         const sampler textureSampler = materialResources.textureSampler;
+        float2 uv = in.textureCoordinate;
+        if (material.hasHeightTexture) {
+            uv = parallaxCoordinate(uv, normalize(in.normal), in.worldPosition, frame.cameraPositions[in.view], materialResources.heightTexture, textureSampler, material.heightScale, material.parallaxDepth);
+        }
         const texture2d<float> ambientOcclusion = frameResources.ambientOcclusion;
         float3 ambientColor = material.ambient * in.color.rgb;
         float3 diffuseColor = material.diffuse * in.color.rgb;
         float3 specularColor = material.specular;
         float alpha = material.opacity * in.color.a;
         if (material.hasAmbientTexture) {
-            ambientColor *= ambientTexture.sample(textureSampler, in.textureCoordinate).rgb;
+            ambientColor *= ambientTexture.sample(textureSampler, uv).rgb;
         }
         if (material.hasDiffuseTexture) {
-            float4 sample = diffuseTexture.sample(textureSampler, in.textureCoordinate);
+            float4 sample = diffuseTexture.sample(textureSampler, uv);
             diffuseColor *= sample.rgb;
             if (material.usesDiffuseAlpha) {
                 alpha *= sample.a;
             }
         }
         if (material.hasSpecularTexture) {
-            specularColor *= specularTexture.sample(textureSampler, in.textureCoordinate).rgb;
+            specularColor *= specularTexture.sample(textureSampler, uv).rgb;
         }
 
         // Meshes with missing (zero) normals get the face normal, turned towards the camera.
@@ -143,13 +194,13 @@ namespace BlinnPhong {
         if (material.hasNormalMap) {
             float3 mapped = material.normal;
             if (material.hasNormalTexture) {
-                mapped *= normalTexture.sample(textureSampler, in.textureCoordinate).xyz * 2.0 - 1.0;
+                mapped *= normalTexture.sample(textureSampler, uv).xyz * 2.0 - 1.0;
             }
             normal = perturbedNormal(normal, in.worldPosition, in.textureCoordinate, mapped);
         }
         float3 emission = material.emission;
         if (material.hasEmissionTexture) {
-            emission *= emissionTexture.sample(textureSampler, in.textureCoordinate).rgb;
+            emission *= emissionTexture.sample(textureSampler, uv).rgb;
         }
         Surface surface = { ambientColor, diffuseColor, specularColor, emission, material.shininess, alpha, material.receivesShadow != 0 };
         float4 channel;

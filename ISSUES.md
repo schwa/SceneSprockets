@@ -12229,15 +12229,18 @@ Lighting for static environments cannot be generated automatically. (Moved from 
 ## 537: No parallax occlusion mapping
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: effort:s, area:renderer
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-22T16:44:26Z
+closed: 2026-11-22T16:44:26Z
 +++
 
 Surfaces cannot show apparent depth without extra geometry. (Moved from SceneSprocketsAddOns#58.)
+
+- `2026-11-22T16:44:26Z`: BlinnPhongSceneMaterial.heightMap + parallaxDepth: parallax occlusion mapping in the fragment shader (ray-marched in a derivative-based tangent frame, so meshes need no tangents); every texture sample uses the shifted coordinate. Archived.
 
 ---
 

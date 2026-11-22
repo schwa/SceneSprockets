@@ -63,6 +63,13 @@ public struct BlinnPhongSceneMaterial: SceneMaterial, SamplesShadowsInShader, Dr
     /// scales the bumps by `s`. A `.color` source is one tangent-space normal for the whole surface. Meshes do not need
     /// tangents.
     public var normalMap: Source?
+    /// A height map for parallax occlusion mapping, sampled at the first texture coordinates: the surface appears to
+    /// have depth without extra geometry (#537). Heights are the red channel times the tint's x, 1 at the surface and 0
+    /// at ``parallaxDepth`` below it. A `.color` source has no effect.
+    public var heightMap: Source?
+    /// How deep the lowest point of ``heightMap`` appears, in texture-coordinate units (0.05 is 5% of the texture's
+    /// width).
+    public var parallaxDepth: Float = 0.05
     /// The depth, color mask, blend, fill and cull settings for the draw. Counter-clockwise triangles are front faces.
     public var renderState: MaterialRenderState
 
@@ -437,6 +444,7 @@ extension BlinnPhongSceneMaterial {
         var specularTexture: MTLTexture
         var emissionTexture: MTLTexture
         var normalTexture: MTLTexture
+        var heightTexture: MTLTexture
         var sampler: MTLSamplerState
     }
 
@@ -456,10 +464,11 @@ extension BlinnPhongSceneMaterial {
         let specular = split(self.specular)
         let emission = split(self.emission)
         let normal = normalMap.map(split)
+        let height = heightMap.map(split)
         let uniforms = resolvedUniforms()
         let samplerDescriptor = diffuse.sampler ?? ambient.sampler ?? specular.sampler ?? emission.sampler
         let sampler = samplerDescriptor.flatMap { try? BlinnPhongShaders.samplerState(for: $0) } ?? defaultSampler
-        return Resolved(uniforms: uniforms, ambientTexture: ambient.texture ?? placeholder, diffuseTexture: diffuse.texture ?? placeholder, specularTexture: specular.texture ?? placeholder, emissionTexture: emission.texture ?? placeholder, normalTexture: normal?.texture ?? placeholder, sampler: sampler)
+        return Resolved(uniforms: uniforms, ambientTexture: ambient.texture ?? placeholder, diffuseTexture: diffuse.texture ?? placeholder, specularTexture: specular.texture ?? placeholder, emissionTexture: emission.texture ?? placeholder, normalTexture: normal?.texture ?? placeholder, heightTexture: height?.texture ?? placeholder, sampler: sampler)
     }
 
     func resolvedUniforms() -> BlinnPhongMaterialUniforms {
@@ -476,6 +485,7 @@ extension BlinnPhongSceneMaterial {
         let specular = split(self.specular)
         let emission = split(self.emission)
         let normal = normalMap.map(split)
+        let height = heightMap.map(split)
         return BlinnPhongMaterialUniforms(
             ambient: ambient.color,
             diffuse: diffuse.color,
@@ -491,7 +501,10 @@ extension BlinnPhongSceneMaterial {
             hasEmissionTexture: emission.texture == nil ? 0 : 1,
             hasNormalMap: normal == nil ? 0 : 1,
             normal: normal?.color ?? [0, 0, 1],
-            hasNormalTexture: normal?.texture == nil ? 0 : 1
+            hasNormalTexture: normal?.texture == nil ? 0 : 1,
+            hasHeightTexture: height?.texture == nil ? 0 : 1,
+            heightScale: height?.color.x ?? 1,
+            parallaxDepth: parallaxDepth
         )
     }
 }
@@ -574,7 +587,7 @@ final class MaterialResourcesCache: @unchecked Sendable {
     private var buffers: [[ObjectIdentifier]: ArgumentBuffer] = [:]
 
     func resources(for resolved: BlinnPhongSceneMaterial.Resolved) -> ArgumentBuffer {
-        let textures = [resolved.ambientTexture, resolved.diffuseTexture, resolved.specularTexture, resolved.emissionTexture, resolved.normalTexture]
+        let textures = [resolved.ambientTexture, resolved.diffuseTexture, resolved.specularTexture, resolved.emissionTexture, resolved.normalTexture, resolved.heightTexture]
         let key = textures.map { ObjectIdentifier($0) } + [ObjectIdentifier(resolved.sampler)]
         return lock.withLock {
             if let buffer = buffers[key] {
@@ -585,7 +598,7 @@ final class MaterialResourcesCache: @unchecked Sendable {
                 buffers.removeAll()
             }
             let buffer = ArgumentBuffer(device: resolved.ambientTexture.device, label: "Blinn-Phong Material Resources")
-            for (name, texture) in zip(["ambientTexture", "diffuseTexture", "specularTexture", "emissionTexture", "normalTexture"], textures) {
+            for (name, texture) in zip(["ambientTexture", "diffuseTexture", "specularTexture", "emissionTexture", "normalTexture", "heightTexture"], textures) {
                 buffer.set(name, texture: texture)
             }
             buffer.set("textureSampler", samplerState: resolved.sampler)
@@ -660,6 +673,8 @@ private struct MaterialKey: Hashable {
     var opacity: Float
     var usesDiffuseTextureAlpha: Bool
     var normalMap: SourceKey?
+    var heightMap: SourceKey?
+    var parallaxDepth: Float
     var renderState: MaterialRenderState
 
     init(_ material: BlinnPhongSceneMaterial) {
@@ -671,6 +686,8 @@ private struct MaterialKey: Hashable {
         opacity = material.opacity
         usesDiffuseTextureAlpha = material.usesDiffuseTextureAlpha
         normalMap = material.normalMap.map(SourceKey.init)
+        heightMap = material.heightMap.map(SourceKey.init)
+        parallaxDepth = material.parallaxDepth
         renderState = material.renderState
     }
 

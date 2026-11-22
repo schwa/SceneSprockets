@@ -16,6 +16,7 @@ struct BlinnPhongMaterialResources {
     metal::texture2d<float> specularTexture;
     metal::texture2d<float> emissionTexture;
     metal::texture2d<float> normalTexture;
+    metal::texture2d<float> heightTexture;
     metal::sampler textureSampler;
 };
 #endif
@@ -64,5 +65,10 @@ struct BlinnPhongMaterialUniforms {
     // The constant normal, or the tint that multiplies the decoded normal texture when hasNormalTexture is set.
     simd_float3 normal;
     int hasNormalTexture;
+    // Parallax occlusion mapping (#537): heights in the height texture's red channel, 1 at the surface and 0 at
+    // `parallaxDepth` below it, in texture-coordinate units. Off when hasHeightTexture is 0.
+    int hasHeightTexture;
+    float heightScale;
+    float parallaxDepth;
 };
 typedef struct BlinnPhongMaterialUniforms BlinnPhongMaterialUniforms;

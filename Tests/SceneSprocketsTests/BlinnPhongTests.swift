@@ -289,3 +289,45 @@ func blinnPhongMaterialsShareResourceBuffers() throws {
     #expect(resources(red, shininess: 1) === resources(red, shininess: 8))
     #expect(resources(red, shininess: 1) !== resources(green, shininess: 1))
 }
+
+// #537: a height map shifts what an oblique surface shows (parallax occlusion mapping); a flat one changes nothing.
+@Test(.enabled(if: deviceSupportsMetal4))
+@MainActor
+func heightMapsShiftObliqueSurfaces() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    func texture(_ value: (Int) -> UInt8) throws -> MTLTexture {
+        let size = 64
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba8Unorm, width: size, height: size, mipmapped: false)
+        let texture = try #require(device.makeTexture(descriptor: descriptor))
+        let texels = (0..<size * size).map { index in SIMD4<UInt8>(repeating: value(index % size)) }
+        texture.replace(region: MTLRegionMake2D(0, 0, size, size), mipmapLevel: 0, withBytes: texels, bytesPerRow: size * 4)
+        return texture
+    }
+    // Vertical stripes, 8 texels wide, for both color and height.
+    let stripes = try texture { ($0 / 8).isMultiple(of: 2) ? 255 : 0 }
+    let flat = try texture { _ in 255 }
+    func render(heightMap: MTLTexture?) throws -> [SIMD4<UInt8>] {
+        var material = BlinnPhongSceneMaterial(ambient: .texture(stripes), diffuse: .color(0), specular: .color(0), shininess: 1)
+        material.heightMap = heightMap.map { .texture($0) }
+        material.parallaxDepth = 0.15
+        let root = SceneGraph.Node()
+        // Seen from the side at 60 degrees, so the parallax offset is large across the stripes.
+        root.addChild(SceneGraph.Node(transform: .init(translation: [2.6, 0, 1.5], rotation: simd_quatf(angle: .pi / 3, axis: [0, 1, 0])), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(40))))))
+        root.addChild(SceneGraph.Node(content: .mesh(MetalMesh(mesh: .quad(extents: [2, 2]), device: device), material: material)))
+        let size = 64
+        let rendered = try OffscreenRenderer(size: CGSize(width: size, height: size)).render(SceneGraphElement(sceneGraph: SceneGraph(linearRoot: root), aspectRatio: 1, renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [1, 1, 1])])).texture
+        var pixels = [SIMD4<UInt8>](repeating: .zero, count: size * size)
+        rendered.getBytes(&pixels, bytesPerRow: size * 4, from: MTLRegionMake2D(0, 0, size, size), mipmapLevel: 0)
+        return pixels
+    }
+    let plain = try render(heightMap: nil)
+    #expect(plain.contains { $0.x > 200 } && plain.contains { $0.x < 50 }, "the stripes are in view")
+    #expect(try render(heightMap: flat) == plain)
+    let shifted = try render(heightMap: stripes)
+    let changed = zip(plain, shifted).count { abs(Int($0.x) - Int($1.x)) > 64 }
+    #expect(changed > 100, "\(changed) pixels changed")
+    // Raised white ridges hide part of the black grooves between them, so more of the view is white.
+    let whitePlain = plain.count { $0.x > 128 }
+    let whiteShifted = shifted.count { $0.x > 128 }
+    #expect(whiteShifted > whitePlain, "white \(whitePlain) -> \(whiteShifted)")
+}
