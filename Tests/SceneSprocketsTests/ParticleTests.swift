@@ -70,7 +70,7 @@ func particlesFollowTheNode() throws {
 @MainActor
 func softParticlesFadeIntoGeometry() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
-    func brightness(softness: Float) throws -> UInt8 {
+    func brightness(softness: Float, sampleCount: Int = 1) throws -> UInt8 {
         var system = glowSystem()
         system.layers[0].modules[SpriteModule.self]?.softness = softness
         // Few enough that additive blending does not saturate.
@@ -87,7 +87,7 @@ func softParticlesFadeIntoGeometry() throws {
         var value = SIMD4<UInt8>.zero
         for _ in 0..<5 {
             sceneGraph.advanceParticles(by: 1.0 / 30.0)
-            let texture = try renderer.render(SceneGraphElement(sceneGraph: sceneGraph, aspectRatio: 1, renderers: [ShaderMaterialRenderer()])).texture
+            let texture = try renderer.render(SceneGraphElement(sceneGraph: sceneGraph, aspectRatio: 1, renderers: [ShaderMaterialRenderer()], sampleCount: sampleCount)).texture
             texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(16, 16, 1, 1), mipmapLevel: 0)
         }
         return value.x
@@ -96,6 +96,9 @@ func softParticlesFadeIntoGeometry() throws {
     let soft = try brightness(softness: 2)
     #expect(hard > 40)
     #expect(soft < hard / 2, "hard \(hard) soft \(soft)")
+    // #601: with MSAA the soft pass still runs, after the scene pass resolves color and depth.
+    let softMultisampled = try brightness(softness: 2, sampleCount: 4)
+    #expect(softMultisampled < hard / 2, "hard \(hard) soft with MSAA \(softMultisampled)")
 }
 
 // #144

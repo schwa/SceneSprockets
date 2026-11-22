@@ -32,7 +32,9 @@ struct SceneFramePlan: Equatable {
         var adjustsColor = false
         var hasSoftParticles = false
         var hasAutoExposure = false
-        // The scene pass resolves MSAA, so a second pass could not reload its samples.
+        // The view's own target is multisampled and resolves at the end of the scene pass, so a second pass could not
+        // reload its samples. SceneGraphElement's `sampleCount` does not set this: its scene pass resolves into the
+        // view's single-sample color and depth, which a second pass can load (#601).
         var resolvesMultisample = false
         var storesDepthRequested = false
         var depthIsMemoryless = false

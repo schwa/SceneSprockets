@@ -13693,18 +13693,21 @@ Split out of #95.
 ## 601: Soft particles draw as hard particles with MSAA
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:renderer, effort:m
 milestone: Rendering
 created: 2026-11-20T06:30:55Z
-updated: 2026-11-22T13:04:15Z
+updated: 2026-11-22T16:22:08Z
+closed: 2026-11-22T16:22:08Z
 +++
 
 With sceneAntialiasing(sampleCount:) above 1, SceneFramePlan turns off the soft particle pass (it would need to reload the multisampled color after a depth copy). Soft particles are then drawn in the scene pass like hard particles, so they clip sharply against geometry.
 
 Split out of #95.
+
+- `2026-11-22T16:22:08Z`: SceneGraphElement/SceneView sampleCount no longer disables the soft particle pass: the scene pass already resolves color and depth into the view's single-sample targets, which the particle pass loads. Only a multisampled view target (resolve texture on the view's attachment) still falls back to hard particles.
 
 ---
 

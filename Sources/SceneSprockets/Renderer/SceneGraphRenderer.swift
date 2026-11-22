@@ -248,7 +248,9 @@ public struct SceneGraphElement: Element {
                 adjustsColor: postProcessing?.adjustsColor ?? false,
                 hasSoftParticles: visibleParticleFrames.contains(where: \.isSoft),
                 hasAutoExposure: autoExposureBuffer != nil,
-                resolvesMultisample: renderPassDescriptor?.colorAttachments[0].resolveTexture != nil || sampleCount > 1,
+                // Only a multisampled view target blocks the soft particle pass. With `sampleCount`, the scene pass resolves
+                // color and depth into the view's single-sample targets, which the particle pass loads (#601).
+                resolvesMultisample: renderPassDescriptor?.colorAttachments[0].resolveTexture != nil,
                 storesDepthRequested: storesDepth,
                 depthIsMemoryless: renderPassDescriptor?.depthAttachment.texture?.storageMode == .memoryless
             ))
