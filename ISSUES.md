@@ -9791,20 +9791,23 @@ Expose SwiftJolt's `PhysicsWorld.settings` (`PhysicsSettings`).
 ## 422: Jolt diagnostic messages go to stdout
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:physics, effort:xs
 milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-16T23:34:13Z
-updated: 2026-11-20T06:32:46Z
+updated: 2026-11-22T15:44:14Z
+closed: 2026-11-22T15:44:14Z
 +++
 
 Jolt prints its trace messages to stdout. They don't reach os.Logger, so they are missing from Console and unified logging, unlike the rest of SceneSprockets.
 
 ## Proposed fix (per schwa)
 Install SwiftJolt's `JoltEngine.setTraceHandler` and forward to the package logger.
+
+- `2026-11-22T15:44:14Z`: SceneGraphPhysicsWorld installs JoltEngine.setTraceHandler once, forwarding to the Physics os.Logger. No test: Jolt traces cannot be triggered on demand from the public API.
 
 ---
 

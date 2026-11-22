@@ -77,6 +77,7 @@ public final class SceneGraphPhysicsWorld {
     /// - Throws: An error if the Jolt engine cannot start.
     public init(sceneGraph: SceneGraph, gravity: SIMD3<Float> = [0, -9.81, 0]) throws {
         self.sceneGraph = sceneGraph
+        _ = Self.forwardJoltTraces
         world = PhysicsWorld(engine: try JoltEngine(), gravity: gravity)
         world.contactListener = contactListener
     }
@@ -350,6 +351,12 @@ public final class SceneGraphPhysicsWorld {
     }
 
     private static let logger = Logger(subsystem: "io.schwa.SceneSprockets", category: "Physics")
+
+    // Sends Jolt's trace messages, which print to stdout by default, to unified logging (#422). Installed once; the
+    // handler is process-wide.
+    private static let forwardJoltTraces: Void = JoltEngine.setTraceHandler { message in
+        logger.info("Jolt: \(message, privacy: .public)")
+    }
 
     private func makeBody(for node: SceneGraph.Node, description: SceneGraph.PhysicsBody) -> BodyID? {
         // Jolt supports triangle-mesh shapes only on static and kinematic bodies (#425).
