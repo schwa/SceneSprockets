@@ -917,6 +917,8 @@ Want: post-processing settings on `Camera`, applied after the scene pass. Start 
 - `2026-10-13T20:21:45Z`: Related: #43 (scene environment).
 - `2026-10-15T03:32:22Z`: Done: SceneGraph.postProcessing with SSAO (unblurred), exposure, contrast, saturation and vignette, as compute passes after fog; Shadows demo toggles and a golden image. Left: HDR and tone mapping (needs float render targets in the renderers, including MetalSprocketsPBR), bloom and depth of field (need extra textures and blur passes), an SSAO blur.
 - `2026-11-17T17:51:39Z`: Related: #501, #508, #399.
+- `2026-11-22T17:44:30Z`: Autonomous run: checked what is left. Exposure and tone mapping are done for every renderer (#501), automatic exposure too (#508). Left: a real HDR path, bloom, depth of field and an SSAO blur. Bloom and depth of field are blocked on the same design decision as #399: each renderer tone-maps into the 8-bit view, so a bloom pass only sees clipped color. They need the scene drawn linear into an rgba16Float target with tone mapping moved to a final post pass. That question is open on #399 (Q1); #399 Q2 asks whether to merge #399 into #45. Not started until those are answered. The SSAO blur does not depend on HDR and could be split out.
+- `2026-11-22T17:44:30Z`: Question 1 (decision): Should the SSAO blur (independent of the HDR decision on #399) be split into its own issue so it can be done now, leaving #45 for HDR, bloom and depth of field? Recommended: Yes
 
 ---
 
@@ -5560,10 +5562,10 @@ To get a sky gradient, TreeAppreciator draws an inside-out sphere mesh with an e
 status: open
 priority: low
 kind: feature
-labels: effort:l, area:ui
+labels: effort:l, area:ui, deferred
 milestone: Physics-and-Scene
 created: 2026-10-30T14:40:29Z
-updated: 2026-11-20T06:32:46Z
+updated: 2026-11-22T17:44:37Z
 +++
 
 Comparing two scenes side by side (TreeAppreciator shows two trees with a shared camera) needs two SceneViews. Each one makes its own RenderView, drawable, shadow maps, particle runtimes and pipeline setup, so a new pair pays the setup cost twice.
@@ -11492,6 +11494,9 @@ updated: 2026-11-20T06:33:50Z
 Weighted blended OIT is a practical starting point. (Moved from SceneSprocketsAddOns #47.)
 
 - `2026-11-17T17:59:21Z`: Related: #539.
+- `2026-11-22T17:44:45Z`: Autonomous run: looked at weighted blended OIT here. Transparent draws are sorted back to front and alpha-blended straight into the view's 8-bit target by each renderer (Blinn-Phong, PBR, shader materials). WBOIT needs two extra targets (rgba16Float accumulation, r8/r16 revealage), every transparent fragment shader writing weighted outputs to both, and a composite pass over the opaque result. Additive/multiply/screen blend modes do not fit the weighted model and would stay sorted. It overlaps #539 (stochastic transparency; #539 Q3 asks which comes first) and the float-target decision on #399. Not started.
+- `2026-11-22T17:44:45Z`: Question 1 (design): Should weighted blended OIT replace sorting for all alpha-blended draws, or be opt-in (a scene setting or a per-material blend mode), with sorted blending kept as the default? Recommended: Opt-in scene setting; sorted blending stays the default
+- `2026-11-22T17:44:45Z`: Question 2 (decision): Which renderers must support it first: PBR only, or PBR, Blinn-Phong and shader materials together? Recommended: PBR and Blinn-Phong; shader materials later through a helper
 
 ---
 
@@ -11528,6 +11533,9 @@ updated: 2026-11-20T06:33:14Z
 +++
 
 Stabilizes geometry, specular highlights, and fine detail. (Moved from SceneSprocketsAddOns #53.)
+
+- `2026-11-22T17:44:54Z`: Autonomous run: TAA needs a sub-pixel jitter on every renderer's projection, per-pixel motion vectors for skinned, morphed, instanced and moving meshes (not produced today; that is #510), a history color target per view, and a resolve pass with neighborhood clamping. It works best on linear HDR color before tone mapping, which is the open float-target decision on #399. MSAA (sceneAntialiasing) is the only anti-aliasing now. Blocked on #510; not started.
+- `2026-11-22T17:44:54Z`: Question 1 (decision): Should #496 be marked blocked on #510 (motion vectors), with #510 done first? Recommended: Yes
 
 ---
 
@@ -11780,6 +11788,10 @@ updated: 2026-11-20T06:33:50Z
 Softer, more natural illumination from large sources. Complexity: medium. (Moved from SceneSprocketsAddOns #77.)
 
 - `2026-11-17T17:51:39Z`: Related: #86 (area lights).
+- `2026-11-22T17:45:09Z`: Autonomous run: looked at adding an area light. Light.Kind has directional, point, spot and ambient; LightingLight (96 bytes) carries no size or shape. LTC needs: a new Light.Kind with width/height (rect) or radius (disk), LightingLight growing to carry it, the two 64x64 LTC lookup tables (Heitz et al. fits; not in the repo, need importing as textures or a header), a PBR shader path that integrates specular and diffuse over the polygon, an approximation for Blinn-Phong and shader materials, and archive support. Shadows from area lights (soft, sized by the light) are a separate problem; the current shadow maps assume a point or direction. Scope is not specified, so not started.
+- `2026-11-22T17:45:09Z`: Question 1 (decision): Which shapes for the first version: rectangle only, or rectangle and disk? Recommended: Rectangle only
+- `2026-11-22T17:45:09Z`: Question 2 (decision): May the LTC lookup tables from Heitz et al. (MIT-licensed reference data) be added to the repo as a generated header or texture resource? Recommended: Yes, as a generated Metal header
+- `2026-11-22T17:45:09Z`: Question 3 (decision): Is a first version without shadows (area lights light the scene but cast none) and with PBR only acceptable, leaving Blinn-Phong and shadows to follow-ups? Recommended: Yes
 
 ---
 
@@ -11796,6 +11808,11 @@ updated: 2026-11-20T06:33:14Z
 +++
 
 Effects such as SSR, SSGI, motion blur, decals, and contact shadows need per-pixel normals, motion vectors, or other G-buffer data. The renderer does not produce or expose them. Needed by several SceneSprocketsAddOns issues.
+
+- `2026-11-22T17:45:20Z`: Autonomous run: looked at what this takes. The opaque pass writes one color target plus depth (depth is already copied for post passes and fog). Normals and velocity need extra color attachments in every renderer's opaque pipelines (Blinn-Phong, PBR, shader materials, particles, sky), so every fragment shader writes them or the pipelines must mask them. Velocity also needs each draw's previous-frame model matrix (and previous joint matrices and morph weights for skinned/morphed meshes) and the previous view-projection, kept per entity across frames. Not specified: which targets, whether they are always on or requested, and how post passes and apps get them. Not started. Blocks #496 (TAA) and motion blur (#399).
+- `2026-11-22T17:45:20Z`: Question 1 (decision): Which targets for the first version: view-space normals and screen-space velocity, or also roughness/albedo for a full G-buffer? Recommended: Normals and velocity only
+- `2026-11-22T17:45:20Z`: Question 2 (design): Should the extra targets be produced only when something asks for them (a post-processing effect or an app setting), so frames without them cost nothing extra? Recommended: Yes: requested per frame through the frame plan, off by default
+- `2026-11-22T17:45:20Z`: Question 3 (decision): May shader materials that do not write the new targets simply leave them unwritten (masked), rather than every custom shader having to output them? Recommended: Yes; a helper writes them for shaders that want correct values
 
 ---
 
@@ -11832,6 +11849,11 @@ updated: 2026-11-20T06:33:14Z
 +++
 
 Add-on packages cannot insert passes at defined stages (after opaque, before transparent, post-process) or contribute indirect lighting (probes, lightmaps) to built-in materials.
+
+- `2026-11-22T17:45:36Z`: Autonomous run: looked at SceneGraphElement. Passes are ordered by SceneFramePlan (pre-passes such as GPU deformation, shadows, opaque, ambient occlusion, transparent, post passes, auto exposure). The only app hook is decorations (SceneView.sceneDecorations), drawn with the scene. Stage hooks for passes are feasible: a closure per stage taking the RenderContext and the post targets, returning an element, run at its point in the plan. Contributing lighting terms to built-in materials is a different change: Blinn-Phong and PBR shaders would need a hook (a function table, an extra texture/buffer the shaders add, or recompiled variants). Not started: the public API shape is not specified.
+- `2026-11-22T17:45:37Z`: Question 1 (decision): Should #512 be split into (a) render pass hooks at fixed stages and (b) lighting terms contributed to built-in materials, doing (a) first? Recommended: Yes
+- `2026-11-22T17:45:37Z`: Question 2 (design): For pass hooks, is this API acceptable: SceneGraphElement/SceneView take [RenderStage: (RenderContext, targets) -> AnyElement?] with stages afterOpaque, beforeTransparent, afterTransparent and postProcess? Recommended: Yes
+- `2026-11-22T17:45:37Z`: Question 3 (design): For lighting terms, should built-in materials add an indirect-light term from a context-provided source (e.g. an irradiance texture or SH buffer per draw), which probes (#532) and lightmaps would fill, rather than arbitrary injected shader code? Recommended: Yes: a fixed indirect-light input, not code injection
 
 ---
 
@@ -12191,6 +12213,10 @@ updated: 2026-11-20T06:33:50Z
 Mirrors, polished floors and water surfaces cannot show planar reflections. (Moved from SceneSprocketsAddOns#50.)
 
 - `2026-11-17T17:59:21Z`: Related: #530.
+- `2026-11-22T17:43:33Z`: Looked at what planar reflections need here. There is no render-to-texture camera path in the renderer yet (only shadow maps and AO render offscreen). A reflection means: per reflective plane, render the scene again from the camera mirrored across the plane, with an oblique near plane so geometry behind the plane is clipped, into a texture; then the surface samples that texture in screen space, blended by its Fresnel/roughness. The issue does not say how a reflective surface is declared, which renderers must support it, or the cost budget (one extra full scene pass per plane per frame), so I did not start.
+- `2026-11-22T17:43:37Z`: Question 1 (design): How should a reflective plane be declared: a PlanarReflector node feature on a mesh node, or a reflective flag on materials? Recommended: A PlanarReflector node feature; the node's material samples the reflection
+- `2026-11-22T17:43:38Z`: Question 2 (decision): Which renderers must support planar reflections first: PBR only, or PBR plus Blinn-Phong and shader materials? Recommended: PBR only
+- `2026-11-22T17:43:38Z`: Question 3 (decision): Is one reflective plane per frame (the most visible, with a resolution scale) enough for the first version? Recommended: Yes
 
 ---
 
@@ -12209,6 +12235,11 @@ Objects do not receive indirect lighting appropriate to their location. (Moved f
 
 - `2026-11-17T17:59:21Z`: Related: #533, #530.
 - `2026-11-22T13:04:15Z`: Related: #602 (ambient light as a scene node).
+- `2026-11-22T17:43:49Z`: Looked at what irradiance probes need. Today indirect light is global: one image-based environment (PBR) plus summed ambient light nodes (#602), the same everywhere. Location-dependent indirect light needs probes placed in the scene, a way to fill them (capture a cubemap per probe and project it to spherical harmonics, which needs the render-to-texture path #531 also lacks, or hand-authored values), and a per-object or per-pixel lookup that blends the nearest probes. The issue does not say how probes are placed or filled, or which renderers use them, so I did not start.
+- `2026-11-22T17:43:49Z`: Question 1 (design): Should probes be filled by capturing the scene at runtime (render a cubemap per probe, project to spherical harmonics), or authored/baked offline and stored in the archive? Recommended: Capture at runtime on demand (an explicit update call), store the resulting spherical harmonics in the archive
+- `2026-11-22T17:43:49Z`: Question 2 (design): Should probes be individual nodes the user places, or a regular grid volume (a node with bounds and a resolution)? Recommended: A grid volume node; individual probes later if needed
+- `2026-11-22T17:43:49Z`: Question 3 (decision): Is per-object lookup (blend the probes nearest each mesh's center) enough for the first version, rather than per-pixel? Recommended: Yes
+- `2026-11-22T17:43:49Z`: Question 4 (decision): Which renderers must use probes first: PBR only, or PBR and Blinn-Phong? Recommended: PBR and Blinn-Phong, through RenderContext like the ambient light from #602
 
 ---
 
@@ -12327,6 +12358,10 @@ updated: 2026-11-20T06:33:50Z
 Hair, foliage and dense overlapping transparent surfaces need order-independent transparency. (Moved from SceneSprocketsAddOns#61.)
 
 - `2026-11-17T17:59:21Z`: Related: #494 (OIT).
+- `2026-11-22T17:44:12Z`: Looked at what exists. PBR mask materials already draw in the opaque pass with alpha to coverage under MSAA (#600), so stochastic transparency could reuse that: draw the transparent surface in the opaque pass, depth-written, with alpha turned into a hashed per-pixel sample coverage (or a hashed discard without MSAA). There is no temporal accumulation (TAA), so at 1x the result is visibly noisy and at 4x MSAA it quantizes alpha to 5 levels. The issue does not say how a material opts in, which renderers need it, or whether that noise is acceptable without TAA, so I did not start. Related: #494 (weighted blended OIT) solves the same problem differently.
+- `2026-11-22T17:44:12Z`: Question 1 (design): How should a material opt in: a new MaterialRenderState.BlendMode case (.stochastic) for Blinn-Phong and shader materials plus a PBRMaterial override, or one scene-wide setting that switches all transparent draws? Recommended: A per-material BlendMode.stochastic plus a PBRMaterial property
+- `2026-11-22T17:44:13Z`: Question 2 (decision): Is MSAA alpha-to-coverage with a hashed pattern (noisy at 1x, 5 alpha levels at 4x) acceptable without TAA, or should this wait for temporal accumulation? Recommended: Acceptable; document that it looks best with sceneAntialiasing(sampleCount: 4)
+- `2026-11-22T17:44:13Z`: Question 3 (decision): Should #539 wait for, or be done instead of, weighted blended OIT (#494)? Recommended: Do #539 first; it reuses the alpha-to-coverage path and is smaller
 
 ---
 
