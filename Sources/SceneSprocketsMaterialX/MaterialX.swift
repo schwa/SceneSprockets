@@ -6,6 +6,7 @@ import MetalKit
 import MetalSprocketsPBR
 import MetalSprocketsPBRShaders
 import MetalSupport
+import SceneSprocketsPBR
 import simd
 
 /// The materials of a MaterialX (`.mtlx`) document, as ``PBRSceneMaterial``s (#528).

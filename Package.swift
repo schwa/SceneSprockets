@@ -13,6 +13,8 @@ let package = Package(
         .library(name: "SceneSprockets", targets: ["SceneSprockets"]),
         .library(name: "SceneSprocketsPhysics", targets: ["SceneSprocketsPhysics"]),
         .library(name: "SceneSprocketsPBR", targets: ["SceneSprocketsPBR"]),
+        // MaterialX (.mtlx) loading into PBR materials (#528).
+        .library(name: "SceneSprocketsMaterialX", targets: ["SceneSprocketsMaterialX"]),
         .library(name: "SceneSprocketsBlinnPhong", targets: ["SceneSprocketsBlinnPhong"]),
         .library(name: "SceneSprocketsShaderMaterial", targets: ["SceneSprocketsShaderMaterial"]),
         .library(name: "SceneSprocketsAudio", targets: ["SceneSprocketsAudio"]),
@@ -246,6 +248,22 @@ let package = Package(
                 .product(name: "MetalSupport", package: "MetalSupport"),
                 .product(name: "SwiftGLTF", package: "SwiftGLTF"),
                 .product(name: "SwiftMesh", package: "SwiftMesh"),
+            ]
+        ),
+        .target(
+            name: "SceneSprocketsMaterialX",
+            dependencies: [
+                "SceneSprocketsPBR",
+                "MetalSprocketsPBR",
+                "MetalSprocketsPBRShaders",
+                .product(name: "MetalSupport", package: "MetalSupport"),
+            ]
+        ),
+        .testTarget(
+            name: "SceneSprocketsMaterialXTests",
+            dependencies: [
+                "SceneSprocketsMaterialX",
+                "SceneSprocketsPBR",
             ]
         ),
         // Editor aids: transform gizmos drawn with MetalSprocketsAddOns' GraphicsContext3D (#154), and selection

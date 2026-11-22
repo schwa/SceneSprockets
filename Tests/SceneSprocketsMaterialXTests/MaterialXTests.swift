@@ -2,7 +2,8 @@ import CoreGraphics
 import Foundation
 import ImageIO
 import Metal
-@testable import SceneSprocketsPBR
+@testable import SceneSprocketsMaterialX
+import SceneSprocketsPBR
 import simd
 import Testing
 import UniformTypeIdentifiers
