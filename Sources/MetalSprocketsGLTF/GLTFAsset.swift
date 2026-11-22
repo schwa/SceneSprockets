@@ -35,7 +35,8 @@ public final class GLTFAsset: @unchecked Sendable {
     public let cameras: [(camera: SwiftGLTF.Camera, worldMatrix: simd_float4x4)]
     /// Computes this scene's animated poses.
     let poser: GLTFPoser
-    public let warnings: [String]
+    /// What the load skipped or could not do exactly. Check ``GLTFWarning/kind`` in code; show the description.
+    public let warnings: [GLTFWarning]
 
     public var opaqueInstances: [Instance] { model.opaqueInstances }
     public var blendedInstances: [Instance] { model.blendedInstances }
@@ -73,7 +74,7 @@ public final class GLTFAsset: @unchecked Sendable {
         var primitiveMaterials: [Primitive.Key: (material: Int, variants: [Int: Int])]
         var skins: [Skin]
         var animations: [GLTFAnimationClip]
-        var warnings: [String]
+        var warnings: [GLTFWarning]
         /// EXT_mesh_gpu_instancing: node-relative matrices of each copy of a node's mesh, by node index.
         var nodeInstanceMatrices: [Int: [simd_float4x4]] = [:]
         /// EXT_lights_image_based lights that scenes use, by light index.

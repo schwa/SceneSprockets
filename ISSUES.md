@@ -12864,13 +12864,14 @@ Was MetalSprocketsGLTF#180 (moved with the package, #552).
 ## 562: Resources.load does every loading step in one function; non-material extensions are spread across files
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: effort:l, area:architecture, gltf
 milestone: Physics-and-Scene
 created: 2026-11-19T02:12:56Z
-updated: 2026-11-20T06:32:46Z
+updated: 2026-11-22T17:43:14Z
+closed: 2026-11-22T17:43:14Z
 +++
 
 GLTFAsset.Resources.load (GLTFAssetLoading.swift, about 90 lines) does all of these in one function:
@@ -12890,6 +12891,8 @@ Warnings are plain [String], so DisabledExtensionsTests, InstancingTests, ImageB
 State: partly done; Resources.load is now about 60 lines. Decided: add a feature table for non-material extensions (instancing, image-based lights, node visibility, variants), like GLTFMaterialFeature.all, and make GLTFAsset.warnings typed instead of [String].
 
 Was MetalSprocketsGLTF#188 (moved with the package, #552).
+
+- `2026-11-22T17:43:14Z`: GLTFAsset.warnings is now [GLTFWarning] (kind + description). Added GLTFExtensionFeature.all, which drives builtInExtensions and runs the instancing and image-based-light load steps. Resources.load is split into checkRequiredExtensions/loadMaterials/loadGeometry/loadSkins plus the feature steps. Tests check kinds, and new LoadingStepTests cover the steps alone. Node visibility and variants stay in GLTFSceneContents (scene flattening); the table only names them.
 
 ---
 

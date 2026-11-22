@@ -48,16 +48,10 @@ public struct GLTFLoadOptions: Sendable {
 
 public extension GLTFAsset {
     /// Extensions this package supports without registered decoders: SwiftGLTF's (``Document/supportedExtensions``),
-    /// the material extensions from `GLTFMaterialFeature`, and the ones below.
-    static let builtInExtensions: Set<String> = Document.supportedExtensions.union(GLTFMaterialFeature.extensionNames).union([
-        "KHR_animation_pointer",
-        KHRMaterialsVariants.extensionName,
-        KHRNodeVisibility.extensionName,
-        EXTMeshGPUInstancing.extensionName,
-        EXTLightsImageBased.extensionName,
-        // Metadata only; nothing to render.
-        "KHR_xmp_json_ld"
-    ])
+    /// and the material and other extensions from the `GLTFMaterialFeature` and `GLTFExtensionFeature` tables.
+    static let builtInExtensions: Set<String> = Document.supportedExtensions
+        .union(GLTFMaterialFeature.extensionNames)
+        .union(GLTFExtensionFeature.extensionNames)
 }
 
 /// A file requires extensions this load does not support.

@@ -126,7 +126,7 @@ private func baseColorTexture(_ asset: GLTFAsset) throws -> MTLTexture {
 @Test(.requiresMetal4, .requiresMetal4) func unsupportedRequiredExtensionCanBeLoadedWithAWarning() throws {
     let url = try makeFile(texture: #"{"source": 1}"#, required: ["TEST_unknown"])
     let asset = try GLTFAsset(url: url, options: GLTFLoadOptions(loadsUnsupportedRequiredExtensions: true))
-    #expect(asset.warnings.contains { $0.contains("TEST_unknown") }, "\(asset.warnings)")
+    #expect(asset.warnings.map(\.kind).contains(.requiredExtensionsLoadedAnyway(["TEST_unknown"])), "\(asset.warnings)")
 }
 
 // A registered decoder's extensions count as supported; built-in ones always do.
@@ -160,11 +160,11 @@ private func baseColorTexture(_ asset: GLTFAsset) throws -> MTLTexture {
     // A second material using the same broken image: no new decode, no duplicate warning.
     #expect(failingCache.binding(for: index, sRGB: true) == nil)
     #expect(failing.attempts == 1)
-    #expect(failingCache.warnings.filter { $0.contains("Image 0 failed to load") }.count == 1, "\(failingCache.warnings)")
+    #expect(failingCache.warnings.filter { $0.kind == .imageFailed(index: 0) }.count == 1, "\(failingCache.warnings)")
 }
 
 // Without the decoder and without a fallback, the texture is skipped with a warning.
 @Test(.requiresMetal4, .requiresMetal4) func withoutTheDecoderOrAFallbackTheTextureIsSkipped() throws {
     let asset = try GLTFAsset(url: makeFile(texture: #"{"extensions": {"TEST_texture_fake": {"source": 0}}}"#))
-    #expect(asset.warnings.contains { $0.contains("Texture 0 skipped") }, "\(asset.warnings)")
+    #expect(asset.warnings.map(\.kind).contains(.textureSkipped(index: 0)), "\(asset.warnings)")
 }

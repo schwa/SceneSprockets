@@ -280,7 +280,7 @@ private struct GLTFSceneGraphBuilder {
         } catch {
             warnings.append("Image-based light skipped: \(error)")
         }
-        return GLTFImport(sceneGraph: sceneGraph, animations: animations, nodes: nodes, variantNames: asset.variantNames, warnings: asset.warnings + warnings, asset: asset, meshNodes: meshNodeList, sceneMaterials: sceneMaterials)
+        return GLTFImport(sceneGraph: sceneGraph, animations: animations, nodes: nodes, variantNames: asset.variantNames, warnings: asset.warnings.map(\.description) + warnings, asset: asset, meshNodes: meshNodeList, sceneMaterials: sceneMaterials)
     }
 
     // The asset resolves each primitive's material (including variants); instances carry the result.

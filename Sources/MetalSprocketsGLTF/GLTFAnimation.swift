@@ -72,13 +72,13 @@ public struct GLTFAnimationClip: Sendable {
     /// KHR_animation_pointer targets this renderer cannot animate.
     public var unsupportedPointers: [String]
     /// Why channels with malformed keyframes were skipped.
-    var skippedChannels: [String] = []
+    var skippedChannels: [GLTFWarning] = []
 
     init(_ animation: Animation, index: Int, container: Container) {
         let name = animation.name ?? "Animation \(index)"
         self.name = name
         var unsupported: [String] = []
-        var skipped: [String] = []
+        var skipped: [GLTFWarning] = []
         channels = animation.channels.enumerated().compactMap { channelIndex, channel in
             guard animation.samplers.indices.contains(channel.sampler) else {
                 return nil
@@ -105,7 +105,7 @@ public struct GLTFAnimationClip: Sendable {
                 }
                 return Channel(target: target, keyframes: keyframes)
             } catch {
-                skipped.append("Skipped \(name) channel \(channelIndex): \(error)")
+                skipped.append(GLTFWarning(.animationChannelSkipped(animation: name), "Skipped \(name) channel \(channelIndex): \(error)"))
                 return nil
             }
         }
@@ -322,9 +322,9 @@ extension GLTFNodeHierarchy {
 
 extension GLTFAnimationClip {
     /// Every animation of the document, with warnings for channels that cannot be used.
-    static func load(container: Container) -> (clips: [Self], warnings: [String]) {
+    static func load(container: Container) -> (clips: [Self], warnings: [GLTFWarning]) {
         let document = container.document
-        var warnings: [String] = []
+        var warnings: [GLTFWarning] = []
         var clips = document.animations.enumerated().map { index, animation in
             GLTFAnimationClip(animation, index: index, container: container)
         }
@@ -337,11 +337,11 @@ extension GLTFAnimationClip {
                       document.nodes.indices.contains(node), document.nodes[node].usesMatrix else {
                     return false
                 }
-                warnings.append("Skipped \(name) channel: node \(node) uses matrix, so its \(property.rawValue) cannot be animated")
+                warnings.append(GLTFWarning(.animationChannelSkipped(animation: name), "Skipped \(name) channel: node \(node) uses matrix, so its \(property.rawValue) cannot be animated"))
                 return true
             }
         }
-        warnings += Set(clips.flatMap(\.unsupportedPointers)).sorted().map { "Animation pointer not supported: \($0)" }
+        warnings += Set(clips.flatMap(\.unsupportedPointers)).sorted().map { GLTFWarning(.animationPointerUnsupported($0), "Animation pointer not supported: \($0)") }
         return (clips, warnings)
     }
 }

@@ -82,10 +82,10 @@ final class GLTFTextureCache {
     private var invalidSamplers: [Int: Int] = [:]
 
     /// What was skipped or failed, once per texture and image, whichever materials asked for it.
-    var warnings: [String] {
-        skippedTextures.sorted { $0.key < $1.key }.map { "Texture \($0.key) skipped: \($0.value)" }
-            + failedImages.sorted { $0.key < $1.key }.map { "Image \($0.key) failed to load: \($0.value)" }
-            + invalidSamplers.sorted { $0.key < $1.key }.map { "Texture \($0.key) uses the default sampler: sampler \($0.value) is out of range" }
+    var warnings: [GLTFWarning] {
+        skippedTextures.sorted { $0.key < $1.key }.map { GLTFWarning(.textureSkipped(index: $0.key), "Texture \($0.key) skipped: \($0.value)") }
+            + failedImages.sorted { $0.key < $1.key }.map { GLTFWarning(.imageFailed(index: $0.key), "Image \($0.key) failed to load: \($0.value)") }
+            + invalidSamplers.sorted { $0.key < $1.key }.map { GLTFWarning(.samplerOutOfRange(texture: $0.key, sampler: $0.value), "Texture \($0.key) uses the default sampler: sampler \($0.value) is out of range") }
     }
     lazy var defaultBinding: PBRMaterial.Binding = makeBinding(texture: makeWhiteTexture(), samplerDescriptor: makeSamplerDescriptor(nil))
 

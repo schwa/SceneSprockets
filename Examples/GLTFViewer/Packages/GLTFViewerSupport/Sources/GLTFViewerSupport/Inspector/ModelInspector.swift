@@ -30,7 +30,7 @@ struct ModelInspector: View {
                 }
             }
             ExtensionsSection(statistics: asset.statistics)
-            StatisticsSections(statistics: asset.statistics, warnings: asset.warnings, file: FileInfo(url: loaded.url, loadTime: loaded.loadTime))
+            StatisticsSections(statistics: asset.statistics, warnings: asset.warnings.map(\.description), file: FileInfo(url: loaded.url, loadTime: loaded.loadTime))
         }
         .formStyle(.grouped)
     }

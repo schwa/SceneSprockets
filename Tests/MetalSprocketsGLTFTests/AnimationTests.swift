@@ -253,7 +253,7 @@ struct AnimationTests {
         // Offset (0.25, 0) with the file's unanimated scale 2 kept: the matrix's translation column is the offset.
         #expect(simd_distance(uniforms.baseColor.transform.columns.2, [0.25, 0, 1]) < 1e-5)
         #expect(uniforms.baseColor.transform.columns.0.x == 2)
-        #expect(asset.warnings.contains { $0.contains("/meshes/0/weights") }, "\(asset.warnings)")
+        #expect(asset.warnings.map(\.kind).contains(.animationPointerUnsupported("/meshes/0/weights")), "\(asset.warnings)")
         #expect(asset.restPose.materialUniforms.isEmpty)
     }
 
@@ -347,7 +347,7 @@ struct AnimationTests {
         try Data(json.replacingOccurrences(of: "\"nodes\": [{\"mesh\": 0}]", with: skew).utf8).write(to: url)
         let asset = try GLTFAsset(url: url)
         #expect(asset.animations[0].channels.isEmpty)
-        #expect(asset.warnings.contains { $0.contains("node 0 uses matrix") })
+        #expect(asset.warnings.map(\.kind) == [.animationChannelSkipped(animation: asset.animations[0].name)], "\(asset.warnings)")
         let world = asset.pose(animation: 0, time: 1).worldMatrices[0]
         #expect(world.columns.1 == [0.5, 1, 0, 0])
     }

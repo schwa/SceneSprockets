@@ -37,5 +37,5 @@ private func clearcoatFile(required: Bool = false) throws -> URL {
     }
     let asset = try GLTFAsset(url: url, options: GLTFLoadOptions(disabledExtensions: ["KHR_materials_clearcoat"], loadsUnsupportedRequiredExtensions: true))
     #expect(asset.materials.first?.uniforms.clearcoatFactor == 0)
-    #expect(asset.warnings.contains { $0.contains("KHR_materials_clearcoat") })
+    #expect(asset.warnings.map(\.kind) == [.requiredExtensionsLoadedAnyway(["KHR_materials_clearcoat"])], "\(asset.warnings)")
 }

@@ -11,28 +11,55 @@ import SwiftGLTF
 extension GLTFAsset.Resources {
     /// Loads everything that does not depend on the scene or variant: textures and materials, meshes, skins and
     /// animations, with warnings for what was skipped.
+    ///
+    /// Each step is its own function, so it can be tested alone (#562): required extensions, materials, geometry,
+    /// skins, animations, then each ``GLTFExtensionFeature``'s load step.
     static func load(container: Container, device: MTLDevice, options: GLTFLoadOptions = GLTFLoadOptions()) throws -> Self {
-        let document = container.document
-        var warnings: [String] = []
-
-        let unsupported = Set(document.extensionsRequired).subtracting(options.supportedExtensions).sorted()
-        if !unsupported.isEmpty {
-            guard options.loadsUnsupportedRequiredExtensions else {
-                throw GLTFUnsupportedExtensionsError(extensions: unsupported)
-            }
-            warnings.append("Required extensions not supported, loaded anyway: \(unsupported.joined(separator: ", "))")
-        }
-
+        var warnings = try checkRequiredExtensions(container.document, options: options)
         let textures = GLTFTextureCache(container: container, device: device, decoders: options.textureDecoders)
+        let (materials, defaultMaterial) = loadMaterials(container.document, textures: textures)
+        let geometry = try loadGeometry(container, device: device)
+        warnings += geometry.warnings
+        let skins = try loadSkins(container)
+        let (animations, animationWarnings) = GLTFAnimationClip.load(container: container)
+        warnings += animationWarnings
+        var resources = Self(device: device, materials: materials, defaultMaterial: defaultMaterial, meshes: geometry.meshes, primitiveMaterials: geometry.primitiveMaterials, skins: skins, animations: animations, warnings: [])
+        for feature in GLTFExtensionFeature.all {
+            try feature.load?(container, &resources, &warnings)
+        }
+        // Texture warnings last: textures load lazily, so all materials have asked for theirs by now.
+        resources.warnings = warnings + textures.warnings
+        return resources
+    }
+
+    /// A warning when the file requires extensions `options` does not support and loads them anyway; throws when it
+    /// should not load them.
+    static func checkRequiredExtensions(_ document: Document, options: GLTFLoadOptions) throws -> [GLTFWarning] {
+        let unsupported = Set(document.extensionsRequired).subtracting(options.supportedExtensions).sorted()
+        guard !unsupported.isEmpty else {
+            return []
+        }
+        guard options.loadsUnsupportedRequiredExtensions else {
+            throw GLTFUnsupportedExtensionsError(extensions: unsupported)
+        }
+        return [GLTFWarning(.requiredExtensionsLoadedAnyway(unsupported), "Required extensions not supported, loaded anyway: \(unsupported.joined(separator: ", "))")]
+    }
+
+    /// Every material, and the default material for primitives without one.
+    static func loadMaterials(_ document: Document, textures: GLTFTextureCache) -> (materials: [PBRMaterial], defaultMaterial: PBRMaterial) {
         textures.preload(document.materials)
         let defaultMaterial = PBRMaterial(material: nil, textures: textures)
-        let materials = document.materials.map { PBRMaterial(material: $0, textures: textures) }
+        return (document.materials.map { PBRMaterial(material: $0, textures: textures) }, defaultMaterial)
+    }
 
-        // Every primitive's geometry goes into one set of shared buffers.
+    /// Every mesh's primitives in one set of shared buffers, with each primitive's material and variant material
+    /// indices. Primitives that cannot be built are left out with a warning.
+    static func loadGeometry(_ container: Container, device: MTLDevice) throws -> (meshes: [[GLTFAsset.Primitive]], primitiveMaterials: [GLTFAsset.Primitive.Key: (material: Int, variants: [Int: Int])], warnings: [GLTFWarning]) {
+        var warnings: [GLTFWarning] = []
         var geometry = PBRGeometryBuilder(device: device)
         var meshPrimitiveIndices: [[Int]] = []
         var materialIndices: [Int: (material: Int, variants: [Int: Int])] = [:]
-        for (meshIndex, mesh) in document.meshes.enumerated() {
+        for (meshIndex, mesh) in container.document.meshes.enumerated() {
             var indices: [Int] = []
             for (primitiveIndex, primitive) in mesh.primitives.enumerated() {
                 let label = mesh.name ?? "mesh\(meshIndex)"
@@ -42,10 +69,10 @@ extension GLTFAsset.Resources {
                         materialIndices[index] = (primitive.material?.index ?? -1, primitive.variantMaterials)
                         indices.append(index)
                     } else {
-                        warnings.append("Skipped \(label)[\(primitiveIndex)]: unsupported mode \(primitive.mode)")
+                        warnings.append(GLTFWarning(.primitiveSkipped(mesh: label, primitive: primitiveIndex), "Skipped \(label)[\(primitiveIndex)]: unsupported mode \(primitive.mode)"))
                     }
                 } catch {
-                    warnings.append("Skipped \(label)[\(primitiveIndex)]: \(error)")
+                    warnings.append(GLTFWarning(.primitiveSkipped(mesh: label, primitive: primitiveIndex), "Skipped \(label)[\(primitiveIndex)]: \(error)"))
                 }
             }
             meshPrimitiveIndices.append(indices)
@@ -53,25 +80,14 @@ extension GLTFAsset.Resources {
         let primitives = try geometry.build()
         let meshes = meshPrimitiveIndices.map { $0.map { primitives[$0] } }
         let primitiveMaterials = Dictionary(uniqueKeysWithValues: materialIndices.map { (primitives[$0.key].key, $0.value) })
-        let skins = try document.skins.map { skin in
+        return (meshes, primitiveMaterials, warnings)
+    }
+
+    /// Every skin, with its inverse bind matrices checked.
+    static func loadSkins(_ container: Container) throws -> [PBRModel.Skin] {
+        try container.document.skins.map { skin in
             PBRModel.Skin(joints: skin.joints.map(\.index), inverseBindMatrices: try container.checkedInverseBindMatrices(for: skin))
         }
-        let (animations, animationWarnings) = GLTFAnimationClip.load(container: container)
-        warnings += animationWarnings
-        var nodeInstanceMatrices: [Int: [simd_float4x4]] = [:]
-        for (index, node) in document.nodes.enumerated() where node.mesh != nil {
-            nodeInstanceMatrices[index] = try container.instanceMatrices(for: node)
-        }
-        // EXT_lights_image_based: decode each light a scene uses; a broken one is skipped with a warning.
-        var imageBasedLights: [Int: GLTFImageBasedLight] = [:]
-        for index in Set(document.scenes.indices.compactMap { GLTFImageBasedLight.lightIndex(document: document, sceneIndex: $0) }).sorted() {
-            do {
-                imageBasedLights[index] = try GLTFImageBasedLight(container: container, index: index)
-            } catch {
-                warnings.append("Image-based light \(index) skipped: \(error)")
-            }
-        }
-        return Self(device: device, materials: materials, defaultMaterial: defaultMaterial, meshes: meshes, primitiveMaterials: primitiveMaterials, skins: skins, animations: animations, warnings: warnings + textures.warnings, nodeInstanceMatrices: nodeInstanceMatrices, imageBasedLights: imageBasedLights)
     }
 }
 
