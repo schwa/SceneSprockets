@@ -85,6 +85,21 @@ func keynoteShowing(_ title: String) throws -> KeynoteDemo {
     return keynote
 }
 
+// #611: the Many Lights slide shows enough lights to be clustered, and every one lights the whole slide, so its batches
+// keep the clusters (batches lit by only some of the frame's lights do not use them).
+@Test
+@MainActor
+func manyLightsSlideIsClustered() throws {
+    let keynote = try keynoteShowing("Many Lights")
+    keynote.update(time: 1, deltaTime: 1.0 / 60)
+    let lights = keynote.sceneGraph.lightNodes()
+    #expect(lights.count >= LightClustering.automaticMinimumLightCount)
+    let masks = Set(lights.map(\.node.lightCategoryBitMask))
+    #expect(masks.count == 1)
+    let meshMasks = Set(keynote.sceneGraph.meshEntries().map(\.node.categoryBitMask))
+    #expect(meshMasks.allSatisfy { mask in masks.allSatisfy { $0 & mask != 0 } })
+}
+
 // #610: the More Physics slide's chain holds, crates float and the character walks.
 @Test
 @MainActor
@@ -201,7 +216,8 @@ func keynoteThankYouFinaleStartsAfterTheTitle() throws {
 @Test
 @MainActor
 func keynoteShadowsCoverTheShadowsSlideTransitions() throws {
-    let keynote = try keynoteShowing("Lights")
+    let shadowsIndex = try #require(KeynoteDemo.titles.firstIndex(of: "Shadows"))
+    let keynote = try keynoteShowing(KeynoteDemo.titles[shadowsIndex - 1])
     let next = try #require(keynote.actions.first { $0.name == "Next" })
     next.perform()
     #expect(keynote.shadows != nil)

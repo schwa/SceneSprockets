@@ -14069,17 +14069,19 @@ The keynote's only physics slide is the dice tray. It does not show physics join
 ## 611: Keynote has no slide for clustered lighting with many lights
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:demo, effort:s
 created: 2026-11-22T19:47:48Z
-updated: 2026-11-22T19:59:11Z
+updated: 2026-11-22T21:03:07Z
+closed: 2026-11-22T21:03:07Z
 +++
 
 Clustered light assignment (#519) is only shown by the standalone Many Lights demo. The keynote has no slide with many lights. Related: #443 (standalone demos outside the keynote).
 
 - `2026-11-22T19:59:11Z`: Related: #514 (clustered lighting).
+- `2026-11-22T21:03:07Z`: Added a Many Lights keynote slide after Lights: 400 short-range point lights (300 on by default) drifting over a tilted floor of pillars, with Swarm Size/Range/Speed controls. Every light lights the whole slide, so its batches keep the clusters. Test: manyLightsSlideIsClustered. Inserting the slide moves later slides along +X, which changes the Particles slide's world-space smoke; the keynote-particles golden was re-recorded.
 
 ---
 

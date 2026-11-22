@@ -30,7 +30,7 @@ public final class KeynoteDemo: DemoScene {
     // Basics first, then looks, animation and particles together, then the nerdier features, and UI, picking and
     // debugging, then add-ons (#310). Slides are built by title, so reordering only means editing this list.
     public static let titles = [
-        "SceneSprockets", "SceneView", "Scene Graph", "Shapes", "Materials", "Lights",
+        "SceneSprockets", "SceneView", "Scene Graph", "Shapes", "Materials", "Lights", "Many Lights",
         "Shadows", "Fog", "Opacity & Fades", "Blend Modes", "Glass", "PBR Extensions", "Custom Shaders", "Video Textures", "glTF & Model I/O",
         "Actions", "Implicit Animation", "Constraints", "Animation Blending", "Deformation",
         "Particles", "Mesh Emitters",
@@ -75,6 +75,9 @@ public final class KeynoteDemo: DemoScene {
     private var sinceMorePhysicsReset: Float = 0
     private var sinceBallDrop: Float = 0
     private var physicsDebugNode: SceneGraph.Node?
+    // The Many Lights slide's swarm (#611): every light is built once; the count slider hides the rest.
+    private var swarmLights: [(node: SceneGraph.Node, phase: Float, radius: Float, speed: Float)] = []
+    private static let maximumSwarmLights = 400
     private let debugDrawMaterial = ShaderMaterial.vertexColors()
     private static let tubeJointCount = 7
     private var pbrExtensionPieces: [(node: SceneGraph.Node, axis: SIMD3<Float>, speed: Float)] = []
@@ -273,6 +276,12 @@ public final class KeynoteDemo: DemoScene {
         • Point, spot and directional lights are nodes like everything else.
         • These three colored point lights orbit because their parent node spins.
         • Range limits how far each light reaches.
+        """,
+        "Many Lights": """
+        • Hundreds of short-range point lights, with no special setup.
+        • From 16 lights on, a compute pass sorts lights into a grid of view clusters.
+        • Each pixel then shades only the lights in its cluster, not every light.
+        • Blinn-Phong and PBR both use the clusters; the result matches shading every light.
         """,
         "Shadows": """
         • Shadow maps from a directional sun light.
@@ -495,6 +504,8 @@ public final class KeynoteDemo: DemoScene {
             [.slider("Galaxy Speed", 0...5, default: 1), .slider("Point Size", 1...8, default: 2)]
         case "Terrain":
             [.slider("Terrain Speed", 0...5, default: 1), .slider("Height Exaggeration", 0...8, default: 3), .choice("Terrain Style", terrainStyles.map(\.name), default: 3)]
+        case "Many Lights":
+            [.slider("Swarm Size", 1...Float(maximumSwarmLights), default: 300), .slider("Swarm Range", 0.5...4, default: 1.6), .slider("Swarm Speed", 0...3, default: 1)]
         case "Physics":
             [.toggle("Auto-roll", default: true)]
         case "More Physics":
@@ -647,6 +658,8 @@ public final class KeynoteDemo: DemoScene {
             physics?.step(deltaTime: min(deltaTime, 1.0 / 30.0), collisionSteps: 2)
         case "More Physics":
             updateMorePhysics(deltaTime: deltaTime)
+        case "Many Lights":
+            updateSwarm(time: time)
         default:
             break
         }
@@ -1317,6 +1330,14 @@ public final class KeynoteDemo: DemoScene {
             let physics = try SceneGraphPhysicsWorld(sceneGraph: sceneGraph)
             physics.setAngularVelocity(spin, of: die)
             physics.step(deltaTime: deltaTime)
+            """, to: slide)
+        case "Many Lights":
+            manyLightsSlide(slide)
+            addCode("""
+            for color in colors {
+                lights.addChild(SceneGraph.Node(content: .light(Light(type: .point, color: color, range: 1.6))))
+            }
+            SceneGraphElement(...).lightClustering(.automatic) // the default: on from 16 lights
             """, to: slide)
         case "More Physics":
             morePhysicsSlide(slide)
@@ -2104,6 +2125,53 @@ public final class KeynoteDemo: DemoScene {
             // Velocities are in world space; the throw is in the tilted tray's.
             physics.setVelocity(Self.trayTilt.act(velocity), of: die)
             physics.setAngularVelocity(SIMD3<Float>.random(in: -15...15, using: &diceGenerator), of: die)
+        }
+    }
+
+    // A floor of pillars under a swarm of colored point lights (#611), like ManyLightsDemo. The lights stay near the
+    // floor and reach only a little way, so clustering lets each pixel shade a handful of them.
+    private func manyLightsSlide(_ slide: SceneGraph.Node) {
+        addLight(to: slide, at: [0, 6, 4], color: [0.5, 0.6, 1], intensity: 4)
+        // Tilted toward the camera, like the dice tray, so the floor shows from the slides' eye height.
+        let stage = slide.addChild(SceneGraph.Node(label: "Stage", transform: .init(translation: [0, 0.4, 0], rotation: simd_quatf(angle: 0.55, axis: [1, 0, 0]))))
+        let floorColor: SIMD3<Float> = [0.5, 0.5, 0.55]
+        stage.addChild(SceneGraph.Node(label: "Floor", shape: .box(width: 14, height: 0.1, length: 7), material: BlinnPhongSceneMaterial.plastic(floorColor, shininess: 16), transform: .init(translation: [0, -0.05, -1])))
+        for x in stride(from: -6, through: 6, by: 1.5) {
+            for z in stride(from: -4, through: 2, by: 1.5) {
+                stage.addChild(SceneGraph.Node(label: "Pillar", shape: .cylinder(radius: 0.18, height: 1.2), material: BlinnPhongSceneMaterial.plastic([0.85, 0.85, 0.85], shininess: 48), transform: .init(translation: [Float(x), 0.6, Float(z)])))
+            }
+        }
+        let swarm = stage.addChild(SceneGraph.Node(label: "Swarm", transform: .init(translation: [0, 0, -1])))
+        swarmLights = (0 ..< Self.maximumSwarmLights).map { index in
+            // Spread over an ellipse by the golden angle; hues around the color wheel.
+            let fraction = Float(index) / Float(Self.maximumSwarmLights)
+            let hue = (Float(index) * 0.618034).truncatingRemainder(dividingBy: 1)
+            let color = SIMD3<Float>((0 ..< 3).map { channel in 0.5 + 0.5 * cos(2 * .pi * (hue + Float(channel) / 3)) })
+            let node = swarm.addChild(SceneGraph.Node(label: "Swarm Light", content: .light(Light(type: .point, color: color, intensity: 2, range: 1.6))))
+            return (node, Float(index) * 2.399963, 0.3 + sqrt(fraction) * 6.5, 0.15 + fraction * 0.35)
+        }
+    }
+
+    private func updateSwarm(time: Float) {
+        let count = Int(self[value: "Swarm Size"].rounded())
+        let range = self[value: "Swarm Range"]
+        let speed = self[value: "Swarm Speed"]
+        for (index, light) in swarmLights.enumerated() {
+            let isOn = index < count
+            if light.node.isVisible != isOn {
+                light.node.isVisible = isOn
+            }
+            guard isOn else {
+                continue
+            }
+            let angle = light.phase + time * light.speed * speed
+            let wobble = sin(time * 1.3 + light.phase) * 0.3
+            // An ellipse twice as wide as deep, to fill the floor.
+            light.node.transform = Transform3D(translation: [cos(angle) * (light.radius + wobble), 0.35 + 0.25 * sin(time * 2 + light.phase), sin(angle) * (light.radius + wobble) * 0.45])
+            if case var .light(settings) = light.node.content, settings.range != range {
+                settings.range = range
+                light.node.content = .light(settings)
+            }
         }
     }
 
