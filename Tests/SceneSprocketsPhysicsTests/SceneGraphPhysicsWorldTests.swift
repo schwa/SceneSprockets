@@ -1,4 +1,5 @@
 import GeometryLite3D
+import JoltPhysics
 import Metal
 import SceneSprockets
 @testable import SceneSprocketsPhysics
@@ -469,6 +470,20 @@ func contactsReportBeginAndEndByNode() throws {
     run(physics, seconds: 0.25)
     #expect(events.map(\.phase) == [.ended], "\(events.map(\.phase))")
     #expect(physics.contacts(of: box).isEmpty)
+}
+
+// #438: the job system can be chosen, including Jolt's pool with no worker threads.
+@Test
+func jobSystemCanBeChosen() throws {
+    for jobSystem: JobSystemKind in [.joltThreadPool(threadCount: 0), .userInteractiveThreadPool(threadCount: 1)] {
+        let root = SceneGraph.Node()
+        _ = makeFloor(in: root)
+        let box = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 2, 0])))
+        box.physicsBody = .init(type: .dynamic, shape: .box(size: [1, 1, 1]))
+        let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root), jobSystem: jobSystem)
+        run(physics, seconds: 2)
+        #expect(abs(box.worldPosition.y - 0.5) < 0.05, "\(jobSystem): box at \(box.worldPosition)")
+    }
 }
 
 // #421: solver and sleep settings can be read and changed.

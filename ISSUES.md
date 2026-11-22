@@ -10135,19 +10135,22 @@ Context: SwiftJolt has soft bodies (now with object layer, collision group and b
 ## 438: Physics worker threads cannot be configured
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:physics, effort:xs
 milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-20T06:32:46Z
+updated: 2026-11-22T16:24:57Z
+closed: 2026-11-22T16:24:57Z
 +++
 
 SceneGraphPhysicsWorld always uses SwiftJolt's default job system and thread count; an app can't limit physics threads (e.g. on low-power devices) or pick Jolt's own pool.
 
 Context: PhysicsWorld.init now takes jobSystem: JobSystemKind (user-interactive pool or Jolt's pool, with a thread count).
+
+- `2026-11-22T16:24:57Z`: SceneGraphPhysicsWorld.init takes jobSystem: JobSystemKind (SwiftJolt's user-interactive pool or Jolt's pool, with a thread count; 0 runs on the calling thread).
 
 ---
 

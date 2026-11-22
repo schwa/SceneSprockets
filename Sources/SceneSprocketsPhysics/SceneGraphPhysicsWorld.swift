@@ -74,11 +74,13 @@ public final class SceneGraphPhysicsWorld {
     /// - Parameters:
     ///   - sceneGraph: The scene graph to simulate.
     ///   - gravity: The acceleration of gravity in world space, in meters per second squared.
+    ///   - jobSystem: The threads that run the simulation, for example fewer on low-power devices, or
+    ///     `.joltThreadPool(threadCount: 0)` to run on the calling thread. Fixed for the life of the world.
     /// - Throws: An error if the Jolt engine cannot start.
-    public init(sceneGraph: SceneGraph, gravity: SIMD3<Float> = [0, -9.81, 0]) throws {
+    public init(sceneGraph: SceneGraph, gravity: SIMD3<Float> = [0, -9.81, 0], jobSystem: JobSystemKind = .default) throws {
         self.sceneGraph = sceneGraph
         _ = Self.forwardJoltTraces
-        world = PhysicsWorld(engine: try JoltEngine(), gravity: gravity)
+        world = PhysicsWorld(engine: try JoltEngine(), gravity: gravity, jobSystem: jobSystem)
         world.contactListener = contactListener
     }
 
