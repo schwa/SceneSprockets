@@ -264,3 +264,41 @@ func backFaceCullingKeepsFrontFacesOfEveryStripTriangle() throws {
         #expect(back.isEmpty, "back at \(point)")
     }
 }
+
+// #605: lines and points are hit within a world-space tolerance, and never without one.
+@Test
+func hitTestHitsLinesAndPointsWithinTolerance() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    // A line strip along X at z = 0 and two points.
+    let positions: [SIMD3<Float>] = [[-1, 0, 0], [0, 0, 0], [1, 0, 0], [3, 0, 0], [3, 1, 0]]
+    let mesh = MetalMesh(device: device, attributes: [.positions(positions)], submeshes: [
+        .init(label: "Strip", indices: [0, 1, 2], primitiveType: .lineStrip),
+        .init(label: "Points", indices: [3, 4], primitiveType: .point)
+    ])
+    let root = SceneGraph.Node()
+    let node = root.addChild(SceneGraph.Node(label: "wire", content: .mesh(mesh, material: material())))
+    node.transform.translation = [0, 0, -5]
+    let sceneGraph = SceneGraph(root: root)
+    var options = SceneGraph.HitTestOptions()
+
+    // No tolerance: never hit, as before.
+    #expect(sceneGraph.hitTest(Ray3D(origin: [0.5, 0.05, 0], direction: [0, 0, -1]), options: options).isEmpty)
+
+    options.lineAndPointTolerance = 0.1
+    let lineHit = try #require(sceneGraph.hitTest(Ray3D(origin: [0.5, 0.05, 0], direction: [0, 0, -1]), options: options).first)
+    #expect(lineHit.node === node)
+    #expect(lineHit.submeshIndex == 0)
+    // The second segment of the strip.
+    #expect(lineHit.triangleIndex == 1)
+    #expect(simd_distance(lineHit.position, [0.5, 0, -5]) < 1e-4)
+    #expect(abs(lineHit.distance - simd_distance(SIMD3<Float>(0.5, 0.05, 0), SIMD3<Float>(0.5, 0, -5))) < 1e-4)
+    // Too far from the line.
+    #expect(sceneGraph.hitTest(Ray3D(origin: [0.5, 0.2, 0], direction: [0, 0, -1]), options: options).isEmpty)
+
+    let pointHit = try #require(sceneGraph.hitTest(Ray3D(origin: [3.05, 0.95, 0], direction: [0, 0, -1]), options: options).first)
+    #expect(pointHit.submeshIndex == 1)
+    #expect(pointHit.triangleIndex == 1)
+    #expect(simd_distance(pointHit.position, [3, 1, -5]) < 1e-4)
+    // Beside the zero-height bounds of the points, but within the tolerance.
+    #expect(!sceneGraph.hitTest(Ray3D(origin: [3, 1.08, 0], direction: [0, 0, -1]), options: options).isEmpty)
+}

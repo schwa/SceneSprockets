@@ -13950,15 +13950,18 @@ Related gaps in the first cut:
 ## 605: Hit testing never hits line or point primitives
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:scenegraph, effort:s
 created: 2026-11-22T16:12:40Z
-updated: 2026-11-22T19:59:10Z
+updated: 2026-11-22T20:22:31Z
+closed: 2026-11-22T20:22:31Z
 +++
 
 SceneGraph.hitTest skips submeshes whose primitive type is .line, .lineStrip or .point, so wireframe helpers, curves and point clouds can never be picked. SceneKit-style picking of lines and points needs a distance tolerance (in world units or screen points), which HitTestOptions does not have. Split from #405.
+
+- `2026-11-22T20:22:31Z`: Added HitTestOptions.lineAndPointTolerance (world units). Line, line strip and point submeshes are hit when the ray passes within it; entries whose zero-thickness bounds the ray just misses are still tested. Test: hitTestHitsLinesAndPointsWithinTolerance.
 
 ---
 
