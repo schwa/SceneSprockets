@@ -68,6 +68,32 @@ public final class SceneGraphPhysicsWorld {
         public var impulse: Float = 0
     }
 
+    /// A body of water (or other fluid): an axis-aligned world-space region whose top face is the surface. Dynamic
+    /// bodies in it get buoyancy and drag every step (#436).
+    public struct Fluid: Sendable, Equatable {
+        /// The fluid's extent; the surface is at `region.max.y`.
+        public var region: BoundingBox3D
+        /// 1 is neutral, below 1 sinks, above 1 floats: the fluid's density relative to the bodies'.
+        public var buoyancy: Float
+        /// Slows bodies moving through the fluid.
+        public var linearDrag: Float
+        /// Slows bodies spinning in the fluid.
+        public var angularDrag: Float
+        /// The fluid's own velocity, for currents and rivers.
+        public var flowVelocity: SIMD3<Float>
+
+        public init(region: BoundingBox3D, buoyancy: Float = 1.5, linearDrag: Float = 0.5, angularDrag: Float = 0.05, flowVelocity: SIMD3<Float> = .zero) {
+            self.region = region
+            self.buoyancy = buoyancy
+            self.linearDrag = linearDrag
+            self.angularDrag = angularDrag
+            self.flowVelocity = flowVelocity
+        }
+    }
+
+    /// The fluids that dynamic bodies float in.
+    public var fluids: [Fluid] = []
+
     /// Called after each step for every pair of nodes whose bodies started or stopped touching during it, like
     /// SceneKit's `SCNPhysicsContactDelegate`. It runs on the thread that called ``step(deltaTime:collisionSteps:)``.
     /// Triggers report contacts too. A body that is removed or rebuilt reports no `.ended`.
@@ -188,6 +214,7 @@ public final class SceneGraphPhysicsWorld {
             let pose = Transform3D(nearestTo: entry.node.worldTransform)
             world.moveKinematic(entry.body, to: pose.translation, rotation: pose.rotation.quaternion, deltaTime: deltaTime)
         }
+        applyFluids(deltaTime: deltaTime)
         world.update(deltaTime: deltaTime, collisionSteps: collisionSteps)
         // Sleeping bodies do not move; writing their nodes would only bump the transform revision (#419).
         for entry in entries.values where entry.description.type == .dynamic && world.isAdded(entry.body) && world.isActive(entry.body) {
@@ -197,6 +224,25 @@ public final class SceneGraphPhysicsWorld {
             entry.node.worldTransform = pose.matrix
         }
         reportContacts()
+    }
+
+    // Buoyancy and drag for awake dynamic bodies whose bounds overlap a fluid. Jolt computes the submerged part.
+    private func applyFluids(deltaTime: Float) {
+        guard !fluids.isEmpty else {
+            return
+        }
+        let gravity = world.gravity
+        for entry in entries.values where entry.description.type == .dynamic && world.isAdded(entry.body) && world.isActive(entry.body) {
+            guard let bounds = world.readBody(entry.body, { $0.worldSpaceBounds }) else {
+                continue
+            }
+            for fluid in fluids where all(bounds.min .<= fluid.region.max) && all(bounds.max .>= fluid.region.min) {
+                // A point on the surface above the body.
+                var surface = simd_clamp((bounds.min + bounds.max) / 2, fluid.region.min, fluid.region.max)
+                surface.y = fluid.region.max.y
+                world.applyBuoyancyImpulse(to: entry.body, surfacePosition: surface, surfaceNormal: [0, 1, 0], buoyancy: fluid.buoyancy, linearDrag: fluid.linearDrag, angularDrag: fluid.angularDrag, fluidVelocity: fluid.flowVelocity, gravity: gravity, deltaTime: deltaTime)
+            }
+        }
     }
 
     /// The nodes whose bodies touch the body of `node` after the last step.

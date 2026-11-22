@@ -10106,13 +10106,14 @@ Context: SwiftJolt has Ragdoll, Skeleton, SkeletonPose, SkeletonMapper and now S
 ## 436: Bodies cannot float in water
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:physics, effort:s
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-22T16:39:24Z
+closed: 2026-11-22T16:39:24Z
 +++
 
 There is no water/fluid volume, so floating objects need hand-written forces.
@@ -10120,6 +10121,7 @@ There is no water/fluid volume, so floating objects need hand-written forces.
 Context: SwiftJolt now exposes Jolt's buoyancy impulse (applyBuoyancyImpulse) on PhysicsWorld and LockedBody.
 
 - `2026-11-17T06:02:51Z`: Related: #420 (per-sub-step forces would be the natural place to apply buoyancy).
+- `2026-11-22T16:39:24Z`: SceneGraphPhysicsWorld.fluids: Fluid regions (world-space box, surface at its top) with buoyancy factor, linear/angular drag and flow velocity; each step applies Jolt's buoyancy impulse to awake dynamic bodies overlapping a fluid. Per-sub-step application stays with #420.
 
 ---
 

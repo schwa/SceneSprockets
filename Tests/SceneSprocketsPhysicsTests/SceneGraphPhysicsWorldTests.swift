@@ -501,6 +501,21 @@ func bodyMotionOptions() throws {
     #expect(floating.worldPosition.y < 2)
 }
 
+// #436: a body floats in a fluid, and only inside the fluid's horizontal bounds.
+@Test
+func bodiesFloatInFluids() throws {
+    let root = SceneGraph.Node()
+    let floating = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 2, 0])))
+    floating.physicsBody = .init(type: .dynamic, shape: .box(size: [1, 1, 1]))
+    let outside = root.addChild(SceneGraph.Node(transform: .init(translation: [20, 2, 0])))
+    outside.physicsBody = .init(type: .dynamic, shape: .box(size: [1, 1, 1]))
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+    physics.fluids = [.init(region: BoundingBox3D(min: [-10, -100, -10], max: [10, 0, 10]), buoyancy: 2)]
+    run(physics, seconds: 6)
+    #expect(abs(floating.worldPosition.y) < 0.5, "floating at \(floating.worldPosition)")
+    #expect(outside.worldPosition.y < -20, "outside at \(outside.worldPosition)")
+}
+
 // #430: a contact reports how hard the bodies hit: a box dropped from higher has a larger impulse.
 @Test
 func contactsReportImpactImpulse() throws {
