@@ -116,6 +116,26 @@ extension SceneGraph {
             }
         }
 
+        /// Moves the node along a spline in its parent's space, at even speed, from its start to its end (#407).
+        ///
+        /// - Parameters:
+        ///   - path: The spline, in the node's parent space.
+        ///   - duration: The duration, in seconds.
+        ///   - orientsToPath: Whether the node turns to face along the path: its -Z axis follows the direction of
+        ///     travel, with +Y kept up.
+        public static func follow(_ path: Spline, duration: Float, orientsToPath: Bool = false) -> Self {
+            interval(duration, reversed: { .follow(path.reversed, duration: duration, orientsToPath: orientsToPath) }) { node, _, to in
+                let position = path.position(at: to)
+                node.transform.translation = position
+                let tangent = path.tangent(at: to)
+                // Facing straight up or down has no defined roll; keep the last orientation then.
+                guard orientsToPath, simd_length(tangent) > 0, abs(simd_dot(tangent, [0, 1, 0])) < 0.999 else {
+                    return
+                }
+                node.transform.rotation = Transform3D(position: .zero, lookingAt: tangent).rotation
+            }
+        }
+
         /// Moves the node to a position in its parent's space. The action cannot be reversed.
         ///
         /// - Parameters:

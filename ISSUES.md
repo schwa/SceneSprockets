@@ -9477,12 +9477,13 @@ Moved from SceneSprocketsAddOns #35.
 ## 407: No path or spline nodes
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: effort:m, area:scenegraph
 created: 2026-11-16T20:14:04Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-22T17:19:47Z
+closed: 2026-11-22T17:19:47Z
 +++
 
 There are no spline paths in the scene, and nothing that moves cameras or objects along a path.
@@ -9490,6 +9491,8 @@ There are no spline paths in the scene, and nothing that moves cameras or object
 Related: #81 (extruded Bézier path shape) could share the same spline type. Constraints (Constraint.swift) have no follow-path kind.
 
 Moved from SceneSprocketsAddOns #36.
+
+- `2026-11-22T17:19:47Z`: SceneGraph.Spline (Catmull-Rom through points, open or closed, arc-length t, position/tangent/length/reversed, Codable) and Action.follow(_:duration:orientsToPath:) (even speed, faces travel with -Z, reversible). Path nodes and a follow-path constraint split to the new issue.
 
 ---
 
@@ -13883,7 +13886,7 @@ It passed in some earlier full runs the same day, so it may be timing-dependent.
 status: new
 priority: low
 kind: feature
-labels: area:scenegraph,effort:m
+labels: area:scenegraph, effort:m
 created: 2026-11-22T17:19:47Z
 +++
 
