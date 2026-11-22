@@ -292,8 +292,6 @@ public struct PBRRenderer: Element {
         let primitiveType = primitive.primitiveType
         let draw = Draw { encoder in
             stereo?.configure(encoder)
-            encoder.setCullMode(batchDraw.cullMode)
-            encoder.setTriangleFillMode(batchDraw.fillMode)
             for range in batchDraw.ranges {
                 // glTF front faces are counter-clockwise; a mirroring transform flips that.
                 encoder.setFrontFacing(range.mirrored ? .clockwise : .counterClockwise)
@@ -308,9 +306,11 @@ public struct PBRRenderer: Element {
                     baseInstance: range.start
                 )
             }
-            // Later draws outside the renderer expect the default.
-            encoder.setTriangleFillMode(.fill)
+            // Winding varies per range, so it is set here; put back the default the pass assumes (#472).
+            encoder.setFrontFacing(.clockwise)
         }
+        .cullMode(batchDraw.cullMode)
+        .triangleFillMode(batchDraw.fillMode)
         // The index buffer is only referenced by address; the model's resource collection keeps it resident and the
         // model keeps it alive.
         .vertexBuffer(geometry.vertexBuffer, index: 0, offset: primitive.baseVertex * MemoryLayout<PBRVertex>.stride)

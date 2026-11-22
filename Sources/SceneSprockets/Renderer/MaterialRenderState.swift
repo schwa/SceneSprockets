@@ -130,11 +130,12 @@ public func materialDraw(_ submesh: MetalMesh.Submesh, instanceCount: Int = 1, c
     let (primitiveType, indexType, indexCount) = (submesh.primitiveType, submesh.indexType, submesh.indexCount)
     return Draw { encoder in
         stereoViews?.configure(encoder)
-        encoder.setCullMode(cullMode)
-        encoder.setFrontFacing(isMirrored ? .clockwise : .counterClockwise)
-        encoder.setTriangleFillMode(fillMode)
         encoder.drawIndexedPrimitives(primitiveType: primitiveType, indexCount: indexCount, indexType: indexType, indexBuffer: indexBuffer.gpuAddress + UInt64(offset), indexBufferLength: indexBuffer.length - offset, instanceCount: instanceCount)
     }
+    // Set through modifiers so the pass tracks them; state set directly on the encoder leaks to later draws (#472).
+    .cullMode(cullMode)
+    .frontFacing(isMirrored ? .clockwise : .counterClockwise)
+    .triangleFillMode(fillMode)
     .useResource(indexBuffer, usage: .read, stages: .vertex)
     .eraseToAnyElement()
 }

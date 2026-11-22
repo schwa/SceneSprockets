@@ -89,10 +89,10 @@ struct SceneGraphDebugRenderer: MaterialRenderer {
                 // Sets the winding even with default cull and fill, so [[front_facing]] is right.
                 Draw { [stereoViews = context.stereoViews] encoder in
                     stereoViews?.configure(encoder)
-                    encoder.setFrontFacing(simd_determinant(modelMatrix) < 0 ? .clockwise : .counterClockwise)
-                    encoder.setTriangleFillMode(mode == .wireframe ? .lines : .fill)
                     encoder.drawIndexedPrimitives(primitiveType: submesh.primitiveType, indexCount: submesh.indexCount, indexType: submesh.indexType, indexBuffer: submesh.indexBuffer.gpuAddress + UInt64(submesh.indexBufferOffset), indexBufferLength: submesh.indexBuffer.length - submesh.indexBufferOffset, instanceCount: 1)
                 }
+                .frontFacing(simd_determinant(modelMatrix) < 0 ? .clockwise : .counterClockwise)
+                .triangleFillMode(mode == .wireframe ? .lines : .fill)
                 .useResource(submesh.indexBuffer, usage: .read, stages: .vertex)
                     .vertexBuffers(mesh.vertexBuffers)
                     .parameter("transforms", value: transforms)
