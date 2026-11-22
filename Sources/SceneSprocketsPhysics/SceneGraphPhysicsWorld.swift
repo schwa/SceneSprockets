@@ -88,6 +88,14 @@ public final class SceneGraphPhysicsWorld {
         set { world.gravity = newValue }
     }
 
+    /// World-wide solver and sleep settings: solver iterations (`velocitySteps`, `positionSteps`), `baumgarte`,
+    /// `penetrationSlop`, `timeBeforeSleep`, `allowSleeping` and so on. Raise the iterations for tall stacks and
+    /// joint chains.
+    public var settings: PhysicsSettings {
+        get { world.settings }
+        set { world.settings = newValue }
+    }
+
     /// The Jolt body of `node`, once a step or sync has created it.
     public func body(of node: SceneGraph.Node) -> BodyID? {
         entries[ObjectIdentifier(node)]?.body

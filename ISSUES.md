@@ -9782,20 +9782,23 @@ Expose SwiftJolt's `StepListener` (`addStepListener`) through SceneGraphPhysicsW
 ## 421: Physics solver and sleep settings cannot be tuned
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:physics, effort:xs
 milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-16T23:34:13Z
-updated: 2026-11-20T06:32:46Z
+updated: 2026-11-22T16:23:25Z
+closed: 2026-11-22T16:23:25Z
 +++
 
 SceneGraphPhysicsWorld has no way to change solver iterations, baumgarte, penetration slop, sleep time or other world-wide settings. Stacks and joints that need more iterations cannot be fixed from SceneSprockets.
 
 ## Proposed fix (per schwa)
 Expose SwiftJolt's `PhysicsWorld.settings` (`PhysicsSettings`).
+
+- `2026-11-22T16:23:25Z`: SceneGraphPhysicsWorld.settings exposes SwiftJolt's PhysicsSettings (solver iterations, baumgarte, penetration slop, sleep time, allowSleeping, ...).
 
 ---
 

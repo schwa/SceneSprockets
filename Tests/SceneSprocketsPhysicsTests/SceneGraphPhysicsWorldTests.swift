@@ -471,6 +471,20 @@ func contactsReportBeginAndEndByNode() throws {
     #expect(physics.contacts(of: box).isEmpty)
 }
 
+// #421: solver and sleep settings can be read and changed.
+@Test
+func solverAndSleepSettingsAreTunable() throws {
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: SceneGraph.Node()))
+    var settings = physics.settings
+    settings.velocitySteps = 20
+    settings.positionSteps = 5
+    settings.timeBeforeSleep = 2
+    settings.allowSleeping = false
+    physics.settings = settings
+    #expect(physics.settings == settings)
+    #expect(physics.world.settings.velocitySteps == 20)
+}
+
 // #411: turning a body into a trigger after it was created lets bodies pass through it.
 @Test
 func floorBecomesTriggerAfterCreation() throws {
