@@ -11762,6 +11762,10 @@ updated: 2026-11-20T06:33:14Z
 
 Refraction, transmission, and screen-space effects need the opaque scene color as a texture. The renderer does not provide one.
 
+- `2026-11-22T16:39:44Z`: Autonomous run: punted. SceneGraphElement draws opaque and transparent entries in one scene render pass, and the only scene-color texture today is PBR's own transmission pre-pass (PBRTransmissionPass renders the opaque PBR scene into a separate texture before the main pass). A renderer-wide copy needs a choice: (a) split the scene pass after opaque draws (store color, copy or blit it, reload for transparent draws), which costs a store/load of the full color target in frames that need it, and does not work when the view target is multisampled without a resolve in between; or (b) generalize PBR's pre-pass so any renderer's opaque entries render once more into a texture. Also open: how a material asks for it (e.g. a SceneMaterial flag or ShaderMaterial parameter) so the copy only happens when something reads it, and whether PBR transmission should switch to it.
+- `2026-11-22T16:39:44Z`: Question 1 (design): Which way should the opaque scene color be provided: (a) split the scene pass after opaque draws and copy color (cheaper when transparent materials read it, one extra store/load), or (b) a pre-pass that renders opaque entries of all renderers into a texture, as PBR transmission does today? Recommended: (a) split the pass, only when some visible material declares it reads scene color; later move PBR transmission onto it
+- `2026-11-22T16:39:44Z`: Question 2 (design): How should a material request the scene color, and where does it receive it: a SceneMaterial property (e.g. readsSceneColor) plus RenderContext.sceneColor for renderers, and a 'sceneColor' texture parameter for ShaderMaterial? Recommended: Yes: SceneMaterial.readsSceneColor, RenderContext.sceneColor, and an automatic sceneColor parameter for ShaderMaterial
+
 ---
 
 ## 512: No extension points for injecting render passes or lighting terms
