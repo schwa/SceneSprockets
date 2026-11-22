@@ -26,6 +26,8 @@ extension SceneGraph {
         /// The triangle's vertex indices; zero for bounding box hits.
         public var vertexIndices: SIMD3<UInt32>
         var mesh: MetalMesh?
+        /// For an instanced mesh, the index of the copy that the ray hits; nil for other meshes.
+        public var instanceIndex: Int?
 
         /// The interpolated texture coordinate of set `index` at the hit point, like
         /// SCNHitTestResult.textureCoordinates(withMappingChannel:). Nil without float2 coordinates or for box hits.
@@ -110,7 +112,7 @@ extension SceneGraph {
             }
             let inverse = modelMatrix.inverse
             let localRay = Ray3D(origin: (inverse * SIMD4(ray.origin, 1)).xyz, direction: (inverse * SIMD4(ray.direction, 0)).xyz)
-            let bounds = submesh.bounds ?? (deformed == nil ? entry.node.meshBounds : nil)
+            let bounds = submesh.bounds ?? (deformed == nil ? entry.meshBounds : nil)
             let boxHit = bounds.flatMap { localRay.intersect(box: $0) }
             if bounds != nil, boxHit == nil {
                 continue
@@ -125,7 +127,7 @@ extension SceneGraph {
                 guard distance <= options.maximumDistance else {
                     continue
                 }
-                hits.append(Hit(node: entry.node, submeshIndex: entry.submeshIndex, triangleIndex: -1, distance: distance, position: position, normal: simd_normalize((inverse.transpose * SIMD4(boxHit.normal, 0)).xyz), localPosition: localPosition, barycentric: .zero, vertexIndices: .zero, mesh: nil))
+                hits.append(Hit(node: entry.node, submeshIndex: entry.submeshIndex, triangleIndex: -1, distance: distance, position: position, normal: simd_normalize((inverse.transpose * SIMD4(boxHit.normal, 0)).xyz), localPosition: localPosition, barycentric: .zero, vertexIndices: .zero, mesh: nil, instanceIndex: entry.instanceIndex))
                 continue
             }
             let positions = geometry.positions(of: mesh)
@@ -151,7 +153,7 @@ extension SceneGraph {
                 if simd_dot(normal, ray.direction) > 0 {
                     normal = -normal
                 }
-                hits.append(Hit(node: entry.node, submeshIndex: entry.submeshIndex, triangleIndex: number, distance: distance, position: position, normal: normal, localPosition: localPosition, barycentric: triangleHit.barycentrics, vertexIndices: vertices, mesh: mesh))
+                hits.append(Hit(node: entry.node, submeshIndex: entry.submeshIndex, triangleIndex: number, distance: distance, position: position, normal: normal, localPosition: localPosition, barycentric: triangleHit.barycentrics, vertexIndices: vertices, mesh: mesh, instanceIndex: entry.instanceIndex))
                 return triangleHit.distance
             }
             if deformed == nil, let triangles = geometry.triangles(of: mesh, submesh: submesh) {

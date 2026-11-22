@@ -3,6 +3,7 @@ import GeometryLite3D
 import MetalSprocketsLighting
 import SceneSprocketsAudio
 import simd
+import SwiftMesh
 
 // Codable for the scene graph types, used by Archive. Metal-backed content (textures, environment maps,
 // materials) goes through the ArchiveContext in the coder's userInfo.
@@ -60,6 +61,8 @@ extension SceneGraph.Node: Codable {
     enum MeshKeys: String, CodingKey {
         /// A mesh is a `shape`, or a `file` written by the archive's mesh codec (#158).
         case shape, file, materials, castsShadow, receivesShadow
+        /// The copies of an instanced mesh, each 16 column-major floats (#135).
+        case instances
     }
 
     enum MaterialKeys: String, CodingKey {
@@ -110,7 +113,7 @@ extension SceneGraph.Node: Codable {
             try container.encode(light, forKey: .light)
         case let .camera(camera):
             try container.encode(camera, forKey: .camera)
-        case let .mesh(metalMesh, materials, castsShadow, receivesShadow):
+        case let .mesh(metalMesh, materials, castsShadow, receivesShadow), let .instancedMesh(metalMesh, materials, _, castsShadow, receivesShadow):
             if shape == nil, context.meshCodec == nil {
                 context.warn("\(nodeDescription): mesh is not a shape and the archive has no mesh codec; not saved (#158)")
             } else {
@@ -126,6 +129,9 @@ extension SceneGraph.Node: Codable {
                 }
                 try mesh.encode(castsShadow, forKey: .castsShadow)
                 try mesh.encode(receivesShadow, forKey: .receivesShadow)
+                if case let .instancedMesh(_, _, transforms, _, _) = content {
+                    try mesh.encode(transforms.map(\.archiveValues), forKey: .instances)
+                }
                 var list = mesh.nestedUnkeyedContainer(forKey: .materials)
                 for material in materials {
                     guard let archivable = material as? any ArchivableMaterial else {
@@ -205,14 +211,22 @@ extension SceneGraph.Node: Codable {
             } else {
                 let castsShadow = try mesh.decode(Bool.self, forKey: .castsShadow)
                 let receivesShadow = try mesh.decode(Bool.self, forKey: .receivesShadow)
+                let instances = try mesh.decodeIfPresent([[Float]].self, forKey: .instances).map { try $0.map { try float4x4(archiveValues: $0) } }
+                func content(_ metalMesh: MetalMesh) -> SceneGraph.Node.Content {
+                    if let instances {
+                        .instancedMesh(metalMesh, materials: materials, transforms: instances, castsShadow: castsShadow, receivesShadow: receivesShadow)
+                    } else {
+                        .mesh(metalMesh, materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
+                    }
+                }
                 if let shape {
                     let shapeMesh = shape.metalMesh()
-                    content = .mesh(shapeMesh, materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
+                    self.content = content(shapeMesh)
                     shapeStorage = (shape, shapeMesh, nil)
                 } else if let path = try mesh.decodeIfPresent(String.self, forKey: .file) {
                     if let codec = context.meshCodec {
                         // Nodes that shared a mesh share it again.
-                        content = .mesh(try context.mesh(atPath: path, codec: codec), materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
+                        self.content = content(try context.mesh(atPath: path, codec: codec))
                     } else {
                         context.warn("\(label ?? "node"): no mesh codec to read \(path); mesh dropped")
                     }

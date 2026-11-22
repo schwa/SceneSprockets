@@ -163,7 +163,14 @@ extension SceneGraph.Node {
     /// or shadow flags, or the subdivision level, keeps it.
     public var shape: SceneGraph.Shape? {
         get {
-            guard let shapeStorage, case let .mesh(mesh, _, _, _) = content else {
+            guard let shapeStorage else {
+                return nil
+            }
+            let mesh: MetalMesh
+            switch content {
+            case let .mesh(contentMesh, _, _, _), let .instancedMesh(contentMesh, _, _, _, _):
+                mesh = contentMesh
+            default:
                 return nil
             }
             let isShapeMesh = mesh.hasSameBuffers(as: shapeStorage.mesh) || shapeStorage.subdivided.map(mesh.hasSameBuffers(as:)) == true
@@ -174,12 +181,21 @@ extension SceneGraph.Node {
                 shapeStorage = nil
                 return
             }
-            guard case let .mesh(_, materials, castsShadow, receivesShadow) = content, newValue != shape else {
+            guard newValue != shape else {
                 return
             }
-            let mesh = newValue.metalMesh()
-            shapeStorage = (newValue, mesh, nil)
-            content = .mesh(mesh, materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
+            switch content {
+            case let .mesh(_, materials, castsShadow, receivesShadow):
+                let mesh = newValue.metalMesh()
+                shapeStorage = (newValue, mesh, nil)
+                content = .mesh(mesh, materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
+            case let .instancedMesh(_, materials, transforms, castsShadow, receivesShadow):
+                let mesh = newValue.metalMesh()
+                shapeStorage = (newValue, mesh, nil)
+                content = .instancedMesh(mesh, materials: materials, transforms: transforms, castsShadow: castsShadow, receivesShadow: receivesShadow)
+            default:
+                return
+            }
             if subdivisionLevel > 0 {
                 subdivisionBase = nil
                 applySubdivision()

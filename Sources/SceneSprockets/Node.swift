@@ -19,6 +19,10 @@ extension SceneGraph {
             ///
             /// `materials[i]` applies to submesh `i`. The last material covers any extra submeshes.
             case mesh(MetalMesh, materials: [any SceneMaterial], castsShadow: Bool = true, receivesShadow: Bool = true)
+            /// Many copies of a mesh in one node, one per transform in the node's space (#135). Each copy is drawn,
+            /// culled, shadowed and hit-tested like a mesh node at `worldTransform * transforms[i]`, without the cost of a
+            /// node per copy.
+            case instancedMesh(MetalMesh, materials: [any SceneMaterial], transforms: [float4x4], castsShadow: Bool = true, receivesShadow: Bool = true)
             /// A light.
             case light(Light)
             /// A camera.
@@ -27,6 +31,11 @@ extension SceneGraph {
             /// A mesh with one material for all submeshes.
             public static func mesh(_ mesh: MetalMesh, material: any SceneMaterial, castsShadow: Bool = true, receivesShadow: Bool = true) -> Self {
                 .mesh(mesh, materials: [material], castsShadow: castsShadow, receivesShadow: receivesShadow)
+            }
+
+            /// Many copies of a mesh with one material for all submeshes.
+            public static func instancedMesh(_ mesh: MetalMesh, material: any SceneMaterial, transforms: [float4x4], castsShadow: Bool = true, receivesShadow: Bool = true) -> Self {
+                .instancedMesh(mesh, materials: [material], transforms: transforms, castsShadow: castsShadow, receivesShadow: receivesShadow)
             }
         }
 

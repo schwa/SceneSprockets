@@ -51,6 +51,7 @@ private struct SceneNodeRowLabel: View {
         switch node.content {
         case .empty: "folder"
         case .mesh: "cube"
+        case .instancedMesh: "square.stack.3d.up"
         case .light: "lightbulb"
         case .camera: "camera"
         }

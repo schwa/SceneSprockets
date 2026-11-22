@@ -2819,13 +2819,14 @@ On the keynote's Performance slide (1,600 animated crates, 3 batches) this group
 ## 135: No explicit instancing API; drawing many copies always goes through per-node implicit instancing
 
 +++
-status: open
+status: closed
 priority: medium
 kind: feature
 labels: effort:l, area:scenegraph
 milestone: Performance-2
 created: 2026-10-17T12:50:07Z
-updated: 2026-11-20T06:33:02Z
+updated: 2026-11-22T15:31:11Z
+closed: 2026-11-22T15:31:11Z
 +++
 
 The only way to draw many copies of a mesh is one Node per copy. Renderers then discover the repeats each frame (implicit instancing): flatten the tree into one MeshEntry per node, cull each entry, and group entries back into instance batches. Even with the cached batching from #134, the per-node cost remains: node traversal and world transforms, one MeshEntry and one frustum test per copy, and gathering one model matrix per copy every frame.
@@ -2837,6 +2838,7 @@ There is no way to give the scene graph a single node holding a mesh, a material
 - `2026-11-12T20:08:30Z`: Autonomous run: punted. Looked at adding per-node instance transforms carried on MeshEntry. It touches 16 files (every renderer, PBR's per-node poses, shadows, culling, bounds, LOD, hit testing, deformation, selection outline, archive, glTF EXT_mesh_gpu_instancing import), and several design choices have no answer in the repo yet. Unblocker: answer the design question on this issue.
 - `2026-11-12T20:08:30Z`: Question 1 (design): Shape of explicit instancing: (a) Node field 'instances: [float4x4]' (+ optional per-instance colors) on a mesh node, carried on one MeshEntry, with renderers that cannot draw instances getting an expanded fallback; or (b) a separate content case like .instancedMesh(mesh, material, transforms)? And: should hit tests report an instance index, should shadows/LOD/culling treat instances individually or as one bounds, and must PBR support it in the first cut?
 - `2026-11-16T21:28:02Z`: Answer 1: b, unsure about othe rquestions - lets go with default answers and improve later
+- `2026-11-22T15:31:11Z`: Node.Content.instancedMesh: one node, many copies, expanded into per-copy mesh entries so all renderers, culling, shadows, LOD and hit testing work (Hit/MeshEntry.instanceIndex). Archived; shapes supported. Remaining per-copy frame cost, glTF EXT_mesh_gpu_instancing import, physics and per-instance colors: #604.
 
 ---
 
@@ -13726,7 +13728,7 @@ The glTF loader itself accepts up to 1024 levels (found while working on #563).
 status: new
 priority: low
 kind: enhancement
-labels: area:scenegraph,effort:l
+labels: area:scenegraph, effort:l
 created: 2026-11-22T15:31:03Z
 +++
 

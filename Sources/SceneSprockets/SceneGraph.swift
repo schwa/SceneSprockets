@@ -176,18 +176,23 @@ public class SceneGraph {
             var renderCache: NodeRenderCache
             // Whether the node has a skin, so a transform-only update knows to read its pose.
             var hasSkin: Bool
+            // For one copy of an instanced mesh: which copy, and its transform in the node's space.
+            var instance: (index: Int, transform: float4x4)?
 
-            init(node: Node, mesh: MetalMesh, submeshIndex: Int, material: any SceneMaterial, castsShadow: Bool, receivesShadow: Bool) {
+            init(node: Node, mesh: MetalMesh, submeshIndex: Int, material: any SceneMaterial, castsShadow: Bool, receivesShadow: Bool, instance: (index: Int, transform: float4x4)? = nil) {
                 nodeID = node.id
                 categoryBitMask = node.categoryBitMask
                 renderingOrder = node.renderingOrder
-                meshBounds = node.meshBounds
+                // An instance entry's world transform already places the copy, so it takes the mesh's own bounds.
+                meshBounds = instance == nil ? node.meshBounds : mesh.positionBounds()
                 levelsOfDetail = node.levelsOfDetail
-                if case let .mesh(_, materials, _, _) = node.content {
+                switch node.content {
+                case let .mesh(_, materials, _, _), let .instancedMesh(_, materials, _, _, _):
                     nodeMaterials = materials
-                } else {
+                default:
                     nodeMaterials = [material]
                 }
+                self.instance = instance
                 skinVertices = node.skinVertices
                 morphTargets = node.morphTargets
                 renderCache = node.renderCache
@@ -217,6 +222,7 @@ public class SceneGraph {
                 morphTargets = other.morphTargets
                 renderCache = other.renderCache
                 hasSkin = other.hasSkin
+                instance = other.instance
             }
 
             func copy() -> Shared {
@@ -252,11 +258,22 @@ public class SceneGraph {
             storage = Storage(shared: shared, worldTransform: worldTransform, opacity: opacity, skin: Self.skinPose(node, mesh: mesh), morphWeights: node.morphWeights)
         }
 
+        // One copy of an instanced mesh; `nodeWorldTransform` is the node's, and the entry's is the copy's.
+        init(node: Node, nodeWorldTransform: float4x4, mesh: MetalMesh, submeshIndex: Int, material: any SceneMaterial, castsShadow: Bool, receivesShadow: Bool, opacity: Float, instanceIndex: Int, instanceTransform: float4x4) {
+            let shared = Shared(node: node, mesh: mesh, submeshIndex: submeshIndex, material: material, castsShadow: castsShadow, receivesShadow: receivesShadow, instance: (instanceIndex, instanceTransform))
+            storage = Storage(shared: shared, worldTransform: nodeWorldTransform * instanceTransform, opacity: opacity, skin: nil, morphWeights: [])
+        }
+
+        /// For one copy of an ``Node/Content/instancedMesh(_:materials:transforms:castsShadow:receivesShadow:)``, the
+        /// index of its transform; nil for other entries.
+        public var instanceIndex: Int? { storage.shared.instance?.index }
+
         // This entry's node after a transform-only change: the same structural fields, the node's new world transform,
         // opacity, morph weights and skin pose (#588).
         func posed(worldTransform: float4x4, opacity: Float) -> Self {
             let shared = storage.shared
             var entry = self
+            let worldTransform = shared.instance.map { worldTransform * $0.transform } ?? worldTransform
             entry.storage = Storage(shared: shared, worldTransform: worldTransform, opacity: opacity, skin: shared.hasSkin ? Self.skinPose(shared.node, mesh: shared.mesh) : nil, morphWeights: shared.node.morphWeights)
             return entry
         }
@@ -411,6 +428,18 @@ public class SceneGraph {
                 for submeshIndex in mesh.submeshes.indices {
                     let material = submeshIndex < materials.count ? materials[submeshIndex] : lastMaterial
                     result.meshes.append(MeshEntry(node: node, worldTransform: worldTransform, mesh: mesh, submeshIndex: submeshIndex, material: material, castsShadow: castsShadow, receivesShadow: receivesShadow, opacity: opacity))
+                }
+            case let .instancedMesh(mesh, materials, transforms, castsShadow, receivesShadow):
+                guard let lastMaterial = materials.last else {
+                    return
+                }
+                let opacity = node.inheritedOpacity
+                result.meshes.reserveCapacity(result.meshes.count + transforms.count * mesh.submeshes.count)
+                for (instanceIndex, instanceTransform) in transforms.enumerated() {
+                    for submeshIndex in mesh.submeshes.indices {
+                        let material = submeshIndex < materials.count ? materials[submeshIndex] : lastMaterial
+                        result.meshes.append(MeshEntry(node: node, nodeWorldTransform: worldTransform, mesh: mesh, submeshIndex: submeshIndex, material: material, castsShadow: castsShadow, receivesShadow: receivesShadow, opacity: opacity, instanceIndex: instanceIndex, instanceTransform: instanceTransform))
+                    }
                 }
             case let .light(light):
                 result.lights.append((node, worldTransform, light))

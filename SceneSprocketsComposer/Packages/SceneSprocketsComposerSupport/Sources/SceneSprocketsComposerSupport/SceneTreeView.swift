@@ -124,6 +124,9 @@ extension SceneGraph.Node {
         case .mesh:
             "cube"
 
+        case .instancedMesh:
+            "square.stack.3d.up"
+
         case .light:
             "lightbulb"
 

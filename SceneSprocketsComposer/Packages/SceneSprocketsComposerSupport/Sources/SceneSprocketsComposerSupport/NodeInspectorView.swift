@@ -94,6 +94,9 @@ extension SceneGraph.Node {
         case .mesh:
             "Mesh"
 
+        case .instancedMesh:
+            "Instanced Mesh"
+
         case .light:
             "Light"
 

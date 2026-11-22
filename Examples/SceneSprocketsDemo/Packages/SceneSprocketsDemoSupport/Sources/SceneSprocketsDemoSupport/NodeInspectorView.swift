@@ -22,6 +22,11 @@ struct NodeInspectorView: View {
             }
         case let .mesh(_, materials, castsShadow, receivesShadow):
             MeshSectionView(materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
+        case let .instancedMesh(_, materials, transforms, castsShadow, receivesShadow):
+            Section("Instances") {
+                LabeledContent("Count", value: transforms.count, format: .number)
+            }
+            MeshSectionView(materials: materials, castsShadow: castsShadow, receivesShadow: receivesShadow)
         }
     }
 }
@@ -40,6 +45,7 @@ private struct GeneralSectionView: View {
         switch node.content {
         case .empty: "Empty"
         case .mesh: "Mesh"
+        case .instancedMesh: "Instanced Mesh"
         case .light: "Light"
         case .camera: "Camera"
         }

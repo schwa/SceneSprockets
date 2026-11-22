@@ -99,3 +99,87 @@ func instancedBoxesAllRender() throws {
     }
     #expect(pixel(22).z < 3)
 }
+
+// MARK: - Explicit instancing (#135)
+
+@Test
+func instancedMeshGivesAnEntryPerCopy() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let box = MetalMesh(mesh: .box(), device: device)
+    let root = SceneGraph.Node()
+    let crates = root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(0, 1, 0)), content: .instancedMesh(box, material: material(0.8), transforms: [translation(-2, 0, 0), translation(0, 0, 0), translation(2, 0, 0)])))
+    let graph = SceneGraph(root: root)
+    let entries = graph.meshEntries()
+    #expect(entries.map(\.instanceIndex) == [0, 1, 2])
+    #expect(entries.map(\.worldTransform.columns.3) == [[-2, 1, 0, 1], [0, 1, 0, 1], [2, 1, 0, 1]])
+    #expect(entries.allSatisfy { $0.node === crates })
+    // The node's bounds hold every copy; each entry's are the box's own.
+    let nodeBounds = try #require(crates.meshBounds)
+    #expect(nodeBounds.min.x == -2.5 && nodeBounds.max.x == 2.5)
+    #expect(entries.allSatisfy { $0.meshBounds?.max.x == 0.5 })
+    // A transform-only change keeps each copy's offset.
+    crates.transform = Transform3D(storing: translation(0, 3, 0))
+    #expect(graph.meshEntries().map(\.worldTransform.columns.3) == [[-2, 3, 0, 1], [0, 3, 0, 1], [2, 3, 0, 1]])
+    // Copies batch into one instanced draw like nodes do.
+    let items = graph.meshEntries().map { entry in
+        (entry: entry, mesh: entry.mesh, modelMatrix: entry.worldTransform, material: entry.material as! BlinnPhongSceneMaterial)
+    }
+    #expect(instanceBatches(items).map(\.modelMatrices.count) == [3])
+}
+
+@Test
+func hitTestReportsTheInstanceIndex() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let box = MetalMesh(mesh: .box(), device: device)
+    let root = SceneGraph.Node()
+    root.addChild(SceneGraph.Node(content: .instancedMesh(box, material: material(0.8), transforms: [translation(-2, 0, 0), translation(2, 0, 0)])))
+    let hits = SceneGraph(root: root).hitTest(segmentFrom: [2, 0, 5], to: [2, 0, -5])
+    #expect(hits.first?.instanceIndex == 1)
+    #expect(abs((hits.first?.position.z ?? 0) - 0.5) < 1e-4)
+    #expect(SceneGraph(root: root).hitTest(segmentFrom: [0, 0, 5], to: [0, 0, -5]).isEmpty)
+}
+
+@Test
+func instancedMeshRendersEveryCopy() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let box = MetalMesh(mesh: .box(), device: device)
+    let root = SceneGraph.Node()
+    root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(0, 0, 8)), content: .camera(Camera(projection: PerspectiveProjection(verticalAngleOfView: .degrees(45))))))
+    root.addChild(SceneGraph.Node(transform: Transform3D(storing: translation(0, 0, 4)), content: .light(Light(type: .point, intensity: 5))))
+    root.addChild(SceneGraph.Node(content: .instancedMesh(box, material: material(0.9), transforms: [-2, 0, 2].map { translation($0, 0, 0) })))
+    let texture = try OffscreenRenderer(size: CGSize(width: 64, height: 64)).render(BlinnPhongSceneGraphElement(sceneGraph: SceneGraph(root: root), aspectRatio: 1)).texture
+
+    func pixel(_ x: Int) -> SIMD4<UInt8> {
+        var value = SIMD4<UInt8>.zero
+        texture.getBytes(&value, bytesPerRow: 4, from: MTLRegionMake2D(x, 32, 1, 1), mipmapLevel: 0)
+        return value
+    }
+    for x in [13, 32, 51] {
+        #expect(pixel(x).z > 20)
+    }
+    #expect(pixel(22).z < 3)
+}
+
+@Test
+func instancedShapeRoundTripsThroughAnArchive() throws {
+    let root = SceneGraph.Node()
+    let crates = root.addChild(SceneGraph.Node(label: "Crates", shape: .box(), material: material(0.8)))
+    guard case let .mesh(mesh, materials, _, _) = crates.content else {
+        Issue.record("not a mesh")
+        return
+    }
+    let transforms = [translation(-2, 0, 0), translation(2, 1, 0)]
+    crates.content = .instancedMesh(mesh, materials: materials, transforms: transforms)
+    #expect(crates.shape == .box())
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension(Archive.pathExtension)
+    defer { try? FileManager.default.removeItem(at: url) }
+    let archive = Archive(materialTypes: [BlinnPhongSceneMaterial.self])
+    #expect(try archive.write(SceneGraph(root: root), to: url).isEmpty)
+    let loaded = try #require(try archive.read(from: url).sceneGraph.root.childNode(withLabel: "Crates"))
+    guard case let .instancedMesh(_, _, loadedTransforms, _, _) = loaded.content else {
+        Issue.record("not instanced: \(loaded.content)")
+        return
+    }
+    #expect(loadedTransforms == transforms)
+    #expect(loaded.shape == .box())
+}

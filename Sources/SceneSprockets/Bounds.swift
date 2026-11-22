@@ -40,8 +40,19 @@ extension SceneGraph.Node {
             return cache.bounds
         }
         var bounds: BoundingBox3D?
-        if case let .mesh(mesh, _, _, _) = content {
+        switch content {
+        case let .mesh(mesh, _, _, _):
             bounds = mesh.positionBounds()
+        case let .instancedMesh(mesh, _, transforms, _, _):
+            // The union of every copy's bounds.
+            if let local = mesh.positionBounds() {
+                bounds = transforms.reduce(nil) { result, transform in
+                    let copy = local.transformed(by: transform)
+                    return result.map { $0.union(copy) } ?? copy
+                }
+            }
+        default:
+            break
         }
         boundsCache.mesh = (revision.structure, bounds)
         return bounds
