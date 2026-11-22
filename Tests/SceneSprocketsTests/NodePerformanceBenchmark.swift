@@ -63,6 +63,11 @@ func nodePerformanceBenchmark() {
         let (graph, _, _) = makeScene(groups: 2_000)
         _ = graph
     }
+    // Dropping a graph detaches every node, copying its fields back out of the World (#270).
+    var graphs = (0..<4).map { _ in makeScene(groups: 2_000).graph }
+    measure("teardown_ns", count: 20_000, repeats: 3) {
+        graphs.removeLast()
+    }
     _ = root
     print("BENCHMARK sink \(sink) \(lights)")
 }
