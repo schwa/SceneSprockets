@@ -12158,12 +12158,13 @@ Related: ISSUES.md Materials list, "Shader modifiers / node-based material graph
 ## 528: No MaterialX material support
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:materials, effort:l
 created: 2026-11-17T14:27:02Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-22T18:08:14Z
+closed: 2026-11-22T18:08:14Z
 +++
 
 SceneSprockets can't load or render MaterialX (.mtlx) materials. Assets authored with MaterialX (Substance, GPUOpen MaterialX Library, ambientCG, OpenUSD pipelines) have to be converted by hand to the existing PBR or Blinn-Phong materials.
@@ -12173,6 +12174,8 @@ Expected: a MaterialX material can be loaded and attached to mesh nodes like the
 References:
 - https://materialx.org
 - https://github.com/AcademySoftwareFoundation/MaterialX
+
+- `2026-11-22T18:08:14Z`: MaterialXDocument (SceneSprocketsPBR) loads standard_surface and UsdPreviewSurface materials into PBRSceneMaterial: constants and image textures (direct, via nodegraph outputs, behind normalmap), fileprefix, metalness+roughness images packed into one texture, warnings for what is skipped. Tests cover constants, textured inputs through a nodegraph, UsdPreviewSurface, an unevaluated node and an unsupported shader. Node graphs and other shaders: #609. Not tested against real-world .mtlx libraries (none available offline).
 
 ---
 
@@ -13986,7 +13989,7 @@ Split from #558.
 status: new
 priority: low
 kind: feature
-labels: area:materials,effort:l
+labels: area:materials, effort:l
 created: 2026-11-22T18:08:09Z
 +++
 
