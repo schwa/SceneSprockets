@@ -4017,6 +4017,10 @@ Split from #161 (constraints are done there).
 
 Seen in shadows and scenekit-features (spinning torus).
 
+- `2026-11-22T15:31:40Z`: Autonomous run: punted. Actions: every factory in Action.swift builds runner closures, so saving needs a Codable description per built-in kind (move/rotate/scale/fade/opacity/hide/unhide/wait/removeFromParent/sequence/group/repeat/repeatForever, plus timingMode and speed); custom/run and TimingMode.custom stay unsaveable. That part is mechanical. Two things are not: (1) the running state: IntervalRunner keeps elapsed time and eased fraction, absolute actions (move(to:), rotate(to:), scale(to:), fadeOpacity(to:)) capture a start value, and Sequence/Repeat runners keep an index/count, so an exact mid-action resume means serializing the runner tree; restarting from zero is simple but double-applies the finished part of relative actions because the node transform is already saved mid-way. (2) Animation: clips and players are owned by the caller, not by nodes, so what an archive holds and what plays on load is a product choice.
+- `2026-11-22T15:31:40Z`: Question 1 (design): For running actions in a saved scene, should loading resume each action exactly where it was (serialize the runner tree: elapsed, eased fraction, sequence index, repeat count, start values of absolute actions), or is restarting only repeatForever actions from zero (and dropping finite in-progress actions) good enough for a first cut? Recommended: Exact resume: save the runner tree, so a half-finished move(by:) or sequence continues correctly
+- `2026-11-22T15:31:40Z`: Question 2 (design): For animation, should the scene graph own clips and players so archives can hold them (e.g. Node.animationPlayers keyed by name, with clips targeting node paths like constraints in #161, and an autoplay flag per player), or should archives store only clips and leave playing to the app? Recommended: Nodes own named players (clip + node-path targets + isPlaying/time/speed/loop), saved in the archive and resumed on load
+
 ---
 
 ## 180: Scene archive: samplers, stored mip levels, cube/3D and compressed textures
@@ -5938,6 +5942,8 @@ Part of #255.
 
 - `2026-11-07T16:00:59Z`: Transform gizmo part fixed: the overlay draws camera-relative (origin minus camera position, computed in Double) with a rotation-only view, and SceneViewport.worldSizeOfPoint (which sizes the handles) projects camera-relative too. New SceneViewport.rotationOnlyViewMatrix inverts the camera rotation alone, so it stays precise far away. Test drawsTheSameFarFromOrigin (translate/rotate/scale at 2^20) failed before with 1159-9846 of 40000 pixels differing; now passes. Title narrowed to the particle part, which is still open: particle positions live in MetalSprocketsParticles buffers, so it needs a change in that package.
 - `2026-11-08T02:26:28Z`: Autonomous run: not changed. Particle positions are simulated and stored in world-space Float inside MetalSprocketsParticles buffers, so a fix needs a reference-frame choice in that package (simulate relative to the emitter or a floating origin, and pass a camera-relative view to render). That is the same design question as #255 (floating origin vs Double transforms vs moving reference frame). Unblocker: answer #255's question, then this can follow the chosen frame in MetalSprocketsParticles.
+- `2026-11-22T15:35:58Z`: Autonomous run: punted again. #255's reference-frame question is still unanswered. A render-only change (camera-relative view for particle drawing) would not fix it alone: particle positions are stored as world-space Float in MetalSprocketsParticles buffers, which at 2^20 m only resolve about 0.125 m, so storage must move to an emitter-relative or floating-origin frame in that package.
+- `2026-11-22T15:35:59Z`: Question 1 (design): Should MetalSprocketsParticles simulate and store particles relative to each emitter (emitter world origin kept on the CPU, offset applied camera-relative at draw), independent of #255's floating-origin decision? Recommended: Yes: emitter-relative positions plus a camera-relative emitter offset at draw; works with any later #255 choice
 
 ---
 
@@ -11842,6 +11848,10 @@ State:
 - Commands in one indirect command buffer cannot bind textures per draw, so a renderer needs bindless materials first. PBR has them; Blinn-Phong has argument-buffer materials since #546.
 - Merged geometry is not required, but whether PBR keeps it decides how commands get their vertex data (#545).
 
+- `2026-11-22T15:32:06Z`: Autonomous run: punted. Looked at PBR's DrawList path (PBRRenderer.drawList) and MetalSprockets' ICB support (MTLDevice ICB factory, Draw(indirectCommandBuffer:range:resources:), supportsIndirectCommandBuffers(), GPU-written ranges). A workable shape: encode DrawList rows into an ICB once per structure revision and execute it each frame; instance and material tables come from the pipeline's argument tables, which ICB commands inherit. Blockers are scope, not mechanics: ICB commands inherit cull mode and winding from the Draw, so rows split into one range per (cullMode, winding); whether the encoding belongs in MetalSprockets' DrawList (an option there, needing a MetalSprockets release) or in PBRRenderer; and what result counts as done, since DrawList is already 0.7 ms slower than merged sets on CarConcept (#583) and CPU encoding into an ICB every frame would save nothing.
+- `2026-11-22T15:32:06Z`: Question 1 (design): Should ICB encoding live in MetalSprockets' DrawList (e.g. a 'cache commands until rows change' option usable by any renderer, released as a new MetalSprockets version), or only inside SceneSprockets' PBRRenderer for now? Recommended: In DrawList, so Blinn-Phong and others get it too; PBR adopts it first
+- `2026-11-22T15:32:06Z`: Question 2 (decision): What finishes this issue: PBR opaque draws executed from a cached ICB with identical images (correctness only), or also a measured CPU win (e.g. CarConcept / Performance slide frame time below the merged-set path)? Recommended: Correctness plus a benchmark showing CPU encode time no worse than today; GPU-driven culling stays in #520
+
 ---
 
 ## 518: No mesh shading
@@ -13617,6 +13627,9 @@ Expected: the shaders that include the header are recompiled.
 Actual: stale metallibs are used until a .metal file in each target is touched.
 
 Found while fixing #299.
+
+- `2026-11-22T15:35:42Z`: Root cause in MetalCompilerPlugin: the build command's inputFiles were only the .metal sources, so no header edit (own target or dependency) invalidated the metallib. Fixed in MetalCompilerPlugin (local commit, not pushed): headers under the target, dependency include paths and include-paths are now inputs. Verified here with a temporary path dependency: appending to MetalSprocketsLightingTypes.h rebuilt the MetalSprocketsLighting, MetalSprocketsPBR and SceneSprockets shader libraries (before: none). Stays open until the plugin is released and SceneSprockets requires it.
+- `2026-11-22T15:35:42Z`: Question 1 (decision): May I push MetalCompilerPlugin's header-inputs fix, tag it 0.4.2, and bump SceneSprockets (and MetalSprockets, which also uses the plugin) to it? Recommended: Yes: push, tag 0.4.2, bump SceneSprockets to .upToNextMinor(from: "0.4.2") and close #598
 
 ---
 
