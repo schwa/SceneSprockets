@@ -11509,6 +11509,10 @@ updated: 2026-11-20T06:33:14Z
 
 Small-scale shadows that conventional shadow maps miss. (Moved from SceneSprocketsAddOns #52.)
 
+- `2026-11-22T17:27:51Z`: Autonomous run: punted for design. Contact shadows are a screen-space march from each pixel toward a light through scene depth (post targets; not in stereo, #382). Where the result goes is the open part: the ShadowMask post pass darkens finished color only for entries whose materials do not sample shadows themselves, while Blinn-Phong, PBR and shadow-sampling ShaderMaterials apply shadow maps per light in their own shaders, so for them contact shadows would have to be a per-light visibility texture computed before the scene pass (needs a depth pre-pass, like ambient occlusion's) and multiplied into Lighting::shadow. Cost also scales with the number of lights marched.
+- `2026-11-22T17:27:52Z`: Question 1 (design): Which lights get contact shadows: only the main directional light (one march per pixel, the common case), or every shadow-casting light? Recommended: The brightest directional light only, with a SceneGraph.Environment setting (length, thickness, strength)
+- `2026-11-22T17:27:52Z`: Question 2 (design): May contact shadows reuse the ambient-occlusion depth pre-pass and feed a contact-visibility texture into Lighting::shadow for every renderer (so in-shader shadow materials get them too), rather than only darkening in the shadow-mask post pass? Recommended: Yes: depth pre-pass, one compute march, a visibility texture bound like the AO texture and applied in Lighting::shadow
+
 ---
 
 ## 496: Temporal anti-aliasing
@@ -11541,21 +11545,27 @@ updated: 2026-11-20T06:33:50Z
 Projected lighting patterns and realistic light distributions. (Moved from SceneSprocketsAddOns #57.)
 
 - `2026-11-17T17:51:39Z`: Related: #86 (IES lights).
+- `2026-11-22T17:28:05Z`: Autonomous run: punted for design. LightingLight (MetalSprocketsLightingTypes.h) has no texture slot; the only per-frame lighting texture every renderer binds is the shadow-map array. Cookies (a projected 2D pattern for spot and directional lights) and IES profiles (intensity by angle from a photometric file) both need a texture reaching Lighting::sample in Blinn-Phong, PBR and shader materials, so the binding design comes first. IES also needs a parser for the LM-63 text format, which overlaps #86 and the deferred glTF EXT_lights_ies (#557).
+- `2026-11-22T17:28:05Z`: Question 1 (design): How should light textures reach the shaders: one shared texture2d_array for all lights' cookies and IES profiles (each light stores a layer index, like shadow slices), bound alongside the shadow map in every renderer? Recommended: Yes: a 'lightTextures' 2D array (fixed size, e.g. 256x256, IES profiles resampled into it), LightingLight gets cookieLayer/iesLayer (-1 none), Light gets cookie: MTLTexture? and ies: IESProfile?
+- `2026-11-22T17:28:05Z`: Question 2 (decision): Should IES profiles be done here or under #86 (IES lights), with this issue covering only cookies? Recommended: Cookies here; IES under #86 using the same light-texture array
 
 ---
 
 ## 498: Transmission / refraction
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:renderer, effort:l
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-22T17:28:34Z
+closed: 2026-11-22T17:28:34Z
 +++
 
 Glass, liquids, transparent solids. (Moved from SceneSprocketsAddOns #60.)
+
+- `2026-11-22T17:28:34Z`: Already implemented (issue predates the work; moved from SceneSprocketsAddOns): PBR materials support KHR_materials_transmission, volume (thickness, attenuation distance/color), IOR and dispersion, refracting a transmission pre-pass of the opaque scene that includes other renderers' content (#327). Covered by Tests/SceneSprocketsTests/TransmissionTests.swift, MetalSprocketsPBRTests RenderTests (glassShowsWhatIsBehindIt, transmission pass tests) and MetalSprocketsGLTFTests VolumeScatterTests; 18 matching tests pass. Blinn-Phong and ShaderMaterial have no transmission, by design: use PBRSceneMaterial for glass.
 
 ---
 
