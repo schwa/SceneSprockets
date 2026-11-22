@@ -32,7 +32,23 @@ struct GLTFBenchCommand: ParsableCommand {
         Scene(name: "AnimationPointerUVs", path: "AnimationPointerUVs/glTF-Binary/AnimationPointerUVs.glb", animation: 0),
         Scene(name: "AlphaBlendModeTest", path: "AlphaBlendModeTest/glTF-Binary/AlphaBlendModeTest.glb"),
         Scene(name: "TransmissionTest", path: "TransmissionTest/glTF-Binary/TransmissionTest.glb"),
-        Scene(name: "CarConcept", path: "CarConcept/glTF-Binary/CarConcept.glb")
+        Scene(name: "CarConcept", path: "CarConcept/glTF-Binary/CarConcept.glb"),
+        // #558: paths the scenes above miss.
+        // Morph targets, animated.
+        Scene(name: "MorphStressTest", path: "MorphStressTest/glTF-Binary/MorphStressTest.glb", animation: 0),
+        // Material lobes that add shader cost.
+        Scene(name: "ClearCoatCarPaint", path: "ClearCoatCarPaint/glTF-Binary/ClearCoatCarPaint.glb"),
+        Scene(name: "SheenWoodLeatherSofa", path: "SheenWoodLeatherSofa/glTF-Binary/SheenWoodLeatherSofa.glb"),
+        Scene(name: "DiffuseTransmissionPlant", path: "DiffuseTransmissionPlant/glTF-Binary/DiffuseTransmissionPlant.glb"),
+        Scene(name: "IridescenceLamp", path: "IridescenceLamp/glTF-Binary/IridescenceLamp.glb"),
+        Scene(name: "AnisotropyBarnLamp", path: "AnisotropyBarnLamp/glTF-Binary/AnisotropyBarnLamp.glb"),
+        Scene(name: "DispersionTest", path: "DispersionTest/glTF-Binary/DispersionTest.glb"),
+        // Point and line primitives.
+        Scene(name: "MeshPrimitiveModes", path: "MeshPrimitiveModes/glTF/MeshPrimitiveModes.gltf"),
+        // Many punctual lights.
+        Scene(name: "LightsPunctualLamp", path: "LightsPunctualLamp/glTF-Binary/LightsPunctualLamp.glb"),
+        // Many large textures and materials.
+        Scene(name: "FlightHelmet", path: "FlightHelmet/glTF/FlightHelmet.gltf")
     ]
 
     struct Baseline: Codable {
@@ -43,6 +59,9 @@ struct GLTFBenchCommand: ParsableCommand {
         var width: Int
         var height: Int
         var scenes: [String: FrameTimings]
+        // Milliseconds to load each scene (GLTFAsset), fastest of the rounds. Nil in baselines from before #558.
+        // swiftlint:disable:next discouraged_optional_collection - nil means the baseline predates load times
+        var loadTimes: [String: Double]?
     }
 
     @Option(help: "glTF-Sample-Assets Models directory.")
@@ -71,6 +90,12 @@ struct GLTFBenchCommand: ParsableCommand {
 
     @Option(help: "Slowdowns smaller than this many milliseconds are noise, whatever the fraction.")
     var noiseFloor = 0.3
+
+    @Option(help: "Allowed load-time slowdown as a fraction of the baseline. Load times vary with the file cache.")
+    var loadMargin = 0.25
+
+    @Option(help: "Load-time slowdowns smaller than this many milliseconds are noise.")
+    var loadNoiseFloor = 5.0
 
     @Argument(help: "Only these scenes (default: all).")
     var only: [String] = []
@@ -105,17 +130,29 @@ struct GLTFBenchCommand: ParsableCommand {
         var results: [String: FrameTimings] = [:]
         var regressions: [String] = []
         var loaded: [(scene: Scene, asset: GLTFAsset)] = []
+        // Fastest load of each scene, in milliseconds (#558). The first load includes a cold file cache, so each scene
+        // is loaded once per round and keeps its fastest.
+        var loadTimes: [String: Double] = [:]
         for scene in selected {
             let url = URL(fileURLWithPath: models).appending(path: scene.path)
             guard FileManager.default.fileExists(atPath: url.path) else {
                 print("\(scene.name): missing \(url.path); run `just download-sample-assets`.")
                 continue
             }
-            let asset = try GLTFAsset(url: url, options: .commandLine)
-            if let animation = scene.animation, !asset.animations.indices.contains(animation) {
+            var asset: GLTFAsset?
+            for _ in 0 ..< max(repeats, 1) {
+                let start = ContinuousClock.now
+                asset = try GLTFAsset(url: url, options: .commandLine)
+                let elapsed = ContinuousClock.now - start
+                let milliseconds = Double(elapsed.components.seconds) * 1_000 + Double(elapsed.components.attoseconds) / 1e15
+                loadTimes[scene.name] = min(loadTimes[scene.name] ?? .infinity, milliseconds)
+            }
+            // swiftlint:disable:next force_unwrapping - loaded at least once above
+            let loadedAsset = asset!
+            if let animation = scene.animation, !loadedAsset.animations.indices.contains(animation) {
                 throw ValidationError("\(scene.name) has no animation \(animation)")
             }
-            loaded.append((scene, asset))
+            loaded.append((scene, loadedAsset))
         }
         // Run every scene once per round, not one scene many times. A cold start then affects only the first round.
         // Each scene keeps its fastest round.
@@ -123,7 +160,7 @@ struct GLTFBenchCommand: ParsableCommand {
         for _ in 0 ..< max(repeats, 1) {
             rounds.append(try loaded.map { try measure($0.scene, asset: $0.asset, renderer: renderer) })
         }
-        print("scene".padding(toLength: 22, withPad: " ", startingAt: 0) + "     cpu ms     gpu ms   vs baseline (median)")
+        print("scene".padding(toLength: 26, withPad: " ", startingAt: 0) + "     cpu ms     gpu ms    load ms   vs baseline (median)")
         for (index, (scene, _)) in loaded.enumerated() {
             let runs = rounds.map { $0[index] }
             // CPU and GPU are judged separately, so each takes its own fastest run.
@@ -135,28 +172,37 @@ struct GLTFBenchCommand: ParsableCommand {
             timings.gpu = runs.map(\.gpu).min { $0.median < $1.median }!
             results[scene.name] = timings
             var comparison = ""
+            let loadTime = loadTimes[scene.name] ?? 0
             if let old = existing?.scenes[scene.name] {
                 let cpu = change(timings.cpu.median, from: old.cpu.median, margin: margin)
                 let gpu = change(timings.gpu.median, from: old.gpu.median, margin: gpuMargin)
                 comparison = "cpu \(cpu.text)  gpu \(gpu.text)"
-                if !record, cpu.isRegression || gpu.isRegression {
+                var isRegression = cpu.isRegression || gpu.isRegression
+                if let oldLoad = existing?.loadTimes?[scene.name] {
+                    let load = change(loadTime, from: oldLoad, margin: loadMargin, noiseFloor: loadNoiseFloor)
+                    comparison += "  load \(load.text)"
+                    isRegression = isRegression || load.isRegression
+                }
+                if !record, isRegression {
                     regressions.append(scene.name)
                     comparison += "  REGRESSION"
                 }
             }
-            print(scene.name.padding(toLength: 22, withPad: " ", startingAt: 0) + String(format: " %10.3f %10.3f   ", timings.cpu.median, timings.gpu.median) + comparison)
+            print(scene.name.padding(toLength: 26, withPad: " ", startingAt: 0) + String(format: " %10.3f %10.3f %10.1f   ", timings.cpu.median, timings.gpu.median, loadTime) + comparison)
         }
 
         if record {
             // Keep baselines of scenes not run this time.
             var scenes = existing?.scenes ?? [:]
             scenes.merge(results) { $1 }
-            let baseline = Baseline(machine: machine, chip: Self.sysctl("machdep.cpu.brand_string") ?? "unknown", recorded: Date(), frames: frames, width: width, height: height, scenes: scenes)
+            var allLoadTimes = existing?.loadTimes ?? [:]
+            allLoadTimes.merge(loadTimes) { $1 }
+            let baseline = Baseline(machine: machine, chip: Self.sysctl("machdep.cpu.brand_string") ?? "unknown", recorded: Date(), frames: frames, width: width, height: height, scenes: scenes, loadTimes: allLoadTimes)
             try FileManager.default.createDirectory(at: baselineURL.deletingLastPathComponent(), withIntermediateDirectories: true)
             try JSONEncoder.iso.encode(baseline).write(to: baselineURL)
             print("Wrote \(baselineURL.path)")
         } else if !regressions.isEmpty {
-            print("Slower than baseline by more than \(Int(margin * 100))% CPU or \(Int(gpuMargin * 100))% GPU, and \(noiseFloor) ms: \(regressions.joined(separator: ", "))")
+            print("Slower than baseline by more than \(Int(margin * 100))% CPU, \(Int(gpuMargin * 100))% GPU or \(Int(loadMargin * 100))% load, past the noise floors: \(regressions.joined(separator: ", "))")
             throw ExitCode(1)
         }
     }
@@ -179,10 +225,10 @@ struct GLTFBenchCommand: ParsableCommand {
         }
     }
 
-    func change(_ new: Double, from old: Double, margin: Double) -> (text: String, isRegression: Bool) {
+    func change(_ new: Double, from old: Double, margin: Double, noiseFloor: Double? = nil) -> (text: String, isRegression: Bool) {
         let fraction = old > 0 ? (new - old) / old : 0
         let text = String(format: "%+6.1f%%", fraction * 100)
-        return (text, new - old > noiseFloor && fraction > margin)
+        return (text, new - old > (noiseFloor ?? self.noiseFloor) && fraction > margin)
     }
 
     static func sysctl(_ name: String) -> String? {

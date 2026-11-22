@@ -12770,13 +12770,14 @@ Was MetalSprocketsGLTF#87 (moved with the package, #552).
 ## 558: Benchmark suite misses several draw paths
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:performance, area:testing, effort:s, gltf
 milestone: Performance-2
 created: 2026-11-19T02:12:55Z
-updated: 2026-11-20T06:33:02Z
+updated: 2026-11-22T17:36:55Z
+closed: 2026-11-22T17:36:55Z
 +++
 
 The bench suite (ms-gltf-render bench, GLTFBenchCommand.scenes) has 11 scenes picked by hand. Paths with no scene, so their regressions go unnoticed:
@@ -12791,6 +12792,8 @@ The bench suite (ms-gltf-render bench, GLTFBenchCommand.scenes) has 11 scenes pi
 Also worth considering: a second resolution (GPU-bound at 4K) and scenes that are GPU-heavy rather than CPU-heavy. Adding scenes means re-recording each machine's baseline (just bench-record) and keeping the suite's run time reasonable (about a minute now).
 
 Was MetalSprocketsGLTF#113 (moved with the package, #552).
+
+- `2026-11-22T17:36:55Z`: Added bench scenes: MorphStressTest (animated morphs), ClearCoatCarPaint, SheenWoodLeatherSofa, DiffuseTransmissionPlant, IridescenceLamp, AnisotropyBarnLamp, DispersionTest (material lobes), MeshPrimitiveModes (points/lines), LightsPunctualLamp (many lights), FlightHelmet (many textures). Load time is measured per scene (fastest of the rounds), stored in the baseline as loadTimes and gated with --load-margin (25%) and --load-noise-floor (5 ms). Verified the new scenes load and render. Baselines need re-recording on each machine (just bench-gltf-record) for the new scenes and load times. Variants switching, background/transmission at size and 4K moved to #608.
 
 ---
 
@@ -13916,7 +13919,7 @@ SceneGraph.Spline and Action.follow(_:duration:orientsToPath:) (#407) move a nod
 status: new
 priority: low
 kind: task
-labels: area:performance,area:testing,effort:s,gltf
+labels: area:performance, area:testing, effort:s, gltf
 created: 2026-11-22T17:36:41Z
 +++
 
