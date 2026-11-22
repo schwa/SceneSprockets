@@ -4,6 +4,7 @@ import GeometryLite3D
 import Metal
 import MetalSprockets
 import SceneSprockets
+import SceneSprocketsAddOns
 import SceneSprocketsBlinnPhong
 @testable import SceneSprocketsDemoSupport
 import simd
@@ -348,6 +349,36 @@ func catalogMatchesAppAndIDsAreUnique() {
     let appIDs = SceneGraphDemos.all.map { $0.metadata.id.rawValue }
     #expect(Array(appIDs.prefix(DemoCatalog.demos.count)) == DemoCatalog.demos.map(\.id))
     #expect(Set(appIDs).count == appIDs.count)
+}
+
+// #529: every scene of the SDF demo builds a valid shape over time, and the demo shows each one.
+@Test
+@MainActor
+func sdfDemoScenesBuildShapes() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    for scene in SDFDemo.scenes {
+        // A spread of times, including ones where shapes are furthest apart.
+        for time in stride(from: Float(0), through: 6.5, by: 0.25) {
+            let shape = SDFDemo.shape(scene: scene, time: time, smoothing: 0.6, blobs: 6)
+            #expect(shape.bounds != nil, "\(scene) at \(time)")
+            let node = SceneGraph.Node()
+            try node.setSignedDistanceShape(shape, surface: .blinnPhong(.plastic([1, 1, 1], shininess: 8)), device: device)
+            guard case .mesh = node.content else {
+                Issue.record("\(scene) made no mesh")
+                continue
+            }
+        }
+    }
+    let demo = SDFDemo()
+    for index in SDFDemo.scenes.indices {
+        demo.values["Scene"] = Float(index)
+        demo.update(time: 1, deltaTime: 1.0 / 60)
+        let node = try #require(demo.sceneGraph.root.childNode(withLabel: "Signed Distance Shape"))
+        guard case .mesh = node.content else {
+            Issue.record("scene \(index) shows nothing")
+            continue
+        }
+    }
 }
 
 @Test

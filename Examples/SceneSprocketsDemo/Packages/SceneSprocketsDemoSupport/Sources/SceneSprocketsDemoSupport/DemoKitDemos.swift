@@ -9,7 +9,7 @@ public enum SceneGraphDemos {
             KeynoteDemoView.self,
             SceneKitFeaturesDemoView.self,
             ShadowsDemoView.self,
-            MetaballsDemoView.self,
+            SDFDemoView.self,
             DiceDemoView.self,
             GearsDemoView.self
         ]
@@ -79,8 +79,8 @@ struct TreeAppreciatorDemoView: DemoView {
     }
 }
 
-struct MetaballsDemoView: CatalogDemoView {
-    nonisolated static let demo = Demo(id: "metaballs", title: "Metaballs", systemImage: "circle.hexagongrid", section: .basics, summary: "Raymarched signed distance blobs that merge smoothly as they move, lit and depth-tested like meshes.") { MetaballsDemo() }
+struct SDFDemoView: CatalogDemoView {
+    nonisolated static let demo = Demo(id: "sdf", title: "Signed Distance Fields", systemImage: "circle.hexagongrid", section: .basics, summary: "Raymarched signed distance shapes, lit and depth-tested like meshes: merging metaballs, a carved box, a lens and a capsule chain.") { SDFDemo() }
 }
 
 struct ShadowsDemoView: CatalogDemoView {

@@ -12146,13 +12146,16 @@ References:
 ## 529: Metalballs Demo -> SDF Demo
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:demo, effort:s
 created: 2026-11-17T17:11:50Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-22T17:34:45Z
+closed: 2026-11-22T17:34:45Z
 +++
+
+- `2026-11-22T17:34:45Z`: The standalone Metaballs demo is now 'Signed Distance Fields' (SDFDemo, catalog id 'sdf') with a Scene choice: Metaballs (smooth union, as before), Carved (smooth subtraction of a moving sphere from a rounded box), Lens (smooth intersection of two spheres) and Chain (capsules joined smoothly). The keynote's Metaballs slide is unchanged.
 
 ---
 
