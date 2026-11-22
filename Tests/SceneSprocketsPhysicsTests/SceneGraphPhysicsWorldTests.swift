@@ -472,6 +472,32 @@ func contactsReportBeginAndEndByNode() throws {
     #expect(physics.contacts(of: box).isEmpty)
 }
 
+// #439: bodies can be put to sleep and woken one at a time or by region.
+@Test
+func bodiesSleepAndWakeOnDemand() throws {
+    let root = SceneGraph.Node()
+    let box = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 5, 0])))
+    box.physicsBody = .init(type: .dynamic, shape: .box(size: [1, 1, 1]))
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+    #expect(physics.isAwake(box) == true)
+    // Asleep, it hangs in the air.
+    physics.sleep(box)
+    #expect(physics.isAwake(box) == false)
+    run(physics, seconds: 0.5)
+    #expect(box.worldPosition.y == 5)
+    physics.wake(box)
+    run(physics, seconds: 0.5)
+    #expect(box.worldPosition.y < 5)
+    // Waking a region wakes the bodies whose bounds overlap it.
+    physics.sleep(box)
+    let position = box.worldPosition
+    physics.wakeBodies(in: BoundingBox3D(min: [10, 10, 10], max: [11, 11, 11]))
+    #expect(physics.isAwake(box) == false)
+    physics.wakeBodies(in: BoundingBox3D(min: position - 1, max: position + 1))
+    #expect(physics.isAwake(box) == true)
+    #expect(physics.isAwake(SceneGraph.Node()) == nil)
+}
+
 // #438: the job system can be chosen, including Jolt's pool with no worker threads.
 @Test
 func jobSystemCanBeChosen() throws {

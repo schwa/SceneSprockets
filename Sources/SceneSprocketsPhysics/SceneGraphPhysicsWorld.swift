@@ -128,6 +128,38 @@ public final class SceneGraphPhysicsWorld {
         }
     }
 
+    /// Whether the node's body is awake (simulated each step). Nil if the node has no body in the simulation.
+    public func isAwake(_ node: SceneGraph.Node) -> Bool? {
+        sync()
+        guard let body = body(of: node), world.isAdded(body) else {
+            return nil
+        }
+        return world.isActive(body)
+    }
+
+    /// Wakes the node's body, so it moves again under gravity and contacts.
+    public func wake(_ node: SceneGraph.Node) {
+        sync()
+        if let body = body(of: node), world.isAdded(body) {
+            world.activate(body)
+        }
+    }
+
+    /// Puts the node's body to sleep until something touches it or it is woken.
+    public func sleep(_ node: SceneGraph.Node) {
+        sync()
+        if let body = body(of: node), world.isAdded(body) {
+            world.deactivate(body)
+        }
+    }
+
+    /// Wakes every moving body whose bounds overlap a world-space box, for example after an explosion or when a
+    /// part of a level becomes active.
+    public func wakeBodies(in bounds: BoundingBox3D) {
+        sync()
+        world.activateBodies(inBoxFrom: bounds.min, to: bounds.max)
+    }
+
     /// Adds an impulse to the node's body at its center of mass.
     ///
     /// The method calls ``sync()`` first, like ``setVelocity(_:of:)``.

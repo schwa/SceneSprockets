@@ -10157,14 +10157,15 @@ Context: PhysicsWorld.init now takes jobSystem: JobSystemKind (user-interactive 
 ## 439: Physics bodies cannot be woken or put to sleep on demand
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:physics, effort:xs
 milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-20T06:32:46Z
+updated: 2026-11-22T16:26:18Z
+closed: 2026-11-22T16:26:18Z
 +++
 
 There is no API to wake a sleeping body, put one to sleep, or wake everything in a region (e.g. after an explosion or when a level section becomes active).
@@ -10172,6 +10173,8 @@ There is no API to wake a sleeping body, put one to sleep, or wake everything in
 Related: #413 (sleep options).
 
 Context: SwiftJolt now has activate/deactivate for one or many bodies and activateBodies(inBoxFrom:to:).
+
+- `2026-11-22T16:26:18Z`: SceneGraphPhysicsWorld.isAwake(_:), wake(_:), sleep(_:) and wakeBodies(in:) (world-space box).
 
 ---
 
