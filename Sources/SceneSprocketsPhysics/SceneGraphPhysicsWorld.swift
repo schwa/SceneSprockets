@@ -341,6 +341,10 @@ public final class SceneGraphPhysicsWorld {
         if description.type == .dynamic, description.shape == .mesh {
             return false
         }
+        // Jolt sets this only when it creates a body.
+        guard description.allowsSleeping == old.allowsSleeping else {
+            return false
+        }
         let body = entry.body
         if description.shape != old.shape {
             let scale = simd_abs(Transform3D(nearestTo: entry.node.worldTransform).scale)
@@ -357,6 +361,21 @@ public final class SceneGraphPhysicsWorld {
         }
         if description.restitution != old.restitution {
             world.setRestitution(of: body, to: description.restitution)
+        }
+        if description.linearDamping != old.linearDamping {
+            world.setLinearDamping(of: body, to: description.linearDamping)
+        }
+        if description.angularDamping != old.angularDamping {
+            world.setAngularDamping(of: body, to: description.angularDamping)
+        }
+        if description.gravityFactor != old.gravityFactor {
+            world.setGravityFactor(of: body, to: description.gravityFactor)
+            if world.isAdded(body) {
+                world.activate(body)
+            }
+        }
+        if description.usesContinuousCollision != old.usesContinuousCollision {
+            world.setMotionQuality(of: body, to: description.usesContinuousCollision ? .linearCast : .discrete)
         }
         let masksChanged = description.categoryBitMask != old.categoryBitMask || description.collisionBitMask != old.collisionBitMask
         if masksChanged {
@@ -418,7 +437,13 @@ public final class SceneGraphPhysicsWorld {
         case .dynamic: .dynamic
         case .kinematic: .kinematic
         }
-        let body = world.addBody(shape, position: pose.translation, rotation: pose.rotation.quaternion, motionType: motionType, restitution: description.restitution, friction: description.friction)
+        var options = BodyOptions.default
+        options.linearDamping = description.linearDamping
+        options.angularDamping = description.angularDamping
+        options.gravityFactor = description.gravityFactor
+        options.allowSleeping = description.allowsSleeping
+        options.motionQuality = description.usesContinuousCollision ? .linearCast : .discrete
+        let body = world.addBody(shape, position: pose.translation, rotation: pose.rotation.quaternion, motionType: motionType, restitution: description.restitution, friction: description.friction, options: options)
         if description.type == .dynamic, let mass = description.mass {
             world.setMass(of: body, to: mass)
         }

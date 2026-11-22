@@ -114,6 +114,7 @@ extension SceneGraph.PhysicsBody.BodyType: Codable {
 extension SceneGraph.PhysicsBody: Codable {
     enum ArchiveKeys: String, CodingKey {
         case type, shape, mass, friction, restitution, isTrigger, categoryBitMask, collisionBitMask
+        case linearDamping, angularDamping, gravityFactor, allowsSleeping, usesContinuousCollision
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -132,6 +133,22 @@ extension SceneGraph.PhysicsBody: Codable {
         if collisionBitMask != .max {
             try container.encode(collisionBitMask, forKey: .collisionBitMask)
         }
+        let defaults = Self(type: type, shape: shape)
+        if linearDamping != defaults.linearDamping {
+            try container.encode(linearDamping, forKey: .linearDamping)
+        }
+        if angularDamping != defaults.angularDamping {
+            try container.encode(angularDamping, forKey: .angularDamping)
+        }
+        if gravityFactor != defaults.gravityFactor {
+            try container.encode(gravityFactor, forKey: .gravityFactor)
+        }
+        if allowsSleeping != defaults.allowsSleeping {
+            try container.encode(allowsSleeping, forKey: .allowsSleeping)
+        }
+        if usesContinuousCollision != defaults.usesContinuousCollision {
+            try container.encode(usesContinuousCollision, forKey: .usesContinuousCollision)
+        }
     }
 
     public init(from decoder: Decoder) throws {
@@ -142,6 +159,11 @@ extension SceneGraph.PhysicsBody: Codable {
             mass: try container.decodeIfPresent(Float.self, forKey: .mass),
             friction: try container.decodeIfPresent(Float.self, forKey: .friction) ?? 0.5,
             restitution: try container.decodeIfPresent(Float.self, forKey: .restitution) ?? 0,
+            linearDamping: try container.decodeIfPresent(Float.self, forKey: .linearDamping) ?? 0.05,
+            angularDamping: try container.decodeIfPresent(Float.self, forKey: .angularDamping) ?? 0.05,
+            gravityFactor: try container.decodeIfPresent(Float.self, forKey: .gravityFactor) ?? 1,
+            allowsSleeping: try container.decodeIfPresent(Bool.self, forKey: .allowsSleeping) ?? true,
+            usesContinuousCollision: try container.decodeIfPresent(Bool.self, forKey: .usesContinuousCollision) ?? false,
             isTrigger: try container.decodeIfPresent(Bool.self, forKey: .isTrigger) ?? false,
             categoryBitMask: try container.decodeIfPresent(UInt32.self, forKey: .categoryBitMask) ?? 1,
             collisionBitMask: try container.decodeIfPresent(UInt32.self, forKey: .collisionBitMask) ?? .max

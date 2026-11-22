@@ -472,6 +472,53 @@ func contactsReportBeginAndEndByNode() throws {
     #expect(physics.contacts(of: box).isEmpty)
 }
 
+// #413: per-body damping, gravity factor, sleeping and continuous collision.
+@Test
+func bodyMotionOptions() throws {
+    let root = SceneGraph.Node()
+    _ = makeFloor(in: root)
+    // No gravity: stays where it is.
+    let floating = root.addChild(SceneGraph.Node(transform: .init(translation: [-4, 3, 0])))
+    floating.physicsBody = .init(type: .dynamic, shape: .sphere(radius: 0.5), gravityFactor: 0)
+    // Heavy damping: slows down far more than the default.
+    let damped = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 3, 0])))
+    damped.physicsBody = .init(type: .dynamic, shape: .sphere(radius: 0.5), linearDamping: 5, gravityFactor: 0)
+    let free = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 6, 0])))
+    free.physicsBody = .init(type: .dynamic, shape: .sphere(radius: 0.5), gravityFactor: 0)
+    // Never sleeps, even at rest on the floor.
+    let restless = root.addChild(SceneGraph.Node(transform: .init(translation: [4, 0.5, 0])))
+    restless.physicsBody = .init(type: .dynamic, shape: .box(size: [1, 1, 1]), allowsSleeping: false)
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+    physics.setVelocity([0, 0, 5], of: damped)
+    physics.setVelocity([0, 0, 5], of: free)
+    run(physics, seconds: 3)
+    #expect(abs(floating.worldPosition.y - 3) < 1e-3, "\(floating.worldPosition)")
+    #expect(damped.worldPosition.z < free.worldPosition.z / 3, "damped \(damped.worldPosition.z) free \(free.worldPosition.z)")
+    #expect(physics.isAwake(restless) == true)
+    // Changing an option on an existing body applies it: gravity back on, so it falls.
+    floating.physicsBody?.gravityFactor = 1
+    run(physics, seconds: 1)
+    #expect(floating.worldPosition.y < 2)
+}
+
+// #413: a fast body with continuous collision does not tunnel through a thin wall.
+@Test
+func continuousCollisionStopsTunneling() throws {
+    func passesThrough(continuous: Bool) throws -> Bool {
+        let root = SceneGraph.Node()
+        let wall = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 0, -5])))
+        wall.physicsBody = .init(type: .static, shape: .box(size: [10, 10, 0.05]))
+        let bullet = root.addChild(SceneGraph.Node())
+        bullet.physicsBody = .init(type: .dynamic, shape: .sphere(radius: 0.05), gravityFactor: 0, usesContinuousCollision: continuous)
+        let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+        physics.setVelocity([0, 0, -400], of: bullet)
+        run(physics, seconds: 0.5)
+        return bullet.worldPosition.z < -5
+    }
+    #expect(try passesThrough(continuous: false))
+    #expect(try !passesThrough(continuous: true))
+}
+
 // #439: bodies can be put to sleep and woken one at a time or by region.
 @Test
 func bodiesSleepAndWakeOnDemand() throws {

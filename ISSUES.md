@@ -9601,14 +9601,15 @@ Map node categories to SwiftJolt `CollisionLayers` (fixed when the world is crea
 ## 413: PhysicsBody has no damping, gravity, sleep or continuous-collision options
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:physics, effort:s
 milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-16T23:34:12Z
-updated: 2026-11-20T06:32:46Z
+updated: 2026-11-22T16:32:26Z
+closed: 2026-11-22T16:32:26Z
 +++
 
 SceneGraph.PhysicsBody only has type, shape, mass, friction and restitution. Linear/angular damping, a gravity factor (or not affected by gravity), whether the body may sleep, and continuous collision for fast bodies cannot be set. SceneKit exposes damping, isAffectedByGravity, allowsResting and continuousCollisionDetectionThreshold.
@@ -9617,6 +9618,7 @@ SceneGraph.PhysicsBody only has type, shape, mass, friction and restitution. Lin
 Pass SwiftJolt's `BodyOptions` (linearDamping, angularDamping, gravityFactor, allowSleeping, motionQuality: .linearCast, maxLinearVelocity) from makeBody.
 
 - `2026-11-17T06:02:51Z`: Related: #260 (fast-moving objects jitter).
+- `2026-11-22T16:32:26Z`: PhysicsBody.linearDamping, angularDamping, gravityFactor, allowsSleeping and usesContinuousCollision (Jolt linear-cast motion quality), applied at creation and on change (allowsSleeping rebuilds the body), archived when not default.
 
 ---
 
