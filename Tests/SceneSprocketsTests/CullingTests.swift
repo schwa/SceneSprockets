@@ -1,5 +1,6 @@
 import GeometryLite3D
 import Metal
+import MetalSprockets
 @testable import SceneSprockets
 @testable import SceneSprocketsBlinnPhong
 import simd
@@ -40,6 +41,23 @@ func cullingDropsEntriesOutsideFrustum() throws {
 
     let visible = culledMeshEntries(SceneGraph(root: root).meshEntries(), viewProjection: viewProjection())
     #expect(visible.map(\.node.label) == ["front"])
+}
+
+// #383: in stereo an entry is kept if any eye can see it, not only the center camera.
+@Test
+func stereoCullingKeepsEntriesOneEyeSees() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let box = MetalMesh(mesh: .box(), device: device)
+    let material = BlinnPhongSceneMaterial(color: [1, 1, 1])
+    let root = SceneGraph.Node()
+    root.addChild(SceneGraph.Node(label: "right only", transform: Transform3D(translation: [3, 0, -10]), content: .mesh(box, material: material)))
+    root.addChild(SceneGraph.Node(label: "nobody", transform: Transform3D(translation: [30, 0, -10]), content: .mesh(box, material: material)))
+    let entries = SceneGraph(root: root).meshEntries()
+    // Narrow views from cameras 3 units left and right of the center, all looking down -Z.
+    let projection = PerspectiveProjection(verticalAngleOfView: .degrees(10)).projectionMatrix(aspectRatio: 1)
+    let stereo = StereoViews(viewMatrices: [simd_float4x4.translation(-3, 0, 0).inverse, simd_float4x4.translation(3, 0, 0).inverse], projectionMatrices: [projection, projection], viewports: Array(repeating: MTLViewport(originX: 0, originY: 0, width: 1, height: 1, znear: 0, zfar: 1), count: 2))
+    #expect(meshEntriesInFrustum(entries, projectionMatrix: projection, cameraMatrix: .identity) == [false, false])
+    #expect(meshEntriesInFrustum(entries, projectionMatrix: projection, cameraMatrix: .identity, stereoViews: stereo) == [true, false])
 }
 
 @Test

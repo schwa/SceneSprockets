@@ -149,7 +149,7 @@ public struct BlinnPhongMaterialRenderer: MaterialRenderer, Equatable {
         // The shader has no morph or skin inputs, so SceneGraphElement deforms those meshes in a GPU pre-pass (#298).
         // SceneGraphElement batches opaque and transparent entries apart, transparent ones sorted farthest first.
         let isTransparent = entries.first?.isTransparent ?? false
-        let inFrustum = meshEntriesInFrustum(entries, projectionMatrix: context.projectionMatrix, cameraMatrix: context.cameraMatrix)
+        let inFrustum = meshEntriesInFrustum(entries, projectionMatrix: context.projectionMatrix, cameraMatrix: context.cameraMatrix, stereoViews: context.stereoViews)
         if !isTransparent, let groups = cachedOpaqueGroups(entries: entries, inFrustum: inFrustum, context: context, cameraPosition: cameraPosition) {
             return BlinnPhongBatchesElement(groups: groups, shading: shading, ambientOcclusion: context.ambientOcclusion, isTransparent: false, stereoViews: context.stereoViews, materialResources: materialResources).eraseToAnyElement()
         }

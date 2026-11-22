@@ -1,4 +1,5 @@
 import GeometryLite3D
+import MetalSprockets
 import simd
 
 /// Entries without bounds are kept.
@@ -34,20 +35,31 @@ public func meshEntriesInFrustum(_ entries: [SceneGraph.MeshEntry], viewProjecti
 ///   - entries: The mesh entries to test.
 ///   - projectionMatrix: The camera's projection matrix, for example ``RenderContext/projectionMatrix``.
 ///   - cameraMatrix: The camera's world transform, for example ``RenderContext/cameraMatrix``.
+///   - stereoViews: The views drawn at once, for example ``RenderContext/stereoViews``. With more than one view, an
+///     entry is visible if any view's frustum holds it, so an object only one eye sees is not culled (#383).
 /// - Returns: One value per entry, in the same order.
-public func meshEntriesInFrustum(_ entries: [SceneGraph.MeshEntry], projectionMatrix: simd_float4x4, cameraMatrix: simd_float4x4) -> [Bool] {
+public func meshEntriesInFrustum(_ entries: [SceneGraph.MeshEntry], projectionMatrix: simd_float4x4, cameraMatrix: simd_float4x4, stereoViews: StereoViews? = nil) -> [Bool] {
     let cameraPosition = cameraMatrix.columns.3.xyz
-    let frustum = Frustum(viewProjection: projectionMatrix * cameraMatrix.cameraRelative(to: cameraPosition).inverse)
+    // Every frustum is relative to the same point, so entries move into that space once.
+    let frustums: [Frustum] = if let stereoViews, stereoViews.isStereo {
+        zip(stereoViews.projectionMatrices, stereoViews.cameraMatrices).map { projection, camera in
+            Frustum(viewProjection: projection * camera.cameraRelative(to: cameraPosition).inverse)
+        }
+    } else {
+        [Frustum(viewProjection: projectionMatrix * cameraMatrix.cameraRelative(to: cameraPosition).inverse)]
+    }
     return entries.map { entry in
         guard let bounds = entry.meshBounds else {
             return true
         }
-        return frustum.intersects(bounds.transformed(by: entry.worldTransform.cameraRelative(to: cameraPosition)))
+        let relative = bounds.transformed(by: entry.worldTransform.cameraRelative(to: cameraPosition))
+        return frustums.contains { $0.intersects(relative) }
     }
 }
 
 // Sorts by camera distance to each entry's world bounds center (its origin without bounds), farthest first, so
-// blended surfaces composite correctly.
+// blended surfaces composite correctly. In stereo, callers pass the center camera, so both eyes draw in the same
+// order (#383).
 func sortedBackToFront(_ entries: [SceneGraph.MeshEntry], cameraPosition: SIMD3<Float>) -> [SceneGraph.MeshEntry] {
     entries
         .map { entry in

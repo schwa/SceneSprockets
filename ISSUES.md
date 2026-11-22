@@ -8930,17 +8930,20 @@ Passes that read or write screen-space textures (outline via JumpFlood/Silhouett
 ## 383: visionOS immersive: culling and transparency sorting use one camera
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: effort:s, area:renderer, subtask, bounds
 milestone: VisionOS
 depends: 380
 created: 2026-11-12T19:17:30Z
-updated: 2026-11-20T06:32:33Z
+updated: 2026-11-22T16:30:22Z
+closed: 2026-11-22T16:30:22Z
 +++
 
 Frustum culling and back-to-front transparency sorting are computed from a single camera. In stereo, objects visible to only one eye could be culled, and sort order should be consistent across both eyes.
+
+- `2026-11-22T16:30:22Z`: meshEntriesInFrustum takes stereoViews: an entry is visible if any view's frustum holds it (camera-relative to the center). Blinn-Phong passes context.stereoViews; PBR already tested every view. Transparency sorting uses the center camera, so both eyes draw in one order.
 
 ---
 
