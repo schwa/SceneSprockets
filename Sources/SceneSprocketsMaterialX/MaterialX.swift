@@ -11,10 +11,12 @@ import simd
 
 /// The materials of a MaterialX (`.mtlx`) document, as ``PBRSceneMaterial``s (#528).
 ///
-/// Each `surfacematerial` whose surface shader is a `standard_surface` or `UsdPreviewSurface` becomes one material.
-/// Shader inputs may be constant values or image textures, connected directly or through a nodegraph output (a
-/// `normalmap` node in front of the normal image is followed). Other node graphs (math, procedural patterns) are not
-/// evaluated: those inputs keep their defaults and are reported in ``warnings``.
+/// Each `surfacematerial` whose surface shader is a `standard_surface`, `UsdPreviewSurface`, `gltf_pbr` or
+/// `open_pbr_surface` becomes one material. Shader inputs may be constant values or image textures, connected directly
+/// or through a nodegraph output (a `normalmap` node in front of the normal image is followed). Math nodes on constants
+/// (add, multiply, mix, clamp, extract, combine and so on) are folded, and an image multiplied by a constant becomes a
+/// textured input with that factor (#609). Nodes that need per-pixel evaluation (noise, texture coordinates, other
+/// math on images) are not evaluated: those inputs keep their defaults and are reported in ``warnings``.
 public struct MaterialXDocument {
     public struct Material {
         /// The `surfacematerial` element's name.
@@ -109,10 +111,10 @@ struct MaterialXElement {
 
 // MARK: - Conversion
 
-/// An input's value: a constant, or an image file.
+/// An input's value: a constant, or an image file times a constant factor (one value, or one per channel).
 enum MaterialXValue: Equatable {
     case constant([Float])
-    case image(URL)
+    case image(URL, factor: [Float] = [1])
 }
 
 struct MaterialXConverter {
@@ -134,6 +136,10 @@ struct MaterialXConverter {
                 materials.append(.init(name: name, material: try standardSurface(shader, material: name)))
             case "UsdPreviewSurface":
                 materials.append(.init(name: name, material: try usdPreviewSurface(shader, material: name)))
+            case "gltf_pbr":
+                materials.append(.init(name: name, material: try gltfPBR(shader, material: name)))
+            case "open_pbr_surface":
+                materials.append(.init(name: name, material: try openPBRSurface(shader, material: name)))
             default:
                 warnings.append("\(name): shader \(shader.tag) is not supported")
             }
@@ -198,6 +204,63 @@ struct MaterialXConverter {
         uniforms.ior = inputs.float("ior", default: 1.5)
         uniforms.clearcoatFactor = inputs.float("clearcoat", default: 0)
         uniforms.clearcoatRoughnessFactor = inputs.float("clearcoatRoughness", default: 0.01)
+        pbr.uniforms = uniforms
+        warnings += inputs.warnings
+        return pbr
+    }
+
+    // glTF's own model, as MaterialX's gltf_pbr node describes it (#609).
+    private mutating func gltfPBR(_ shader: MaterialXElement, material: String) throws -> PBRSceneMaterial {
+        var inputs = Inputs(shader: shader, material: material, converter: self)
+        let pbr = try makeMaterial(
+            baseColor: inputs.colorOrImage("base_color", default: [1, 1, 1]),
+            baseWeight: 1,
+            opacity: inputs.float("alpha", default: 1),
+            metallic: inputs.floatOrImage("metallic", default: 1),
+            roughness: inputs.floatOrImage("roughness", default: 1),
+            normal: inputs.image("normal"),
+            occlusion: inputs.image("occlusion"),
+            emissive: inputs.colorOrImage("emissive", default: [0, 0, 0]),
+            emissiveWeight: inputs.float("emissive_strength", default: 1)
+        )
+        var uniforms = pbr.uniforms
+        uniforms.ior = inputs.float("ior", default: 1.5)
+        uniforms.specularFactor = inputs.float("specular", default: 1)
+        uniforms.specularColorFactor = inputs.color("specular_color", default: [1, 1, 1])
+        uniforms.transmissionFactor = inputs.float("transmission", default: 0)
+        uniforms.clearcoatFactor = inputs.float("clearcoat", default: 0)
+        uniforms.clearcoatRoughnessFactor = inputs.float("clearcoat_roughness", default: 0)
+        uniforms.sheenColorFactor = inputs.color("sheen_color", default: [0, 0, 0])
+        uniforms.sheenRoughnessFactor = inputs.float("sheen_roughness", default: 0)
+        pbr.uniforms = uniforms
+        warnings += inputs.warnings
+        return pbr
+    }
+
+    // OpenPBR Surface (#609). Fuzz maps to sheen and coat to clearcoat. Emission luminance is in nits; 1000 nits is
+    // taken as an emissive factor of 1, which is a guess at a sensible brightness, not a physical conversion.
+    private mutating func openPBRSurface(_ shader: MaterialXElement, material: String) throws -> PBRSceneMaterial {
+        var inputs = Inputs(shader: shader, material: material, converter: self)
+        let pbr = try makeMaterial(
+            baseColor: inputs.colorOrImage("base_color", default: [0.8, 0.8, 0.8]),
+            baseWeight: inputs.float("base_weight", default: 1),
+            opacity: inputs.float("geometry_opacity", default: 1),
+            metallic: inputs.floatOrImage("base_metalness", default: 0),
+            roughness: inputs.floatOrImage("specular_roughness", default: 0.3),
+            normal: inputs.image("geometry_normal"),
+            occlusion: nil,
+            emissive: inputs.colorOrImage("emission_color", default: [1, 1, 1]),
+            emissiveWeight: inputs.float("emission_luminance", default: 0) / 1_000
+        )
+        var uniforms = pbr.uniforms
+        uniforms.ior = inputs.float("specular_ior", default: 1.5)
+        uniforms.specularFactor = inputs.float("specular_weight", default: 1)
+        uniforms.specularColorFactor = inputs.color("specular_color", default: [1, 1, 1])
+        uniforms.transmissionFactor = inputs.float("transmission_weight", default: 0)
+        uniforms.clearcoatFactor = inputs.float("coat_weight", default: 0)
+        uniforms.clearcoatRoughnessFactor = inputs.float("coat_roughness", default: 0)
+        uniforms.sheenColorFactor = inputs.float("fuzz_weight", default: 0) * inputs.color("fuzz_color", default: [1, 1, 1])
+        uniforms.sheenRoughnessFactor = inputs.float("fuzz_roughness", default: 0.5)
         pbr.uniforms = uniforms
         warnings += inputs.warnings
         return pbr
@@ -288,6 +351,9 @@ struct MaterialXConverter {
             if input["type"] == "filename" {
                 return .success(.image(fileURL(value, prefix: fileprefix)))
             }
+            if input["type"] == "boolean" {
+                return .success(.constant([value == "true" ? 1 : 0]))
+            }
             let numbers = value.split { $0 == "," || $0 == " " }.compactMap { Float($0) }
             return numbers.isEmpty ? .failure(.init(reason: "value \"\(value)\" is not a number")) : .success(.constant(numbers))
         }
@@ -301,27 +367,116 @@ struct MaterialXConverter {
             }
             return resolve(output, scope: graph, fileprefix: graph["fileprefix"] ?? fileprefix)
         }
+        if let interfaceName = input["interfacename"] {
+            // An input of the enclosing nodegraph.
+            guard let scope, let graphInput = scope.input(interfaceName) else {
+                return .failure(.init(reason: "no nodegraph input \(interfaceName)"))
+            }
+            return resolve(graphInput, scope: nil, fileprefix: fileprefix)
+        }
         if let nodeName = input["nodename"] {
             guard let node = (scope ?? root).child(named: nodeName) else {
                 return .failure(.init(reason: "no node \(nodeName)"))
             }
-            switch node.tag {
-            case "image", "tiledimage":
-                guard let file = node.input("file") else {
-                    return .failure(.init(reason: "image \(nodeName) has no file"))
-                }
-                return resolve(file, scope: scope, fileprefix: node["fileprefix"] ?? fileprefix)
-            case "normalmap":
-                guard let inner = node.input("in") else {
-                    return .failure(.init(reason: "normalmap \(nodeName) has no input"))
-                }
-                return resolve(inner, scope: scope, fileprefix: fileprefix)
-            default:
-                return .failure(.init(reason: "\(node.tag) nodes are not evaluated"))
-            }
+            return evaluate(node, scope: scope, fileprefix: node["fileprefix"] ?? fileprefix)
         }
         return .failure(.init(reason: "no value or connection"))
     }
+
+    // Nil defaults mean the input is required, and a nil result means the sizes do not match.
+    // swiftlint:disable discouraged_optional_collection
+
+    // A node's value: images and normal maps pass their file through; math nodes whose inputs are constants are
+    // folded, and multiplying an image by a constant scales its factor (#609). Anything needing per-pixel evaluation
+    // (noise, texture coordinates, math on images other than a constant multiply) fails.
+    private func evaluate(_ node: MaterialXElement, scope: MaterialXElement?, fileprefix: String) -> Result<MaterialXValue, MaterialXResolveFailure> {
+        let nodeName = node.name ?? node.tag
+        func value(_ name: String, default fallback: [Float]? = nil) -> Result<MaterialXValue, MaterialXResolveFailure> {
+            guard let input = node.input(name) else {
+                return fallback.map { .success(.constant($0)) } ?? .failure(.init(reason: "\(node.tag) \(nodeName) has no \(name) input"))
+            }
+            return resolve(input, scope: scope, fileprefix: fileprefix)
+        }
+        func constants(_ names: [(String, [Float]?)]) -> Result<[[Float]], MaterialXResolveFailure> {
+            var result: [[Float]] = []
+            for (name, fallback) in names {
+                switch value(name, default: fallback) {
+                case let .success(.constant(numbers)):
+                    result.append(numbers)
+                case .success(.image):
+                    return .failure(.init(reason: "\(node.tag) \(nodeName) on an image is not evaluated"))
+                case let .failure(failure):
+                    return .failure(failure)
+                }
+            }
+            return .success(result)
+        }
+        func fold(_ names: [(String, [Float]?)], _ body: ([[Float]]) -> [Float]?) -> Result<MaterialXValue, MaterialXResolveFailure> {
+            constants(names).flatMap { values in
+                body(values).map { .success(.constant($0)) } ?? .failure(.init(reason: "\(node.tag) \(nodeName) has mismatched input sizes"))
+            }
+        }
+        let binary: [String: (Float, Float) -> Float] = [
+            "add": (+), "subtract": (-), "multiply": (*), "divide": { $1 == 0 ? 0 : $0 / $1 },
+            "min": { Swift.min($0, $1) }, "max": { Swift.max($0, $1) }, "power": { pow($0, $1) }
+        ]
+        switch node.tag {
+        case "image", "tiledimage":
+            guard let file = node.input("file") else {
+                return .failure(.init(reason: "image \(nodeName) has no file"))
+            }
+            return resolve(file, scope: scope, fileprefix: fileprefix)
+        case "normalmap":
+            return value("in")
+        case "constant", "convert", "dot":
+            return value(node.tag == "constant" ? "value" : "in")
+        case "multiply":
+            // An image times a constant keeps the image and scales its factor.
+            switch (value("in1"), value("in2")) {
+            case let (.success(.image(url, factor)), .success(.constant(numbers))), let (.success(.constant(numbers)), .success(.image(url, factor))):
+                return Self.broadcast(factor, numbers, *).map { .success(.image(url, factor: $0)) } ?? .failure(.init(reason: "multiply \(nodeName) has mismatched input sizes"))
+            default:
+                return fold([("in1", nil), ("in2", nil)]) { Self.broadcast($0[0], $0[1], *) }
+            }
+        case let tag where binary[tag] != nil:
+            let operation = binary[tag, default: (+)]
+            return fold([("in1", nil), ("in2", nil)]) { Self.broadcast($0[0], $0[1], operation) }
+        case "mix":
+            return fold([("fg", nil), ("bg", nil), ("mix", [0])]) { values in
+                Self.broadcast(values[0], values[1], -).flatMap { difference in
+                    Self.broadcast(difference, values[2], *).flatMap { Self.broadcast(values[1], $0, +) }
+                }
+            }
+        case "clamp":
+            return fold([("in", nil), ("low", [0]), ("high", [1])]) { values in
+                Self.broadcast(values[0], values[1]) { Swift.max($0, $1) }.flatMap { Self.broadcast($0, values[2]) { Swift.min($0, $1) } }
+            }
+        case "invert":
+            return fold([("in", nil), ("amount", [1])]) { Self.broadcast($0[1], $0[0], -) }
+        case "extract":
+            return fold([("in", nil), ("index", [0])]) { values in
+                let index = Int(values[1].first ?? 0)
+                return values[0].indices.contains(index) ? [values[0][index]] : nil
+            }
+        case "combine2", "combine3", "combine4":
+            let count = ["combine2": 2, "combine3": 3, "combine4": 4][node.tag, default: 2]
+            return fold((1...count).map { ("in\($0)", nil) }) { $0.flatMap(\.self) }
+        default:
+            return .failure(.init(reason: "\(node.tag) nodes are not evaluated"))
+        }
+    }
+
+    // Applies `operation` per channel; a single value applies to every channel of the other. Nil for other mismatches.
+    private static func broadcast(_ lhs: [Float], _ rhs: [Float], _ operation: (Float, Float) -> Float) -> [Float]? {
+        switch (lhs.count, rhs.count) {
+        case let (left, right) where left == right: zip(lhs, rhs).map(operation)
+        case (1, _): rhs.map { operation(lhs[0], $0) }
+        case (_, 1): lhs.map { operation($0, rhs[0]) }
+        default: nil
+        }
+    }
+
+    // swiftlint:enable discouraged_optional_collection
 
     private func fileURL(_ path: String, prefix: String) -> URL {
         let full = prefix + path
@@ -385,7 +540,7 @@ private struct Inputs {
         switch value(name) {
         case let .constant(numbers):
             return (numbers.count >= 3 ? SIMD3(numbers[0], numbers[1], numbers[2]) : SIMD3(repeating: numbers.first ?? 1), nil)
-        case let .image(url): return ([1, 1, 1], url)
+        case let .image(url, factor): return (factor.count >= 3 ? SIMD3(factor[0], factor[1], factor[2]) : SIMD3(repeating: factor.first ?? 1), url)
         case nil: return (fallback, nil)
         }
     }
@@ -393,14 +548,14 @@ private struct Inputs {
     mutating func floatOrImage(_ name: String, default fallback: Float) -> MaterialXConverter.FloatInput {
         switch value(name) {
         case let .constant(numbers): return (numbers.first ?? fallback, nil)
-        case let .image(url): return (1, url)
+        case let .image(url, factor): return (factor.first ?? 1, url)
         case nil: return (fallback, nil)
         }
     }
 
     mutating func image(_ name: String) -> URL? {
         switch value(name) {
-        case let .image(url): return url
+        case let .image(url, _): return url
         case .constant: return nil
         case nil: return nil
         }

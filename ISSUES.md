@@ -14029,17 +14029,19 @@ Split from #558.
 ## 609: MaterialX node graphs are not evaluated
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:materials, effort:l
 created: 2026-11-22T18:08:09Z
-updated: 2026-11-22T19:59:11Z
+updated: 2026-11-22T20:53:33Z
+closed: 2026-11-22T20:53:33Z
 +++
 
 MaterialXDocument (#528) loads standard_surface and UsdPreviewSurface materials with constant inputs and image textures (directly, through nodegraph outputs, or behind a normalmap node). Any other node feeding a shader input (math such as add/multiply, mix, procedural noise, texcoord transforms, extract/swizzle, image nodes with UV scale/offset inputs) is not evaluated: the input keeps the shader's default and a warning is reported. Images on inputs without a texture slot (opacity, coat, sheen, transmission, specular) are also ignored. Other surface shaders (open_pbr_surface, gltf_pbr) are skipped. Split from #528.
 
 - `2026-11-22T19:59:11Z`: Related: #526, #527 (material shader graphs).
+- `2026-11-22T20:53:33Z`: Constant math nodes are folded (add, subtract, multiply, divide, min, max, power, mix, clamp, invert, extract, combine2-4, constant, convert, dot), interfacename inputs followed, image x constant becomes a textured factor; gltf_pbr and open_pbr_surface load. OpenPBR emission_luminance maps 1000 nits to factor 1 (a guess, not a physical conversion). Per-pixel nodes and images on inputs without texture slots split to #620.
 
 ---
 
@@ -14194,6 +14196,20 @@ created: 2026-11-22T20:49:48Z
 +++
 
 EditorGizmos draws Node.path curves (#607) and clicking one selects its node, so the whole path can be moved with the transform gizmo. The individual control points cannot be selected or dragged, so a path's shape can only be changed in code. Split from #607.
+
+---
+
+## 620: MaterialX nodes that need per-pixel evaluation are ignored
+
++++
+status: new
+priority: low
+kind: feature
+labels: area:materials, effort:l
+created: 2026-11-22T20:53:29Z
++++
+
+MaterialXDocument folds math nodes on constants and image-times-constant (#609), but nodes that need per-pixel evaluation still fall back to the shader input's default with a warning: procedural patterns (noise2d, noise3d, fractal3d, cellnoise, ramps), texcoord and texture-coordinate transforms (image uvtiling/uvoffset, place2d, texcoord), and math on images other than multiplying by a constant (mix of two images, add, swizzle/extract of an image). Images on inputs PBRSceneMaterial has no texture slot for (opacity, coat, sheen/fuzz, transmission, specular) are also ignored. Split from #609.
 
 ---
 
