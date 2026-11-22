@@ -46,6 +46,22 @@ struct EditorGizmosTests {
         #expect(EditorGizmos.hitTest([2, 2], sceneGraph: graph, viewport: viewport) == nil)
     }
 
+    // #607: a node's path is drawn in world space, moves with the node, and picks the node when clicked.
+    @Test
+    func pathsAreDrawnAndPicked() throws {
+        let root = SceneGraph.Node()
+        let pathNode = root.addChild(SceneGraph.Node(label: "Path", transform: .init(translation: [0, 1, 0])))
+        pathNode.path = SceneGraph.Spline(points: [[-2, 0, 0], [0, 0, -1], [2, 0, 0]])
+        let graph = SceneGraph(root: root)
+        let shape = try #require(EditorGizmos.shapes(sceneGraph: graph, viewport: viewport, options: .paths).first)
+        #expect(shape.node === pathNode && shape.isOverlay)
+        let line = try #require(shape.lines.first)
+        #expect(simd_distance(try #require(line.first), SIMD3<Float>(-2, 1, 0)) < 1e-4)
+        #expect(simd_distance(try #require(line.last), SIMD3<Float>(2, 1, 0)) < 1e-4)
+        let onPath = try #require(viewport.project(line[line.count / 2]))
+        #expect(EditorGizmos.hitTest(SIMD2(onPath.x, onPath.y), sceneGraph: graph, viewport: viewport) === pathNode)
+    }
+
     // The grid draws, and scene geometry in front of it hides it.
     @Test(.enabled(if: deviceSupportsMetal4))
     func gridDrawsBehindGeometry() throws {

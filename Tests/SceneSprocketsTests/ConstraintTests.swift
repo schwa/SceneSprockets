@@ -168,6 +168,33 @@ func constraintInfluenceAndEnabled() {
     #expect(node.transform.translation == .zero)
 }
 
+// #607: followPath keeps a node at a fraction along a path node's curve, which moves with the path node.
+@Test
+func followPathKeepsNodeOnPathNode() {
+    let root = SceneGraph.Node()
+    let pathNode = root.addChild(SceneGraph.Node(transform: .init(translation: [0, 2, 0])))
+    // A straight path along +X, 4 long.
+    pathNode.path = SceneGraph.Spline(points: [[0, 0, 0], [2, 0, 0], [4, 0, 0]])
+    let parent = root.addChild(SceneGraph.Node(transform: .init(translation: [10, 0, 0])))
+    let node = parent.addChild(SceneGraph.Node())
+    node.constraints = [.followPath(pathNode, fraction: 0.25, orientsToPath: true)]
+    let graph = SceneGraph(root: root)
+    graph.applyConstraints(pointOfView: matrix_identity_float4x4)
+    #expect(simd_distance(node.worldTransform.columns.3.xyz, [1, 2, 0]) < 1e-3)
+    // -Z faces the direction of travel, +X.
+    #expect(simd_distance(front(of: node), [1, 0, 0]) < 1e-3)
+
+    pathNode.transform.translation = [0, 0, -3]
+    graph.applyConstraints(pointOfView: matrix_identity_float4x4)
+    #expect(simd_distance(node.worldTransform.columns.3.xyz, [1, 0, -3]) < 1e-3)
+
+    // No path: the node stays.
+    pathNode.path = nil
+    node.transform.translation = [5, 5, 5]
+    graph.applyConstraints(pointOfView: matrix_identity_float4x4)
+    #expect(node.transform.translation == [5, 5, 5])
+}
+
 // #91: acceleration limits how fast the node's position can change.
 @Test
 func accelerationConstraintLimitsSpeed() {

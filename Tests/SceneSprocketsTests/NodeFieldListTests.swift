@@ -55,6 +55,8 @@ func everyWorldFieldIsPlacedForDrawing() throws {
         // Not drawn.
         "label": nil,
         "physicsBody": nil,
+        // Read by followPath constraints and editor gizmos.
+        "path": nil,
         "audioPlayers": nil,
         "runningActions": nil,
         "actionSpeed": nil,
@@ -103,7 +105,8 @@ func everyArchivedFieldRoundTrips() throws {
         "physicsBody": { $0.physicsBody = .init(type: .static, shape: .sphere(radius: 1)) },
         "morphWeights": { $0.morphWeights = [0.25, 0.75] },
         "actionSpeed": { $0.actionSpeed = 2 },
-        "subdivisionLevel": { $0.subdivisionLevel = 1 }
+        "subdivisionLevel": { $0.subdivisionLevel = 1 },
+        "path": { $0.path = SceneGraph.Spline(points: [[0, 0, 0], [1, 2, 3]], isClosed: true) }
     ]
     // Need other nodes, files or meshes to save; their round trips are in SceneArchiveTests and
     // AudioAndDetailArchiveTests.

@@ -26,12 +26,14 @@ public enum EditorGizmos {
         public static let lightsAndCameras = Self(rawValue: 1 << 2)
         /// The world bounding boxes of the selected nodes and their subtrees.
         public static let bounds = Self(rawValue: 1 << 3)
-        public static let all: Self = [.grid, .axes, .lightsAndCameras, .bounds]
+        /// The curves of nodes with a ``SceneGraph/Node/path`` (#607). Clicking one picks its node.
+        public static let paths = Self(rawValue: 1 << 4)
+        public static let all: Self = [.grid, .axes, .lightsAndCameras, .bounds, .paths]
     }
 
     /// World-space polylines in one color, for one node or for the whole scene.
     public struct Shape {
-        /// The light or camera node the shape stands for; nil for the grid and axes.
+        /// The light, camera or path node the shape stands for; nil for the grid and axes.
         public var node: SceneGraph.Node?
         public var lines: [[SIMD3<Float>]]
         /// Linear RGBA.
@@ -50,6 +52,7 @@ public enum EditorGizmos {
     private static let gridColor = SIMD4<Float>(0.5, 0.5, 0.5, 0.6)
     private static let iconColor = SIMD4<Float>(1, 1, 1, 0.8)
     private static let selectedColor = SIMD4<Float>(1, 0.85, 0, 1)
+    private static let pathColor = SIMD4<Float>(0.4, 0.8, 1, 0.9)
 
     /// The aids' geometry.
     ///
@@ -86,6 +89,15 @@ public enum EditorGizmos {
             for entry in sceneGraph.cameraNodes() {
                 let length = iconSize * viewport.worldSizeOfPoint(at: entry.worldTransform.columns.3.xyz)
                 result.append(Shape(node: entry.node, lines: cameraLines(entry.camera, length: length, aspect: aspect).map { transform($0, by: entry.worldTransform) }, color: selected.contains(entry.node.id) ? selectedColor : iconColor, isOverlay: true))
+            }
+        }
+        if options.contains(.paths) {
+            sceneGraph.visit { node, worldTransform in
+                guard let path = node.path, path.length > 0 else {
+                    return
+                }
+                let line = pathLine(path).map { (worldTransform * SIMD4($0, 1)).xyz }
+                result.append(Shape(node: node, lines: [line], color: selected.contains(node.id) ? selectedColor : pathColor, isOverlay: true))
             }
         }
         if options.contains(.bounds), !selected.isEmpty {
@@ -147,11 +159,12 @@ public enum EditorGizmos {
         .eraseToAnyElement()
     }
 
-    /// The light or camera whose icon passes within ``hitDistance`` points of `point` (in view points), nearest first.
+    /// The light, camera or path node whose lines pass within ``hitDistance`` points of `point` (in view points),
+    /// nearest first.
     @MainActor
     public static func hitTest(_ point: SIMD2<Float>, sceneGraph: SceneGraph, viewport: Viewport) -> SceneGraph.Node? {
         var best: (node: SceneGraph.Node, distance: Float)?
-        for shape in shapes(sceneGraph: sceneGraph, viewport: viewport, options: .lightsAndCameras) {
+        for shape in shapes(sceneGraph: sceneGraph, viewport: viewport, options: [.lightsAndCameras, .paths]) {
             guard let node = shape.node else {
                 continue
             }
@@ -225,6 +238,12 @@ public enum EditorGizmos {
     }
 
     // The 12 edges of a box.
+    // The curve as a polyline, 16 samples per point, closed curves back to the start.
+    static func pathLine(_ path: SceneGraph.Spline) -> [SIMD3<Float>] {
+        let samples = max(path.points.count * 16, 2)
+        return (0...samples).map { path.position(at: Float($0) / Float(samples)) }
+    }
+
     static func boxLines(_ box: BoundingBox3D) -> [[SIMD3<Float>]] {
         let (low, high) = (box.min, box.max)
         let bottom: [SIMD3<Float>] = [[low.x, low.y, low.z], [high.x, low.y, low.z], [high.x, low.y, high.z], [low.x, low.y, high.z]]

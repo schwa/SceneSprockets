@@ -25,6 +25,7 @@ private enum FieldKeyPaths {
     static let particleSystems = \SceneGraph.Node.particleSystems
     static let audioPlayers = \SceneGraph.Node.audioPlayers
     static let text = \SceneGraph.Node.text
+    static let path = \SceneGraph.Node.path
     static let skin = \SceneGraph.Node.skin
     static let skinVertices = \SceneGraph.Node.skinVertices
     static let morphTargets = \SceneGraph.Node.morphTargets
@@ -62,6 +63,7 @@ extension SceneGraph.Node {
         NodeFieldSlot(\.particleSystems, \.particleSystemsStorage, archiveKeys: [.particleSystems]),
         NodeFieldSlot(\.audioPlayers, \.audioPlayersStorage, isCloned: false, archiveKeys: [.audioPlayers]),
         NodeFieldSlot(\.text, \.textStorage, archiveKeys: [.text]),
+        NodeFieldSlot(\.path, \.pathStorage, archiveKeys: [.path]),
         NodeFieldSlot(\.skin, \.skinStorage, archiveKeys: [.skin]),
         NodeFieldSlot(\.skinVertices, \.skinVerticesStorage, archiveKeys: [.skinVertices]),
         NodeFieldSlot(\.morphTargets, \.morphTargetsStorage, archiveKeys: [.morphTargets]),
@@ -160,6 +162,13 @@ extension SceneGraph.Node {
     public var text: SceneText? {
         get { getField(FieldKeyPaths.text, \.textStorage) }
         set { setField(FieldKeyPaths.text, \.textStorage, newValue) }
+    }
+
+    /// A curve in the node's space that moves with the node, for ``SceneGraph/Constraint/Kind/followPath(path:fraction:orientsToPath:)``
+    /// and editor drawing (#607). Not drawn in the rendered scene.
+    public var path: SceneGraph.Spline? {
+        get { getField(FieldKeyPaths.path, \.pathStorage) }
+        set { setField(FieldKeyPaths.path, \.pathStorage, newValue) }
     }
 
     /// Sounds that play from this node; see Audio. Not copied by clone().

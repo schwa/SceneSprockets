@@ -747,6 +747,7 @@ struct SceneArchiveTests {
             .billboard(freeAxes: .y),
             .inverseKinematics(chainRoot: root, target: target, iterations: 4),
             .acceleration(damping: 0.25),
+            .followPath(target, fraction: 0.25, orientsToPath: true),
             .transform { _, trs in trs }
         ]
         let warnings = try archive.write(SceneGraph(root: root), to: url)
@@ -757,7 +758,7 @@ struct SceneArchiveTests {
         let loadedTarget = try #require(loaded.root.children.first { $0.label == "Group" }?.children.first)
         #expect(loadedTarget.label == "Target")
         let constraints = loadedFollower.constraints
-        try #require(constraints.count == 6)
+        try #require(constraints.count == 7)
         guard case let .lookAt(lookAtTarget, worldUp, _) = constraints[0].kind else {
             Issue.record("expected lookAt")
             return
@@ -779,5 +780,10 @@ struct SceneArchiveTests {
             return
         }
         #expect(freeAxes == .y && chainRoot === loaded.root && iterations == 4 && damping == 0.25)
+        guard case let .followPath(pathNode, fraction, orientsToPath) = constraints[6].kind else {
+            Issue.record("expected followPath")
+            return
+        }
+        #expect(pathNode === loadedTarget && fraction == 0.25 && orientsToPath)
     }
 }

@@ -13992,15 +13992,18 @@ It passed in some earlier full runs the same day, so it may be timing-dependent.
 ## 607: Splines cannot be placed in the scene as nodes, and no constraint follows a path
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:scenegraph, effort:m
 created: 2026-11-22T17:19:47Z
-updated: 2026-11-22T19:59:11Z
+updated: 2026-11-22T20:49:51Z
+closed: 2026-11-22T20:49:51Z
 +++
 
 SceneGraph.Spline and Action.follow(_:duration:orientsToPath:) (#407) move a node along a curve given in code. A spline still cannot be a node in the scene (visible and editable like a light or camera, saved in archives, moved with its node), and Constraint has no follow-path kind that keeps a node at a fraction along a path node. #81 (extruded Bézier path shape) could share the type. Split from #407.
+
+- `2026-11-22T20:49:51Z`: Node.path (Spline in node space, moves with the node, archived), Constraint.followPath(_:fraction:orientsToPath:) (archived), EditorGizmos .paths drawing and click-picking. Control-point editing split to #619. #81 (extruded Bezier shape) can use Node.path/Spline but was not touched.
 
 ---
 
@@ -14177,6 +14180,20 @@ updated: 2026-11-22T19:59:11Z
 +++
 
 MaterialX loading (MaterialXDocument, #528) is not shown in the keynote. The demo has no sample .mtlx asset.
+
+---
+
+## 619: Path control points cannot be edited in the editor
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:scenegraph, effort:m
+created: 2026-11-22T20:49:48Z
++++
+
+EditorGizmos draws Node.path curves (#607) and clicking one selects its node, so the whole path can be moved with the transform gizmo. The individual control points cannot be selected or dragged, so a path's shape can only be changed in code. Split from #607.
 
 ---
 

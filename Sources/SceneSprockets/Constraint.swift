@@ -69,6 +69,12 @@ extension SceneGraph {
         public static func acceleration(maximumLinearAcceleration: Float = 3, maximumLinearVelocity: Float = 10, damping: Float = 0.1) -> Self {
             Self(.acceleration(maximumLinearAcceleration: maximumLinearAcceleration, maximumLinearVelocity: maximumLinearVelocity, damping: damping))
         }
+
+        /// A constraint that keeps the node at a fraction along a path node's curve. See
+        /// ``Kind/followPath(path:fraction:orientsToPath:)``.
+        public static func followPath(_ path: Node, fraction: Float, orientsToPath: Bool = false) -> Self {
+            Self(.followPath(path: path, fraction: fraction, orientsToPath: orientsToPath))
+        }
     }
 }
 
@@ -105,6 +111,11 @@ extension SceneGraph.Constraint {
         /// `maximumLinearAcceleration`, in meters per second squared, and stays at most `maximumLinearVelocity`, in meters
         /// per second. `damping`, from 0 to 1, slows it each second.
         case acceleration(maximumLinearAcceleration: Float = 3, maximumLinearVelocity: Float = 10, damping: Float = 0.1)
+        /// Keeps the node at `fraction` (0 at the start, 1 at the end, spread by distance) along the ``SceneGraph/Node/path``
+        /// of the `path` node, which moves the curve with it (#607). With `orientsToPath`, the node's -Z follows the
+        /// direction of travel with +Y kept up, as in ``SceneGraph/Action/follow(_:duration:orientsToPath:)``. Does
+        /// nothing while the path node has no path.
+        case followPath(path: SceneGraph.Node, fraction: Float, orientsToPath: Bool = false)
     }
 }
 
@@ -241,6 +252,20 @@ extension SceneGraph.Node {
             return
         case let .acceleration(maximumLinearAcceleration, maximumLinearVelocity, damping):
             desired.translation = accelerate(towards: world.translation, index: index, deltaTime: deltaTime, maximumLinearAcceleration: maximumLinearAcceleration, maximumLinearVelocity: maximumLinearVelocity, damping: damping)
+        case let .followPath(pathNode, fraction, orientsToPath):
+            guard let spline = pathNode.path else {
+                return
+            }
+            let pathWorld = pathNode.worldTransform
+            desired.translation = (pathWorld * SIMD4(spline.position(at: fraction), 1)).xyz
+            let tangent = (pathWorld * SIMD4(spline.tangent(at: fraction), 0)).xyz
+            // Facing straight up or down has no defined roll; keep the orientation then.
+            if orientsToPath, simd_length(tangent) > 1e-8 {
+                let direction = simd_normalize(tangent)
+                if abs(simd_dot(direction, [0, 1, 0])) < 0.999 {
+                    desired.rotation = Transform3D(position: .zero, lookingAt: direction).rotation
+                }
+            }
         }
         if influence < 1 {
             desired.translation = simd_mix(world.translation, desired.translation, SIMD3(repeating: influence))

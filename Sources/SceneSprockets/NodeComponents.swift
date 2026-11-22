@@ -278,6 +278,22 @@ public struct NodeTextComponent: NodeField {
     static var revision: NodeFieldRevision { .structure }
 }
 
+/// The component that stores ``SceneGraph/Node/path`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
+public struct NodePathComponent: NodeField {
+    /// The value of ``SceneGraph/Node/path``.
+    public var value: SceneGraph.Spline?
+
+    /// Creates the component with a value.
+    public init(value: SceneGraph.Spline?) {
+        self.value = value
+    }
+
+    static var defaultValue: SceneGraph.Spline? { nil }
+    static var revision: NodeFieldRevision { .structure }
+}
+
 /// The component that stores ``SceneGraph/Node/audioPlayers`` for a node in ``SceneGraph/world``.
 ///
 /// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.

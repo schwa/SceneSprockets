@@ -8,7 +8,7 @@ import simd
 // once the whole tree is read. Closure constraints (`.transform`) cannot be saved; they are skipped with a warning.
 struct ArchivedConstraint: Codable {
     enum Kind: String, Codable {
-        case lookAt, billboard, replicator, avoidOccluder, distance, inverseKinematics, acceleration
+        case lookAt, billboard, replicator, avoidOccluder, distance, inverseKinematics, acceleration, followPath
     }
 
     var kind: Kind
@@ -35,6 +35,8 @@ struct ArchivedConstraint: Codable {
     var maximumLinearAcceleration: Float?
     var maximumLinearVelocity: Float?
     var damping: Float?
+    var fraction: Float?
+    var orientsToPath: Bool?
 
     // Nil for constraints that cannot be saved, or whose nodes are not in the same graph.
     init?(_ constraint: SceneGraph.Constraint, root: SceneGraph.Node) {
@@ -99,6 +101,14 @@ struct ArchivedConstraint: Codable {
             self.maximumLinearAcceleration = maximumLinearAcceleration
             self.maximumLinearVelocity = maximumLinearVelocity
             self.damping = damping
+        case let .followPath(pathNode, fraction, orientsToPath):
+            guard let target = path(pathNode) else {
+                return nil
+            }
+            kind = .followPath
+            self.target = target
+            self.fraction = fraction
+            self.orientsToPath = orientsToPath
         }
     }
 
@@ -142,6 +152,11 @@ struct ArchivedConstraint: Codable {
             kind = .inverseKinematics(chainRoot: chainRoot, target: target, iterations: iterations ?? 10, maximumAngle: maximumAngle ?? .pi)
         case .acceleration:
             kind = .acceleration(maximumLinearAcceleration: maximumLinearAcceleration ?? 3, maximumLinearVelocity: maximumLinearVelocity ?? 10, damping: damping ?? 0.1)
+        case .followPath:
+            guard let pathNode = node(target) else {
+                return nil
+            }
+            kind = .followPath(path: pathNode, fraction: fraction ?? 0, orientsToPath: orientsToPath ?? false)
         }
         return SceneGraph.Constraint(kind, influenceFactor: influenceFactor, isEnabled: isEnabled)
     }
