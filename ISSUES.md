@@ -12210,6 +12210,10 @@ updated: 2026-11-20T06:33:14Z
 No local cubemap reflections with parallax correction and probe blending. (Moved from SceneSprocketsAddOns#49.)
 
 - `2026-11-17T17:59:21Z`: Related: #532, #506 (IBL).
+- `2026-11-22T18:08:28Z`: Autonomous run: looked at what reflection probes need. Specular image-based light today is one global LightingEnvironment (prefiltered cubemap) per scene. Local probes need: probe nodes with an influence box, capturing the scene into a cubemap at each probe (six renders from the probe; there is no render-to-texture camera path yet, the same gap as #531 and #532), prefiltering each capture with the existing LightingEnvironment code, and in the PBR shader a parallax-corrected lookup (ray against the probe box) blended across the probes covering a fragment. Not started: capture timing, probe count limits and the overlap with irradiance probes (#532) are open.
+- `2026-11-22T18:08:28Z`: Question 1 (decision): Should reflection probes (#530) and irradiance probes (#532) be one feature: a probe node that captures a cubemap once, used for both specular reflections and diffuse irradiance? Recommended: Yes: one probe node and capture path, both lighting terms from it
+- `2026-11-22T18:08:28Z`: Question 2 (design): When are probes captured: once on request (an explicit update call, e.g. after loading), or continuously every N frames? Recommended: On request only for the first version
+- `2026-11-22T18:08:28Z`: Question 3 (decision): Is per-object probe selection (each mesh uses the probe whose box contains its center, blending at most two) acceptable for the first version, instead of per-pixel blending? Recommended: Yes
 
 ---
 
@@ -12280,14 +12284,15 @@ No dynamic indirect lighting or color bleeding. (Moved from SceneSprocketsAddOns
 status: open
 priority: low
 kind: feature
-labels: effort:l, area:renderer
+labels: effort:l, area:renderer, blocked
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-22T18:08:36Z
 +++
 
 No approximate bounced light from visible surfaces. (Moved from SceneSprocketsAddOns#73.)
 
 - `2026-11-17T17:59:21Z`: Related: #510 (needs normal/G-buffer).
+- `2026-11-22T18:08:35Z`: Autonomous run: skipped. SSGI samples the lit color and normals of nearby pixels, so it needs the normal target from #510 (open, questions pending) and ideally linear HDR color (#399 Q1, pending); without a temporal filter (#496, blocked on #510) it is too noisy at usable sample counts. Labelled blocked on #510.
 
 ---
 
@@ -12305,6 +12310,9 @@ updated: 2026-11-20T06:33:50Z
 Static scenes cannot use precomputed indirect lighting. (Moved from SceneSprocketsAddOns#74.)
 
 - `2026-11-17T17:59:20Z`: Related: #536 (baking produces lightmaps).
+- `2026-11-22T18:08:49Z`: Autonomous run: looked at using lightmaps (baking is #536). PBR meshes already carry a second UV set (texCoord1, glTF TEXCOORD_1); Blinn-Phong meshes do not. Using a lightmap means a texture sampled with the second UVs whose light replaces or adds to the environment's diffuse light, in PBR and Blinn-Phong. Where it attaches (material, like three.js lightMap, or mesh node) and how it combines with image-based light are the same choice as #512 Q3 (one indirect-light input that probes and lightmaps fill). Not started until that is decided.
+- `2026-11-22T18:08:49Z`: Question 1 (design): Should a lightmap be a material property sampled with the second UV set (like three.js lightMap with lightMapIntensity), or a per-node texture so many objects can share one material? Recommended: Per-node: lightmaps are unique per object while materials are shared
+- `2026-11-22T18:08:50Z`: Question 2 (decision): Should a lightmapped surface's lightmap replace the environment's diffuse light (with specular still from the environment), rather than add to it? Recommended: Replace
 
 ---
 
@@ -12355,6 +12363,10 @@ updated: 2026-11-20T06:33:50Z
 +++
 
 Skin, wax, leaves and other translucent materials cannot scatter light below the surface. (Moved from SceneSprocketsAddOns#59.)
+
+- `2026-11-22T18:09:09Z`: Autonomous run: checked what exists. PBR already approximates translucency: KHR_materials_diffuse_transmission (light through thin surfaces such as leaves, with color and thickness/attenuation) and KHR_materials_volume_scatter (light scattered in the volume returns tinted by the multiscatter color, half on each side). Both are settable through PBRSceneMaterial.uniforms and archived. Missing: the softening of lighting across the lit side that skin and wax show (light entering at one point and leaving nearby). Options: a cheap per-light approximation in the shader (wrapped diffuse with a scatter color and radius), or screen-space diffusion of the diffuse lighting (a blur pass masked to scattering materials; needs a separate diffuse target, related to #510). Not started; scope not specified. Blinn-Phong has neither.
+- `2026-11-22T18:09:09Z`: Question 1 (decision): Is a shader-only approximation enough for skin and wax: wrapped diffuse lighting tinted by a subsurface color, with a strength and radius on PBR materials, rather than screen-space diffusion? Recommended: Yes, shader-only for PBR; screen-space diffusion later if needed
+- `2026-11-22T18:09:09Z`: Question 2 (decision): Should leaves and thin translucent surfaces count as covered by the existing diffuse transmission, so #538 is only about thick materials (skin, wax, marble)? Recommended: Yes
 
 ---
 
