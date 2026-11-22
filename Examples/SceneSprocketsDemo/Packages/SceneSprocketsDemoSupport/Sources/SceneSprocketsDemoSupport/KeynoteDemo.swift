@@ -11,6 +11,7 @@ import SceneSprockets
 import SceneSprocketsAddOns
 import SceneSprocketsBlinnPhong
 import SceneSprocketsGizmos
+import SceneSprocketsMaterialX
 import SceneSprocketsPBR
 import SceneSprocketsPhysics
 import SceneSprocketsShaderMaterial
@@ -332,6 +333,8 @@ public final class KeynoteDemo: DemoScene {
         "glTF & Model I/O": """
         • Load glTF files and anything Model I/O reads (OBJ, USD) into a scene graph.
         • The plant is glTF with its animation; the fireflies carry point lights.
+        • The spheres' materials come from a MaterialX file (SceneSprocketsMaterialX): standard_surface,
+          open_pbr_surface with a small node graph, and gltf_pbr, each as a PBR material.
         """,
         "Actions": """
         • Actions are like SpriteKit and SceneKit actions: move, rotate, scale, fade, wait.
@@ -1389,6 +1392,7 @@ public final class KeynoteDemo: DemoScene {
             let plant = try ModelFile.load(plantURL)     // .glb, .gltf, .usdz, .obj, ...
             let pedestal = try ModelFile.load(objURL)
             player = SceneGraph.AnimationPlayer(clip: plant.animations[0]) // fireflies with point lights
+            let gold = try MaterialXDocument(url: mtlxURL)["Gold"]  // import SceneSprocketsMaterialX
             """, to: slide)
         case "Hit Testing":
             hitTestingSlide(slide)
@@ -2242,6 +2246,26 @@ public final class KeynoteDemo: DemoScene {
             }
         } catch {
             // The slide shows whatever loaded.
+        }
+        addMaterialXSpheres(to: slide)
+    }
+
+    // Spheres on either side of the pedestal with the materials of a MaterialX file (#618).
+    static var materialXURL: URL? {
+        Bundle.module.url(forResource: "Materials", withExtension: "mtlx", subdirectory: "DemoAssets")
+    }
+
+    private func addMaterialXSpheres(to slide: SceneGraph.Node) {
+        guard let url = Self.materialXURL,
+              let document = try? MaterialXDocument(url: url, device: demoDevice)
+        else {
+            return
+        }
+        // Gold, car paint, jade, in the file's order.
+        let positions: [SIMD3<Float>] = [[-4, 0.8, -0.3], [3.6, 0.8, 0], [-2.6, 0.5, 1.2]]
+        for (material, position) in zip(document.materials, positions) {
+            let sphere = slide.addChild(SceneGraph.Node(label: "MaterialX \(material.name)", shape: .sphere(radius: 0.45), material: material.material, transform: .init(translation: position)))
+            sphere.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 9)))
         }
     }
 

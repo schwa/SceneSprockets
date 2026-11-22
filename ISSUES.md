@@ -14196,15 +14196,18 @@ The editor gizmos (grid, axes, light and camera icons, bounds; #406) are not sho
 ## 618: Keynote glTF & Model I/O slide does not mention MaterialX
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:demo, effort:s
 created: 2026-11-22T19:47:49Z
-updated: 2026-11-22T19:59:11Z
+updated: 2026-11-22T21:31:31Z
+closed: 2026-11-22T21:31:31Z
 +++
 
 MaterialX loading (MaterialXDocument, #528) is not shown in the keynote. The demo has no sample .mtlx asset.
+
+- `2026-11-22T21:31:31Z`: Added DemoAssets/Materials.mtlx (standard_surface gold, open_pbr_surface car paint with a small node graph, gltf_pbr jade) and three spheres beside the pedestal on the glTF & Model I/O slide, loaded with SceneSprocketsMaterialX; notes and code panel mention it. Test: gltfSlideShowsMaterialXMaterials (file loads without warnings, three spheres). keynote-gltf golden re-recorded.
 
 ---
 

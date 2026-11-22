@@ -8,6 +8,7 @@ import SceneSprocketsAddOns
 import SceneSprocketsBlinnPhong
 @testable import SceneSprocketsDemoSupport
 import simd
+import SceneSprocketsMaterialX
 import Testing
 
 @Test(arguments: DemoCatalog.demos)
@@ -83,6 +84,19 @@ func keynoteShowing(_ title: String) throws -> KeynoteDemo {
     let keynote = KeynoteDemo()
     keynote.show(slide: try #require(KeynoteDemo.titles.firstIndex(of: title)))
     return keynote
+}
+
+// #618: the demo's MaterialX file loads without warnings, and the glTF slide shows a sphere for each material.
+@Test
+@MainActor
+func gltfSlideShowsMaterialXMaterials() throws {
+    let url = try #require(KeynoteDemo.materialXURL)
+    let document = try MaterialXDocument(url: url)
+    #expect(document.warnings.isEmpty, "\(document.warnings)")
+    #expect(document.materials.count == 3)
+    let keynote = try keynoteShowing("glTF & Model I/O")
+    let spheres = keynote.sceneGraph.meshEntries().filter { $0.node.label?.hasPrefix("MaterialX ") == true }
+    #expect(spheres.count == 3)
 }
 
 // #617: the Gizmos slide shows the editor gizmos, with the grid at the slide; the toggle and other slides hide them.

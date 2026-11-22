@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<!-- Sample MaterialX materials for the keynote's glTF & Model I/O slide (#618): one per supported shader. -->
+<materialx version="1.39">
+  <standard_surface name="SR_gold" type="surfaceshader">
+    <input name="base_color" type="color3" value="1, 0.78, 0.34" />
+    <input name="metalness" type="float" value="1" />
+    <input name="specular_roughness" type="float" value="0.25" />
+  </standard_surface>
+  <surfacematerial name="Gold" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="SR_gold" />
+  </surfacematerial>
+
+  <nodegraph name="NG_paint">
+    <input name="tint" type="color3" value="0.2, 0.45, 0.9" />
+    <multiply name="darker" type="color3">
+      <input name="in1" type="color3" interfacename="tint" />
+      <input name="in2" type="float" value="0.8" />
+    </multiply>
+    <output name="color_out" type="color3" nodename="darker" />
+  </nodegraph>
+  <open_pbr_surface name="SR_paint" type="surfaceshader">
+    <input name="base_color" type="color3" nodegraph="NG_paint" output="color_out" />
+    <input name="specular_roughness" type="float" value="0.35" />
+    <input name="coat_weight" type="float" value="1" />
+    <input name="coat_roughness" type="float" value="0.05" />
+  </open_pbr_surface>
+  <surfacematerial name="CarPaint" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="SR_paint" />
+  </surfacematerial>
+
+  <gltf_pbr name="SR_jade" type="surfaceshader">
+    <input name="base_color" type="color3" value="0.3, 0.75, 0.5" />
+    <input name="metallic" type="float" value="0" />
+    <input name="roughness" type="float" value="0.2" />
+    <input name="transmission" type="float" value="0.3" />
+  </gltf_pbr>
+  <surfacematerial name="Jade" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="SR_jade" />
+  </surfacematerial>
+</materialx>
