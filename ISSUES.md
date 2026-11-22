@@ -9459,18 +9459,21 @@ MetalMesh.float3Values / float2Values return nil for any other format (half, pac
 ## 406: No editor gizmos (grid, axes, light and camera icons, bounds)
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: effort:m, area:ui
 milestone: Physics-and-Scene
 created: 2026-11-16T20:13:10Z
-updated: 2026-11-20T06:32:46Z
+updated: 2026-11-22T17:27:31Z
+closed: 2026-11-22T17:27:31Z
 +++
 
 There is no ready-made set of editor aids: a ground grid, axes, icons for lights and cameras, and bounding boxes.
 
 Moved from SceneSprocketsAddOns #35.
+
+- `2026-11-22T17:27:31Z`: SceneSprocketsGizmos.EditorGizmos: grid, axes, light and camera icons (screen-size, drawn on top, pickable with hitTest), and world bounds of selected nodes; shapes(...) geometry and element(...) for sceneDecorations; grid, axes and bounds are depth-tested against the scene. The Composer's DebugShapes now delegates to it.
 
 ---
 
