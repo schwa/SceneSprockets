@@ -13784,6 +13784,24 @@ SceneGraph.hitTest skips submeshes whose primitive type is .line, .lineStrip or 
 
 ---
 
+## 606: autoExposureBrightensDarkScene fails
+
++++
+status: new
+priority: medium
+kind: bug
+labels: area:renderer,area:testing,effort:s
+created: 2026-11-22T16:14:54Z
++++
+
+AutoExposureTests.autoExposureBrightensDarkScene fails in most full runs since the dependency update to MetalSprockets 0.3.9/0.3.10 (2026-11-22), also on a clean working copy:
+
+Expectation failed: last > first + 20 (AutoExposureTests.swift:53)
+
+It passed in some earlier full runs the same day, so it may be timing-dependent.
+
+---
+
 ## Milestone M1: Correctness
 
 +++
