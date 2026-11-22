@@ -1,6 +1,7 @@
 import GeometryLite3D
 import Metal
 import MetalSprockets
+import MetalSprocketsLighting
 import MetalSprocketsParticles
 #if os(visionOS)
 import MetalSprocketsUI
@@ -44,6 +45,9 @@ public struct RenderContext {
     /// Set for content drawn into an intermediate target that needs linear light, such as the scene behind PBR glass:
     /// renderers skip ``SceneGraph/Environment/exposure`` and tone mapping then.
     public internal(set) var outputIsLinear = false
+    /// Set when lights are assigned to clusters this frame (#519). Its light indices are into
+    /// `lightingLights(cameraPosition:)`, so it is nil in batches lit by only some of the lights (category masks).
+    public internal(set) var lightClusters: LightingClusters?
 
     /// The number of views that each draw goes to: 1, or the stereo view count.
     public var viewCount: Int { stereoViews?.count ?? 1 }
@@ -116,6 +120,8 @@ public struct SceneGraphElement: Element {
     var sampleCount = 1
     // Meters each frame and scales the environment's exposure (#508).
     var autoExposure: AutoExposure?
+    // Set with lightClustering(_:) (#519).
+    var lightClustering = LightClustering.automatic
     #if os(visionOS)
     // Set by SceneImmersiveContent: the scene pass is the compositor's pass (#381).
     var immersiveContext: ImmersiveContext?
@@ -222,6 +228,11 @@ public struct SceneGraphElement: Element {
                 context.lightShadowSlices = shadowFrame.lightSlices
             }
             var prePasses: [AnyElement] = []
+            // Assigned before every pass that shades (#519).
+            if debugMode == nil, let device = renderPassDescriptor?.colorAttachments[0].texture?.device, let clusters = try context.makeLightClusters(clustering: lightClustering, device: device) {
+                context.lightClusters = clusters
+                prePasses.append(LightClusterPass(clusters: clusters).eraseToAnyElement())
+            }
             // Morphs and skins on the GPU for renderers that draw plain vertex buffers (#298). Their entries are then
             // swapped for the deformed meshes, so those renderers draw them like any other mesh (#590).
             let deformationJobs = GPUDeformation.prepare(entries: entries, revision: context.revision, submissionIndex: submissionIndex)
@@ -626,6 +637,8 @@ public func renderBatches(_ entries: [SceneGraph.MeshEntry], context: RenderCont
         .map { _, key in
             var batchContext = context
             if key.lights != allLights {
+                // The clusters index every light; this batch has only some.
+                batchContext.lightClusters = nil
                 batchContext.lights = key.lights.map { context.lights[$0] }
                 batchContext.lightCategoryBitMasks = key.lights.map { $0 < context.lightCategoryBitMasks.count ? context.lightCategoryBitMasks[$0] : .max }
                 if !context.lightShadowSlices.isEmpty {

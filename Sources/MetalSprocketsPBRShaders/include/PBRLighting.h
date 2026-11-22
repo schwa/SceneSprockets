@@ -242,7 +242,10 @@ namespace PBR {
         constant LightingShadowUniforms &shadow,
         depth2d_array<float> shadowMap,
         sampler shadowSampler,
-        texture2d<float> ambientOcclusion
+        texture2d<float> ambientOcclusion,
+        // Clustered lights (#519); null loops over every light.
+        constant LightingClusterUniforms *lightClusterUniforms = nullptr,
+        constant uint *lightClusters = nullptr
     ) {
         const float screenOcclusion = Lighting::screenOcclusion(ambientOcclusion, in.position, frame.ambientOcclusionStrength);
         // The material's textures come from one argument buffer, so a draw binds them all at once.
@@ -589,8 +592,9 @@ namespace PBR {
 
         // Punctual lights
         float3 color = float3(0.0);
-        for (int index = 0; index < frame.lightCount; ++index) {
-            const LightingLight light = lights[index];
+        const Lighting::LightList lightList = Lighting::lightList(lightClusterUniforms, lightClusters, in.worldPosition, frame.lightCount);
+        for (uint index = 0; index < lightList.count; ++index) {
+            const LightingLight light = lights[lightList[index]];
             const Lighting::LightSample lightSample = Lighting::sample(light, in.worldPosition);
             const float3 toLight = lightSample.toLight;
             const float3 radiance = lightSample.radiance * Lighting::shadow(light, in.worldPosition, shadow, shadowMap, shadowSampler);
@@ -753,9 +757,11 @@ namespace PBR {
         constant LightingLight *lights,
         constant PBRMaterialResources &materialResources,
         constant LightingShadowUniforms &shadow,
-        constant LightingFrameResources &frameResources
+        constant LightingFrameResources &frameResources,
+        constant LightingClusterUniforms *lightClusterUniforms = nullptr,
+        constant uint *lightClusters = nullptr
     ) {
-        return shade(in, frontFacing, material, frame, lights, materialResources, frameResources.environmentIrradiance, frameResources.environmentSpecular, frameResources.brdfLookup, frameResources.transmissionScene, frameResources.environmentSampler, shadow, frameResources.shadowMap, frameResources.shadowSampler, frameResources.ambientOcclusion);
+        return shade(in, frontFacing, material, frame, lights, materialResources, frameResources.environmentIrradiance, frameResources.environmentSpecular, frameResources.brdfLookup, frameResources.transmissionScene, frameResources.environmentSampler, shadow, frameResources.shadowMap, frameResources.shadowSampler, frameResources.ambientOcclusion, lightClusterUniforms, lightClusters);
     }
 
 } // namespace PBR

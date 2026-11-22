@@ -177,10 +177,13 @@ namespace PBR {
         constant PBRFrameUniforms &frame [[buffer(1)]],
         constant LightingLight *lights [[buffer(2)]],
         constant LightingShadowUniforms &shadow [[buffer(4)]],
-        constant LightingFrameResources &frameResources [[buffer(5)]]
+        constant LightingFrameResources &frameResources [[buffer(5)]],
+        // Clustered lights (#519); `enabled` 0 loops over every light.
+        constant LightingClusterUniforms &lightClusterUniforms [[buffer(6)]],
+        constant uint *lightClusters [[buffer(7)]]
     ) {
         constant PBRMaterialResources &material = materials[in.record];
-        return withWireframe(shade(in, frontFacing, material.uniforms, frame, lights, material, shadow, frameResources), barycentric, frame, material.uniforms);
+        return withWireframe(shade(in, frontFacing, material.uniforms, frame, lights, material, shadow, frameResources, &lightClusterUniforms, lightClusters), barycentric, frame, material.uniforms);
     }
 
 } // namespace PBR

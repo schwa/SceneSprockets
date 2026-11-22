@@ -24,6 +24,7 @@ namespace BlinnPhong {
 
     // The lit color of `surface` at `position` (camera-relative) with unit `normal`. `occlusion` scales ambient light.
     // `shadowMap`, `shadowSampler` and `shadow` are only read when `hasShadows` is true.
+    // `clusters` and `clusterLights` (#519) may be null: every light is then looped over.
     inline metal::float4 shade(
         Surface surface,
         metal::float3 position,
@@ -31,6 +32,8 @@ namespace BlinnPhong {
         metal::float3 cameraPosition,
         constant BlinnPhongFrame &frame,
         constant LightingLight *lights,
+        constant LightingClusterUniforms *clusters,
+        constant uint *clusterLights,
         float occlusion,
         bool hasShadows,
         metal::depth2d_array<float, metal::access::sample> shadowMap,
@@ -40,8 +43,9 @@ namespace BlinnPhong {
         metal::float3 viewDirection = metal::normalize(cameraPosition - position);
         metal::float3 diffuse = 0;
         metal::float3 specular = 0;
-        for (int index = 0; index < frame.lightCount; index++) {
-            const LightingLight light = lights[index];
+        const Lighting::LightList lightList = Lighting::lightList(clusters, clusterLights, position, frame.lightCount);
+        for (uint index = 0; index < lightList.count; index++) {
+            const LightingLight light = lights[lightList[index]];
             const Lighting::LightSample lightSample = Lighting::sample(light, position);
             const metal::float3 toLight = lightSample.toLight;
             float lambertian = metal::max(metal::dot(toLight, normal), 0.0);
@@ -59,6 +63,23 @@ namespace BlinnPhong {
         }
         const metal::float3 color = frame.ambientLightColor * surface.ambient * occlusion + diffuse + specular + surface.emission;
         return metal::float4(frame.linearOutput ? color : Lighting::toneMap(color * frame.exposure, frame.toneMapping), surface.alpha);
+    }
+
+    // Without clusters: every light.
+    inline metal::float4 shade(
+        Surface surface,
+        metal::float3 position,
+        metal::float3 normal,
+        metal::float3 cameraPosition,
+        constant BlinnPhongFrame &frame,
+        constant LightingLight *lights,
+        float occlusion,
+        bool hasShadows,
+        metal::depth2d_array<float, metal::access::sample> shadowMap,
+        metal::sampler shadowSampler,
+        constant LightingShadowUniforms &shadow
+    ) {
+        return shade(surface, position, normal, cameraPosition, frame, lights, nullptr, nullptr, occlusion, hasShadows, shadowMap, shadowSampler, shadow);
     }
 
     // Material channel views (#195), matching MaterialChannel; returns false for lit output. Blinn-Phong has no

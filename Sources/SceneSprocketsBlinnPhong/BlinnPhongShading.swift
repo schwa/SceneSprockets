@@ -18,6 +18,8 @@ public struct BlinnPhongShading {
     public var cameraPosition: SIMD3<Float>
     /// The shadow map inputs, when shadows are on.
     public var shadow: Shadows.Sampling?
+    /// The frame's light clusters (#519), when lights are clustered and this context has all of them.
+    public var lightClusters: LightingClusters?
 
     /// Creates the lighting inputs from a render context.
     public init(context: RenderContext, ambientLightColor: SIMD3<Float>) {
@@ -50,6 +52,12 @@ public struct BlinnPhongShading {
         self.lights = lights.isEmpty ? [LightingLight()] : lights
         self.cameraPosition = cameraPosition
         self.shadow = context.shadow
+        self.lightClusters = context.lightClusters
+    }
+
+    /// The `lightClusterUniforms` and `lightClusters` to bind: disabled ones without clusters.
+    public func lightClusterBinding(device: MTLDevice) throws -> (uniforms: LightingClusterUniforms, buffer: MTLBuffer) {
+        try LightingClusters.binding(lightClusters, shadingOrigin: cameraPosition, device: device)
     }
 
     /// The shadow map, its sampler and uniforms for a submission (`MSEnvironmentValues.submissionIndex`), or `nil`

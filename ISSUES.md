@@ -11988,18 +11988,20 @@ Object and mesh shaders are not used for geometry amplification, culling, or LOD
 ## 519: No clustered Forward+ light assignment
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, lighting
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-22T18:03:06Z
+closed: 2026-11-22T18:03:06Z
 +++
 
 Every lit fragment loops over every light in the frame; lights are not assigned to screen or view-space clusters. Lights are shared by all renderers through MetalSprocketsLighting (#547), so a cluster grid built there could serve every renderer. No demo scene has enough lights to measure the benefit. Related: #514.
 
 - `2026-11-19T01:50:43Z`: Question 2 (decision): Build clustered light assignment in MetalSprocketsLighting (a compute pass producing per-cluster light lists that every renderer reads), measured with a many-lights demo scene? Recommended: Yes
 - `2026-11-20T05:59:25Z`: Answer 2: Yes
+- `2026-11-22T18:03:06Z`: Implemented as decided (Q2): LightingClusters (MetalSprocketsLighting) + LightClusters::assign_lights compute pass, run by SceneGraphElement before the scene pass when there are >= 16 direct lights (lightClustering(.automatic/.on/.off)). Blinn-Phong and PBR loop over the fragment's cluster (Lighting::lightList). Tests: clustered vs unclustered images match for both renderers (and fail when the assignment is broken), category-masked batches drop the clusters. Many Lights demo added. Benchmark (256 lights, 1920x1080, M5 Max): Blinn-Phong 5.2 -> 2.3 ms, PBR 10.0 -> 3.7 ms. Not covered: stereo frames, category-masked batches and shader materials still loop over every light.
 
 ---
 

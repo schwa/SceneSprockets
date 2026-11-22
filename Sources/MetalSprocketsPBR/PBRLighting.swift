@@ -65,6 +65,10 @@ public struct PBRLighting: Sendable {
     public var ambientOcclusion: LightingAmbientOcclusion?
     /// Constant ambient light in linear RGB, added to the environment's diffuse light.
     public var ambientLight: SIMD3<Float> = .zero
+    /// Clusters indexing ``lights`` (#519); nil loops over every light.
+    public var lightClusters: LightingClusters?
+    /// The world position the shading space (and ``lights``) is relative to, for ``lightClusters``.
+    public var lightClusterOrigin: SIMD3<Float> = .zero
 
     public init(lights: [LightingLight] = [], environment: LightingEnvironment = .studio, environmentIntensity: Float = 1, exposure: Float = 1, toneMapping: LightingToneMapping = .pbrNeutral) {
         self.lights = lights

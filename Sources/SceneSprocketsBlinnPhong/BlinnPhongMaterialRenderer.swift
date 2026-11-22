@@ -279,6 +279,7 @@ private struct BlinnPhongBatchesElement: Element {
             let placeholder = try BlinnPhongShaders.placeholderTexture()
             let defaultSampler = try BlinnPhongShaders.defaultSampler()
             let shadowBinding = shading.shadowBinding(submissionIndex: submissionIndex)
+            let clusterBinding = try shading.lightClusterBinding(device: placeholder.device)
             let materialResources = materialResources
             // One per frame, shared by every draw: the shadow map (a placeholder when off) and ambient occlusion.
             let shadowPlaceholder = try BlinnPhongShaders.shadowPlaceholder()
@@ -343,6 +344,8 @@ private struct BlinnPhongBatchesElement: Element {
                 element = element
                     .parameter("frame", functionType: .fragment, value: frame)
                     .parameter("lights", functionType: .fragment, values: lightValues)
+                    .parameter("lightClusterUniforms", functionType: .fragment, value: clusterBinding.uniforms)
+                    .parameter("lightClusters", functionType: .fragment, buffer: clusterBinding.buffer)
                     .parameter("material", functionType: .fragment, value: resolved.uniforms)
                     .parameter("frameResources", functionType: .fragment, argumentBuffer: frameResources)
                     .parameter("materialResources", functionType: .fragment, argumentBuffer: materialResources.resources(for: resolved))

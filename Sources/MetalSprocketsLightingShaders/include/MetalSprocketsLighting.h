@@ -30,6 +30,44 @@ namespace Lighting {
         return metal::smoothstep(light.outerConeCos, light.innerConeCos, cosine);
     }
 
+    // The lights to shade one fragment with (#519): its cluster's list, or every light when clustering is off.
+    // Loop `for (uint i = 0; i < list.count; i++) { LightingLight light = lights[list[i]]; ... }`.
+    struct LightList {
+        // Nil when clustering is off; then the list is 0..<count.
+        constant uint *indices;
+        uint count;
+
+        uint operator[](uint index) const {
+            return indices ? indices[index] : index;
+        }
+    };
+
+    // The cluster holding a shading-space `position`.
+    inline uint clusterIndex(constant LightingClusterUniforms &clusters, float3 position) {
+        const float3 relative = position + clusters.originOffset;
+        const float4 clip = clusters.viewProjection * float4(relative, 1);
+        const float2 ndc = clip.xy / metal::max(clip.w, 1e-6);
+        const int3 size = int3(clusters.gridSize);
+        const int x = metal::clamp(int(metal::floor((ndc.x * 0.5 + 0.5) * float(size.x))), 0, size.x - 1);
+        const int y = metal::clamp(int(metal::floor((ndc.y * 0.5 + 0.5) * float(size.y))), 0, size.y - 1);
+        const float distance = -(clusters.view * float4(relative, 1)).z;
+        int slice = 0;
+        if (distance > clusters.sliceNear) {
+            slice = int(metal::floor(metal::log(distance / clusters.sliceNear) / metal::log(clusters.sliceFar / clusters.sliceNear) * float(size.z)));
+        }
+        slice = metal::clamp(slice, 0, size.z - 1);
+        return uint((slice * size.y + y) * size.x + x);
+    }
+
+    // `clusters` and `clusterLights` may be null (no clustering): the list is then every one of `lightCount` lights.
+    inline LightList lightList(constant LightingClusterUniforms *clusters, constant uint *clusterLights, float3 position, int lightCount) {
+        if (clusters == nullptr || clusterLights == nullptr || clusters->enabled == 0) {
+            return LightList { nullptr, uint(metal::max(lightCount, 0)) };
+        }
+        constant uint *cluster = clusterLights + clusterIndex(*clusters, position) * kLightingClusterStride;
+        return LightList { cluster + 1, metal::min(cluster[0], uint(kLightingClusterMaxLights)) };
+    }
+
     // The light arriving at a point, before shadows.
     struct LightSample {
         // Unit vector from the point toward the light.

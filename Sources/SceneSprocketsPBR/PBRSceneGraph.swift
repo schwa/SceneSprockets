@@ -607,6 +607,9 @@ extension PBRMaterialRenderer: BackgroundRenderer {
         )
         lighting.environmentRotation = context.environment.rotation
         lighting.ambientLight = context.ambientLight
+        // Same lights in the same order as the clusters (#519); nil in batches lit by only some lights.
+        lighting.lightClusters = context.lightClusters
+        lighting.lightClusterOrigin = cameraPosition
         // Darkens only image-based light (#408). The visibility already includes the setting's intensity.
         lighting.ambientOcclusion = context.ambientOcclusion.map { LightingAmbientOcclusion(texture: $0) }
         return lighting

@@ -146,6 +146,9 @@ namespace BlinnPhong {
         // The shadow map and sampler, and screen-space ambient visibility (#136; 1x1 white when off).
         constant LightingFrameResources &frameResources [[buffer(4)]],
         constant BlinnPhongMaterialResources &materialResources [[buffer(5)]],
+        // Clustered lights (#519); `enabled` 0 loops over every light.
+        constant LightingClusterUniforms &lightClusterUniforms [[buffer(6)]],
+        constant uint *lightClusters [[buffer(7)]],
         constant LightingShadowUniforms &shadow [[buffer(3), function_constant(HAS_SHADOWS)]]
     ) {
         const texture2d<float> ambientTexture = materialResources.ambientTexture;
@@ -209,7 +212,7 @@ namespace BlinnPhong {
         }
         uint2 occlusionSize = uint2(ambientOcclusion.get_width(), ambientOcclusion.get_height());
         float occlusion = ambientOcclusion.read(min(uint2(in.position.xy), occlusionSize - 1)).r;
-        return shade(surface, in.worldPosition, normal, frame.cameraPositions[in.view], frame, lights, occlusion, HAS_SHADOWS, frameResources.shadowMap, frameResources.shadowSampler, shadow);
+        return shade(surface, in.worldPosition, normal, frame.cameraPositions[in.view], frame, lights, &lightClusterUniforms, lightClusters, occlusion, HAS_SHADOWS, frameResources.shadowMap, frameResources.shadowSampler, shadow);
     }
 
 }

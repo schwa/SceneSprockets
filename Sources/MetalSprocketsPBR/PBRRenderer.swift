@@ -207,7 +207,10 @@ public struct PBRRenderer: Element {
             .parameter("view", value: context.bindings.view)
             .parameter("materials", argumentBuffer: context.materials.resources)
             .parameter("instanceRecords", values: context.draws.records, else: model.instanceRecordBuffer)
+            let clusterBinding = try LightingClusters.binding(context.bindings.lightClusters, shadingOrigin: context.bindings.lightClusterOrigin, device: model.device)
             context.bindings.apply(to: tables(content, variant: variant, draws: context.draws), frameResources: context.frameResources)
+                .parameter("lightClusterUniforms", functionType: .fragment, value: clusterBinding.uniforms)
+                .parameter("lightClusters", functionType: .fragment, buffer: clusterBinding.buffer)
         }
         .vertexDescriptor(variant.skinned ? PBRModel.skinnedVertexDescriptor : PBRModel.vertexDescriptor)
         .renderPipelineDescriptorTransformer { descriptor in
@@ -412,6 +415,9 @@ public struct PBRFrameBindings {
     public var shadowMap: MTLTexture
     public var shadowSampler: MTLSamplerState
     public var ambientOcclusion: MTLTexture
+    /// Clustered lights (#519), bound by PBRRenderer's fragment shader; nil loops over every light.
+    public var lightClusters: LightingClusters?
+    public var lightClusterOrigin: SIMD3<Float>
 
     /// Bindings for `lighting` seen from `viewProjections` (one per view; two in stereo). There is no transmission
     /// scene, so transmissive materials refract the environment.
@@ -445,6 +451,9 @@ public struct PBRFrameBindings {
         shadowMap = lighting.shadows?.map ?? shaders.placeholderShadowMap
         shadowSampler = lighting.shadows?.sampler ?? shaders.shadowSampler
         self.ambientOcclusion = ambientOcclusion?.texture ?? shaders.placeholderOcclusion
+        // Stereo frames have no single cluster grid.
+        lightClusters = viewProjections.count == 1 ? lighting.lightClusters : nil
+        lightClusterOrigin = lighting.lightClusterOrigin
     }
 
     /// The textures and samplers as a `LightingFrameResources` argument buffer, for ``apply(to:frameResources:)``. Make it once

@@ -39,6 +39,30 @@ struct LightingLight {
 };
 typedef struct LightingLight LightingLight;
 
+// Clustered light assignment (#519): the view frustum is cut into a grid of clusters (screen tiles times view-depth
+// slices), and a compute pass lists the lights that reach each one. Shaders then loop over their fragment's cluster
+// instead of every light. The list buffer holds, per cluster, a count followed by kLightingClusterMaxLights light
+// indices; lights past that are dropped from the cluster.
+#define kLightingClusterMaxLights 63
+#define kLightingClusterStride (kLightingClusterMaxLights + 1)
+
+struct LightingClusterUniforms {
+    // Camera-relative position (camera at the origin) to clip space, and to view space (rotation only).
+    simd_float4x4 viewProjection;
+    simd_float4x4 view;
+    // Added to a shading-space position to make it camera-relative: shading origin minus camera position.
+    simd_float3 originOffset;
+    // Tiles across and down, and depth slices.
+    simd_uint3 gridSize;
+    // Depth slices are exponential in view distance from sliceNear to sliceFar; nearer is slice 0, farther the last.
+    float sliceNear;
+    float sliceFar;
+    // 0 means no clusters: shaders loop over every light.
+    int enabled;
+    int lightCount;
+};
+typedef struct LightingClusterUniforms LightingClusterUniforms;
+
 // The shadow map shared by every light with shadow slices.
 struct LightingShadowUniforms {
     // Shading space to light clip space, one per slice. Depth is compared in 0...1 with the shadow sampler's compare
