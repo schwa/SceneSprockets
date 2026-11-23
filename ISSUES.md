@@ -15050,6 +15050,26 @@ Some kind of proxy in the graph (a node feature marking where a view goes) and s
 
 ---
 
+## 660: G-buffer normals and velocity are approximate and not available in SceneView
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:renderer, effort:m
+created: 2026-11-23T13:48:04Z
+updated: 2026-11-23T13:48:09Z
++++
+
+Follow-up to #510. The G-buffer pre-pass:
+- ignores material normal maps and alpha cutouts (cutout holes show as solid);
+- leaves out renderers that draw their own geometry (raymarched shapes, terrain, voxels, point clouds);
+- gives skinned and morphed meshes the camera's motion only, not their deformation;
+- is not drawn in stereo;
+- has no SceneView modifier; only SceneGraphElement.gBuffer(_:) requests it.
+
+---
+
 ## Milestone M1: Correctness
 
 +++
