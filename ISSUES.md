@@ -12351,8 +12351,9 @@ priority: low
 kind: feature
 labels: effort:l, area:renderer, subtask, lighting
 milestone: Lighting-and-GI
+depends: 643
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-23T02:14:51Z
+updated: 2026-11-23T04:31:55Z
 +++
 
 Static scenes cannot use precomputed indirect lighting (lightmaps). (Moved from SceneSprocketsAddOns#74.) Related: #536 (baking), #512 (indirect-light input).
