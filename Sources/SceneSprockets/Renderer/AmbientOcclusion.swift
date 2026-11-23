@@ -14,6 +14,8 @@ enum AmbientOcclusionTargets {
         // Depth of the in-shader materials alone.
         var inShaderDepth: MTLTexture
         var visibility: MTLTexture
+        // Ambient visibility (red) and contact shadow visibility (green), when contact shadows are on (#495).
+        var contact: MTLTexture
         // The pre-pass draws with the renderers' own pipelines, which need a color target like the scene's.
         var scratchColor: MTLTexture
     }
@@ -49,6 +51,7 @@ enum AmbientOcclusionTargets {
             depth: try make(depthFormat, usage: [.renderTarget, .shaderRead], label: "Ambient Occlusion Depth"),
             inShaderDepth: try make(depthFormat, usage: [.renderTarget, .shaderRead], label: "Ambient Occlusion In-Shader Depth"),
             visibility: try make(.r16Float, usage: [.shaderRead, .shaderWrite], label: "Ambient Occlusion"),
+            contact: try make(.rg16Float, usage: [.shaderRead, .shaderWrite], label: "Ambient Occlusion and Contact Shadows"),
             scratchColor: try make(colorFormat, usage: .renderTarget, label: "Ambient Occlusion Scratch Color")
         )
         cached = [key: targets]

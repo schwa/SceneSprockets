@@ -36,6 +36,9 @@ struct LightingLight {
     // attenuationStartDistance, none from `range` on, with this exponent between. 0 keeps inverse-square falloff.
     float attenuationStartDistance;
     float attenuationFalloffExponent;
+    // 1 when screen-space contact shadows (#495) dim this light: the ambient occlusion texture's green channel holds
+    // their visibility. Fits in the struct's padding.
+    int contactShadow;
 };
 typedef struct LightingLight LightingLight;
 

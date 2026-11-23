@@ -211,8 +211,9 @@ namespace BlinnPhong {
             return channel;
         }
         uint2 occlusionSize = uint2(ambientOcclusion.get_width(), ambientOcclusion.get_height());
-        float occlusion = ambientOcclusion.read(min(uint2(in.position.xy), occlusionSize - 1)).r;
-        return shade(surface, in.worldPosition, normal, frame.cameraPositions[in.view], frame, lights, &lightClusterUniforms, lightClusters, occlusion, HAS_SHADOWS, frameResources.shadowMap, frameResources.shadowSampler, shadow);
+        const float4 occlusionSample = ambientOcclusion.read(min(uint2(in.position.xy), occlusionSize - 1));
+        // Red: ambient occlusion. Green: contact shadows (#495), read only for lights that have them.
+        return shade(surface, in.worldPosition, normal, frame.cameraPositions[in.view], frame, lights, &lightClusterUniforms, lightClusters, occlusionSample.r, HAS_SHADOWS, frameResources.shadowMap, frameResources.shadowSampler, shadow, occlusionSample.g);
     }
 
 }

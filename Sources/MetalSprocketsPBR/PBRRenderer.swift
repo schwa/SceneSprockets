@@ -456,6 +456,12 @@ public struct PBRFrameBindings {
         frame.ambientLight = lighting.ambientLight
         self.frame = frame
         lights = lighting.lights.isEmpty ? [LightingLight()] : lighting.lights
+        // Contact shadows are read from the occlusion texture; without it, the placeholder holds no visibility (#495).
+        if ambientOcclusion == nil {
+            for index in lights.indices {
+                lights[index].contactShadow = 0
+            }
+        }
         view = PBRViewUniforms(viewProjectionMatrices: viewPair(viewProjections), modelMatrix: matrix_identity_float4x4, modelNormalMatrix: matrix_identity_float4x4)
         transmissionScene = shaders.placeholderTexture
         irradiance = environment.irradiance

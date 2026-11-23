@@ -90,6 +90,49 @@ struct AmbientOcclusionPass: Element {
     }
 }
 
+// Screen-space contact shadows (#495): ambient occlusion (or 1) in red, contact visibility in green.
+struct ContactShadowPass: Element {
+    var settings: SceneGraph.ContactShadows
+    var depthTexture: MTLTexture
+    // Ambient visibility to copy into red; nil writes 1.
+    var ambientOcclusion: MTLTexture?
+    // Bound in place of `ambientOcclusion` when there is none.
+    var placeholder: MTLTexture
+    var outputTexture: MTLTexture
+    var viewProjection: simd_float4x4
+    var toLight: SIMD3<Float>
+
+    var body: some Element {
+        get throws {
+            let uniforms = ContactShadowUniforms(
+                inverseViewProjection: viewProjection.inverse,
+                viewProjection: viewProjection,
+                toLight: simd_normalize(toLight),
+                length: settings.length,
+                thickness: settings.thickness,
+                strength: settings.strength,
+                stepCount: Int32(max(settings.stepCount, 1)),
+                hasAmbientOcclusion: ambientOcclusion == nil ? 0 : 1
+            )
+            return try ComputePass(label: "Contact Shadows") {
+                QueueBarrier(after: [.fragment, .dispatch], before: .dispatch)
+                try ComputePipeline(label: "Contact Shadows", computeKernel: try PostProcessingShaders.kernel("contact_shadows")) {
+                    try ComputeDispatch(
+                        threadsPerGrid: MTLSize(width: outputTexture.width, height: outputTexture.height, depth: 1),
+                        threadsPerThreadgroup: MTLSize(width: 8, height: 8, depth: 1)
+                    )
+                    .parameter("sceneDepth", texture: depthTexture)
+                    .parameter("outputTexture", texture: outputTexture)
+                    .parameter("ambientOcclusion", texture: ambientOcclusion ?? placeholder)
+                    .parameter("uniforms", value: uniforms)
+                }
+            }
+            // The scene pass samples the visibility.
+            .barrierAfterPass(after: .dispatch, beforeQueueStages: [.vertex, .fragment, .dispatch])
+        }
+    }
+}
+
 // Darkens the final color by the visibility where the front surface's material does not apply it while shading.
 struct ApplyAmbientOcclusionPass: Element {
     var visibilityTexture: MTLTexture

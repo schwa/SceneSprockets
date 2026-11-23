@@ -119,6 +119,59 @@ namespace PostProcessing {
         outputTexture.write(float4(saturate(visibility)), tid);
     }
 
+    // Contact shadows (#495): marches from each pixel's surface toward the light through the depth buffer. A step is
+    // shadowed when the visible surface there is in front of it by less than `thickness`. Writes ambient occlusion
+    // (or 1) to red and the contact visibility to green.
+    [[kernel]] void contact_shadows(
+        uint2 tid [[thread_position_in_grid]],
+        depth2d<float, access::read> sceneDepth [[texture(0)]],
+        texture2d<float, access::write> outputTexture [[texture(1)]],
+        texture2d<float, access::read> ambientOcclusion [[texture(2)]],
+        constant ContactShadowUniforms &uniforms [[buffer(0)]]
+    ) {
+        uint2 size = uint2(outputTexture.get_width(), outputTexture.get_height());
+        if (tid.x >= size.x || tid.y >= size.y) {
+            return;
+        }
+        const float occlusion = uniforms.hasAmbientOcclusion != 0 ? ambientOcclusion.read(tid).r : 1.0;
+        float depth = depthAt(sceneDepth, tid, size);
+        if (depth == 0.0) {
+            outputTexture.write(float4(occlusion, 1, 0, 0), tid);
+            return;
+        }
+        const float3 position = worldPosition(tid, depth, size, uniforms.inverseViewProjection);
+        const int count = max(uniforms.stepCount, 1);
+        // Start a little off the surface, scaled with distance, so the surface does not shadow itself.
+        const float bias = length(position) * 0.002;
+        const float jitter = hash(tid, 0u);
+        float shadowed = 0.0;
+        for (int index = 0; index < count; index++) {
+            const float distance = bias + uniforms.length * (float(index) + jitter) / float(count);
+            const float3 sample = position + uniforms.toLight * distance;
+            const float4 clip = uniforms.viewProjection * float4(sample, 1.0);
+            if (clip.w <= 0.0) {
+                break;
+            }
+            const float2 uv = float2(clip.x / clip.w * 0.5 + 0.5, 0.5 - clip.y / clip.w * 0.5);
+            if (any(uv < 0.0) || any(uv > 1.0)) {
+                break;
+            }
+            const uint2 pixel = min(uint2(uv * float2(size)), size - 1);
+            const float sceneSampleDepth = depthAt(sceneDepth, pixel, size);
+            if (sceneSampleDepth == 0.0) {
+                continue;
+            }
+            const float sceneDistance = length(worldPosition(pixel, sceneSampleDepth, size, uniforms.inverseViewProjection));
+            const float difference = length(sample) - sceneDistance;
+            if (difference > bias && difference < uniforms.thickness) {
+                // Fade toward the end of the march, so the shadow's far edge is soft.
+                shadowed = 1.0 - float(index) / float(count);
+                break;
+            }
+        }
+        outputTexture.write(float4(occlusion, saturate(1.0 - uniforms.strength * shadowed), 0, 0), tid);
+    }
+
     // Multiplies the final color by the visibility, for pixels whose front surface does not apply it while shading:
     // where the depth of those materials alone is in front of the full depth (#136).
     [[kernel]] void apply_ambient_occlusion(

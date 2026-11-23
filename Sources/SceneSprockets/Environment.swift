@@ -53,6 +53,8 @@ extension SceneGraph {
         public var rotation: Float
         /// Screen-space ambient occlusion; nil turns it off.
         public var ambientOcclusion: AmbientOcclusion?
+        /// Screen-space contact shadows from the brightest directional light; nil turns them off.
+        public var contactShadows: ContactShadows?
         /// Multiplies the light before tone mapping, for every renderer.
         public var exposure: Float
         /// How every renderer turns linear light into display values.
@@ -76,6 +78,27 @@ extension SceneGraph {
             self.ambientOcclusion = ambientOcclusion
             self.exposure = exposure
             self.toneMapping = toneMapping
+        }
+    }
+
+    /// Screen-space contact shadows (#495): the small shadows where objects touch, which shadow maps miss. Each pixel
+    /// marches toward the brightest directional light through the scene's depth. Blinn-Phong and PBR dim that light by
+    /// it while shading. Needs readable view targets (see ``Shadows/requiredColorUsage``); not drawn in stereo.
+    public struct ContactShadows: Sendable, Equatable, Codable {
+        /// How far toward the light to march, in world units.
+        public var length: Float
+        /// How thick a surface counts as, in world units: depth behind it farther than this does not shadow.
+        public var thickness: Float
+        /// 0 leaves the light unchanged, 1 removes it where shadowed.
+        public var strength: Float
+        /// Steps per pixel.
+        public var stepCount: Int
+
+        public init(length: Float = 0.3, thickness: Float = 0.1, strength: Float = 1, stepCount: Int = 16) {
+            self.length = length
+            self.thickness = thickness
+            self.strength = strength
+            self.stepCount = stepCount
         }
     }
 }

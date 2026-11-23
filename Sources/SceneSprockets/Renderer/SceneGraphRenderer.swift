@@ -51,6 +51,9 @@ public struct RenderContext {
     /// Set for materials that conform to ``ReadsSceneDepth``, which draw after the scene pass: the scene's depth as an
     /// `.r32Float` texture (reversed depth, 0 is the background), one texel per pixel of the color target (#397).
     public internal(set) var sceneDepth: MTLTexture?
+    /// The world transform of the directional light that has screen-space contact shadows this frame (#495); its
+    /// visibility is the green channel of ``ambientOcclusion``. Nil when there are none.
+    public internal(set) var contactShadowLight: simd_float4x4?
 
     /// The number of views that each draw goes to: 1, or the stereo view count.
     public var viewCount: Int { stereoViews?.count ?? 1 }
@@ -252,7 +255,11 @@ public struct SceneGraphElement: Element {
             let opaque = entries.filter { !$0.isTransparent }
             let inShaderAmbientOcclusion = opaque.filter { $0.material is any AppliesAmbientOcclusionInShader }
             let wantsAmbientOcclusion = context.environment.ambientOcclusion != nil && postTargets != nil && debugMode == nil
-            let ambientOcclusionContent = wantsAmbientOcclusion && !opaque.isEmpty ? try makeOpaqueContent(entries: opaque, context: context, excluding: nil) : nil
+            // Contact shadows (#495) march from the brightest directional light's side, through the same depth pre-pass.
+            let contactShadowLight: (worldTransform: simd_float4x4, light: Light)? = context.environment.contactShadows == nil || postTargets == nil || debugMode != nil ? nil : context.lights
+                .filter { $0.light.type == .directional && $0.light.castsShadow }
+                .max { $0.light.intensity * $0.light.tintedColor.max() < $1.light.intensity * $1.light.tintedColor.max() }
+            let ambientOcclusionContent = (wantsAmbientOcclusion || contactShadowLight != nil) && !opaque.isEmpty ? try makeOpaqueContent(entries: opaque, context: context, excluding: nil) : nil
             let visibleParticleFrames = presentation.visibleParticleIndices.map { presentation.particleFrames[$0] }
             let postProcessing = postTargets == nil ? nil : presentation.postProcessing
             let plan = SceneFramePlan(.init(
@@ -278,6 +285,18 @@ public struct SceneGraphElement: Element {
             if case let .passes(inShaderDepth, appliesAsPostPass) = plan.ambientOcclusion, let postTargets, let ambientOcclusionContent, let settings = context.environment.ambientOcclusion {
                 let inShaderContent = inShaderDepth ? try makeOpaqueContent(entries: inShaderAmbientOcclusion, context: context, excluding: nil) : nil
                 ambientOcclusionApply = try makeAmbientOcclusionPasses(settings: settings, content: ambientOcclusionContent, inShaderContent: inShaderContent, splitsInShader: inShaderDepth, appliesAsPostPass: appliesAsPostPass, postTargets: postTargets, context: &context, prePasses: &prePasses)
+            }
+            if let contactShadowLight, let settings = context.environment.contactShadows, let postTargets, let ambientOcclusionContent {
+                let targets = try AmbientOcclusionTargets.targets(device: postTargets.color.device, width: postTargets.color.width, height: postTargets.color.height, colorFormat: postTargets.color.pixelFormat, depthFormat: postTargets.depth.pixelFormat)
+                let ambientOcclusion = context.ambientOcclusion
+                if ambientOcclusion == nil {
+                    prePasses.append(AmbientOcclusionDepthPass(label: "Contact Shadow Depth", depth: targets.depth, scratchColor: targets.scratchColor, content: ambientOcclusionContent).eraseToAnyElement())
+                }
+                // Lights shine down their node's -Z axis, so +Z points toward the light.
+                let toLight = contactShadowLight.worldTransform.columns.2.xyz
+                prePasses.append(ContactShadowPass(settings: settings, depthTexture: targets.depth, ambientOcclusion: ambientOcclusion, placeholder: targets.visibility, outputTexture: targets.contact, viewProjection: context.projectionMatrix * context.viewMatrix.rotationOnlyView, toLight: toLight).eraseToAnyElement())
+                context.ambientOcclusion = targets.contact
+                context.contactShadowLight = contactShadowLight.worldTransform
             }
             prePasses += try makeRendererPrePasses(entries: entries, context: context)
             #if os(visionOS)

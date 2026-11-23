@@ -486,7 +486,7 @@ extension Camera: Codable {
 
 extension SceneGraph.Environment: Codable {
     enum ArchiveKeys: String, CodingKey {
-        case background, map, mapType, intensity, rotation, ambientOcclusion, exposure, toneMapping
+        case background, map, mapType, intensity, rotation, ambientOcclusion, contactShadows, exposure, toneMapping
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -495,6 +495,7 @@ extension SceneGraph.Environment: Codable {
         try container.encode(intensity, forKey: .intensity)
         try container.encode(rotation, forKey: .rotation)
         try container.encodeIfPresent(ambientOcclusion, forKey: .ambientOcclusion)
+        try container.encodeIfPresent(contactShadows, forKey: .contactShadows)
         if exposure != 1 {
             try container.encode(exposure, forKey: .exposure)
         }
@@ -533,5 +534,6 @@ extension SceneGraph.Environment: Codable {
             }
         }
         self.init(background: try container.decode(Background.self, forKey: .background), map: map, intensity: try container.decode(Float.self, forKey: .intensity), rotation: try container.decode(Float.self, forKey: .rotation), ambientOcclusion: try container.decodeIfPresent(SceneGraph.AmbientOcclusion.self, forKey: .ambientOcclusion), exposure: try container.decodeIfPresent(Float.self, forKey: .exposure) ?? 1, toneMapping: toneMapping)
+        contactShadows = try container.decodeIfPresent(SceneGraph.ContactShadows.self, forKey: .contactShadows)
     }
 }

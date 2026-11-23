@@ -38,7 +38,9 @@ namespace BlinnPhong {
         bool hasShadows,
         metal::depth2d_array<float, metal::access::sample> shadowMap,
         metal::sampler shadowSampler,
-        constant LightingShadowUniforms &shadow
+        constant LightingShadowUniforms &shadow,
+        // Screen-space contact shadow visibility (#495), for lights with `contactShadow`.
+        float contactVisibility = 1.0
     ) {
         metal::float3 viewDirection = metal::normalize(cameraPosition - position);
         metal::float3 diffuse = 0;
@@ -57,6 +59,9 @@ namespace BlinnPhong {
             metal::float3 radiance = lightSample.radiance;
             if (hasShadows && surface.receivesShadow) {
                 radiance *= Lighting::shadow(light, position, shadow, shadowMap, shadowSampler);
+            }
+            if (light.contactShadow != 0 && surface.receivesShadow) {
+                radiance *= contactVisibility;
             }
             diffuse += surface.diffuse * lambertian * radiance;
             specular += surface.specular * highlight * radiance;

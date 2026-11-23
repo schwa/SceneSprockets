@@ -29,3 +29,18 @@ struct AmbientOcclusionUniforms {
     int sampleCount;
 };
 typedef struct AmbientOcclusionUniforms AmbientOcclusionUniforms;
+
+// Screen-space contact shadows (#495). Positions are camera-relative (camera at the origin).
+struct ContactShadowUniforms {
+    simd_float4x4 inverseViewProjection;
+    simd_float4x4 viewProjection;
+    // Unit vector from a surface toward the light.
+    simd_float3 toLight;
+    float length;
+    float thickness;
+    float strength;
+    int stepCount;
+    // Whether texture(2) holds ambient occlusion to copy into the red channel; otherwise red is 1.
+    int hasAmbientOcclusion;
+};
+typedef struct ContactShadowUniforms ContactShadowUniforms;

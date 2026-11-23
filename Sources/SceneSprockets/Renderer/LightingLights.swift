@@ -41,7 +41,12 @@ package extension RenderContext {
                 return nil
             }
             let slices = shadow != nil && index < lightShadowSlices.count ? lightShadowSlices[index] : 0..<0
-            return LightingLight(entry.light, worldTransform: entry.worldTransform.cameraRelative(to: cameraPosition), shadowSlices: slices)
+            var lightingLight = LightingLight(entry.light, worldTransform: entry.worldTransform.cameraRelative(to: cameraPosition), shadowSlices: slices)
+            // Batches hold subsets of the lights, so the contact-shadow light is found by its transform (#495).
+            if let contactShadowLight, entry.light.type == .directional, entry.worldTransform == contactShadowLight {
+                lightingLight.contactShadow = 1
+            }
+            return lightingLight
         }
     }
 }

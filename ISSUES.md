@@ -11507,13 +11507,14 @@ Decided (2026-11-23):
 ## 495: Contact shadows
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:renderer, effort:m
 milestone: Rendering-2
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-20T06:33:14Z
+updated: 2026-11-23T03:25:52Z
+closed: 2026-11-23T03:25:52Z
 +++
 
 There are no contact shadows: the small-scale shadows that shadow maps miss. (Moved from SceneSprocketsAddOns #52.)

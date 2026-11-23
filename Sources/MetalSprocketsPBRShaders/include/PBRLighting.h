@@ -597,7 +597,7 @@ namespace PBR {
             const LightingLight light = lights[lightList[index]];
             const Lighting::LightSample lightSample = Lighting::sample(light, in.worldPosition);
             const float3 toLight = lightSample.toLight;
-            const float3 radiance = lightSample.radiance * Lighting::shadow(light, in.worldPosition, shadow, shadowMap, shadowSampler);
+            const float3 radiance = lightSample.radiance * Lighting::shadow(light, in.worldPosition, shadow, shadowMap, shadowSampler) * Lighting::contactShadow(light, ambientOcclusion, in.position);
             const float NdotL = clamp(dot(normal, toLight), 0.0, 1.0);
             if (NdotL <= 0.0) {
                 // Light from behind reaches this side only by diffuse transmission. Its Fresnel term uses the light

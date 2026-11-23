@@ -76,6 +76,16 @@ namespace Lighting {
         const float sample = occlusion.read(min(uint2(position.xy), size - 1)).r;
         return 1.0 + strength * (sample - 1.0);
     }
+
+    // Screen-space contact shadow visibility (#495) for `light` at a pixel: the green channel of the ambient occlusion
+    // texture when the light has contact shadows, 1 otherwise.
+    inline float contactShadow(LightingLight light, texture2d<float> occlusion, float4 position) {
+        if (light.contactShadow == 0) {
+            return 1.0;
+        }
+        const uint2 size = uint2(occlusion.get_width(), occlusion.get_height());
+        return occlusion.read(min(uint2(position.xy), size - 1)).g;
+    }
 } // namespace Lighting
 
 #endif
