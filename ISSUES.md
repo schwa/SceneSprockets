@@ -15114,6 +15114,19 @@ MetalFX spatial antialiasing (built into MetalSprocketAddOns)
 
 ---
 
+## 663: Cryptic 'LTC' abbreviation in lighting shader names
+
++++
+status: new
+priority: low
+kind: none
+created: 2026-11-23T14:37:43Z
++++
+
+The area-light code uses the bare abbreviation 'LTC' (Linearly Transformed Cosines, Heitz et al. 2016) in file and symbol names, e.g. `MetalSprocketsLightingLTC.h`, `kLightingLTC1`, `kLightingLTC2`. Readers without graphics-research background can't tell what these are from the name alone.
+
+---
+
 ## Milestone M1: Correctness
 
 +++

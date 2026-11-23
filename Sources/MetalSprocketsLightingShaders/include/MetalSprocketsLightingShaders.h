@@ -13,4 +13,5 @@ NS_ASSUME_NONNULL_END
 // Metal-only; empty when compiled for Swift.
 #include "MetalSprocketsLightingSupport.h"
 #include "MetalSprocketsLightingToneMapping.h"
+#include "MetalSprocketsLightingLTC.h"
 #include "MetalSprocketsLighting.h"
