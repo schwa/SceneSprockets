@@ -5921,13 +5921,13 @@ Open question: scaled space or nested frusta, and how do nodes opt in (per-node 
 ## 262: Particles use world-space Float matrices
 
 +++
-status: open
+status: blocked
 priority: low
 kind: bug
 labels: area:renderer, effort:m, subtask, large-worlds
 milestone: Big-World
 created: 2026-11-04T21:19:04Z
-updated: 2026-11-20T06:32:40Z
+updated: 2026-11-23T13:36:40Z
 +++
 
 Particles are simulated and stored as world-space Float in MetalSprocketsParticles buffers, so far from the origin they jitter or misplace (at 2^20 m positions resolve only about 0.125 m). Drawing camera-relative alone does not fix it; storage must change, in that package. Left over from #257 (the transform gizmo part is fixed). Part of #255.
@@ -5935,6 +5935,8 @@ Particles are simulated and stored as world-space Float in MetalSprocketsParticl
 Decided (2026-11-23): simulate and store particles relative to each emitter (emitter origin on the CPU, applied camera-relative at draw), independent of #255's decision? Decision: yes; it works with any later #255 choice.
 
 - `2026-11-23T02:52:35Z`: Question 1 (decision): Emitter-relative storage needs MetalSprocketsParticles changes (a per-system origin applied camera-relative at draw, colliders/scene-depth collisions in that space) and a new release. May I implement it in ../MetalSprocketsParticles and commit there, with you pushing and tagging 0.2.0 before adopting it here? Recommended: Yes
+- `2026-11-23T13:33:38Z`: Answer 1: File issues
+- `2026-11-23T13:36:40Z`: Filed upstream as MetalSprocketsParticles#248 (emitter-relative storage); this issue waits on it and on a release.
 
 ---
 
@@ -8996,6 +8998,8 @@ Related: #392 (particle crash seen in a session that used the immersive space).
 
 - `2026-11-23T02:52:20Z`: Question 1 (verify): On a Vision Pro: does the demo's immersive space open and render, and do the keynote slides keep working in the window while immersive? Recommended: Run it and report yes/no
 - `2026-11-23T02:52:20Z`: Question 2 (decision): May I push SceneSprocketsAddOns 0f5cd695 (Terrain bundle Resources→Heightmaps codesign fix) and update the resolved version here? Recommended: Yes
+- `2026-11-23T13:33:52Z`: Answer 1: I will test
+- `2026-11-23T13:33:59Z`: Answer 2: Yes
 
 ---
 
@@ -11837,6 +11841,7 @@ Decided (2026-11-23):
 
 - `2026-11-23T04:07:57Z`: Design option found while starting: instead of adding attachments to every renderer's opaque pipelines, a core-owned G-buffer pre-pass (like the ambient-occlusion depth pre-pass) could draw every opaque MeshEntry with one shader that writes view-space normals and velocity, using a per-node cache of last frame's world transforms and the previous view-projection. Pros: no change to Blinn-Phong/PBR/ShaderMaterial pipelines or the PBR DrawList, one place to keep previous transforms. Cons: one more geometry pass; material normal maps and alpha cutouts are ignored; renderers that draw their own geometry (SDF, terrain, voxels, point clouds) are missing unless they opt in; skinned and morphed meshes get object motion only.
 - `2026-11-23T04:07:57Z`: Question 1 (design): Should normals and velocity come from a core G-buffer pre-pass over the opaque mesh entries (see the comment), rather than extra attachments in every renderer's opaque pipelines? Recommended: Yes, a pre-pass first: far smaller blast radius; renderers can add in-pipeline output later where accuracy matters
+- `2026-11-23T13:34:27Z`: Answer 1: Yes
 
 ---
 
@@ -11974,13 +11979,13 @@ Related: #544 (indirect drawing umbrella), #517, #518, #520, #521, #522, #523, #
 ## 517: Draws are not encoded with indirect command buffers
 
 +++
-status: open
+status: blocked
 priority: medium
 kind: feature
 labels: area:renderer, effort:l, subtask, indirect-drawing
 milestone: GPU-Driven
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-23T02:14:51Z
+updated: 2026-11-23T13:36:40Z
 +++
 
 Draw commands are encoded on the CPU each frame. Indirect command buffers would let them be encoded once, or on the GPU. Part of #544.
@@ -11997,6 +12002,8 @@ Decided (2026-11-23):
 - What finishes this issue? Decision: identical images plus a benchmark showing CPU encode time no worse than today; GPU-driven culling stays in #520.
 
 - `2026-11-23T02:52:14Z`: Question 1 (decision): The decided design puts ICB caching in MetalSprockets' DrawList and needs a new MetalSprockets release. May I implement it in ../MetalSprockets, commit there, and tag/push a release (0.3.4) so SceneSprockets can require it? Recommended: Yes: implement in MetalSprockets, you push and tag; then adopt in PBR here
+- `2026-11-23T13:34:39Z`: Answer 1: File issues only
+- `2026-11-23T13:36:40Z`: Filed upstream as MetalSprockets#604 (ICB command caching in DrawList); this issue waits on it and on a release.
 
 ---
 
@@ -12306,6 +12313,8 @@ Decided (2026-11-23):
 - `2026-11-23T03:37:47Z`: Question 1 (decision): Capture renders 6 cube faces per probe on request. Is it acceptable that the first version captures only the opaque scene and background (no shadows, transparency or particles), like the planar reflection pass (#531)? Recommended: Yes
 - `2026-11-23T03:37:51Z`: Per-object values cannot reach shaders like ambient light does today: ambient light is one color per batch, and renderBatches groups many objects (PBR instancing) into one draw. Options: (a) per-object L0 (one ambient color) by splitting batches per probe value: no shader changes, loses up/down direction, more draws; (b) per-draw L1 spherical harmonics (4 float3) in PBR instance data and Blinn-Phong per-draw uniforms, evaluated with the normal: keeps direction, changes both renderers' instance layouts.
 - `2026-11-23T03:37:52Z`: Question 2 (design): Should per-object probe light reach shaders as per-draw L1 spherical harmonics in instance data (option b in the comment) rather than a per-object ambient color by splitting batches (option a)? Recommended: Yes, per-draw L1 SH; directional sky/ground light is the point of probes
+- `2026-11-23T13:35:13Z`: Answer 1: Yes - but file follow ups as needed
+- `2026-11-23T13:35:22Z`: Answer 2: Sure
 
 ---
 
@@ -14543,6 +14552,7 @@ Each keynote slide's code sample is a SwiftUI snapshot rendered into a texture a
 Use a text view for the source code instead of a textured plane. Related: #629.
 
 - `2026-11-23T03:00:51Z`: Question 1 (design): Where should the keynote's code text view go? Recommended: A SwiftUI overlay at the bottom of the scene view, shown only for the keynote; remove the panels from the scene and re-record the keynote goldens (they would no longer show code). Alternatives: the inspector, or the presenter notes window.
+- `2026-11-23T13:35:31Z`: Answer 1: Yes overlay.
 
 ---
 
@@ -14990,6 +15000,51 @@ Steps:
 
 Expected: the decal draws.
 Actual: nothing is drawn; the same scene in an OffscreenRenderer with Shadows.requiredColorUsage draws the decal.
+
+---
+
+## 658: Subsurface scattering is barely visible
+
++++
+status: open
+priority: medium
+kind: enhancement
+labels: area:renderer, effort:l
+milestone: Lighting-and-GI
+created: 2026-11-23T13:31:43Z
+updated: 2026-11-23T13:31:45Z
++++
+
+The subsurface scattering added in #538 is hard to see. On the keynote's Subsurface slide (#646) the scattering head looks almost the same as the plain one: only a faint reddish tint near the shadow edge, even with the environment dimmed and strength at 1. Light does not bleed through thin parts (ears, nose), there is no softening of shading detail across the lit side, and backlit shapes do not glow.
+
+The current model is a shader-only wrapped-diffuse term: it only adds tinted light past the terminator and does nothing for thickness, translucency or the blurring of lighting across the surface.
+
+Related: #538 (current approximation), #651 (API gaps), #646 (demo slide).
+
+## Proposed fix (per schwa)
+Use proper subsurface scattering techniques instead of the wrapped-diffuse approximation.
+
+---
+
+## 659: SwiftUI views cannot be placed at positions in the scene graph
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:ui, effort:l, research
+created: 2026-11-23T13:31:54Z
+updated: 2026-11-23T13:31:56Z
++++
+
+There is no way to attach SwiftUI content to a point in 3D space: labels, buttons or inspectors that follow a node on screen. Apps have to project positions themselves and lay out an overlay by hand. Node text (SceneText) is drawn into the scene and is not interactive SwiftUI.
+
+To consider: how a node refers to a SwiftUI view, how SceneView places the views over the scene each frame (and hides them when the node is hidden, culled or behind other geometry), and how this works with stereo and visionOS.
+
+Related: #630 (keynote code samples as SwiftUI text instead of textured planes).
+
+## Proposed fix (per schwa)
+Some kind of proxy in the graph (a node feature marking where a view goes) and some kind of SwiftUI overlay on SceneView that positions the views at those proxies.
 
 ---
 
