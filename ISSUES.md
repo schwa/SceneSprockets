@@ -13786,13 +13786,13 @@ Decided (2026-11-23): route shadow casters through the shared GPUDeformation pas
 ## 596: No simple way to create billboards with alignment options
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
 labels: effort:s, area:scenegraph
 milestone: Physics-and-Scene
 created: 2026-11-20T05:56:30Z
-updated: 2026-11-23T02:11:51Z
+updated: 2026-11-23T12:30:08Z
 +++
 
 There is no easy way to make a billboard with alignment options (facing the camera, "tree style" upright, and so on). Constraint.billboard(freeAxes:) exists (freeAxes: .y is tree-style), but a billboard still takes a quad, a material and a constraint set up by hand. Related: #400.
@@ -14549,13 +14549,13 @@ Use a text view for the source code instead of a textured plane. Related: #629.
 ## 631: Screen-space ambient occlusion is not blurred
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
 labels: area:renderer, effort:s
 milestone: Rendering-2
 created: 2026-11-23T02:28:04Z
-updated: 2026-11-23T02:28:07Z
+updated: 2026-11-23T12:30:08Z
 +++
 
 SceneGraph.postProcessing's SSAO is unblurred, so the occlusion is noisy. A blur pass does not depend on the HDR path. Split from #45.
@@ -14565,13 +14565,13 @@ SceneGraph.postProcessing's SSAO is unblurred, so the occlusion is noisy. A blur
 ## 632: SCNText's chamfer, flatness, container frame and wrapping are missing
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
 labels: area:scenegraph, effort:m
 milestone: Physics-and-Scene
 created: 2026-11-23T02:28:07Z
-updated: 2026-11-23T02:28:10Z
+updated: 2026-11-23T12:30:08Z
 +++
 
 Text shapes (Shape.text) have no chamfer, flatness, container frame or wrapping, which SCNText has. Split from #80. See docs/SceneKitComparison.md.
@@ -14581,11 +14581,12 @@ Text shapes (Shape.text) have no chamfer, flatness, container frame or wrapping,
 ## 633: PBR element tree overflows Swift Testing's 512 KB stack in debug builds when frame structs grow
 
 +++
-status: new
-priority: low
+status: open
+priority: medium
 kind: bug
 labels: area:renderer, effort:m
 created: 2026-11-23T03:12:31Z
+updated: 2026-11-23T12:30:08Z
 +++
 
 While adding 512 bytes to LightingShadowUniforms (#88), MetalSprocketsGLTFMeshoptTests (and the GLTF and BasisU test bundles) crashed with EXC_BAD_ACCESS in ___chkstk_darwin, deep in MetalSprockets' TreeReconciler recursion through PBRRenderer.body (FrameDrawBuilder). Boxing PBRFrameBindings.shadow avoided it, but the recursion is close to the cooperative thread stack limit in debug builds, so any further growth of value types held along that path can crash tests again.
@@ -14748,6 +14749,241 @@ updated: 2026-11-23T04:14:39Z
 +++
 
 Split from #512 (part b). Add-ons cannot contribute indirect lighting to Blinn-Phong and PBR. Decided in #512: a fixed indirect-light input (an irradiance texture or SH buffer per draw) that probes (#532) and lightmaps (#535) fill, not shader code injection.
+
+---
+
+## 644: Keynote has no slide for projected decals
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:demo, effort:s
+milestone: Demo
+created: 2026-11-23T12:27:33Z
+updated: 2026-11-23T12:27:35Z
++++
+
+Projected decals (#397) are not shown in the keynote. A slide could project a texture (for example a road marking or footprints) onto a floor and a step, with a code panel.
+
+---
+
+## 645: Keynote has no slide for planar reflections
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:demo, effort:s
+milestone: Demo
+created: 2026-11-23T12:27:33Z
+updated: 2026-11-23T12:27:35Z
++++
+
+Planar reflections (#531) are not shown in the keynote. A slide could put a mirror-smooth PBR floor with Node.planarReflector under moving objects, with a code panel.
+
+---
+
+## 646: Keynote has no slide for subsurface scattering
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:demo, effort:s
+milestone: Demo
+created: 2026-11-23T12:27:33Z
+updated: 2026-11-23T12:27:35Z
++++
+
+Subsurface scattering (#538) is not shown in the keynote. A slide could compare a plain PBR sphere and a skin- or wax-like one lit from the side, with a code panel.
+
+---
+
+## 647: Keynote has no slide for stochastic transparency
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:demo, effort:s
+milestone: Demo
+created: 2026-11-23T12:27:33Z
+updated: 2026-11-23T12:27:35Z
++++
+
+Stochastic transparency (#539) is not shown in the keynote. A slide could show many overlapping see-through cards or foliage drawn with BlendMode.stochastic next to sorted blending, with a code panel.
+
+---
+
+## 648: Keynote has no slide for per-light shadow settings
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:demo, effort:s
+milestone: Demo
+created: 2026-11-23T12:27:33Z
+updated: 2026-11-23T12:27:35Z
++++
+
+Per-light shadow settings (#88) are not shown in the keynote: cascaded shadows for a directional light over a long scene, and per-light resolution and bias. A slide could show a long row of objects with and without cascades, with a code panel.
+
+---
+
+## 649: Keynote has no slide for bloom
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:demo, effort:s
+milestone: Demo
+created: 2026-11-23T12:27:33Z
+updated: 2026-11-23T12:27:35Z
++++
+
+Bloom and the HDR path (#640) are not shown in the keynote. A slide could show bright emissive objects with PostProcessing.bloom and controls for threshold and intensity, with a code panel.
+
+---
+
+## 650: Area lights are missing shadows and full shading
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:renderer, effort:m
+created: 2026-11-23T12:29:09Z
++++
+
+Follow-up to #509. Rectangular area lights:
+- cast no shadows;
+- are treated as a point light at their center by Blinn-Phong and shader materials;
+- skip sheen, clearcoat and transmission in PBR's area path.
+
+---
+
+## 651: Subsurface scattering is only reachable through raw PBR uniforms
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:materials, effort:m
+created: 2026-11-23T12:29:09Z
++++
+
+Follow-up to #538. Subsurface scattering:
+- has no PBRSceneMaterial property; it is set through uniforms;
+- has no texture for strength or color;
+- has no Blinn-Phong version;
+- has no glTF extension mapping.
+
+---
+
+## 652: Planar reflections miss content and have no clip plane
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:renderer, effort:m
+created: 2026-11-23T12:29:09Z
++++
+
+Follow-up to #531. Planar reflections:
+- have no clip plane, so meshes crossing the mirror show whole in the reflection;
+- leave out shadows, transparent meshes and particles;
+- draw one reflector per frame;
+- are not drawn in stereo;
+- are ignored on reflectors that are also transmissive (they share the transmission texture slot).
+
+---
+
+## 653: Decals are not archived
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:renderer, effort:m
+created: 2026-11-23T12:29:09Z
++++
+
+Follow-up to #397. DecalMaterial holds an MTLTexture and is not saved in scene archives, and there is only one decal material type. Lit and normal-mapped decals wait on #510.
+
+---
+
+## 654: Shader materials lack stochastic transparency, weighted transparency and contact shadows
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:materials, effort:m
+created: 2026-11-23T12:29:09Z
++++
+
+Follow-up to #539, #494 and #495. Shader materials:
+- get alpha to coverage without the random offset for BlendMode.stochastic, unless their shader calls Lighting::stochasticAlpha;
+- are always sorted, never drawn as weighted blended transparency;
+- do not apply contact shadows.
+
+---
+
+## 655: Bloom and the HDR path are skipped in stereo and with multisampled view targets
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:renderer, effort:m
+created: 2026-11-23T12:29:09Z
++++
+
+Follow-up to #640. The HDR path and bloom:
+- do not run in stereo;
+- do not run when the view's own target is multisampled;
+- tone-map editor grids, decorations and node text along with the scene.
+
+---
+
+## 656: Keynote's Animation Blending slide does not show blending well
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:demo, effort:m
+milestone: Demo
+created: 2026-11-23T12:29:18Z
+updated: 2026-11-23T12:29:21Z
++++
+
+The Animation Blending slide (KeynoteDemo.animationBlendingSlide) blends two hand-made clips on a box with a sphere head: a linear Bounce (body translation) and a Sway (body and head rotation). The blend between them is hard to read, and it does not look like character animation.
+
+---
+
+## 657: SceneView does not make its targets readable for decals, order-independent transparency or contact shadows
+
++++
+status: open
+priority: medium
+kind: bug
+labels: area:ui, effort:s
+created: 2026-11-23T12:31:06Z
+updated: 2026-11-23T12:31:09Z
++++
+
+SceneView makes its drawable and depth readable (framebufferOnly false, depth shaderRead, not memoryless) only when it has shadows, fog, post-processing or auto exposure (needsPostPasses). Decals (#397), Environment.orderIndependentTransparency (#494) and Environment.contactShadows (#495) also need readable targets, so in a SceneView without those other features they are silently not drawn.
+
+Steps:
+1. Show a scene with a DecalMaterial box (and DecalRenderer) in SceneView, without sceneShadows, fog or post-processing.
+
+Expected: the decal draws.
+Actual: nothing is drawn; the same scene in an OffscreenRenderer with Shadows.requiredColorUsage draws the decal.
 
 ---
 
