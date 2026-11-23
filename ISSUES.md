@@ -11538,8 +11538,9 @@ priority: low
 kind: feature
 labels: area:renderer, effort:l
 milestone: Rendering-2
+depends: 510
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-20T06:33:14Z
+updated: 2026-11-23T03:54:58Z
 +++
 
 There is no temporal anti-aliasing to stabilize geometry, specular highlights and fine detail; MSAA is the only anti-aliasing. (Moved from SceneSprocketsAddOns #53.)
