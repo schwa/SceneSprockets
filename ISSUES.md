@@ -11565,6 +11565,9 @@ Decided (2026-11-23):
 - Binding? Decision: one shared 'lightTextures' 2D array (e.g. 256x256; IES profiles resampled into it); LightingLight gets cookieLayer and iesLayer (-1 for none); Light gets cookie and ies properties.
 - IES here or under #86? Decision: cookies here, IES under #86 using the same array.
 
+- `2026-11-23T03:26:18Z`: Question 1 (design): Light is a Codable, Equatable, Sendable value, so it cannot hold an MTLTexture cookie. Where should the cookie live? Recommended: A node feature, Node.lightCookie (texture plus world size for directional lights), packed into the shared lightTextures array by the renderer; archived as PNG data in the scene archive
+- `2026-11-23T03:26:19Z`: Question 2 (decision): LightingLight has only its direction, and its padding has room for just cookieLayer and iesLayer, so a spot cookie's roll around the light axis is not known in the shader. Derive the cookie's up from world +Y (rolling the light node does not rotate the cookie), or add a per-light orientation buffer bound to every renderer? Recommended: Add a small per-light buffer (cookie view-projection per light) bound alongside lights, so roll works and directional cookies get their size
+
 ---
 
 ## 498: Transmission / refraction
