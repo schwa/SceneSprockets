@@ -130,13 +130,14 @@ struct GPUDeformationJob {
 }
 
 enum GPUDeformation {
-    // Prepares this frame's deformation of every morphed or skinned mesh drawn by a DrawsDeformedVertices material, and
-    // publishes the result on each node for `resolvingDeformation(revision:)`. Returns the jobs for DeformationPass.
-    static func prepare(entries: [SceneGraph.MeshEntry], revision: SceneGraph.Revision, submissionIndex: UInt64) -> [GPUDeformationJob] {
+    // Prepares this frame's deformation of every morphed or skinned mesh drawn by a DrawsDeformedVertices material, or
+    // casting a shadow when `includesShadowCasters` (#595), and publishes the result on each node for
+    // `resolvingDeformation(revision:)`. Returns the jobs for DeformationPass.
+    static func prepare(entries: [SceneGraph.MeshEntry], revision: SceneGraph.Revision, submissionIndex: UInt64, includesShadowCasters: Bool = false) -> [GPUDeformationJob] {
         var jobs: [GPUDeformationJob] = []
         var done = Set<SceneGraph.Node.ID>()
         let slot = Int(submissionIndex % UInt64(GPUDeformationState.slotCount))
-        for entry in entries where entry.material is any DrawsDeformedVertices {
+        for entry in entries where entry.material is any DrawsDeformedVertices || (includesShadowCasters && entry.castsShadow) {
             let cache = entry.renderCache
             guard done.insert(entry.nodeID).inserted else {
                 continue

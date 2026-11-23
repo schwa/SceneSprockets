@@ -282,10 +282,27 @@ public struct SceneGraphElement: Element {
                 }
                 return eyes.count == stereoViews.count ? eyes : []
             }()
+            // Passes before everything else: GPU deformation, then the shadow casters, which draw the deformed vertices.
+            var leadingPasses: [AnyElement] = []
+            // Morphs and skins on the GPU for renderers that draw plain vertex buffers (#298), and for shadow casters
+            // (#595). Their entries are then swapped for the deformed meshes, so they are drawn like any other mesh (#590).
+            let shadowTargets = postTargets ?? stereoEyeTargets.first
+            let deformationJobs = GPUDeformation.prepare(entries: entries, revision: context.revision, submissionIndex: submissionIndex, includesShadowCasters: shadows != nil && shadowTargets != nil)
+            if !deformationJobs.isEmpty {
+                leadingPasses.append(DeformationPass(jobs: deformationJobs).gpuTimed(SceneGPUTimingLabel.prePasses).eraseToAnyElement())
+            }
             // Prepared before the renderers, which sample it while shading.
-            let shadowFrame = try (postTargets ?? stereoEyeTargets.first).flatMap { targets in
+            let shadowFrame = try shadowTargets.flatMap { targets in
                 try shadows?.prepare(entries: entries, context: context, bounds: presentation.bounds, viewSize: (targets.color.width, targets.color.height), renderers: renderers)
             }
+            if let shadowFrame {
+                leadingPasses.append(ShadowCasterDepthPass(frame: shadowFrame).gpuTimed(SceneGPUTimingLabel.shadowCasters).eraseToAnyElement())
+            }
+            #if os(visionOS)
+            if immersiveContext != nil {
+                leadingPasses = leadingPasses.map { $0.immersiveRenderContext(nil).eraseToAnyElement() }
+            }
+            #endif
             if let shadows, let shadowFrame {
                 context.shadow = Shadows.Sampling(shadowMap: shadowFrame.shadowMap, intensity: shadows.intensity, color: shadows.color, softness: shadows.softness)
                 context.lightShadowSlices = shadowFrame.lightSlices
@@ -295,12 +312,6 @@ public struct SceneGraphElement: Element {
             if debugMode == nil, let device = renderPassDescriptor?.colorAttachments[0].texture?.device, let clusters = try context.makeLightClusters(clustering: lightClustering, device: device) {
                 context.lightClusters = clusters
                 prePasses.append(LightClusterPass(clusters: clusters).eraseToAnyElement())
-            }
-            // Morphs and skins on the GPU for renderers that draw plain vertex buffers (#298). Their entries are then
-            // swapped for the deformed meshes, so those renderers draw them like any other mesh (#590).
-            let deformationJobs = GPUDeformation.prepare(entries: entries, revision: context.revision, submissionIndex: submissionIndex)
-            if !deformationJobs.isEmpty {
-                prePasses.append(DeformationPass(jobs: deformationJobs).eraseToAnyElement())
             }
             let revision = context.revision
             entries = entries.map { $0.material is any DrawsDeformedVertices ? $0.resolvingDeformation(revision: revision) : $0 }
@@ -465,7 +476,6 @@ public struct SceneGraphElement: Element {
                 // Stereo shadows (#634): the caster pass, then the shadow mask once per eye.
                 let cameraPosition = context.cameraMatrix.columns.3.xyz
                 let eyeViewProjections = stereoViews.relativeViewProjections(origin: cameraPosition)
-                var casterPass = ShadowCasterDepthPass(frame: shadowFrame).gpuTimed(SceneGPUTimingLabel.shadowCasters).eraseToAnyElement()
                 var maskPasses = shadowFrame.masksEverything ? [] : stereoEyeTargets.enumerated().map { eye, targets in
                     SceneShadowMaskPass(frame: shadowFrame, sceneDepthTexture: targets.depth, outputTexture: targets.color, viewProjection: eyeViewProjections[eye], intensity: shadows.intensity, color: shadows.color, radius: shadows.softness)
                         .gpuTimed(SceneGPUTimingLabel.shadowMask)
@@ -473,12 +483,13 @@ public struct SceneGraphElement: Element {
                 }
                 #if os(visionOS)
                 if immersiveContext != nil {
-                    casterPass = casterPass.immersiveRenderContext(nil).eraseToAnyElement()
                     maskPasses = maskPasses.map { $0.immersiveRenderContext(nil).eraseToAnyElement() }
                 }
                 #endif
                 return try MetalSprockets.Group {
-                    casterPass
+                    ForEach(Array(leadingPasses.enumerated()), id: \.offset) { _, leadingPass in
+                        leadingPass
+                    }
                     ForEach(Array(prePasses.enumerated()), id: \.offset) { _, prePass in
                         prePass
                     }
@@ -492,10 +503,13 @@ public struct SceneGraphElement: Element {
                 .eraseToAnyElement()
             }
             guard let postTargets, plan.hasPostPhase else {
-                if prePasses.isEmpty {
+                if prePasses.isEmpty, leadingPasses.isEmpty {
                     return scenePass.gpuTimed(SceneGPUTimingLabel.scene).eraseToAnyElement()
                 }
                 return try MetalSprockets.Group {
+                    ForEach(Array(leadingPasses.enumerated()), id: \.offset) { _, leadingPass in
+                        leadingPass
+                    }
                     ForEach(Array(prePasses.enumerated()), id: \.offset) { _, prePass in
                         prePass
                     }
@@ -517,9 +531,8 @@ public struct SceneGraphElement: Element {
             }
             // The shadow and post passes open their own encoders, so they are siblings of the scene pass.
             return try MetalSprockets.Group {
-                if let shadowFrame {
-                    ShadowCasterDepthPass(frame: shadowFrame)
-                        .gpuTimed(SceneGPUTimingLabel.shadowCasters)
+                ForEach(Array(leadingPasses.enumerated()), id: \.offset) { _, leadingPass in
+                    leadingPass
                 }
                 ForEach(Array(prePasses.enumerated()), id: \.offset) { _, prePass in
                     prePass

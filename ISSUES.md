@@ -13760,13 +13760,14 @@ After #593, NodeFieldSlot records each field's archive keys and clone() copies f
 ## 595: Shadow casters and PBR primitives still resolve skinned and morphed geometry on their own
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: effort:m, area:renderer, area:architecture
 milestone: Rendering
 created: 2026-11-20T05:52:31Z
-updated: 2026-11-20T06:32:25Z
+updated: 2026-11-23T04:43:41Z
+closed: 2026-11-23T04:43:41Z
 +++
 
 After #590, SceneGraphElement resolves deformation once for renderers that draw plain vertex buffers (MeshEntry.resolvingDeformation), and MeshEntry.validMorphs is the rule for valid morph targets and weights on the CPU and GPU paths. Two places still decide this on their own:

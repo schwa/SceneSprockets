@@ -212,7 +212,6 @@ public final class Shadows {
     private var shadowMap: SceneGraphShadowMap?
     private var positionBuffers: [PositionKey: MTLBuffer] = [:]
     private var texCoordBuffers: [TexCoordKey: MTLBuffer] = [:]
-    private var influenceBuffers: [InfluenceKey: MTLBuffer] = [:]
     // One per frame in flight, like the shadow map's depth textures.
     private var receiverMasks: [MTLTexture] = []
 
@@ -260,15 +259,17 @@ public final class Shadows {
     struct Caster {
         enum Placement {
             case model(simd_float4x4)
-            /// Skinned on the GPU: rest positions moved by these joint matrices (joint world * inverse bind).
-            case skinned(influences: MTLBuffer, jointMatrices: [simd_float4x4])
         }
 
+        // float3 positions: a packed copy, or a deformed mesh's own vertex buffer (#595).
         var positions: MTLBuffer
         var submesh: MetalMesh.Submesh
         var placement: Placement
         // See-through casters: their alpha and texture coordinates.
         var alpha: (alpha: ShadowCasterAlpha, texCoords: MTLBuffer)?
+        // Where the first position is in `positions`, and the distance between positions, in bytes.
+        var positionOffset = 0
+        var positionStride = 12
     }
 
     struct Frame {
@@ -309,7 +310,6 @@ public final class Shadows {
         }
         var usedKeys = Set<PositionKey>()
         var usedTexCoords = Set<TexCoordKey>()
-        var usedInfluences = Set<InfluenceKey>()
         var casters: [Caster] = []
         var nonReceivers: [Caster] = []
         // Position-only geometry for `entry`, as drawn this frame. With `alpha`, see-through materials get their
@@ -336,28 +336,27 @@ public final class Shadows {
                     }
                 }
             }
-            // Skin on the GPU when there is a valid skin and no active morph; otherwise use CPU-deformed positions.
-            let skin = gpuSkin(of: entry)
-            let deformed = skin == nil ? entry.deformed(revision: context.revision) : nil
-            let mesh = deformed?.mesh ?? entry.mesh
+            // Skinned and morphed meshes come deformed by this frame's GPU deformation pass, which runs before the
+            // shadow pass (on the CPU when it did not run), and are drawn from their own vertex buffers (#595).
+            let isDeformed = entry.skin != nil || entry.hasMorphs
+            let resolved = isDeformed ? entry.resolvingDeformation(revision: context.revision) : entry
+            let mesh = resolved.mesh
             let submesh = mesh.submeshes[entry.submeshIndex]
             guard submesh.primitiveType == .triangle || submesh.primitiveType == .triangleStrip else {
                 return nil
+            }
+            let placement = Caster.Placement.model(resolved.worldTransform.cameraRelative(to: cameraPosition))
+            if isDeformed, let attribute = mesh.vertexDescriptor.attributes.first(where: { $0.semantic == .position }), attribute.format == .float3, let buffer = mesh.vertexBuffers[attribute.bufferIndex] {
+                let offset = attribute.offset + (mesh.vertexBufferOffsets[attribute.bufferIndex] ?? 0)
+                let stride = mesh.vertexDescriptor.layouts[attribute.bufferIndex]?.stride ?? 12
+                return Caster(positions: buffer, submesh: submesh, placement: placement, alpha: alpha, positionOffset: offset, positionStride: stride)
             }
             let key = PositionKey(mesh)
             usedKeys.insert(key)
             guard let positions = positionBuffer(for: mesh, key: key) else {
                 return nil
             }
-            guard let skin else {
-                return Caster(positions: positions, submesh: submesh, placement: .model((deformed?.modelMatrix ?? entry.worldTransform).cameraRelative(to: cameraPosition)), alpha: alpha)
-            }
-            let influenceKey = InfluenceKey(node: entry.nodeID, revision: context.revision.structure)
-            usedInfluences.insert(influenceKey)
-            guard let influences = influenceBuffer(for: entry, key: influenceKey, device: mesh.vertexBuffer.device) else {
-                return nil
-            }
-            return Caster(positions: positions, submesh: submesh, placement: .skinned(influences: influences, jointMatrices: skin.jointMatrices().map { $0.cameraRelative(to: cameraPosition) }), alpha: alpha)
+            return Caster(positions: positions, submesh: submesh, placement: placement, alpha: alpha)
         }
         // Materials that sample shadows themselves are kept out of the screen-space mask, like non-receivers.
         let skipsMask = { (entry: SceneGraph.MeshEntry) in !entry.receivesShadow || (entry.material as? any SamplesShadowsInShader)?.samplesShadowsInShader == true }
@@ -378,7 +377,6 @@ public final class Shadows {
         }
         positionBuffers = positionBuffers.filter { usedKeys.contains($0.key) }
         texCoordBuffers = texCoordBuffers.filter { usedTexCoords.contains($0.key) }
-        influenceBuffers = influenceBuffers.filter { usedInfluences.contains($0.key) }
         let customCasters = zip(casterRenderers, customEntries).filter { !$0.1.isEmpty }.map { (renderer: $0.0, entries: $0.1) }
         guard !casters.isEmpty || !customCasters.isEmpty else {
             return nil
@@ -588,10 +586,6 @@ public final class Shadows {
         }
     }
 
-    private func gpuSkin(of entry: SceneGraph.MeshEntry) -> SceneGraph.SkinPose? {
-        entry.hasMorphs ? nil : entry.skin
-    }
-
     private func positionBuffer(for mesh: MetalMesh, key: PositionKey) -> MTLBuffer? {
         if let buffer = positionBuffers[key] {
             return buffer
@@ -615,20 +609,6 @@ public final class Shadows {
         }
         buffer.label = "Shadow Caster Texture Coordinates"
         texCoordBuffers[key] = buffer
-        return buffer
-    }
-
-    // Joints (as floats) and weights per vertex, laid out as two float4s.
-    private func influenceBuffer(for entry: SceneGraph.MeshEntry, key: InfluenceKey, device: MTLDevice) -> MTLBuffer? {
-        if let buffer = influenceBuffers[key] {
-            return buffer
-        }
-        let influences = entry.skinVertices.flatMap { [SIMD4<Float>($0.joints), $0.weights] }
-        guard let buffer = device.makeBuffer(bytes: influences, length: influences.count * MemoryLayout<SIMD4<Float>>.stride, options: .storageModeShared) else {
-            return nil
-        }
-        buffer.label = "Shadow Caster Skin Influences"
-        influenceBuffers[key] = buffer
         return buffer
     }
 }
@@ -662,13 +642,7 @@ private struct TexCoordKey: Hashable {
     var index: Int
 }
 
-private struct InfluenceKey: Hashable {
-    var node: SceneGraph.Node.ID
-    var revision: Int
-}
-
-// Draws casters into each light's slice of the shadow map, with a second pipeline that
-// skins vertices on the GPU.
+// Draws casters into each light's slice of the shadow map: one pipeline per position stride, solid and see-through.
 struct ShadowCasterDepthPass: Element {
     var frame: Shadows.Frame
 
@@ -680,11 +654,7 @@ struct ShadowCasterDepthPass: Element {
             let shaders = try ShadowCasterShaders.shared()
             let shadowMap = frame.shadowMap
             let depthTexture = shadowMap.depthTexture(forSubmission: submissionIndex)
-            let isStatic = { (caster: Shadows.Caster) in if case .model = caster.placement { true } else { false } }
-            let staticCasters = frame.casters.filter { isStatic($0) && $0.alpha == nil }
-            let skinnedCasters = frame.casters.filter { !isStatic($0) && $0.alpha == nil }
-            let staticAlphaCasters = frame.casters.filter { isStatic($0) && $0.alpha != nil }
-            let skinnedAlphaCasters = frame.casters.filter { !isStatic($0) && $0.alpha != nil }
+            let groups = ShadowCasterShaders.groups(frame.casters)
             return ForEach(Array(0..<shadowMap.lightCount), id: \.self) { lightIndex in
                 let lightViewProjection = frame.casterViewProjections.indices.contains(lightIndex) ? frame.casterViewProjections[lightIndex] : shadowMap.lightViewProjectionMatrices[lightIndex]
                 let sliceRender = shadowMap.sliceRenders.indices.contains(lightIndex) ? shadowMap.sliceRenders[lightIndex] : nil
@@ -692,23 +662,8 @@ struct ShadowCasterDepthPass: Element {
                 let depthBias = -(sliceRender?.depthBias ?? shadowMap.depthBias)
                 let slopeScale = -(sliceRender?.slopeScale ?? shadowMap.slopeScale)
                 try RenderPass(label: "Shadow Casters [\(lightIndex)]") {
-                    if !staticCasters.isEmpty {
-                        try pipeline("Shadow Casters", vertexShader: shaders.staticVertex, fragmentShader: shaders.fragment, vertexDescriptor: shaders.staticDescriptor, casters: staticCasters, lightViewProjection: lightViewProjection)
-                            .depthBias(depthBias, slopeScale: slopeScale)
-                            .depthCompare(function: .greaterEqual, writes: true)
-                    }
-                    if !skinnedCasters.isEmpty {
-                        try pipeline("Skinned Shadow Casters", vertexShader: shaders.skinnedVertex, fragmentShader: shaders.fragment, vertexDescriptor: shaders.skinnedDescriptor, casters: skinnedCasters, lightViewProjection: lightViewProjection)
-                            .depthBias(depthBias, slopeScale: slopeScale)
-                            .depthCompare(function: .greaterEqual, writes: true)
-                    }
-                    if !staticAlphaCasters.isEmpty {
-                        try pipeline("See-Through Shadow Casters", vertexShader: shaders.staticAlphaVertex, fragmentShader: shaders.alphaFragment, vertexDescriptor: shaders.staticAlphaDescriptor, casters: staticAlphaCasters, lightViewProjection: lightViewProjection)
-                            .depthBias(depthBias, slopeScale: slopeScale)
-                            .depthCompare(function: .greaterEqual, writes: true)
-                    }
-                    if !skinnedAlphaCasters.isEmpty {
-                        try pipeline("Skinned See-Through Shadow Casters", vertexShader: shaders.skinnedAlphaVertex, fragmentShader: shaders.alphaFragment, vertexDescriptor: shaders.skinnedAlphaDescriptor, casters: skinnedAlphaCasters, lightViewProjection: lightViewProjection)
+                    ForEach(Array(groups.enumerated()), id: \.offset) { _, group in
+                        try pipeline(group.isSeeThrough ? "See-Through Shadow Casters" : "Shadow Casters", vertexShader: group.isSeeThrough ? shaders.staticAlphaVertex : shaders.staticVertex, fragmentShader: group.isSeeThrough ? shaders.alphaFragment : shaders.fragment, vertexDescriptor: shaders.descriptor(stride: group.stride, seeThrough: group.isSeeThrough), casters: group.casters, lightViewProjection: lightViewProjection)
                             .depthBias(depthBias, slopeScale: slopeScale)
                             .depthCompare(function: .greaterEqual, writes: true)
                     }
@@ -767,15 +722,10 @@ private func drawCaster(_ caster: Shadows.Caster) -> AnyElement {
         indexCount: caster.submesh.indexCount,
         indexBufferOffset: caster.submesh.indexBufferOffset
     )
-    .vertexBuffer(caster.positions, index: 0)
+    .vertexBuffer(caster.positions, index: 0, offset: caster.positionOffset)
     let placed = switch caster.placement {
     case .model(let modelMatrix):
         draw.parameter("modelMatrix", functionType: .vertex, value: modelMatrix).eraseToAnyElement()
-    case let .skinned(influences, jointMatrices):
-        draw
-            .vertexBuffer(influences, index: 1)
-            .parameter("jointMatrices", functionType: .vertex, values: jointMatrices)
-            .eraseToAnyElement()
     }
     guard let (alpha, texCoords) = caster.alpha, let shaders = try? ShadowCasterShaders.shared() else {
         return placed
@@ -792,16 +742,12 @@ private func drawCaster(_ caster: Shadows.Caster) -> AnyElement {
 // From ShadowCasters.metal in SceneSprocketsShaders, loaded once.
 struct ShadowCasterShaders {
     var staticVertex: VertexShader
-    var skinnedVertex: VertexShader
     var fragment: FragmentShader
     var mark: FragmentShader
     var staticDescriptor: MTLVertexDescriptor
-    var skinnedDescriptor: MTLVertexDescriptor
     var staticAlphaVertex: VertexShader
-    var skinnedAlphaVertex: VertexShader
     var alphaFragment: FragmentShader
     var staticAlphaDescriptor: MTLVertexDescriptor
-    var skinnedAlphaDescriptor: MTLVertexDescriptor
     var whiteTexture: MTLTexture
     var sampler: MTLSamplerState
 
@@ -820,15 +766,6 @@ struct ShadowCasterShaders {
         let staticDescriptor = MTLVertexDescriptor()
         staticDescriptor.attributes[0].format = .float3
         staticDescriptor.layouts[0].stride = 12
-        let skinnedDescriptor = MTLVertexDescriptor()
-        skinnedDescriptor.attributes[0].format = .float3
-        skinnedDescriptor.layouts[0].stride = 12
-        skinnedDescriptor.attributes[1].format = .float4
-        skinnedDescriptor.attributes[1].bufferIndex = 1
-        skinnedDescriptor.attributes[2].format = .float4
-        skinnedDescriptor.attributes[2].bufferIndex = 1
-        skinnedDescriptor.attributes[2].offset = 16
-        skinnedDescriptor.layouts[1].stride = 32
         func withTexCoords(_ descriptor: MTLVertexDescriptor) -> MTLVertexDescriptor {
             // swiftlint:disable:next force_cast - MTLVertexDescriptor copies are always MTLVertexDescriptor
             let copy = descriptor.copy() as! MTLVertexDescriptor
@@ -853,20 +790,39 @@ struct ShadowCasterShaders {
         }
         let shaders = Self(
             staticVertex: try library.vertex_static,
-            skinnedVertex: try library.vertex_skinned,
             fragment: try library.fragment_depth,
             mark: try library.fragment_mark,
             staticDescriptor: staticDescriptor,
-            skinnedDescriptor: skinnedDescriptor,
             staticAlphaVertex: try library.vertex_static_alpha,
-            skinnedAlphaVertex: try library.vertex_skinned_alpha,
             alphaFragment: try library.fragment_alpha,
             staticAlphaDescriptor: withTexCoords(staticDescriptor),
-            skinnedAlphaDescriptor: withTexCoords(skinnedDescriptor),
             whiteTexture: whiteTexture,
             sampler: sampler
         )
         cached = shaders
         return shaders
+    }
+
+    // Position-only layout for casters whose positions are `stride` bytes apart (deformed meshes keep their own vertex
+    // layout, #595); the attribute offset is applied when the buffer is bound.
+    func descriptor(stride: Int, seeThrough: Bool) -> MTLVertexDescriptor {
+        // swiftlint:disable:next force_cast - MTLVertexDescriptor copies are always MTLVertexDescriptor
+        let descriptor = (seeThrough ? staticAlphaDescriptor : staticDescriptor).copy() as! MTLVertexDescriptor
+        descriptor.layouts[0].stride = stride
+        return descriptor
+    }
+
+    // Casters split by whether they are see-through and by position stride, one pipeline each.
+    static func groups(_ casters: [Shadows.Caster]) -> [(isSeeThrough: Bool, stride: Int, casters: [Shadows.Caster])] {
+        var keys: [SIMD2<Int>] = []
+        var groups: [SIMD2<Int>: [Shadows.Caster]] = [:]
+        for caster in casters {
+            let key = SIMD2(caster.alpha == nil ? 0 : 1, caster.positionStride)
+            if groups[key] == nil {
+                keys.append(key)
+            }
+            groups[key, default: []].append(caster)
+        }
+        return keys.map { (isSeeThrough: $0.x == 1, stride: $0.y, casters: groups[$0] ?? []) }
     }
 }

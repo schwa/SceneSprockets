@@ -109,10 +109,43 @@ func skinnedCasterIsSkinnedOnGPU() throws {
     let lit = try brightness(sceneGraph, at: pixel, shadows: nil)
     let shadowed = try brightness(sceneGraph, at: pixel, shadows: shadows)
     #expect(Double(shadowed) < Double(lit) * 0.6)
-    // The caster is skinned on the GPU, not CPU-deformed.
+    // The caster draws the shared GPU deformation's vertices (#595), not a CPU-deformed copy.
     let context = try #require(makeRenderContext(sceneGraph: sceneGraph, camera: nil, cameraMatrix: nil, aspectRatio: 1))
-    let frame = try #require(try shadows.prepare(entries: sceneGraph.meshEntries(), context: context, bounds: sceneGraph.bounds))
-    #expect(frame.casters.contains { if case .skinned = $0.placement { true } else { false } })
+    let entries = sceneGraph.meshEntries()
+    #expect(!GPUDeformation.prepare(entries: entries, revision: context.revision, submissionIndex: 0, includesShadowCasters: true).isEmpty)
+    let frame = try #require(try shadows.prepare(entries: entries, context: context, bounds: sceneGraph.bounds))
+    let box = try #require(entries.first { $0.skin != nil })
+    let deformedBuffers = Set(try #require(box.renderCache.gpuDeformation).slots[0].values.map(ObjectIdentifier.init))
+    #expect(frame.casters.contains { deformedBuffers.contains(ObjectIdentifier($0.positions)) })
+    #expect(box.renderCache.deformation == nil)
+}
+
+// #595: morphed casters are deformed by the GPU pass too, before the shadow pass, and their shadow moves with the morph.
+@Test(.enabled(if: deviceSupportsMetal4))
+@MainActor
+func morphedCasterUsesTheGPUDeformation() throws {
+    let (sceneGraph, pixel) = try makeScene()
+    let box = try #require(sceneGraph.root.children.first { $0.label == "Box" })
+    guard case let .mesh(mesh, _, _, _) = box.content else {
+        Issue.record("No box mesh")
+        return
+    }
+    // A morph that moves the box far away: fully on, the floor spot is no longer shadowed.
+    box.morphTargets = [SceneGraph.MorphTarget(positionDeltas: Array(repeating: [40, 0, 0], count: mesh.vertexCount))]
+    box.morphWeights = [0]
+    let shadows = Shadows(intensity: 0.8)
+    let lit = try brightness(sceneGraph, at: pixel, shadows: nil)
+    #expect(Double(try brightness(sceneGraph, at: pixel, shadows: shadows)) < Double(lit) * 0.6)
+    box.morphWeights = [1]
+    #expect(Double(try brightness(sceneGraph, at: pixel, shadows: shadows)) > Double(lit) * 0.9)
+
+    let context = try #require(makeRenderContext(sceneGraph: sceneGraph, camera: nil, cameraMatrix: nil, aspectRatio: 1))
+    let entries = sceneGraph.meshEntries()
+    _ = GPUDeformation.prepare(entries: entries, revision: context.revision, submissionIndex: 0, includesShadowCasters: true)
+    let frame = try #require(try shadows.prepare(entries: entries, context: context, bounds: sceneGraph.bounds))
+    let morphed = try #require(entries.first { $0.hasMorphs })
+    let deformedBuffers = Set(try #require(morphed.renderCache.gpuDeformation).slots[0].values.map(ObjectIdentifier.init))
+    #expect(frame.casters.contains { deformedBuffers.contains(ObjectIdentifier($0.positions)) })
 }
 
 // #478: an app changes shadow settings on the main thread while SceneView's render thread prepares the frame. The

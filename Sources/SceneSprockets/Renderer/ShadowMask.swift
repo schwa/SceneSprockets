@@ -75,17 +75,16 @@ struct SceneShadowMaskPass: Element {
     // camera so they pass where they are the front surface.
     private func receiverMaskPass(casters: [Shadows.Caster], mask: MTLTexture) throws -> some Element {
         let shaders = try ShadowCasterShaders.shared()
-        let staticCasters = casters.filter { if case .model = $0.placement { true } else { false } }
-        let skinnedCasters = casters.filter { if case .skinned = $0.placement { true } else { false } }
+        // One pipeline per position stride; the mask needs positions only.
+        let groups = ShadowCasterShaders.groups(casters.map { caster in
+            var caster = caster
+            caster.alpha = nil
+            return caster
+        })
         return try RenderPass(label: "Shadow Receiver Mask") {
             QueueBarrier(after: [.fragment, .dispatch], before: [.vertex, .fragment])
-            if !staticCasters.isEmpty {
-                try casterPipeline("Non-Receivers", vertexShader: shaders.staticVertex, fragmentShader: shaders.mark, vertexDescriptor: shaders.staticDescriptor, casters: staticCasters, viewProjection: viewProjection, colorPixelFormat: mask.pixelFormat)
-                    .depthBias(Self.depthBias, slopeScale: Self.slopeScale)
-                    .depthCompare(function: .greaterEqual, writes: false)
-            }
-            if !skinnedCasters.isEmpty {
-                try casterPipeline("Skinned Non-Receivers", vertexShader: shaders.skinnedVertex, fragmentShader: shaders.mark, vertexDescriptor: shaders.skinnedDescriptor, casters: skinnedCasters, viewProjection: viewProjection, colorPixelFormat: mask.pixelFormat)
+            ForEach(Array(groups.enumerated()), id: \.offset) { _, group in
+                try casterPipeline("Non-Receivers", vertexShader: shaders.staticVertex, fragmentShader: shaders.mark, vertexDescriptor: shaders.descriptor(stride: group.stride, seeThrough: false), casters: group.casters, viewProjection: viewProjection, colorPixelFormat: mask.pixelFormat)
                     .depthBias(Self.depthBias, slopeScale: Self.slopeScale)
                     .depthCompare(function: .greaterEqual, writes: false)
             }
