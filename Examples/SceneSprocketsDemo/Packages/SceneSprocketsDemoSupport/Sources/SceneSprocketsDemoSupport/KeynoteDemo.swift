@@ -2,6 +2,7 @@ import AVFoundation
 import Foundation
 import GeometryLite3D
 import Metal
+import MetalKit
 import MetalSprocketsGLTF
 import MetalSprocketsParticles
 import MetalSprocketsParticlesSamples
@@ -32,7 +33,7 @@ public final class KeynoteDemo: DemoScene {
     // debugging, then add-ons (#310). Slides are built by title, so reordering only means editing this list.
     public static let titles = [
         "SceneSprockets", "SceneView", "Scene Graph", "Shapes", "Materials", "Lights", "Many Lights",
-        "Shadows", "Fog", "Opacity & Fades", "Blend Modes", "Glass", "PBR Extensions", "Custom Shaders", "Video Textures", "glTF & Model I/O", "MaterialX",
+        "Shadows", "Fog", "Decals", "Opacity & Fades", "Blend Modes", "Glass", "PBR Extensions", "Custom Shaders", "Video Textures", "glTF & Model I/O", "MaterialX",
         "Actions", "Implicit Animation", "Constraints", "Paths", "Animation Blending", "Deformation",
         "Particles", "Mesh Emitters",
         "Physics", "More Physics", "Post-Processing", "Level of Detail", "Performance", "SwiftECS World",
@@ -50,7 +51,8 @@ public final class KeynoteDemo: DemoScene {
 
     // Per-slide state: each is used only while its slide is showing.
     private let shadowRenderer = Shadows(intensity: 0.75, softness: 2)
-    private static let shadowedTitles: Set<String> = ["Shadows", "Fog", "Metaballs", "Voxels", "Toon"]
+    // Decals read the scene's depth, which the view keeps readable when shadows are on (#644).
+    private static let shadowedTitles: Set<String> = ["Shadows", "Fog", "Decals", "Metaballs", "Voxels", "Toon"]
     private var shuffleCubes: [SceneGraph.Node] = []
     private var sinceShuffle: Float = 0
     private var blendMixer: SceneGraph.AnimationMixer?
@@ -78,6 +80,8 @@ public final class KeynoteDemo: DemoScene {
     private var physicsDebugNode: SceneGraph.Node?
     // The Many Lights slide's swarm (#611): every light is built once; the count slider hides the rest.
     private var swarmLights: [(node: SceneGraph.Node, phase: Float, radius: Float, speed: Float)] = []
+    // The Decals slide (#644): the decal that slides over the step, and its material, whose angle limit the slider sets.
+    private var movingDecal: SceneGraph.Node?
     private static let maximumSwarmLights = 400
     private let debugDrawMaterial = ShaderMaterial.vertexColors()
     private static let tubeJointCount = 7
@@ -166,7 +170,7 @@ public final class KeynoteDemo: DemoScene {
         root.addChild(cameraNode)
         super.init(
             sceneGraph: SceneGraph(root: root),
-            renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0.05, 0.05, 0.07]), pbr, ShaderMaterialRenderer(), PointCloudRenderer(), TerrainRenderer(), SignedDistanceRenderer(ambientLightColor: [0.05, 0.05, 0.07], pbr: pbr), VoxelRenderer(ambientLightColor: [0.15, 0.15, 0.18], pbr: pbr), ToonRenderer()],
+            renderers: [BlinnPhongMaterialRenderer(ambientLightColor: [0.05, 0.05, 0.07]), pbr, ShaderMaterialRenderer(), PointCloudRenderer(), TerrainRenderer(), SignedDistanceRenderer(ambientLightColor: [0.05, 0.05, 0.07], pbr: pbr), VoxelRenderer(ambientLightColor: [0.15, 0.15, 0.18], pbr: pbr), ToonRenderer(), DecalRenderer()],
             cameraMatrix: .camera(eye: Self.eye(for: 0), target: Self.target(for: 0)),
             parameters: [.choice("Slide", Self.titles), .toggle("Auto-advance", default: false), .slider("Seconds per Slide", 2...15, default: 6)]
         )
@@ -310,6 +314,12 @@ public final class KeynoteDemo: DemoScene {
         • Volumetric fog scatters the moonlight in the air; the pillars' shadows cut shafts through it.
         • It marches each pixel's ray through the shadow map, so it needs shadows on.
         • Distance fog (start and end distances) is also available, alone or with it.
+        """,
+        "Decals": """
+        • A decal projects an image onto whatever surfaces are inside a box: road markings, footprints, bullet holes.
+        • It is a DecalMaterial on a box-shaped node; the node's transform places and sizes the projector.
+        • The moving arrow wraps over the step and fades on the steep side, past the maximum angle.
+        • Decals draw after the scene from its depth, so they need no changes to the meshes they land on.
         """,
         "Opacity & Fades": """
         • Node opacity is inherited: fade a parent and its children fade too.
@@ -497,6 +507,8 @@ public final class KeynoteDemo: DemoScene {
             [
                 .toggle("Fog", default: true), .slider("Fog Density", 0...0.2, default: 0.06)
             ]
+        case "Decals":
+            [.toggle("Move Decal", default: true), .slider("Maximum Angle", 10...90, default: 60)]
         case "Opacity & Fades":
             [.slider("Fade Speed", 0...3, default: 1)]
         case "Blend Modes":
@@ -701,6 +713,8 @@ public final class KeynoteDemo: DemoScene {
             updateSwarm(time: time)
         case "Paths":
             updateCars(deltaTime: deltaTime)
+        case "Decals":
+            updateDecals(time: time)
         default:
             break
         }
@@ -1378,6 +1392,14 @@ public final class KeynoteDemo: DemoScene {
             // Noir
             sceneGraph.postProcessing = SceneGraph.PostProcessing(contrast: 1.8, saturation: 0,
                                                                   vignetteIntensity: 0.9, vignetteRadius: 0.35)
+            """, to: slide)
+        case "Decals":
+            decalsSlide(slide)
+            addCode("""
+            let arrow = DecalMaterial(texture: arrowTexture, maximumAngle: .pi / 3)
+            floor.addChild(SceneGraph.Node(shape: .box(), material: arrow,
+                transform: .init(rotation: lookDown, scale: [1.2, 1.2, 1])))
+            SceneView(scene, renderers: renderers + [DecalRenderer()])
             """, to: slide)
         case "Fog":
             fogSlide(slide)
@@ -2162,6 +2184,80 @@ public final class KeynoteDemo: DemoScene {
             title?.run(.repeatForever(pulse.timingMode(.easeInEaseOut)), forKey: "pulse")
         }
         finale.run(.sequence([.wait(duration: delay), reveal]), forKey: "finale")
+    }
+
+    private func decalsSlide(_ slide: SceneGraph.Node) {
+        slide.addChild(SceneGraph.Node(label: "Sun", transform: Transform3D(position: [2, 6, 4], lookingAt: [0, 0, 0]), content: .light(Light(type: .directional, color: [1, 0.95, 0.9], intensity: 0.9))))
+        addLight(to: slide, at: [-3, 3, 5], color: [0.6, 0.7, 1], intensity: 6, castsShadow: false)
+        // Matte, so the decals are not washed out by a broad highlight.
+        let concrete = BlinnPhongSceneMaterial(ambient: .color(0.3), diffuse: .color([0.45, 0.45, 0.48]), specular: .color(0.02), shininess: 8)
+        // Tilted toward the camera, so the ground and the decals on it face the audience.
+        let slide = slide.addChild(SceneGraph.Node(label: "Street", transform: .init(translation: [0, 0.8, 0], rotation: simd_quatf(angle: 0.7, axis: [1, 0, 0]), scale: [1.3, 1.3, 1.3])))
+        slide.addChild(SceneGraph.Node(label: "Ground", shape: .box(width: 8, height: 0.1, length: 4), material: concrete, transform: .init(translation: [0, -0.05, 0])))
+        slide.addChild(SceneGraph.Node(label: "Step", shape: .box(width: 1.6, height: 0.5, length: 4), material: concrete, transform: .init(translation: [0.8, 0.25, 0])))
+        slide.addChild(SceneGraph.Node(label: "Barrel", shape: .cylinder(radius: 0.4, height: 1.2), material: BlinnPhongSceneMaterial.plastic([0.7, 0.25, 0.15], shininess: 24), transform: .init(translation: [-2.6, 0.6, -0.6])))
+        // Projectors point down (their -Z along -Y); x and y of the box are the decal's width and height.
+        let lookDown = simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])
+        let stripes = DecalMaterial(texture: Self.decalTexture(.stripes), color: [1, 0.85, 0.2, 1])
+        slide.addChild(SceneGraph.Node(label: "Crossing", shape: .box(), material: stripes, transform: .init(translation: [-1.4, 0, 0.4], rotation: lookDown, scale: [1.8, 1.2, 0.6])))
+        let footprints = DecalMaterial(texture: Self.decalTexture(.footprints), color: [0.15, 0.12, 0.1, 0.85])
+        slide.addChild(SceneGraph.Node(label: "Footprints", shape: .box(), material: footprints, transform: .init(translation: [-2.6, 0, 0.9], rotation: lookDown * simd_quatf(angle: 0.4, axis: [0, 0, 1]), scale: [1, 1.6, 0.6])))
+        // Tall enough to reach both the ground and the top of the step as it slides across the edge.
+        let arrow = DecalMaterial(texture: Self.decalTexture(.arrow), color: [1, 1, 1, 1], maximumAngle: .pi / 3)
+        movingDecal = slide.addChild(SceneGraph.Node(label: "Arrow", shape: .box(), material: arrow, transform: .init(translation: [0, 0.25, -0.6], rotation: lookDown, scale: [1.2, 1.2, 1.4])))
+    }
+
+    private func updateDecals(time: Float) {
+        guard let movingDecal else {
+            return
+        }
+        if self[flag: "Move Decal"] {
+            movingDecal.transform.translation.x = sin(time * 0.6) * 1.4
+        }
+        if case let .mesh(mesh, materials, castsShadow, receivesShadow) = movingDecal.content, var material = materials.first as? DecalMaterial {
+            let angle = self[value: "Maximum Angle"] * .pi / 180
+            if material.maximumAngle != angle {
+                material.maximumAngle = angle
+                movingDecal.content = .mesh(mesh, materials: [material], castsShadow: castsShadow, receivesShadow: receivesShadow)
+            }
+        }
+    }
+
+    enum DecalPattern {
+        case arrow, stripes, footprints
+    }
+
+    // A small white-on-clear image for a decal, drawn once per pattern.
+    static func decalTexture(_ pattern: DecalPattern) -> MTLTexture? {
+        let size = 256
+        guard let context = CGContext(data: nil, width: size, height: size, bitsPerComponent: 8, bytesPerRow: size * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
+            return nil
+        }
+        context.setFillColor(red: 1, green: 1, blue: 1, alpha: 1)
+        let unit = CGFloat(size)
+        switch pattern {
+        case .arrow:
+            let path = CGMutablePath()
+            path.addLines(between: [CGPoint(x: 0.4, y: 0.1), CGPoint(x: 0.6, y: 0.1), CGPoint(x: 0.6, y: 0.55), CGPoint(x: 0.8, y: 0.55), CGPoint(x: 0.5, y: 0.9), CGPoint(x: 0.2, y: 0.55), CGPoint(x: 0.4, y: 0.55)].map { CGPoint(x: $0.x * unit, y: $0.y * unit) })
+            path.closeSubpath()
+            context.addPath(path)
+            context.fillPath()
+        case .stripes:
+            for stripe in 0..<5 {
+                context.fill(CGRect(x: (0.05 + CGFloat(stripe) * 0.19) * unit, y: 0.05 * unit, width: 0.11 * unit, height: 0.9 * unit))
+            }
+        case .footprints:
+            for step in 0..<4 {
+                let x = step.isMultiple(of: 2) ? 0.3 : 0.55
+                let y = 0.08 + CGFloat(step) * 0.22
+                context.fillEllipse(in: CGRect(x: x * unit, y: y * unit, width: 0.15 * unit, height: 0.12 * unit))
+                context.fillEllipse(in: CGRect(x: (x + 0.03) * unit, y: (y + 0.13) * unit, width: 0.09 * unit, height: 0.06 * unit))
+            }
+        }
+        guard let image = context.makeImage() else {
+            return nil
+        }
+        return try? MTKTextureLoader(device: demoDevice).newTexture(cgImage: image, options: [.SRGB: true, .generateMipmaps: true, .textureStorageMode: MTLStorageMode.private.rawValue])
     }
 
     private func fogSlide(_ slide: SceneGraph.Node) {

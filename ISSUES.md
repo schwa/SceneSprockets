@@ -14755,13 +14755,14 @@ Split from #512 (part b). Add-ons cannot contribute indirect lighting to Blinn-P
 ## 644: Keynote has no slide for projected decals
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:demo, effort:s
 milestone: Demo
 created: 2026-11-23T12:27:33Z
-updated: 2026-11-23T12:27:35Z
+updated: 2026-11-23T12:39:26Z
+closed: 2026-11-23T12:39:26Z
 +++
 
 Projected decals (#397) are not shown in the keynote. A slide could project a texture (for example a road marking or footprints) onto a floor and a step, with a code panel.
