@@ -14592,13 +14592,14 @@ While adding 512 bytes to LightingShadowUniforms (#88), MetalSprocketsGLTFMeshop
 ## 634: Shadow mask pass is skipped in stereo
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:renderer, effort:m, subtask
 milestone: Rendering
 created: 2026-11-23T03:12:45Z
-updated: 2026-11-23T03:12:48Z
+updated: 2026-11-23T04:22:40Z
+closed: 2026-11-23T04:22:40Z
 +++
 
 Part of #382: in visionOS immersive (stereo) rendering this screen-space pass does not run for either eye. It needs texture2d_array targets (one slice per eye) and per-eye view-projections. Testable on macOS with layered offscreen targets, like StereoRenderTests.

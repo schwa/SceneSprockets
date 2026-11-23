@@ -250,8 +250,29 @@ public struct SceneGraphElement: Element {
                 }
                 return (color, depth)
             }()
+            // In stereo (#634): one 2D view per eye of the layered targets, for shadows and the shadow mask.
+            // Empty when not in stereo or the targets cannot be read and written.
+            let stereoEyeTargets: [(color: MTLTexture, depth: MTLTexture)] = {
+                guard let stereoViews, debugMode == nil, let color = renderPassDescriptor?.colorAttachments[0].texture, let depth = renderPassDescriptor?.depthAttachment.texture,
+                      color.textureType == .type2DArray, depth.textureType == .type2DArray,
+                      color.arrayLength >= stereoViews.count, depth.arrayLength >= stereoViews.count,
+                      color.usage.isSuperset(of: Shadows.requiredColorUsage), depth.usage.isSuperset(of: Shadows.requiredDepthUsage),
+                      depth.storageMode != .memoryless
+                else {
+                    return []
+                }
+                let eyes = (0..<stereoViews.count).compactMap { eye -> (color: MTLTexture, depth: MTLTexture)? in
+                    guard let colorView = color.makeTextureView(pixelFormat: color.pixelFormat, textureType: .type2D, levels: 0..<1, slices: eye..<(eye + 1)),
+                          let depthView = depth.makeTextureView(pixelFormat: depth.pixelFormat, textureType: .type2D, levels: 0..<1, slices: eye..<(eye + 1))
+                    else {
+                        return nil
+                    }
+                    return (colorView, depthView)
+                }
+                return eyes.count == stereoViews.count ? eyes : []
+            }()
             // Prepared before the renderers, which sample it while shading.
-            let shadowFrame = try postTargets.flatMap { targets in
+            let shadowFrame = try (postTargets ?? stereoEyeTargets.first).flatMap { targets in
                 try shadows?.prepare(entries: entries, context: context, bounds: presentation.bounds, viewSize: (targets.color.width, targets.color.height), renderers: renderers)
             }
             if let shadows, let shadowFrame {
@@ -413,6 +434,36 @@ public struct SceneGraphElement: Element {
                 if let weightedPass {
                     weightedPass
                 }
+            }
+            if let stereoViews, !stereoEyeTargets.isEmpty, let shadowFrame, let shadows {
+                // Stereo shadows (#634): the caster pass, then the shadow mask once per eye.
+                let cameraPosition = context.cameraMatrix.columns.3.xyz
+                let eyeViewProjections = stereoViews.relativeViewProjections(origin: cameraPosition)
+                var casterPass = ShadowCasterDepthPass(frame: shadowFrame).gpuTimed(SceneGPUTimingLabel.shadowCasters).eraseToAnyElement()
+                var maskPasses = shadowFrame.masksEverything ? [] : stereoEyeTargets.enumerated().map { eye, targets in
+                    SceneShadowMaskPass(frame: shadowFrame, sceneDepthTexture: targets.depth, outputTexture: targets.color, viewProjection: eyeViewProjections[eye], intensity: shadows.intensity, color: shadows.color, radius: shadows.softness)
+                        .gpuTimed(SceneGPUTimingLabel.shadowMask)
+                        .eraseToAnyElement()
+                }
+                #if os(visionOS)
+                if immersiveContext != nil {
+                    casterPass = casterPass.immersiveRenderContext(nil).eraseToAnyElement()
+                    maskPasses = maskPasses.map { $0.immersiveRenderContext(nil).eraseToAnyElement() }
+                }
+                #endif
+                return try MetalSprockets.Group {
+                    casterPass
+                    ForEach(Array(prePasses.enumerated()), id: \.offset) { _, prePass in
+                        prePass
+                    }
+                    .gpuTimed(SceneGPUTimingLabel.prePasses)
+                    scenePass
+                        .gpuTimed(SceneGPUTimingLabel.scene)
+                    ForEach(Array(maskPasses.enumerated()), id: \.offset) { _, maskPass in
+                        maskPass
+                    }
+                }
+                .eraseToAnyElement()
             }
             guard let postTargets, plan.hasPostPhase else {
                 if prePasses.isEmpty {
