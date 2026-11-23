@@ -902,10 +902,10 @@ Want: fog settings on the scene, used by Blinn-Phong and PBR.
 status: open
 priority: low
 kind: feature
-labels: area:renderer, effort:l
+labels: area:renderer, effort:l, umbrella
 milestone: Rendering-2
 created: 2026-10-13T20:20:23Z
-updated: 2026-11-20T06:33:14Z
+updated: 2026-11-23T03:45:46Z
 +++
 
 Camera post-processing is incomplete compared with SceneKit cameras. Done: SceneGraph.postProcessing (SSAO, exposure, contrast, saturation, vignette, color grading), tone mapping in every renderer (#501) and automatic exposure (#508).
@@ -917,6 +917,8 @@ Missing:
 Decided (2026-11-23): when bloom or depth of field is on, draw the scene linear into an rgba16Float target, then run bloom (bright pass and blur chain) and tone mapping as post passes into the view; renderers skip their own tone mapping in that path. The default path stays as today. Split into bloom, depth of field and motion blur subtasks when started. The SSAO blur is split out to its own issue.
 
 Related: #43, #501, #508.
+
+- `2026-11-23T03:45:46Z`: Split into #640 (HDR path and bloom, first), #641 (depth of field), #642 (motion blur).
 
 ---
 
@@ -14668,6 +14670,51 @@ updated: 2026-11-23T03:12:48Z
 +++
 
 Part of #382: in visionOS immersive (stereo) rendering this screen-space pass does not run for either eye. It needs texture2d_array targets (one slice per eye) and per-eye view-projections. Testable on macOS with layered offscreen targets, like StereoRenderTests.
+
+---
+
+## 640: No HDR scene path and no bloom
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:renderer, effort:l, subtask
+milestone: Rendering-2
+created: 2026-11-23T03:45:46Z
++++
+
+Part of #45. Each renderer tone-maps into the 8-bit view, so there is no bloom. Decided in #45: when bloom is on, draw the scene linear (outputIsLinear) into an rgba16Float target, then run bloom (bright pass and blur chain) and tone mapping as post passes into the view; the default path stays as today.
+
+---
+
+## 641: No depth of field
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:renderer, effort:m, subtask
+milestone: Rendering-2
+created: 2026-11-23T03:45:46Z
++++
+
+Part of #45. Cameras have no depth of field (SCNCamera wantsDepthOfField, focusDistance, fStop). Runs on the linear HDR target from #640.
+
+---
+
+## 642: No motion blur
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:renderer, effort:m, subtask
+milestone: Rendering-2
+created: 2026-11-23T03:45:46Z
++++
+
+Part of #45. Cameras have no motion blur (SCNCamera motionBlurIntensity). Needs per-pixel velocity (#510) and the HDR target from #640.
 
 ---
 
