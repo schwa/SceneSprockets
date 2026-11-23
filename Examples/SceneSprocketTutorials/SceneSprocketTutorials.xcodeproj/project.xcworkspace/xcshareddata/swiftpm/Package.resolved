@@ -69,8 +69,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsMaterialX",
       "state" : {
-        "branch" : "main",
-        "revision" : "dfcb8197f7bab2568518ce093f8fc2bbfea89ec6"
+        "revision" : "7a6c85f0f4aaf0dacd7afa41e95b5679d12db73a",
+        "version" : "0.0.1"
       }
     },
     {
