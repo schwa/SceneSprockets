@@ -11552,6 +11552,9 @@ There is no temporal anti-aliasing to stabilize geometry, specular highlights an
 
 TAA needs a sub-pixel jitter on every renderer's projection, per-pixel motion vectors for skinned, morphed, instanced and moving meshes (#510), a history target per view, and a resolve pass with neighborhood clamping. It works best on linear HDR color before tone mapping (#399). Depends on #510.
 
+- `2026-11-23T14:15:53Z`: We would use MetalFX for this?
+- `2026-11-23T14:17:28Z`: Related: #662 (MetalFX spatial in MetalSprocketsAddOns).
+
 ---
 
 ## 497: Light cookies / IES
@@ -15091,6 +15094,23 @@ Follow-up to #532. Irradiance probe volumes:
 - are not drawn in the editor (no gizmo for the volume or its probes);
 - cover one volume at a time: the first volume containing a point wins, with no blending between volumes;
 - are not used by shader materials.
+
+---
+
+## 662: MetalSprocketsAddOns has no built-in MetalFX spatial antialiasing/upscaling
+
++++
+status: open
+priority: low
+kind: feature
+labels: effort:m, area:renderer
+created: 2026-11-23T14:16:15Z
+updated: 2026-11-23T14:17:28Z
++++
+
+MetalFX spatial antialiasing (built into MetalSprocketAddOns)
+
+- `2026-11-23T14:17:28Z`: Related: #496 (TAA, could use MetalFX temporal), #559 (immersive has no AA).
 
 ---
 
