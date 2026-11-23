@@ -7,7 +7,7 @@ import simd
 import SwiftUI
 
 /// Editor aids drawn over a scene: a ground grid, world axes, line icons for lights and cameras (which have no
-/// geometry of their own), and bounding boxes (#406). Draw them with ``element(sceneGraph:viewport:options:selected:)``
+/// geometry of their own), and bounding boxes (#406). Draw them with ``element(sceneGraph:viewport:options:selected:gridTransform:)``
 /// from `SceneView.sceneDecorations`.
 public enum EditorGizmos {
     /// Which aids to draw.
@@ -26,7 +26,7 @@ public enum EditorGizmos {
         public static let lightsAndCameras = Self(rawValue: 1 << 2)
         /// The world bounding boxes of the selected nodes and their subtrees.
         public static let bounds = Self(rawValue: 1 << 3)
-        /// The curves of nodes with a ``SceneGraph/Node/path`` (#607). Clicking one picks its node.
+        /// The curves of nodes with a `SceneGraph.Node.path` (#607). Clicking one picks its node.
         public static let paths = Self(rawValue: 1 << 4)
         public static let all: Self = [.grid, .axes, .lightsAndCameras, .bounds, .paths]
     }

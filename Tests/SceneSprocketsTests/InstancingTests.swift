@@ -139,7 +139,7 @@ func hitTestReportsTheInstanceIndex() throws {
     #expect(SceneGraph(root: root).hitTest(segmentFrom: [0, 0, 5], to: [0, 0, -5]).isEmpty)
 }
 
-@Test
+@Test(.enabled(if: deviceSupportsMetal4))
 func instancedMeshRendersEveryCopy() throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let box = MetalMesh(mesh: .box(), device: device)

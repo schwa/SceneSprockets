@@ -5,7 +5,7 @@ import SceneSprockets
 import simd
 import SwiftUI
 
-/// Handles on the control points of a node's ``SceneGraph/Node/path``, which move the points (#619).
+/// Handles on the control points of a node's `SceneGraph.Node.path`, which move the points (#619).
 ///
 /// Each point is a small square, the same size on screen at any distance. Dragging a point moves it in the plane that
 /// faces the camera through it, and writes a new path to the node. Pass the gizmo to `SceneView`'s

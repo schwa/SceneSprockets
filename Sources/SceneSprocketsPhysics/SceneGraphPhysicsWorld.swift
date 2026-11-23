@@ -79,7 +79,7 @@ public final class SceneGraphPhysicsWorld {
         public var position: SIMD3<Float>
         /// How far along the ray, from 0 at its origin to 1 at `origin + direction`.
         public var fraction: Float
-        /// The node's ``SceneGraph/PhysicsBody/surface`` tag.
+        /// The node's `SceneGraph.PhysicsBody.surface` tag.
         public var surface: String?
         /// For a `.mesh` shape, the submesh of the node's mesh that is hit; nil for other shapes.
         public var submeshIndex: Int?
