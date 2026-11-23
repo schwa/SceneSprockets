@@ -232,7 +232,7 @@ public struct SceneView: View {
                 frameTiming.statistics = statistics
             }
             if showsStatistics {
-                statisticsHolder.record(statistics)
+                statisticsHolder.record(statistics, sceneGraph: sceneGraph)
             }
             onFrameTiming?(statistics)
         }
@@ -243,7 +243,7 @@ public struct SceneView: View {
         }
         .overlay(alignment: .bottomLeading) {
             if showsStatistics {
-                SceneStatisticsOverlay(holder: statisticsHolder, sceneGraph: sceneGraph)
+                SceneStatisticsOverlay(holder: statisticsHolder)
             }
         }
     }

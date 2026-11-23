@@ -7,8 +7,8 @@ import SceneSprockets
 import SceneSprocketsAddOns
 import SceneSprocketsBlinnPhong
 @testable import SceneSprocketsDemoSupport
-import simd
 import SceneSprocketsMaterialX
+import simd
 import Testing
 
 @Test(arguments: DemoCatalog.demos)
@@ -86,17 +86,38 @@ func keynoteShowing(_ title: String) throws -> KeynoteDemo {
     return keynote
 }
 
-// #618: the demo's MaterialX file loads without warnings, and the glTF slide shows a sphere for each material.
+// #618, #622: the demo's MaterialX file loads without warnings, and the MaterialX slide, not the glTF slide, shows a
+// sphere for each material.
 @Test
 @MainActor
-func gltfSlideShowsMaterialXMaterials() throws {
+func materialXSlideShowsMaterialXMaterials() throws {
     let url = try #require(KeynoteDemo.materialXURL)
     let document = try MaterialXDocument(url: url)
     #expect(document.warnings.isEmpty, "\(document.warnings)")
     #expect(document.materials.count == 3)
-    let keynote = try keynoteShowing("glTF & Model I/O")
-    let spheres = keynote.sceneGraph.meshEntries().filter { $0.node.label?.hasPrefix("MaterialX ") == true }
-    #expect(spheres.count == 3)
+    func spheres(_ title: String) throws -> Int {
+        try keynoteShowing(title).sceneGraph.meshEntries().filter { $0.node.label?.hasPrefix("MaterialX ") == true }.count
+    }
+    #expect(try spheres("MaterialX") == 3)
+    #expect(try spheres("glTF & Model I/O") == 0)
+}
+
+// #626: each Gizmos slide shape has its own gizmo mode; the selected one is draggable, the others are shown, and
+// clicking a shape selects it.
+@Test
+@MainActor
+func gizmosSlideShowsOneGizmoPerShape() throws {
+    let keynote = try keynoteShowing("Gizmos")
+    let box = try #require(keynote.selectedNode)
+    #expect(box.label == "Box" && keynote.gizmoMode == .rotate)
+    #expect(Set(keynote.displayGizmos.compactMap(\.node.label)) == ["Sphere", "Cone"])
+    let cone = try #require(keynote.displayGizmos.first { $0.node.label == "Cone" }?.node)
+    let hit = try #require(keynote.sceneGraph.hitTest(Ray3D(origin: cone.worldTransform.columns.3.xyz + [0, 0, 5], direction: [0, 0, -1])).first)
+    keynote.pick(hit)
+    #expect(keynote.selectedNode === cone && keynote.gizmoMode == .scale)
+    #expect(Set(keynote.displayGizmos.compactMap(\.node.label)) == ["Sphere", "Box"])
+    keynote.show(slide: 0)
+    #expect(keynote.displayGizmos.isEmpty && keynote.gizmoMode == nil)
 }
 
 // #617: the Gizmos slide shows the editor gizmos, with the grid at the slide; the toggle and other slides hide them.
@@ -220,6 +241,38 @@ func manyLightsSlideIsClustered() throws {
     #expect(masks.count == 1)
     let meshMasks = Set(keynote.sceneGraph.meshEntries().map(\.node.categoryBitMask))
     #expect(meshMasks.allSatisfy { mask in masks.allSatisfy { $0 & mask != 0 } })
+}
+
+// #624: bodies rebuilt when the More Physics slide restarts keep the slide's light bit, so they stay lit.
+@Test
+@MainActor
+func morePhysicsRebuiltBodiesStayLit() throws {
+    let index = try #require(KeynoteDemo.titles.firstIndex(of: "More Physics"))
+    let keynote = try keynoteShowing("More Physics")
+    let bit: UInt = 1 << UInt(index % UInt.bitWidth)
+    // The slide restarts after 12 seconds.
+    for frame in 0 ..< 13 * 30 {
+        keynote.update(time: Float(frame) / 30, deltaTime: 1.0 / 30)
+    }
+    let bodies = keynote.sceneGraph.meshEntries().filter { ["Chain Link", "Chain Bob", "Crate", "Bouncing Ball"].contains($0.node.label) }
+    #expect(!bodies.isEmpty)
+    #expect(bodies.allSatisfy { $0.node.categoryBitMask == bit })
+}
+
+// #625: the character climbs the step instead of stopping at it.
+@Test
+@MainActor
+func morePhysicsCharacterClimbsTheStep() throws {
+    let keynote = try keynoteShowing("More Physics")
+    let slide = try #require(keynote.sceneGraph.root.children.first { $0.label?.hasSuffix(": More Physics") == true })
+    let walker = try #require(keynote.sceneGraph.nodesWithWorldTransforms().map(\.node).first { $0.label == "Character" })
+    var farthest: Float = -.infinity
+    // About 6 seconds: the character starts at x = 2.2 and the step is at x = 3.1...3.9.
+    for frame in 0 ..< 6 * 60 {
+        keynote.update(time: Float(frame) / 60, deltaTime: 1.0 / 60)
+        farthest = max(farthest, walker.worldTransform.columns.3.x - slide.worldTransform.columns.3.x)
+    }
+    #expect(farthest > 4.2, "the character stopped at x = \(farthest)")
 }
 
 // #610: the More Physics slide's chain holds, crates float and the character walks.

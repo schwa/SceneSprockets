@@ -537,6 +537,39 @@ func characterControllerWalksAndJumps() throws {
     #expect(physics.characters.isEmpty)
 }
 
+// #625: a character that walks slowly into a low step climbs it. Before the fix, the velocity into the step was
+// cancelled as a steep slope, so below about 2 units per second it stood at the step.
+@Test(arguments: [0.75, 1.5, 3] as [Float], [0.2, 0.3] as [Float])
+func characterClimbsStepAtAnySpeed(speed: Float, stepHeight: Float) throws {
+    let root = SceneGraph.Node()
+    _ = makeFloor(in: root)
+    let step = root.addChild(SceneGraph.Node(transform: .init(translation: [3.5, stepHeight / 2, 0])))
+    step.physicsBody = .init(type: .static, shape: .box(size: [0.8, stepHeight, 1.2]))
+    let player = root.addChild(SceneGraph.Node(transform: .init(translation: [2.2, 0.05, 0.3])))
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+    let character = try #require(physics.addCharacter(for: player, height: 1.4, radius: 0.3))
+    character.desiredVelocity = [speed, 0, 0]
+    run(physics, seconds: 2.5 / speed + 1)
+    let farthest = player.worldPosition.x
+    #expect(farthest > 4.2, "speed \(speed), step \(stepHeight): stopped at x = \(farthest)")
+}
+
+// #625: walking into a steep ramp does not climb it, even though steps no longer cancel the velocity.
+@Test
+func characterDoesNotClimbSteepRamp() throws {
+    let root = SceneGraph.Node()
+    _ = makeFloor(in: root)
+    // A 60-degree ramp rising toward +X from x = 3.
+    let ramp = root.addChild(SceneGraph.Node(transform: .init(translation: [4, 0, 0], rotation: simd_quatf(angle: .pi / 3, axis: [0, 0, 1]))))
+    ramp.physicsBody = .init(type: .static, shape: .box(size: [4, 0.2, 4]))
+    let player = root.addChild(SceneGraph.Node(transform: .init(translation: [1, 0.05, 0])))
+    let physics = try SceneGraphPhysicsWorld(sceneGraph: SceneGraph(root: root))
+    let character = try #require(physics.addCharacter(for: player, height: 1.4, radius: 0.3))
+    character.desiredVelocity = [1.5, 0, 0]
+    run(physics, seconds: 4)
+    #expect(player.worldPosition.y < 0.5, "climbed to \(player.worldPosition)")
+}
+
 // #433: a character standing on a moving kinematic platform rides along.
 @Test
 func characterRidesMovingPlatform() throws {

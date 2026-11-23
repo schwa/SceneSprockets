@@ -109,7 +109,7 @@ public enum DemoSnapshot {
         guard let selected else {
             return element.eraseToAnyElement()
         }
-        let outlineElement = scene.showsSelectionOutline ? try outline.element(nodes: [selected], sceneGraph: scene.sceneGraph, viewport: viewport) : nil
+        let outlineElement = try scene.overlayElement(viewport: viewport, outline: outline)
         let gizmoOverlay = try TransformGizmo(target: selected, mode: scene.gizmoMode ?? .translate).overlay(viewport: viewport)
         return try MetalSprockets.Group {
             element

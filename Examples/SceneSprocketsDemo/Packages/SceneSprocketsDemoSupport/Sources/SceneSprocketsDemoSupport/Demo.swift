@@ -118,6 +118,8 @@ open class DemoScene {
     public var showsSelectionOutline = false
     // Overrides the view's gizmo mode picker while set, so a demo can show each mode.
     public var gizmoMode: TransformGizmo.Mode?
+    // Transform gizmos drawn on other nodes besides the selection, for show: only the selection's gizmo can be dragged.
+    public var displayGizmos: [(node: SceneGraph.Node, mode: TransformGizmo.Mode)] = []
     // Editor aids drawn over the scene (grid, axes, light and camera icons, bounds of the selection); none by default.
     public var editorGizmos: EditorGizmos.Options = []
     // Where the editor grid and axes are drawn; identity is the world origin.
@@ -161,6 +163,25 @@ open class DemoScene {
     // Selects the hit node (nil clears the selection), then calls `didPick`.
     public var selectedNode: SceneGraph.Node? {
         selectedNodeID.flatMap(sceneGraph.node(withID:))
+    }
+
+    // The selection outline (if shown) and the display gizmos, for SceneView's overlay; nil when there are neither.
+    @MainActor
+    func overlayElement(viewport: Viewport, outline: SelectionOutline) throws -> AnyElement? {
+        let outlineElement = showsSelectionOutline ? try outline.element(nodes: selectedNode.map { [$0] } ?? [], sceneGraph: sceneGraph, viewport: viewport) : nil
+        let gizmos = try displayGizmos.compactMap { try TransformGizmo(target: $0.node, mode: $0.mode).overlay(viewport: viewport) }
+        guard outlineElement != nil || !gizmos.isEmpty else {
+            return nil
+        }
+        return try MetalSprockets.Group {
+            if let outlineElement {
+                outlineElement
+            }
+            MetalSprockets.ForEach(Array(gizmos.indices), id: \.self) { index in
+                ManipulatorOverlayPass(content: gizmos[index])
+            }
+        }
+        .eraseToAnyElement()
     }
 
     // The editor aids for `viewport`, or nil when the demo shows none.

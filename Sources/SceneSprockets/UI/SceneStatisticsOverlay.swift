@@ -29,14 +29,26 @@ final class SceneStatisticsHolder {
 
     static let historyLength = 120
 
-    private(set) var timing: FrameTimingStatistics?
-    private(set) var frameTimes: [TimeInterval] = []
+    // Not observed: they change every frame, and a view that observed them redrew every frame and flickered. The
+    // overlay's TimelineView reads them four times a second instead.
+    @ObservationIgnored private(set) var timing: FrameTimingStatistics?
+    @ObservationIgnored private(set) var frameTimes: [TimeInterval] = []
+    // The scene's counts, taken here, not in the overlay's body: counting reads every node, so a body that counted
+    // observed every node and redrew whenever anything moved, every frame. Taken at most four times a second.
+    @ObservationIgnored private(set) var sceneStatistics: SceneGraph.Statistics?
+    @ObservationIgnored private var lastSceneCount: ContinuousClock.Instant?
+    static let sceneCountInterval: Duration = .milliseconds(250)
 
-    func record(_ statistics: FrameTimingStatistics) {
+    func record(_ statistics: FrameTimingStatistics, sceneGraph: SceneGraph? = nil) {
         timing = statistics
         frameTimes.append(statistics.deltaTime)
         if frameTimes.count > Self.historyLength {
             frameTimes.removeFirst(frameTimes.count - Self.historyLength)
+        }
+        let now = ContinuousClock.now
+        if let sceneGraph, lastSceneCount.map({ now - $0 >= Self.sceneCountInterval }) ?? true {
+            sceneStatistics = sceneGraph.statistics
+            lastSceneCount = now
         }
     }
 
@@ -61,7 +73,7 @@ final class SceneStatisticsHolder {
 
     // The frame's numbers and the scene's counts, as the expanded panel shows them. GPU passes appear only when some
     // element is timed.
-    func sections(scene statistics: SceneGraph.Statistics) -> [Section] {
+    func sections(scene statistics: SceneGraph.Statistics?) -> [Section] {
         var frame: [Row] = []
         if let timing {
             frame.append(Row(label: "FPS", value: Self.number(timing.currentFPS.rounded())))
@@ -75,18 +87,39 @@ final class SceneStatisticsHolder {
         if !frame.isEmpty {
             sections.append(Section(title: "Frame", rows: frame))
         }
-        sections.append(Section(title: "Scene", rows: [
-            Row(label: "Nodes", value: Self.number(Double(statistics.nodeCount))),
-            Row(label: "Meshes", value: Self.number(Double(statistics.meshCount))),
-            Row(label: "Triangles", value: Self.number(Double(statistics.triangleCount))),
-            Row(label: "Vertices", value: Self.number(Double(statistics.vertexCount))),
-            Row(label: "Lights", value: Self.number(Double(statistics.lightCount))),
-            Row(label: "Cameras", value: Self.number(Double(statistics.cameraCount)))
-        ]))
+        if let statistics {
+            sections.append(Section(title: "Scene", rows: [
+                Row(label: "Nodes", value: Self.number(Double(statistics.nodeCount))),
+                Row(label: "Meshes", value: Self.number(Double(statistics.meshCount))),
+                Row(label: "Triangles", value: Self.number(Double(statistics.triangleCount))),
+                Row(label: "Vertices", value: Self.number(Double(statistics.vertexCount))),
+                Row(label: "Lights", value: Self.number(Double(statistics.lightCount))),
+                Row(label: "Cameras", value: Self.number(Double(statistics.cameraCount)))
+            ]))
+        }
         if let passes = timing?.gpuTimings, !passes.isEmpty {
-            sections.append(Section(title: "GPU passes", rows: passes.map { Row(label: $0.label, value: Self.milliseconds($0.duration)) }))
+            sections.append(Section(title: "GPU passes", rows: Self.passRows(passes.map { ($0.label, $0.duration) })))
         }
         return sections
+    }
+
+    // One row per pass label, in first-seen order. Passes with the same label, such as one per particle system, are
+    // summed into one row that says how many there were (#621): rows are identified by label, and repeated labels broke
+    // the panel's layout.
+    static func passRows(_ passes: [(label: String, duration: TimeInterval)]) -> [Row] {
+        var order: [String] = []
+        var totals: [String: (duration: TimeInterval, count: Int)] = [:]
+        for pass in passes {
+            if let total = totals[pass.label] {
+                totals[pass.label] = (total.duration + pass.duration, total.count + 1)
+            } else {
+                order.append(pass.label)
+                totals[pass.label] = (pass.duration, 1)
+            }
+        }
+        return order.compactMap { label in
+            totals[label].map { Row(label: $0.count > 1 ? "\(label) ×\($0.count)" : label, value: milliseconds($0.duration)) }
+        }
     }
 
     static func milliseconds(_ seconds: TimeInterval) -> String {
@@ -98,14 +131,13 @@ final class SceneStatisticsHolder {
     }
 }
 
+// Reads only the holder's unobserved values, so it redraws on its TimelineView, four times a second, not every frame.
 struct SceneStatisticsOverlay: View {
     let holder: SceneStatisticsHolder
-    let sceneGraph: SceneGraph
     @State private var isExpanded: Bool
 
-    init(holder: SceneStatisticsHolder, sceneGraph: SceneGraph, isExpanded: Bool = false) {
+    init(holder: SceneStatisticsHolder, isExpanded: Bool = false) {
         self.holder = holder
-        self.sceneGraph = sceneGraph
         _isExpanded = State(initialValue: isExpanded)
     }
 
@@ -115,7 +147,7 @@ struct SceneStatisticsOverlay: View {
                 header
                 if isExpanded {
                     Divider()
-                    SceneStatisticsSectionsView(sections: holder.sections(scene: sceneGraph.statistics))
+                    SceneStatisticsSectionsView(sections: holder.sections(scene: holder.sceneStatistics))
                     if !holder.phases.isEmpty {
                         Divider()
                         SceneStatisticsPhaseChart(phases: holder.phases)
@@ -124,6 +156,8 @@ struct SceneStatisticsOverlay: View {
             }
             .font(.caption.monospacedDigit())
             .padding(8)
+            // Collapsed, the bar is as wide as its contents, not the view (#621).
+            .fixedSize(horizontal: !isExpanded, vertical: false)
             .frame(width: isExpanded ? 260 : nil, alignment: .leading)
             .background(.ultraThinMaterial, in: .rect(cornerRadius: 8))
             .overlay {
@@ -170,9 +204,14 @@ private struct SceneStatisticsSectionsView: View {
                     Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 1) {
                         ForEach(section.rows) { row in
                             GridRow {
+                                // One line each: long labels shorten in the middle, values never wrap (#621).
                                 Text(row.label)
                                     .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
                                 Text(row.value)
+                                    .lineLimit(1)
+                                    .fixedSize()
                                     .gridColumnAlignment(.trailing)
                                     .frame(maxWidth: .infinity, alignment: .trailing)
                             }
@@ -184,7 +223,7 @@ private struct SceneStatisticsSectionsView: View {
     }
 }
 
-private struct SceneStatisticsSparkline: View {
+struct SceneStatisticsSparkline: View {
     let values: [TimeInterval]
 
     var body: some View {
@@ -192,9 +231,10 @@ private struct SceneStatisticsSparkline: View {
             guard values.count > 1, let maximum = values.max(), maximum > 0 else {
                 return
             }
+            let top = Self.scale(forMaximum: maximum)
             var path = Path()
             for (index, value) in values.enumerated() {
-                let point = CGPoint(x: size.width * CGFloat(index) / CGFloat(SceneStatisticsHolder.historyLength - 1), y: size.height * (1 - CGFloat(value / maximum)))
+                let point = CGPoint(x: size.width * CGFloat(index) / CGFloat(SceneStatisticsHolder.historyLength - 1), y: size.height * (1 - CGFloat(min(value / top, 1))))
                 if index == 0 {
                     path.move(to: point)
                 } else {
@@ -204,6 +244,16 @@ private struct SceneStatisticsSparkline: View {
             context.stroke(path, with: .color(.green), lineWidth: 1)
         }
         .accessibilityHidden(true)
+    }
+
+    // Frame-time ceilings for the top of the sparkline, in seconds: 60, 30, 20, 10 and 5 fps. None at 120 fps: frames
+    // there jitter around 8.3 ms and would flip the scale back and forth; they draw at half height instead.
+    static let scales: [TimeInterval] = [1.0 / 60, 1.0 / 30, 1.0 / 20, 1.0 / 10, 1.0 / 5]
+
+    // The smallest ceiling at or above `maximum`. Scaling to the history's own maximum made the whole line jump
+    // whenever a slow frame entered or left the history; a ceiling changes only when frames cross it.
+    static func scale(forMaximum maximum: TimeInterval) -> TimeInterval {
+        scales.first { $0 >= maximum } ?? maximum
     }
 }
 

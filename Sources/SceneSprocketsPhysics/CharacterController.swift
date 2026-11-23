@@ -51,7 +51,11 @@ public final class CharacterController {
         } else {
             verticalSpeed += simd_dot(gravity, up) * deltaTime
         }
-        character.linearVelocity = character.cancelVelocityTowardsSteepSlopes(horizontal + up * verticalSpeed)
+        let velocity = horizontal + up * verticalSpeed
+        // Velocity into a steep contact is cancelled, so the character does not climb slopes it cannot walk up. A step
+        // it can climb is such a contact too: cancelling the velocity there stopped stair walking when the character
+        // reached the step slowly, so it stood at the step (#625).
+        character.linearVelocity = walksStairs && character.canWalkStairs(velocity: velocity) ? velocity : character.cancelVelocityTowardsSteepSlopes(velocity)
         // Sticking to the floor would pull a jumping character back down.
         character.update(deltaTime: deltaTime, stickToFloor: verticalSpeed <= 0, walkStairs: walksStairs)
         var pose = Transform3D(nearestTo: node.worldTransform)

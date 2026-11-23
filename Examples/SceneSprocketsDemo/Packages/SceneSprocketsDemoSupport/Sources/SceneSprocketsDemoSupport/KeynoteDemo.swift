@@ -32,7 +32,7 @@ public final class KeynoteDemo: DemoScene {
     // debugging, then add-ons (#310). Slides are built by title, so reordering only means editing this list.
     public static let titles = [
         "SceneSprockets", "SceneView", "Scene Graph", "Shapes", "Materials", "Lights", "Many Lights",
-        "Shadows", "Fog", "Opacity & Fades", "Blend Modes", "Glass", "PBR Extensions", "Custom Shaders", "Video Textures", "glTF & Model I/O",
+        "Shadows", "Fog", "Opacity & Fades", "Blend Modes", "Glass", "PBR Extensions", "Custom Shaders", "Video Textures", "glTF & Model I/O", "MaterialX",
         "Actions", "Implicit Animation", "Constraints", "Paths", "Animation Blending", "Deformation",
         "Particles", "Mesh Emitters",
         "Physics", "More Physics", "Post-Processing", "Level of Detail", "Performance", "SwiftECS World",
@@ -108,7 +108,8 @@ public final class KeynoteDemo: DemoScene {
     private var tumblingLetters: [TumblingLetter] = []
     // SwiftECS World slide.
     private var boids: KeynoteBoids?
-    // Gizmos slide: the node it selects.
+    // Gizmos slide: one object per transform gizmo mode, with where it started, and the one selected (#626).
+    private var gizmoObjects: [(node: SceneGraph.Node, mode: TransformGizmo.Mode, rest: Transform3D)] = []
     private var gizmoTarget: SceneGraph.Node?
     // Debug Views slide: one label per mode, and the time on the current one.
     private var debugLabels: [SceneGraph.Node] = []
@@ -226,8 +227,13 @@ public final class KeynoteDemo: DemoScene {
 
     // Clicking a hit-test target makes it jump; any other click advances.
     override public func didPick(_ hit: SceneGraph.Hit?) {
-        // Taps do not select: only the Gizmos slide shows a selection, always its own box (#328).
-        selectedNodeID = currentTitle == "Gizmos" ? gizmoTarget?.id : nil
+        // Taps do not select: only the Gizmos slide shows a selection, always one of its shapes (#328). Clicking a
+        // shape there selects it (#626).
+        if currentTitle == "Gizmos", let hit, let object = gizmoObjects.first(where: { $0.node === hit.node || $0.node.isAncestor(of: hit.node) }) {
+            selectGizmoObject(object.node)
+            return
+        }
+        selectGizmoObject(gizmoTarget)
         if let hit, let target = hitTarget(containing: hit.node) {
             target.run(.group([
                 .sequence([.move(by: [0, 1, 0], duration: 0.25), .move(by: [0, -1, 0], duration: 0.25)]),
@@ -333,8 +339,12 @@ public final class KeynoteDemo: DemoScene {
         "glTF & Model I/O": """
         • Load glTF files and anything Model I/O reads (OBJ, USD) into a scene graph.
         • The plant is glTF with its animation; the fireflies carry point lights.
-        • The spheres' materials come from a MaterialX file (SceneSprocketsMaterialX): standard_surface,
-          open_pbr_surface with a small node graph, and gltf_pbr, each as a PBR material.
+        """,
+        "MaterialX": """
+        • An add-on: import SceneSprocketsMaterialX and load a .mtlx file.
+        • Each material becomes a PBR material: gold is standard_surface, the car paint is open_pbr_surface,
+          the jade is gltf_pbr.
+        • The car paint's color comes from a small node graph; math on constants is worked out at load.
         """,
         "Actions": """
         • Actions are like SpriteKit and SceneKit actions: move, rotate, scale, fade, wait.
@@ -434,7 +444,8 @@ public final class KeynoteDemo: DemoScene {
         • hitTest(ray) gives every hit, nearest first, with position and normal.
         """,
         "Gizmos": """
-        • Transform gizmos move, rotate and scale nodes; a selection outline shows what is selected.
+        • Transform gizmos move, rotate and scale nodes: the sphere moves, the box rotates, the cone scales.
+        • Click a shape to select it; the selection outline shows which one, and its gizmo is the one to drag.
         • Both come from SceneSprocketsGizmos and plug into SceneView.
         • Editor gizmos draw what has no geometry: a ground grid, axes, line icons for lights and the selection's bounds.
         """,
@@ -528,7 +539,7 @@ public final class KeynoteDemo: DemoScene {
         case "SwiftECS World":
             [.slider("Cohesion", 0...2, default: 0.6), .slider("Alignment", 0...2, default: 0.8), .slider("Separation", 0...1, default: 0.35)]
         case "Gizmos":
-            [.choice("Gizmo Mode", ["Cycle", "Translate", "Rotate", "Scale"]), .toggle("Editor Gizmos", default: true)]
+            [.toggle("Editor Gizmos", default: true)]
         case "Debug Views":
             [.choice("Debug View", ["Cycle"] + debugModes.map { $0?.name ?? "Materials" })]
         case "Point Clouds":
@@ -578,7 +589,7 @@ public final class KeynoteDemo: DemoScene {
         case "SwiftECS World":
             [action("Scatter Boids", "sparkles") { $0.boids?.scatter() }]
         case "Gizmos":
-            [action("Reset Box", "arrow.counterclockwise") { $0.resetGizmoTarget() }]
+            [action("Reset Shapes", "arrow.counterclockwise") { $0.resetGizmoObjects() }]
         case "Physics":
             [action("Roll Dice", "dice") { $0.resetPhysics() }]
         case "More Physics":
@@ -667,10 +678,6 @@ public final class KeynoteDemo: DemoScene {
             updateDebugView(deltaTime: deltaTime)
         case "SwiftECS World":
             boids?.step(deltaTime: deltaTime)
-        case "Gizmos":
-            let modes: [TransformGizmo.Mode] = [.translate, .rotate, .scale]
-            let picked = Int(self[value: "Gizmo Mode"])
-            gizmoMode = picked == 0 ? modes[Int(time / 2.5) % modes.count] : modes[min(picked - 1, modes.count - 1)]
         case "Metaballs":
             updateMetaballs(time: time)
         case "Voxels":
@@ -707,11 +714,9 @@ public final class KeynoteDemo: DemoScene {
     private func applySceneSettings() {
         let castsShadows = currentTitle != "Shadows" || self[flag: "Cast Shadows"]
         shadows = Self.shadowedTitles.contains(currentTitle) && castsShadows ? shadowRenderer : nil
-        // The Gizmos slide selects its box; other slides show no selection.
-        let showsGizmo = currentTitle == "Gizmos"
-        showsSelectionOutline = showsGizmo
-        selectedNodeID = showsGizmo ? gizmoTarget?.id : nil
-        gizmoMode = showsGizmo ? .translate : nil
+        // The Gizmos slide selects one of its shapes; other slides show no selection.
+        showsSelectionOutline = currentTitle == "Gizmos"
+        selectGizmoObject(gizmoTarget)
         applyEditorGizmos()
         // A debug view replaces every material in the view, so it is on only for its slide.
         debugIndex = 0
@@ -1083,8 +1088,25 @@ public final class KeynoteDemo: DemoScene {
         }
     }
 
-    private func resetGizmoTarget() {
-        gizmoTarget?.transform = .init(translation: [0, 0.9, 0], rotation: simd_quatf(angle: 0.5, axis: [0, 1, 0]))
+    private func resetGizmoObjects() {
+        for object in gizmoObjects {
+            object.node.transform = object.rest
+        }
+    }
+
+    // On the Gizmos slide, selects `node` (one of the shapes) and gives it its gizmo to drag; the other shapes show
+    // theirs for display (#626). Elsewhere, clears the selection and the gizmos.
+    private func selectGizmoObject(_ node: SceneGraph.Node?) {
+        guard currentTitle == "Gizmos", let node, let selected = gizmoObjects.first(where: { $0.node === node }) else {
+            selectedNodeID = nil
+            gizmoMode = nil
+            displayGizmos = []
+            return
+        }
+        gizmoTarget = node
+        selectedNodeID = node.id
+        gizmoMode = selected.mode
+        displayGizmos = gizmoObjects.filter { $0.node !== node }.map { ($0.node, $0.mode) }
     }
 
     // MARK: - Slides
@@ -1392,7 +1414,14 @@ public final class KeynoteDemo: DemoScene {
             let plant = try ModelFile.load(plantURL)     // .glb, .gltf, .usdz, .obj, ...
             let pedestal = try ModelFile.load(objURL)
             player = SceneGraph.AnimationPlayer(clip: plant.animations[0]) // fireflies with point lights
-            let gold = try MaterialXDocument(url: mtlxURL)["Gold"]  // import SceneSprocketsMaterialX
+            """, to: slide)
+        case "MaterialX":
+            materialXSlide(slide)
+            addCode("""
+            import SceneSprocketsMaterialX
+            let document = try MaterialXDocument(url: mtlxURL)
+            sphere.content = .mesh(mesh, material: document["Gold"]!)
+            // document.warnings lists anything not converted
             """, to: slide)
         case "Hit Testing":
             hitTestingSlide(slide)
@@ -1753,7 +1782,6 @@ public final class KeynoteDemo: DemoScene {
             .rotate(by: -0.9, around: [0, 1, 0], duration: 3).timingMode(.easeInEaseOut)
         ])))
         swing.addChild(SceneGraph.Node(label: "Parallax Tile", shape: .box(width: 2, height: 2, length: 0.1), material: material, transform: .init(rotation: simd_quatf(angle: -0.45, axis: [0, 1, 0]))))
-        addTitle("Parallax", size: 0.25, y: 0.1, color: [0.6, 0.65, 0.75], to: slide).transform.translation.x = 4.6
     }
 
     // Running-bond bricks: color with mortar lines, and heights 1 on the brick faces, bevelled down to 0 in the mortar.
@@ -2247,24 +2275,25 @@ public final class KeynoteDemo: DemoScene {
         } catch {
             // The slide shows whatever loaded.
         }
-        addMaterialXSpheres(to: slide)
     }
 
-    // Spheres on either side of the pedestal with the materials of a MaterialX file (#618).
     static var materialXURL: URL? {
         Bundle.module.url(forResource: "Materials", withExtension: "mtlx", subdirectory: "DemoAssets")
     }
 
-    private func addMaterialXSpheres(to slide: SceneGraph.Node) {
+    // A row of spheres with the materials of a MaterialX file, one per shader kind (#618, #622).
+    private func materialXSlide(_ slide: SceneGraph.Node) {
+        addLight(to: slide, at: [0, 5, 6], intensity: 80)
+        addLight(to: slide, at: [-6, 2, 4], color: [0.6, 0.7, 1], intensity: 30)
         guard let url = Self.materialXURL,
               let document = try? MaterialXDocument(url: url, device: demoDevice)
         else {
             return
         }
         // Gold, car paint, jade, in the file's order.
-        let positions: [SIMD3<Float>] = [[-4, 0.8, -0.3], [3.6, 0.8, 0], [-2.6, 0.5, 1.2]]
-        for (material, position) in zip(document.materials, positions) {
-            let sphere = slide.addChild(SceneGraph.Node(label: "MaterialX \(material.name)", shape: .sphere(radius: 0.45), material: material.material, transform: .init(translation: position)))
+        for (index, material) in document.materials.enumerated() {
+            let position = SIMD3<Float>(Float(index) * 3 - Float(document.materials.count - 1) * 1.5, 1.4, 0)
+            let sphere = slide.addChild(SceneGraph.Node(label: "MaterialX \(material.name)", shape: .sphere(radius: 1), material: material.material, transform: .init(translation: position)))
             sphere.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 9)))
         }
     }
@@ -2344,6 +2373,10 @@ public final class KeynoteDemo: DemoScene {
             // Velocities are in world space; the throw is in the tilted tray's.
             physics.setVelocity(Self.trayTilt.act(velocity), of: die)
             physics.setAngularVelocity(SIMD3<Float>.random(in: -15...15, using: &diceGenerator), of: die)
+        }
+        // New dice need the slide's light bit, as in tagMorePhysicsBodies (#624).
+        if let index = Self.titles.firstIndex(of: "Physics"), slides.indices.contains(index) {
+            Self.isolateLights(of: physicsDice, index: index)
         }
     }
 
@@ -2494,6 +2527,7 @@ public final class KeynoteDemo: DemoScene {
         self.walker = walker
         walkerController = physics.addCharacter(for: walker, height: 1.4, radius: 0.3)
         walkerController?.desiredVelocity = [self[value: "Walk Speed"], 0, 0]
+        tagMorePhysicsBodies()
     }
 
     private func dropBall() {
@@ -2502,6 +2536,16 @@ public final class KeynoteDemo: DemoScene {
         ball?.physicsBody = .init(type: .dynamic, shape: .sphere(radius: 0.2), restitution: 0.75)
         bouncingBall = ball
         sinceBallDrop = 0
+        tagMorePhysicsBodies()
+    }
+
+    // New nodes have the default category mask, which the slide's lights (isolated to the slide's bit) do not light,
+    // so rebuilt bodies drew black (#624). Gives them the slide's bit.
+    private func tagMorePhysicsBodies() {
+        guard let morePhysicsBodies, let index = Self.titles.firstIndex(of: "More Physics"), slides.indices.contains(index) else {
+            return
+        }
+        Self.isolateLights(of: morePhysicsBodies, index: index)
     }
 
     private func removeWalker() {
@@ -2815,14 +2859,22 @@ public final class KeynoteDemo: DemoScene {
     // nil shows the materials; the debug views replace them for the whole view, title and code panel included.
     private static let debugModes: [DebugMode?] = [nil, .normals, .textureCoordinates, .uvChecker, .worldPosition, .wireframe]
 
-    // A selected box with its outline and the transform gizmo, which cycles through its modes.
+    // Three shapes, each with its own transform gizmo: move the sphere, rotate the box, scale the cone. Clicking a shape
+    // selects it, outlines it and makes its gizmo the one to drag.
     private func gizmosSlide(_ slide: SceneGraph.Node) {
         addLight(to: slide, at: [2, 6, 5], intensity: 60)
         // A spot light, so the editor gizmos show a cone icon as well as the point light's.
         slide.addChild(SceneGraph.Node(label: "Spot", transform: Transform3D(position: [-4.5, 3, 1.5], lookingAt: [-3.2, 0.9, 0]), content: .light(.spot(color: [1, 0.9, 0.7], intensity: 15, range: 10))))
-        slide.addChild(SceneGraph.Node(shape: .sphere(radius: 0.6), material: BlinnPhongSceneMaterial.plastic([0.4, 0.75, 0.45], shininess: 32), transform: .init(translation: [-3.2, 0.9, 0])))
-        slide.addChild(SceneGraph.Node(shape: .cone(topRadius: 0, bottomRadius: 0.6, height: 1.3), material: BlinnPhongSceneMaterial.plastic([0.4, 0.55, 0.95], shininess: 32), transform: .init(translation: [3.2, 0.9, 0])))
-        gizmoTarget = slide.addChild(SceneGraph.Node(label: "Box", shape: .box(width: 1.2, height: 1.2, length: 1.2), material: BlinnPhongSceneMaterial.plastic([0.95, 0.55, 0.3], shininess: 32), transform: .init(translation: [0, 0.9, 0], rotation: simd_quatf(angle: 0.5, axis: [0, 1, 0]))))
+        let shapes: [(String, SceneGraph.Shape, SIMD3<Float>, TransformGizmo.Mode, Transform3D)] = [
+            ("Sphere", .sphere(radius: 0.6), [0.4, 0.75, 0.45], .translate, .init(translation: [-3.2, 0.9, 0])),
+            ("Box", .box(width: 1.2, height: 1.2, length: 1.2), [0.95, 0.55, 0.3], .rotate, .init(translation: [0, 0.9, 0], rotation: simd_quatf(angle: 0.5, axis: [0, 1, 0]))),
+            ("Cone", .cone(topRadius: 0, bottomRadius: 0.6, height: 1.3), [0.4, 0.55, 0.95], .scale, .init(translation: [3.2, 0.9, 0]))
+        ]
+        gizmoObjects = shapes.map { label, shape, color, mode, rest in
+            let node = slide.addChild(SceneGraph.Node(label: label, shape: shape, material: BlinnPhongSceneMaterial.plastic(color, shininess: 32), transform: rest))
+            return (node, mode, rest)
+        }
+        gizmoTarget = gizmoObjects[1].node
     }
 
     private func debugViewsSlide(_ slide: SceneGraph.Node) {

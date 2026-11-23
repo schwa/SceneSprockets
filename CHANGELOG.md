@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `CharacterController` climbs low steps at any walking speed (#625). Below about 2 units per second, the velocity into the step was cancelled as a steep slope, so the character stood at the step.
+- The statistics panel sums GPU passes with the same label into one row ("Simulate ×6"), keeps each row on one line, and its collapsed bar fits its contents instead of the view's width (#621). It redraws four times a second instead of every frame, so it no longer flickers, and the sparkline's scale steps between fixed frame-time ceilings (60, 30, 20, 10, 5 fps) instead of following the history's maximum, so the line no longer jumps when a slow frame enters or leaves it.
 - `EditorGizmos.shapes` and `element` take a `gridTransform` that places the grid and axes, which were fixed at the world origin (#617).
 - MaterialX node graphs and shaders (#609). Math nodes on constants (`constant`, `add`, `subtract`, `multiply`, `divide`, `min`, `max`, `power`, `mix`, `clamp`, `invert`, `extract`, `combine2`–`4`, `convert`, `dot`) are folded, nodegraph `interfacename` inputs are followed, and an image multiplied by a constant becomes a texture with that factor. `gltf_pbr` and `open_pbr_surface` load too (OpenPBR emission luminance is mapped as 1000 nits = factor 1). Per-pixel nodes are still skipped (#620).
 - Path nodes (#607). `Node.path` holds a `SceneGraph.Spline` in the node's space; it moves with the node and is saved in archives. `Constraint.followPath(_:fraction:orientsToPath:)` keeps a node at a fraction along a path node's curve. `EditorGizmos` draws paths (`.paths`, in `.all`) and picks their nodes on click.

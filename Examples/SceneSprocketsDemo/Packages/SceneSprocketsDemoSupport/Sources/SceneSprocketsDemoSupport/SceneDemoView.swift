@@ -152,8 +152,8 @@ private struct DemoSceneContent: View {
                 .onSceneTap { hit in
                     scene.pick(hit)
                 }
-                .sceneOverlay(scene.showsSelectionOutline ? { @MainActor @Sendable [scene, selectionOutline] viewport in
-                    try selectionOutline.element(nodes: scene.selectedNode.map { [$0] } ?? [], sceneGraph: scene.sceneGraph, viewport: viewport)
+                .sceneOverlay(scene.showsSelectionOutline || !scene.displayGizmos.isEmpty ? { @MainActor @Sendable [scene, selectionOutline] viewport in
+                    try scene.overlayElement(viewport: viewport, outline: selectionOutline)
                 } : nil)
                 .sceneDecorations(id: scene.editorGizmos.rawValue, scene.editorGizmos.isEmpty ? nil : { [scene, displayScale] context, drawableSize in
                     // Sized in view points, like hit testing.
