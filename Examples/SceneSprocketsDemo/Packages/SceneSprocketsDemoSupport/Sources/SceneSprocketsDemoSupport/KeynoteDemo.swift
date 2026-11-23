@@ -33,7 +33,7 @@ public final class KeynoteDemo: DemoScene {
     // debugging, then add-ons (#310). Slides are built by title, so reordering only means editing this list.
     public static let titles = [
         "SceneSprockets", "SceneView", "Scene Graph", "Shapes", "Materials", "Lights", "Many Lights",
-        "Shadows", "Fog", "Decals", "Opacity & Fades", "Blend Modes", "Glass", "PBR Extensions", "Custom Shaders", "Video Textures", "glTF & Model I/O", "MaterialX",
+        "Shadows", "Fog", "Decals", "Mirrors", "Opacity & Fades", "Blend Modes", "Glass", "PBR Extensions", "Custom Shaders", "Video Textures", "glTF & Model I/O", "MaterialX",
         "Actions", "Implicit Animation", "Constraints", "Paths", "Animation Blending", "Deformation",
         "Particles", "Mesh Emitters",
         "Physics", "More Physics", "Post-Processing", "Level of Detail", "Performance", "SwiftECS World",
@@ -82,6 +82,9 @@ public final class KeynoteDemo: DemoScene {
     private var swarmLights: [(node: SceneGraph.Node, phase: Float, radius: Float, speed: Float)] = []
     // The Decals slide (#644): the decal that slides over the step, and its material, whose angle limit the slider sets.
     private var movingDecal: SceneGraph.Node?
+    // The Mirrors slide (#645): shapes that orbit above the mirror floor, and the floor's PBR material.
+    private var mirrorShapes: [SceneGraph.Node] = []
+    private var mirrorFloor: SceneGraph.Node?
     private static let maximumSwarmLights = 400
     private let debugDrawMaterial = ShaderMaterial.vertexColors()
     private static let tubeJointCount = 7
@@ -315,6 +318,12 @@ public final class KeynoteDemo: DemoScene {
         • It marches each pixel's ray through the shadow map, so it needs shadows on.
         • Distance fog (start and end distances) is also available, alone or with it.
         """,
+        "Mirrors": """
+        • A node with planarReflector becomes a mirror: its plane shows the scene reflected in it.
+        • Each frame the scene is drawn once more from the camera mirrored in the plane, into a texture.
+        • PBR materials on the node use it instead of the environment's reflections; rougher surfaces blur it.
+        • Like a polished floor or still water. One mirror per frame.
+        """,
         "Decals": """
         • A decal projects an image onto whatever surfaces are inside a box: road markings, footprints, bullet holes.
         • It is a DecalMaterial on a box-shaped node; the node's transform places and sizes the projector.
@@ -509,6 +518,8 @@ public final class KeynoteDemo: DemoScene {
             ]
         case "Decals":
             [.toggle("Move Decal", default: true), .slider("Maximum Angle", 10...90, default: 60)]
+        case "Mirrors":
+            [.toggle("Reflect", default: true), .slider("Floor Roughness", 0...0.6, default: 0.05), .slider("Mirror Orbit Speed", 0...3, default: 1)]
         case "Opacity & Fades":
             [.slider("Fade Speed", 0...3, default: 1)]
         case "Blend Modes":
@@ -715,6 +726,8 @@ public final class KeynoteDemo: DemoScene {
             updateCars(deltaTime: deltaTime)
         case "Decals":
             updateDecals(time: time)
+        case "Mirrors":
+            updateMirrors(time: time)
         default:
             break
         }
@@ -1392,6 +1405,13 @@ public final class KeynoteDemo: DemoScene {
             // Noir
             sceneGraph.postProcessing = SceneGraph.PostProcessing(contrast: 1.8, saturation: 0,
                                                                   vignetteIntensity: 0.9, vignetteRadius: 0.35)
+            """, to: slide)
+        case "Mirrors":
+            mirrorsSlide(slide)
+            addCode("""
+            let floor = SceneGraph.Node(shape: .plane(width: 8, height: 5),
+                material: PBRSceneMaterial(baseColor: [0.45, 0.47, 0.5], metallic: 0.6, roughness: 0.05))
+            floor.planarReflector = SceneGraph.PlanarReflector(resolutionScale: 0.5)
             """, to: slide)
         case "Decals":
             decalsSlide(slide)
@@ -2205,6 +2225,47 @@ public final class KeynoteDemo: DemoScene {
         // Tall enough to reach both the ground and the top of the step as it slides across the edge.
         let arrow = DecalMaterial(texture: Self.decalTexture(.arrow), color: [1, 1, 1, 1], maximumAngle: .pi / 3)
         movingDecal = slide.addChild(SceneGraph.Node(label: "Arrow", shape: .box(), material: arrow, transform: .init(translation: [0, 0.25, -0.6], rotation: lookDown, scale: [1.2, 1.2, 1.4])))
+    }
+
+    private func mirrorsSlide(_ slide: SceneGraph.Node) {
+        addLight(to: slide, at: [3, 5, 4], intensity: 60, castsShadow: false)
+        addLight(to: slide, at: [-4, 3, 2], color: [0.5, 0.6, 1], intensity: 25, castsShadow: false)
+        // A plane faces +Z; turned to face up, it is the floor. Tilted a little toward the camera.
+        let stage = slide.addChild(SceneGraph.Node(label: "Stage", transform: .init(translation: [0, 0.3, 0], rotation: simd_quatf(angle: 0.25, axis: [1, 0, 0]))))
+        let floor = stage.addChild(SceneGraph.Node(label: "Mirror Floor", shape: .plane(width: 8, height: 5), material: PBRSceneMaterial(baseColor: [0.45, 0.47, 0.5], metallic: 0.6, roughness: 0.05), transform: .init(rotation: simd_quatf(angle: -.pi / 2, axis: [1, 0, 0]))))
+        floor.planarReflector = SceneGraph.PlanarReflector(resolutionScale: 0.5)
+        mirrorFloor = floor
+        let shapes: [(SceneGraph.Shape, SIMD3<Float>)] = [
+            (.sphere(radius: 0.45), [0.95, 0.35, 0.25]), (.box(width: 0.7, height: 0.7, length: 0.7), [0.3, 0.75, 0.4]),
+            (.torus(ringRadius: 0.4, pipeRadius: 0.14), [0.95, 0.8, 0.3]), (.cone(bottomRadius: 0.4, height: 0.9), [0.35, 0.5, 0.95])
+        ]
+        mirrorShapes = shapes.map { shape, color in
+            stage.addChild(SceneGraph.Node(label: "Shape", shape: shape, material: PBRSceneMaterial(baseColor: color, roughness: 0.4)))
+        }
+        updateMirrors(time: 0)
+    }
+
+    private func updateMirrors(time: Float) {
+        guard let mirrorFloor else {
+            return
+        }
+        for (index, shape) in mirrorShapes.enumerated() {
+            let angle = time * 0.5 * self[value: "Mirror Orbit Speed"] + Float(index) * .pi / 2
+            shape.transform = .init(translation: [cos(angle) * 2.2, 0.75 + 0.25 * sin(time * 1.3 + Float(index)), sin(angle) * 1.3], rotation: simd_quatf(angle: time + Float(index), axis: simd_normalize([0.3, 1, 0.2])), scale: [1.4, 1.4, 1.4])
+        }
+        let reflects = self[flag: "Reflect"]
+        if (mirrorFloor.planarReflector != nil) != reflects {
+            mirrorFloor.planarReflector = reflects ? SceneGraph.PlanarReflector(resolutionScale: 0.5) : nil
+        }
+        if case let .mesh(mesh, materials, castsShadow, receivesShadow) = mirrorFloor.content, let material = materials.first as? PBRSceneMaterial {
+            let roughness = self[value: "Floor Roughness"]
+            if material.uniforms.roughnessFactor != roughness {
+                var uniforms = material.uniforms
+                uniforms.roughnessFactor = roughness
+                material.uniforms = uniforms
+                mirrorFloor.content = .mesh(mesh, materials: [material], castsShadow: castsShadow, receivesShadow: receivesShadow)
+            }
+        }
     }
 
     private func updateDecals(time: Float) {

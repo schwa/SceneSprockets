@@ -14772,13 +14772,14 @@ Projected decals (#397) are not shown in the keynote. A slide could project a te
 ## 645: Keynote has no slide for planar reflections
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:demo, effort:s
 milestone: Demo
 created: 2026-11-23T12:27:33Z
-updated: 2026-11-23T12:27:35Z
+updated: 2026-11-23T12:43:48Z
+closed: 2026-11-23T12:43:48Z
 +++
 
 Planar reflections (#531) are not shown in the keynote. A slide could put a mirror-smooth PBR floor with Node.planarReflector under moving objects, with a code panel.
