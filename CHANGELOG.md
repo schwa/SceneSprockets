@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Projected decals (#397). Put a `DecalMaterial` (texture, color, `maximumAngle`) on a box-shaped node and add `DecalRenderer`: the node's unit box projects the decal along its -Z onto the surfaces inside it, unlit and alpha-blended, fading on steep sides. Materials that conform to `ReadsSceneDepth` draw after the scene pass with `RenderContext.sceneDepth` (the soft-particle depth copy) and cast no shadows; they need readable, single-sample view targets and are skipped in stereo.
 - Per-light shadow settings (#88). `Light.shadowSettings` (`Light.ShadowSettings`) overrides `Shadows` for one light: `cascadeCount` gives directional lights cascaded shadow maps (split by camera distance, spaced by `splitFactor`, blended over the last 10% of each cascade), `resolutionScale` uses part of a slice, and `depthBias`/`slopeScale` replace the global bias. Archived with the light. `LightingShadowUniforms` gains `sliceCascades`, and `PBRShadows` takes `sliceCascades`; `Lighting::sliceShadow` takes an optional extent.
 - Shape options (#80). `.box` takes `chamferRadius`, `.plane` takes `cornerRadius`, `.sphere` takes `segmentCount` and `isGeodesic`, and `.cylinder`, `.cone`, `.capsule`, `.tube` and `.torus` take segment counts. Defaults draw the same meshes as before, and archives without the new keys still load. Code that pattern-matches these cases needs the extra bindings.
 - `SceneView` documents that two views must not draw one scene graph, or share renderer objects, at the same time (#481).

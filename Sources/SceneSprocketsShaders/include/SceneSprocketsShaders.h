@@ -2,6 +2,7 @@
 
 #import "BlinnPhong.h"
 #import "BlinnPhongLighting.h"
+#import "Decal.h"
 #import "Deformation.h"
 #import "Fog.h"
 #import "ShaderMaterial.h"

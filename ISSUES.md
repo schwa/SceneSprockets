@@ -9268,13 +9268,14 @@ Seen in TinyTorii (wander mode) with SceneSprockets 0.1.0.
 ## 397: No projected decals
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: effort:m, area:renderer
 milestone: Rendering-2
 created: 2026-11-16T20:03:49Z
-updated: 2026-11-20T06:33:14Z
+updated: 2026-11-23T03:18:28Z
+closed: 2026-11-23T03:18:28Z
 +++
 
 There is no way to project an image onto existing meshes, for example bullet holes, footprints or road markings. Moved from SceneSprocketsAddOns #24.

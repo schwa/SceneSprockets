@@ -292,6 +292,8 @@ public final class Shadows {
         guard let bounds else {
             return nil
         }
+        // Decals and other depth readers draw onto other surfaces; they neither cast nor receive (#397).
+        let entries = entries.filter { !($0.material is any ReadsSceneDepth) }
         // Everything here is camera-relative (#257): lights, bounds and casters are shifted by the camera position in
         // Double, so the light views map camera-relative positions and stay precise far from the world origin.
         let cameraPosition = context.cameraMatrix.columns.3.xyz

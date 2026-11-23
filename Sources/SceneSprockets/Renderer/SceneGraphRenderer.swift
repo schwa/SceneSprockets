@@ -48,6 +48,9 @@ public struct RenderContext {
     /// Set when lights are assigned to clusters this frame (#519). Its light indices are into
     /// `lightingLights(cameraPosition:)`, so it is nil in batches lit by only some of the lights (category masks).
     public internal(set) var lightClusters: LightingClusters?
+    /// Set for materials that conform to ``ReadsSceneDepth``, which draw after the scene pass: the scene's depth as an
+    /// `.r32Float` texture (reversed depth, 0 is the background), one texel per pixel of the color target (#397).
+    public internal(set) var sceneDepth: MTLTexture?
 
     /// The number of views that each draw goes to: 1, or the stereo view count.
     public var viewCount: Int { stereoViews?.count ?? 1 }
@@ -241,6 +244,11 @@ public struct SceneGraphElement: Element {
             }
             let revision = context.revision
             entries = entries.map { $0.material is any DrawsDeformedVertices ? $0.resolvingDeformation(revision: revision) : $0 }
+            // Decals and other depth readers draw after the scene pass, from its depth (#397).
+            let depthReaders = entries.filter { $0.material is any ReadsSceneDepth }
+            if !depthReaders.isEmpty {
+                entries = entries.filter { !($0.material is any ReadsSceneDepth) }
+            }
             let opaque = entries.filter { !$0.isTransparent }
             let inShaderAmbientOcclusion = opaque.filter { $0.material is any AppliesAmbientOcclusionInShader }
             let wantsAmbientOcclusion = context.environment.ambientOcclusion != nil && postTargets != nil && debugMode == nil
@@ -258,6 +266,7 @@ public struct SceneGraphElement: Element {
                 hasFog: presentation.fog != nil,
                 adjustsColor: postProcessing?.adjustsColor ?? false,
                 hasSoftParticles: visibleParticleFrames.contains(where: \.isSoft),
+                hasDepthReaders: !depthReaders.isEmpty,
                 hasAutoExposure: autoExposureBuffer != nil,
                 // Only a multisampled view target blocks the soft particle pass. With `sampleCount`, the scene pass resolves
                 // color and depth into the view's single-sample targets, which the particle pass loads (#601).
@@ -290,6 +299,15 @@ public struct SceneGraphElement: Element {
                 return (postTargets.depth, copy)
             }()
             var particleElements: [AnyElement] = []
+            if let softParticleDepth, !depthReaders.isEmpty {
+                var depthContext = context
+                depthContext.sceneDepth = softParticleDepth.copy
+                for batch in renderBatches(depthReaders, context: depthContext) {
+                    particleElements += try zip(renderers, partitionMeshEntries(batch.entries, renderers: renderers)).compactMap { renderer, rendererEntries in
+                        rendererEntries.isEmpty ? nil : try renderer.makeElement(entries: rendererEntries, context: batch.context)
+                    }
+                }
+            }
             for frame in visibleParticleFrames {
                 // Made by the simulation above.
                 guard let runtime = frame.system.renderRuntime else {

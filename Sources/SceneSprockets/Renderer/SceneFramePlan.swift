@@ -31,6 +31,8 @@ struct SceneFramePlan: Equatable {
         var hasFog = false
         var adjustsColor = false
         var hasSoftParticles = false
+        // Entries whose material reads the scene's depth (decals, #397); like soft particles, they need the second pass.
+        var hasDepthReaders = false
         var hasAutoExposure = false
         // The view's own target is multisampled and resolves at the end of the scene pass, so a second pass could not
         // reload its samples. SceneGraphElement's `sampleCount` does not set this: its scene pass resolves into the
@@ -78,7 +80,7 @@ struct SceneFramePlan: Equatable {
             ambientOcclusion = .passes(inShaderDepth: inShader > 0 && inShader < inputs.opaqueCount, appliesAsPostPass: inShader < inputs.opaqueCount)
         }
         drawsText = !inputs.isDebug
-        hasSoftParticlePass = inputs.hasPostTargets && inputs.hasSoftParticles && !inputs.resolvesMultisample
+        hasSoftParticlePass = inputs.hasPostTargets && (inputs.hasSoftParticles || inputs.hasDepthReaders) && !inputs.resolvesMultisample
         hasShadowCasterPass = inputs.hasShadowFrame
         var postPasses: [PostPass] = []
         if inputs.hasShadowFrame, !inputs.shadowMasksEverything {
