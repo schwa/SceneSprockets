@@ -36,7 +36,7 @@ public final class KeynoteDemo: DemoScene {
         "Shadows", "Shadow Settings", "Fog", "Decals", "Mirrors", "Opacity & Fades", "Blend Modes", "Stochastic", "Glass", "PBR Extensions", "Subsurface", "Custom Shaders", "Video Textures", "glTF & Model I/O", "MaterialX",
         "Actions", "Implicit Animation", "Constraints", "Paths", "Animation Blending", "Deformation",
         "Particles", "Mesh Emitters",
-        "Physics", "More Physics", "Post-Processing", "Level of Detail", "Performance", "SwiftECS World",
+        "Physics", "More Physics", "Post-Processing", "Bloom", "Level of Detail", "Performance", "SwiftECS World",
         "Hit Testing", "Gizmos", "Debug Views",
         "Point Clouds", "Terrain", "Metaballs", "Voxels", "Toon",
         "Thank You"
@@ -91,6 +91,8 @@ public final class KeynoteDemo: DemoScene {
     private var cardClusters: [SceneGraph.Node] = []
     // The Shadow Settings slide (#648): the sun, whose shadow settings the controls set.
     private var cascadeSun: SceneGraph.Node?
+    // The Bloom slide (#649): the glowing shapes that turn.
+    private var neonShapes: SceneGraph.Node?
     private var cardMaterials: [PBRSceneMaterial] = []
     private var subsurfaceMaterials: [PBRSceneMaterial] = []
     private static let maximumSwarmLights = 400
@@ -326,6 +328,12 @@ public final class KeynoteDemo: DemoScene {
         • It marches each pixel's ray through the shadow map, so it needs shadows on.
         • Distance fog (start and end distances) is also available, alone or with it.
         """,
+        "Bloom": """
+        • Bloom makes bright light glow past its edges, like neon signs and the sun through a lens.
+        • One setting: sceneGraph.postProcessing.bloom, with a threshold, intensity and radius.
+        • With bloom on, the scene is drawn in floating point (HDR), so these tubes can be far brighter than white.
+        • Bloom, exposure and tone mapping then run as post passes over the whole frame.
+        """,
         "Shadow Settings": """
         • Each light can override the scene's shadow settings: Light.shadowSettings.
         • Cascades split a sun's shadow map by distance from the camera: sharp shadows near, coarser far away.
@@ -544,6 +552,8 @@ public final class KeynoteDemo: DemoScene {
             ]
         case "Decals":
             [.toggle("Move Decal", default: true), .slider("Maximum Angle", 10...90, default: 60)]
+        case "Bloom":
+            [.toggle("Bloom", default: true), .slider("Bloom Threshold", 0.5...4, default: 1), .slider("Bloom Intensity", 0...2, default: 0.6), .slider("Bloom Radius", 1...8, default: 6), .slider("Neon Spin", 0...3, default: 1)]
         case "Shadow Settings":
             [.toggle("Cascades", default: true), .slider("Cascade Count", 2...4, default: 4), .slider("Sun Resolution", 0.25...1, default: 1)]
         case "Stochastic":
@@ -766,6 +776,9 @@ public final class KeynoteDemo: DemoScene {
             updateCards(time: time)
         case "Shadow Settings":
             updateCascadeSun()
+        case "Bloom":
+            neonShapes?.transform = .init(translation: [0, 1.8, 0], rotation: simd_quatf(angle: time * 0.3 * self[value: "Neon Spin"], axis: [0, 1, 0]))
+            updateBloom()
         default:
             break
         }
@@ -795,6 +808,8 @@ public final class KeynoteDemo: DemoScene {
         if currentTitle == "Post-Processing" {
             gradeIndex = 0
             sinceGrade = 0
+        } else if currentTitle == "Bloom" {
+            updateBloom()
         } else {
             sceneGraph.postProcessing = nil
         }
@@ -1445,6 +1460,12 @@ public final class KeynoteDemo: DemoScene {
             // Noir
             sceneGraph.postProcessing = SceneGraph.PostProcessing(contrast: 1.8, saturation: 0,
                                                                   vignetteIntensity: 0.9, vignetteRadius: 0.35)
+            """, to: slide)
+        case "Bloom":
+            bloomSlide(slide)
+            addCode("""
+            sceneGraph.postProcessing = SceneGraph.PostProcessing(
+                bloom: .init(threshold: 1, intensity: 0.6, radius: 6))
             """, to: slide)
         case "Shadow Settings":
             shadowSettingsSlide(slide)
@@ -2287,6 +2308,32 @@ public final class KeynoteDemo: DemoScene {
         // Tall enough to reach both the ground and the top of the step as it slides across the edge.
         let arrow = DecalMaterial(texture: Self.decalTexture(.arrow), color: [1, 1, 1, 1], maximumAngle: .pi / 3)
         movingDecal = slide.addChild(SceneGraph.Node(label: "Arrow", shape: .box(), material: arrow, transform: .init(translation: [0, 0.25, -0.6], rotation: lookDown, scale: [1.2, 1.2, 1.4])))
+    }
+
+    private func bloomSlide(_ slide: SceneGraph.Node) {
+        addLight(to: slide, at: [0, 4, 5], intensity: 8, castsShadow: false)
+        slide.addChild(SceneGraph.Node(label: "Floor", shape: .box(width: 8, height: 0.1, length: 4), material: BlinnPhongSceneMaterial(ambient: .color(0.05), diffuse: .color([0.15, 0.15, 0.18]), specular: .color(0.3), shininess: 64), transform: .init(translation: [0, -0.05, 0])))
+        let neon = slide.addChild(SceneGraph.Node(label: "Neon", transform: .init(translation: [0, 1.8, 0])))
+        neonShapes = neon
+        // Emission far above 1: the HDR path keeps it, and the threshold picks it out for bloom.
+        func glow(_ color: SIMD3<Float>) -> BlinnPhongSceneMaterial {
+            BlinnPhongSceneMaterial(ambient: .color(0), diffuse: .color(0), specular: .color(0), shininess: 1, emission: .color(color * 6))
+        }
+        neon.addChild(SceneGraph.Node(label: "Ring", shape: .torus(ringRadius: 1.1, pipeRadius: 0.06), material: glow([1, 0.2, 0.6]), transform: .init(rotation: simd_quatf(angle: .pi / 2, axis: [1, 0, 0]))))
+        neon.addChild(SceneGraph.Node(label: "Ring", shape: .torus(ringRadius: 0.8, pipeRadius: 0.05), material: glow([0.2, 0.7, 1]), transform: .init(rotation: simd_quatf(angle: .pi / 2, axis: [0, 0, 1]))))
+        neon.addChild(SceneGraph.Node(label: "Core", shape: .sphere(radius: 0.25), material: glow([1, 0.85, 0.4])))
+        // Dim shapes nearby stay below the threshold and do not glow.
+        for side: Float in [-1, 1] {
+            slide.addChild(SceneGraph.Node(label: "Dim Cube", shape: .box(width: 0.6, height: 0.6, length: 0.6), material: BlinnPhongSceneMaterial.plastic([0.6, 0.6, 0.65]), transform: .init(translation: [side * 2.8, 0.3, 0])))
+        }
+    }
+
+    private func updateBloom() {
+        let bloom = self[flag: "Bloom"] ? SceneGraph.PostProcessing.Bloom(threshold: self[value: "Bloom Threshold"], intensity: self[value: "Bloom Intensity"], radius: Int(self[value: "Bloom Radius"].rounded())) : nil
+        let settings = SceneGraph.PostProcessing(bloom: bloom)
+        if sceneGraph.postProcessing != settings {
+            sceneGraph.postProcessing = settings
+        }
     }
 
     private func shadowSettingsSlide(_ slide: SceneGraph.Node) {

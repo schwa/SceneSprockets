@@ -51,7 +51,9 @@ struct GoldenImageTests {
         // #647: crossed cards, sorted and stochastic.
         Case(name: "keynote-stochastic", demo: "keynote", values: ["Card Spin": 0], frames: 30, slide: "Stochastic"),
         // #648: a long street of posts under a cascaded sun.
-        Case(name: "keynote-shadow-settings", demo: "keynote", frames: 30, slide: "Shadow Settings")
+        Case(name: "keynote-shadow-settings", demo: "keynote", frames: 30, slide: "Shadow Settings"),
+        // #649: neon shapes through the HDR path and bloom.
+        Case(name: "keynote-bloom", demo: "keynote", values: ["Neon Spin": 0], frames: 30, slide: "Bloom")
     ]
 
     @Test(arguments: cases)

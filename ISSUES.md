@@ -14840,13 +14840,14 @@ Per-light shadow settings (#88) are not shown in the keynote: cascaded shadows f
 ## 649: Keynote has no slide for bloom
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:demo, effort:s
 milestone: Demo
 created: 2026-11-23T12:27:33Z
-updated: 2026-11-23T12:27:35Z
+updated: 2026-11-23T13:08:27Z
+closed: 2026-11-23T13:08:27Z
 +++
 
 Bloom and the HDR path (#640) are not shown in the keynote. A slide could show bright emissive objects with PostProcessing.bloom and controls for threshold and intensity, with a code panel.
