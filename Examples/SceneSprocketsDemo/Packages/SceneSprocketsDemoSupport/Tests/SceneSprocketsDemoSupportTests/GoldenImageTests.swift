@@ -45,7 +45,9 @@ struct GoldenImageTests {
         // #644: decals on the ground and over the step's edge.
         Case(name: "keynote-decals", demo: "keynote", values: ["Move Decal": 0], frames: 30, slide: "Decals"),
         // #645: shapes above a mirror floor.
-        Case(name: "keynote-mirrors", demo: "keynote", values: ["Mirror Orbit Speed": 0], frames: 30, slide: "Mirrors")
+        Case(name: "keynote-mirrors", demo: "keynote", values: ["Mirror Orbit Speed": 0], frames: 30, slide: "Mirrors"),
+        // #646: plain and subsurface heads lit from the side.
+        Case(name: "keynote-subsurface", demo: "keynote", values: ["Subsurface Light Speed": 0], frames: 30, slide: "Subsurface")
     ]
 
     @Test(arguments: cases)

@@ -14789,13 +14789,14 @@ Planar reflections (#531) are not shown in the keynote. A slide could put a mirr
 ## 646: Keynote has no slide for subsurface scattering
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:demo, effort:s
 milestone: Demo
 created: 2026-11-23T12:27:33Z
-updated: 2026-11-23T12:27:35Z
+updated: 2026-11-23T12:53:11Z
+closed: 2026-11-23T12:53:11Z
 +++
 
 Subsurface scattering (#538) is not shown in the keynote. A slide could compare a plain PBR sphere and a skin- or wax-like one lit from the side, with a code panel.

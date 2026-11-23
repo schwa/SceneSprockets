@@ -33,7 +33,7 @@ public final class KeynoteDemo: DemoScene {
     // debugging, then add-ons (#310). Slides are built by title, so reordering only means editing this list.
     public static let titles = [
         "SceneSprockets", "SceneView", "Scene Graph", "Shapes", "Materials", "Lights", "Many Lights",
-        "Shadows", "Fog", "Decals", "Mirrors", "Opacity & Fades", "Blend Modes", "Glass", "PBR Extensions", "Custom Shaders", "Video Textures", "glTF & Model I/O", "MaterialX",
+        "Shadows", "Fog", "Decals", "Mirrors", "Opacity & Fades", "Blend Modes", "Glass", "PBR Extensions", "Subsurface", "Custom Shaders", "Video Textures", "glTF & Model I/O", "MaterialX",
         "Actions", "Implicit Animation", "Constraints", "Paths", "Animation Blending", "Deformation",
         "Particles", "Mesh Emitters",
         "Physics", "More Physics", "Post-Processing", "Level of Detail", "Performance", "SwiftECS World",
@@ -85,6 +85,9 @@ public final class KeynoteDemo: DemoScene {
     // The Mirrors slide (#645): shapes that orbit above the mirror floor, and the floor's PBR material.
     private var mirrorShapes: [SceneGraph.Node] = []
     private var mirrorFloor: SceneGraph.Node?
+    // The Subsurface slide (#646): the light that circles the pair, and the materials whose scattering the sliders set.
+    private var subsurfaceLight: SceneGraph.Node?
+    private var subsurfaceMaterials: [PBRSceneMaterial] = []
     private static let maximumSwarmLights = 400
     private let debugDrawMaterial = ShaderMaterial.vertexColors()
     private static let tubeJointCount = 7
@@ -318,6 +321,12 @@ public final class KeynoteDemo: DemoScene {
         • It marches each pixel's ray through the shadow map, so it needs shadows on.
         • Distance fog (start and end distances) is also available, alone or with it.
         """,
+        "Subsurface": """
+        • Skin, wax and marble let light in and scatter it under the surface, so their shadow edge glows softly.
+        • Left: plain PBR. Right: the same material with subsurface scattering, tinted red like skin.
+        • It wraps the diffuse light past the terminator; strength and radius are two material values.
+        • An approximation that costs almost nothing; thin surfaces like leaves use diffuse transmission instead.
+        """,
         "Mirrors": """
         • A node with planarReflector becomes a mirror: its plane shows the scene reflected in it.
         • Each frame the scene is drawn once more from the camera mirrored in the plane, into a texture.
@@ -518,6 +527,8 @@ public final class KeynoteDemo: DemoScene {
             ]
         case "Decals":
             [.toggle("Move Decal", default: true), .slider("Maximum Angle", 10...90, default: 60)]
+        case "Subsurface":
+            [.slider("Subsurface Strength", 0...2, default: 1), .slider("Subsurface Radius", 0...1, default: 0.6), .slider("Subsurface Light Speed", 0...3, default: 1)]
         case "Mirrors":
             [.toggle("Reflect", default: true), .slider("Floor Roughness", 0...0.6, default: 0.05), .slider("Mirror Orbit Speed", 0...3, default: 1)]
         case "Opacity & Fades":
@@ -728,6 +739,8 @@ public final class KeynoteDemo: DemoScene {
             updateDecals(time: time)
         case "Mirrors":
             updateMirrors(time: time)
+        case "Subsurface":
+            updateSubsurface(time: time)
         default:
             break
         }
@@ -741,6 +754,8 @@ public final class KeynoteDemo: DemoScene {
         showsSelectionOutline = currentTitle == "Gizmos"
         selectGizmoObject(gizmoTarget)
         applyEditorGizmos()
+        // The Subsurface slide dims the environment, so its one side light shows the soft shadow edge (#646).
+        sceneGraph.environment.intensity = currentTitle == "Subsurface" ? 0.15 : 1
         // A debug view replaces every material in the view, so it is on only for its slide.
         debugIndex = 0
         sinceDebugMode = 0
@@ -1405,6 +1420,15 @@ public final class KeynoteDemo: DemoScene {
             // Noir
             sceneGraph.postProcessing = SceneGraph.PostProcessing(contrast: 1.8, saturation: 0,
                                                                   vignetteIntensity: 0.9, vignetteRadius: 0.35)
+            """, to: slide)
+        case "Subsurface":
+            subsurfaceSlide(slide)
+            addCode("""
+            var uniforms = wax.uniforms
+            uniforms.subsurfaceColor = [1, 0.35, 0.25]
+            uniforms.subsurfaceStrength = 1
+            uniforms.subsurfaceRadius = 0.6
+            wax.uniforms = uniforms
             """, to: slide)
         case "Mirrors":
             mirrorsSlide(slide)
@@ -2225,6 +2249,45 @@ public final class KeynoteDemo: DemoScene {
         // Tall enough to reach both the ground and the top of the step as it slides across the edge.
         let arrow = DecalMaterial(texture: Self.decalTexture(.arrow), color: [1, 1, 1, 1], maximumAngle: .pi / 3)
         movingDecal = slide.addChild(SceneGraph.Node(label: "Arrow", shape: .box(), material: arrow, transform: .init(translation: [0, 0.25, -0.6], rotation: lookDown, scale: [1.2, 1.2, 1.4])))
+    }
+
+    private func subsurfaceSlide(_ slide: SceneGraph.Node) {
+        // One light from the side, so half of each head is past the terminator.
+        subsurfaceLight = slide.addChild(SceneGraph.Node(label: "Key Light", content: .light(Light(type: .directional, color: [1, 0.95, 0.9], intensity: 3, castsShadow: false))))
+        subsurfaceMaterials = []
+        for (index, scatters) in [false, true].enumerated() {
+            let material = PBRSceneMaterial(baseColor: [0.85, 0.65, 0.55], roughness: 0.55)
+            if scatters {
+                subsurfaceMaterials.append(material)
+            }
+            let x: Float = index == 0 ? -1.6 : 1.6
+            // A simple head: a sphere with a nose and two ears, so the soft edge shows on curved shapes.
+            let head = slide.addChild(SceneGraph.Node(label: scatters ? "Subsurface" : "Plain", shape: .sphere(radius: 1), material: material, transform: .init(translation: [x, 1.6, 0])))
+            head.addChild(SceneGraph.Node(label: "Nose", shape: .sphere(radius: 0.22), material: material, transform: .init(translation: [0, -0.05, 0.95])))
+            for side: Float in [-1, 1] {
+                head.addChild(SceneGraph.Node(label: "Ear", shape: .sphere(radius: 0.25), material: material, transform: .init(translation: [side * 0.98, 0, 0], scale: [0.5, 1, 0.8])))
+            }
+            addTitle(scatters ? "Subsurface" : "Plain", size: 0.35, y: 0.2, to: slide).transform.translation.x = x
+        }
+        updateSubsurface(time: 0)
+    }
+
+    private func updateSubsurface(time: Float) {
+        // From the right and a little behind, swinging slowly, so the terminator crosses the faces.
+        let angle = -0.35 + 0.45 * sin(time * 0.4 * self[value: "Subsurface Light Speed"])
+        subsurfaceLight?.transform = Transform3D(position: [cos(angle) * 6, 1.8, sin(angle) * 6], lookingAt: [0, 1.6, 0])
+        for material in subsurfaceMaterials {
+            var uniforms = material.uniforms
+            let strength = self[value: "Subsurface Strength"]
+            let radius = self[value: "Subsurface Radius"]
+            guard uniforms.subsurfaceStrength != strength || uniforms.subsurfaceRadius != radius || uniforms.subsurfaceColor != [1, 0.35, 0.25] else {
+                continue
+            }
+            uniforms.subsurfaceColor = [1, 0.35, 0.25]
+            uniforms.subsurfaceStrength = strength
+            uniforms.subsurfaceRadius = radius
+            material.uniforms = uniforms
+        }
     }
 
     private func mirrorsSlide(_ slide: SceneGraph.Node) {
