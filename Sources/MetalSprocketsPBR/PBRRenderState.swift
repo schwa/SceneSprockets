@@ -93,6 +93,9 @@ struct PBRPipelineState: Hashable {
     // Alpha-masked (glTF MASK) and not blended: the fragment's alpha decides sample coverage, so cutout edges are
     // antialiased with MSAA (#600). With one sample it cuts at the same alpha as discarding did.
     var alphaToCoverage = false
+    // Weighted blended transparency (#494): two color attachments (rgba16Float accumulation, r16Float revealage),
+    // drawn with fragment_weighted, depth tested but not written.
+    var isWeighted = false
 
     static let opaque = Self(blendMode: .opaque, colorWriteMask: .all, depthTest: true, depthWrite: true)
 
@@ -132,6 +135,9 @@ struct PBRPipelineState: Hashable {
         if alphaToCoverage {
             suffix += " Alpha To Coverage"
         }
+        if isWeighted {
+            suffix += " Weighted"
+        }
         return suffix
     }
 
@@ -152,6 +158,27 @@ struct PBRPipelineState: Hashable {
             mask.insert(.alpha)
         }
         attachment.writeMask = mask
+        if isWeighted {
+            attachment.pixelFormat = .rgba16Float
+            attachment.blendingState = .enabled
+            attachment.rgbBlendOperation = .add
+            attachment.alphaBlendOperation = .add
+            attachment.sourceRGBBlendFactor = .one
+            attachment.destinationRGBBlendFactor = .one
+            attachment.sourceAlphaBlendFactor = .one
+            attachment.destinationAlphaBlendFactor = .one
+            // swiftlint:disable:next force_unwrapping - color attachment 1 always exists
+            let revealage = descriptor.colorAttachments[1]!
+            revealage.pixelFormat = .r16Float
+            revealage.blendingState = .enabled
+            revealage.rgbBlendOperation = .add
+            revealage.alphaBlendOperation = .add
+            revealage.sourceRGBBlendFactor = .zero
+            revealage.destinationRGBBlendFactor = .oneMinusSourceColor
+            revealage.sourceAlphaBlendFactor = .zero
+            revealage.destinationAlphaBlendFactor = .oneMinusSourceAlpha
+            return
+        }
         // Alpha to one keeps the stored alpha at 1, as discarding did.
         descriptor.alphaToCoverageState = alphaToCoverage ? .enabled : .disabled
         descriptor.alphaToOneState = alphaToCoverage ? .enabled : .disabled
@@ -166,6 +193,6 @@ struct PBRPipelineState: Hashable {
     }
 
     func depthStencilDescriptor(function: MTLCompareFunction) -> MTLDepthStencilDescriptor {
-        MTLDepthStencilDescriptor(depthCompareFunction: depthTest ? function : .always, isDepthWriteEnabled: depthWrite)
+        MTLDepthStencilDescriptor(depthCompareFunction: depthTest ? function : .always, isDepthWriteEnabled: depthWrite && !isWeighted)
     }
 }

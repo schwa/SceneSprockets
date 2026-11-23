@@ -123,6 +123,9 @@ private struct FrameDrawBuilder {
     func pipelineState(_ batch: PBRModel.Batch, coverage: Bool) -> PBRPipelineState {
         let material = material(batch)
         var state = PBRPipelineState(material, writesBlendedDepth: renderer.writesBlendedDepth)
+        if renderer.drawsWeightedTransparency, state.blendMode == .alpha {
+            state.isWeighted = true
+        }
         if coverage {
             state.blendMode = .premultiplied
             state.alphaToCoverage = false

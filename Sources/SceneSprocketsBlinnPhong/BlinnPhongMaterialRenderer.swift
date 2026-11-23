@@ -208,7 +208,7 @@ public struct BlinnPhongMaterialRenderer: MaterialRenderer, Equatable {
                 return (key: group.key, single: sortedSingle, instanced: batches.filter { $0.modelMatrices.count > 1 })
             }
         }
-        return BlinnPhongBatchesElement(groups: groups, shading: shading, ambientOcclusion: context.ambientOcclusion, isTransparent: isTransparent, stereoViews: context.stereoViews, materialResources: materialResources).eraseToAnyElement()
+        return BlinnPhongBatchesElement(groups: groups, shading: shading, ambientOcclusion: context.ambientOcclusion, isTransparent: isTransparent, isWeighted: isTransparent && context.drawsWeightedTransparency, stereoViews: context.stereoViews, materialResources: materialResources).eraseToAnyElement()
     }
 
     // Opaque batching depends on structure, opacity and mirroring, not on where things are, so it is cached and only
@@ -264,6 +264,8 @@ private struct BlinnPhongBatchesElement: Element {
     var ambientOcclusion: MTLTexture?
     // Blends and does not write depth.
     var isTransparent: Bool
+    // Draws into weighted blended transparency targets instead (#494).
+    var isWeighted = false
     var stereoViews: StereoViews?
     var materialResources: MaterialResourcesCache
 
@@ -276,7 +278,13 @@ private struct BlinnPhongBatchesElement: Element {
             let lightValues = shading.lights
             let cameraPosition = shading.cameraPosition
             let shaders = try BlinnPhongShaders.shared()
-            let fragmentShader = shading.shadow == nil ? shaders.fragment : shaders.shadowedFragment
+            let isWeighted = isWeighted
+            let fragmentShader = switch (shading.shadow == nil, isWeighted) {
+            case (true, false): shaders.fragment
+            case (false, false): shaders.shadowedFragment
+            case (true, true): shaders.weightedFragment
+            case (false, true): shaders.shadowedWeightedFragment
+            }
             let placeholder = try BlinnPhongShaders.placeholderTexture()
             let defaultSampler = try BlinnPhongShaders.defaultSampler()
             let shadowBinding = shading.shadowBinding(submissionIndex: submissionIndex)
@@ -296,7 +304,7 @@ private struct BlinnPhongBatchesElement: Element {
             // then color only where its nearest face is (#327).
             func isFaded(_ batch: InstanceBatch) -> Bool {
                 let state = batch.material.renderState
-                return isTransparent && !batch.material.isTransparent && state.fillMode == .fill && state.readsFromDepthBuffer && state.writesToDepthBuffer
+                return isTransparent && !isWeighted && !batch.material.isTransparent && state.fillMode == .fill && state.readsFromDepthBuffer && state.writesToDepthBuffer
             }
             // Consecutive batches that are all faded or all not, in draw order.
             func runs(_ batches: [InstanceBatch]) -> [(isFaded: Bool, batches: [InstanceBatch])] {
@@ -389,7 +397,7 @@ private struct BlinnPhongBatchesElement: Element {
                             }
                         }
                         .vertexDescriptor(layout.descriptor)
-                        .materialRenderState(group.key.renderState, isTransparent: isTransparent, writesBlendedDepth: stereoViews != nil)
+                        .blinnPhongBlending(group.key.renderState, isTransparent: isTransparent, isWeighted: isWeighted, writesBlendedDepth: stereoViews != nil)
                         .vertexAmplification(count: viewCount)
                     }
                 }
@@ -400,10 +408,21 @@ private struct BlinnPhongBatchesElement: Element {
                         }
                     }
                     .vertexDescriptor(layout.descriptor)
-                    .materialRenderState(group.key.renderState, isTransparent: isTransparent, writesBlendedDepth: stereoViews != nil)
+                    .blinnPhongBlending(group.key.renderState, isTransparent: isTransparent, isWeighted: isWeighted, writesBlendedDepth: stereoViews != nil)
                     .vertexAmplification(count: viewCount)
                 }
             }
+        }
+    }
+}
+
+private extension Element {
+    @ElementBuilder
+    func blinnPhongBlending(_ state: MaterialRenderState, isTransparent: Bool, isWeighted: Bool, writesBlendedDepth: Bool) -> some Element {
+        if isWeighted {
+            weightedTransparencyState()
+        } else {
+            materialRenderState(state, isTransparent: isTransparent, writesBlendedDepth: writesBlendedDepth)
         }
     }
 }
@@ -511,6 +530,13 @@ extension BlinnPhongSceneMaterial {
             parallaxDepth: parallaxDepth,
             stochasticAlpha: renderState.blendMode == .stochastic ? 1 : 0
         )
+    }
+}
+
+extension BlinnPhongSceneMaterial: SupportsWeightedTransparency {
+    /// Straight alpha blending: `renderState.blendMode` is `.alpha` (#494).
+    public var drawsAsWeightedTransparency: Bool {
+        renderState.blendMode == .alpha
     }
 }
 
@@ -719,6 +745,9 @@ struct BlinnPhongShaders {
     var coloredInstancedVertex: VertexShader
     var fragment: FragmentShader
     var shadowedFragment: FragmentShader
+    // Weighted blended transparency (#494).
+    var weightedFragment: FragmentShader
+    var shadowedWeightedFragment: FragmentShader
 
     nonisolated(unsafe) private static var cached: Self?
     nonisolated(unsafe) private static var cachedPlaceholder: MTLTexture?
@@ -735,10 +764,10 @@ struct BlinnPhongShaders {
             return cached
         }
         let library = try ShaderLibrary(bundle: .sceneSprocketsShaders()).namespaced("BlinnPhong")
-        func fragment(shadows: Bool) throws -> FragmentShader {
+        func fragment(shadows: Bool, weighted: Bool = false) throws -> FragmentShader {
             var constants = FunctionConstants()
             constants["HAS_SHADOWS"] = .bool(shadows)
-            return try library.function(named: "fragment_main", type: FragmentShader.self, constants: constants)
+            return try library.function(named: weighted ? "fragment_weighted" : "fragment_main", type: FragmentShader.self, constants: constants)
         }
         func vertex(_ name: String, colors: Bool) throws -> VertexShader {
             var constants = FunctionConstants()
@@ -751,7 +780,9 @@ struct BlinnPhongShaders {
             coloredVertex: try vertex("vertex_main", colors: true),
             coloredInstancedVertex: try vertex("vertex_instanced", colors: true),
             fragment: try fragment(shadows: false),
-            shadowedFragment: try fragment(shadows: true)
+            shadowedFragment: try fragment(shadows: true),
+            weightedFragment: try fragment(shadows: false, weighted: true),
+            shadowedWeightedFragment: try fragment(shadows: true, weighted: true)
         )
         cached = shaders
         return shaders

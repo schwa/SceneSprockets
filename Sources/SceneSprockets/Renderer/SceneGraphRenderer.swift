@@ -56,6 +56,9 @@ public struct RenderContext {
     public internal(set) var contactShadowLight: simd_float4x4?
     /// Set when a node with ``SceneGraph/Node/planarReflector`` is drawn this frame (#531).
     public internal(set) var planarReflection: PlanarReflectionContext?
+    /// Set for the transparent entries drawn as weighted blended transparency (#494): renderers draw them with a
+    /// fragment shader that writes `Lighting::WeightedTransparencyOutput` and ``Element/weightedTransparencyState()``.
+    public internal(set) var drawsWeightedTransparency = false
 
     /// The number of views that each draw goes to: 1, or the stereo view count.
     public var viewCount: Int { stereoViews?.count ?? 1 }
@@ -254,6 +257,16 @@ public struct SceneGraphElement: Element {
             if !depthReaders.isEmpty {
                 entries = entries.filter { !($0.material is any ReadsSceneDepth) }
             }
+            // Order-independent transparency (#494): straight-alpha transparent entries draw in their own pass.
+            let drawsWeighted = context.environment.orderIndependentTransparency && postTargets != nil && debugMode == nil
+                && renderPassDescriptor?.colorAttachments[0].resolveTexture == nil
+            let isWeighted = { (entry: SceneGraph.MeshEntry) in
+                entry.isTransparent && ((entry.material as? any SupportsWeightedTransparency)?.drawsAsWeightedTransparency ?? false)
+            }
+            let weightedEntries = drawsWeighted ? entries.filter(isWeighted) : []
+            if !weightedEntries.isEmpty {
+                entries = entries.filter { !isWeighted($0) }
+            }
             let opaque = entries.filter { !$0.isTransparent }
             let inShaderAmbientOcclusion = opaque.filter { $0.material is any AppliesAmbientOcclusionInShader }
             let wantsAmbientOcclusion = context.environment.ambientOcclusion != nil && postTargets != nil && debugMode == nil
@@ -275,7 +288,7 @@ public struct SceneGraphElement: Element {
                 hasFog: presentation.fog != nil,
                 adjustsColor: postProcessing?.adjustsColor ?? false,
                 hasSoftParticles: visibleParticleFrames.contains(where: \.isSoft),
-                hasDepthReaders: !depthReaders.isEmpty,
+                hasDepthReaders: !depthReaders.isEmpty || !weightedEntries.isEmpty,
                 hasAutoExposure: autoExposureBuffer != nil,
                 // Only a multisampled view target blocks the soft particle pass. With `sampleCount`, the scene pass resolves
                 // color and depth into the view's single-sample targets, which the particle pass loads (#601).
@@ -355,11 +368,29 @@ public struct SceneGraphElement: Element {
             } else {
                 nil
             }
+            let weightedPass: WeightedTransparencyPass? = try {
+                guard !weightedEntries.isEmpty, let postTargets else {
+                    return nil
+                }
+                var weightedContext = context
+                weightedContext.drawsWeightedTransparency = true
+                var content: [AnyElement] = []
+                for batch in renderBatches(weightedEntries, context: weightedContext) {
+                    content += try zip(renderers, partitionMeshEntries(batch.entries, renderers: renderers)).compactMap { renderer, rendererEntries in
+                        rendererEntries.isEmpty ? nil : try renderer.makeElement(entries: rendererEntries, context: batch.context)
+                    }
+                }
+                let targets = try WeightedTransparencyTargets.targets(device: postTargets.color.device, width: postTargets.color.width, height: postTargets.color.height)
+                return WeightedTransparencyPass(targets: targets, colorTexture: postTargets.color, depthTexture: postTargets.depth, content: content, storesDepth: plan.particlePassStoresDepth)
+            }()
             let scenePass = try MetalSprockets.Group {
                 try makeScenePass(elements: elements, clearColor: clearColor, storesDepth: plan.scenePassStoresDepth)
                 if let softParticleDepth {
                     ParticleDepthCopyPass(depthTexture: softParticleDepth.scene, output: softParticleDepth.copy)
                     try makeParticlePass(elements: particleElements, storesDepth: plan.particlePassStoresDepth)
+                }
+                if let weightedPass {
+                    weightedPass
                 }
             }
             guard let postTargets, plan.hasPostPhase else {

@@ -53,6 +53,13 @@ public final class PBRSceneMaterial: SceneMaterial, SamplesShadowsInShader, Shad
         pbrMaterial.isBlended
     }
 
+    /// Straight-alpha blending (the default for `alphaMode` blend), not transmissive (#494).
+    public var drawsAsWeightedTransparency: Bool {
+        let material = pbrMaterial
+        let mode = material.renderState.blendMode ?? (material.uniforms.alphaMode == .blend ? .alpha : .opaque)
+        return mode == .alpha && !material.isTransmissive
+    }
+
     public var appliesNodeOpacity: Bool {
         true
     }
@@ -461,6 +468,7 @@ public final class PBRMaterialRenderer: MaterialRenderer, Equatable {
         )
         renderer.materialOverrides = materialOverrides(for: entries, built: built, current: current)
         renderer.stereo = context.stereoViews.map { Self.relativeStereoViews($0, origin: cameraPosition) }
+        renderer.drawsWeightedTransparency = context.drawsWeightedTransparency
         if let channel = context.materialChannel {
             renderer.debugView = Self.debugView(for: channel)
         }
@@ -611,6 +619,8 @@ private struct FadeKey: Hashable {
 extension LightingEnvironment: EnvironmentMap {}
 
 extension PBRSceneMaterial: AppliesAmbientOcclusionInShader {}
+
+extension PBRSceneMaterial: SupportsWeightedTransparency {}
 
 extension PBRMaterialRenderer: BackgroundRenderer {
     /// The lighting PBR meshes get in `context`, for renderers whose shaders call `PBR::shade` themselves: lights

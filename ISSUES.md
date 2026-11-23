@@ -11487,13 +11487,14 @@ Found by the SwiftUI review (#475).
 ## 494: Order-independent transparency
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:renderer, effort:l
 milestone: Rendering-2
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-23T02:11:50Z
+updated: 2026-11-23T03:54:43Z
+closed: 2026-11-23T03:54:43Z
 +++
 
 Transparent draws are sorted back to front and alpha-blended, so intersecting or interleaved transparent surfaces blend in the wrong order. There is no order-independent transparency. (Moved from SceneSprocketsAddOns #47.) Related: #539, #399.

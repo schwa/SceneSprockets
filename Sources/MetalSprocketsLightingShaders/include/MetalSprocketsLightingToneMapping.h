@@ -77,6 +77,22 @@ namespace Lighting {
         return 1.0 + strength * (sample - 1.0);
     }
 
+    // Weighted blended order-independent transparency (#494, McGuire and Bavoil 2013). Color 0 accumulates weighted
+    // premultiplied color (blend one, one), color 1 the product of (1 - alpha) (blend zero, one minus source color),
+    // cleared to 0 and 1. A composite pass then resolves them over the opaque scene.
+    struct WeightedTransparencyOutput {
+        float4 accumulation [[color(0)]];
+        float revealage [[color(1)]];
+    };
+
+    // `color` is straight alpha; `position` is the fragment's [[position]] with reversed depth (1 is near).
+    inline WeightedTransparencyOutput weightedTransparency(float4 color, float4 position) {
+        const float alpha = saturate(color.a);
+        const float depth = saturate(1.0 - position.z);
+        const float weight = clamp(pow(min(1.0, alpha * 10.0) + 0.01, 3.0) * 1e8 * pow(1.0 - depth * 0.9, 3.0), 1e-2, 3e3);
+        return { float4(color.rgb * alpha, alpha) * weight, alpha };
+    }
+
     // Stochastic transparency (#539): for a pipeline with alpha to coverage, adds a per-pixel, per-depth random offset to
     // alpha so the coverage is a random pattern whose average is the alpha, different for each overlapping layer.
     // `position` is the fragment's [[position]]. Returns 0 or less where the fragment should be discarded.

@@ -55,6 +55,12 @@ extension SceneGraph {
         public var ambientOcclusion: AmbientOcclusion?
         /// Screen-space contact shadows from the brightest directional light; nil turns them off.
         public var contactShadows: ContactShadows?
+        /// Draws straight-alpha transparent Blinn-Phong and PBR meshes with weighted blended order-independent
+        /// transparency (#494) instead of sorting them, so intersecting and interleaved surfaces blend without order
+        /// errors. An approximation: the result is an average, so a near, opaque-looking layer is less dominant than
+        /// with sorting. Other blend modes and materials stay sorted. Needs readable view targets (see
+        /// ``Shadows/requiredColorUsage``) and no multisampled view target; not in stereo.
+        public var orderIndependentTransparency = false
         /// Multiplies the light before tone mapping, for every renderer.
         public var exposure: Float
         /// How every renderer turns linear light into display values.

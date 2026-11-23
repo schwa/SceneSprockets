@@ -186,4 +186,22 @@ namespace PBR {
         return withWireframe(shade(in, frontFacing, material.uniforms, frame, lights, material, shadow, frameResources, &lightClusterUniforms, lightClusters), barycentric, frame, material.uniforms);
     }
 
+    // fragment_main's color as weighted blended transparency (#494).
+    [[fragment]] Lighting::WeightedTransparencyOutput fragment_weighted(
+        Fragment in [[stage_in]],
+        bool frontFacing [[front_facing]],
+        float3 barycentric [[barycentric_coord]],
+        constant PBRMaterialResources *materials [[buffer(0)]],
+        constant PBRFrameUniforms &frame [[buffer(1)]],
+        constant LightingLight *lights [[buffer(2)]],
+        constant LightingShadowUniforms &shadow [[buffer(4)]],
+        constant LightingFrameResources &frameResources [[buffer(5)]],
+        constant LightingClusterUniforms &lightClusterUniforms [[buffer(6)]],
+        constant uint *lightClusters [[buffer(7)]]
+    ) {
+        constant PBRMaterialResources &material = materials[in.record];
+        const float4 color = withWireframe(shade(in, frontFacing, material.uniforms, frame, lights, material, shadow, frameResources, &lightClusterUniforms, lightClusters), barycentric, frame, material.uniforms);
+        return Lighting::weightedTransparency(color, in.position);
+    }
+
 } // namespace PBR

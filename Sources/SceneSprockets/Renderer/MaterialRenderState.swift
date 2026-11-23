@@ -74,7 +74,41 @@ public struct MaterialRenderState: Sendable, Hashable {
     }
 }
 
+/// Order-independent transparency (#494): which materials can be drawn as weighted blended transparency when
+/// ``SceneGraph/Environment/orderIndependentTransparency`` is on. Others stay sorted and blended in the scene pass.
+public protocol SupportsWeightedTransparency {
+    /// Whether this material blends like straight alpha over what is behind, which weighted blending can stand in for.
+    var drawsAsWeightedTransparency: Bool { get }
+}
+
 extension Element {
+    /// Draw state for ``RenderContext/drawsWeightedTransparency`` (#494): the fragment shader writes
+    /// `Lighting::WeightedTransparencyOutput`, color 0 (`.rgba16Float`) accumulates and color 1 (`.r16Float`)
+    /// multiplies revealage. Depth is tested, not written.
+    public func weightedTransparencyState() -> some Element {
+        depthCompare(function: .greater, writes: false)
+            .renderPipelineDescriptorTransformer { descriptor in
+                let accumulation: MTL4RenderPipelineColorAttachmentDescriptor = descriptor.colorAttachments[0]
+                accumulation.pixelFormat = .rgba16Float
+                accumulation.blendingState = .enabled
+                accumulation.rgbBlendOperation = .add
+                accumulation.alphaBlendOperation = .add
+                accumulation.sourceRGBBlendFactor = .one
+                accumulation.destinationRGBBlendFactor = .one
+                accumulation.sourceAlphaBlendFactor = .one
+                accumulation.destinationAlphaBlendFactor = .one
+                let revealage: MTL4RenderPipelineColorAttachmentDescriptor = descriptor.colorAttachments[1]
+                revealage.pixelFormat = .r16Float
+                revealage.blendingState = .enabled
+                revealage.rgbBlendOperation = .add
+                revealage.alphaBlendOperation = .add
+                revealage.sourceRGBBlendFactor = .zero
+                revealage.destinationRGBBlendFactor = .oneMinusSourceColor
+                revealage.sourceAlphaBlendFactor = .zero
+                revealage.destinationAlphaBlendFactor = .oneMinusSourceAlpha
+            }
+    }
+
     /// Reversed depth. `isTransparent` draws do not write depth and blend by alpha unless the blend mode says otherwise.
     /// `writesBlendedDepth` makes transparent draws write depth anyway: visionOS's compositor needs depth for every
     /// pixel drawn, so pass `context.stereoViews != nil`. `depthFunction` replaces `.greater` when the state reads depth.

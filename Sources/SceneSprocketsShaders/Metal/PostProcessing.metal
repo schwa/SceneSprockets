@@ -174,6 +174,29 @@ namespace PostProcessing {
 
     // Multiplies the final color by the visibility, for pixels whose front surface does not apply it while shading:
     // where the depth of those materials alone is in front of the full depth (#136).
+    // Weighted blended transparency (#494): the average transparent color over the opaque scene, by the product of
+    // the layers' (1 - alpha).
+    [[kernel]] void composite_weighted_transparency(
+        uint2 tid [[thread_position_in_grid]],
+        texture2d<float, access::read> accumulation [[texture(0)]],
+        texture2d<float, access::read> revealage [[texture(1)]],
+        texture2d<float, access::read_write> outputTexture [[texture(2)]]
+    ) {
+        uint2 size = uint2(outputTexture.get_width(), outputTexture.get_height());
+        if (tid.x >= size.x || tid.y >= size.y) {
+            return;
+        }
+        const float reveal = revealage.read(tid).r;
+        if (reveal >= 1.0) {
+            return;
+        }
+        const float4 sum = accumulation.read(tid);
+        const float3 average = sum.rgb / clamp(sum.a, 1e-4, 5e4);
+        float4 color = outputTexture.read(tid);
+        color.rgb = average * (1.0 - reveal) + color.rgb * reveal;
+        outputTexture.write(color, tid);
+    }
+
     [[kernel]] void apply_ambient_occlusion(
         uint2 tid [[thread_position_in_grid]],
         texture2d<float, access::read> visibility [[texture(0)]],

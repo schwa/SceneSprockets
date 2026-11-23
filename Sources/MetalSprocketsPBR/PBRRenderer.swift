@@ -39,6 +39,10 @@ public struct PBRRenderer: Element {
     /// with one slice and mipmaps. When set, the specular lobe shows it instead of the environment. Ignored when a
     /// transmission scene is bound, and in stereo.
     public var planarReflection: MTLTexture?
+    /// Draws straight-alpha blended batches as weighted blended transparency (#494), into a pass whose color
+    /// attachments are an `.rgba16Float` accumulation target (cleared to 0) and an `.r16Float` revealage target
+    /// (cleared to 1). Other batches draw as usual.
+    public var drawsWeightedTransparency = false
 
     var views: PBRViews { PBRViews(viewMatrix: viewMatrix, projectionMatrix: projectionMatrix, stereo: stereo) }
     /// The view-projection of every view drawn.
@@ -207,7 +211,7 @@ public struct PBRRenderer: Element {
         let segments = DrawSegment.segments(group.draws)
         // visionOS shows our color only where depth is written. In stereo, blended surfaces write depth so glass over
         // passthrough stays visible (see PBRPipelineState). They draw back to front, so nearer ones still pass.
-        return try RenderPipeline(label: group.label, vertexShader: context.shaders.vertexShader(variant), fragmentShader: context.shaders.fragment) {
+        return try RenderPipeline(label: group.label, vertexShader: context.shaders.vertexShader(variant), fragmentShader: group.state.isWeighted ? context.shaders.weightedFragment : context.shaders.fragment) {
             let content = ForEach(segments) { segment in
                 if case let .list(_, geometry, draws) = segment {
                     drawList(draws, geometry: geometry, skinned: variant.skinned)
@@ -532,6 +536,8 @@ public struct PBRFrameBindings {
 struct PBRShaders {
     var vertex: VertexShader
     var fragment: FragmentShader
+    // Weighted blended transparency (#494).
+    var weightedFragment: FragmentShader
     var skinnedVertex: VertexShader
     var morphedVertex: VertexShader
     var skinnedMorphedVertex: VertexShader
@@ -633,6 +639,7 @@ struct PBRShaders {
         return Self(
             vertex: try pbr.vertex_main,
             fragment: try pbr.fragment_main,
+            weightedFragment: try pbr.fragment_weighted,
             skinnedVertex: try pbr.vertex_skinned,
             morphedVertex: try pbr.vertex_main_morphed,
             skinnedMorphedVertex: try pbr.vertex_skinned_morphed,

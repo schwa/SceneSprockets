@@ -137,19 +137,18 @@ namespace BlinnPhong {
         return out;
     }
 
-    [[fragment]] float4 fragment_main(
-        Fragment in [[stage_in]],
-        bool frontFacing [[front_facing]],
-        constant BlinnPhongFrame &frame [[buffer(0)]],
-        constant LightingLight *lights [[buffer(1)]],
-        constant BlinnPhongMaterialUniforms &material [[buffer(2)]],
-        // The shadow map and sampler, and screen-space ambient visibility (#136; 1x1 white when off).
-        constant LightingFrameResources &frameResources [[buffer(4)]],
-        constant BlinnPhongMaterialResources &materialResources [[buffer(5)]],
-        // Clustered lights (#519); `enabled` 0 loops over every light.
-        constant LightingClusterUniforms &lightClusterUniforms [[buffer(6)]],
-        constant uint *lightClusters [[buffer(7)]],
-        constant LightingShadowUniforms &shadow [[buffer(3), function_constant(HAS_SHADOWS)]]
+    // The shaded color, for fragment_main and fragment_weighted.
+    static inline float4 fragmentColor(
+        Fragment in,
+        bool frontFacing,
+        constant BlinnPhongFrame &frame,
+        constant LightingLight *lights,
+        constant BlinnPhongMaterialUniforms &material,
+        constant LightingFrameResources &frameResources,
+        constant BlinnPhongMaterialResources &materialResources,
+        constant LightingClusterUniforms &lightClusterUniforms,
+        constant uint *lightClusters,
+        constant LightingShadowUniforms &shadow
     ) {
         const texture2d<float> ambientTexture = materialResources.ambientTexture;
         const texture2d<float> diffuseTexture = materialResources.diffuseTexture;
@@ -221,6 +220,39 @@ namespace BlinnPhong {
         const float4 occlusionSample = ambientOcclusion.read(min(uint2(in.position.xy), occlusionSize - 1));
         // Red: ambient occlusion. Green: contact shadows (#495), read only for lights that have them.
         return shade(surface, in.worldPosition, normal, frame.cameraPositions[in.view], frame, lights, &lightClusterUniforms, lightClusters, occlusionSample.r, HAS_SHADOWS, frameResources.shadowMap, frameResources.shadowSampler, shadow, occlusionSample.g);
+    }
+
+    [[fragment]] float4 fragment_main(
+        Fragment in [[stage_in]],
+        bool frontFacing [[front_facing]],
+        constant BlinnPhongFrame &frame [[buffer(0)]],
+        constant LightingLight *lights [[buffer(1)]],
+        constant BlinnPhongMaterialUniforms &material [[buffer(2)]],
+        // The shadow map and sampler, and screen-space ambient visibility (#136; 1x1 white when off).
+        constant LightingFrameResources &frameResources [[buffer(4)]],
+        constant BlinnPhongMaterialResources &materialResources [[buffer(5)]],
+        // Clustered lights (#519); `enabled` 0 loops over every light.
+        constant LightingClusterUniforms &lightClusterUniforms [[buffer(6)]],
+        constant uint *lightClusters [[buffer(7)]],
+        constant LightingShadowUniforms &shadow [[buffer(3), function_constant(HAS_SHADOWS)]]
+    ) {
+        return fragmentColor(in, frontFacing, frame, lights, material, frameResources, materialResources, lightClusterUniforms, lightClusters, shadow);
+    }
+
+    // fragment_main's color as weighted blended transparency (#494).
+    [[fragment]] Lighting::WeightedTransparencyOutput fragment_weighted(
+        Fragment in [[stage_in]],
+        bool frontFacing [[front_facing]],
+        constant BlinnPhongFrame &frame [[buffer(0)]],
+        constant LightingLight *lights [[buffer(1)]],
+        constant BlinnPhongMaterialUniforms &material [[buffer(2)]],
+        constant LightingFrameResources &frameResources [[buffer(4)]],
+        constant BlinnPhongMaterialResources &materialResources [[buffer(5)]],
+        constant LightingClusterUniforms &lightClusterUniforms [[buffer(6)]],
+        constant uint *lightClusters [[buffer(7)]],
+        constant LightingShadowUniforms &shadow [[buffer(3), function_constant(HAS_SHADOWS)]]
+    ) {
+        return Lighting::weightedTransparency(fragmentColor(in, frontFacing, frame, lights, material, frameResources, materialResources, lightClusterUniforms, lightClusters, shadow), in.position);
     }
 
 }
