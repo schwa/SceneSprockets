@@ -140,11 +140,12 @@ extension PBRSceneMaterial: ArchivableMaterial {
         case .alpha: "alpha"
         case .premultiplied: "premultiplied"
         case .additive: "additive"
+        case .stochastic: "stochastic"
         }
     }
 
     private static func blendMode(_ name: String) -> PBRRenderState.BlendMode? {
-        ["opaque": .opaque, "alpha": .alpha, "premultiplied": .premultiplied, "additive": .additive][name]
+        ["opaque": .opaque, "alpha": .alpha, "premultiplied": .premultiplied, "additive": .additive, "stochastic": .stochastic][name]
     }
 
     private static func name(_ depthWrite: PBRRenderState.DepthWrite) -> String {

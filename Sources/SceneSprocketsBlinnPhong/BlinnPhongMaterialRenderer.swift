@@ -111,7 +111,8 @@ public struct BlinnPhongSceneMaterial: SceneMaterial, SamplesShadowsInShader, Dr
     }
 
     public var isTransparent: Bool {
-        opacity < 1 || usesDiffuseTextureAlpha || renderState.blendsWithBackground
+        // Stochastic transparency draws with the opaque meshes (#539).
+        (opacity < 1 || usesDiffuseTextureAlpha) && renderState.blendMode != .stochastic || renderState.blendsWithBackground
     }
 
     public var appliesNodeOpacity: Bool {
@@ -507,7 +508,8 @@ extension BlinnPhongSceneMaterial {
             hasNormalTexture: normal?.texture == nil ? 0 : 1,
             hasHeightTexture: height?.texture == nil ? 0 : 1,
             heightScale: height?.color.x ?? 1,
-            parallaxDepth: parallaxDepth
+            parallaxDepth: parallaxDepth,
+            stochasticAlpha: renderState.blendMode == .stochastic ? 1 : 0
         )
     }
 }

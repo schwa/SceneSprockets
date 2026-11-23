@@ -205,6 +205,13 @@ namespace BlinnPhong {
         if (material.hasEmissionTexture) {
             emission *= emissionTexture.sample(textureSampler, uv).rgb;
         }
+        if (material.stochasticAlpha != 0) {
+            // Stochastic transparency (#539): the pipeline turns alpha into sample coverage.
+            alpha = Lighting::stochasticAlpha(alpha, in.position);
+            if (alpha <= 0.0) {
+                discard_fragment();
+            }
+        }
         Surface surface = { ambientColor, diffuseColor, specularColor, emission, material.shininess, alpha, material.receivesShadow != 0 };
         float4 channel;
         if (channelColor(surface, frame.materialChannel, channel)) {

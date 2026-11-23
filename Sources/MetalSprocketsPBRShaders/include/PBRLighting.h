@@ -306,6 +306,12 @@ namespace PBR {
             baseColor.a = coverage;
         } else if (material.alphaMode == kPBRAlphaModeOpaque) {
             baseColor.a = 1.0;
+        } else if (material.stochasticAlpha != 0) {
+            // Stochastic transparency (#539): the pipeline turns alpha into sample coverage.
+            baseColor.a = Lighting::stochasticAlpha(baseColor.a, in.position);
+            if (baseColor.a <= 0.0) {
+                discard_fragment();
+            }
         }
 
         if (material.unlit) {

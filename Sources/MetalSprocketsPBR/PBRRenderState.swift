@@ -11,6 +11,14 @@ public struct PBRRenderState: Hashable, Sendable {
         case premultiplied
         /// source * alpha + destination.
         case additive
+        /// Stochastic transparency (#539): drawn with the opaque batches, writing depth, with alpha turned into hashed
+        /// sample coverage. Overlapping surfaces need no sorting. Noisy at one sample; looks best with 4x MSAA.
+        case stochastic
+
+        /// Draws with the blended batches, back to front.
+        var isBlended: Bool {
+            self != .opaque && self != .stochastic
+        }
     }
 
     public enum FillMode: Hashable, Sendable {
@@ -48,8 +56,8 @@ public struct PBRRenderState: Hashable, Sendable {
         public static let none: Self = []
     }
 
-    /// Nil: `.alpha` for `alphaMode` blend, else `.opaque`. Anything but `.opaque` draws with the blended batches, back
-    /// to front.
+    /// Nil: `.alpha` for `alphaMode` blend, else `.opaque`. Anything but `.opaque` and `.stochastic` draws with the
+    /// blended batches, back to front.
     public var blendMode: BlendMode?
     /// False draws whatever is already in the depth buffer.
     public var depthTest: Bool
@@ -102,9 +110,9 @@ struct PBRPipelineState: Hashable {
         blendMode = state.resolvedBlendMode(alphaMode: material.uniforms.alphaMode)
         colorWriteMask = state.colorWriteMask
         depthTest = state.depthTest
-        let blended = blendMode != .opaque
+        let blended = blendMode.isBlended
         depthWrite = blended && writesBlendedDepth ? true : state.depthWrite.resolved(blended: blended)
-        alphaToCoverage = !blended && material.uniforms.alphaMode == .mask
+        alphaToCoverage = blendMode == .stochastic || (!blended && material.uniforms.alphaMode == .mask)
     }
 
     var labelSuffix: String {
@@ -113,6 +121,7 @@ struct PBRPipelineState: Hashable {
         case .alpha: ""
         case .premultiplied: " Premultiplied"
         case .additive: " Additive"
+        case .stochastic: " Stochastic"
         }
         if colorWriteMask != .all {
             suffix += " Masked"
@@ -146,7 +155,7 @@ struct PBRPipelineState: Hashable {
         // Alpha to one keeps the stored alpha at 1, as discarding did.
         descriptor.alphaToCoverageState = alphaToCoverage ? .enabled : .disabled
         descriptor.alphaToOneState = alphaToCoverage ? .enabled : .disabled
-        guard blendMode != .opaque else {
+        guard blendMode.isBlended else {
             return
         }
         attachment.blendingState = .enabled

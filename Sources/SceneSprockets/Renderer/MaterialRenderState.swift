@@ -20,6 +20,11 @@ public struct MaterialRenderState: Sendable, Hashable {
         case screen
         /// Writes the color with no blending, even when transparent.
         case replace
+        /// Stochastic transparency (#539): drawn with the opaque meshes, writing depth, with alpha turned into hashed
+        /// sample coverage, so overlapping see-through surfaces (hair, foliage) need no sorting. Noisy at one sample;
+        /// looks best with 4x MSAA. Shader materials get alpha to coverage without the random offset, unless their
+        /// shader applies `Lighting::stochasticAlpha` itself.
+        case stochastic
     }
 
     /// How the material's color combines with what is already drawn.
@@ -49,7 +54,7 @@ public struct MaterialRenderState: Sendable, Hashable {
     /// Add, subtract, multiply and screen blend with what is behind, so they draw with transparent meshes.
     public var blendsWithBackground: Bool {
         switch blendMode {
-        case .alpha, .replace: false
+        case .alpha, .replace, .stochastic: false
         case .add, .subtract, .multiply, .screen: true
         }
     }
@@ -78,6 +83,12 @@ extension Element {
             .renderPipelineDescriptorTransformer { descriptor in
                 let attachment: MTL4RenderPipelineColorAttachmentDescriptor = descriptor.colorAttachments[0]
                 attachment.writeMask = state.colorWriteMask
+                if state.blendMode == .stochastic {
+                    // Alpha to one keeps the stored alpha at 1, as for opaque meshes.
+                    descriptor.alphaToCoverageState = .enabled
+                    descriptor.alphaToOneState = .enabled
+                    return
+                }
                 let blendMode: MaterialRenderState.BlendMode = state.blendMode == .alpha && !isTransparent ? .replace : state.blendMode
                 guard blendMode != .replace else {
                     return
@@ -88,7 +99,7 @@ extension Element {
                 attachment.sourceAlphaBlendFactor = .one
                 attachment.destinationAlphaBlendFactor = .oneMinusSourceAlpha
                 switch blendMode {
-                case .alpha, .replace:
+                case .alpha, .replace, .stochastic:
                     attachment.sourceRGBBlendFactor = .sourceAlpha
                     attachment.destinationRGBBlendFactor = .oneMinusSourceAlpha
                 case .add:

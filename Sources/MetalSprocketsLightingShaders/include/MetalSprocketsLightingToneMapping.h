@@ -77,6 +77,15 @@ namespace Lighting {
         return 1.0 + strength * (sample - 1.0);
     }
 
+    // Stochastic transparency (#539): for a pipeline with alpha to coverage, adds a per-pixel, per-depth random offset to
+    // alpha so the coverage is a random pattern whose average is the alpha, different for each overlapping layer.
+    // `position` is the fragment's [[position]]. Returns 0 or less where the fragment should be discarded.
+    inline float stochasticAlpha(float alpha, float4 position) {
+        const float3 seed = float3(position.xy, position.z * 4096.0);
+        const float noise = fract(sin(dot(seed, float3(12.9898, 78.233, 37.719))) * 43758.5453);
+        return saturate(alpha + noise - 0.5);
+    }
+
     // Screen-space contact shadow visibility (#495) for `light` at a pixel: the green channel of the ambient occlusion
     // texture when the light has contact shadows, 1 otherwise.
     inline float contactShadow(LightingLight light, texture2d<float> occlusion, float4 position) {

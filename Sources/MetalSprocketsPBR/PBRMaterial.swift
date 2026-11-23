@@ -125,7 +125,9 @@ public final class PBRMaterial: @unchecked Sendable {
         textureBindings[Int(index.rawValue)]
     }
 
-    public var isBlended: Bool { renderState.resolvedBlendMode(alphaMode: uniforms.alphaMode) != .opaque }
+    public var isBlended: Bool { renderState.resolvedBlendMode(alphaMode: uniforms.alphaMode).isBlended }
+    /// Whether the material draws with stochastic transparency (#539): `renderState.blendMode` is `.stochastic`.
+    public var usesStochasticTransparency: Bool { renderState.blendMode == .stochastic }
     public var isTransmissive: Bool { uniforms.transmissionFactor > 0 }
 
     /// Whether `other` can be drawn in place of this material without rebuilding the model: it is drawn in the same
@@ -133,6 +135,7 @@ public final class PBRMaterial: @unchecked Sendable {
     public func canOverride(_ other: PBRMaterial) -> Bool {
         // Masked materials draw with an alpha-to-coverage pipeline (#600).
         isBlended == other.isBlended && isTransmissive == other.isTransmissive && renderState.isDefault == other.renderState.isDefault
+            && usesStochasticTransparency == other.usesStochasticTransparency
             && (uniforms.alphaMode == .mask) == (other.uniforms.alphaMode == .mask)
     }
 
@@ -141,7 +144,7 @@ public final class PBRMaterial: @unchecked Sendable {
     public init(name: String? = nil, uniforms: PBRMaterialUniforms, doubleSided: Bool = false, renderState: PBRRenderState = PBRRenderState(), textureTransforms: [String: TextureTransform] = [:], textureBindings: [Binding]) {
         precondition(textureBindings.count == Int(kPBRMaterialTextureCount.rawValue), "One texture binding per PBRMaterialTextureIndex")
         self.name = name
-        self.uniforms = uniforms
+        self.uniforms = Self.marking(uniforms, renderState: renderState)
         self.doubleSided = doubleSided
         self.renderState = renderState
         self.textureTransforms = textureTransforms
@@ -155,11 +158,18 @@ public final class PBRMaterial: @unchecked Sendable {
 
     private init(copying material: PBRMaterial, uniforms: PBRMaterialUniforms, renderState: PBRRenderState, textureTransforms: [String: TextureTransform]) {
         name = material.name
-        self.uniforms = uniforms
+        self.uniforms = Self.marking(uniforms, renderState: renderState)
         doubleSided = material.doubleSided
         self.renderState = renderState
         self.textureTransforms = textureTransforms
         textureBindings = material.textureBindings
+    }
+
+    // The shader reads the render state's stochastic mode from the uniforms.
+    private static func marking(_ uniforms: PBRMaterialUniforms, renderState: PBRRenderState) -> PBRMaterialUniforms {
+        var uniforms = uniforms
+        uniforms.stochasticAlpha = renderState.blendMode == .stochastic ? 1 : 0
+        return uniforms
     }
 
     /// A new material sharing this one's textures, with the given values replaced.

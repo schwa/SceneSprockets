@@ -70,5 +70,7 @@ struct BlinnPhongMaterialUniforms {
     int hasHeightTexture;
     float heightScale;
     float parallaxDepth;
+    // Stochastic transparency (#539): alpha becomes hashed sample coverage.
+    int stochasticAlpha;
 };
 typedef struct BlinnPhongMaterialUniforms BlinnPhongMaterialUniforms;

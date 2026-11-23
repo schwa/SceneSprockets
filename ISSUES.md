@@ -12410,13 +12410,14 @@ Decided (2026-11-23):
 ## 539: No stochastic transparency
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: effort:m, area:renderer
 milestone: Rendering-2
 created: 2026-11-17T17:55:40Z
-updated: 2026-11-23T02:11:50Z
+updated: 2026-11-23T03:45:31Z
+closed: 2026-11-23T03:45:31Z
 +++
 
 Hair, foliage and dense overlapping transparent surfaces need order-independent transparency; there is no stochastic transparency. (Moved from SceneSprocketsAddOns#61.) Related: #494 (weighted blended OIT, the other approach).

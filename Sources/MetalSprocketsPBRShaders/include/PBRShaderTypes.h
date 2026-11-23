@@ -83,6 +83,7 @@ struct PBRMaterialUniforms {
     int hasTangents;
     int hasNormals; // 0: derive flat normals from screen-space derivatives.
     int isPointOrLine; // Not triangles: no barycentrics, so no wireframe.
+    int stochasticAlpha; // Stochastic transparency (#539): alpha becomes hashed coverage. Set from the render state.
     PBRTextureSlot baseColor;
     PBRTextureSlot metallicRoughness;
     PBRTextureSlot normal;
