@@ -17,7 +17,9 @@ import simd
 /// or through a nodegraph output (a `normalmap` node in front of the normal image is followed). Math nodes on constants
 /// (add, multiply, mix, clamp, extract, combine and so on) are folded, and an image multiplied by a constant becomes a
 /// textured input with that factor (#609). Nodes that need per-pixel evaluation (noise, texture coordinates, other
-/// math on images) are not evaluated: those inputs keep their defaults and are reported in ``warnings``.
+/// math on images) are not evaluated on the CPU. Those materials are compiled instead into a surface function that
+/// runs per pixel (#667), with MetalSprocketsMaterialX; only when that fails do the inputs keep their defaults, and
+/// the reasons are reported in ``warnings``.
 public struct MaterialXDocument {
     public struct Material {
         /// The `surfacematerial` element's name.
@@ -37,13 +39,14 @@ public struct MaterialXDocument {
 
     public init(data: Data, baseURL: URL, device: MTLDevice? = nil) throws {
         // Parsed by MetalSprocketsMaterialX (#665).
-        let root: MaterialXElement
+        let document: MaterialX.MaterialXDocument
         do {
-            root = try MaterialX.MaterialXDocument(data: data, baseURL: baseURL).root
+            document = try MaterialX.MaterialXDocument(data: data, baseURL: baseURL)
         } catch let error as MaterialX.MaterialXError {
             throw MaterialXError.invalidDocument(error.description)
         }
-        var converter = MaterialXConverter(root: root, baseURL: baseURL, device: device ?? _MTLCreateSystemDefaultDevice())
+        var converter = MaterialXConverter(root: document.root, baseURL: baseURL, device: device ?? _MTLCreateSystemDefaultDevice())
+        converter.stitcher = SurfaceStitcher(document: document, baseURL: baseURL, device: converter.device)
         materials = try converter.convertMaterials()
         warnings = converter.warnings
     }
@@ -85,6 +88,8 @@ struct MaterialXConverter {
     var baseURL: URL
     var device: MTLDevice
     var warnings: [String] = []
+    /// Compiles materials the CPU conversion cannot handle (#667). Nil converts on the CPU only.
+    var stitcher: SurfaceStitcher?
 
     mutating func convertMaterials() throws -> [MaterialXDocument.Material] {
         var materials: [MaterialXDocument.Material] = []
@@ -94,21 +99,39 @@ struct MaterialXConverter {
                 warnings.append("\(name): no surfaceshader input")
                 continue
             }
+            let firstWarning = warnings.count
+            let converted: PBRSceneMaterial
             switch shader.tag {
             case "standard_surface":
-                materials.append(.init(name: name, material: try standardSurface(shader, material: name)))
+                converted = try standardSurface(shader, material: name)
             case "UsdPreviewSurface":
-                materials.append(.init(name: name, material: try usdPreviewSurface(shader, material: name)))
+                converted = try usdPreviewSurface(shader, material: name)
             case "gltf_pbr":
-                materials.append(.init(name: name, material: try gltfPBR(shader, material: name)))
+                converted = try gltfPBR(shader, material: name)
             case "open_pbr_surface":
-                materials.append(.init(name: name, material: try openPBRSurface(shader, material: name)))
+                converted = try openPBRSurface(shader, material: name)
             default:
-                warnings.append("\(name): shader \(shader.tag) is not supported")
+                warnings.append("\(name): shader \(shader.tag) is not supported on the CPU")
+                converted = PBRSceneMaterial()
             }
+            // What the CPU could not convert runs per pixel instead; its warnings no longer apply.
+            if warnings.count > firstWarning, let stitcher {
+                do {
+                    converted.pbrMaterial = try stitcher.material(shader: shaderName, replacing: converted.pbrMaterial)
+                    warnings.removeSubrange(firstWarning...)
+                } catch {
+                    warnings.append("\(name): not compiled for per-pixel evaluation: \(error)")
+                }
+            }
+            if warnings.count > firstWarning, converted.pbrMaterial.surfaceFunction == nil, !Self.cpuShaders.contains(shader.tag) {
+                continue
+            }
+            materials.append(.init(name: name, material: converted))
         }
         return materials
     }
+
+    static let cpuShaders: Set<String> = ["standard_surface", "UsdPreviewSurface", "gltf_pbr", "open_pbr_surface"]
 
     // MARK: Shaders
 

@@ -264,6 +264,8 @@ let package = Package(
                 "MetalSprocketsPBRShaders",
                 .product(name: "MetalSupport", package: "MetalSupport"),
                 .product(name: "MaterialX", package: "MetalSprocketsMaterialX"),
+                .product(name: "MaterialXMetal", package: "MetalSprocketsMaterialX"),
+                .product(name: "MetalSprockets", package: "MetalSprockets"),
             ]
         ),
         .testTarget(
@@ -271,6 +273,9 @@ let package = Package(
             dependencies: [
                 "SceneSprocketsMaterialX",
                 "SceneSprocketsPBR",
+                "SceneSprockets",
+                .product(name: "MetalSprockets", package: "MetalSprockets"),
+                .product(name: "GeometryLite3D", package: "GeometryLite3D"),
             ]
         ),
         // Editor aids: transform gizmos drawn with MetalSprocketsAddOns' GraphicsContext3D (#154), and selection

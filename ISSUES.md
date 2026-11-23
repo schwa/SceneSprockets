@@ -14299,13 +14299,14 @@ EditorGizmos draws Node.path curves (#607) and clicking one selects its node, so
 ## 620: MaterialX nodes that need per-pixel evaluation are ignored
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:materials, effort:l
 milestone: Assets-and-Materials
 created: 2026-11-22T20:53:29Z
-updated: 2026-11-23T02:14:51Z
+updated: 2026-11-23T18:06:28Z
+closed: 2026-11-23T18:06:28Z
 +++
 
 MaterialXDocument folds math nodes on constants and image-times-constant (#609), but nodes that need per-pixel evaluation still fall back to the shader input's default with a warning: procedural patterns (noise2d, noise3d, fractal3d, cellnoise, ramps), texcoord and texture-coordinate transforms (image uvtiling/uvoffset, place2d, texcoord), and math on images other than multiplying by a constant (mix of two images, add, swizzle/extract of an image). Images on inputs PBRSceneMaterial has no texture slot for (opacity, coat, sheen/fuzz, transmission, specular) are also ignored. Split from #609.
@@ -14313,6 +14314,7 @@ MaterialXDocument folds math nodes on constants and image-times-constant (#609),
 Possible approach: map image uvtiling/uvoffset and place2d to the PBR texture transforms; bake texcoord-only graphs (noise2d, cellnoise2d, ramps, math on images) into a texture on the CPU at load; 3D-position nodes (noise3d, fractal3d) cannot be baked that way.
 
 - `2026-11-23T17:40:35Z`: Tracked by #665, #666, #667 (adopt MetalSprocketsMaterialX).
+- `2026-11-23T18:06:28Z`: Per-pixel nodes now run through stitched surface functions (#667). Nodes MetalSprocketsMaterialX has no Metal implementation for still fall back with a warning; those gaps are tracked in that repo.
 
 ---
 
@@ -15194,17 +15196,21 @@ Expected: a PBR material can optionally evaluate its inputs through a linked sti
 ## 667: MaterialX documents do not render through stitched node graphs
 
 +++
-status: new
+status: closed
 priority: medium
 kind: feature
 labels: area:materials, effort:m
 depends: 665, 666
 created: 2026-11-23T17:40:35Z
+updated: 2026-11-23T18:06:28Z
+closed: 2026-11-23T18:06:28Z
 +++
 
 Even with the parser and PBR hook in place, SceneSprocketsMaterialX still converts every material on the CPU. Materials whose surface shader inputs are driven by per-pixel node graphs (#620) need to be stitched with MetalSprocketsMaterialX's GraphStitcher/SurfaceMapping and rendered through the PBR hook, with the CPU converter used only when stitching fails.
 
 Expected: the #620 cases (noise, texcoord transforms, math on images, images on inputs without a PBR texture slot) render, and warnings report only what neither path handles.
+
+- `2026-11-23T18:06:28Z`: SceneSprocketsMaterialX compiles materials the CPU conversion cannot handle into PBR surface functions (MetalSprocketsMaterialX GraphStitcher.stitchSurface) and keeps the CPU result otherwise. Shaders without a CPU path (any with a MetalSprocketsMaterialX SurfaceMapping, e.g. realitykit_pbr_surfaceshader) are stitched too. Image nodes load their files (linear; the graph converts colorspaces). Warnings now only report what neither path handles. Tests: texcoordGraphRendersPerPixel (renders a u ramp), usdPreviewSurfaceAndUnsupportedInputs (noise2d now stitched).
 
 ---
 

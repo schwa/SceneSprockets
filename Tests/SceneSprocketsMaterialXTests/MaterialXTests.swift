@@ -129,13 +129,14 @@ func usdPreviewSurfaceAndUnsupportedInputs() throws {
     </materialx>
     """
     let document = try load(xml, folder: try temporaryFolder())
-    let usd = try #require(document["Usd"]).uniforms
+    let usdMaterial = try #require(document["Usd"])
+    let usd = usdMaterial.uniforms
     #expect(simd_distance(usd.baseColorFactor, [0.2, 0.4, 0.6, 1]) < 1e-6)
     #expect(usd.clearcoatFactor == 1)
-    // Procedural nodes are not evaluated: roughness keeps UsdPreviewSurface's default.
-    #expect(usd.roughnessFactor == 0.5)
+    // The CPU cannot evaluate the noise, so the material is compiled to run per pixel (#667).
+    #expect(usdMaterial.pbrMaterial.surfaceFunction != nil)
     #expect(document.materials.map(\.name) == ["Usd"])
-    #expect(document.warnings.contains { $0.contains("roughness") && $0.contains("noise2d") }, "\(document.warnings)")
+    #expect(!document.warnings.contains { $0.contains("noise2d") }, "\(document.warnings)")
     #expect(document.warnings.contains { $0.contains("disney_brdf") }, "\(document.warnings)")
 }
 
