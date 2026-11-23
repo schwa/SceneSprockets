@@ -11835,6 +11835,9 @@ Decided (2026-11-23):
 - Always on, or only when requested? Decision: requested per frame through the frame plan, off by default.
 - May shader materials leave the new targets unwritten? Decision: yes; a helper writes them for shaders that want correct values.
 
+- `2026-11-23T04:07:57Z`: Design option found while starting: instead of adding attachments to every renderer's opaque pipelines, a core-owned G-buffer pre-pass (like the ambient-occlusion depth pre-pass) could draw every opaque MeshEntry with one shader that writes view-space normals and velocity, using a per-node cache of last frame's world transforms and the previous view-projection. Pros: no change to Blinn-Phong/PBR/ShaderMaterial pipelines or the PBR DrawList, one place to keep previous transforms. Cons: one more geometry pass; material normal maps and alpha cutouts are ignored; renderers that draw their own geometry (SDF, terrain, voxels, point clouds) are missing unless they opt in; skinned and morphed meshes get object motion only.
+- `2026-11-23T04:07:57Z`: Question 1 (design): Should normals and velocity come from a core G-buffer pre-pass over the opaque mesh entries (see the comment), rather than extra attachments in every renderer's opaque pipelines? Recommended: Yes, a pre-pass first: far smaller blast radius; renderers can add in-pipeline output later where accuracy matters
+
 ---
 
 ## 511: No copy of scene color before transparent objects are drawn
