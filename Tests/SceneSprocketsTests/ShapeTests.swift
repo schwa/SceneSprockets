@@ -145,3 +145,57 @@ func shapeFollowsContent() throws {
     light.shape = .box()
     #expect(light.shape == nil)
 }
+
+// #80: chamfered boxes, geodesic spheres and rounded planes keep their extents and face outward.
+@Test(arguments: [
+    (SceneGraph.Shape.box(width: 2, height: 3, length: 4, chamferRadius: 0.5), SIMD3<Float>(2, 3, 4)),
+    (.box(width: 1, height: 1, length: 1, chamferRadius: 5), SIMD3<Float>(1, 1, 1)),
+    (.sphere(radius: 1.5, isGeodesic: true), SIMD3<Float>(3, 3, 3)),
+    (.plane(width: 2, height: 1, cornerRadius: 0.25), SIMD3<Float>(2, 1, 0))
+])
+func shapeOptionsKeepExtents(shape: SceneGraph.Shape, size: SIMD3<Float>) throws {
+    try shapeSizes(shape: shape, size: size)
+}
+
+@Test
+func chamferedBoxVolume() {
+    // A unit cube with r = 0.5 is a sphere of radius 0.5.
+    newShapesFaceOutward(shape: .box(width: 1, height: 1, length: 1, chamferRadius: 0.5), volume: 4 / 3 * .pi * 0.125)
+    let (width, height, length, radius): (Float, Float, Float, Float) = (2, 3, 4, 0.5)
+    let volume = width * height * length - (8 - 4 / 3 * .pi) * radius * radius * radius - (4 - .pi) * radius * radius * ((width - 2 * radius) + (height - 2 * radius) + (length - 2 * radius))
+    newShapesFaceOutward(shape: .box(width: width, height: height, length: length, chamferRadius: radius), volume: volume)
+}
+
+@Test
+func roundedPlaneArea() {
+    let mesh = SceneGraph.Shape.plane(width: 2, height: 1, cornerRadius: 0.25).mesh().triangulated()
+    var area: Float = 0
+    for face in mesh.topology.faces {
+        let corners = mesh.topology.halfEdgeLoop(for: face.id).map { mesh.positions[mesh.topology.halfEdges[$0.raw].origin.raw] }
+        // Positive z: faces +z like the unrounded plane.
+        area += simd_cross(corners[1] - corners[0], corners[2] - corners[0]).z / 2
+    }
+    #expect(abs(area - (2 - (4 - .pi) * 0.0625)) < 0.01)
+}
+
+@Test
+func segmentCountsChangeTheMesh() {
+    #expect(SceneGraph.Shape.sphere(radius: 1, segmentCount: 8).mesh().positions.count < SceneGraph.Shape.sphere(radius: 1).mesh().positions.count)
+    #expect(SceneGraph.Shape.cylinder(segmentCount: 8).mesh().positions.count < SceneGraph.Shape.cylinder().mesh().positions.count)
+    #expect(SceneGraph.Shape.torus(ringSegmentCount: 8, pipeSegmentCount: 4).mesh().positions.count < SceneGraph.Shape.torus().mesh().positions.count)
+    #expect(SceneGraph.Shape.tube(segmentCount: 8).mesh().positions.count < SceneGraph.Shape.tube().mesh().positions.count)
+    #expect(SceneGraph.Shape.capsule(segmentCount: 8).mesh().positions.count < SceneGraph.Shape.capsule().mesh().positions.count)
+    #expect(SceneGraph.Shape.cone(segmentCount: 8).mesh().positions.count < SceneGraph.Shape.cone().mesh().positions.count)
+    // The defaults draw the same meshes as before the options existed.
+    #expect(SceneGraph.Shape.sphere(radius: 1).mesh() == Mesh.sphere(extents: [2, 2, 2], latitudeSegments: 32, longitudeSegments: 64, attributes: [.smoothNormals, .textureCoordinates]))
+}
+
+// Archives written before #80 have no option keys; they load with the defaults, and new archives round-trip.
+@Test
+func shapeDecodesArchivesWithoutOptions() throws {
+    let old = #"[{"box":{"width":2,"height":3,"length":4}},{"sphere":{"radius":1}},{"plane":{"width":1,"height":2}},{"torus":{"ringRadius":1,"pipeRadius":0.5}},{"text":{"_0":"Hi","fontName":"Helvetica","fontSize":1,"extrusionDepth":0.1}}]"#
+    let shapes = try JSONDecoder().decode([SceneGraph.Shape].self, from: Data(old.utf8))
+    #expect(shapes == [.box(width: 2, height: 3, length: 4), .sphere(radius: 1), .plane(width: 1, height: 2), .torus(ringRadius: 1, pipeRadius: 0.5), .text("Hi")])
+    let new: [SceneGraph.Shape] = [.box(chamferRadius: 0.1), .sphere(segmentCount: 12, isGeodesic: true), .plane(cornerRadius: 0.2), .cylinder(segmentCount: 7), .cone(segmentCount: 5), .capsule(segmentCount: 9), .torus(ringSegmentCount: 10, pipeSegmentCount: 6), .tube(segmentCount: 11), .pyramid(), .floor(), .extrudedPath("0 0 m 1 0 l 0 1 l h"), .teapot()]
+    #expect(try JSONDecoder().decode([SceneGraph.Shape].self, from: JSONEncoder().encode(new)) == new)
+}

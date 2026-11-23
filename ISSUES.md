@@ -1661,13 +1661,14 @@ Missing SceneKit equivalents: eulerAngles; settable worldPosition/worldOrientati
 ## 80: Shape options: segment counts, box chamfer, geodesic sphere, plane corner radius
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: effort:m, area:scenegraph
 milestone: Physics-and-Scene
 created: 2026-10-15T02:28:07Z
-updated: 2026-11-20T06:32:46Z
+updated: 2026-11-23T03:00:28Z
+closed: 2026-11-23T03:00:28Z
 +++
 
 SceneGraph.Shape has no segment counts, no box chamfer radius, no geodesic sphere and no plane corner radius. See docs/SceneKitComparison.md. Text options are split to #632.
