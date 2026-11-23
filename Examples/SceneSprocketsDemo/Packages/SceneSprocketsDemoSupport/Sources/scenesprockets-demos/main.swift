@@ -15,6 +15,9 @@ import SwiftUI
 //                  [--frames N] [--slide N] [--value Name=Number ...]
 // scenesprockets-demos --benchmark <id>        render every frame offscreen and print frame times
 //                  [--size WxH] [--frames N] [--slide N]
+// scenesprockets-demos --terminal <id>         render every frame offscreen and draw it in the terminal (kitty
+//                  [--size WxH] [--fps N]   graphics protocol: Ghostty, kitty, WezTerm) until Ctrl-C or --frames
+//                  [--frames N] [--slide N] [--value Name=Number ...]
 
 struct SceneGraphDemosApp: App {
     init() {
@@ -181,6 +184,38 @@ case "--benchmark":
         func milliseconds(_ seconds: Double) -> String { String(format: "%.2f ms", seconds * 1_000) }
         print("frames \(times.count)  mean \(milliseconds(mean)) (\(String(format: "%.1f", 1 / mean)) fps)  median \(milliseconds(sorted[sorted.count / 2]))  p95 \(milliseconds(sorted[sorted.count * 95 / 100]))  max \(milliseconds(sorted.last ?? 0))")
     } catch {
+        fail("\(error)")
+    }
+case "--terminal":
+    let frameRate = option("--fps").flatMap { Double($0) } ?? 30
+    let frameLimit = option("--frames").flatMap { Int($0) }
+    let slide = option("--slide").flatMap { Int($0) }
+    var values = valueOptions()
+    let size = option("--size").map { $0.split(separator: "x").compactMap { Int($0) } } ?? TerminalImage.defaultSize()
+    // The keynote plays through, as with --video.
+    if arguments.count >= 2, arguments[1] == "keynote", values["Auto-advance"] == nil {
+        values["Auto-advance"] = 1
+    }
+    guard size.count == 2, arguments.count >= 2 else {
+        fail("usage: scenesprockets-demos --terminal <id> [--size WxH] [--fps N] [--frames N] [--slide N] [--value Name=Number ...]")
+    }
+    TerminalImage.begin()
+    var frameCount = 0
+    do {
+        try MainActor.assumeIsolated {
+            try DemoSnapshot.stream(demoID: arguments[1], width: size[0], height: size[1], frameRate: frameRate, values: values) { scene in
+                if let slide, let keynote = scene as? KeynoteDemo {
+                    keynote.show(slide: slide)
+                }
+            } frame: { image in
+                try TerminalImage.draw(image)
+                frameCount += 1
+                return frameLimit.map { frameCount < $0 } ?? true
+            }
+        }
+        TerminalImage.end()
+    } catch {
+        TerminalImage.end()
         fail("\(error)")
     }
 case nil:

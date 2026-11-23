@@ -79,7 +79,42 @@ public enum DemoSnapshot {
                 _ = try renderer.render(try makeElement())
             }
         }
-        let texture = try renderer.render(try makeElement()).texture
+        return try image(from: try renderer.render(try makeElement()).texture, width: width, height: height)
+    }
+
+    // Steps a demo like render(...) and renders every frame offscreen, handing each frame's image to `frame` until it
+    // returns false.
+    @MainActor
+    public static func stream(demoID: String, width: Int, height: Int, frameRate: Double = 30, values: [String: Float] = [:], configure: (DemoScene) -> Void = { _ in }, frame: (CGImage) throws -> Bool) throws {
+        guard let demo = DemoCatalog.demos.first(where: { $0.id == demoID }) else {
+            throw Failure.unknownDemo(demoID)
+        }
+        let scene = demo.make()
+        scene.values.merge(values) { $1 }
+        configure(scene)
+        let renderer = try OffscreenRenderer(size: CGSize(width: width, height: height), colorUsage: Shadows.requiredColorUsage, depthUsage: Shadows.requiredDepthUsage)
+        let outline = SelectionOutline()
+        let deltaTime = Float(1 / frameRate)
+        var frameIndex = 0
+        while true {
+            let start = ContinuousClock.now
+            scene.update(time: Float(frameIndex) * deltaTime, deltaTime: deltaTime)
+            scene.sceneGraph.advanceActions(by: deltaTime)
+            scene.sceneGraph.advanceParticles(by: deltaTime)
+            scene.sceneGraph.applyConstraints(pointOfView: scene.initialCameraMatrix, deltaTime: deltaTime)
+            let texture = try renderer.render(try frameElement(scene, width: width, height: height, outline: outline)).texture
+            guard try frame(try image(from: texture, width: width, height: height)) else {
+                return
+            }
+            frameIndex += 1
+            let remaining = Duration.seconds(1 / frameRate) - (ContinuousClock.now - start)
+            if remaining > .zero {
+                Thread.sleep(forTimeInterval: Double(remaining.components.seconds) + Double(remaining.components.attoseconds) * 1e-18)
+            }
+        }
+    }
+
+    static func image(from texture: MTLTexture, width: Int, height: Int) throws -> CGImage {
         let bytesPerRow = width * 4
         guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: bytesPerRow, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue),
               let data = context.data
