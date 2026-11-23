@@ -82,6 +82,7 @@ public final class KeynoteDemo: DemoScene {
     private var swarmLights: [(node: SceneGraph.Node, phase: Float, radius: Float, speed: Float)] = []
     // The Decals slide (#644): the decal that slides over the step, and its material, whose angle limit the slider sets.
     private var movingDecal: SceneGraph.Node?
+    private var pawPrints: [SceneGraph.Node] = []
     // The Mirrors slide (#645): shapes that orbit above the mirror floor, and the floor's PBR material.
     private var mirrorShapes: [SceneGraph.Node] = []
     private var mirrorFloor: SceneGraph.Node?
@@ -359,9 +360,10 @@ public final class KeynoteDemo: DemoScene {
         • Like a polished floor or still water. One mirror per frame.
         """,
         "Decals": """
-        • A decal projects an image onto whatever surfaces are inside a box: road markings, footprints, bullet holes.
+        • A decal projects an image onto whatever surfaces are inside a box: road markings, paw prints, warning bands.
         • It is a DecalMaterial on a box-shaped node; the node's transform places and sizes the projector.
-        • The moving arrow wraps over the step and fades on the steep side, past the maximum angle.
+        • The moving arrow and the paw prints wrap over the step and fade on its steep side, past the maximum angle.
+        • A projector pointing sideways wraps a hazard band around the curved barrel.
         • Decals draw after the scene from its depth, so they need no changes to the meshes they land on.
         """,
         "Opacity & Fades": """
@@ -2303,8 +2305,17 @@ public final class KeynoteDemo: DemoScene {
         let lookDown = simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])
         let stripes = DecalMaterial(texture: Self.decalTexture(.stripes), color: [1, 0.85, 0.2, 1])
         slide.addChild(SceneGraph.Node(label: "Crossing", shape: .box(), material: stripes, transform: .init(translation: [-1.4, 0, 0.4], rotation: lookDown, scale: [1.8, 1.2, 0.6])))
-        let footprints = DecalMaterial(texture: Self.decalTexture(.footprints), color: [0.15, 0.12, 0.1, 0.85])
-        slide.addChild(SceneGraph.Node(label: "Footprints", shape: .box(), material: footprints, transform: .init(translation: [-2.6, 0, 0.9], rotation: lookDown * simd_quatf(angle: 0.4, axis: [0, 0, 1]), scale: [1, 1.6, 0.6])))
+        // Paw prints walking along the ground and up over the step, one decal each; updateDecals fades them in and out.
+        let paw = DecalMaterial(texture: Self.decalTexture(.paw), color: [0.12, 0.08, 0.06, 0.9])
+        let facingRight = lookDown * simd_quatf(angle: -.pi / 2, axis: [0, 0, 1])
+        pawPrints = (0..<12).map { index in
+            let x = -3.5 + Float(index) * 0.48
+            let z: Float = 1.1 + (index.isMultiple(of: 2) ? -0.16 : 0.16)
+            return slide.addChild(SceneGraph.Node(label: "Paw Print", shape: .box(), material: paw, transform: .init(translation: [x, 0.25, z], rotation: facingRight, scale: [0.4, 0.4, 1.4])))
+        }
+        // A hazard band wrapped around the front of the barrel: the projector points at it from the front.
+        let hazard = DecalMaterial(texture: Self.decalTexture(.stripes), color: [1, 0.85, 0.1, 1], maximumAngle: .pi * 0.45)
+        slide.addChild(SceneGraph.Node(label: "Barrel Band", shape: .box(), material: hazard, transform: .init(translation: [-2.6, 0.75, -0.3], rotation: simd_quatf(angle: .pi / 2, axis: [0, 0, 1]), scale: [0.35, 0.9, 1])))
         // Tall enough to reach both the ground and the top of the step as it slides across the edge.
         let arrow = DecalMaterial(texture: Self.decalTexture(.arrow), color: [1, 1, 1, 1], maximumAngle: .pi / 3)
         movingDecal = slide.addChild(SceneGraph.Node(label: "Arrow", shape: .box(), material: arrow, transform: .init(translation: [0, 0.25, -0.6], rotation: lookDown, scale: [1.2, 1.2, 1.4])))
@@ -2488,8 +2499,15 @@ public final class KeynoteDemo: DemoScene {
         guard let movingDecal else {
             return
         }
-        if self[flag: "Move Decal"] {
+        let moves = self[flag: "Move Decal"]
+        if moves {
             movingDecal.transform.translation.x = sin(time * 0.6) * 1.4
+        }
+        // Each print appears as the walk reaches it, then fades; the walk starts over after the last one.
+        let step = (time * 2.5).truncatingRemainder(dividingBy: Float(pawPrints.count + 6))
+        for (index, print) in pawPrints.enumerated() {
+            let age = step - Float(index)
+            print.opacity = moves ? (age < 0 ? 0 : max(0, 1 - age / 8)) : 1
         }
         if case let .mesh(mesh, materials, castsShadow, receivesShadow) = movingDecal.content, var material = materials.first as? DecalMaterial {
             let angle = self[value: "Maximum Angle"] * .pi / 180
@@ -2501,7 +2519,7 @@ public final class KeynoteDemo: DemoScene {
     }
 
     enum DecalPattern {
-        case arrow, stripes, footprints
+        case arrow, stripes, paw
     }
 
     // A small white-on-clear image for a decal, drawn once per pattern.
@@ -2523,12 +2541,11 @@ public final class KeynoteDemo: DemoScene {
             for stripe in 0..<5 {
                 context.fill(CGRect(x: (0.05 + CGFloat(stripe) * 0.19) * unit, y: 0.05 * unit, width: 0.11 * unit, height: 0.9 * unit))
             }
-        case .footprints:
-            for step in 0..<4 {
-                let x = step.isMultiple(of: 2) ? 0.3 : 0.55
-                let y = 0.08 + CGFloat(step) * 0.22
-                context.fillEllipse(in: CGRect(x: x * unit, y: y * unit, width: 0.15 * unit, height: 0.12 * unit))
-                context.fillEllipse(in: CGRect(x: (x + 0.03) * unit, y: (y + 0.13) * unit, width: 0.09 * unit, height: 0.06 * unit))
+        case .paw:
+            // A heel pad and four toes, pointing up the image.
+            context.fillEllipse(in: CGRect(x: 0.28 * unit, y: 0.12 * unit, width: 0.44 * unit, height: 0.38 * unit))
+            for (x, y) in [(0.12, 0.5), (0.3, 0.66), (0.52, 0.66), (0.7, 0.5)] as [(CGFloat, CGFloat)] {
+                context.fillEllipse(in: CGRect(x: x * unit, y: y * unit, width: 0.18 * unit, height: 0.22 * unit))
             }
         }
         guard let image = context.makeImage() else {
