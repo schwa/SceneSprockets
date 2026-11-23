@@ -14,14 +14,15 @@ enum DebugShapes {
 
     @MainActor
     static func shapes(sceneGraph: SceneGraph, viewport: Viewport) -> [Shape] {
-        EditorGizmos.shapes(sceneGraph: sceneGraph, viewport: viewport, options: .lightsAndCameras).compactMap { shape in
+        EditorGizmos.shapes(sceneGraph: sceneGraph, viewport: viewport, options: [.lightsAndCameras, .paths]).compactMap { shape in
             shape.node.map { Shape(node: $0, lines: shape.lines) }
         }
     }
 
     @MainActor
     static func element(sceneGraph: SceneGraph, selected: Set<SceneGraph.Node.ID>, viewport: Viewport) -> AnyElement? {
-        try? EditorGizmos.element(sceneGraph: sceneGraph, viewport: viewport, options: .lightsAndCameras, selected: selected)
+        // Paths too, so a node's path shows and can be clicked to select it (#619).
+        try? EditorGizmos.element(sceneGraph: sceneGraph, viewport: viewport, options: [.lightsAndCameras, .paths], selected: selected)
     }
 
     // The node whose shape passes within EditorGizmos.hitDistance points of `point`, nearest first.

@@ -200,6 +200,10 @@ public final class EditorModel {
     // PBRMaterialRenderer caches GPU state, so keep one instance per editor.
     @ObservationIgnored public let renderers: [any MaterialRenderer]
     @ObservationIgnored public let gizmo = TransformGizmo()
+    // Handles on the selected node's path points (#619). Drawn with the transform gizmo; a drag on a point moves it.
+    @ObservationIgnored public let pathGizmo = PathPointGizmo()
+    @ObservationIgnored public private(set) lazy var manipulators = ManipulatorGroup([pathGizmo, gizmo])
+    @ObservationIgnored private var pathBeforeDrag: SceneGraph.Spline?
     // Keeps its textures between frames.
     @ObservationIgnored let selectionOutline = SelectionOutline()
     // One instance, so it keeps its GPU state and SceneView sees the same shadows between updates (#235).
@@ -270,6 +274,26 @@ public final class EditorModel {
         gizmo.onEnd = { [weak self] node in
             self?.endGizmoDrag(node)
         }
+        pathGizmo.onBegin = { [weak self] node in
+            self?.pathBeforeDrag = node.path
+        }
+        pathGizmo.onChange = { [weak self] _ in
+            self?.notify(.content)
+        }
+        pathGizmo.onEnd = { [weak self] node in
+            self?.endPathDrag(node)
+        }
+    }
+
+    // One undo step for a path point drag.
+    func endPathDrag(_ node: SceneGraph.Node) {
+        let before = pathBeforeDrag
+        pathBeforeDrag = nil
+        let after = node.path
+        guard before != after else {
+            return
+        }
+        perform("Move Path Point", affecting: .content, { _ in node.path = after }, revert: { _ in node.path = before })
     }
 
     func frameAll() {
@@ -445,6 +469,7 @@ public final class EditorModel {
 
     private func updateGizmoTarget() {
         gizmo.target = selectedNode.flatMap { isLocked($0) ? nil : $0 }
+        pathGizmo.target = gizmo.target.flatMap { $0.path == nil ? nil : $0 }
     }
 
     // Deletes every selected node that can be; descendants of another selected node go with it.

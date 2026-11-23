@@ -291,6 +291,34 @@ struct SceneEditBoundaryTests {
     }
 }
 
+// #619: selecting a node with a path puts handles on its points; a point drag is one undo step.
+@MainActor
+@Test func pathPointDragIsUndoable() throws {
+    let document = ComposerDocument()
+    let model = EditorModel(sceneGraph: document.sceneGraph)
+    document.editorModel = model
+    model.addShape(.box(), label: "Track")
+    let undoManager = UndoManager()
+    undoManager.groupsByEvent = false
+    model.undoManager = undoManager
+    let node = try #require(model.selectedNode)
+    #expect(model.pathGizmo.target == nil)
+    let original = SceneGraph.Spline(points: [[0, 0, 0], [1, 0, 0]])
+    node.path = original
+    model.selection = nil
+    model.selection = node.id
+    #expect(model.pathGizmo.target === node)
+    // As PathPointGizmo calls them during a drag.
+    undoManager.beginUndoGrouping()
+    model.pathGizmo.onBegin?(node)
+    node.path = SceneGraph.Spline(points: [[0, 0, 0], [1, 2, 0]])
+    model.pathGizmo.onEnd?(node)
+    undoManager.endUndoGrouping()
+    #expect(undoManager.canUndo)
+    undoManager.undo()
+    #expect(node.path == original)
+}
+
 // #192
 @MainActor
 @Test func lockedNodesCannotBePickedMovedOrDeleted() throws {

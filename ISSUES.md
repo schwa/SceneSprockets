@@ -14215,15 +14215,18 @@ MaterialX loading (MaterialXDocument, #528) is not shown in the keynote. The dem
 ## 619: Path control points cannot be edited in the editor
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:scenegraph, effort:m
 created: 2026-11-22T20:49:48Z
-updated: 2026-11-23T00:50:54Z
+updated: 2026-11-23T01:28:52Z
+closed: 2026-11-23T01:28:52Z
 +++
 
 EditorGizmos draws Node.path curves (#607) and clicking one selects its node, so the whole path can be moved with the transform gizmo. The individual control points cannot be selected or dragged, so a path's shape can only be changed in code. Split from #607.
+
+- `2026-11-23T01:28:52Z`: PathPointGizmo (SceneSprocketsGizmos): square handles on a node's path points; dragging one moves the point in the camera-facing plane and writes a new path. ManipulatorGroup lets SceneView use it with the TransformGizmo (the first manipulator to claim a drag gets it). Composer: draws paths, adds point handles for the selected node with a path, one undo step per drag. Points cannot be added or removed yet. Tests: pathPointGizmoMovesAPoint, manipulatorGroupGivesTheDragToTheFirstThatClaimsIt, pathPointDragIsUndoable. Not tried by hand in the Composer.
 
 ---
 

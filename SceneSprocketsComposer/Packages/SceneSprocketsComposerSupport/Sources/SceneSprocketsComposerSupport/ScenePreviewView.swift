@@ -49,7 +49,7 @@ struct ScenePreviewView: View {
             .sceneShadows(settings.showsShadows ? model.shadows : nil)
             // A key-path binding, which SwiftUI can compare; a Binding(get:set:) is new on every pass (#223).
             .sceneCamera(matrix: $model.viewCameraMatrix, target: model.camera.target, override: settings.camera)
-            .sceneManipulator(model.gizmo)
+            .sceneManipulator(model.manipulators)
             .sceneDebugMode(settings.debugMode)
             .sceneMaterialChannel(settings.materialChannel)
             .onSceneTap(id: closuresID) { point, viewport, _ in

@@ -46,6 +46,55 @@ struct EditorGizmosTests {
         #expect(EditorGizmos.hitTest([2, 2], sceneGraph: graph, viewport: viewport) == nil)
     }
 
+    // #619: dragging a path point's handle moves that point, in the node's space, and leaves the others.
+    @Test
+    func pathPointGizmoMovesAPoint() throws {
+        let root = SceneGraph.Node()
+        let pathNode = root.addChild(SceneGraph.Node(label: "Path", transform: .init(translation: [0, 1, 0])))
+        let original: [SIMD3<Float>] = [[-2, 0, 0], [0, 0, -1], [2, 0, 0]]
+        pathNode.path = SceneGraph.Spline(points: original, isClosed: true)
+        _ = SceneGraph(root: root)
+        let gizmo = PathPointGizmo(target: pathNode)
+        let start = try #require(viewport.project([0, 1, -1]))
+        let point = SIMD2(start.x, start.y)
+        #expect(gizmo.hitTest(point, viewport: viewport))
+        #expect(gizmo.hoveredIndex == 1)
+        #expect(!gizmo.hitTest(point + [40, 40], viewport: viewport))
+        gizmo.beginDrag(at: point, viewport: viewport)
+        #expect(gizmo.activeIndex == 1)
+        // Right on screen is +X in the world for this camera.
+        gizmo.drag(to: point + [30, 0], viewport: viewport)
+        gizmo.endDrag()
+        let path = try #require(pathNode.path)
+        #expect(path.isClosed)
+        #expect(path.points[0] == original[0] && path.points[2] == original[2])
+        #expect(path.points[1].x > 0.1, "\(path.points[1])")
+        #expect(abs(path.points[1].y - original[1].y) < 0.05 + abs(path.points[1].x) && gizmo.activeIndex == nil)
+        #expect(try gizmo.overlay(viewport: viewport) != nil)
+    }
+
+    // #619: in a group, a drag on a path point goes to the path gizmo, not the transform gizmo below it.
+    @Test
+    func manipulatorGroupGivesTheDragToTheFirstThatClaimsIt() throws {
+        let root = SceneGraph.Node()
+        let pathNode = root.addChild(SceneGraph.Node(label: "Path"))
+        pathNode.path = SceneGraph.Spline(points: [[0, 0, 0], [2, 0, 0]])
+        _ = SceneGraph(root: root)
+        let pathGizmo = PathPointGizmo(target: pathNode)
+        let transformGizmo = TransformGizmo(target: pathNode)
+        let group = ManipulatorGroup([pathGizmo, transformGizmo])
+        let onPoint = try #require(viewport.project([2, 0, 0]))
+        let point = SIMD2(onPoint.x, onPoint.y)
+        #expect(group.hitTest(point, viewport: viewport))
+        group.beginDrag(at: point, viewport: viewport)
+        group.drag(to: point + [0, -30], viewport: viewport)
+        group.endDrag()
+        // The point moved; the node did not.
+        #expect(pathNode.path?.points[1] != [2, 0, 0])
+        #expect(pathNode.transform.translation == .zero)
+        #expect(try group.overlay(viewport: viewport) != nil)
+    }
+
     // #617: gridTransform moves the grid and axes.
     @Test
     func gridTransformMovesGridAndAxes() throws {
