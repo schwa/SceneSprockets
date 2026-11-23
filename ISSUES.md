@@ -12166,6 +12166,8 @@ Decided (2026-11-23):
 - Depend on the ShaderGraph package or copy the DSL here? Decision: depend on it, in a new SceneSprocketsShaderGraph target so the core does not.
 - Final color or surface inputs? Decision: surface inputs (base color, roughness, metallic, normal, emission) shaded by PBR, with an unlit color output as the first step.
 
+- `2026-11-23T04:14:55Z`: Question 1 (decision): MetalSprocketsShaderGraphSupport is a nested package inside the MetalSprocketsShaderGraph app repo (no URL SceneSprockets can depend on) and it depends on SwiftNodeEditor from a private Tailscale git host. How should SceneSprocketsShaderGraph depend on it? Recommended: Move the DSL (Node<T>, ShaderGraph.makeFunction, no node-editor UI) into its own public package (e.g. github.com/schwa/MetalSprocketsShaderGraph at the repo root, editor UI split out), release it, then depend on that
+
 ---
 
 ## 527: No visual node-graph editor for materials (ShaderGraph node graph)
@@ -12239,8 +12241,9 @@ priority: low
 kind: feature
 labels: effort:l, area:renderer
 milestone: Lighting-and-GI
+depends: 532
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-23T02:14:51Z
+updated: 2026-11-23T04:15:04Z
 +++
 
 There are no local cubemap reflections with parallax correction and probe blending; specular image-based light is one global environment per scene. (Moved from SceneSprocketsAddOns#49.) Related: #532, #506.
