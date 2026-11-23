@@ -14312,6 +14312,8 @@ MaterialXDocument folds math nodes on constants and image-times-constant (#609),
 
 Possible approach: map image uvtiling/uvoffset and place2d to the PBR texture transforms; bake texcoord-only graphs (noise2d, cellnoise2d, ramps, math on images) into a texture on the CPU at load; 3D-position nodes (noise3d, fractal3d) cannot be baked that way.
 
+- `2026-11-23T17:40:35Z`: Tracked by #665, #666, #667 (adopt MetalSprocketsMaterialX).
+
 ---
 
 ## 621: Frame statistics panel is hard to read: GPU pass rows wrap one letter per line, collapsed bar spans the whole window
@@ -15144,6 +15146,57 @@ SceneSprockets has no source of realistic, seamless PBR materials for demos and 
 hypbr (https://github.com/wrong-nebula/hypbr, MIT, cloned at ~/Projects/Vendor/hypbr) provides 500 tileable materials as glTF-style maps (albedo, OpenGL normal, ORM, height, plus anisotropy/curvature/etc.), with real-world tile sizes and projection hints in per-material JSON spec cards. Hosted maps are 512px WebP; higher resolutions come from its Python generator.
 
 Caveat: project is ~2 days old and changing quickly.
+
+---
+
+## 665: SceneSprocketsMaterialX has its own MaterialX parser instead of using MetalSprocketsMaterialX
+
++++
+status: new
+priority: high
+kind: task
+labels: area:materials, effort:m
+created: 2026-11-23T17:40:29Z
++++
+
+SceneSprocketsMaterialX (MaterialX.swift) parses .mtlx with its own XML parser (MaterialXElement) and resolves nodes without MaterialX's standard library. github.com/schwa/MetalSprocketsMaterialX has a full document model (xi:include, validation, filename and token resolution, bundled MaterialX 1.39.4 libraries). SceneSprockets does not depend on it.
+
+Expected: SceneSprocketsMaterialX reads documents with MetalSprocketsMaterialX's MaterialX module. The current CPU conversion to PBRSceneMaterial stays as the fallback (decided in MetalSprocketsMaterialX #42). Existing tests and the keynote MaterialX spheres (#618) still pass.
+
+Note: MetalSprocketsMaterialX has no release tag yet; other dependencies use .upToNextMinor(from:).
+
+---
+
+## 666: PBR shaders have no hook for stitched MaterialX material functions
+
++++
+status: new
+priority: high
+kind: feature
+labels: area:materials, effort:l
+created: 2026-11-23T17:40:29Z
++++
+
+The PBR fragment shader reads material values only from PBRMaterialUniforms and textures. There is no visible-function call site where a MetalSprocketsMaterialX stitched graph (which fills MXSurfaceInputs from an MXShadingContext) can supply the material inputs at a surface point, so stitched graphs cannot drive the PBR renderer.
+
+Expected: a PBR material can optionally evaluate its inputs through a linked stitched function. Materials without one pay no cost (decided in MetalSprocketsMaterialX #35: function-constant gated). Lights and environment stay with MetalSprocketsLighting (MetalSprocketsMaterialX #37).
+
+---
+
+## 667: MaterialX documents do not render through stitched node graphs
+
++++
+status: new
+priority: medium
+kind: feature
+labels: area:materials, effort:m
+depends: 665, 666
+created: 2026-11-23T17:40:35Z
++++
+
+Even with the parser and PBR hook in place, SceneSprocketsMaterialX still converts every material on the CPU. Materials whose surface shader inputs are driven by per-pixel node graphs (#620) need to be stitched with MetalSprocketsMaterialX's GraphStitcher/SurfaceMapping and rendered through the PBR hook, with the CPU converter used only when stitching fails.
+
+Expected: the #620 cases (noise, texcoord transforms, math on images, images on inputs without a PBR texture slot) render, and warnings report only what neither path handles.
 
 ---
 
