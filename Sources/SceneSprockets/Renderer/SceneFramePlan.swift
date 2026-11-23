@@ -8,6 +8,8 @@ public enum SceneGPUTimingLabel {
     /// The scene pass, with the soft particle pass when there is one.
     public static let scene = "Scene"
     public static let shadowMask = "Shadow Mask"
+    /// Bloom and tone mapping of the HDR scene (#640).
+    public static let bloom = "Bloom"
     public static let ambientOcclusion = "Ambient Occlusion"
     public static let fog = "Fog"
     public static let colorAdjust = "Color Adjust"

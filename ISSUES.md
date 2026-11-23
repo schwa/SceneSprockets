@@ -14689,12 +14689,14 @@ Part of #382: in visionOS immersive (stereo) rendering this screen-space pass do
 ## 640: No HDR scene path and no bloom
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask
 milestone: Rendering-2
 created: 2026-11-23T03:45:46Z
+updated: 2026-11-23T04:31:43Z
+closed: 2026-11-23T04:31:43Z
 +++
 
 Part of #45. Each renderer tone-maps into the 8-bit view, so there is no bloom. Decided in #45: when bloom is on, draw the scene linear (outputIsLinear) into an rgba16Float target, then run bloom (bright pass and blur chain) and tone mapping as post passes into the view; the default path stays as today.

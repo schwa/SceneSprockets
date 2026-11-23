@@ -30,6 +30,17 @@ struct AmbientOcclusionUniforms {
 };
 typedef struct AmbientOcclusionUniforms AmbientOcclusionUniforms;
 
+// Bloom and tone mapping of the HDR scene (#640).
+struct BloomUniforms {
+    // Multiplies the linear scene before the threshold and tone mapping.
+    float exposure;
+    float threshold;
+    float intensity;
+    // LightingShaderToneMapping.
+    int toneMapping;
+};
+typedef struct BloomUniforms BloomUniforms;
+
 // Screen-space contact shadows (#495). Positions are camera-relative (camera at the origin).
 struct ContactShadowUniforms {
     simd_float4x4 inverseViewProjection;

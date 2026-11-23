@@ -19,14 +19,48 @@ extension SceneGraph {
         public var vignetteIntensity: Float
         /// Fraction of the center-to-corner distance where the vignette starts.
         public var vignetteRadius: Float
+        /// Glow around bright parts of the image, like SCNCamera's bloom (#640). Nil turns it off. When it is on, the
+        /// scene is drawn as linear HDR into a float target, and bloom and tone mapping run as post passes.
+        public var bloom: Bloom?
 
         /// Creates post-processing settings. The defaults change nothing.
-        public init(exposure: Float = 0, contrast: Float = 1, saturation: Float = 1, vignetteIntensity: Float = 0, vignetteRadius: Float = 0.6) {
+        public init(exposure: Float = 0, contrast: Float = 1, saturation: Float = 1, vignetteIntensity: Float = 0, vignetteRadius: Float = 0.6, bloom: Bloom? = nil) {
             self.exposure = exposure
             self.contrast = contrast
             self.saturation = saturation
             self.vignetteIntensity = vignetteIntensity
             self.vignetteRadius = vignetteRadius
+            self.bloom = bloom
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case exposure, contrast, saturation, vignetteIntensity, vignetteRadius, bloom
+        }
+
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            exposure = try container.decode(Float.self, forKey: .exposure)
+            contrast = try container.decode(Float.self, forKey: .contrast)
+            saturation = try container.decode(Float.self, forKey: .saturation)
+            vignetteIntensity = try container.decode(Float.self, forKey: .vignetteIntensity)
+            vignetteRadius = try container.decode(Float.self, forKey: .vignetteRadius)
+            bloom = try container.decodeIfPresent(Bloom.self, forKey: .bloom)
+        }
+
+        /// Bloom settings, like SCNCamera's bloomThreshold, bloomIntensity and bloomBlurRadius.
+        public struct Bloom: Sendable, Equatable, Codable {
+            /// Linear radiance (after exposure) above which pixels glow.
+            public var threshold: Float
+            /// How strongly the glow is added.
+            public var intensity: Float
+            /// How far the glow spreads: the number of half-size blur levels, from 1 to 8.
+            public var radius: Int
+
+            public init(threshold: Float = 1, intensity: Float = 0.5, radius: Int = 5) {
+                self.threshold = threshold
+                self.intensity = intensity
+                self.radius = radius
+            }
         }
 
         var adjustsColor: Bool {

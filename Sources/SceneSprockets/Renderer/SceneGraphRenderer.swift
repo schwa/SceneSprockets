@@ -250,6 +250,17 @@ public struct SceneGraphElement: Element {
                 }
                 return (color, depth)
             }()
+            // Bloom (#640): the scene draws linear into a float target; bloom and tone mapping then write the view.
+            let bloom = debugMode == nil ? presentation.postProcessing?.bloom : nil
+            let hdrTargets: HDRTargets.Targets? = try {
+                guard let bloom, let postTargets, renderPassDescriptor?.colorAttachments[0].resolveTexture == nil else {
+                    return nil
+                }
+                return try HDRTargets.targets(device: postTargets.color.device, width: postTargets.color.width, height: postTargets.color.height, levels: min(max(bloom.radius, 1), 8))
+            }()
+            if hdrTargets != nil {
+                context.outputIsLinear = true
+            }
             // In stereo (#634): one 2D view per eye of the layered targets, for shadows and the shadow mask.
             // Empty when not in stereo or the targets cannot be read and written.
             let stereoEyeTargets: [(color: MTLTexture, depth: MTLTexture)] = {
@@ -423,9 +434,9 @@ public struct SceneGraphElement: Element {
                     }
                 }
                 let targets = try WeightedTransparencyTargets.targets(device: postTargets.color.device, width: postTargets.color.width, height: postTargets.color.height)
-                return WeightedTransparencyPass(targets: targets, colorTexture: postTargets.color, depthTexture: postTargets.depth, content: content, storesDepth: plan.particlePassStoresDepth)
+                return WeightedTransparencyPass(targets: targets, colorTexture: hdrTargets?.scene ?? postTargets.color, depthTexture: postTargets.depth, content: content, storesDepth: plan.particlePassStoresDepth)
             }()
-            let scenePass = try MetalSprockets.Group {
+            var scenePasses = try MetalSprockets.Group {
                 try makeScenePass(elements: elements, clearColor: clearColor, storesDepth: plan.scenePassStoresDepth)
                 if let softParticleDepth {
                     ParticleDepthCopyPass(depthTexture: softParticleDepth.scene, output: softParticleDepth.copy)
@@ -435,6 +446,21 @@ public struct SceneGraphElement: Element {
                     weightedPass
                 }
             }
+            .eraseToAnyElement()
+            if let bloom, let hdrTargets, let postTargets, let descriptor = renderPassDescriptor {
+                // The scene passes draw into the HDR target instead of the view's color (#640).
+                let hdrDescriptor = descriptor.copyWithType(MTL4RenderPassDescriptor.self)
+                hdrDescriptor.colorAttachments[0].texture = hdrTargets.scene
+                hdrDescriptor.colorAttachments[0].resolveTexture = nil
+                scenePasses = try MetalSprockets.Group {
+                    scenePasses
+                        .renderPassDescriptor(hdrDescriptor)
+                    BloomPass(settings: bloom, targets: hdrTargets, output: postTargets.color, exposure: context.environment.exposure, toneMapping: context.environment.toneMapping)
+                        .gpuTimed(SceneGPUTimingLabel.bloom)
+                }
+                .eraseToAnyElement()
+            }
+            let scenePass = scenePasses
             if let stereoViews, !stereoEyeTargets.isEmpty, let shadowFrame, let shadows {
                 // Stereo shadows (#634): the caster pass, then the shadow mask once per eye.
                 let cameraPosition = context.cameraMatrix.columns.3.xyz

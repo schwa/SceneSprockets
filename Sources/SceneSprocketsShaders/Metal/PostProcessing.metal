@@ -1,5 +1,6 @@
 #include <metal_stdlib>
 #include "SceneSprocketsShaders.h"
+#include "MetalSprocketsLightingToneMapping.h"
 
 using namespace metal;
 
@@ -174,6 +175,102 @@ namespace PostProcessing {
 
     // Multiplies the final color by the visibility, for pixels whose front surface does not apply it while shading:
     // where the depth of those materials alone is in front of the full depth (#136).
+    // Bloom (#640). Thirteen bilinear taps (Jimenez 2014, as in Call of Duty: Advanced Warfare) around `uv`, one source
+    // texel apart: a 2x downsample that does not flicker as bright pixels move.
+    static float3 downsample(texture2d<float> source, sampler linear, float2 uv, float2 texel) {
+        const float3 a = source.sample(linear, uv + texel * float2(-2, -2)).rgb;
+        const float3 b = source.sample(linear, uv + texel * float2(0, -2)).rgb;
+        const float3 c = source.sample(linear, uv + texel * float2(2, -2)).rgb;
+        const float3 d = source.sample(linear, uv + texel * float2(-2, 0)).rgb;
+        const float3 e = source.sample(linear, uv).rgb;
+        const float3 f = source.sample(linear, uv + texel * float2(2, 0)).rgb;
+        const float3 g = source.sample(linear, uv + texel * float2(-2, 2)).rgb;
+        const float3 h = source.sample(linear, uv + texel * float2(0, 2)).rgb;
+        const float3 i = source.sample(linear, uv + texel * float2(2, 2)).rgb;
+        const float3 j = source.sample(linear, uv + texel * float2(-1, -1)).rgb;
+        const float3 k = source.sample(linear, uv + texel * float2(1, -1)).rgb;
+        const float3 l = source.sample(linear, uv + texel * float2(-1, 1)).rgb;
+        const float3 m = source.sample(linear, uv + texel * float2(1, 1)).rgb;
+        return e * 0.125 + (a + c + g + i) * 0.03125 + (b + d + f + h) * 0.0625 + (j + k + l + m) * 0.125;
+    }
+
+    // The first bloom level: the exposed scene, downsampled, keeping only what is above the threshold (soft knee).
+    [[kernel]] void bloom_prefilter(
+        uint2 tid [[thread_position_in_grid]],
+        texture2d<float> scene [[texture(0)]],
+        texture2d<float, access::write> output [[texture(1)]],
+        sampler linear [[sampler(0)]],
+        constant BloomUniforms &uniforms [[buffer(0)]]
+    ) {
+        const uint2 size = uint2(output.get_width(), output.get_height());
+        if (tid.x >= size.x || tid.y >= size.y) {
+            return;
+        }
+        const float2 uv = (float2(tid) + 0.5) / float2(size);
+        const float3 color = downsample(scene, linear, uv, 0.5 / float2(size)) * uniforms.exposure;
+        const float brightness = max(color.r, max(color.g, color.b));
+        const float knee = uniforms.threshold * 0.5;
+        float soft = clamp(brightness - uniforms.threshold + knee, 0.0, 2.0 * knee);
+        soft = soft * soft / (4.0 * knee + 1e-4);
+        const float contribution = max(soft, brightness - uniforms.threshold) / max(brightness, 1e-4);
+        output.write(float4(color * contribution, 1), tid);
+    }
+
+    [[kernel]] void bloom_downsample(
+        uint2 tid [[thread_position_in_grid]],
+        texture2d<float> source [[texture(0)]],
+        texture2d<float, access::write> output [[texture(1)]],
+        sampler linear [[sampler(0)]]
+    ) {
+        const uint2 size = uint2(output.get_width(), output.get_height());
+        if (tid.x >= size.x || tid.y >= size.y) {
+            return;
+        }
+        const float2 uv = (float2(tid) + 0.5) / float2(size);
+        output.write(float4(downsample(source, linear, uv, 0.5 / float2(size)), 1), tid);
+    }
+
+    // Adds the smaller level, blurred with a 3x3 tent, to this one.
+    [[kernel]] void bloom_upsample(
+        uint2 tid [[thread_position_in_grid]],
+        texture2d<float> smaller [[texture(0)]],
+        texture2d<float, access::read_write> output [[texture(1)]],
+        sampler linear [[sampler(0)]]
+    ) {
+        const uint2 size = uint2(output.get_width(), output.get_height());
+        if (tid.x >= size.x || tid.y >= size.y) {
+            return;
+        }
+        const float2 uv = (float2(tid) + 0.5) / float2(size);
+        const float2 texel = 1.0 / float2(smaller.get_width(), smaller.get_height());
+        float3 sum = smaller.sample(linear, uv).rgb * 4.0;
+        sum += (smaller.sample(linear, uv + texel * float2(-1, 0)).rgb + smaller.sample(linear, uv + texel * float2(1, 0)).rgb
+            + smaller.sample(linear, uv + texel * float2(0, -1)).rgb + smaller.sample(linear, uv + texel * float2(0, 1)).rgb) * 2.0;
+        sum += smaller.sample(linear, uv + texel * float2(-1, -1)).rgb + smaller.sample(linear, uv + texel * float2(1, -1)).rgb
+            + smaller.sample(linear, uv + texel * float2(-1, 1)).rgb + smaller.sample(linear, uv + texel * float2(1, 1)).rgb;
+        output.write(float4(output.read(tid).rgb + sum / 16.0, 1), tid);
+    }
+
+    // The exposed HDR scene plus bloom, tone mapped into the view.
+    [[kernel]] void bloom_composite(
+        uint2 tid [[thread_position_in_grid]],
+        texture2d<float, access::read> scene [[texture(0)]],
+        texture2d<float> bloom [[texture(1)]],
+        texture2d<float, access::write> output [[texture(2)]],
+        sampler linear [[sampler(0)]],
+        constant BloomUniforms &uniforms [[buffer(0)]]
+    ) {
+        const uint2 size = uint2(output.get_width(), output.get_height());
+        if (tid.x >= size.x || tid.y >= size.y) {
+            return;
+        }
+        const float4 color = scene.read(tid);
+        const float2 uv = (float2(tid) + 0.5) / float2(size);
+        const float3 glow = bloom.sample(linear, uv).rgb * uniforms.intensity;
+        const float3 mapped = Lighting::toneMap(color.rgb * uniforms.exposure + glow, LightingShaderToneMapping(uniforms.toneMapping));
+        output.write(float4(mapped, color.a), tid);
+    }
+
     // Weighted blended transparency (#494): the average transparent color over the opaque scene, by the product of
     // the layers' (1 - alpha).
     [[kernel]] void composite_weighted_transparency(
