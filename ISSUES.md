@@ -5930,6 +5930,8 @@ Particles are simulated and stored as world-space Float in MetalSprocketsParticl
 
 Decided (2026-11-23): simulate and store particles relative to each emitter (emitter origin on the CPU, applied camera-relative at draw), independent of #255's decision? Decision: yes; it works with any later #255 choice.
 
+- `2026-11-23T02:52:35Z`: Question 1 (decision): Emitter-relative storage needs MetalSprocketsParticles changes (a per-system origin applied camera-relative at draw, colliders/scene-depth collisions in that space) and a new release. May I implement it in ../MetalSprocketsParticles and commit there, with you pushing and tagging 0.2.0 before adopting it here? Recommended: Yes
+
 ---
 
 ## 263: Package tools version 6.2 is below SwiftECS's required 6.4
@@ -8986,6 +8988,9 @@ To do:
 
 Related: #392 (particle crash seen in a session that used the immersive space).
 
+- `2026-11-23T02:52:20Z`: Question 1 (verify): On a Vision Pro: does the demo's immersive space open and render, and do the keynote slides keep working in the window while immersive? Recommended: Run it and report yes/no
+- `2026-11-23T02:52:20Z`: Question 2 (decision): May I push SceneSprocketsAddOns 0f5cd695 (Terrain bundle Resources→Heightmaps codesign fix) and update the resolved version here? Recommended: Yes
+
 ---
 
 ## 386: Scene graph cannot be rendered from a thread other than the one that edits it
@@ -11970,6 +11975,8 @@ Decided (2026-11-23):
 - Where does ICB encoding live? Decision: in MetalSprockets' DrawList (a 'cache commands until rows change' option, new release), adopted by PBR first.
 - What finishes this issue? Decision: identical images plus a benchmark showing CPU encode time no worse than today; GPU-driven culling stays in #520.
 
+- `2026-11-23T02:52:14Z`: Question 1 (decision): The decided design puts ICB caching in MetalSprockets' DrawList and needs a new MetalSprockets release. May I implement it in ../MetalSprockets, commit there, and tag/push a release (0.3.4) so SceneSprockets can require it? Recommended: Yes: implement in MetalSprockets, you push and tag; then adopt in PBR here
+
 ---
 
 ## 518: No mesh shading
@@ -13441,18 +13448,21 @@ MetalSprockets#585 proposes a container for many similar draws. If it is impleme
 ## 583: CarConcept frame time is 0.7 ms longer with DrawList than with merged sets
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:performance, effort:m, investigate, gltf
 milestone: Rendering
 created: 2026-11-20T00:29:59Z
-updated: 2026-11-23T02:16:09Z
+updated: 2026-11-23T02:54:59Z
+closed: 2026-11-23T02:54:59Z
 +++
 
 After #582 (every batch through DrawList), ms-gltf-render bench CarConcept reports ~2.4 ms CPU per frame against ~1.67 ms for the merged path (56c82e9b), both on MetalSprockets main, Release, M5 Max. Sponza: 0.83 vs 0.69 ms. Reproduced over several runs.
 
 The bench's CPU figure is frame wall time minus GPU time. Time Profiler runs of 3000 frames of each show about the same CPU samples in measureFrames (4839 vs 4936), so the extra time is not CPU work; it is waiting somewhere in submission or completion. Cause not known. Related: #555.
+
+- `2026-11-23T02:54:59Z`: No longer reproduces (2026-11-23, Release, M5 Max, bench --repeats 3): CarConcept 1.33 ms CPU (was 2.4; merged path was 1.67), Sponza 0.72 ms (merged 0.69). No code change; perf-only, so no unit test.
 
 ---
 
