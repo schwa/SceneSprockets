@@ -45,6 +45,8 @@ extension SceneGraph {
         public var cameras: [CameraEntry]
         public var texts: [TextEntry]
         public var reflectors: [ReflectorEntry] = []
+        /// Irradiance probe volumes with their nodes' world transforms (#532).
+        public var probeVolumes: [(worldTransform: simd_float4x4, volume: ProbeVolume)] = []
         /// This frame's edits of every particle system on an active node, hidden or not, each once. Made fresh by each
         /// ``SceneGraph/presentation()`` call, which takes the time advanced since the previous call.
         public var particleFrames: [SceneParticleSystem.Frame]
@@ -75,6 +77,7 @@ extension SceneGraph {
             cameras: parts.cameras,
             texts: parts.texts,
             reflectors: parts.reflectors,
+            probeVolumes: parts.probeVolumes,
             particleFrames: parts.particleSystems.map { $0.makeFrame() },
             visibleParticleIndices: parts.visibleParticleIndices,
             environment: environment,
@@ -92,6 +95,7 @@ extension SceneGraph {
         var cameras: [Presentation.CameraEntry]
         var texts: [Presentation.TextEntry]
         var reflectors: [Presentation.ReflectorEntry]
+        var probeVolumes: [(worldTransform: simd_float4x4, volume: ProbeVolume)]
         var particleSystems: [SceneParticleSystem]
         var visibleParticleIndices: [Int]
         var bounds: BoundingBox3D?
@@ -101,7 +105,11 @@ extension SceneGraph {
         let flattened = flattened()
         var texts: [Presentation.TextEntry] = []
         var reflectors: [Presentation.ReflectorEntry] = []
+        var probeVolumes: [(worldTransform: simd_float4x4, volume: ProbeVolume)] = []
         visit { node, worldTransform in
+            if let volume = node.probeVolume, !volume.coefficients.isEmpty {
+                probeVolumes.append((worldTransform, volume))
+            }
             if let text = node.text, !text.string.isEmpty {
                 texts.append(.init(text: text, worldTransform: worldTransform, categoryBitMask: node.categoryBitMask))
             }
@@ -118,6 +126,7 @@ extension SceneGraph {
             cameras: flattened.cameras.map { .init(nodeID: $0.node.id, worldTransform: $0.worldTransform, camera: $0.camera) },
             texts: texts,
             reflectors: reflectors,
+            probeVolumes: probeVolumes,
             particleSystems: particleSystems,
             visibleParticleIndices: particleSystems.indices.filter { visible.contains(ObjectIdentifier(particleSystems[$0])) },
             bounds: bounds

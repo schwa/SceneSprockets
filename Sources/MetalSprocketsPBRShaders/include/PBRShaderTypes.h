@@ -40,6 +40,12 @@ typedef struct PBRMorphUniforms PBRMorphUniforms;
 struct PBRInstance {
     simd_float4x4 worldMatrix;
     simd_float4x4 normalMatrix; // Inverse transpose of worldMatrix. Only the upper 3x3 is used.
+    // Probe light for this instance (#532): L1 spherical harmonics per color channel (constant, y, z, x), used instead
+    // of the environment's diffuse light when hasIrradiance is 1.
+    simd_float4 irradianceRed;
+    simd_float4 irradianceGreen;
+    simd_float4 irradianceBlue;
+    int hasIrradiance;
 };
 typedef struct PBRInstance PBRInstance;
 

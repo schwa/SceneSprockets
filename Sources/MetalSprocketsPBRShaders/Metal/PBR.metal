@@ -31,7 +31,13 @@ namespace PBR {
     void applyMorph(thread float3 &position, thread float3 &normal, thread float4 &tangent, uint vertexID, constant PBRMorphUniforms &morph, constant PBRMorphDelta *deltas, constant float *weights);
 
     Fragment instancedFragment(VertexIn in, float3 position, float3 normal, float4 tangent, PBRInstance instance, constant PBRViewUniforms &view, ushort eye) {
-        return makeFragment(position, normal, tangent, in.texCoord0, in.texCoord1, in.color, view, eye, view.modelMatrix * instance.worldMatrix, upperLeft(instance.normalMatrix));
+        Fragment out = makeFragment(position, normal, tangent, in.texCoord0, in.texCoord1, in.color, view, eye, view.modelMatrix * instance.worldMatrix, upperLeft(instance.normalMatrix));
+        // Probe light (#532).
+        out.irradianceRed = instance.irradianceRed;
+        out.irradianceGreen = instance.irradianceGreen;
+        out.irradianceBlue = instance.irradianceBlue;
+        out.hasIrradiance = instance.hasIrradiance;
+        return out;
     }
 
     Fragment skinnedFragment(SkinnedVertexIn in, float3 position, float3 normal, float4 tangent, constant float4x4 *jointMatrices, constant PBRViewUniforms &view, ushort eye);
@@ -152,6 +158,10 @@ namespace PBR {
         out.modelScale = (length(modelMatrix[0].xyz) + length(modelMatrix[1].xyz) + length(modelMatrix[2].xyz)) / 3.0;
         out.pointSize = 1.0;
         out.record = 0;
+        out.hasIrradiance = 0;
+        out.irradianceRed = 0;
+        out.irradianceGreen = 0;
+        out.irradianceBlue = 0;
         return out;
     }
 
@@ -183,7 +193,7 @@ namespace PBR {
         constant uint *lightClusters [[buffer(7)]]
     ) {
         constant PBRMaterialResources &material = materials[in.record];
-        return withWireframe(shade(in, frontFacing, material.uniforms, frame, lights, material, shadow, frameResources, &lightClusterUniforms, lightClusters), barycentric, frame, material.uniforms);
+        return withWireframe(shade(in, frontFacing, material.uniforms, frame, lights, material, shadow, frameResources, &lightClusterUniforms, lightClusters, true), barycentric, frame, material.uniforms);
     }
 
     // fragment_main's color as weighted blended transparency (#494).
@@ -200,7 +210,7 @@ namespace PBR {
         constant uint *lightClusters [[buffer(7)]]
     ) {
         constant PBRMaterialResources &material = materials[in.record];
-        const float4 color = withWireframe(shade(in, frontFacing, material.uniforms, frame, lights, material, shadow, frameResources, &lightClusterUniforms, lightClusters), barycentric, frame, material.uniforms);
+        const float4 color = withWireframe(shade(in, frontFacing, material.uniforms, frame, lights, material, shadow, frameResources, &lightClusterUniforms, lightClusters, true), barycentric, frame, material.uniforms);
         return Lighting::weightedTransparency(color, in.position);
     }
 

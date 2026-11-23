@@ -51,6 +51,8 @@ func everyWorldFieldIsPlacedForDrawing() throws {
         "text": nil,
         // Drawn from Presentation.reflectors (#531).
         "planarReflector": nil,
+        // Read from Presentation.probeVolumes (#532).
+        "probeVolume": nil,
         // Applied to `content` before entries are made.
         "subdivisionLevel": nil,
         "subdivisionBase": nil,
@@ -109,7 +111,8 @@ func everyArchivedFieldRoundTrips() throws {
         "actionSpeed": { $0.actionSpeed = 2 },
         "subdivisionLevel": { $0.subdivisionLevel = 1 },
         "path": { $0.path = SceneGraph.Spline(points: [[0, 0, 0], [1, 2, 3]], isClosed: true) },
-        "planarReflector": { $0.planarReflector = SceneGraph.PlanarReflector(resolutionScale: 0.25) }
+        "planarReflector": { $0.planarReflector = SceneGraph.PlanarReflector(resolutionScale: 0.25) },
+        "probeVolume": { $0.probeVolume = SceneGraph.ProbeVolume(resolution: [1, 1, 1], coefficients: [.zero]) }
     ]
     // Need other nodes, files or meshes to save; their round trips are in SceneArchiveTests and
     // AudioAndDetailArchiveTests.

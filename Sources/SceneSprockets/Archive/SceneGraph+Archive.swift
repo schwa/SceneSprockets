@@ -55,7 +55,7 @@ extension SceneGraph.Node: Codable {
     enum ArchiveKeys: String, CodingKey, CaseIterable {
         case label, transform, pivot, isVisible, isActive, opacity, categoryBitMask, lightCategoryBitMask, renderingOrder
         case subdivisionLevel, actionSpeed, mesh, light, camera, constraints, children, model
-        case morphTargets, morphWeights, skin, skinVertices, physicsBody, particleSystems, levelsOfDetail, audioPlayers, text, path, planarReflector
+        case morphTargets, morphWeights, skin, skinVertices, physicsBody, particleSystems, levelsOfDetail, audioPlayers, text, path, planarReflector, probeVolume
     }
 
     enum MeshKeys: String, CodingKey {
@@ -245,6 +245,7 @@ extension SceneGraph.Node: Codable {
         physicsBody = try container.decodeIfPresent(SceneGraph.PhysicsBody.self, forKey: .physicsBody)
         path = try container.decodeIfPresent(SceneGraph.Spline.self, forKey: .path)
         planarReflector = try container.decodeIfPresent(SceneGraph.PlanarReflector.self, forKey: .planarReflector)
+        probeVolume = try container.decodeIfPresent(SceneGraph.ProbeVolume.self, forKey: .probeVolume)
         particleSystems = try (container.decodeIfPresent([ArchivedParticleSystem].self, forKey: .particleSystems) ?? []).map {
             let system = SceneParticleSystem($0.system, seed: $0.seed)
             system.usesNodeTransform = $0.usesNodeTransform ?? true
@@ -310,6 +311,7 @@ extension SceneGraph.Node: Codable {
         try container.encodeIfPresent(physicsBody, forKey: .physicsBody)
         try container.encodeIfPresent(path, forKey: .path)
         try container.encodeIfPresent(planarReflector, forKey: .planarReflector)
+        try container.encodeIfPresent(probeVolume, forKey: .probeVolume)
         if !particleSystems.isEmpty {
             let archived = particleSystems.map {
                 ArchivedParticleSystem(system: $0.system, seed: $0.seed, usesNodeTransform: $0.usesNodeTransform ? nil : false)

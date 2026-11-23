@@ -72,5 +72,10 @@ struct BlinnPhongMaterialUniforms {
     float parallaxDepth;
     // Stochastic transparency (#539): alpha becomes hashed sample coverage.
     int stochasticAlpha;
+    // Probe light for this draw (#532): L1 spherical harmonics per color channel (IrradianceSH), when hasIrradiance.
+    int hasIrradiance;
+    simd_float4 irradianceRed;
+    simd_float4 irradianceGreen;
+    simd_float4 irradianceBlue;
 };
 typedef struct BlinnPhongMaterialUniforms BlinnPhongMaterialUniforms;

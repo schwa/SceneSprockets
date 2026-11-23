@@ -211,7 +211,8 @@ namespace BlinnPhong {
                 discard_fragment();
             }
         }
-        Surface surface = { ambientColor, diffuseColor, specularColor, emission, material.shininess, alpha, material.receivesShadow != 0 };
+        const float3 indirect = material.hasIrradiance != 0 ? diffuseColor * Lighting::probeIrradiance(material.irradianceRed, material.irradianceGreen, material.irradianceBlue, normal) : float3(0);
+        Surface surface = { ambientColor, diffuseColor, specularColor, emission, material.shininess, alpha, material.receivesShadow != 0, indirect };
         float4 channel;
         if (channelColor(surface, frame.materialChannel, channel)) {
             return channel;

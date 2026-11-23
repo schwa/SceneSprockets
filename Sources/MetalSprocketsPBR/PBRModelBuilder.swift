@@ -76,7 +76,7 @@ public struct PBRModelBuilder {
                 firstInstance: instanceValues.count,
                 worldBounds: group.dropFirst().reduce(first.worldBounds) { $0.union($1.worldBounds) }
             ))
-            instanceValues += group.map { PBRInstance(worldMatrix: $0.worldMatrix, normalMatrix: $0.normalMatrix) }
+            instanceValues += group.map { PBRInstance(worldMatrix: $0.worldMatrix, normalMatrix: $0.normalMatrix, irradiance: nil) }
             instanceRecords += repeatElement(UInt32(element), count: group.count)
         }
         var skinOffsets: [UInt32] = []

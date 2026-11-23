@@ -12293,13 +12293,14 @@ Decided (2026-11-23):
 ## 532: No ambient or irradiance probes
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: effort:m, area:renderer
 milestone: Lighting-and-GI
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-23T02:14:51Z
+updated: 2026-11-23T14:01:52Z
+closed: 2026-11-23T14:01:52Z
 +++
 
 Objects do not receive indirect lighting appropriate to their location: indirect light is global (one image-based environment plus summed ambient light nodes, #602). (Moved from SceneSprocketsAddOns#71.) Related: #530, #533.
@@ -15067,6 +15068,28 @@ Follow-up to #510. The G-buffer pre-pass:
 - gives skinned and morphed meshes the camera's motion only, not their deformation;
 - is not drawn in stereo;
 - has no SceneView modifier; only SceneGraphElement.gBuffer(_:) requests it.
+
+---
+
+## 661: Irradiance probes leave out shadows, transparency, skinned meshes and per-instance light
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:renderer, effort:m, lighting
+created: 2026-11-23T14:01:48Z
+updated: 2026-11-23T14:01:52Z
++++
+
+Follow-up to #532. Irradiance probe volumes:
+- capture only the opaque scene and background: no shadows, transparent meshes, particles or decals;
+- are captured only on request (ProbeVolume.capture), on the main thread, which is slow for many probes (six renders each);
+- give skinned PBR meshes the environment's diffuse light (skinned instances carry no probe light);
+- give Blinn-Phong's instanced copies the probe light at the first copy's origin;
+- are not drawn in the editor (no gizmo for the volume or its probes);
+- cover one volume at a time: the first volume containing a point wins, with no blending between volumes;
+- are not used by shader materials.
 
 ---
 

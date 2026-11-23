@@ -350,6 +350,13 @@ private struct BlinnPhongBatchesElement: Element {
                 var resolved = batch.material.resolved(placeholder: placeholder, defaultSampler: defaultSampler)
                 resolved.uniforms.receivesShadow = batch.receivesShadow ? 1 : 0
                 resolved.uniforms.opacity *= batch.opacity
+                // Probe light (#532) at the first copy's origin: instanced copies share it.
+                if let irradiance = shading.irradiance?(batch.modelMatrices[0].columns.3.xyz) {
+                    resolved.uniforms.hasIrradiance = 1
+                    resolved.uniforms.irradianceRed = irradiance.red
+                    resolved.uniforms.irradianceGreen = irradiance.green
+                    resolved.uniforms.irradianceBlue = irradiance.blue
+                }
                 element = element
                     .parameter("frame", functionType: .fragment, value: frame)
                     .parameter("lights", functionType: .fragment, values: lightValues)
@@ -528,7 +535,11 @@ extension BlinnPhongSceneMaterial {
             hasHeightTexture: height?.texture == nil ? 0 : 1,
             heightScale: height?.color.x ?? 1,
             parallaxDepth: parallaxDepth,
-            stochasticAlpha: renderState.blendMode == .stochastic ? 1 : 0
+            stochasticAlpha: renderState.blendMode == .stochastic ? 1 : 0,
+            hasIrradiance: 0,
+            irradianceRed: .zero,
+            irradianceGreen: .zero,
+            irradianceBlue: .zero
         )
     }
 }

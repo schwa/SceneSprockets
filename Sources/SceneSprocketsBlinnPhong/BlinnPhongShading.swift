@@ -20,6 +20,8 @@ public struct BlinnPhongShading {
     public var shadow: Shadows.Sampling?
     /// The frame's light clusters (#519), when lights are clustered and this context has all of them.
     public var lightClusters: LightingClusters?
+    /// Probe light at a world position (#532); nil when the scene has no probe volumes.
+    public var irradiance: ((SIMD3<Float>) -> IrradianceSH?)?
 
     /// Creates the lighting inputs from a render context.
     public init(context: RenderContext, ambientLightColor: SIMD3<Float>) {
@@ -53,6 +55,7 @@ public struct BlinnPhongShading {
         self.cameraPosition = cameraPosition
         self.shadow = context.shadow
         self.lightClusters = context.lightClusters
+        self.irradiance = context.hasIrradianceProbes ? { context.irradiance(at: $0) } : nil
     }
 
     /// The `lightClusterUniforms` and `lightClusters` to bind: disabled ones without clusters.

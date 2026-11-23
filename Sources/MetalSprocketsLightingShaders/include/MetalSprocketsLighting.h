@@ -9,6 +9,13 @@
 namespace Lighting {
     using namespace metal;
 
+    // Probe light (#532): irradiance over pi from L1 spherical harmonics, one float4 per color channel holding
+    // (constant, y, z, x), as IrradianceSH stores them.
+    inline float3 probeIrradiance(float4 red, float4 green, float4 blue, float3 normal) {
+        const float4 basis = float4(1, normal.y, normal.z, normal.x);
+        return max(float3(dot(red, basis), dot(green, basis), dot(blue, basis)), 0.0);
+    }
+
     // Rectangular area lights with linearly transformed cosines (#509; Heitz et al. 2016).
 
     // A table entry, bilinearly filtered, at perceptual roughness and the view angle.

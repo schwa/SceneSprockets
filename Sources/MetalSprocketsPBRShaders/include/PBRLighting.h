@@ -28,6 +28,11 @@ namespace PBR {
         float pointSize [[point_size]]; // Required when drawing point primitives.
         uint record [[flat]]; // The instance's element of the material table (PBRRenderer); 0 for other renderers.
         uint eye [[flat]]; // Which view (amplification ID) this is drawn for; selects the per-view uniforms.
+        // Probe light (#532), from PBRInstance. Read only when shade is told the fragment carries it.
+        float4 irradianceRed [[flat]];
+        float4 irradianceGreen [[flat]];
+        float4 irradianceBlue [[flat]];
+        int hasIrradiance [[flat]];
     };
 
     inline float3x3 upperLeft(float4x4 matrix) {
@@ -245,7 +250,9 @@ namespace PBR {
         texture2d<float> ambientOcclusion,
         // Clustered lights (#519); null loops over every light.
         constant LightingClusterUniforms *lightClusterUniforms = nullptr,
-        constant uint *lightClusters = nullptr
+        constant uint *lightClusters = nullptr,
+        // Whether `in` carries probe light (#532): PBRRenderer's vertex stage fills it; other renderers do not.
+        bool readsIrradiance = false
     ) {
         const float screenOcclusion = Lighting::screenOcclusion(ambientOcclusion, in.position, frame.ambientOcclusionStrength);
         // The material's textures come from one argument buffer, so a draw binds them all at once.
@@ -679,7 +686,13 @@ namespace PBR {
         }
 
         // Split-sum image-based lighting: prefiltered radiance times the BRDF integral from the lookup table.
-        const float3 irradiance = environmentIrradiance.sample(environmentSampler, environmentDirection(normal, frame.environmentRotation)).rgb;
+        // Probe light (#532) replaces the environment's diffuse light. It is absolute, so environment intensity does not
+        // scale it.
+        const bool usesProbe = readsIrradiance && in.hasIrradiance != 0;
+        const float diffuseIntensity = usesProbe ? 1.0 : frame.environmentIntensity;
+        const float3 irradiance = usesProbe
+            ? Lighting::probeIrradiance(in.irradianceRed, in.irradianceGreen, in.irradianceBlue, normal)
+            : environmentIrradiance.sample(environmentSampler, environmentDirection(normal, frame.environmentRotation)).rgb;
         // Anisotropic reflections sample along a normal bent toward the anisotropy direction.
         float3 reflectionNormal = normal;
         if (anisotropy > 0.0) {
@@ -721,13 +734,15 @@ namespace PBR {
         // it for light arriving from behind the surface.
         float3 diffuseIrradiance = irradiance * diffuseColor;
         if (diffuseTransmission > 0.0) {
-            const float3 backIrradiance = environmentIrradiance.sample(environmentSampler, environmentDirection(-normal, frame.environmentRotation)).rgb;
+            const float3 backIrradiance = usesProbe
+                ? Lighting::probeIrradiance(in.irradianceRed, in.irradianceGreen, in.irradianceBlue, -normal)
+                : environmentIrradiance.sample(environmentSampler, environmentDirection(-normal, frame.environmentRotation)).rgb;
             diffuseIrradiance = mix(diffuseIrradiance, backIrradiance * diffuseTransmittedColor, diffuseTransmission);
         }
         const float3 diffuseWeight = 1.0 - specularWeight - multiScatterWeight;
         // transmittedRadiance is already absolute radiance (scene or environment), so it is not scaled again.
-        const float3 ambientDiffuse = mix(diffuseIrradiance * diffuseWeight * frame.environmentIntensity, transmittedRadiance * (1.0 - specularWeight), transmission);
-        float3 ambient = ambientDiffuse + (prefiltered * specularWeight + irradiance * multiScatterWeight) * frame.environmentIntensity + planarReflection * specularWeight;
+        const float3 ambientDiffuse = mix(diffuseIrradiance * diffuseWeight * diffuseIntensity, transmittedRadiance * (1.0 - specularWeight), transmission);
+        float3 ambient = ambientDiffuse + prefiltered * specularWeight * frame.environmentIntensity + irradiance * multiScatterWeight * diffuseIntensity + planarReflection * specularWeight;
         // Constant ambient light lights the diffuse lobe evenly, and occlusion darkens it like image-based light.
         ambient += diffuseColor * diffuseWeight * frame.ambientLight * (1.0 - transmission);
         // The irradiance map holds irradiance / pi; three.js's sheen term expects irradiance.
@@ -790,9 +805,10 @@ namespace PBR {
         constant LightingShadowUniforms &shadow,
         constant LightingFrameResources &frameResources,
         constant LightingClusterUniforms *lightClusterUniforms = nullptr,
-        constant uint *lightClusters = nullptr
+        constant uint *lightClusters = nullptr,
+        bool readsIrradiance = false
     ) {
-        return shade(in, frontFacing, material, frame, lights, materialResources, frameResources.environmentIrradiance, frameResources.environmentSpecular, frameResources.brdfLookup, frameResources.transmissionScene, frameResources.environmentSampler, shadow, frameResources.shadowMap, frameResources.shadowSampler, frameResources.ambientOcclusion, lightClusterUniforms, lightClusters);
+        return shade(in, frontFacing, material, frame, lights, materialResources, frameResources.environmentIrradiance, frameResources.environmentSpecular, frameResources.brdfLookup, frameResources.transmissionScene, frameResources.environmentSampler, shadow, frameResources.shadowMap, frameResources.shadowSampler, frameResources.ambientOcclusion, lightClusterUniforms, lightClusters, readsIrradiance);
     }
 
 } // namespace PBR

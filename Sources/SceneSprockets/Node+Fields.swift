@@ -27,6 +27,7 @@ private enum FieldKeyPaths {
     static let text = \SceneGraph.Node.text
     static let path = \SceneGraph.Node.path
     static let planarReflector = \SceneGraph.Node.planarReflector
+    static let probeVolume = \SceneGraph.Node.probeVolume
     static let skin = \SceneGraph.Node.skin
     static let skinVertices = \SceneGraph.Node.skinVertices
     static let morphTargets = \SceneGraph.Node.morphTargets
@@ -66,6 +67,7 @@ extension SceneGraph.Node {
         NodeFieldSlot(\.text, \.textStorage, archiveKeys: [.text]),
         NodeFieldSlot(\.path, \.pathStorage, archiveKeys: [.path]),
         NodeFieldSlot(\.planarReflector, \.planarReflectorStorage, archiveKeys: [.planarReflector]),
+        NodeFieldSlot(\.probeVolume, \.probeVolumeStorage, archiveKeys: [.probeVolume]),
         NodeFieldSlot(\.skin, \.skinStorage, archiveKeys: [.skin]),
         NodeFieldSlot(\.skinVertices, \.skinVerticesStorage, archiveKeys: [.skinVertices]),
         NodeFieldSlot(\.morphTargets, \.morphTargetsStorage, archiveKeys: [.morphTargets]),
@@ -179,6 +181,14 @@ extension SceneGraph.Node {
     public var planarReflector: SceneGraph.PlanarReflector? {
         get { getField(FieldKeyPaths.planarReflector, \.planarReflectorStorage) }
         set { setField(FieldKeyPaths.planarReflector, \.planarReflectorStorage, newValue) }
+    }
+
+    /// A grid of irradiance probes filling this node's unit box (-0.5...0.5 on each axis, placed by the node's
+    /// transform), which gives each object inside indirect light from where it is (#532). Fill it with
+    /// ``SceneGraph/ProbeVolume/capture(sceneGraph:node:renderers:)``.
+    public var probeVolume: SceneGraph.ProbeVolume? {
+        get { getField(FieldKeyPaths.probeVolume, \.probeVolumeStorage) }
+        set { setField(FieldKeyPaths.probeVolume, \.probeVolumeStorage, newValue) }
     }
 
     /// Sounds that play from this node; see Audio. Not copied by clone().

@@ -463,7 +463,14 @@ public final class PBRMaterialRenderer: MaterialRenderer, Equatable {
             viewMatrix: context.viewMatrix.rotationOnlyView,
             projectionMatrix: context.projectionMatrix,
             lighting: lighting,
-            pose: layout.pose(cameraPosition: cameraPosition),
+            pose: {
+                var pose = layout.pose(cameraPosition: cameraPosition)
+                // Probe light per entry (#532), at each entry's bounds center.
+                if context.hasIrradianceProbes {
+                    pose.irradiance = layout.entries.map { context.irradiance(for: $0) }
+                }
+                return pose
+            }(),
             transmissionTarget: transmissionTarget
         )
         renderer.materialOverrides = materialOverrides(for: entries, built: built, current: current)

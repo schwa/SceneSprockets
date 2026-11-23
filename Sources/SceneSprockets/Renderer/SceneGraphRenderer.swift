@@ -62,6 +62,8 @@ public struct RenderContext {
     /// This frame's normals and velocity, when ``SceneGraphElement/gBuffer(_:)`` requested them and the pre-pass ran
     /// (#510). Drawn before the scene pass.
     public internal(set) var gBuffer: GBuffer?
+    // The scene's probe volumes (#532); see irradiance(at:).
+    var probeVolumes: [(worldTransform: simd_float4x4, volume: SceneGraph.ProbeVolume)] = []
 
     /// The number of views that each draw goes to: 1, or the stereo view count.
     public var viewCount: Int { stereoViews?.count ?? 1 }
@@ -128,6 +130,8 @@ public struct SceneGraphElement: Element {
     var stageContent: [RenderStage: RenderStageContent] = [:]
     // Normals and velocity when requested (#510).
     var gBufferStorage: GBuffer?
+    // Rendering a probe's view (#532).
+    var capturesIrradiance = false
     // Draws every mesh in this debug view instead of its material (#132).
     var debugMode: DebugMode?
     // Each renderer shows this material value instead of lighting (#195). Ignored while debugMode is set.
@@ -227,6 +231,11 @@ public struct SceneGraphElement: Element {
             }
             let cameraPosition = context.cameraMatrix.columns.3.xyz
             context.materialChannel = debugMode == nil ? materialChannel : nil
+            // Probe capture (#532) draws linear light from the opaque scene, without the probes themselves.
+            context.probeVolumes = capturesIrradiance ? [] : presentation.probeVolumes
+            if capturesIrradiance {
+                context.outputIsLinear = true
+            }
             // Metered into after the post passes; needs the view's color and depth to be readable.
             let autoExposureBuffer: MTLBuffer? = try {
                 guard let autoExposure, debugMode == nil, let device = renderPassDescriptor?.colorAttachments[0].texture?.device else {
@@ -237,6 +246,9 @@ public struct SceneGraphElement: Element {
                 return buffer
             }()
             var entries = applyLevelsOfDetail(presentation.meshes.filter { $0.categoryBitMask & context.categoryBitMask != 0 }, cameraPosition: cameraPosition)
+            if capturesIrradiance {
+                entries = entries.filter { !$0.isTransparent && !($0.material is any ReadsSceneDepth) }
+            }
             if let debugMode {
                 entries = entries.map { entry in
                     var entry = entry
@@ -297,7 +309,7 @@ public struct SceneGraphElement: Element {
                 leadingPasses.append(DeformationPass(jobs: deformationJobs).gpuTimed(SceneGPUTimingLabel.prePasses).eraseToAnyElement())
             }
             // Prepared before the renderers, which sample it while shading.
-            let shadowFrame = try shadowTargets.flatMap { targets in
+            let shadowFrame = capturesIrradiance ? nil : try shadowTargets.flatMap { targets in
                 try shadows?.prepare(entries: entries, context: context, bounds: presentation.bounds, viewSize: (targets.color.width, targets.color.height), renderers: renderers)
             }
             if let shadowFrame {
@@ -357,7 +369,7 @@ public struct SceneGraphElement: Element {
                 .filter { $0.light.type == .directional && $0.light.castsShadow }
                 .max { $0.light.intensity * $0.light.tintedColor.max() < $1.light.intensity * $1.light.tintedColor.max() }
             let ambientOcclusionContent = (wantsAmbientOcclusion || contactShadowLight != nil) && !opaque.isEmpty ? try makeOpaqueContent(entries: opaque, context: context, excluding: nil) : nil
-            let visibleParticleFrames = presentation.visibleParticleIndices.map { presentation.particleFrames[$0] }
+            let visibleParticleFrames = capturesIrradiance ? [] : presentation.visibleParticleIndices.map { presentation.particleFrames[$0] }
             let postProcessing = postTargets == nil ? nil : presentation.postProcessing
             let plan = SceneFramePlan(.init(
                 hasPostTargets: postTargets != nil,
@@ -408,7 +420,7 @@ public struct SceneGraphElement: Element {
             #endif
             var elements = try makeSceneElements(entries: entries, context: context, drawsText: plan.drawsText)
             // Particles simulate in their own compute pass before the scene pass, then draw after the meshes.
-            let particleSimulations = try presentation.particleFrames.map { try $0.system.simulate($0, view: context.viewMatrix).eraseToAnyElement() }
+            let particleSimulations = capturesIrradiance ? [] : try presentation.particleFrames.map { try $0.system.simulate($0, view: context.viewMatrix).eraseToAnyElement() }
             prePasses = particleSimulations + prePasses
             // Soft particles read the scene's depth, so they draw in a second pass after a depth copy.
             let softParticleDepth: (scene: MTLTexture, copy: MTLTexture)? = try {

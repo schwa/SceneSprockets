@@ -20,6 +20,8 @@ namespace BlinnPhong {
         float shininess;
         float alpha;
         bool receivesShadow;
+        // Indirect light from probes (#532), already multiplied by the diffuse color; zero when there are none.
+        metal::float3 indirect;
     };
 
     // The lit color of `surface` at `position` (camera-relative) with unit `normal`. `occlusion` scales ambient light.
@@ -66,7 +68,7 @@ namespace BlinnPhong {
             diffuse += surface.diffuse * lambertian * radiance;
             specular += surface.specular * highlight * radiance;
         }
-        const metal::float3 color = frame.ambientLightColor * surface.ambient * occlusion + diffuse + specular + surface.emission;
+        const metal::float3 color = (frame.ambientLightColor * surface.ambient + surface.indirect) * occlusion + diffuse + specular + surface.emission;
         return metal::float4(frame.linearOutput ? color : Lighting::toneMap(color * frame.exposure, frame.toneMapping), surface.alpha);
     }
 

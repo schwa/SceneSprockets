@@ -1,3 +1,4 @@
+import MetalSprocketsLighting
 import MetalSprocketsPBRShaders
 import simd
 
@@ -18,6 +19,8 @@ public struct PBRPose: Sendable {
     /// Animated camera properties, by camera index then the producer's property name (glTF: the JSON pointer below
     /// `/cameras/N/`, e.g. `perspective/yfov`).
     public var cameraParameters: [Int: [String: Float]] = [:]
+    /// Probe light for each node's instances (#532); empty, or nil for a node, uses the environment's diffuse light.
+    public var irradiance: [IrradianceSH?] = []
 
     public init(worldMatrices: [simd_float4x4], morphWeights: [[Float]] = [], materialUniforms: [ObjectIdentifier: PBRMaterialUniforms] = [:], visibility: [Bool] = []) {
         self.worldMatrices = worldMatrices
@@ -34,5 +37,14 @@ public struct PBRPose: Sendable {
     /// Whether any node is hidden.
     public var hidesNodes: Bool {
         visibility.contains(false)
+    }
+}
+
+public extension PBRInstance {
+    /// An instance placed by `worldMatrix`, lit by `irradiance` instead of the environment's diffuse light when given
+    /// (#532).
+    init(worldMatrix: simd_float4x4, normalMatrix: simd_float4x4, irradiance: IrradianceSH? = nil) {
+        let sh = irradiance ?? .zero
+        self.init(worldMatrix: worldMatrix, normalMatrix: normalMatrix, irradianceRed: sh.red, irradianceGreen: sh.green, irradianceBlue: sh.blue, hasIrradiance: irradiance == nil ? 0 : 1)
     }
 }

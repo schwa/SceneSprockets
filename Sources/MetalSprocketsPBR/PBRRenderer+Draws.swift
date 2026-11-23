@@ -244,20 +244,20 @@ private struct FrameDrawBuilder {
             if batch.skinIndex != nil {
                 // Skinned meshes follow their joints; the instance only carries the record. Hidden skinned meshes never
                 // get here: their bounds are empty, so they are culled.
-                instances.append(PBRInstance(worldMatrix: matrix_identity_float4x4, normalMatrix: matrix_identity_float4x4))
+                instances.append(PBRInstance(worldMatrix: matrix_identity_float4x4, normalMatrix: matrix_identity_float4x4, irradiance: nil))
                 ranges = [.init(start: start, count: 1, mirrored: batch.isMirrored != modelIsMirrored)]
             } else {
                 // Hidden nodes' instances are left out. Posed instances are ordered unmirrored first, then mirrored (an
                 // animation can mirror some of a batch's nodes), and drawn as up to two ranges with their own winding.
                 let placements = zip(batch.nodeIndices, batch.instanceMatrices).filter { pose.isVisible($0.0) }.map { node, instanceMatrix in
-                    pose.placement(node: node, instanceMatrix: instanceMatrix)
+                    (matrix: pose.placement(node: node, instanceMatrix: instanceMatrix), irradiance: pose.irradiance.indices.contains(node) ? pose.irradiance[node] : nil)
                 }
                 guard !placements.isEmpty else {
                     return nil
                 }
-                let unmirrored = placements.filter { !$0.isMirroring }
-                let mirrored = placements.filter(\.isMirroring)
-                instances += (unmirrored + mirrored).map { PBRInstance(worldMatrix: $0, normalMatrix: $0.inverse.transpose) }
+                let unmirrored = placements.filter { !$0.matrix.isMirroring }
+                let mirrored = placements.filter(\.matrix.isMirroring)
+                instances += (unmirrored + mirrored).map { PBRInstance(worldMatrix: $0.matrix, normalMatrix: $0.matrix.inverse.transpose, irradiance: $0.irradiance) }
                 var posedRanges: [PBRRenderer.InstanceRange] = []
                 if !unmirrored.isEmpty {
                     posedRanges.append(.init(start: start, count: unmirrored.count, mirrored: modelIsMirrored))

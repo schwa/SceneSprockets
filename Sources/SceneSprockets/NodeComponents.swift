@@ -294,6 +294,23 @@ public struct NodePathComponent: NodeField {
     static var revision: NodeFieldRevision { .structure }
 }
 
+/// The component that stores ``SceneGraph/Node/probeVolume`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
+public struct NodeProbeVolumeComponent: NodeField {
+    /// The value of ``SceneGraph/Node/probeVolume``.
+    public var value: SceneGraph.ProbeVolume?
+
+    /// Creates the component with a value.
+    public init(value: SceneGraph.ProbeVolume?) {
+        self.value = value
+    }
+
+    static var defaultValue: SceneGraph.ProbeVolume? { nil }
+    // Structure: the presentation snapshot holds the volumes.
+    static var revision: NodeFieldRevision { .structure }
+}
+
 /// The component that stores ``SceneGraph/Node/planarReflector`` for a node in ``SceneGraph/world``.
 ///
 /// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
