@@ -9000,6 +9000,7 @@ Related: #392 (particle crash seen in a session that used the immersive space).
 - `2026-11-23T02:52:20Z`: Question 2 (decision): May I push SceneSprocketsAddOns 0f5cd695 (Terrain bundle Resources→Heightmaps codesign fix) and update the resolved version here? Recommended: Yes
 - `2026-11-23T13:33:52Z`: Answer 1: I will test
 - `2026-11-23T13:33:59Z`: Answer 2: Yes
+- `2026-11-23T13:40:38Z`: SceneSprocketsAddOns 0f5cd695 (Terrain bundle codesign fix) pushed to main; the demo package now resolves it. Waiting on the on-device check (Q1).
 
 ---
 

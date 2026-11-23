@@ -1,5 +1,5 @@
 {
-  "originHash" : "aa0b1f51557fda7755f393b7056d66734256debd42679216f8c11059067b92a3",
+  "originHash" : "40beb8a937f45d6b14a2238d51396d3bf009fd38812b5c55be23a9fe8ddb2542",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -106,7 +106,7 @@
       "location" : "https://github.com/schwa/SceneSprocketsAddOns",
       "state" : {
         "branch" : "main",
-        "revision" : "e3aa452155758c4310fd26cf09b9dc772ea3fd56"
+        "revision" : "0f5cd6953923fe4bf57dbddc4401f1e2e3e57b22"
       }
     },
     {
