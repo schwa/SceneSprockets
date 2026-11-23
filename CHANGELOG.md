@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `SceneView` documents that two views must not draw one scene graph, or share renderer objects, at the same time (#481).
 - Path point editing (#619). `PathPointGizmo` (SceneSprocketsGizmos) draws a handle on each point of a node's path and moves a point when you drag its handle, in the plane facing the camera. `ManipulatorGroup` combines manipulators for `sceneManipulator(_:)`. The Composer shows paths and puts point handles on the selected node's path; a point drag is one undo step.
 - Clustered lighting no longer drops lights when more than 63 reach one cluster (#628). The cluster is shaded with every light instead, so dense light fields no longer show rectangular tiles. `Lighting::lightList` returns the full light list for such clusters.
 - `CharacterController` climbs low steps at any walking speed (#625). Below about 2 units per second, the velocity into the step was cancelled as a steep slope, so the character stood at the step.

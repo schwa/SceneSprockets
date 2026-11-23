@@ -33,6 +33,11 @@ public extension ViewDelegate {
 ///     .sceneShadows(shadows)
 ///     .onSceneTap { hit in print(hit?.node.label ?? "nothing") }
 /// ```
+///
+/// Each view renders on its own thread. Do not let two views (or a view and a visionOS immersive space) draw the same
+/// scene graph at the same time, and do not give one renderer object (such as a material renderer or ``Shadows``) to
+/// two views: GPU deformation buffers, renderer caches and some shared targets are not synchronized between views.
+/// Hide one view while the other shows the scene, or give each view its own scene graph and renderers.
 public struct SceneView: View {
     // Debug settings turned on by environment variables, for a run without editing the call site (#365):
     // SS_SHOWS_STATISTICS, SS_SHOWS_FRAME_TIMING, SS_DISABLES_FRAMEBUFFER_ONLY. They add to the settings in code.

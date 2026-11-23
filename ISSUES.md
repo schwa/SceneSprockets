@@ -11138,13 +11138,14 @@ Found by the swift-concurrency-pro review (#476).
 ## 481: Two views that render the same scene, or share a renderer object, race on shared caches
 
 +++
-status: open
+status: closed
 priority: low
 kind: bug
 labels: area:renderer, effort:l
 milestone: Rendering
 created: 2026-11-17T06:39:06Z
-updated: 2026-11-23T02:14:51Z
+updated: 2026-11-23T02:56:20Z
+closed: 2026-11-23T02:56:20Z
 +++
 
 Each SceneView has its own render thread, and a visionOS immersive space has another (#392). When two of them draw the same scene graph, or share renderer objects, at the same time, these are written from two threads with no synchronization:
