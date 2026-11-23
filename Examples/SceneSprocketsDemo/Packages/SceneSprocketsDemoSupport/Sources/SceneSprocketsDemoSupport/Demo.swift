@@ -105,6 +105,8 @@ open class DemoScene {
         }
     }
     public var contextActions: [DemoAction] = []
+    // Swift code shown over the bottom of the view, such as the keynote's current slide's sample (#630).
+    public var codeSample: String?
     // Set to draw shadows from directional lights.
     // Observed: the view needs different texture settings with and without shadows.
     public var shadows: Shadows?

@@ -14537,13 +14537,14 @@ Open question: should the scene view stop at the sidebar's and inspector's edges
 ## 630: Keynote code samples are drawn as textured planes in the 3D scene
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:demo, effort:m
 milestone: Demo
 created: 2026-11-23T01:46:29Z
-updated: 2026-11-23T02:11:51Z
+updated: 2026-11-23T14:08:29Z
+closed: 2026-11-23T14:08:29Z
 +++
 
 Each keynote slide's code sample is a SwiftUI snapshot rendered into a texture and shown on a plane in the scene (CodePanel, KeynoteDemo.addCode). Because it is scene geometry:

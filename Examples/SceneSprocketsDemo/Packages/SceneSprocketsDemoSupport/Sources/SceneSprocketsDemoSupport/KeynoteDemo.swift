@@ -82,6 +82,8 @@ public final class KeynoteDemo: DemoScene {
     private var swarmLights: [(node: SceneGraph.Node, phase: Float, radius: Float, speed: Float)] = []
     // The Decals slide (#644): the decal that slides over the step, and its material, whose angle limit the slider sets.
     private var movingDecal: SceneGraph.Node?
+    // Each slide's code sample, by slide node.
+    private var codeSamples: [ObjectIdentifier: String] = [:]
     private var pawPrints: [SceneGraph.Node] = []
     // The Mirrors slide (#645): shapes that orbit above the mirror floor, and the floor's PBR material.
     private var mirrorShapes: [SceneGraph.Node] = []
@@ -523,6 +525,7 @@ public final class KeynoteDemo: DemoScene {
         model.title = currentTitle
         model.notes = Self.notes[currentTitle] ?? ""
         model.nextTitle = current + 1 < Self.titles.count ? Self.titles[current + 1] : nil
+        codeSample = slides.indices.contains(current) ? codeSamples[ObjectIdentifier(slides[current])] : nil
         publishSlideControls()
     }
 
@@ -1786,13 +1789,9 @@ public final class KeynoteDemo: DemoScene {
         try? metaballs.setSignedDistanceShape(.smoothUnion(spheres, smoothing: smoothing), surface: (values["Metaball Lighting"] ?? 0) == 0 ? .pbr(metaballMaterial) : .blinnPhong(.plastic([0.3, 0.55, 0.95], shininess: 48)), device: demoDevice)
     }
 
-    // A code panel below the slide's live content, tilted a little toward the camera.
+    // The slide's code sample, shown as SwiftUI text over the bottom of the view while the slide is current (#630).
     private func addCode(_ code: String, to slide: SceneGraph.Node) {
-        guard let panel = CodePanel.node(code: code, device: demoDevice) else {
-            return
-        }
-        panel.transform = .init(translation: [0, -1.6, 1.5], rotation: simd_quatf(angle: -0.15, axis: [1, 0, 0]))
-        slide.addChild(panel)
+        codeSamples[ObjectIdentifier(slide)] = code
     }
 
     // Lights reach only their own slide.

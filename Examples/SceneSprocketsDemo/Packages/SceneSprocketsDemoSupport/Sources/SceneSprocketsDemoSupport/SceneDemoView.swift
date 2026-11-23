@@ -83,6 +83,13 @@ struct SceneDemoContentView: View {
                 FrameTimingBadge(model: frameTiming)
             }
         }
+        // The keynote's code sample for the current slide (#630).
+        .overlay(alignment: .bottom) {
+            if let code = scene.codeSample {
+                CodeSampleView(code: code)
+                    .padding()
+            }
+        }
         .toolbar {
             ForEach(scene.actions) { action in
                 Button(action.name, systemImage: action.systemImage) {

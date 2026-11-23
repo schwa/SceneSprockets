@@ -86,6 +86,20 @@ func keynoteShowing(_ title: String) throws -> KeynoteDemo {
     return keynote
 }
 
+// #630: each slide's code sample is shown as SwiftUI text over the view, not drawn in the scene.
+@Test
+@MainActor
+func keynoteCodeSampleFollowsTheSlide() throws {
+    let keynote = try keynoteShowing("Bloom")
+    #expect(keynote.codeSample?.contains("bloom") == true)
+    keynote.show(slide: try #require(KeynoteDemo.titles.firstIndex(of: "Mirrors")))
+    #expect(keynote.codeSample?.contains("planarReflector") == true)
+    // The opening slide has no code.
+    keynote.show(slide: 0)
+    #expect(keynote.codeSample == nil)
+    #expect(keynote.sceneGraph.nodesWithWorldTransforms().allSatisfy { $0.node.label != "Code" })
+}
+
 // #618, #622: the demo's MaterialX file loads without warnings, and the MaterialX slide, not the glTF slide, shows a
 // sphere for each material.
 @Test
