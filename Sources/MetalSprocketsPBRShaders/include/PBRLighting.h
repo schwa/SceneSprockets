@@ -676,6 +676,16 @@ namespace PBR {
             const float3 retroPrefiltered = environmentSpecular.sample(environmentSampler, environmentDirection(retroReflection, frame.environmentRotation), level(lod)).rgb;
             prefiltered = mix(prefiltered, retroPrefiltered, retroreflection);
         }
+        // A planar reflection (#531) replaces the environment in the specular lobe: the scene seen from the mirrored
+        // camera, rendered with x flipped, so this pixel's reflection is at its mirrored screen position. Rougher
+        // surfaces read blurrier levels. It is absolute radiance, so environment intensity does not scale it.
+        float3 planarReflection = float3(0.0);
+        if (frame.hasPlanarReflection != 0) {
+            const float4 clip = frame.viewProjectionMatrices[in.eye] * float4(in.worldPosition, 1.0);
+            const float2 uv = float2(0.5 - clip.x / clip.w * 0.5, 0.5 - clip.y / clip.w * 0.5);
+            planarReflection = transmissionScene.sample(environmentSampler, uv, 0, level(perceptualRoughness * (frame.transmissionSceneMipCount - 1.0))).rgb;
+            prefiltered = float3(0.0);
+        }
         const float2 brdf = brdfLookup.sample(environmentSampler, float2(NdotV, perceptualRoughness)).rg;
         // Multiple-scattering energy compensation (Fdez-Agüera 2019, as in three.js and the Khronos sample viewer).
         // Single-scattering GGX loses energy at high roughness; the lost share returns as diffuse-like reflection.
@@ -696,7 +706,7 @@ namespace PBR {
         const float3 diffuseWeight = 1.0 - specularWeight - multiScatterWeight;
         // transmittedRadiance is already absolute radiance (scene or environment), so it is not scaled again.
         const float3 ambientDiffuse = mix(diffuseIrradiance * diffuseWeight * frame.environmentIntensity, transmittedRadiance * (1.0 - specularWeight), transmission);
-        float3 ambient = ambientDiffuse + (prefiltered * specularWeight + irradiance * multiScatterWeight) * frame.environmentIntensity;
+        float3 ambient = ambientDiffuse + (prefiltered * specularWeight + irradiance * multiScatterWeight) * frame.environmentIntensity + planarReflection * specularWeight;
         // Constant ambient light lights the diffuse lobe evenly, and occlusion darkens it like image-based light.
         ambient += diffuseColor * diffuseWeight * frame.ambientLight * (1.0 - transmission);
         // The irradiance map holds irradiance / pi; three.js's sheen term expects irradiance.

@@ -231,6 +231,8 @@ struct PBRFrameUniforms {
     PBRShaderDebugView debugView;
     int showsWireframe; // Draw triangle edges over the output.
     LightingShaderToneMapping toneMapping;
+    // `transmissionScene` holds a planar reflection (#531) instead: the specular lobe samples it, mirrored in x.
+    int hasPlanarReflection;
     // World direction to environment direction (the inverse of the environment's rotation). Zero means identity.
     simd_float3x3 environmentRotation;
     // Scales the screen-space occlusion texture's effect on indirect light. Zero disables it.

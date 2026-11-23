@@ -76,6 +76,7 @@ extension SceneGraph {
         @ObservationIgnored @exclusivity(unchecked) var audioPlayersStorage = NodeFieldStorage<NodeAudioPlayersComponent>()
         @ObservationIgnored @exclusivity(unchecked) var textStorage = NodeFieldStorage<NodeTextComponent>()
         @ObservationIgnored @exclusivity(unchecked) var pathStorage = NodeFieldStorage<NodePathComponent>()
+        @ObservationIgnored @exclusivity(unchecked) var planarReflectorStorage = NodeFieldStorage<NodePlanarReflectorComponent>()
         @ObservationIgnored @exclusivity(unchecked) var skinStorage = NodeFieldStorage<NodeSkinComponent>()
         @ObservationIgnored @exclusivity(unchecked) var skinVerticesStorage = NodeFieldStorage<NodeSkinVerticesComponent>()
         @ObservationIgnored @exclusivity(unchecked) var morphTargetsStorage = NodeFieldStorage<NodeMorphTargetsComponent>()

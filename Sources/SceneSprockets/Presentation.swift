@@ -30,6 +30,13 @@ extension SceneGraph {
             public var categoryBitMask: UInt
         }
 
+        /// A planar reflector with its node's world transform (#531).
+        public struct ReflectorEntry {
+            public var nodeID: Node.ID
+            public var worldTransform: simd_float4x4
+            public var reflector: PlanarReflector
+        }
+
         /// The graph's revision when the snapshot was made.
         public var revision: Revision
         /// One entry for each visible submesh.
@@ -37,6 +44,7 @@ extension SceneGraph {
         public var lights: [LightEntry]
         public var cameras: [CameraEntry]
         public var texts: [TextEntry]
+        public var reflectors: [ReflectorEntry] = []
         /// This frame's edits of every particle system on an active node, hidden or not, each once. Made fresh by each
         /// ``SceneGraph/presentation()`` call, which takes the time advanced since the previous call.
         public var particleFrames: [SceneParticleSystem.Frame]
@@ -66,6 +74,7 @@ extension SceneGraph {
             lights: parts.lights,
             cameras: parts.cameras,
             texts: parts.texts,
+            reflectors: parts.reflectors,
             particleFrames: parts.particleSystems.map { $0.makeFrame() },
             visibleParticleIndices: parts.visibleParticleIndices,
             environment: environment,
@@ -82,6 +91,7 @@ extension SceneGraph {
         var lights: [Presentation.LightEntry]
         var cameras: [Presentation.CameraEntry]
         var texts: [Presentation.TextEntry]
+        var reflectors: [Presentation.ReflectorEntry]
         var particleSystems: [SceneParticleSystem]
         var visibleParticleIndices: [Int]
         var bounds: BoundingBox3D?
@@ -90,9 +100,13 @@ extension SceneGraph {
     private func makePresentationParts(revision: Revision) -> PresentationParts {
         let flattened = flattened()
         var texts: [Presentation.TextEntry] = []
+        var reflectors: [Presentation.ReflectorEntry] = []
         visit { node, worldTransform in
             if let text = node.text, !text.string.isEmpty {
                 texts.append(.init(text: text, worldTransform: worldTransform, categoryBitMask: node.categoryBitMask))
+            }
+            if let reflector = node.planarReflector {
+                reflectors.append(.init(nodeID: node.id, worldTransform: worldTransform, reflector: reflector))
             }
         }
         let particleSystems = allParticleSystems()
@@ -103,6 +117,7 @@ extension SceneGraph {
             lights: flattened.lights.map { .init(nodeID: $0.node.id, worldTransform: $0.worldTransform, light: $0.light, lightCategoryBitMask: $0.node.lightCategoryBitMask) },
             cameras: flattened.cameras.map { .init(nodeID: $0.node.id, worldTransform: $0.worldTransform, camera: $0.camera) },
             texts: texts,
+            reflectors: reflectors,
             particleSystems: particleSystems,
             visibleParticleIndices: particleSystems.indices.filter { visible.contains(ObjectIdentifier(particleSystems[$0])) },
             bounds: bounds

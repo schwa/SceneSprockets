@@ -12246,13 +12246,14 @@ Decided (2026-11-23):
 ## 531: No planar reflections
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: effort:m, area:renderer
 milestone: Lighting-and-GI
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-23T02:14:51Z
+updated: 2026-11-23T03:37:27Z
+closed: 2026-11-23T03:37:27Z
 +++
 
 Mirrors, polished floors and water surfaces cannot show planar reflections. (Moved from SceneSprocketsAddOns#50.) Related: #530.

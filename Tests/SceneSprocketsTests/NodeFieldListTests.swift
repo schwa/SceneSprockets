@@ -49,6 +49,8 @@ func everyWorldFieldIsPlacedForDrawing() throws {
         // Drawn from Presentation.particleFrames and text entries, not mesh entries.
         "particleSystems": nil,
         "text": nil,
+        // Drawn from Presentation.reflectors (#531).
+        "planarReflector": nil,
         // Applied to `content` before entries are made.
         "subdivisionLevel": nil,
         "subdivisionBase": nil,
@@ -106,7 +108,8 @@ func everyArchivedFieldRoundTrips() throws {
         "morphWeights": { $0.morphWeights = [0.25, 0.75] },
         "actionSpeed": { $0.actionSpeed = 2 },
         "subdivisionLevel": { $0.subdivisionLevel = 1 },
-        "path": { $0.path = SceneGraph.Spline(points: [[0, 0, 0], [1, 2, 3]], isClosed: true) }
+        "path": { $0.path = SceneGraph.Spline(points: [[0, 0, 0], [1, 2, 3]], isClosed: true) },
+        "planarReflector": { $0.planarReflector = SceneGraph.PlanarReflector(resolutionScale: 0.25) }
     ]
     // Need other nodes, files or meshes to save; their round trips are in SceneArchiveTests and
     // AudioAndDetailArchiveTests.

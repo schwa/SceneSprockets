@@ -35,6 +35,10 @@ public struct PBRRenderer: Element {
     /// Skip point and line primitives: render passes with a rasterization rate map (visionOS foveation) only allow
     /// triangles, and Metal validation aborts on anything else.
     public var drawsTrianglesOnly = false
+    /// The scene seen from the camera mirrored in this model's plane, rendered with x flipped (#531): a 2D array texture
+    /// with one slice and mipmaps. When set, the specular lobe shows it instead of the environment. Ignored when a
+    /// transmission scene is bound, and in stereo.
+    public var planarReflection: MTLTexture?
 
     var views: PBRViews { PBRViews(viewMatrix: viewMatrix, projectionMatrix: projectionMatrix, stereo: stereo) }
     /// The view-projection of every view drawn.
@@ -118,6 +122,13 @@ public struct PBRRenderer: Element {
         bindings.frame.transmissionAsCoverage = transmissionAsCoverage ? 1 : 0
         bindings.frame.transmissionSceneMipCount = Float(transmissionScene?.mipmapLevelCount ?? 1)
         bindings.transmissionScene = transmissionScene ?? shaders.placeholderTexture
+        // The planar reflection shares the transmission scene's slot (#531).
+        bindings.frame.hasPlanarReflection = 0
+        if transmissionScene == nil, !isTransmissionPrePass, stereo == nil, let planarReflection {
+            bindings.frame.hasPlanarReflection = 1
+            bindings.frame.transmissionSceneMipCount = Float(planarReflection.mipmapLevelCount)
+            bindings.transmissionScene = planarReflection
+        }
         bindings.view = PBRViewUniforms(viewProjectionMatrices: viewPair(viewProjections), modelMatrix: modelMatrix, modelNormalMatrix: modelMatrix.inverse.transpose)
 
         let draws = frameDraws(cameraPosition: views.centerPosition)

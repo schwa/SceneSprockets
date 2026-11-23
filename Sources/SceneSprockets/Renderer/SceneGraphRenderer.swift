@@ -54,6 +54,8 @@ public struct RenderContext {
     /// The world transform of the directional light that has screen-space contact shadows this frame (#495); its
     /// visibility is the green channel of ``ambientOcclusion``. Nil when there are none.
     public internal(set) var contactShadowLight: simd_float4x4?
+    /// Set when a node with ``SceneGraph/Node/planarReflector`` is drawn this frame (#531).
+    public internal(set) var planarReflection: PlanarReflectionContext?
 
     /// The number of views that each draw goes to: 1, or the stereo view count.
     public var viewCount: Int { stereoViews?.count ?? 1 }
@@ -298,6 +300,9 @@ public struct SceneGraphElement: Element {
                 context.ambientOcclusion = targets.contact
                 context.contactShadowLight = contactShadowLight.worldTransform
             }
+            if let reflectionPass = try makePlanarReflectionPass(entries: entries, context: &context) {
+                prePasses.append(reflectionPass)
+            }
             prePasses += try makeRendererPrePasses(entries: entries, context: context)
             #if os(visionOS)
             if immersiveContext != nil {
@@ -441,21 +446,54 @@ public struct SceneGraphElement: Element {
     }
 
     // The scene pass's content before particles: background, mesh batches, decorations and node text.
-    private func makeSceneElements(entries: [SceneGraph.MeshEntry], context: RenderContext, drawsText: Bool) throws -> [AnyElement] {
-        var elements: [AnyElement] = []
+    private func makeBackgroundElements(context: RenderContext) throws -> [AnyElement] {
         switch context.environment.background {
         case let .gradient(gradient):
-            elements.append(SkyGradientBackground(gradient: gradient, viewMatrix: context.viewMatrix, projectionMatrix: context.projectionMatrix, stereoViews: context.stereoViews).eraseToAnyElement())
+            return [SkyGradientBackground(gradient: gradient, viewMatrix: context.viewMatrix, projectionMatrix: context.projectionMatrix, stereoViews: context.stereoViews).eraseToAnyElement()]
         case .environment:
             for case let renderer as any BackgroundRenderer in renderers {
                 if let background = try renderer.makeBackgroundElement(context: context) {
-                    elements.append(background)
-                    break
+                    return [background]
                 }
             }
+            return []
         default:
-            break
+            return []
         }
+    }
+
+    // The planar reflection pre-pass (#531): the first reflector in front of the camera that has meshes this frame.
+    // Sets the context's reflection; returns nil when there is none.
+    private func makePlanarReflectionPass(entries: [SceneGraph.MeshEntry], context: inout RenderContext) throws -> AnyElement? {
+        guard context.stereoViews == nil, debugMode == nil, let color = renderPassDescriptor?.colorAttachments[0].texture else {
+            return nil
+        }
+        let cameraPosition = context.cameraMatrix.columns.3.xyz
+        let nodesWithMeshes = Set(entries.map(\.nodeID))
+        guard let reflector = presentation.reflectors.first(where: { reflector in
+            let point = reflector.worldTransform.columns.3.xyz
+            let normal = simd_normalize(reflector.worldTransform.columns.2.xyz)
+            return nodesWithMeshes.contains(reflector.nodeID) && simd_dot(cameraPosition - point, normal) > 0
+        }) else {
+            return nil
+        }
+        let point = reflector.worldTransform.columns.3.xyz
+        let normal = simd_normalize(reflector.worldTransform.columns.2.xyz)
+        let mirrored = PlanarReflection.mirroredContext(context, mirror: PlanarReflection.mirror(point: point, normal: normal))
+        // Only what is in front of the mirror shows in it; there is no clip plane, so meshes crossing it show whole.
+        let reflected = entries.filter { !$0.isTransparent && $0.nodeID != reflector.nodeID && PlanarReflection.isInFront($0, point: point, normal: normal) }
+        let scale = min(max(reflector.reflector.resolutionScale, 0.1), 1)
+        let targets = try PlanarReflection.targets(device: color.device, width: max(Int(Float(color.width) * scale), 1), height: max(Int(Float(color.height) * scale), 1), colorFormat: .rgba16Float)
+        var content = try makeBackgroundElements(context: mirrored)
+        if let opaque = try makeOpaqueContent(entries: reflected, context: mirrored, excluding: nil) {
+            content.append(opaque)
+        }
+        context.planarReflection = PlanarReflectionContext(nodeID: reflector.nodeID, texture: targets.color)
+        return PlanarReflectionPass(targets: targets, content: content).eraseToAnyElement()
+    }
+
+    private func makeSceneElements(entries: [SceneGraph.MeshEntry], context: RenderContext, drawsText: Bool) throws -> [AnyElement] {
+        var elements = try makeBackgroundElements(context: context)
         // One batch per rendering order and set of affecting lights; each renderer draws its part of each batch.
         for batch in renderBatches(entries, context: context) {
             let partitions = partitionMeshEntries(batch.entries, renderers: renderers)

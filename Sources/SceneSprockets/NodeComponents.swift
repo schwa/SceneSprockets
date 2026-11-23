@@ -294,6 +294,23 @@ public struct NodePathComponent: NodeField {
     static var revision: NodeFieldRevision { .structure }
 }
 
+/// The component that stores ``SceneGraph/Node/planarReflector`` for a node in ``SceneGraph/world``.
+///
+/// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.
+public struct NodePlanarReflectorComponent: NodeField {
+    /// The value of ``SceneGraph/Node/planarReflector``.
+    public var value: SceneGraph.PlanarReflector?
+
+    /// Creates the component with a value.
+    public init(value: SceneGraph.PlanarReflector?) {
+        self.value = value
+    }
+
+    static var defaultValue: SceneGraph.PlanarReflector? { nil }
+    // Structure: the presentation snapshot holds the reflectors.
+    static var revision: NodeFieldRevision { .structure }
+}
+
 /// The component that stores ``SceneGraph/Node/audioPlayers`` for a node in ``SceneGraph/world``.
 ///
 /// Writing it in the world changes the node. See <doc:WorkingWithTheWorld>.

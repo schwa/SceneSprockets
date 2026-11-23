@@ -26,6 +26,7 @@ private enum FieldKeyPaths {
     static let audioPlayers = \SceneGraph.Node.audioPlayers
     static let text = \SceneGraph.Node.text
     static let path = \SceneGraph.Node.path
+    static let planarReflector = \SceneGraph.Node.planarReflector
     static let skin = \SceneGraph.Node.skin
     static let skinVertices = \SceneGraph.Node.skinVertices
     static let morphTargets = \SceneGraph.Node.morphTargets
@@ -64,6 +65,7 @@ extension SceneGraph.Node {
         NodeFieldSlot(\.audioPlayers, \.audioPlayersStorage, isCloned: false, archiveKeys: [.audioPlayers]),
         NodeFieldSlot(\.text, \.textStorage, archiveKeys: [.text]),
         NodeFieldSlot(\.path, \.pathStorage, archiveKeys: [.path]),
+        NodeFieldSlot(\.planarReflector, \.planarReflectorStorage, archiveKeys: [.planarReflector]),
         NodeFieldSlot(\.skin, \.skinStorage, archiveKeys: [.skin]),
         NodeFieldSlot(\.skinVertices, \.skinVerticesStorage, archiveKeys: [.skinVertices]),
         NodeFieldSlot(\.morphTargets, \.morphTargetsStorage, archiveKeys: [.morphTargets]),
@@ -169,6 +171,14 @@ extension SceneGraph.Node {
     public var path: SceneGraph.Spline? {
         get { getField(FieldKeyPaths.path, \.pathStorage) }
         set { setField(FieldKeyPaths.path, \.pathStorage, newValue) }
+    }
+
+    /// Makes this node's mesh a mirror-like plane that shows the scene reflected in it (#531). The plane is the node's
+    /// local XY plane through its origin, facing +Z, as ``SceneGraph/Shape/plane(width:height:cornerRadius:)`` is.
+    /// PBR materials on the node show the reflection; one reflector is drawn per frame.
+    public var planarReflector: SceneGraph.PlanarReflector? {
+        get { getField(FieldKeyPaths.planarReflector, \.planarReflectorStorage) }
+        set { setField(FieldKeyPaths.planarReflector, \.planarReflectorStorage, newValue) }
     }
 
     /// Sounds that play from this node; see Audio. Not copied by clone().

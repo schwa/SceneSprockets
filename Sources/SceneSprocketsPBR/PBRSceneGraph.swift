@@ -413,11 +413,31 @@ public final class PBRMaterialRenderer: MaterialRenderer, Equatable {
     }
 
     public func makeElement(entries: [SceneGraph.MeshEntry], context: RenderContext) throws -> AnyElement {
-        let renderer = try makeRenderer(entries: entries, context: context, transmissionTarget: frameTransmissionTarget)
+        // The planar reflector's meshes (#531) draw with their own renderer, which shows the reflection.
+        var renderers: [PBRRenderer] = []
+        var others = entries
+        if let reflection = context.planarReflection {
+            let reflecting = entries.filter { $0.nodeID == reflection.nodeID }
+            if !reflecting.isEmpty {
+                others = entries.filter { $0.nodeID != reflection.nodeID }
+                var renderer = try makeRenderer(entries: reflecting, context: context, transmissionTarget: nil)
+                renderer.planarReflection = reflection.texture
+                renderers.append(renderer)
+            }
+        }
+        if !others.isEmpty {
+            renderers.insert(try makeRenderer(entries: others, context: context, transmissionTarget: frameTransmissionTarget), at: 0)
+        }
         return PBRShadowedElement(shadow: context.shadow) { shadows in
-            var renderer = renderer
-            renderer.lighting.shadows = shadows
-            return renderer.eraseToAnyElement()
+            let shadowed = renderers.map { renderer in
+                var renderer = renderer
+                renderer.lighting.shadows = shadows
+                return renderer
+            }
+            return ForEach(Array(shadowed.enumerated()), id: \.offset) { _, renderer in
+                renderer
+            }
+            .eraseToAnyElement()
         }
         .vertexAmplification(count: context.viewCount)
         .eraseToAnyElement()
