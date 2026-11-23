@@ -38,7 +38,7 @@ namespace SceneShadowMask {
         world /= world.w;
         float lit = 1;
         for (int slice = 0; slice < uniforms.sliceCount; slice++) {
-            lit *= Lighting::sliceShadow(world.xyz, uniforms.sliceViewProjections[slice], uniforms.mapSize, uniforms.radius, shadowMap, shadowSampler, uint(slice));
+            lit *= Lighting::sliceShadow(world.xyz, uniforms.sliceViewProjections[slice], uniforms.mapSize, uniforms.radius, shadowMap, shadowSampler, uint(slice), uniforms.sliceExtents[slice]);
         }
         if (lit >= 1.0) {
             return;

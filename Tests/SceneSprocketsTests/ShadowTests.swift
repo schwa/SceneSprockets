@@ -532,3 +532,116 @@ func shadowCasterRendererDrawsItsOwnCasters() throws {
     #expect(frame.customCasters.map(\.entries.count) == [1])
     #expect(frame.casters.count == 1)
 }
+
+// #88: per-light shadow settings.
+@MainActor
+private func setSunShadowSettings(_ sceneGraph: SceneGraph, _ settings: Light.ShadowSettings) throws {
+    let sun = try #require(sceneGraph.lightNodes().first?.node)
+    guard case var .light(light) = sun.content else {
+        Issue.record("No sun")
+        return
+    }
+    light.shadowSettings = settings
+    sun.content = .light(light)
+}
+
+// Cascades, a smaller resolution and a bias override all still shadow the floor, in-shader (Blinn-Phong, PBR) and in
+// the screen-space mask.
+@Test(.enabled(if: deviceSupportsMetal4), arguments: [
+    Light.ShadowSettings(cascadeCount: 3),
+    Light.ShadowSettings(resolutionScale: 0.5),
+    Light.ShadowSettings(cascadeCount: 2, resolutionScale: 0.25, depthBias: 4, slopeScale: 3)
+])
+@MainActor
+func perLightShadowSettingsStillShadow(settings: Light.ShadowSettings) throws {
+    let (sceneGraph, pixel) = try makeScene()
+    try setSunShadowSettings(sceneGraph, settings)
+    let lit = try brightness(sceneGraph, at: pixel, shadows: nil)
+    #expect(lit > 30)
+    #expect(Double(try brightness(sceneGraph, at: pixel, shadows: Shadows(intensity: 0.8))) < Double(lit) * 0.6)
+
+    let gray = PBRSceneMaterial(baseColor: [0.5, 0.5, 0.5], roughness: 1)
+    let (pbrScene, pbrPixel) = try makeScene(boxMaterial: gray)
+    try setSunShadowSettings(pbrScene, settings)
+    let floor = try #require(pbrScene.nodesWithWorldTransforms().first { $0.node.label == "Floor" }?.node)
+    if case let .mesh(mesh, _, castsShadow, receivesShadow) = floor.content {
+        floor.content = .mesh(mesh, materials: [gray], castsShadow: castsShadow, receivesShadow: receivesShadow)
+    }
+    let pbrRenderers: [any MaterialRenderer] = [PBRMaterialRenderer(environmentIntensity: 0)]
+    let pbrLit = try brightness(pbrScene, at: pbrPixel, shadows: nil, renderers: pbrRenderers)
+    #expect(pbrLit > 30)
+    #expect(Double(try brightness(pbrScene, at: pbrPixel, shadows: Shadows(intensity: 0.8), renderers: pbrRenderers)) < Double(pbrLit) * 0.6)
+
+    let (maskScene, maskPixel) = try makeScene()
+    try setSunShadowSettings(maskScene, settings)
+    let maskFloor = try #require(maskScene.nodesWithWorldTransforms().first { $0.node.label == "Floor" }?.node)
+    if case let .mesh(mesh, _, castsShadow, receivesShadow) = maskFloor.content {
+        maskFloor.content = .mesh(mesh, materials: [ShaderMaterial.rim(color: [0.5, 0.5, 0.5])], castsShadow: castsShadow, receivesShadow: receivesShadow)
+    }
+    let maskRenderers: [any MaterialRenderer] = [BlinnPhongMaterialRenderer(), ShaderMaterialRenderer()]
+    let maskLit = try brightness(maskScene, at: maskPixel, shadows: nil, renderers: maskRenderers)
+    #expect(Double(try brightness(maskScene, at: maskPixel, shadows: Shadows(intensity: 0.8), renderers: maskRenderers)) < Double(maskLit) * 0.6)
+}
+
+@Test
+func cascadesSplitTheSceneByCameraDistance() {
+    let shadows = Shadows()
+    // Camera at the origin, scene from 1 to 101 units away.
+    let bounds = BoundingBox3D(min: [-10, -1, -101], max: [10, 1, -1])
+    var light = Light(type: .directional)
+    light.shadowSettings = .init(cascadeCount: 4, splitFactor: 0.75)
+    let sun = (simd_float4x4(columns: ([1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1])), light)
+    let result = shadows.shadowSlices(lights: [sun], bounds: bounds)
+    #expect(result.slices.count == 4)
+    #expect(result.lightSlices == [0..<4])
+    let splits = result.slices.map(\.cascade.x)
+    #expect(splits == splits.sorted())
+    let far = simd_length(SIMD3<Float>(10, 1, -101))
+    #expect(abs(splits[3] - far) < 1e-3)
+    // Logarithmic leaning: the first cascade covers much less than a quarter of the depth.
+    #expect(splits[0] < far / 8)
+    // Blending starts inside each cascade, after the previous one ends.
+    for (index, slice) in result.slices.enumerated() {
+        #expect(slice.cascade.y < slice.cascade.x)
+        #expect(slice.cascade.y > (index == 0 ? 0 : splits[index - 1]))
+    }
+    // Nearer cascades cover less: their orthographic scale is larger.
+    let scales = result.slices.map { simd_length(SIMD3($0.view[0][0], $0.view[1][0], $0.view[2][0])) }
+    #expect(scales == scales.sorted(by: >))
+    // A point at the near end lands inside the first cascade's view.
+    let clip = result.slices[0].view * SIMD4<Float>(0, 0, -2, 1)
+    #expect(abs(clip.x / clip.w) < 1 && abs(clip.y / clip.w) < 1 && clip.z / clip.w > 0 && clip.z / clip.w < 1)
+
+    // Without settings, one view as before.
+    #expect(shadows.shadowSlices(lights: [(sun.0, Light(type: .directional))], bounds: bounds).slices.map(\.cascade) == [.zero])
+}
+
+@Test
+func resolutionScaleAndBiasArePerLight() throws {
+    let shadows = Shadows(resolution: 1_024, depthBias: 2, slopeScale: 2)
+    let bounds = BoundingBox3D(min: [-1, -1, -1], max: [1, 1, 1])
+    var small = Light(type: .spot)
+    small.shadowSettings = .init(resolutionScale: 0.5, depthBias: 7)
+    let result = shadows.shadowSlices(lights: [(matrix_identity_float4x4, small), (matrix_identity_float4x4, Light(type: .spot))], bounds: bounds)
+    #expect(result.slices.map(\.render.size) == [512, 1_024])
+    #expect(result.slices.map(\.render.depthBias) == [7, 2])
+    #expect(result.slices.map(\.render.slopeScale) == [2, 2])
+    #expect(result.slices.map(\.cascade.z) == [0.5, 0])
+    // The small light's view maps its frustum into the top-left half of the slice.
+    let full = try #require(shadows.shadowSlices(lights: [(matrix_identity_float4x4, Light(type: .spot))], bounds: bounds).slices.first?.view)
+    for corner: SIMD4<Float> in [[-1, -1, 0.5, 1], [1, 1, 0.5, 1]] {
+        let world = full.inverse * corner
+        let clip = result.slices[0].view * world
+        let uv = SIMD2(clip.x / clip.w * 0.5 + 0.5, 0.5 - clip.y / clip.w * 0.5)
+        #expect(uv.min() > -1e-4 && uv.max() < 0.5 + 1e-4)
+    }
+}
+
+@Test
+func lightShadowSettingsAreArchived() throws {
+    var light = Light(type: .directional, range: 10)
+    light.shadowSettings = .init(cascadeCount: 3, splitFactor: 0.5, resolutionScale: 0.5, depthBias: 1, slopeScale: nil)
+    #expect(try JSONDecoder().decode(Light.self, from: JSONEncoder().encode(light)) == light)
+    let old = #"{"type":"directional","color":[1,1,1],"intensity":1,"range":1,"innerConeAngle":0.3,"outerConeAngle":0.5}"#
+    #expect(try JSONDecoder().decode(Light.self, from: Data(old.utf8)).shadowSettings == nil)
+}

@@ -69,6 +69,11 @@ struct LightingShadowUniforms {
     // Shading space to light clip space, one per slice. Depth is compared in 0...1 with the shadow sampler's compare
     // function.
     simd_float4x4 sliceViewProjections[kLightingMaxShadowSliceCount];
+    // Cascaded slices (#88): x is the distance from the camera (the shading-space origin) the slice covers, y where
+    // blending into the light's next slice starts. x is 0 for slices that are not cascades; a light whose first slice
+    // is a cascade uses one of its slices per point instead of multiplying them all. z is the fraction of the slice's
+    // width and height the light draws into, from the top left (0 means all of it).
+    simd_float4 sliceCascades[kLightingMaxShadowSliceCount];
     float mapSize;
     // PCF half-size in texels.
     int radius;

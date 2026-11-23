@@ -34,6 +34,13 @@ struct SceneShadowMaskPass: Element {
                     slices[index] = matrix
                 }
             }
+            withUnsafeMutableBytes(of: &uniforms.sliceExtents) { buffer in
+                let extents = buffer.bindMemory(to: Float.self)
+                for index in extents.indices {
+                    let cascade = shadowMap.sliceCascades.indices.contains(index) ? shadowMap.sliceCascades[index] : .zero
+                    extents[index] = cascade.z > 0 ? cascade.z : 1
+                }
+            }
             let mask = frame.nonReceivers.map { $0.masks[Int(submissionIndex % UInt64($0.masks.count))] }
             let kernel = try SceneShadowMaskShaders.kernel(hasReceiverMask: mask != nil)
             return try MetalSprockets.Group {

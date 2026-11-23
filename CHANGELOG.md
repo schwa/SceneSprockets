@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Per-light shadow settings (#88). `Light.shadowSettings` (`Light.ShadowSettings`) overrides `Shadows` for one light: `cascadeCount` gives directional lights cascaded shadow maps (split by camera distance, spaced by `splitFactor`, blended over the last 10% of each cascade), `resolutionScale` uses part of a slice, and `depthBias`/`slopeScale` replace the global bias. Archived with the light. `LightingShadowUniforms` gains `sliceCascades`, and `PBRShadows` takes `sliceCascades`; `Lighting::sliceShadow` takes an optional extent.
 - Shape options (#80). `.box` takes `chamferRadius`, `.plane` takes `cornerRadius`, `.sphere` takes `segmentCount` and `isGeodesic`, and `.cylinder`, `.cone`, `.capsule`, `.tube` and `.torus` take segment counts. Defaults draw the same meshes as before, and archives without the new keys still load. Code that pattern-matches these cases needs the extra bindings.
 - `SceneView` documents that two views must not draw one scene graph, or share renderer objects, at the same time (#481).
 - Path point editing (#619). `PathPointGizmo` (SceneSprocketsGizmos) draws a handle on each point of a node's path and moves a point when you drag its handle, in the plane facing the camera. `ManipulatorGroup` combines manipulators for `sceneManipulator(_:)`. The Composer shows paths and puts point handles on the selected node's path; a point drag is one undo step.

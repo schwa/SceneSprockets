@@ -27,7 +27,7 @@ namespace Fog {
             const float4 clip = uniforms.sliceViewProjections[slice] * float4(position, 1);
             const float3 ndc = clip.xyz / clip.w;
             const float2 uv = float2(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5);
-            if (clip.w <= 0.0 || any(uv < 0.0) || any(uv > 1.0) || ndc.z > 1.0) {
+            if (clip.w <= 0.0 || any(uv < 0.0) || any(uv > Lighting::sliceExtent(uniforms.sliceCascades[slice])) || ndc.z > 1.0) {
                 continue;
             }
             lit *= shadowMap.sample_compare(shadowSampler, uv, uint(slice), max(ndc.z, 0.0), level(0));

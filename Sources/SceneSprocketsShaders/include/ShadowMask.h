@@ -19,5 +19,7 @@ struct SceneShadowMaskUniforms {
     simd_float3 color;
     // PCF kernel half-size in shadow map texels; 1 samples 3x3.
     int radius;
+    // Per slice: the fraction of its width and height in use, from the top left (Lighting::sliceExtent).
+    float sliceExtents[SCENE_SHADOW_MAX_SLICES];
 };
 typedef struct SceneShadowMaskUniforms SceneShadowMaskUniforms;

@@ -247,6 +247,12 @@ public final class Shadows {
                     slices[index] = matrix
                 }
             }
+            withUnsafeMutableBytes(of: &uniforms.sliceCascades) { buffer in
+                let cascades = buffer.bindMemory(to: SIMD4<Float>.self)
+                for (index, cascade) in shadowMap.sliceCascades.prefix(cascades.count).enumerated() {
+                    cascades[index] = cascade
+                }
+            }
             return uniforms
         }
     }
@@ -291,7 +297,8 @@ public final class Shadows {
         let cameraPosition = context.cameraMatrix.columns.3.xyz
         let relativeBounds = BoundingBox3D(min: cameraRelative(bounds.min, to: cameraPosition), max: cameraRelative(bounds.max, to: cameraPosition))
         let relativeLights = context.lights.map { (worldTransform: $0.worldTransform.cameraRelative(to: cameraPosition), light: $0.light) }
-        let (views, dropped, slices) = shadowViewsAndDroppedLights(lights: relativeLights, bounds: relativeBounds)
+        let (shadowSlices, dropped, slices) = shadowSlices(lights: relativeLights, bounds: relativeBounds)
+        let views = shadowSlices.map(\.view)
         write(\.droppedLightCount, dropped)
         // One copy for the whole frame, so a change in the middle does not mix old and new values.
         let settings = self.settings
@@ -386,6 +393,9 @@ public final class Shadows {
         // slope bias that grows with it, or it shadows itself (#366).
         shadowMap.slopeScale = settings.slopeScale * Float(max(settings.softness, 1))
         shadowMap.lightViewProjectionMatrices = views
+        shadowMap.sliceCascades = shadowSlices.map(\.cascade)
+        // The slope bias grows with softness, as above.
+        shadowMap.sliceRenders = shadowSlices.map { SceneGraphShadowMap.SliceRender(size: $0.render.size, depthBias: $0.render.depthBias, slopeScale: $0.render.slopeScale * Float(max(settings.softness, 1))) }
         self.shadowMap = shadowMap
         let casterViews = views.map { casterViewProjection($0, settings: settings) }
         guard !nonReceivers.isEmpty, let viewSize else {
@@ -441,10 +451,23 @@ public final class Shadows {
     // A light whose views do not all fit in the remaining slices is dropped whole; later lights may still fit.
     // `slices` is parallel to `lights`: the slices of each light's views, empty for lights that cast none.
     func shadowViewsAndDroppedLights(lights: [(worldTransform: simd_float4x4, light: Light)], bounds: BoundingBox3D) -> (views: [simd_float4x4], dropped: Int, slices: [Range<Int>]) {
+        let result = shadowSlices(lights: lights, bounds: bounds)
+        return (result.slices.map(\.view), result.dropped, result.lightSlices)
+    }
+
+    // One shadow map slice: its view, and how it is drawn and sampled (#88).
+    struct Slice {
+        var view: simd_float4x4
+        var cascade = SIMD4<Float>.zero
+        var render: SceneGraphShadowMap.SliceRender
+    }
+
+    // Positions are camera-relative, so the camera is at the origin.
+    func shadowSlices(lights: [(worldTransform: simd_float4x4, light: Light)], bounds: BoundingBox3D) -> (slices: [Slice], dropped: Int, lightSlices: [Range<Int>]) {
         let center = (bounds.min + bounds.max) / 2
         let radius = max(simd_length(bounds.max - bounds.min) / 2, 0.01)
         let settings = self.settings
-        var views: [simd_float4x4] = []
+        var allSlices: [Slice] = []
         var dropped = 0
         var slices = Array(repeating: 0..<0, count: lights.count)
         let order: [Int] = switch settings.lightPriority {
@@ -470,6 +493,10 @@ public final class Shadows {
                 continue
             }
             var lightViews: [simd_float4x4] = []
+            var cascades: [SIMD4<Float>] = []
+            let lightSettings = light.shadowSettings ?? Light.ShadowSettings()
+            let scale = min(max(lightSettings.resolutionScale, 1 / Float(max(settings.resolution, 1))), 1)
+            let size = max(Int((Float(settings.resolution) * scale).rounded()), 1)
             let position = transform.columns.3.xyz
             let forward = simd_normalize(-transform.columns.2.xyz)
             // Far enough to reach the whole scene from the light.
@@ -479,6 +506,11 @@ public final class Shadows {
             case .ambient:
                 // No direction, no shadows.
                 continue
+            case .directional where lightSettings.cascadeCount > 1:
+                for (view, cascade) in cascadeViews(forward: forward, bounds: bounds, count: lightSettings.cascadeCount, splitFactor: lightSettings.splitFactor, resolution: size) {
+                    lightViews.append(view)
+                    cascades.append(cascade)
+                }
             case .directional:
                 let eye = center - forward * radius * 2
                 let projection = OrthographicProjection(halfHeight: radius, depthMode: .reversed(zClip: radius * 0.5 ... radius * 3.5))
@@ -494,14 +526,64 @@ public final class Shadows {
                     lightViews.append(projection.projectionMatrix(aspectRatio: 1) * .viewMatrix(eye: position, forward: face))
                 }
             }
-            if views.count + lightViews.count <= settings.maximumSliceCount {
-                slices[lightIndex] = views.count..<(views.count + lightViews.count)
-                views += lightViews
+            if allSlices.count + lightViews.count <= settings.maximumSliceCount {
+                slices[lightIndex] = allSlices.count..<(allSlices.count + lightViews.count)
+                let render = SceneGraphShadowMap.SliceRender(size: size, depthBias: lightSettings.depthBias ?? settings.depthBias, slopeScale: lightSettings.slopeScale ?? settings.slopeScale)
+                let extent = Float(size) / Float(max(settings.resolution, 1))
+                for (index, view) in lightViews.enumerated() {
+                    var cascade = cascades.indices.contains(index) ? cascades[index] : .zero
+                    cascade.z = extent < 1 ? extent : 0
+                    allSlices.append(Slice(view: Self.subRectangle(scale: extent) * view, cascade: cascade, render: render))
+                }
             } else {
                 dropped += 1
             }
         }
-        return (views, dropped, slices)
+        return (allSlices, dropped, slices)
+    }
+
+    // Maps clip space to the top-left `scale` of the slice, so a light can use fewer texels than the slice has.
+    static func subRectangle(scale: Float) -> simd_float4x4 {
+        guard scale < 1 else {
+            return matrix_identity_float4x4
+        }
+        return simd_float4x4(columns: ([scale, 0, 0, 0], [0, scale, 0, 0], [0, 0, 1, 0], [scale - 1, 1 - scale, 0, 1]))
+    }
+
+    // Cascaded orthographic views for a directional light (#88). Cascade i covers the scene within split distance d_i
+    // of the camera (the origin): d_i mixes even and logarithmic spacing by `splitFactor`, and the last reaches the
+    // farthest point of `bounds`. Every view keeps the whole scene's depth range, so casters outside a cascade still
+    // shadow into it. Each view is moved in whole texels so shadows do not crawl as the camera moves.
+    func cascadeViews(forward: SIMD3<Float>, bounds: BoundingBox3D, count: Int, splitFactor: Float, resolution: Int) -> [(view: simd_float4x4, cascade: SIMD4<Float>)] {
+        let sceneCenter = (bounds.min + bounds.max) / 2
+        let sceneRadius = max(simd_length(bounds.max - bounds.min) / 2, 0.01)
+        let corners = (0..<8).map { corner in
+            SIMD3<Float>(corner & 1 == 0 ? bounds.min.x : bounds.max.x, corner & 2 == 0 ? bounds.min.y : bounds.max.y, corner & 4 == 0 ? bounds.min.z : bounds.max.z)
+        }
+        let far = max(corners.map { simd_length($0) }.max() ?? 0, 0.01)
+        let near = max(simd_length(simd_clamp(SIMD3<Float>.zero, bounds.min, bounds.max)), far * 0.01)
+        let factor = min(max(splitFactor, 0), 1)
+        let lightView = simd_float4x4.viewMatrix(eye: .zero, forward: forward)
+        var previous: Float = 0
+        return (1...count).map { index in
+            let fraction = Float(index) / Float(count)
+            let even = near + (far - near) * fraction
+            let logarithmic = near * pow(far / near, fraction)
+            let split = index == count ? far : even + (logarithmic - even) * factor
+            let box = BoundingBox3D(min: simd_max(bounds.min, SIMD3(repeating: -split)), max: simd_min(bounds.max, SIMD3(repeating: split)))
+            let radius = max(simd_length(box.max - box.min) / 2, 0.01)
+            let texel = 2 * radius / Float(max(resolution, 1))
+            var local = (lightView * SIMD4((box.min + box.max) / 2, 1)).xyz
+            local.x = (local.x / texel).rounded() * texel
+            local.y = (local.y / texel).rounded() * texel
+            let center = (lightView.inverse * SIMD4(local, 1)).xyz
+            let offset = simd_distance(center, sceneCenter)
+            let eye = center - forward * sceneRadius * 2
+            let projection = OrthographicProjection(halfHeight: radius, depthMode: .reversed(zClip: max(sceneRadius - offset, sceneRadius * 0.01) ... (sceneRadius * 3 + offset)))
+            let cascade = SIMD4<Float>(split, split - (split - previous) * 0.1, 0, 0)
+            previous = split
+            return (projection.projectionMatrix(aspectRatio: 1) * .viewMatrix(eye: eye, forward: forward), cascade)
+        }
     }
 
     private func gpuSkin(of entry: SceneGraph.MeshEntry) -> SceneGraph.SkinPose? {
@@ -595,9 +677,6 @@ struct ShadowCasterDepthPass: Element {
         get throws {
             let shaders = try ShadowCasterShaders.shared()
             let shadowMap = frame.shadowMap
-            // Reversed depth: bias pushes towards 0.
-            let depthBias = -shadowMap.depthBias
-            let slopeScale = -shadowMap.slopeScale
             let depthTexture = shadowMap.depthTexture(forSubmission: submissionIndex)
             let isStatic = { (caster: Shadows.Caster) in if case .model = caster.placement { true } else { false } }
             let staticCasters = frame.casters.filter { isStatic($0) && $0.alpha == nil }
@@ -606,6 +685,10 @@ struct ShadowCasterDepthPass: Element {
             let skinnedAlphaCasters = frame.casters.filter { !isStatic($0) && $0.alpha != nil }
             return ForEach(Array(0..<shadowMap.lightCount), id: \.self) { lightIndex in
                 let lightViewProjection = frame.casterViewProjections.indices.contains(lightIndex) ? frame.casterViewProjections[lightIndex] : shadowMap.lightViewProjectionMatrices[lightIndex]
+                let sliceRender = shadowMap.sliceRenders.indices.contains(lightIndex) ? shadowMap.sliceRenders[lightIndex] : nil
+                // Reversed depth: bias pushes towards 0.
+                let depthBias = -(sliceRender?.depthBias ?? shadowMap.depthBias)
+                let slopeScale = -(sliceRender?.slopeScale ?? shadowMap.slopeScale)
                 try RenderPass(label: "Shadow Casters [\(lightIndex)]") {
                     if !staticCasters.isEmpty {
                         try pipeline("Shadow Casters", vertexShader: shaders.staticVertex, fragmentShader: shaders.fragment, vertexDescriptor: shaders.staticDescriptor, casters: staticCasters, lightViewProjection: lightViewProjection)

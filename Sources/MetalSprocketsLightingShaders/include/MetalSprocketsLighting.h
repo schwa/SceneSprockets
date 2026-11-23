@@ -100,12 +100,17 @@ namespace Lighting {
         return result;
     }
 
-    // PCF in one slice; 1 is lit. Positions outside the slice's view are lit.
-    inline float sliceShadow(float3 position, float4x4 viewProjection, float mapSize, int radius, metal::depth2d_array<float> shadowMap, metal::sampler shadowSampler, uint slice) {
+    // How much of a slice's width and height a light uses, from its top left (#88); 0 means all of it.
+    inline float sliceExtent(float4 cascade) {
+        return cascade.z > 0.0 ? cascade.z : 1.0;
+    }
+
+    // PCF in one slice; 1 is lit. Positions outside the slice's view (the top-left `extent` of the slice) are lit.
+    inline float sliceShadow(float3 position, float4x4 viewProjection, float mapSize, int radius, metal::depth2d_array<float> shadowMap, metal::sampler shadowSampler, uint slice, float extent = 1.0) {
         const float4 clip = viewProjection * float4(position, 1);
         const float3 ndc = clip.xyz / clip.w;
         const float2 uv = float2(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5);
-        if (metal::any(uv < 0.0) || metal::any(uv > 1.0) || ndc.z < 0.0 || ndc.z > 1.0) {
+        if (metal::any(uv < 0.0) || metal::any(uv > extent) || ndc.z < 0.0 || ndc.z > 1.0) {
             return 1.0;
         }
         float lit = 0.0;
@@ -126,9 +131,27 @@ namespace Lighting {
             return float3(1.0);
         }
         float lit = 1.0;
+        const int start = metal::max(light.shadowSliceStart, 0);
         const int end = metal::min(light.shadowSliceStart + light.shadowSliceCount, kLightingMaxShadowSliceCount);
-        for (int slice = metal::max(light.shadowSliceStart, 0); slice < end; slice++) {
-            lit *= sliceShadow(position, uniforms.sliceViewProjections[slice], uniforms.mapSize, uniforms.radius, shadowMap, shadowSampler, uint(slice));
+        if (start < end && uniforms.sliceCascades[start].x > 0.0) {
+            // Cascades: the nearest slice that covers the point, blended into the next near its far end.
+            const float distance = metal::length(position);
+            for (int slice = start; slice < end; slice++) {
+                const float4 cascade = uniforms.sliceCascades[slice];
+                if (distance > cascade.x && slice + 1 < end) {
+                    continue;
+                }
+                lit = sliceShadow(position, uniforms.sliceViewProjections[slice], uniforms.mapSize, uniforms.radius, shadowMap, shadowSampler, uint(slice), sliceExtent(cascade));
+                if (slice + 1 < end && distance > cascade.y) {
+                    const float next = sliceShadow(position, uniforms.sliceViewProjections[slice + 1], uniforms.mapSize, uniforms.radius, shadowMap, shadowSampler, uint(slice + 1), sliceExtent(uniforms.sliceCascades[slice + 1]));
+                    lit = metal::mix(lit, next, metal::saturate((distance - cascade.y) / metal::max(cascade.x - cascade.y, 1e-6)));
+                }
+                break;
+            }
+        } else {
+            for (int slice = start; slice < end; slice++) {
+                lit *= sliceShadow(position, uniforms.sliceViewProjections[slice], uniforms.mapSize, uniforms.radius, shadowMap, shadowSampler, uint(slice), sliceExtent(uniforms.sliceCascades[slice]));
+            }
         }
         return metal::mix(float3(1.0), uniforms.color, uniforms.intensity * (1.0 - lit));
     }

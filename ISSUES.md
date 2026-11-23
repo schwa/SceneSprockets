@@ -1815,13 +1815,14 @@ GeometryLite3D only has PerspectiveProjection, so there is no orthographic camer
 ## 88: Shadow gaps: cascades, per-light settings
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: effort:l, area:renderer
 milestone: Rendering
 created: 2026-10-15T02:28:07Z
-updated: 2026-11-20T06:32:25Z
+updated: 2026-11-23T03:12:27Z
+closed: 2026-11-23T03:12:27Z
 +++
 
 Shadows have no cascades and no per-light resolution or bias; these are global settings on Shadows. Shadow color, softness and Light.castsShadow are done. See docs/SceneKitComparison.md.

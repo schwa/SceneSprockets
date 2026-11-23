@@ -22,10 +22,13 @@ public struct PBRShadows: @unchecked Sendable {
     public var intensity: Float
     /// Linear tint of fully shadowed pixels, like `SCNLight.shadowColor`.
     public var color: SIMD3<Float>
+    /// Parallel to `sliceViewProjections`: `LightingShadowUniforms.sliceCascades`. Empty: no cascades.
+    public var sliceCascades: [SIMD4<Float>]
 
-    public init(map: MTLTexture, sliceViewProjections: [simd_float4x4], filterRadius: Int = 1, sampler: MTLSamplerState? = nil, intensity: Float = 1, color: SIMD3<Float> = .zero) {
+    public init(map: MTLTexture, sliceViewProjections: [simd_float4x4], sliceCascades: [SIMD4<Float>] = [], filterRadius: Int = 1, sampler: MTLSamplerState? = nil, intensity: Float = 1, color: SIMD3<Float> = .zero) {
         self.map = map
         self.sliceViewProjections = sliceViewProjections
+        self.sliceCascades = sliceCascades
         self.filterRadius = filterRadius
         self.sampler = sampler
         self.intensity = intensity
@@ -38,6 +41,12 @@ public struct PBRShadows: @unchecked Sendable {
             let matrices = buffer.bindMemory(to: simd_float4x4.self)
             for (index, matrix) in sliceViewProjections.prefix(matrices.count).enumerated() {
                 matrices[index] = matrix
+            }
+        }
+        withUnsafeMutableBytes(of: &uniforms.sliceCascades) { buffer in
+            let cascades = buffer.bindMemory(to: SIMD4<Float>.self)
+            for (index, cascade) in sliceCascades.prefix(cascades.count).enumerated() {
+                cascades[index] = cascade
             }
         }
         uniforms.mapSize = Float(map.width)

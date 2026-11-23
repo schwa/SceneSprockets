@@ -400,6 +400,14 @@ extension Element {
 /// ``apply(to:)`` binds by name: `frame`, `lights`, `environmentIrradiance`, `environmentSpecular`, `brdfLookup`,
 /// `environmentSampler`, `transmissionScene`, `shadow`, `shadowMap`, `shadowSampler` and `ambientOcclusion`, as
 /// `PBR::shade` takes them.
+private final class Box<Value> {
+    let value: Value
+
+    init(_ value: Value) {
+        self.value = value
+    }
+}
+
 public struct PBRFrameBindings {
     public var frame: PBRFrameUniforms
     /// Never empty: shaders read through a pointer, so an unlit frame binds one unused light.
@@ -411,7 +419,14 @@ public struct PBRFrameBindings {
     public var specular: MTLTexture
     public var brdfLookup: MTLTexture
     public var sampler: MTLSamplerState
-    public var shadow: LightingShadowUniforms
+    // Boxed: the uniforms are several kilobytes, and copies of this struct on the stack overflowed the 512 KB threads
+    // of Swift Testing in debug builds (#88).
+    private var shadowBox: Box<LightingShadowUniforms>
+    public var shadow: LightingShadowUniforms {
+        get { shadowBox.value }
+        set { shadowBox = Box(newValue) }
+    }
+
     public var shadowMap: MTLTexture
     public var shadowSampler: MTLSamplerState
     public var ambientOcclusion: MTLTexture
@@ -447,7 +462,7 @@ public struct PBRFrameBindings {
         specular = environment.specular
         brdfLookup = environment.brdfLookup
         sampler = shaders.environmentSampler
-        shadow = lighting.shadows?.uniforms ?? LightingShadowUniforms()
+        shadowBox = Box(lighting.shadows?.uniforms ?? LightingShadowUniforms())
         shadowMap = lighting.shadows?.map ?? shaders.placeholderShadowMap
         shadowSampler = lighting.shadows?.sampler ?? shaders.shadowSampler
         self.ambientOcclusion = ambientOcclusion?.texture ?? shaders.placeholderOcclusion

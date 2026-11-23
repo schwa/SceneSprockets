@@ -41,6 +41,31 @@ public struct Light: Sendable, Equatable, Codable {
     /// SceneKit-style distance falloff for point and spot lights, instead of physical inverse-square falloff with
     /// ``range``. Nil keeps the physical falloff.
     public var attenuation: Attenuation?
+    /// This light's shadow settings. Nil uses the defaults of ``Shadows``.
+    public var shadowSettings: ShadowSettings?
+
+    /// Shadow settings for one light, overriding ``Shadows``.
+    public struct ShadowSettings: Sendable, Equatable, Codable {
+        /// Directional lights only: the number of shadow map slices, each covering the scene up to a farther distance
+        /// from the camera, so near shadows get more texels (cascaded shadow maps). 1 fits one view to the whole scene.
+        public var cascadeCount: Int
+        /// How cascade split distances are spaced, from 0 (even) to 1 (logarithmic: more cascades near the camera).
+        public var splitFactor: Float
+        /// The fraction of ``Shadows/resolution`` this light's slices use, from 0 to 1.
+        public var resolutionScale: Float
+        /// Replaces ``Shadows/depthBias`` for this light. Nil uses it.
+        public var depthBias: Float?
+        /// Replaces ``Shadows/slopeScale`` for this light. Nil uses it.
+        public var slopeScale: Float?
+
+        public init(cascadeCount: Int = 1, splitFactor: Float = 0.75, resolutionScale: Float = 1, depthBias: Float? = nil, slopeScale: Float? = nil) {
+            self.cascadeCount = cascadeCount
+            self.splitFactor = splitFactor
+            self.resolutionScale = resolutionScale
+            self.depthBias = depthBias
+            self.slopeScale = slopeScale
+        }
+    }
 
     /// Distance falloff like SCNLight's attenuationStartDistance, attenuationEndDistance and
     /// attenuationFalloffExponent.
@@ -102,7 +127,7 @@ public struct Light: Sendable, Equatable, Codable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case type, color, intensity, range, innerConeAngle, outerConeAngle, castsShadow, temperature, attenuation
+        case type, color, intensity, range, innerConeAngle, outerConeAngle, castsShadow, temperature, attenuation, shadowSettings
     }
 
     /// Decodes a light. Archives from before `castsShadow` decode with shadows on.
@@ -117,6 +142,7 @@ public struct Light: Sendable, Equatable, Codable {
         castsShadow = try container.decodeIfPresent(Bool.self, forKey: .castsShadow) ?? true
         temperature = try container.decodeIfPresent(Float.self, forKey: .temperature)
         attenuation = try container.decodeIfPresent(Attenuation.self, forKey: .attenuation)
+        shadowSettings = try container.decodeIfPresent(ShadowSettings.self, forKey: .shadowSettings)
     }
 
     /// Creates a spot light. It shines along its node's -Z axis.

@@ -538,6 +538,7 @@ public extension Shadows.Sampling {
             map: shadowMap.depthTexture(forSubmission: submissionIndex),
             // Camera-relative, like the PBR positions.
             sliceViewProjections: shadowMap.lightViewProjectionMatrices,
+            sliceCascades: shadowMap.sliceCascades,
             filterRadius: max(softness, 0),
             sampler: shadowMap.sampler,
             intensity: intensity,

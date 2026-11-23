@@ -12,8 +12,20 @@ public struct SceneGraphShadowMap {
     public let sampler: MTLSamplerState
     /// Camera-relative: they take world position minus the camera position (#257).
     public internal(set) var lightViewProjectionMatrices: [simd_float4x4]
+    /// Parallel to ``lightViewProjectionMatrices``: for cascaded slices, the camera distance the slice covers (x) and
+    /// where blending into the next cascade starts (y); zero for other slices (#88).
+    public internal(set) var sliceCascades: [SIMD4<Float>] = []
     var depthBias: Float
     var slopeScale: Float
+    // Parallel to the matrices: each slice's drawn size in texels (from the top left) and bias (#88). Empty: every
+    // slice is full size with `depthBias` and `slopeScale`.
+    var sliceRenders: [SliceRender] = []
+
+    struct SliceRender: Equatable {
+        var size: Int
+        var depthBias: Float
+        var slopeScale: Float
+    }
     /// The width and height of each slice, in texels.
     public let resolution: Int
     // Number of slices (shadow views).
