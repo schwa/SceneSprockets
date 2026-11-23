@@ -53,6 +53,8 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.8.2"),
         .package(url: "https://github.com/schwa/GoldenImage", .upToNextMinor(from: "0.1.7")),
         .package(url: "https://github.com/schwa/BasisUniversalMetal", .upToNextMinor(from: "0.0.3")),
+        // No release tag yet (#665).
+        .package(url: "https://github.com/schwa/MetalSprocketsMaterialX", branch: "main"),
     ],
     targets: [
         // MARK: MetalSprocketsLighting
@@ -257,6 +259,7 @@ let package = Package(
                 "MetalSprocketsPBR",
                 "MetalSprocketsPBRShaders",
                 .product(name: "MetalSupport", package: "MetalSupport"),
+                .product(name: "MaterialX", package: "MetalSprocketsMaterialX"),
             ]
         ),
         .testTarget(

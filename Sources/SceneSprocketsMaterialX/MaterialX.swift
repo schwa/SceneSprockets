@@ -1,6 +1,7 @@
 import CoreGraphics
 import Foundation
 import ImageIO
+import MaterialX
 import Metal
 import MetalKit
 import MetalSprocketsPBR
@@ -28,15 +29,19 @@ public struct MaterialXDocument {
     /// What was not converted, such as unsupported shaders or node graphs.
     public var warnings: [String]
 
-    /// Loads `url`. Relative texture paths resolve against the file's folder and any `fileprefix` attributes.
+    /// Loads `url`, following `xi:include`s. Relative texture paths resolve against the file's folder and any
+    /// `fileprefix` attributes.
     public init(url: URL, device: MTLDevice? = nil) throws {
         try self.init(data: Data(contentsOf: url), baseURL: url.deletingLastPathComponent(), device: device)
     }
 
     public init(data: Data, baseURL: URL, device: MTLDevice? = nil) throws {
-        let root = try MaterialXElement.parse(data)
-        guard root.tag == "materialx" else {
-            throw MaterialXError.invalidDocument("The root element is <\(root.tag)>, not <materialx>")
+        // Parsed by MetalSprocketsMaterialX (#665).
+        let root: MaterialXElement
+        do {
+            root = try MaterialX.MaterialXDocument(data: data, baseURL: baseURL).root
+        } catch let error as MaterialX.MaterialXError {
+            throw MaterialXError.invalidDocument(error.description)
         }
         var converter = MaterialXConverter(root: root, baseURL: baseURL, device: device ?? _MTLCreateSystemDefaultDevice())
         materials = try converter.convertMaterials()
@@ -61,51 +66,9 @@ public enum MaterialXError: Error, CustomStringConvertible {
 
 // MARK: - XML
 
-struct MaterialXElement {
-    var tag: String
-    var attributes: [String: String]
-    var children: [Self]
-
-    subscript(attribute: String) -> String? { attributes[attribute] }
-
-    var name: String? { attributes["name"] }
-
-    func child(named name: String) -> Self? {
-        children.first { $0.name == name }
-    }
-
+extension MaterialXElement {
     func input(_ name: String) -> Self? {
         children.first { $0.tag == "input" && $0.name == name }
-    }
-
-    static func parse(_ data: Data) throws -> Self {
-        let delegate = TreeBuilder()
-        let parser = XMLParser(data: data)
-        parser.delegate = delegate
-        guard parser.parse(), let root = delegate.root else {
-            throw MaterialXError.invalidDocument(parser.parserError.map { "\($0)" } ?? "empty document")
-        }
-        return root
-    }
-
-    private final class TreeBuilder: NSObject, XMLParserDelegate {
-        var stack: [MaterialXElement] = []
-        var root: MaterialXElement?
-
-        func parser(_: XMLParser, didStartElement elementName: String, namespaceURI _: String?, qualifiedName _: String?, attributes: [String: String] = [:]) {
-            stack.append(MaterialXElement(tag: elementName, attributes: attributes, children: []))
-        }
-
-        func parser(_: XMLParser, didEndElement _: String, namespaceURI _: String?, qualifiedName _: String?) {
-            guard let element = stack.popLast() else {
-                return
-            }
-            if stack.isEmpty {
-                root = element
-            } else {
-                stack[stack.count - 1].children.append(element)
-            }
-        }
     }
 }
 

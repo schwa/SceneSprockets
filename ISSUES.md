@@ -15152,11 +15152,13 @@ Caveat: project is ~2 days old and changing quickly.
 ## 665: SceneSprocketsMaterialX has its own MaterialX parser instead of using MetalSprocketsMaterialX
 
 +++
-status: new
+status: closed
 priority: high
 kind: task
 labels: area:materials, effort:m
 created: 2026-11-23T17:40:29Z
+updated: 2026-11-23T17:48:50Z
+closed: 2026-11-23T17:48:50Z
 +++
 
 SceneSprocketsMaterialX (MaterialX.swift) parses .mtlx with its own XML parser (MaterialXElement) and resolves nodes without MaterialX's standard library. github.com/schwa/MetalSprocketsMaterialX has a full document model (xi:include, validation, filename and token resolution, bundled MaterialX 1.39.4 libraries). SceneSprockets does not depend on it.
@@ -15164,6 +15166,8 @@ SceneSprocketsMaterialX (MaterialX.swift) parses .mtlx with its own XML parser (
 Expected: SceneSprocketsMaterialX reads documents with MetalSprocketsMaterialX's MaterialX module. The current CPU conversion to PBRSceneMaterial stays as the fallback (decided in MetalSprocketsMaterialX #42). Existing tests and the keynote MaterialX spheres (#618) still pass.
 
 Note: MetalSprocketsMaterialX has no release tag yet; other dependencies use .upToNextMinor(from:).
+
+- `2026-11-23T17:48:50Z`: SceneSprocketsMaterialX now reads documents with MetalSprocketsMaterialX's MaterialX module (branch main, no tag yet); its own XML parser is gone. The CPU converter is unchanged. xi:include now works (test includedShadersAreFollowed).
 
 ---
 

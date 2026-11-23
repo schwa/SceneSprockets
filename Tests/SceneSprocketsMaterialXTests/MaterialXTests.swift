@@ -232,6 +232,33 @@ func gltfAndOpenPBRShadersLoad() throws {
     #expect(open.ior == 1.7 && open.clearcoatFactor == 0.6)
 }
 
+// #665: documents are read with MetalSprocketsMaterialX, which follows xi:include.
+@Test
+func includedShadersAreFollowed() throws {
+    let folder = try temporaryFolder()
+    let shaders = """
+    <?xml version="1.0"?>
+    <materialx version="1.39">
+      <standard_surface name="Shader" type="surfaceshader">
+        <input name="metalness" type="float" value="0.75" />
+      </standard_surface>
+    </materialx>
+    """
+    try Data(shaders.utf8).write(to: folder.appending(path: "shaders.mtlx"))
+    let material = """
+    <?xml version="1.0"?>
+    <materialx version="1.39" xmlns:xi="http://www.w3.org/2001/XInclude">
+      <xi:include href="shaders.mtlx" />
+      <surfacematerial name="Included" type="material">
+        <input name="surfaceshader" type="surfaceshader" nodename="Shader" />
+      </surfacematerial>
+    </materialx>
+    """
+    let document = try load(material, folder: folder)
+    #expect(document.warnings.isEmpty)
+    #expect(try #require(document["Included"]).uniforms.metallicFactor == 0.75)
+}
+
 @Test
 func notMaterialXThrows() throws {
     #expect(throws: MaterialXError.self) {

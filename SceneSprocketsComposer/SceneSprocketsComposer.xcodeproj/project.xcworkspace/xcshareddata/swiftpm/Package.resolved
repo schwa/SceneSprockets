@@ -74,6 +74,15 @@
       }
     },
     {
+      "identity" : "metalsprocketsmaterialx",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/schwa/MetalSprocketsMaterialX",
+      "state" : {
+        "branch" : "main",
+        "revision" : "8d5cbe56f799017c0d51431a78f74a481263b5f2"
+      }
+    },
+    {
       "identity" : "metalsprocketsparticles",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/schwa/MetalSprocketsParticles",
