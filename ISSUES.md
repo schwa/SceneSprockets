@@ -14511,6 +14511,8 @@ Each keynote slide's code sample is a SwiftUI snapshot rendered into a texture a
 ## Proposed fix (per schwa)
 Use a text view for the source code instead of a textured plane. Related: #629.
 
+- `2026-11-23T03:00:51Z`: Question 1 (design): Where should the keynote's code text view go? Recommended: A SwiftUI overlay at the bottom of the scene view, shown only for the keynote; remove the panels from the scene and re-record the keynote goldens (they would no longer show code). Alternatives: the inspector, or the presenter notes window.
+
 ---
 
 ## 631: Screen-space ambient occlusion is not blurred
