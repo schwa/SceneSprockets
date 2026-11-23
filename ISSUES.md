@@ -14243,6 +14243,8 @@ updated: 2026-11-23T00:50:54Z
 
 MaterialXDocument folds math nodes on constants and image-times-constant (#609), but nodes that need per-pixel evaluation still fall back to the shader input's default with a warning: procedural patterns (noise2d, noise3d, fractal3d, cellnoise, ramps), texcoord and texture-coordinate transforms (image uvtiling/uvoffset, place2d, texcoord), and math on images other than multiplying by a constant (mix of two images, add, swizzle/extract of an image). Images on inputs PBRSceneMaterial has no texture slot for (opacity, coat, sheen/fuzz, transmission, specular) are also ignored. Split from #609.
 
+- `2026-11-23T01:46:14Z`: Skipped in the autonomous run on 2026-11-22, on the user's call. The plan offered was: map image uvtiling/uvoffset and place2d to the PBR texture transforms, bake texcoord-only graphs (noise2d, cellnoise2d, ramps, math on images) into a texture on the CPU at load, and split 3D-position nodes into a new issue.
+
 ---
 
 ## 621: Frame statistics panel is hard to read: GPU pass rows wrap one letter per line, collapsed bar spans the whole window
@@ -14465,6 +14467,30 @@ Actual: on several slides the code panel is wider than the view and its lines ar
 
 - `2026-11-23T01:21:50Z`: Investigated 2026-11-22. At the keynote's own camera (40-degree view) every code panel fits: the widest (Gizmos) is 11.7 units, and the view is about 13.8 units wide at the panel at a 1.65 aspect; offscreen renders at the screenshot's window size show the Many Lights panel fitting with margin. In the demo app the scene view extends under the sidebar and inspector, so slides are framed for the full window width and their edges are hidden behind the panels (confirmed by the user: hiding the panels shows the full slide). Punting: the fix is a layout decision for the demo app, not the code panels.
 - `2026-11-23T01:21:50Z`: Question 1 (decision): Should the demo app's scene view stop at the sidebar's and inspector's edges (for every demo), so slides are framed for the visible area? Recommended: Yes: the scene view fills only the area between the sidebar and inspector
+- `2026-11-23T01:47:03Z`: Related: #630 (show code samples in a text view instead of a scene plane).
+
+---
+
+## 630: Keynote code samples are drawn as textured planes in the 3D scene
+
++++
+status: open
+priority: low
+kind: enhancement
+labels: area:demo, effort:m
+created: 2026-11-23T01:46:29Z
+updated: 2026-11-23T01:47:03Z
++++
+
+Each keynote slide's code sample is a SwiftUI snapshot rendered into a texture and shown on a plane in the scene (CodePanel, KeynoteDemo.addCode). Because it is scene geometry:
+- Scene effects apply to it: the Fog slide's volumetric haze covers it (#627), and lighting and post-processing can too.
+- It is framed with the slide, so it can be hidden under the sidebar and inspector or run past the visible area (#629).
+- The text is a fixed-resolution image, so it is not selectable or copyable, and gets soft when the camera is close.
+
+## Proposed fix (per schwa)
+Use a text view for the source code instead of a textured plane.
+
+- `2026-11-23T01:47:03Z`: Related: #629 (code panels hidden under the sidebar and inspector); a text view outside the scene would also avoid that.
 
 ---
 
