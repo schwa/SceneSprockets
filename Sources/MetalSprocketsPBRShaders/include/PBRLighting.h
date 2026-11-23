@@ -611,6 +611,14 @@ namespace PBR {
             const Lighting::LightSample lightSample = Lighting::sample(light, in.worldPosition);
             const float3 toLight = lightSample.toLight;
             const float3 radiance = lightSample.radiance * Lighting::shadow(light, in.worldPosition, shadow, shadowMap, shadowSampler) * Lighting::contactShadow(light, ambientOcclusion, in.position);
+            if (material.subsurfaceStrength > 0.0) {
+                // Subsurface scattering (#538): wrapped diffuse. The light that wrapping adds past the plain cosine
+                // falloff comes back tinted, softening the terminator as light scattered under the surface does.
+                const float rawNdotL = dot(normal, toLight);
+                const float wrap = saturate(material.subsurfaceRadius);
+                const float wrapped = saturate((rawNdotL + wrap) / (1.0 + wrap));
+                color += diffuseColor / kPi * material.subsurfaceColor * material.subsurfaceStrength * max(wrapped - saturate(rawNdotL), 0.0) * radiance * (1.0 - transmission);
+            }
             const float NdotL = clamp(dot(normal, toLight), 0.0, 1.0);
             if (NdotL <= 0.0) {
                 // Light from behind reaches this side only by diffuse transmission. Its Fresnel term uses the light

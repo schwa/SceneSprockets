@@ -12403,13 +12403,14 @@ Surfaces cannot show apparent depth without extra geometry. (Moved from SceneSpr
 ## 538: No subsurface scattering
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: effort:l, area:renderer
 milestone: Lighting-and-GI
 created: 2026-11-17T17:55:40Z
-updated: 2026-11-23T02:14:51Z
+updated: 2026-11-23T04:36:38Z
+closed: 2026-11-23T04:36:38Z
 +++
 
 Skin, wax, marble and other thick translucent materials cannot scatter light below the surface: lighting does not soften across the lit side. (Moved from SceneSprocketsAddOns#59.)

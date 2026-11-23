@@ -145,6 +145,11 @@ struct PBRMaterialUniforms {
     // specular is specularColor. Roughness is 1 - glossinessFactor * the specularColor texture's alpha.
     int specularGlossiness;
     float glossinessFactor;
+    // Subsurface scattering, approximated (#538): diffuse light wraps past the terminator by `subsurfaceRadius` (0 to
+    // 1), tinted by `subsurfaceColor` and scaled by `subsurfaceStrength` (zero disables), for skin, wax and marble.
+    float subsurfaceStrength;
+    float subsurfaceRadius;
+    simd_float3 subsurfaceColor;
 };
 typedef struct PBRMaterialUniforms PBRMaterialUniforms;
 

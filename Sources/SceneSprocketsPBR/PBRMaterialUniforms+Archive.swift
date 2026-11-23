@@ -52,7 +52,9 @@ enum PBRUniformsArchive {
         ("dispersion", \.dispersion),
         ("diffuseTransmissionFactor", \.diffuseTransmissionFactor),
         ("retroreflectionFactor", \.retroreflectionFactor),
-        ("glossinessFactor", \.glossinessFactor)
+        ("glossinessFactor", \.glossinessFactor),
+        ("subsurfaceStrength", \.subsurfaceStrength),
+        ("subsurfaceRadius", \.subsurfaceRadius)
         ]
     }
 
@@ -63,7 +65,8 @@ enum PBRUniformsArchive {
         ("specularColorFactor", \.specularColorFactor),
         ("sheenColorFactor", \.sheenColorFactor),
         ("diffuseTransmissionColorFactor", \.diffuseTransmissionColorFactor),
-        ("multiscatterColorFactor", \.multiscatterColorFactor)
+        ("multiscatterColorFactor", \.multiscatterColorFactor),
+        ("subsurfaceColor", \.subsurfaceColor)
         ]
     }
 
