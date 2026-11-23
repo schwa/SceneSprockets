@@ -36,7 +36,7 @@ private func load(_ xml: String, folder: URL) throws -> MaterialXDocument {
 
 @Test
 func standardSurfaceConstantsBecomePBRFactors() throws {
-    let document = try load("""
+    let xml = """
     <?xml version="1.0"?>
     <materialx version="1.38">
       <standard_surface name="SR_gold" type="surfaceshader">
@@ -54,7 +54,8 @@ func standardSurfaceConstantsBecomePBRFactors() throws {
         <input name="surfaceshader" type="surfaceshader" nodename="SR_gold" />
       </surfacematerial>
     </materialx>
-    """, folder: try temporaryFolder())
+    """
+    let document = try load(xml, folder: try temporaryFolder())
     #expect(document.warnings.isEmpty, "\(document.warnings)")
     let gold = try #require(document["Gold"])
     let uniforms = gold.uniforms
@@ -74,7 +75,7 @@ func imagesConnectThroughNodegraphsAndNormalMaps() throws {
     for name in ["color", "rough", "metal", "normal"] {
         try writeGrayPNG(name == "rough" ? 64 : 200, to: folder.appending(path: "textures/\(name).png"))
     }
-    let document = try load("""
+    let xml = """
     <materialx version="1.38" fileprefix="textures/">
       <nodegraph name="NG">
         <image name="color" type="color3"><input name="file" type="filename" value="color.png" /></image>
@@ -96,7 +97,8 @@ func imagesConnectThroughNodegraphsAndNormalMaps() throws {
         <input name="surfaceshader" type="surfaceshader" nodename="SR" />
       </surfacematerial>
     </materialx>
-    """, folder: folder)
+    """
+    let document = try load(xml, folder: folder)
     #expect(document.warnings.isEmpty, "\(document.warnings)")
     let uniforms = try #require(document["Textured"]).uniforms
     #expect(uniforms.baseColor.enabled == 1)
@@ -108,7 +110,7 @@ func imagesConnectThroughNodegraphsAndNormalMaps() throws {
 
 @Test
 func usdPreviewSurfaceAndUnsupportedInputs() throws {
-    let document = try load("""
+    let xml = """
     <materialx version="1.38">
       <noise2d name="noise" type="float"><input name="amplitude" type="float" value="1" /></noise2d>
       <UsdPreviewSurface name="SR_usd" type="surfaceshader">
@@ -125,7 +127,8 @@ func usdPreviewSurfaceAndUnsupportedInputs() throws {
         <input name="surfaceshader" type="surfaceshader" nodename="SR_disney" />
       </surfacematerial>
     </materialx>
-    """, folder: try temporaryFolder())
+    """
+    let document = try load(xml, folder: try temporaryFolder())
     let usd = try #require(document["Usd"]).uniforms
     #expect(simd_distance(usd.baseColorFactor, [0.2, 0.4, 0.6, 1]) < 1e-6)
     #expect(usd.clearcoatFactor == 1)
@@ -141,7 +144,7 @@ func usdPreviewSurfaceAndUnsupportedInputs() throws {
 func constantMathNodesAreEvaluated() throws {
     let folder = try temporaryFolder()
     try writeGrayPNG(200, to: folder.appending(path: "color.png"))
-    let document = try load("""
+    let xml = """
     <materialx version="1.38">
       <nodegraph name="NG">
         <input name="tint" type="color3" value="0.5, 1, 1" />
@@ -171,7 +174,8 @@ func constantMathNodesAreEvaluated() throws {
         <input name="surfaceshader" type="surfaceshader" nodename="SR" />
       </surfacematerial>
     </materialx>
-    """, folder: folder)
+    """
+    let document = try load(xml, folder: folder)
     #expect(document.warnings.isEmpty, "\(document.warnings)")
     let uniforms = try #require(document["Math"]).uniforms
     #expect(uniforms.baseColor.enabled == 1)
@@ -185,7 +189,7 @@ func constantMathNodesAreEvaluated() throws {
 // #609: gltf_pbr and open_pbr_surface shaders load.
 @Test
 func gltfAndOpenPBRShadersLoad() throws {
-    let document = try load("""
+    let xml = """
     <materialx version="1.39">
       <gltf_pbr name="SR_gltf" type="surfaceshader">
         <input name="base_color" type="color3" value="0.2, 0.4, 0.6" />
@@ -213,7 +217,8 @@ func gltfAndOpenPBRShadersLoad() throws {
         <input name="surfaceshader" type="surfaceshader" nodename="SR_open" />
       </surfacematerial>
     </materialx>
-    """, folder: try temporaryFolder())
+    """
+    let document = try load(xml, folder: try temporaryFolder())
     #expect(document.warnings.isEmpty, "\(document.warnings)")
     let gltf = try #require(document["Gltf"])
     #expect(simd_distance(gltf.uniforms.baseColorFactor, [0.2, 0.4, 0.6, 0.5]) < 1e-6)
