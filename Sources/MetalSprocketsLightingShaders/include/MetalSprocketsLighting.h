@@ -4,9 +4,98 @@
 
 #ifdef __METAL_VERSION__
 #include <metal_stdlib>
+#include "MetalSprocketsLightingLTC.h"
 
 namespace Lighting {
     using namespace metal;
+
+    // Rectangular area lights with linearly transformed cosines (#509; Heitz et al. 2016).
+
+    // A table entry, bilinearly filtered, at perceptual roughness and the view angle.
+    template <typename T>
+    inline T ltcLookup(constant T *table, float perceptualRoughness, float NdotV) {
+        const float2 uv = float2(saturate(perceptualRoughness), saturate(acos(saturate(NdotV)) / (M_PI_F * 0.5))) * 63.0;
+        const int2 base = int2(floor(uv));
+        const int2 next = min(base + 1, int2(63));
+        const float2 blend = uv - float2(base);
+        const T top = mix(table[base.y * 64 + base.x], table[base.y * 64 + next.x], blend.x);
+        const T bottom = mix(table[next.y * 64 + base.x], table[next.y * 64 + next.x], blend.x);
+        return mix(top, bottom, blend.y);
+    }
+
+    // The vector form factor of one edge of a polygon on the unit sphere; its z is the edge's share of the integral.
+    inline float ltcEdge(float3 from, float3 to) {
+        const float cosine = clamp(dot(from, to), -0.9999, 0.9999);
+        const float theta = acos(cosine);
+        return cross(from, to).z * (theta / sin(theta));
+    }
+
+    // The cosine-weighted integral of the rectangle `corners` (in order around it) seen from
+    // `position`, after `transform` (the inverse LTC matrix in the frame of `normal` and `view`). 1 is the whole
+    // hemisphere. The polygon is clipped to the upper hemisphere first.
+    inline float ltcIntegrate(float3 normal, float3 view, float3 position, float3x3 transform, thread const float3 *corners) {
+        const float3 tangent = normalize(view - normal * dot(view, normal));
+        const float3 bitangent = cross(normal, tangent);
+        const float3x3 frame = transform * transpose(float3x3(tangent, bitangent, normal));
+        float3 points[4];
+        for (int index = 0; index < 4; index++) {
+            points[index] = frame * (corners[index] - position);
+        }
+        // Clip to z >= 0 (Sutherland-Hodgman); a quad clipped by a plane has at most five corners.
+        float3 clipped[5];
+        int count = 0;
+        for (int index = 0; index < 4; index++) {
+            const float3 current = points[index];
+            const float3 next = points[(index + 1) % 4];
+            if (current.z >= 0.0) {
+                clipped[count++] = current;
+            }
+            if ((current.z >= 0.0) != (next.z >= 0.0)) {
+                clipped[count++] = mix(current, next, current.z / (current.z - next.z));
+            }
+        }
+        if (count < 3) {
+            return 0.0;
+        }
+        float sum = 0.0;
+        for (int index = 0; index < count; index++) {
+            sum += ltcEdge(normalize(clipped[index]), normalize(clipped[(index + 1) % count]));
+        }
+        // Points behind the light are skipped before this, so the winding's sign does not matter.
+        return abs(sum) / (2.0 * M_PI_F);
+    }
+
+    // The light's corners, in order around the rectangle.
+    inline void areaCorners(LightingLight light, thread float3 *corners) {
+        corners[0] = light.position - light.areaRight - light.areaUp;
+        corners[1] = light.position - light.areaRight + light.areaUp;
+        corners[2] = light.position + light.areaRight + light.areaUp;
+        corners[3] = light.position + light.areaRight - light.areaUp;
+    }
+
+    // Diffuse and specular light from an area light, as radiance already weighted by the BRDF lobes: multiply
+    // `diffuse` by the diffuse color and `specular` by nothing more. `f0` is the specular color at normal incidence.
+    struct AreaLightResult {
+        float3 diffuse;
+        float3 specular;
+    };
+
+    inline AreaLightResult areaLight(LightingLight light, float3 position, float3 normal, float3 view, float perceptualRoughness, float3 f0) {
+        float3 corners[4];
+        areaCorners(light, corners);
+        // Lit only from its front: points behind the rectangle get nothing.
+        if (dot(position - light.position, light.direction) <= 0.0) {
+            return { float3(0.0), float3(0.0) };
+        }
+        const float NdotV = saturate(dot(normal, view));
+        const float4 inverse = ltcLookup(kLightingLTC1, perceptualRoughness, NdotV);
+        const float3x3 transform = float3x3(float3(inverse.x, 0, inverse.y), float3(0, 1, 0), float3(inverse.z, 0, inverse.w));
+        const float2 terms = ltcLookup(kLightingLTC2, perceptualRoughness, NdotV);
+        const float3 radiance = light.color * light.intensity;
+        const float specular = ltcIntegrate(normal, view, position, transform, corners);
+        const float diffuse = ltcIntegrate(normal, view, position, float3x3(1.0), corners);
+        return { radiance * diffuse, radiance * specular * (f0 * terms.x + (1.0 - f0) * terms.y) };
+    }
 
     // KHR_lights_punctual range attenuation: inverse square, cut off smoothly at `range` (0 means infinite).
     inline float rangeAttenuation(float range, float distance) {

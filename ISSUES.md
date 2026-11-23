@@ -11793,13 +11793,14 @@ Avoid manually tuning brightness for every scene. Complexity: low–medium. (Mov
 ## 509: Area lights / LTC
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, lighting
 milestone: Lighting-and-GI
 created: 2026-11-17T14:09:42Z
-updated: 2026-11-23T02:14:51Z
+updated: 2026-11-23T04:07:37Z
+closed: 2026-11-23T04:07:37Z
 +++
 
 There are no area lights for softer, more natural light from large sources. (Moved from SceneSprocketsAddOns #77.) Related: #86.

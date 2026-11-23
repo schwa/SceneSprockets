@@ -505,8 +505,8 @@ public final class Shadows {
             let far = max(simd_distance(position, center) + radius, 0.1)
             let near = max(far * 0.001, 0.01)
             switch light.type {
-            case .ambient:
-                // No direction, no shadows.
+            case .ambient, .area:
+                // Ambient lights have no direction; area light shadows are not drawn yet (#509).
                 continue
             case .directional where lightSettings.cascadeCount > 1:
                 for (view, cascade) in cascadeViews(forward: forward, bounds: bounds, count: lightSettings.cascadeCount, splitFactor: lightSettings.splitFactor, resolution: size) {

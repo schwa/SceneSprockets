@@ -10,6 +10,9 @@ enum LightingLightType : int {
     kLightingLightTypeDirectional = 0,
     kLightingLightTypePoint = 1,
     kLightingLightTypeSpot = 2,
+    // A rectangle facing `direction` (#509): `areaRight` and `areaUp` are half its sides. PBR integrates it with
+    // linearly transformed cosines; other shading treats it as a point light at its center.
+    kLightingLightTypeArea = 3,
 };
 
 // The most shadow map slices any renderer reads; Shadows.maximumSliceCount picks how many are used (#299).
@@ -39,6 +42,9 @@ struct LightingLight {
     // 1 when screen-space contact shadows (#495) dim this light: the ambient occlusion texture's green channel holds
     // their visibility. Fits in the struct's padding.
     int contactShadow;
+    // Area lights (#509): half the rectangle's width along `areaRight` and half its height along `areaUp`.
+    simd_float3 areaRight;
+    simd_float3 areaUp;
 };
 typedef struct LightingLight LightingLight;
 

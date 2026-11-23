@@ -14,6 +14,10 @@ public struct Light: Sendable, Equatable, Codable {
         /// Even light from every direction, like SCNLight's `.ambient`: it lights every surface in its categories by
         /// `color * intensity`, without shading or shadows. The node's position and direction do not matter (#602).
         case ambient
+        /// A rectangle of ``Light/areaSize`` in the node's XY plane, lighting along its -Z axis, like SCNLight's `.area`
+        /// (#509). PBR integrates it for soft, wide highlights; other materials treat it as a point light at its
+        /// center. It casts no shadows yet.
+        case area
     }
 
     /// The former name of ``Kind``.
@@ -41,6 +45,8 @@ public struct Light: Sendable, Equatable, Codable {
     /// SceneKit-style distance falloff for point and spot lights, instead of physical inverse-square falloff with
     /// ``range``. Nil keeps the physical falloff.
     public var attenuation: Attenuation?
+    /// The width (along the node's X axis) and height (along Y) of an ``Kind/area`` light.
+    public var areaSize: SIMD2<Float> = [1, 1]
     /// This light's shadow settings. Nil uses the defaults of ``Shadows``.
     public var shadowSettings: ShadowSettings?
 
@@ -127,7 +133,7 @@ public struct Light: Sendable, Equatable, Codable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case type, color, intensity, range, innerConeAngle, outerConeAngle, castsShadow, temperature, attenuation, shadowSettings
+        case type, color, intensity, range, innerConeAngle, outerConeAngle, castsShadow, temperature, attenuation, shadowSettings, areaSize
     }
 
     /// Decodes a light. Archives from before `castsShadow` decode with shadows on.
@@ -143,6 +149,7 @@ public struct Light: Sendable, Equatable, Codable {
         temperature = try container.decodeIfPresent(Float.self, forKey: .temperature)
         attenuation = try container.decodeIfPresent(Attenuation.self, forKey: .attenuation)
         shadowSettings = try container.decodeIfPresent(ShadowSettings.self, forKey: .shadowSettings)
+        areaSize = try container.decodeIfPresent(SIMD2<Float>.self, forKey: .areaSize) ?? [1, 1]
     }
 
     /// Creates a spot light. It shines along its node's -Z axis.

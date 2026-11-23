@@ -197,6 +197,10 @@ public enum EditorGizmos {
             }
             lines.append([[head * 0.5, 0, -length + head], [0, 0, -length], [-head * 0.5, 0, -length + head]])
             return lines
+        case .area:
+            // The rectangle, and a line along the direction it lights.
+            let (x, y) = (light.areaSize.x / 2, light.areaSize.y / 2)
+            return [[[-x, -y, 0], [x, -y, 0], [x, y, 0], [-x, y, 0], [-x, -y, 0]], [[0, 0, 0], [0, 0, -length]]]
         case .ambient:
             // No position or direction: a small star of lines marks the node.
             let size = length * 0.15

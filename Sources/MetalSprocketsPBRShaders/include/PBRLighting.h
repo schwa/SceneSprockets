@@ -601,6 +601,13 @@ namespace PBR {
         const Lighting::LightList lightList = Lighting::lightList(lightClusterUniforms, lightClusters, in.worldPosition, frame.lightCount);
         for (uint index = 0; index < lightList.count; ++index) {
             const LightingLight light = lights[lightList[index]];
+            if (light.type == kLightingLightTypeArea) {
+                // Rectangular area light (#509): diffuse and GGX specular integrated over the rectangle. No shadows,
+                // sheen, clearcoat or transmission terms yet.
+                const Lighting::AreaLightResult area = Lighting::areaLight(light, in.worldPosition, normal, view, perceptualRoughness, f0 * specularStrength);
+                color += area.diffuse * diffuseColor * (1.0 - diffuseTransmission) * (1.0 - transmission) + area.specular;
+                continue;
+            }
             const Lighting::LightSample lightSample = Lighting::sample(light, in.worldPosition);
             const float3 toLight = lightSample.toLight;
             const float3 radiance = lightSample.radiance * Lighting::shadow(light, in.worldPosition, shadow, shadowMap, shadowSampler) * Lighting::contactShadow(light, ambientOcclusion, in.position);

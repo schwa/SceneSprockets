@@ -55,7 +55,7 @@ struct LightingTests {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .appending(path: "Sources/MetalSprocketsLightingShaders/include")
-        let headers = try ["MetalSprocketsLightingTypes.h", "MetalSprocketsLighting.h", "MetalSprocketsLightingToneMapping.h"].map { name in
+        let headers = try ["MetalSprocketsLightingTypes.h", "MetalSprocketsLightingLTC.h", "MetalSprocketsLighting.h", "MetalSprocketsLightingToneMapping.h"].map { name in
             try String(contentsOf: include.appending(path: name), encoding: .utf8)
                 .split(separator: "\n", omittingEmptySubsequences: false)
                 .filter { !$0.hasPrefix("#include \"") && !$0.hasPrefix("#pragma once") }
@@ -115,8 +115,9 @@ struct LightingTests {
 
     // Same layout as MetalSprocketsPBR's PBRLight and PBRShadowUniforms, so renderers can share buffers.
     @Test func layoutsMatchPBR() {
-        #expect(MemoryLayout<LightingLight>.size == 96)
-        #expect(MemoryLayout<LightingLight>.stride == 96)
+        // 96 bytes plus the area light's two axes (#509).
+        #expect(MemoryLayout<LightingLight>.size == 128)
+        #expect(MemoryLayout<LightingLight>.stride == 128)
         // A matrix and a cascade float4 per slice (#88), then the scalars.
         #expect(MemoryLayout<LightingShadowUniforms>.offset(of: \.mapSize) == 80 * Int(kLightingMaxShadowSliceCount))
         #expect(MemoryLayout<LightingShadowUniforms>.offset(of: \.color) == 80 * Int(kLightingMaxShadowSliceCount) + 16)

@@ -26,6 +26,13 @@ package extension LightingLight {
         case .spot: .spot
         // Ambient lights are summed into RenderContext.ambientLight and never reach shaders as lights.
         case .point, .ambient: .point
+        case .area: .area
+        }
+        if light.type == .area {
+            let right = SIMD3(worldTransform.columns.0.x, worldTransform.columns.0.y, worldTransform.columns.0.z)
+            let up = SIMD3(worldTransform.columns.1.x, worldTransform.columns.1.y, worldTransform.columns.1.z)
+            areaRight = right * light.areaSize.x / 2
+            areaUp = up * light.areaSize.y / 2
         }
         shadowSliceStart = Int32(shadowSlices.lowerBound)
         shadowSliceCount = Int32(shadowSlices.count)
