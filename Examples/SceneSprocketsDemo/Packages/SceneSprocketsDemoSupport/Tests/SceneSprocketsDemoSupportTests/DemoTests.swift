@@ -445,7 +445,9 @@ func keynoteCameraHeightIsTheSameOnEverySlide() throws {
 @Test
 @MainActor
 func keynoteFogFadesInDuringTransition() throws {
-    let keynote = try keynoteShowing("Shadows")
+    // The slide just before Fog.
+    let fogIndex = try #require(KeynoteDemo.titles.firstIndex(of: "Fog"))
+    let keynote = try keynoteShowing(KeynoteDemo.titles[fogIndex - 1])
     try #require(keynote.actions.first { $0.name == "Next" }).perform()
     keynote.update(time: 0, deltaTime: 0.25)
     let density = try #require(keynote.sceneGraph.fog?.scattering?.density)

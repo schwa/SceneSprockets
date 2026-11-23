@@ -14823,13 +14823,14 @@ Stochastic transparency (#539) is not shown in the keynote. A slide could show m
 ## 648: Keynote has no slide for per-light shadow settings
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:demo, effort:s
 milestone: Demo
 created: 2026-11-23T12:27:33Z
-updated: 2026-11-23T12:27:35Z
+updated: 2026-11-23T13:01:40Z
+closed: 2026-11-23T13:01:40Z
 +++
 
 Per-light shadow settings (#88) are not shown in the keynote: cascaded shadows for a directional light over a long scene, and per-light resolution and bias. A slide could show a long row of objects with and without cascades, with a code panel.

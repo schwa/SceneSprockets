@@ -33,7 +33,7 @@ public final class KeynoteDemo: DemoScene {
     // debugging, then add-ons (#310). Slides are built by title, so reordering only means editing this list.
     public static let titles = [
         "SceneSprockets", "SceneView", "Scene Graph", "Shapes", "Materials", "Lights", "Many Lights",
-        "Shadows", "Fog", "Decals", "Mirrors", "Opacity & Fades", "Blend Modes", "Stochastic", "Glass", "PBR Extensions", "Subsurface", "Custom Shaders", "Video Textures", "glTF & Model I/O", "MaterialX",
+        "Shadows", "Shadow Settings", "Fog", "Decals", "Mirrors", "Opacity & Fades", "Blend Modes", "Stochastic", "Glass", "PBR Extensions", "Subsurface", "Custom Shaders", "Video Textures", "glTF & Model I/O", "MaterialX",
         "Actions", "Implicit Animation", "Constraints", "Paths", "Animation Blending", "Deformation",
         "Particles", "Mesh Emitters",
         "Physics", "More Physics", "Post-Processing", "Level of Detail", "Performance", "SwiftECS World",
@@ -52,7 +52,7 @@ public final class KeynoteDemo: DemoScene {
     // Per-slide state: each is used only while its slide is showing.
     private let shadowRenderer = Shadows(intensity: 0.75, softness: 2)
     // Decals read the scene's depth, which the view keeps readable when shadows are on (#644).
-    private static let shadowedTitles: Set<String> = ["Shadows", "Fog", "Decals", "Metaballs", "Voxels", "Toon"]
+    private static let shadowedTitles: Set<String> = ["Shadows", "Shadow Settings", "Fog", "Decals", "Metaballs", "Voxels", "Toon"]
     private var shuffleCubes: [SceneGraph.Node] = []
     private var sinceShuffle: Float = 0
     private var blendMixer: SceneGraph.AnimationMixer?
@@ -89,6 +89,8 @@ public final class KeynoteDemo: DemoScene {
     private var subsurfaceLight: SceneGraph.Node?
     // The Stochastic slide (#647): the two card clusters that spin, and their materials, whose opacity the slider sets.
     private var cardClusters: [SceneGraph.Node] = []
+    // The Shadow Settings slide (#648): the sun, whose shadow settings the controls set.
+    private var cascadeSun: SceneGraph.Node?
     private var cardMaterials: [PBRSceneMaterial] = []
     private var subsurfaceMaterials: [PBRSceneMaterial] = []
     private static let maximumSwarmLights = 400
@@ -324,6 +326,12 @@ public final class KeynoteDemo: DemoScene {
         • It marches each pixel's ray through the shadow map, so it needs shadows on.
         • Distance fog (start and end distances) is also available, alone or with it.
         """,
+        "Shadow Settings": """
+        • Each light can override the scene's shadow settings: Light.shadowSettings.
+        • Cascades split a sun's shadow map by distance from the camera: sharp shadows near, coarser far away.
+        • Turn Cascades off: one map has to cover the whole long street, and the near posts' shadows go blurry.
+        • Resolution scale and bias are per light too, to spend shadow memory where it matters.
+        """,
         "Stochastic": """
         • Crossed, see-through cards, like foliage or hair, cut through each other, so no draw order is right.
         • Left: sorted alpha blending. Whole cards pop in front of each other as they turn.
@@ -536,6 +544,8 @@ public final class KeynoteDemo: DemoScene {
             ]
         case "Decals":
             [.toggle("Move Decal", default: true), .slider("Maximum Angle", 10...90, default: 60)]
+        case "Shadow Settings":
+            [.toggle("Cascades", default: true), .slider("Cascade Count", 2...4, default: 4), .slider("Sun Resolution", 0.25...1, default: 1)]
         case "Stochastic":
             [.slider("Card Opacity", 0.1...0.9, default: 0.5), .slider("Card Spin", 0...3, default: 1)]
         case "Subsurface":
@@ -754,6 +764,8 @@ public final class KeynoteDemo: DemoScene {
             updateSubsurface(time: time)
         case "Stochastic":
             updateCards(time: time)
+        case "Shadow Settings":
+            updateCascadeSun()
         default:
             break
         }
@@ -1433,6 +1445,12 @@ public final class KeynoteDemo: DemoScene {
             // Noir
             sceneGraph.postProcessing = SceneGraph.PostProcessing(contrast: 1.8, saturation: 0,
                                                                   vignetteIntensity: 0.9, vignetteRadius: 0.35)
+            """, to: slide)
+        case "Shadow Settings":
+            shadowSettingsSlide(slide)
+            addCode("""
+            var sun = Light(type: .directional, intensity: 2)
+            sun.shadowSettings = Light.ShadowSettings(cascadeCount: 4, resolutionScale: 1)
             """, to: slide)
         case "Stochastic":
             stochasticSlide(slide)
@@ -2269,6 +2287,37 @@ public final class KeynoteDemo: DemoScene {
         // Tall enough to reach both the ground and the top of the step as it slides across the edge.
         let arrow = DecalMaterial(texture: Self.decalTexture(.arrow), color: [1, 1, 1, 1], maximumAngle: .pi / 3)
         movingDecal = slide.addChild(SceneGraph.Node(label: "Arrow", shape: .box(), material: arrow, transform: .init(translation: [0, 0.25, -0.6], rotation: lookDown, scale: [1.2, 1.2, 1.4])))
+    }
+
+    private func shadowSettingsSlide(_ slide: SceneGraph.Node) {
+        // A low sun from the side, so every post casts a long shadow across the street.
+        cascadeSun = slide.addChild(SceneGraph.Node(label: "Sun", transform: Transform3D(position: [6, 4, 2], lookingAt: [0, 0, -2]), content: .light(Light(type: .directional, color: [1, 0.92, 0.8], intensity: 2))))
+        addLight(to: slide, at: [-3, 4, 6], color: [0.45, 0.55, 0.8], intensity: 10, castsShadow: false)
+        let ground = BlinnPhongSceneMaterial(ambient: .color(0.25), diffuse: .color([0.55, 0.55, 0.5]), specular: .color(0.02), shininess: 8)
+        // A long street running away from the camera: near posts need sharp shadows, far ones cover a lot of ground.
+        slide.addChild(SceneGraph.Node(label: "Street", shape: .box(width: 6, height: 0.1, length: 60), material: ground, transform: .init(translation: [0, -0.05, -27])))
+        let post = BlinnPhongSceneMaterial.plastic([0.75, 0.35, 0.25], shininess: 16)
+        for row in 0..<15 {
+            for side: Float in [-1.6, 1.6] {
+                slide.addChild(SceneGraph.Node(label: "Post", shape: .box(width: 0.12, height: 1.4, length: 0.12), material: post, transform: .init(translation: [side, 0.7, 2 - Float(row) * 4])))
+            }
+        }
+        // Thin rails, whose shadows show the detail a coarse map loses.
+        for side: Float in [-1.6, 1.6] {
+            slide.addChild(SceneGraph.Node(label: "Rail", shape: .box(width: 0.05, height: 0.05, length: 60), material: post, transform: .init(translation: [side, 1.2, -27])))
+        }
+        updateCascadeSun()
+    }
+
+    private func updateCascadeSun() {
+        guard let cascadeSun, case var .light(light) = cascadeSun.content else {
+            return
+        }
+        let settings = Light.ShadowSettings(cascadeCount: self[flag: "Cascades"] ? Int(self[value: "Cascade Count"].rounded()) : 1, resolutionScale: self[value: "Sun Resolution"])
+        if light.shadowSettings != settings {
+            light.shadowSettings = settings
+            cascadeSun.content = .light(light)
+        }
     }
 
     private func stochasticSlide(_ slide: SceneGraph.Node) {
