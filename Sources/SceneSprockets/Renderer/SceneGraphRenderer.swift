@@ -59,6 +59,9 @@ public struct RenderContext {
     /// Set for the transparent entries drawn as weighted blended transparency (#494): renderers draw them with a
     /// fragment shader that writes `Lighting::WeightedTransparencyOutput` and ``Element/weightedTransparencyState()``.
     public internal(set) var drawsWeightedTransparency = false
+    /// This frame's normals and velocity, when ``SceneGraphElement/gBuffer(_:)`` requested them and the pre-pass ran
+    /// (#510). Drawn before the scene pass.
+    public internal(set) var gBuffer: GBuffer?
 
     /// The number of views that each draw goes to: 1, or the stereo view count.
     public var viewCount: Int { stereoViews?.count ?? 1 }
@@ -123,6 +126,8 @@ public struct SceneGraphElement: Element {
     var decorations: ((RenderContext) throws -> AnyElement?)?
     // App content at fixed stages of the frame (#512).
     var stageContent: [RenderStage: RenderStageContent] = [:]
+    // Normals and velocity when requested (#510).
+    var gBufferStorage: GBuffer?
     // Draws every mesh in this debug view instead of its material (#132).
     var debugMode: DebugMode?
     // Each renderer shows this material value instead of lighting (#195). Ignored while debugMode is set.
@@ -331,6 +336,20 @@ public struct SceneGraphElement: Element {
                 entries = entries.filter { !isWeighted($0) }
             }
             let opaque = entries.filter { !$0.isTransparent }
+            // The G-buffer pre-pass (#510), when requested.
+            if let gBuffer = gBufferStorage, let postTargets, stereoViews == nil, debugMode == nil {
+                let drawn = opaque
+                    .filter { entry in
+                        let type = entry.mesh.submeshes[entry.submeshIndex].primitiveType
+                        return type == .triangle || type == .triangleStrip
+                    }
+                    .map { $0.skin != nil || $0.hasMorphs ? $0.resolvingDeformation(revision: revision) : $0 }
+                let targets = try gBuffer.targets(device: postTargets.color.device, width: postTargets.color.width, height: postTargets.color.height)
+                let viewRotation = context.viewMatrix.rotationOnlyView
+                let uniforms = gBuffer.drawUniforms(entries: drawn, viewProjection: context.projectionMatrix * viewRotation, viewRotation: viewRotation, cameraPosition: context.cameraMatrix.columns.3.xyz)
+                prePasses.append(GBufferPass(entries: drawn, uniforms: uniforms, targets: targets).gpuTimed(SceneGPUTimingLabel.prePasses).eraseToAnyElement())
+                context.gBuffer = gBuffer
+            }
             let inShaderAmbientOcclusion = opaque.filter { $0.material is any AppliesAmbientOcclusionInShader }
             let wantsAmbientOcclusion = context.environment.ambientOcclusion != nil && postTargets != nil && debugMode == nil
             // Contact shadows (#495) march from the brightest directional light's side, through the same depth pre-pass.

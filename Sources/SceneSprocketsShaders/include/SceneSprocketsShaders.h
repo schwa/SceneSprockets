@@ -5,6 +5,7 @@
 #import "Decal.h"
 #import "Deformation.h"
 #import "Fog.h"
+#import "GBuffer.h"
 #import "ShaderMaterial.h"
 #import "ShadowMask.h"
 #import "SkyGradient.h"

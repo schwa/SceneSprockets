@@ -11822,13 +11822,14 @@ Decided (2026-11-23):
 ## 510: Renderer does not expose normal, velocity, or G-buffer targets
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:renderer, effort:l
 milestone: Rendering-2
 created: 2026-11-17T14:09:42Z
-updated: 2026-11-20T06:33:14Z
+updated: 2026-11-23T13:47:59Z
+closed: 2026-11-23T13:47:59Z
 +++
 
 Effects such as SSR, SSGI, motion blur, decals and contact shadows need per-pixel normals, motion vectors or other G-buffer data. The renderer does not produce or expose them. Blocks #496 (TAA), #398 (SSR) and motion blur (#399).
