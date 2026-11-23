@@ -33,7 +33,7 @@ public final class KeynoteDemo: DemoScene {
     // debugging, then add-ons (#310). Slides are built by title, so reordering only means editing this list.
     public static let titles = [
         "SceneSprockets", "SceneView", "Scene Graph", "Shapes", "Materials", "Lights", "Many Lights",
-        "Shadows", "Fog", "Decals", "Mirrors", "Opacity & Fades", "Blend Modes", "Glass", "PBR Extensions", "Subsurface", "Custom Shaders", "Video Textures", "glTF & Model I/O", "MaterialX",
+        "Shadows", "Fog", "Decals", "Mirrors", "Opacity & Fades", "Blend Modes", "Stochastic", "Glass", "PBR Extensions", "Subsurface", "Custom Shaders", "Video Textures", "glTF & Model I/O", "MaterialX",
         "Actions", "Implicit Animation", "Constraints", "Paths", "Animation Blending", "Deformation",
         "Particles", "Mesh Emitters",
         "Physics", "More Physics", "Post-Processing", "Level of Detail", "Performance", "SwiftECS World",
@@ -87,6 +87,9 @@ public final class KeynoteDemo: DemoScene {
     private var mirrorFloor: SceneGraph.Node?
     // The Subsurface slide (#646): the light that circles the pair, and the materials whose scattering the sliders set.
     private var subsurfaceLight: SceneGraph.Node?
+    // The Stochastic slide (#647): the two card clusters that spin, and their materials, whose opacity the slider sets.
+    private var cardClusters: [SceneGraph.Node] = []
+    private var cardMaterials: [PBRSceneMaterial] = []
     private var subsurfaceMaterials: [PBRSceneMaterial] = []
     private static let maximumSwarmLights = 400
     private let debugDrawMaterial = ShaderMaterial.vertexColors()
@@ -321,6 +324,12 @@ public final class KeynoteDemo: DemoScene {
         • It marches each pixel's ray through the shadow map, so it needs shadows on.
         • Distance fog (start and end distances) is also available, alone or with it.
         """,
+        "Stochastic": """
+        • Crossed, see-through cards, like foliage or hair, cut through each other, so no draw order is right.
+        • Left: sorted alpha blending. Whole cards pop in front of each other as they turn.
+        • Right: stochastic transparency. Each pixel is covered or not at random, by alpha, and depth sorts it.
+        • No sorting at all. Noisy with one sample; it looks best with 4x MSAA.
+        """,
         "Subsurface": """
         • Skin, wax and marble let light in and scatter it under the surface, so their shadow edge glows softly.
         • Left: plain PBR. Right: the same material with subsurface scattering, tinted red like skin.
@@ -527,6 +536,8 @@ public final class KeynoteDemo: DemoScene {
             ]
         case "Decals":
             [.toggle("Move Decal", default: true), .slider("Maximum Angle", 10...90, default: 60)]
+        case "Stochastic":
+            [.slider("Card Opacity", 0.1...0.9, default: 0.5), .slider("Card Spin", 0...3, default: 1)]
         case "Subsurface":
             [.slider("Subsurface Strength", 0...2, default: 1), .slider("Subsurface Radius", 0...1, default: 0.6), .slider("Subsurface Light Speed", 0...3, default: 1)]
         case "Mirrors":
@@ -741,6 +752,8 @@ public final class KeynoteDemo: DemoScene {
             updateMirrors(time: time)
         case "Subsurface":
             updateSubsurface(time: time)
+        case "Stochastic":
+            updateCards(time: time)
         default:
             break
         }
@@ -1420,6 +1433,13 @@ public final class KeynoteDemo: DemoScene {
             // Noir
             sceneGraph.postProcessing = SceneGraph.PostProcessing(contrast: 1.8, saturation: 0,
                                                                   vignetteIntensity: 0.9, vignetteRadius: 0.35)
+            """, to: slide)
+        case "Stochastic":
+            stochasticSlide(slide)
+            addCode("""
+            let leaf = PBRSceneMaterial(baseColor: [0.3, 0.8, 0.35], opacity: 0.5)
+            leaf.renderState = PBRRenderState(blendMode: .stochastic)
+            SceneView(scene, renderers: renderers).sceneAntialiasing(sampleCount: 4)
             """, to: slide)
         case "Subsurface":
             subsurfaceSlide(slide)
@@ -2249,6 +2269,43 @@ public final class KeynoteDemo: DemoScene {
         // Tall enough to reach both the ground and the top of the step as it slides across the edge.
         let arrow = DecalMaterial(texture: Self.decalTexture(.arrow), color: [1, 1, 1, 1], maximumAngle: .pi / 3)
         movingDecal = slide.addChild(SceneGraph.Node(label: "Arrow", shape: .box(), material: arrow, transform: .init(translation: [0, 0.25, -0.6], rotation: lookDown, scale: [1.2, 1.2, 1.4])))
+    }
+
+    private func stochasticSlide(_ slide: SceneGraph.Node) {
+        addLight(to: slide, at: [0, 5, 6], intensity: 60, castsShadow: false)
+        cardClusters = []
+        cardMaterials = []
+        let colors: [SIMD3<Float>] = [[0.95, 0.3, 0.3], [0.3, 0.85, 0.4], [0.3, 0.5, 0.95], [0.95, 0.8, 0.3]]
+        for (index, stochastic) in [false, true].enumerated() {
+            let x: Float = index == 0 ? -1.8 : 1.8
+            let cluster = slide.addChild(SceneGraph.Node(label: stochastic ? "Stochastic Cards" : "Sorted Cards", transform: .init(translation: [x, 1.6, 0])))
+            // Four double-sided cards crossing at the middle, every 45 degrees, so each cuts through the others.
+            for (card, color) in colors.enumerated() {
+                let material = PBRSceneMaterial(baseColor: color, opacity: 0.5, roughness: 0.6)
+                // Double-sided, so the cards show from both sides as they turn.
+                let base = material.pbrMaterial
+                material.pbrMaterial = PBRMaterial(uniforms: base.uniforms, doubleSided: true, renderState: PBRRenderState(blendMode: stochastic ? .stochastic : nil), textureBindings: base.textureBindings)
+                cardMaterials.append(material)
+                let angle = Float(card) * .pi / 4
+                cluster.addChild(SceneGraph.Node(label: "Card", shape: .plane(width: 2, height: 2), material: material, transform: .init(rotation: simd_quatf(angle: angle, axis: [0, 1, 0]))))
+            }
+            cardClusters.append(cluster)
+            addTitle(stochastic ? "Stochastic" : "Sorted", size: 0.35, y: 0.2, to: slide).transform.translation.x = x
+        }
+        updateCards(time: 0)
+    }
+
+    private func updateCards(time: Float) {
+        for (index, cluster) in cardClusters.enumerated() {
+            let rotation = simd_quatf(angle: 0.3, axis: [1, 0, 0]) * simd_quatf(angle: time * 0.4 * self[value: "Card Spin"] + Float(index) * 0.1, axis: [0, 1, 0])
+            cluster.transform = .init(translation: cluster.transform.translation, rotation: rotation)
+        }
+        let opacity = self[value: "Card Opacity"]
+        for material in cardMaterials where material.uniforms.baseColorFactor.w != opacity {
+            var uniforms = material.uniforms
+            uniforms.baseColorFactor.w = opacity
+            material.uniforms = uniforms
+        }
     }
 
     private func subsurfaceSlide(_ slide: SceneGraph.Node) {

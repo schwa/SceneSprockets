@@ -47,7 +47,9 @@ struct GoldenImageTests {
         // #645: shapes above a mirror floor.
         Case(name: "keynote-mirrors", demo: "keynote", values: ["Mirror Orbit Speed": 0], frames: 30, slide: "Mirrors"),
         // #646: plain and subsurface heads lit from the side.
-        Case(name: "keynote-subsurface", demo: "keynote", values: ["Subsurface Light Speed": 0], frames: 30, slide: "Subsurface")
+        Case(name: "keynote-subsurface", demo: "keynote", values: ["Subsurface Light Speed": 0], frames: 30, slide: "Subsurface"),
+        // #647: crossed cards, sorted and stochastic.
+        Case(name: "keynote-stochastic", demo: "keynote", values: ["Card Spin": 0], frames: 30, slide: "Stochastic")
     ]
 
     @Test(arguments: cases)

@@ -14806,13 +14806,14 @@ Subsurface scattering (#538) is not shown in the keynote. A slide could compare 
 ## 647: Keynote has no slide for stochastic transparency
 
 +++
-status: open
+status: closed
 priority: low
 kind: enhancement
 labels: area:demo, effort:s
 milestone: Demo
 created: 2026-11-23T12:27:33Z
-updated: 2026-11-23T12:27:35Z
+updated: 2026-11-23T12:57:33Z
+closed: 2026-11-23T12:57:33Z
 +++
 
 Stochastic transparency (#539) is not shown in the keynote. A slide could show many overlapping see-through cards or foliage drawn with BlendMode.stochastic next to sorted blending, with a code panel.
