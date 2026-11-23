@@ -15125,6 +15125,9 @@ created: 2026-11-23T14:37:43Z
 
 The area-light code uses the bare abbreviation 'LTC' (Linearly Transformed Cosines, Heitz et al. 2016) in file and symbol names, e.g. `MetalSprocketsLightingLTC.h`, `kLightingLTC1`, `kLightingLTC2`. Readers without graphics-research background can't tell what these are from the name alone.
 
+- `2026-11-23T14:38:27Z`: ## Proposed fix (per user)
+Name it after the inventors (Heitz et al.) instead of the acronym, so readers know it's a specific published technique they can look up rather than having to guess what 'LTC' stands for.
+
 ---
 
 ## Milestone M1: Correctness
