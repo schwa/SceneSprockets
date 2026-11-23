@@ -12289,6 +12289,10 @@ Decided (2026-11-23):
 - Per-object lookup at first? Decision: yes.
 - Which renderers? Decision: PBR and Blinn-Phong, through RenderContext like ambient light.
 
+- `2026-11-23T03:37:47Z`: Question 1 (decision): Capture renders 6 cube faces per probe on request. Is it acceptable that the first version captures only the opaque scene and background (no shadows, transparency or particles), like the planar reflection pass (#531)? Recommended: Yes
+- `2026-11-23T03:37:51Z`: Per-object values cannot reach shaders like ambient light does today: ambient light is one color per batch, and renderBatches groups many objects (PBR instancing) into one draw. Options: (a) per-object L0 (one ambient color) by splitting batches per probe value: no shader changes, loses up/down direction, more draws; (b) per-draw L1 spherical harmonics (4 float3) in PBR instance data and Blinn-Phong per-draw uniforms, evaluated with the normal: keeps direction, changes both renderers' instance layouts.
+- `2026-11-23T03:37:52Z`: Question 2 (design): Should per-object probe light reach shaders as per-draw L1 spherical harmonics in instance data (option b in the comment) rather than a per-object ambient color by splitting batches (option a)? Recommended: Yes, per-draw L1 SH; directional sky/ground light is the point of probes
+
 ---
 
 ## 533: No dynamic indirect illumination (light probes / DDGI)
