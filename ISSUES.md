@@ -601,16 +601,14 @@ status: open
 priority: low
 kind: feature
 labels: effort:xl, area:assets
-milestone: Physics-and-Scene
+milestone: Assets-and-Materials
 created: 2026-10-11T21:31:43Z
-updated: 2026-11-20T06:32:46Z
+updated: 2026-11-23T02:14:51Z
 +++
 
-Long-term goal: import USD/USDZ into a SceneGraph (via ModelIO or USD bindings), getting the same rendering and animation as glTF. Depends on the scene graph staying format-neutral. Split from #16.
+USD/USDZ files cannot be loaded into a SceneGraph with the same rendering and animation as glTF. The ModelIO importer (#37) reads some USD, but not skinning, blend shapes, material bindings or animation fully. Split from #16.
 
-- `2026-10-12T15:58:57Z`: Decision: use USDKit (new in the 27 SDKs) instead of ModelIO or USD bindings. From the macOS 27 swiftinterface, USDKit exposes core USD: USDStage, USDLayer, USDPrim, Attribute, Relationship, USDTransformOperation, TimeCode, variant sets, and vector/matrix/quaternion types. It has no typed UsdGeom/UsdShade/UsdSkel/UsdLux schema wrappers, so the importer reads schema attributes by name (points, faceVertexCounts/Indices, normals, primvars:st, xformOps, material bindings, skel joints/bindTransforms/jointIndices/jointWeights, blendShapes, time samples for animation). Raises the minimum OS for the importer target to 27; keep it in its own target so the core stays on 26.
-- `2026-10-12T16:16:55Z`: Related: #37 (ModelIO importer; also reads USD via ModelIO, but USDKit is the full-featured path).
-- `2026-10-13T20:21:49Z`: Related: #37 (ModelIO path also reads USD).
+Decided: use USDKit (27 SDKs). It exposes core USD (stage, layers, prims, attributes, relationships, xform ops, time codes, variant sets) but no typed UsdGeom/UsdShade/UsdSkel/UsdLux wrappers, so schema attributes are read by name. It needs OS 27, so the importer goes in its own target and the core stays on 26.
 
 ---
 
@@ -910,15 +908,15 @@ created: 2026-10-13T20:20:23Z
 updated: 2026-11-20T06:33:14Z
 +++
 
-Cameras have only a projection. SceneKit cameras have HDR, exposure, bloom, depth of field, motion blur, SSAO, vignette and color grading.
+Camera post-processing is incomplete compared with SceneKit cameras. Done: SceneGraph.postProcessing (SSAO, exposure, contrast, saturation, vignette, color grading), tone mapping in every renderer (#501) and automatic exposure (#508).
 
-Want: post-processing settings on `Camera`, applied after the scene pass. Start with HDR, tone mapping and bloom.
+Missing:
+- A real HDR path. Each renderer tone-maps into the 8-bit view, so later passes only see clipped color.
+- Bloom, depth of field and motion blur (merged from #399). Motion blur also needs per-pixel velocity (#510).
 
-- `2026-10-13T20:21:45Z`: Related: #43 (scene environment).
-- `2026-10-15T03:32:22Z`: Done: SceneGraph.postProcessing with SSAO (unblurred), exposure, contrast, saturation and vignette, as compute passes after fog; Shadows demo toggles and a golden image. Left: HDR and tone mapping (needs float render targets in the renderers, including MetalSprocketsPBR), bloom and depth of field (need extra textures and blur passes), an SSAO blur.
-- `2026-11-17T17:51:39Z`: Related: #501, #508, #399.
-- `2026-11-22T17:44:30Z`: Autonomous run: checked what is left. Exposure and tone mapping are done for every renderer (#501), automatic exposure too (#508). Left: a real HDR path, bloom, depth of field and an SSAO blur. Bloom and depth of field are blocked on the same design decision as #399: each renderer tone-maps into the 8-bit view, so a bloom pass only sees clipped color. They need the scene drawn linear into an rgba16Float target with tone mapping moved to a final post pass. That question is open on #399 (Q1); #399 Q2 asks whether to merge #399 into #45. Not started until those are answered. The SSAO blur does not depend on HDR and could be split out.
-- `2026-11-22T17:44:30Z`: Question 1 (decision): Should the SSAO blur (independent of the HDR decision on #399) be split into its own issue so it can be done now, leaving #45 for HDR, bloom and depth of field? Recommended: Yes
+Decided (2026-11-23): when bloom or depth of field is on, draw the scene linear into an rgba16Float target, then run bloom (bright pass and blur chain) and tone mapping as post passes into the view; renderers skip their own tone mapping in that path. The default path stays as today. Split into bloom, depth of field and motion blur subtasks when started. The SSAO blur is split out to its own issue.
+
+Related: #43, #501, #508.
 
 ---
 
@@ -1672,11 +1670,11 @@ created: 2026-10-15T02:28:07Z
 updated: 2026-11-20T06:32:46Z
 +++
 
-SceneGraph.Shape has no segment counts, no box chamferRadius, no sphere isGeodesic, and no plane corner radius. SCNText's chamfer, flatness, container frame and wrapping are missing too. Needs SwiftMesh support for some of these. See docs/SceneKitComparison.md.
+SceneGraph.Shape has no segment counts, no box chamfer radius, no geodesic sphere and no plane corner radius. See docs/SceneKitComparison.md. Text options are split to #632.
 
-- `2026-11-22T15:58:26Z`: Autonomous run: punted. SwiftMesh has no chamfered box, geodesic sphere or rounded quad, so these would be built in Shape.swift like tube and pyramid (doable). The blocker is the API: Shape uses synthesized Codable, which does not apply defaults for missing keys, so adding associated values to .box/.sphere/.plane (chamferRadius, isGeodesic, cornerRadius, segment counts) breaks loading every existing archive with a shape and 18 'case let .box(...)'-style pattern matches in Sources/Examples/Tests, unless Shape gets a hand-written Codable. Text options (chamfer, flatness, container frame, wrapping) are a separate, larger piece of work.
-- `2026-11-22T15:58:26Z`: Question 1 (design): How should the new options be expressed: (a) extra associated values with defaults on the existing cases (.box(width:height:length:chamferRadius:segments:), .sphere(radius:segments:isGeodesic:), .plane(width:height:cornerRadius:)) plus a hand-written Codable that keeps old archives loading, or (b) new cases (.roundedBox, .geodesicSphere, .roundedPlane) leaving existing cases untouched? Recommended: (a) with a hand-written Codable: matches SceneKit's properties-on-one-shape model; old archives still load
-- `2026-11-22T15:58:26Z`: Question 2 (decision): Are SCNText's chamfer, flatness, container frame and wrapping part of this issue, or should they be split into their own issue? Recommended: Split text options into a new issue; do box/sphere/plane/segments here
+SwiftMesh has none of these meshes, so they would be built in Shape.swift like tube and pyramid. Shape uses synthesized Codable, which does not default missing keys: new associated values on .box/.sphere/.plane break loading existing archives and about 18 pattern matches unless Shape gets a hand-written Codable.
+
+Decided (2026-11-23): new associated values with defaults on the existing cases (not new .roundedBox/.geodesicSphere/.roundedPlane cases), plus a hand-written Codable that keeps old archives loading.
 
 ---
 
@@ -1763,8 +1761,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:xl, area:renderer
+milestone: Assets-and-Materials
 created: 2026-10-15T02:28:07Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:14:51Z
 +++
 
 SceneKit shader modifiers inject code at geometry, surface, lighting and fragment entry points of the built-in materials. ShaderMaterial (like SCNProgram) replaces the whole shader. Want a way to tweak the built-in Blinn-Phong/PBR shading without rewriting it. See docs/SceneKitComparison.md.
@@ -1824,14 +1823,17 @@ created: 2026-10-15T02:28:07Z
 updated: 2026-11-20T06:32:25Z
 +++
 
-SceneGraphShadows is one global setting. Missing: shadowColor (today only intensity toward black), soft shadows (shadowRadius, shadowSampleCount), cascades, and per-light castsShadow, resolution and bias. See docs/SceneKitComparison.md.
+Shadows have no cascades and no per-light resolution or bias; these are global settings on Shadows. Shadow color, softness and Light.castsShadow are done. See docs/SceneKitComparison.md.
 
-- `2026-10-15T03:04:56Z`: Done: SceneGraphShadows.color (shadow tint) and softness (PCF radius). Left: cascades and per-light castsShadow/resolution/bias (ties into the #71 decision).
-- `2026-11-17T18:25:51Z`: From #502 (closed): when adding cascades, check cascade transitions (blend or seam between cascades) and that bias and PCF softness scale per cascade, since texel size changes between cascades.
-- `2026-11-20T06:27:02Z`: Autonomous run: scoped, not changed. Light.castsShadow already exists, so what is left is cascades and per-light resolution and bias. Findings: (1) All lights share one depth2d_array, so every slice has the same size. Per-light resolution means rendering into a sub-rectangle of a slice and folding the scale and offset into that slice's view-projection, or using one texture per light. (2) Lighting::shadow multiplies the PCF result of every slice a light owns. That is right for point lights, but with cascades the coarse cascade would still blur and darken the near region. The shader must pick the finest cascade that contains the point, in MetalSprocketsLighting.h and in ShadowMask.metal (which today knows only a flat slice count). Directional lights could be treated as cascaded whenever they own more than one slice, so LightingLight (80 bytes, shared with PBR) does not need to grow. (3) Per-light bias is easy: the depth pass already draws one render pass per slice. Punting because the API shape is a design decision.
-- `2026-11-20T06:27:02Z`: Question 1 (design): Where should the cascade and per-light shadow settings live: on Light (like SCNLight: shadowCascadeCount, shadowCascadeSplittingFactor, shadowMapSize, shadowBias), or as global settings on Shadows with optional per-light overrides? Recommended: On Light, as an optional Light.ShadowSettings (cascadeCount, splitFactor, resolutionScale, depthBias, slopeScale), with nil meaning use the Shadows defaults
-- `2026-11-20T06:27:02Z`: Question 2 (decision): For per-light resolution, is it OK to keep one shared shadow map array and give a light a smaller sub-rectangle of its slice (resolution can only go down from Shadows.resolution), instead of one texture per light? Recommended: Yes: sub-rectangles in the shared array; per-light resolution is a fraction of Shadows.resolution
-- `2026-11-20T06:27:02Z`: Question 3 (decision): Should cascade transitions blend between cascades (smoother, two samples near the boundary) or switch hard at the boundary (cheaper, a visible seam)? Recommended: Blend over a small band (about 10% of the cascade's depth range)
+Notes:
+- All lights share one depth2d_array, so every slice is the same size. Per-light resolution means a sub-rectangle of a slice, or one texture per light.
+- Lighting::shadow multiplies every slice a light owns. With cascades the shader must pick the finest cascade containing the point (MetalSprocketsLighting.h and ShadowMask.metal). Bias and PCF softness must scale per cascade, and transitions should not seam (from #502).
+- Per-light bias is easy: the depth pass already draws one pass per slice.
+
+Decided (2026-11-23):
+- Where do the settings live? Decision: an optional Light.ShadowSettings (cascadeCount, splitFactor, resolutionScale, depthBias, slopeScale); nil uses the Shadows defaults.
+- Per-light resolution as sub-rectangles of the shared array (only smaller than Shadows.resolution)? Decision: yes.
+- Blend or hard-switch between cascades? Decision: blend over about 10% of a cascade's depth range.
 
 ---
 
@@ -3889,8 +3891,9 @@ status: open
 priority: low
 kind: task
 labels: area:ui, effort:l, deferred
+milestone: Demo
 created: 2026-10-22T22:00:05Z
-updated: 2026-11-22T18:17:29Z
+updated: 2026-11-23T02:14:51Z
 +++
 
 TransformGizmo (SceneSprocketsGizmos, #154) is mostly not about scene graphs: handle layout, picking, drag math along axes, planes and rings, snapping, and screen-size scaling. Other MetalSprockets apps could use it. Interaction3D is the home for 3D interaction (camera controls, rotation widget), so move the gizmo there, and keep a thin SceneSprockets adapter.
@@ -3908,7 +3911,7 @@ Gestures: do this together with Interaction3D #38 (drag filter), so the gizmo an
 
 After the move: SceneSprocketsGizmos keeps SelectionOutline (or it moves too), and the demo app and SceneSprocketsComposer use the Interaction3D gizmo through the adapter.
 
-- `2026-10-23T12:56:17Z`: Deferred. Leaning toward: rendering moves to MetalSprocketsAddOns (AddOns depends on Interaction3D; Interaction3D owns gizmo geometry/math, no Metal). Gesture model still undecided (see #38, #173).
+Leaning toward: Interaction3D owns the gizmo geometry and math (no Metal); drawing moves to MetalSprocketsAddOns, which depends on Interaction3D. The gesture model is still undecided (#38, #173). PathPointGizmo and ManipulatorGroup (#619) would move the same way.
 
 ---
 
@@ -4016,16 +4019,14 @@ created: 2026-10-23T13:53:20Z
 updated: 2026-11-20T06:32:46Z
 +++
 
-Split from #161 (constraints are done there).
+Scene archives do not save running actions or animation, so a saved scene loses its motion (seen in shadows and scenekit-features: the spinning torus). Split from #161 (constraints are saved there).
 
-- Actions: SceneGraph.Action stores its behavior as runner closures (makeRunner), so no action can be saved today, not even move(by:). Saving them needs a data description of actions (a Codable tree of the built-in kinds: move, rotate, scale, fade, hide, sequence, group, repeat, wait, ...) that builds the runners, plus the running state (elapsed time, key). Action.custom/run and TimingMode.custom are closures: skip them with a warning, or replace them with named, registered behaviors.
-- Animation: AnimationClip and AnimationPlayer are not tied to nodes in the graph (players are owned by the caller), so decide what a saved scene holds: clips with node-path targets (like constraints in #161), and which players auto-play on load.
+- Actions are runner closures, so none can be saved, not even move(by:). Saving needs a Codable description of each built-in kind (move, rotate, scale, fade, hide, wait, sequence, group, repeat, ...) plus timing mode and speed; custom/run actions and TimingMode.custom stay unsaveable. The running state (elapsed time, eased fraction, sequence index, repeat count, start values of absolute actions) is what makes resume hard: restarting from zero double-applies the finished part of relative actions.
+- AnimationClip and AnimationPlayer are owned by the caller, not by nodes, so what an archive holds and what plays on load is a product choice.
 
-Seen in shadows and scenekit-features (spinning torus).
-
-- `2026-11-22T15:31:40Z`: Autonomous run: punted. Actions: every factory in Action.swift builds runner closures, so saving needs a Codable description per built-in kind (move/rotate/scale/fade/opacity/hide/unhide/wait/removeFromParent/sequence/group/repeat/repeatForever, plus timingMode and speed); custom/run and TimingMode.custom stay unsaveable. That part is mechanical. Two things are not: (1) the running state: IntervalRunner keeps elapsed time and eased fraction, absolute actions (move(to:), rotate(to:), scale(to:), fadeOpacity(to:)) capture a start value, and Sequence/Repeat runners keep an index/count, so an exact mid-action resume means serializing the runner tree; restarting from zero is simple but double-applies the finished part of relative actions because the node transform is already saved mid-way. (2) Animation: clips and players are owned by the caller, not by nodes, so what an archive holds and what plays on load is a product choice.
-- `2026-11-22T15:31:40Z`: Question 1 (design): For running actions in a saved scene, should loading resume each action exactly where it was (serialize the runner tree: elapsed, eased fraction, sequence index, repeat count, start values of absolute actions), or is restarting only repeatForever actions from zero (and dropping finite in-progress actions) good enough for a first cut? Recommended: Exact resume: save the runner tree, so a half-finished move(by:) or sequence continues correctly
-- `2026-11-22T15:31:40Z`: Question 2 (design): For animation, should the scene graph own clips and players so archives can hold them (e.g. Node.animationPlayers keyed by name, with clips targeting node paths like constraints in #161, and an autoplay flag per player), or should archives store only clips and leave playing to the app? Recommended: Nodes own named players (clip + node-path targets + isPlaying/time/speed/loop), saved in the archive and resumed on load
+Open questions:
+- Resume actions exactly (save the runner tree), or restart only repeatForever actions? Proposed: exact resume.
+- Should nodes own named animation players (clip with node-path targets, playing, time, speed, loop) saved in the archive? Proposed: yes.
 
 ---
 
@@ -5563,19 +5564,19 @@ status: open
 priority: low
 kind: feature
 labels: effort:l, area:ui, deferred
-milestone: Physics-and-Scene
+milestone: Demo
 created: 2026-10-30T14:40:29Z
-updated: 2026-11-22T17:44:37Z
+updated: 2026-11-23T02:14:51Z
 +++
 
 Comparing two scenes side by side (TreeAppreciator shows two trees with a shared camera) needs two SceneViews. Each one makes its own RenderView, drawable, shadow maps, particle runtimes and pipeline setup, so a new pair pays the setup cost twice.
 
-SceneView has no way to draw several scene graphs into split viewports of one RenderView. SceneGraphElement inside a custom RenderView is possible, but then SceneView features (camera control, onTapAt with SceneViewport, actions, constraints, particles advance) must be rebuilt by hand.
+SceneView has no way to draw several scene graphs into split viewports of one RenderView. SceneGraphElement inside a custom RenderView is possible, but then SceneView features (camera control, taps, actions, constraints, particles) must be rebuilt by hand.
 
-- `2026-11-04T20:59:53Z`: Looked at SceneView (one RenderView, one SceneGraphElement, one camera/manipulator, onTapAt with one SceneViewport). Punting: this needs API design decisions the code cannot answer. (1) Shape of the API: a SceneView taking [(sceneGraph, camera, rect)] viewports, a separate MultiSceneView, or making SceneGraphElement + a reusable 'scene runtime' (actions/constraints/particles advance, tap handling) public so apps compose their own RenderView. (2) Camera control: shared camera across viewports (TreeAppreciator's case) vs per-viewport manipulators, and which viewport gets gestures. (3) Shared resources: one shadow map per viewport or reused across them; particle runtimes per scene graph. (4) onTapAt must report which viewport was hit. Unblocker: pick (1) and (2); the TreeAppreciator side-by-side case with one shared camera is a good first target.
-- `2026-11-07T16:53:24Z`: Autonomous run: still waiting on the 2026-11-04 API decisions (API shape and camera control). Not changed.
-- `2026-11-07T16:59:57Z`: Question 1 (design): Which API shape for several scene graphs or viewports: a SceneView taking viewports, a separate MultiSceneView, or public building blocks (SceneGraphElement plus a reusable scene runtime) for custom RenderViews? And is camera control shared across viewports or per viewport?
-- `2026-11-12T02:06:25Z`: Answer 1: defer this issue for now
+Deferred (2026-11-12). Design points when it comes back:
+- API shape: a SceneView taking viewports, a separate MultiSceneView, or public building blocks (SceneGraphElement plus a reusable scene runtime).
+- Camera control shared across viewports (TreeAppreciator) or per viewport, and which viewport gets gestures.
+- Shadow maps and particle runtimes per viewport or shared; taps must report which viewport was hit.
 
 ---
 
@@ -5709,10 +5710,12 @@ Problems:
 - A bare number does not say its unit (seconds assumed) and does not separate durations from points in time.
 - Inconsistent with platform time types (`TimeInterval`/`Double`, `Duration`, `ContinuousClock.Instant`) that callers usually have.
 
-- `2026-11-04T20:54:25Z`: Looked at the ~70 sites. Punting: this is a public API break across actions, animation, particles, constraints, transactions, SceneView and physics, and the target type is a design decision the code cannot answer. Options seen: (a) TimeInterval/Double everywhere (simple, matches CADisplayLink and AVFoundation); (b) Swift Duration for durations plus Double for accumulated time (typed, but awkward arithmetic and no Float conversion in shaders); (c) Double only for accumulated/absolute time (particle time, animation playhead), keep Float for small per-frame deltas and durations. Also: whether to keep Float overloads as deprecated shims. Unblocker: pick a/b/c and say whether to keep deprecated Float overloads.
-- `2026-11-04T21:10:48Z`: Part of #255 (very large worlds).
-- `2026-11-07T16:22:23Z`: Autonomous run: still waiting on the 2026-11-04 decision (time type a/b/c, and whether to keep deprecated Float overloads). Not changed.
-- `2026-11-07T16:59:57Z`: Question 1 (decision): Which time type: (a) TimeInterval/Double everywhere, (b) Duration for durations plus Double for accumulated time, or (c) Double only for accumulated/absolute time? And keep the Float overloads as deprecated shims?
+Changing it is a public API break across all of these. Part of #255.
+
+Open question: which time type, and keep Float overloads as deprecated shims?
+- (a) TimeInterval/Double everywhere: simple, matches CADisplayLink and AVFoundation.
+- (b) Duration for durations, Double for accumulated time: typed, but awkward arithmetic.
+- (c) Double only for accumulated or absolute time (particle time, animation playhead); Float stays for per-frame deltas and durations.
 
 ---
 
@@ -5781,24 +5784,11 @@ Node transforms and accumulated world transforms are simd_float4x4. Float32 reso
 
 Affects: world transform accumulation, bounds, hit testing, culling, physics hand-off, archives.
 
-Related: #250 (ECS storage), #252 (Float time).
+Related: #250 (ECS storage), #252 (Float time). No orbit work planned.
 
-\- `2026-11-04T21:10:48Z`: Now an umbrella. Sub-issues:
-- #256 Node and world transforms are Float (xl, the big refactor)
-- #253 Blinn-Phong precision far from origin (m)
-- #254 PBR precision far from origin (m, spans MetalSprocketsPBR)
-- #257 Shadows, fog, particles, gizmos, culling use world-space Float (m)
-- #258 SwiftJolt double precision unknown (s, investigation)
-- #259 Physics cannot run far from origin (l)
-- #260 Fast-moving active objects jitter (m)
-- #261 One depth range cannot hold parts and planets (l)
-- #252 Float time (needs an API decision)
-No orbit work planned.
+Done: camera-relative rendering for Blinn-Phong, PBR, shadows, fog, particles, gizmos and culling (#253, #254, #257), and the SwiftJolt precision check (#258). Left: #256 (Double transforms, the core refactor), #259 and #260 (physics, build on #256), #261 (depth range), #262 (particles), #252 (time type).
 
-Doable now without a huge refactor: #253, #254, #257, #258. These work with today's Float world transforms (camera-relative rendering helps SidraLine-scale scenes immediately) and do not depend on #256.
-Blocked or big: #256 (core refactor); #259 and #260 build on #256 and #258; #261 is a renderer architecture change; #252 waits on a decision.
-
-- `2026-11-07T16:59:58Z`: Question 1 (design): #256, #259, #260 and #261 depend on this. How should origin shifts work across node transforms, physics and rendering (floating origin, Double node transforms, or a moving reference frame)?
+Open question: how should origin shifts work across node transforms, physics and rendering: a floating origin, Double node transforms, or a moving reference frame? #256, #259, #260 and #261 depend on it.
 
 ---
 
@@ -5871,43 +5861,36 @@ For #259 the alternative needs no SwiftJolt change: keep Jolt in float and simul
 ## 259: Physics cannot run far from the world origin
 
 +++
-status: open
+status: blocked
 priority: low
 kind: feature
-labels: area:physics, effort:l, subtask, large-worlds, blocked
+labels: area:physics, effort:l, subtask, large-worlds
 milestone: Big-World
 created: 2026-11-04T21:10:37Z
-updated: 2026-11-22T18:17:43Z
+updated: 2026-11-23T02:25:52Z
 +++
 
 SceneSprocketsPhysics hands world-space Float positions to Jolt. Far from the origin, simulation near the active area loses precision. There is no floating origin or local physics frame around the active area.
 
-Part of #255.
-
-- `2026-11-07T16:53:42Z`: Autonomous run: scoped, not changed. A local physics frame is easy to add (subtract an origin from node world positions before Jolt, add it back when writing poses), but node world transforms are Float (#256): at 2^20 m a position can only change in 0.125 m steps, so writing the precise result back to the nodes still quantizes it, and dynamic bodies would visibly jump. A real fix needs Double (or origin-relative) node transforms and the #255 origin-shift design that #260 also depends on. Punting: depends on #256/#255. Unblocker: settle how origin shifts work across nodes, physics and rendering (#255), or do #256 first.
-- `2026-11-22T18:17:43Z`: Autonomous run: unchanged; depends on #256 (effort:xl) and the open origin-shift design question on #255 (Q1). Labelled blocked.
+A local physics frame alone is not enough: node world transforms are Float (#256), so at 2^20 m a position only changes in 0.125 m steps and bodies would visibly jump when poses are written back. Blocked on #256 and the origin-shift design on #255. Part of #255.
 
 ---
 
 ## 260: Fast-moving active objects jitter
 
 +++
-status: open
+status: blocked
 priority: low
 kind: feature
-labels: area:physics, effort:m, subtask, large-worlds, blocked
+labels: area:physics, effort:m, subtask, large-worlds
 milestone: Big-World
 created: 2026-11-04T21:10:37Z
-updated: 2026-11-22T18:17:37Z
+updated: 2026-11-23T02:25:52Z
 +++
 
 At orbital speeds (several km/s) the active object's coordinates change by kilometers per second, so precision near it degrades and rendering and physics jitter. There is no reference frame that keeps the active object near rest (KSP's Krakensbane).
 
-Part of #255.
-
-- `2026-11-07T16:30:16Z`: Autonomous run: not changed. A Krakensbane-style moving reference frame (subtract the active object's velocity from the whole world each step, keep the object near rest) needs a world-space origin that can shift, which is #259 (physics far from the origin, floating origin) and #256 (Double transforms, effort:xl). Without those, the frame offset just moves the precision loss elsewhere. Punting: depends on #259 and #256 and on the #255 design for how origin shifts reach physics, rendering and node transforms. Unblocker: settle #255's origin-shift design (or do #259 first).
-- `2026-11-17T06:02:51Z`: Related: #413 (continuous collision / motion quality option for fast bodies).
-- `2026-11-22T18:17:37Z`: Autonomous run: unchanged; still depends on #259 -> #256 (effort:xl) and the #255 design. Labelled blocked.
+A moving reference frame needs a world origin that can shift: blocked on #259, #256 and the origin-shift design on #255. Part of #255. Related: #413 (continuous collision for fast bodies).
 
 ---
 
@@ -5923,12 +5906,11 @@ created: 2026-11-04T21:10:38Z
 updated: 2026-11-20T06:32:40Z
 +++
 
-Reverse-Z Float depth cannot resolve both nearby parts and very distant bodies in one pass. There is no scaled-space pass or multi-range (nested frusta) rendering. Related: #248 (several viewports/passes in one view).
+Reverse-Z Float depth cannot resolve both nearby parts and very distant bodies in one pass. There is no scaled-space pass or multi-range (nested frusta) rendering. Part of #255. Related: #248 (several viewports or passes in one view).
 
-Part of #255.
+Options: a scaled-space pass (distant bodies drawn first, scaled toward the camera, then near geometry with cleared depth), or nested frusta (several depth ranges, far to near, one pass each). Either way SceneGraphElement must run several passes.
 
-- `2026-11-07T16:53:58Z`: Autonomous run: not changed. The renderer already uses reverse-Z Float depth; the remaining fix is architectural: either a scaled-space pass (distant bodies drawn first, scaled toward the camera, then near geometry over them with cleared depth) or nested frusta (several depth ranges, far to near, each with its own pass). Both need decisions about how nodes are assigned to a range or scale (per node flag, by distance, by category mask) and how SceneGraphElement runs several passes, which overlaps #248's multi-pass/viewport API and #255's design. Punting: needs that design. Unblocker: pick scaled space vs nested frusta and how nodes opt in.
-- `2026-11-07T16:59:57Z`: Question 1 (design): Scaled-space pass or nested frusta for huge depth ranges, and how do nodes opt in (per-node flag, by distance, or by category mask)?
+Open question: scaled space or nested frusta, and how do nodes opt in (per-node flag, by distance, or by category mask)?
 
 ---
 
@@ -5944,14 +5926,9 @@ created: 2026-11-04T21:19:04Z
 updated: 2026-11-20T06:32:40Z
 +++
 
-Left over from #257. Particle simulation and drawing (SceneParticleSystem simulate(view:) and runtime render(projection:view:), MetalSprocketsParticles) and the transform gizmo (TransformGizmo, GraphicsContext3DRenderPipeline with projection * view) still work in world-space Float, so far from the origin they jitter or misplace like the other paths did before #251/#253/#257. Particle positions live in MetalSprocketsParticles buffers, so a fix spans that package.
+Particles are simulated and stored as world-space Float in MetalSprocketsParticles buffers, so far from the origin they jitter or misplace (at 2^20 m positions resolve only about 0.125 m). Drawing camera-relative alone does not fix it; storage must change, in that package. Left over from #257 (the transform gizmo part is fixed). Part of #255.
 
-Part of #255.
-
-- `2026-11-07T16:00:59Z`: Transform gizmo part fixed: the overlay draws camera-relative (origin minus camera position, computed in Double) with a rotation-only view, and SceneViewport.worldSizeOfPoint (which sizes the handles) projects camera-relative too. New SceneViewport.rotationOnlyViewMatrix inverts the camera rotation alone, so it stays precise far away. Test drawsTheSameFarFromOrigin (translate/rotate/scale at 2^20) failed before with 1159-9846 of 40000 pixels differing; now passes. Title narrowed to the particle part, which is still open: particle positions live in MetalSprocketsParticles buffers, so it needs a change in that package.
-- `2026-11-08T02:26:28Z`: Autonomous run: not changed. Particle positions are simulated and stored in world-space Float inside MetalSprocketsParticles buffers, so a fix needs a reference-frame choice in that package (simulate relative to the emitter or a floating origin, and pass a camera-relative view to render). That is the same design question as #255 (floating origin vs Double transforms vs moving reference frame). Unblocker: answer #255's question, then this can follow the chosen frame in MetalSprocketsParticles.
-- `2026-11-22T15:35:58Z`: Autonomous run: punted again. #255's reference-frame question is still unanswered. A render-only change (camera-relative view for particle drawing) would not fix it alone: particle positions are stored as world-space Float in MetalSprocketsParticles buffers, which at 2^20 m only resolve about 0.125 m, so storage must move to an emitter-relative or floating-origin frame in that package.
-- `2026-11-22T15:35:59Z`: Question 1 (design): Should MetalSprocketsParticles simulate and store particles relative to each emitter (emitter world origin kept on the CPU, offset applied camera-relative at draw), independent of #255's floating-origin decision? Recommended: Yes: emitter-relative positions plus a camera-relative emitter offset at draw; works with any later #255 choice
+Decided (2026-11-23): simulate and store particles relative to each emitter (emitter origin on the CPU, applied camera-relative at draw), independent of #255's decision? Decision: yes; it works with any later #255 choice.
 
 ---
 
@@ -6162,10 +6139,10 @@ status: open
 priority: low
 kind: enhancement
 labels: area:scenegraph, effort:m, subtask
-milestone: Performance-2
+milestone: Big-World
 depends: 265
 created: 2026-11-05T18:22:50Z
-updated: 2026-11-20T06:33:02Z
+updated: 2026-11-23T02:14:51Z
 +++
 
 Nodes in a scene graph store their fields in the SwiftECS World (#265). Per-node costs are fine for the scenes the demos and glTF samples use (hundreds to a few thousand nodes) but too high for large or heavily animated scenes.
@@ -6191,10 +6168,11 @@ Findings:
 - Observation (Node is @Observable) is not the main cost: with access/withMutation removed, write was 218-234 ns (from ~242). The rest is the SwiftECS store write, didChangeInWorld bookkeeping and the Transform3D update; not yet split.
 - Create + attach (~13 us per node) is the largest per-node cost and was not measured before.
 - Low Power Mode runs are ~30% slower across the board; measure in High Power Mode.
+- Teardown dominates create + attach (2026-11-22, 20k nodes: ~21 us/node, of which ~16-17 us is dropping the SceneGraph). Detach copies 25 world fields back to local storage at ~600 ns each (~14.5 us/node): fields never read have no cached ComponentRef, so each copy does a full World lookup. Destroying entities is ~1.7 us/node.
 
-- `2026-11-22T16:07:20Z`: Autonomous run: punted with findings. Added teardown_ns to NodePerformanceBenchmark (committed). Release, 20k-node graphs: create_attach ~21 us/node, of which teardown (dropping the SceneGraph) is ~16-17 us/node. Instrumented Node.detach: copying the 25 world fields back to local storage is ~14.5 us/node, ~580-650 ns per field for every field type alike; destroying entities is ~1.7 us/node. Each copyBack takes NodeFieldSlot's slow path: fields never read have no cached ComponentRef, so readField does currentBinding + World.componentRef (generic metadata lookups, location hash) per field. Copying every node's fields before destroying any entity (to keep refs valid) saved only ~3%, so it was not kept. Bigger wins need a design choice: read all of an entity's components in one World lookup (needs a SwiftECS API that walks an entity's row once), or skip copy-back for nodes that die with the graph (only nodes still referenced from outside need their values back).
-- `2026-11-22T16:07:20Z`: Question 1 (design): To cut graph teardown (~14.5 us/node spent copying 25 fields out of the World), which approach: (a) a SwiftECS API that reads/exports a whole entity row in one lookup, used by copyBack; (b) skip copy-back for nodes that are not referenced outside the graph when it deinits; or (c) keep the World alive while any detached node still points into it, so detaching copies nothing? Recommended: (a): fixes teardown and also speeds clone/archive paths; no lifetime tricks
-- `2026-11-22T16:07:20Z`: Question 2 (decision): What per-node targets close this issue (e.g. create+attach+teardown under 2 us/node, write under 200 ns, traversal under 120 ns at 100k nodes, Release, High Power Mode)? Recommended: Teardown under 2 us/node and create+attach under 5 us/node; read/write/traversal back to the 2026-11-06 numbers
+Open questions:
+- How to cut teardown: (a) a SwiftECS API that exports a whole entity row in one lookup, (b) skip copy-back for nodes not referenced outside the graph, or (c) keep the World alive while detached nodes point into it? Proposed: (a); it also speeds clone and archive.
+- What targets close this issue? Proposed: teardown under 2 us/node, create + attach under 5 us/node, read/write/traversal back to the 2026-11-06 numbers.
 
 ---
 
@@ -7335,15 +7313,11 @@ updated: 2026-11-20T06:32:25Z
 The renderer always uses reverse-Z (projection multiplied by .reverseZ, with a matching depth compare and clear value). There is no way to switch a view between reverse-Z and normal Z, and no automatic choice. Code that reads or writes depth (shadow maps, hit testing, depth debug views, post-processing, custom shader materials, gizmos, the sky background) assumes one convention, so changing it in one place gives wrong results somewhere else.
 
 ## Proposed behavior (per schwa)
-Switch between normal Z and reverse-Z automatically, with no side effects: everything that uses depth keeps working in both modes.
+The depth mode is user-controlled through an API, with no side effects: everything that uses depth keeps working in both modes. Changing MetalSprocketsPBR, MetalSprocketsAddOns and MetalSprocketsParticles in step is fine.
 
-- `2026-11-08T02:42:54Z`: Autonomous run: scoped, not changed. The reverse-Z assumption is in 11 SceneSprockets source files plus 16 in MetalSprocketsPBR, MetalSprocketsAddOns (ShadowMaskPass, grid) and MetalSprocketsParticles (depth compare, clear value, projection, or shaders that read depth). Supporting both modes means a depth-mode value passed through all of them and shader variants in three external packages. Punting: cross-package, and 'automatic' needs a rule.
-- `2026-11-20T05:58:14Z`: Question 1 (design): What should pick the depth mode automatically: normal Z only when the depth format is not float, or a SceneView option with an automatic default?
-- `2026-11-20T05:58:14Z`: Question 2 (decision): Is it acceptable to change MetalSprocketsPBR, MetalSprocketsAddOns and MetalSprocketsParticles in step to support both depth modes?
-- `2026-11-20T05:59:06Z`: Answer 1: User controlled - need api
-- `2026-11-20T05:59:11Z`: Answer 2: Yes!
-- `2026-11-21T01:50:08Z`: Autonomous run: scoped again after the answers (user-controlled API; changing all three packages is fine). The reverse-Z assumption is now in about 45 files in this repo (SceneSprockets and MetalSprocketsPBR) and 24 in MetalSprocketsAddOns and MetalSprocketsParticles. SceneSprockets uses those two as remote packages (upToNextMinor 0.3.0 and 0.1.0), so their changes must be released before this repo can use them. I cannot push or tag releases. Doing only the in-repo part would break gizmos and particles in normal-Z views, which goes against 'no side effects'. Filed MetalSprocketsAddOns#137 and MetalSprocketsParticles#246 for the upstream work. Punting until they are released.
-- `2026-11-21T01:50:08Z`: Question 3 (decision): Should the upstream depth-direction work (MetalSprocketsAddOns#137, MetalSprocketsParticles#246) land and be released first, with this issue done afterwards against the new versions? Recommended: Yes: fix and release the two packages first, then do SceneSprockets and MetalSprocketsPBR in one change that bumps the dependency versions
+The reverse-Z assumption is in about 45 files here (SceneSprockets, MetalSprocketsPBR) and 24 in MetalSprocketsAddOns and MetalSprocketsParticles, which this repo uses as released packages. Doing only the in-repo part would break gizmos and particles in normal-Z views. Upstream work: MetalSprocketsAddOns#137, MetalSprocketsParticles#246.
+
+Decided (2026-11-23): land and release the two packages first, then do SceneSprockets and MetalSprocketsPBR in one change that bumps them? Decision: yes.
 
 ---
 
@@ -7840,12 +7814,14 @@ Expected: a list, per slide, of what is data and what needs code, and the archiv
 ## 346: No scripting: scene logic can only be written in Swift
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:scenegraph, effort:xl
+milestone: Physics-and-Scene
 created: 2026-11-07T18:54:15Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:16:30Z
+closed: 2026-11-23T02:16:30Z
 +++
 
 All scene behavior (reacting to taps, per-frame updates, custom actions, game logic) must be written in Swift and compiled into the app. There is no way to attach logic to a scene as data, for example in a stored scene file or from a tool like Composer, without rebuilding.
@@ -7854,6 +7830,8 @@ All scene behavior (reacting to taps, per-frame updates, custom actions, game lo
 A JavaScript API (for example through JavaScriptCore) so logic can be added to scenes with JavaScript.
 
 Related: #345 (what in the keynote needs code).
+
+- `2026-11-23T02:16:30Z`: this is an ecs problem right now
 
 ---
 
@@ -7886,18 +7864,18 @@ status: open
 priority: low
 kind: feature
 labels: area:ui, effort:m
-milestone: Physics-and-Scene
+milestone: Demo
 created: 2026-11-07T19:00:30Z
-updated: 2026-11-20T06:32:46Z
+updated: 2026-11-23T02:14:51Z
 +++
 
-SceneView's camera control (configured with SceneCameraControl, #312) stops as soon as a drag or scroll ends: there is no inertia (the camera does not keep moving and slow down). It also has no fly or pan-only interaction modes, which SCNCameraController offers. Interaction3D, which SceneView uses for camera control, has neither.
+SceneView's camera control (#312) has no configurable inertia and no pan-only mode, which SCNCameraController offers. Orbit coasts, but pan and zoom stop as soon as the gesture ends. Fly mode is done (#313).
 
-- `2026-11-08T01:33:09Z`: Related: #313. Interaction3D now has an FPV fly mode that can start from the bound camera matrix (Interaction3D #39-#42, on main after 0.1.16, untagged). That covers the fly-mode part of this issue once SceneSprockets uses it; inertia and pan-only modes are still missing.
-- `2026-11-08T02:43:06Z`: Autonomous run: checked, not changed. Inertia: SceneView's orbit drag already has momentum (Interaction3D InteractiveCameraModifier uses CoreDragModifier with momentum: true for rotation); pan (Command-drag, momentum: false) and zoom have none, and Interaction3D exposes no option to turn momentum on or off, so SceneCameraControl cannot make it configurable without an Interaction3D change. Fly mode: same as #313, waiting on an Interaction3D release (0.1.17) with the FPV fixes. Punting: both parts need Interaction3D. Unblocker: tag Interaction3D 0.1.17, and decide whether pan and zoom should coast too (an Interaction3D issue).
-- `2026-11-22T16:44:56Z`: Autonomous run (Interaction3D 0.2.2): fly mode is done (CameraControl.Mode.fly, #313). Inertia and pan-only are still blocked in Interaction3D: InteractiveCameraModifier hard-codes CoreDragModifier momentum (true for orbit, false for the Command-drag pan) and the zoom gesture has none, with no parameter; InteractiveCameraMode only has turntable and arcball, so there is no pan-only (map-style) camera. Interaction3D's RTSMovementModifier pans with one finger and coasts, but it drives an RTSCameraPose, not SceneView's camera matrix binding.
-- `2026-11-22T16:44:56Z`: Question 1 (decision): May I add to Interaction3D (and release it) a momentum option for interactiveCamera's orbit, pan and zoom gestures, and a pan-only InteractiveCameraMode, then expose them as CameraControl.inertia and CameraControl.Mode.pan? Recommended: Yes: Interaction3D gets per-gesture momentum flags plus a .pan mode; CameraControl gets inertia: Bool (default true for all three) and Mode.pan
-- `2026-11-22T16:44:57Z`: Question 2 (decision): Should pan and zoom coast after release by default (like orbit does today), or keep stopping immediately unless inertia is turned on? Recommended: Coast by default for orbit, pan and zoom, matching SCNCameraController's inertia
+Both parts need Interaction3D: InteractiveCameraModifier hard-codes momentum per gesture, and InteractiveCameraMode has only turntable and arcball. Its RTSMovementModifier pans and coasts, but drives an RTSCameraPose, not SceneView's camera matrix.
+
+Decided (2026-11-23): add per-gesture momentum flags and a .pan mode to Interaction3D (and release it), exposed as CameraControl.inertia and CameraControl.Mode.pan.
+
+Open question: should pan and zoom coast by default, like orbit? Proposed: yes, matching SCNCameraController.
 
 ---
 
@@ -8293,8 +8271,9 @@ status: open
 priority: low
 kind: task
 labels: effort:s, area:ui, research
+milestone: Demo
 created: 2026-11-10T18:37:12Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:14:51Z
 +++
 
 SceneView takes most of its configuration as initializer arguments and an `Options` option set:
@@ -8320,8 +8299,9 @@ status: open
 priority: low
 kind: task
 labels: effort:m, area:scenegraph, research
+milestone: Physics-and-Scene
 created: 2026-11-10T18:39:06Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:14:13Z
 +++
 
 Building a hierarchy today means making each node and attaching it to its parent one at a time:
@@ -8924,17 +8904,19 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, area:renderer
-milestone: VisionOS
+milestone: Rendering
 depends: 380
 created: 2026-11-12T19:17:30Z
-updated: 2026-11-20T06:32:33Z
+updated: 2026-11-23T02:14:51Z
 +++
 
-Passes that read or write screen-space textures (outline via JumpFlood/SilhouetteMask, post effects, anything sampling depth) assume one non-layered target. A stereo drawable is a layered texture (one slice per eye) so these passes would break or only cover one eye.
+Screen-space passes are skipped in stereo (visionOS immersive). SceneGraphElement drops the post targets whenever stereoViews is set, so for both eyes there is no shadow mask (renderers that rely on it lose shadows), ambient occlusion, fog, color adjust, auto exposure or soft particles. SelectionOutline (JumpFlood/SilhouetteMask) has no stereo path.
 
-- `2026-11-22T16:45:20Z`: Autonomous run: punted for scope. Current behavior: SceneGraphElement sets postTargets to nil whenever stereoViews is set (SceneGraphRenderer.swift ~208), so in stereo the post passes do not break, they are skipped for both eyes: shadow mask (renderers that rely on it lose shadows unless the casters' material samples shadows in shader), ambient occlusion, fog, color adjust, auto exposure, and the soft particle pass. SelectionOutline (JumpFlood/SilhouetteMask) has no stereo path. Supporting stereo means each pass reads and writes texture2d_array targets (one slice per eye, layered render or per-slice dispatch, per-eye view-projection for depth reconstruction). That is testable on macOS with layered offscreen targets (as StereoRenderTests do), but it is separate work per pass.
-- `2026-11-22T16:45:20Z`: Question 1 (decision): May I split this into one issue per pass (stereo shadow mask, stereo fog, ...) and close #382 as an umbrella? Recommended: Yes: one subtask per pass under #382
-- `2026-11-22T16:45:29Z`: Question 2 (decision): Which screen-space pass should work in stereo first (options listed in the comment above)? Recommended: Shadow mask, then fog
+Each pass needs texture2d_array targets (one slice per eye) and a per-eye view-projection for depth reconstruction. This is testable on macOS with layered offscreen targets, as StereoRenderTests do.
+
+Decided (2026-11-23):
+- Split into one subtask per pass under this issue? Decision: yes.
+- Which pass first? Decision: shadow mask, then fog.
 
 ---
 
@@ -8988,23 +8970,21 @@ status: open
 priority: medium
 kind: feature
 labels: area:demo, effort:m
-milestone: VisionOS
+milestone: Demo
 depends: 386
 created: 2026-11-12T21:05:10Z
-updated: 2026-11-20T06:32:33Z
+updated: 2026-11-23T02:14:51Z
 +++
 
-SceneImmersiveElement (#381) exists but no app uses it. SceneSprocketsDemo has no ImmersiveSpace scene and no control to open one, so stereo rendering has never run on a device.
+The demo's visionOS immersive space (SceneImmersiveElement, #381) has never run on a device. The immersive space and toolbar toggle exist, and the window-edits-while-immersive crash is fixed (#386).
 
-The visionOS build of SceneSprocketsDemo also fails: CodeSign of SceneSprocketsDemoSupport_SceneSprocketsDemoSupport.bundle reports 'bundle format unrecognized, invalid, or unsuitable' (build with -destination generic/platform=visionOS).
+The visionOS build from GitHub fails to codesign: SceneSprocketsAddOns_SceneSprocketsTerrain.bundle has a top-level Resources folder. The fix (renamed to Heightmaps) is SceneSprocketsAddOns 0f5cd695, committed but not pushed; with local packages (MetalSprockets Workspaces/SceneSprocketsDemo.xcworkspace) the demo builds for visionOS.
 
-- `2026-11-12T21:24:48Z`: The immersive space and toggle are written (uncommitted) but crash when the window edits the scene while immersive; blocked on #386.
-- `2026-11-12T21:25:34Z`: Immersive space and toolbar toggle committed. Known: crashes when the window edits the scene while immersive (data race, #386). Leave open until #386 lands.
-- `2026-11-12T21:46:10Z`: #386 is fixed: the demo's immersive space now renders ScenePresenter snapshots. Needs a device check: open immersive, then use the window (keynote slides) while immersive.
-- `2026-11-16T19:43:27Z`: Related: #392 (particle crash seen in a session that used the immersive space).
-- `2026-11-22T15:12:55Z`: visionOS build failure fixed: the codesign error had moved to SceneSprocketsAddOns_SceneSprocketsTerrain.bundle, whose top-level 'Resources' folder codesign rejects in shallow bundles. Renamed it to Heightmaps in SceneSprocketsAddOns (0f5cd695, committed, not pushed). With local packages (MetalSprockets Workspaces/SceneSprocketsDemo.xcworkspace) the demo builds for generic/platform=visionOS. Not closing: the immersive space has still never run on a device, and the demo here only picks up the fix once SceneSprocketsAddOns is pushed.
-- `2026-11-22T15:12:55Z`: Question 1 (verify): On a Vision Pro, does the demo's immersive space open and render, and can you use the window (keynote slides) while immersive without a crash? Recommended: Run from MetalSprockets Workspaces/SceneSprocketsDemo.xcworkspace on device and report the result
-- `2026-11-22T15:12:55Z`: Question 2 (decision): May I push SceneSprocketsAddOns 0f5cd695 (Terrain Resources folder rename) so the demo builds for visionOS from GitHub? Recommended: Yes, push it and update SceneSprockets' resolved SceneSprocketsAddOns
+To do:
+- Verify on a Vision Pro: the immersive space opens and renders, and the window (keynote slides) works while immersive without a crash.
+- Push SceneSprocketsAddOns 0f5cd695 and update the resolved version here.
+
+Related: #392 (particle crash seen in a session that used the immersive space).
 
 ---
 
@@ -9288,56 +9268,56 @@ created: 2026-11-16T20:03:49Z
 updated: 2026-11-20T06:33:14Z
 +++
 
-There is no way to project an image onto existing meshes, for example bullet holes, footprints or road markings.
+There is no way to project an image onto existing meshes, for example bullet holes, footprints or road markings. Moved from SceneSprocketsAddOns #24.
 
-Moved from SceneSprocketsAddOns #24.
+A decal draws its projector box, reads scene depth, rebuilds the world position, and blends the decal texture onto color. Scene depth is only readable after the scene pass, so decals need the second pass soft particles use, and post targets (off in stereo, #382, and with memoryless depth). Lit decals need surface normals (#510).
 
-- `2026-11-22T16:45:55Z`: Autonomous run: punted for design. Mechanics: a deferred-style decal draws its projector box, reads scene depth, rebuilds the world position (camera-relative, as fog does), maps it into the decal's unit box, samples the decal texture and blends it onto color. Scene depth is only readable after the scene pass, so decals need the second pass that soft particles already use (ParticleDepthCopyPass + a load-color pass), and post targets, which are off in stereo (#382) and with memoryless depth. Open: the API (a new Node.Content case breaks exhaustive switches again; a DecalMaterial on a box mesh with its own renderer fits MaterialRenderer but must run in that later pass; or a Node.decals field), whether decals are lit (unlit blend is simple; lit needs the surface normal, i.e. a normal target, #510), and angle fade / normal-map decals.
-- `2026-11-22T16:45:55Z`: Question 1 (design): How should a decal be expressed: a DecalMaterial on a box-mesh node (the node's transform is the projector box; drawn by a DecalRenderer after the scene pass), or a dedicated Node field/content case? Recommended: DecalMaterial on a box node: no new Content case, works with archives and the inspector
-- `2026-11-22T16:45:55Z`: Question 2 (decision): For the first version, are unlit decals enough: the texture is blended onto the lit scene color, with alpha and an angle fade? Recommended: Yes, unlit with angle fade; lit and normal-map decals after #510 provides normals
+Decided (2026-11-23):
+- API? Decision: a DecalMaterial on a box-mesh node (its transform is the projector box), drawn by a DecalRenderer after the scene pass; no new Content case.
+- Are unlit decals (alpha and angle fade) enough at first? Decision: yes; lit and normal-map decals after #510.
 
 ---
 
 ## 398: No screen-space reflections
 
 +++
-status: open
+status: blocked
 priority: low
 kind: feature
-labels: effort:m, area:renderer, blocked
+labels: effort:m, area:renderer
 milestone: Rendering-2
 created: 2026-11-16T20:03:49Z
-updated: 2026-11-22T18:17:48Z
+updated: 2026-11-23T02:25:52Z
 +++
 
-Shiny surfaces reflect only the environment map. They do not reflect other objects in the scene.
+Shiny surfaces reflect only the environment map. They do not reflect other objects in the scene. Moved from SceneSprocketsAddOns #25.
 
-Moved from SceneSprocketsAddOns #25.
-
-- `2026-11-22T18:17:48Z`: Autonomous run: skipped. SSR traces reflected rays through the depth buffer, so it needs per-pixel normals and roughness, which the renderer does not produce (#510, questions pending); without a temporal filter (#496, blocked on #510) rough reflections are noisy. Labelled blocked on #510.
+Blocked on #510: SSR traces reflected rays through the depth buffer and needs per-pixel normals and roughness, which the renderer does not produce. Without a temporal filter (#496) rough reflections are noisy.
 
 ---
 
 ## 399: No bloom, depth of field or motion blur
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: effort:m, area:renderer
 milestone: Rendering-2
 created: 2026-11-16T20:03:49Z
-updated: 2026-11-20T06:33:14Z
+updated: 2026-11-23T02:28:07Z
+closed: 2026-11-23T02:28:07Z
 +++
 
-Post-processing has exposure, contrast, saturation, vignette and ambient occlusion. It has no bloom, depth of field or motion blur.
+Post-processing has no bloom, depth of field or motion blur. Moved from SceneSprocketsAddOns #26. Overlaps #45.
 
-Moved from SceneSprocketsAddOns #26.
+Every renderer tone-maps into the view's 8-bit target (#501), so a bloom pass would only see clipped color. Bloom needs the scene drawn linear into an rgba16Float target, a bright-pass and blur chain, then tone mapping and exposure as a final post pass. Motion blur also needs per-pixel velocity (#510).
 
-- `2026-11-17T17:51:43Z`: Related: #45.
-- `2026-11-22T16:57:38Z`: Autonomous run: punted for design. Since #501 every renderer tone-maps its own output into the view's 8-bit target, so a bloom pass would only see clipped, tone-mapped color (thresholding near white, no real HDR highlights). Proper bloom needs: renderers in their existing linearOutput mode drawing into a float (rgba16Float) intermediate target, a bright-pass + downsample/upsample blur chain, then tone mapping and exposure moved into a final post pass that writes the view. That changes where tone mapping happens for every renderer and adds a full-screen float target in frames that use it. Depth of field and motion blur need depth (available as post targets) and, for motion blur, per-pixel velocity (#510). Overlaps #45, which tracks the same HDR/bloom/DoF goals.
-- `2026-11-22T16:57:38Z`: Question 1 (design): For bloom, may the renderer switch to an HDR path when bloom is on: scene drawn linear into an rgba16Float target, then bloom and tone mapping as post passes into the view (renderers skip their own tone mapping in that path)? Recommended: Yes, only when bloom (or later DoF) is enabled; the default path stays as today
-- `2026-11-22T16:57:38Z`: Question 2 (decision): Should #399 be merged into #45 (same goals), keeping one issue per effect: bloom, depth of field, motion blur (after #510)? Recommended: Yes: close #399 as a duplicate of #45 and split #45 into bloom / DoF / motion blur subtasks
+Open questions:
+- When bloom (or depth of field) is on, switch to that HDR path, with renderers skipping their own tone mapping? Proposed: yes; the default path stays as today.
+- Merge this into #45 and split #45 into bloom, depth of field and motion blur? Proposed: yes.
+
+- `2026-11-23T02:28:07Z`: Merged into #45, which now covers HDR, bloom, depth of field and motion blur with the decided HDR path.
 
 ---
 
@@ -9348,17 +9328,18 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, area:renderer
+milestone: Rendering-2
 created: 2026-11-16T20:03:49Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:11:50Z
 +++
 
-Distant meshes are drawn as full geometry or a lower LOD. They cannot be replaced by billboard imposters (pre-rendered views).
+Distant meshes are drawn as full geometry or a lower LOD. They cannot be replaced by billboard imposters (pre-rendered views). Moved from SceneSprocketsAddOns #33. Related: #596 (billboards).
 
-Moved from SceneSprocketsAddOns #33.
+Pieces: a bake step that renders a node from N directions into an atlas with OffscreenRenderer; an impostor material that turns a quad toward the camera and picks the nearest atlas cell; and LevelOfDetail support, since a level today is only a mesh.
 
-- `2026-11-22T16:57:55Z`: Autonomous run: punted for design. Pieces: (1) a bake step that renders a node's mesh from N directions into an atlas with OffscreenRenderer (color + alpha, optionally normals and depth for relighting); (2) an impostor material/shader that turns a quad toward the camera and picks (or blends) the atlas cell nearest the view direction; (3) LevelOfDetail integration: today a level is only a MetalMesh (or nil), so it needs a way to name an impostor instead. Open choices: view layout (a horizontal ring of 8-16 views for upright objects like trees, or an octahedral hemisphere for any object), baked lighting vs a normal atlas lit at runtime, and when baking runs (on demand, cached per mesh+material). Billboards themselves overlap #596 (billboards with alignment options).
-- `2026-11-22T16:57:55Z`: Question 1 (design): Which impostor kind first: horizontal ring of views with baked lighting (cheap, fits trees and buildings seen from the ground), or octahedral views with a normal atlas lit at runtime (any angle, matches scene lighting)? Recommended: Ring of 8 views, baked unlit color + alpha, lit with the node's normal-free ambient; octahedral later
-- `2026-11-22T16:57:55Z`: Question 2 (design): How should a level of detail name an impostor: a new LevelOfDetail(impostor: Impostor, distance:) where Impostor holds the baked atlas, made by Impostor.bake(node:views:size:)? Recommended: Yes: LevelOfDetail gains an impostor alternative to mesh; Impostor.bake renders the atlas once with OffscreenRenderer
+Open questions:
+- Which kind first? Proposed: a ring of 8 views with baked color and alpha (fits trees and buildings); octahedral views with a normal atlas later.
+- API? Proposed: LevelOfDetail(impostor:distance:), with Impostor.bake(node:views:size:) rendering the atlas once.
 
 ---
 
@@ -10121,9 +10102,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:xl
+milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:11:50Z
 +++
 
 Cars, motorcycles and tracked vehicles cannot be built from scene nodes (body node + wheel nodes that follow the simulated wheels).
@@ -10139,9 +10121,10 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:xl
+milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:11:50Z
 +++
 
 A skinned character cannot go limp into a ragdoll, or have its bodies follow a keyframed animation.
@@ -10179,16 +10162,17 @@ status: open
 priority: low
 kind: feature
 labels: area:physics, effort:xl
+milestone: Physics-and-Scene
 depends: 410
 created: 2026-11-17T01:03:57Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:11:50Z
 +++
 
 Nodes cannot be simulated as cloth or other soft bodies.
 
-Context: SwiftJolt has soft bodies (now with object layer, collision group and bulk face creation). Reading back simulated vertices is still missing upstream (SwiftJolt #52).
+Nodes cannot be simulated as rope either (from SceneSprocketsAddOns#31).
 
-- `2026-11-17T17:55:39Z`: Also covers rope simulation (from SceneSprocketsAddOns#31).
+Context: SwiftJolt has soft bodies (with object layer, collision group and bulk face creation). Reading back simulated vertices is still missing upstream (SwiftJolt #52).
 
 ---
 
@@ -10283,9 +10267,9 @@ status: open
 priority: medium
 kind: bug
 labels: area:physics, effort:m, investigate, deferred
-milestone: Reliability
+milestone: Physics-and-Scene
 created: 2026-11-17T01:25:42Z
-updated: 2026-11-20T06:33:09Z
+updated: 2026-11-23T02:14:51Z
 +++
 
 The physics test process sometimes crashes on CI. The crash is intermittent: the next CI run passed, and 3 local runs passed.
@@ -10300,26 +10284,17 @@ Note: Some test targets reported failures:
 
 Tests that had started but not reported a result at the time of the crash include: kinematicBodyFollowsItsNodeAndPushes, boundingBoxAndMeshShapesComeFromTheMesh, bodiesFollowTheGraph, dynamicBoxFallsAndRestsOnStaticFloor, velocityLaunchesANode, tumblingScaledBodyKeepsItsScale, sliderConstraintStopsAtWallAndSlides, dynamicNodeUnderScaledParentKeepsItsScale.
 
-Tests run in parallel, so the crashing test is not known.
+Tests run in parallel. Reproduced locally (about 1 in 15 runs, SwiftJolt 0.0.3):
 
-\- `2026-11-17T01:55:34Z`: Could not reproduce locally (Apple silicon Mac, commit 7ec3f209):
-- 60 consecutive runs of SceneSprocketsPhysicsTests (11 tests, parallel): all passed, no crashes.
-- One run with --sanitize=thread: passed, no TSan reports.
-- One run with --sanitize=address: passed, no ASan reports.
-Cause still unknown. A crash report (.ips from ~/Library/Logs/DiagnosticReports) from a failing CI run would identify the crashing thread.
-
-\- `2026-11-17T06:23:38Z`: Reproduced locally (about 1 in 15 runs of SceneSprocketsPhysicsTests, SwiftJolt 0.0.3). Backtrace with SWIFT_BACKTRACE:
-
+```
 Bad pointer dereference at 0x9, Thread 3:
 0 JPH::HashTable<JPH::PhysicsSystem*, pair<JPH::PhysicsSystem*, JPH_PhysicsSystem*>, ...>::InsertKey<false>
 1 JPH_PhysicsSystem_Create + 600
 2 PhysicsWorld.init(engine:gravity:...) (SwiftJolt JoltPhysics.swift:438)
 3 SceneGraphPhysicsWorld.init(sceneGraph:gravity:) (SceneGraphPhysicsWorld.swift:45)
-4 changingPhysicsBodyKeepsItsMotion() (the test that happened to be creating a world)
+```
 
-Likely cause: joltc keeps a process-wide map from JPH::PhysicsSystem* to JPH_PhysicsSystem*, and JPH_PhysicsSystem_Create inserts into it without a lock. Swift Testing runs tests in parallel, so two tests creating physics worlds at once race on the map. Any app creating physics worlds on more than one thread would hit the same race. joltc ships as a binary in SwiftJolt, so the map itself was not inspected.
-
-- `2026-11-17T18:31:53Z`: Root cause is in SwiftJolt/joltc: filed SwiftJolt#104 (concurrent JPH_PhysicsSystem_Create). Moved to M006 to wait for it.
+Likely cause: joltc keeps a process-wide map from JPH::PhysicsSystem* to JPH_PhysicsSystem* and inserts into it without a lock, so two threads creating physics worlds at once race. Any app creating worlds on several threads would hit it too. Waiting on SwiftJolt#104.
 
 ---
 
@@ -10330,19 +10305,25 @@ status: open
 priority: low
 kind: task
 labels: area:demo, effort:m
+milestone: Demo
 created: 2026-11-17T02:19:23Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:11:51Z
 +++
 
 The demo app has standalone demos besides the keynote (Shadows, Gears, Dice, Metaballs, SceneKit Features, and others). Some show features the keynote already covers; others show features the keynote does not cover at all. Two places to maintain the same showcases.
 
 Expected: each standalone demo is either merged into the keynote as a slide (or slide controls), or removed if the keynote already covers it well.
 
-- `2026-11-22T18:17:21Z`: Autonomous run: compared the catalog (DemoKitDemos.swift) with the keynote's slides (KeynoteDemo.build). The keynote has slides for shadows, fog, metaballs/SDF, performance, post-processing, particles, glass, PBR extensions and more. Standalone: Shadows (overlaps the shadows and fog slides; now also has a Volumetric Fog toggle, #540), SDF (overlaps the metaballs slide), Dice (Jolt physics, not in the keynote), Gears (generated meshes, not in the keynote), SceneKit Features (overlaps several slides), Tree Appreciator (its own SwiftUI layout with two views; cannot be a slide, #248 is deferred) and Many Lights (new in #519, clustered lighting). Which to merge, keep or drop is a product choice; not changed.
-- `2026-11-22T18:17:21Z`: Question 1 (decision): Fold the Shadows and SDF demos into the keynote (their parameters become the shadows/fog and metaballs slide controls) and remove them from the catalog? Recommended: Yes
-- `2026-11-22T18:17:21Z`: Question 2 (decision): Remove the SceneKit Features demo, since the keynote's slides now cover shapes, lights, actions, constraints, fog, shaders and category masks? Recommended: Yes
-- `2026-11-22T18:17:22Z`: Question 3 (decision): Add keynote slides for physics (Dice), generated meshes (Gears) and many lights (Many Lights), then remove those standalone demos? Recommended: Yes for physics and many lights; keep Gears and Dice as standalone showcases since they are full scenes
-- `2026-11-22T18:17:22Z`: Question 4 (decision): Keep Tree Appreciator standalone, since it uses its own two-view SwiftUI layout that a keynote slide cannot host (#248 deferred)? Recommended: Yes
+Overlap today:
+- Shadows: overlaps the Shadows and Fog slides.
+- SDF: overlaps the Metaballs slide.
+- SceneKit Features: overlaps shapes, lights, actions, constraints, fog, shaders and category masks.
+- Many Lights: the keynote now has a Many Lights slide (#611).
+- Dice: the keynote's Physics slide uses its dice.
+- Gears: generated meshes, not in the keynote.
+- Tree Appreciator: its own two-view layout, which a slide cannot host (#248 deferred).
+
+Open question: which to fold in and remove? Proposed: fold Shadows and SDF into their slides' controls and remove them; remove SceneKit Features and Many Lights; keep Dice, Gears and Tree Appreciator as standalone showcases.
 
 ---
 
@@ -11156,9 +11137,9 @@ status: open
 priority: low
 kind: bug
 labels: area:renderer, effort:l
-milestone: Reliability
+milestone: Rendering
 created: 2026-11-17T06:39:06Z
-updated: 2026-11-20T06:33:09Z
+updated: 2026-11-23T02:14:51Z
 +++
 
 Each SceneView has its own render thread, and a visionOS immersive space has another (#392). When two of them draw the same scene graph, or share renderer objects, at the same time, these are written from two threads with no synchronization:
@@ -11171,7 +11152,7 @@ Locks alone do not fix it: two command buffers would still write one resource in
 
 Found by the concurrency review (#476).
 
-- `2026-11-17T19:05:44Z`: Question 1 (decision): Should two views drawing one scene at once be supported with per-view storage (rather than documented as unsupported)? Recommended: No, document as unsupported
+Decided (2026-11-23): support two views drawing one scene at once with per-view storage, or document it as unsupported? Decision: document as unsupported.
 
 ---
 
@@ -11497,16 +11478,18 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l
+milestone: Rendering-2
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:11:50Z
 +++
 
-Weighted blended OIT is a practical starting point. (Moved from SceneSprocketsAddOns #47.)
+Transparent draws are sorted back to front and alpha-blended, so intersecting or interleaved transparent surfaces blend in the wrong order. There is no order-independent transparency. (Moved from SceneSprocketsAddOns #47.) Related: #539, #399.
 
-- `2026-11-17T17:59:21Z`: Related: #539.
-- `2026-11-22T17:44:45Z`: Autonomous run: looked at weighted blended OIT here. Transparent draws are sorted back to front and alpha-blended straight into the view's 8-bit target by each renderer (Blinn-Phong, PBR, shader materials). WBOIT needs two extra targets (rgba16Float accumulation, r8/r16 revealage), every transparent fragment shader writing weighted outputs to both, and a composite pass over the opaque result. Additive/multiply/screen blend modes do not fit the weighted model and would stay sorted. It overlaps #539 (stochastic transparency; #539 Q3 asks which comes first) and the float-target decision on #399. Not started.
-- `2026-11-22T17:44:45Z`: Question 1 (design): Should weighted blended OIT replace sorting for all alpha-blended draws, or be opt-in (a scene setting or a per-material blend mode), with sorted blending kept as the default? Recommended: Opt-in scene setting; sorted blending stays the default
-- `2026-11-22T17:44:45Z`: Question 2 (decision): Which renderers must support it first: PBR only, or PBR, Blinn-Phong and shader materials together? Recommended: PBR and Blinn-Phong; shader materials later through a helper
+Weighted blended OIT is a practical start: two extra targets (rgba16Float accumulation, r8/r16 revealage), every transparent fragment shader writing weighted outputs, and a composite pass. Additive, multiply and screen blend modes do not fit and stay sorted.
+
+Decided (2026-11-23):
+- Replace sorting or opt in? Decision: an opt-in scene setting; sorted blending stays the default.
+- Which renderers first? Decision: PBR and Blinn-Phong; shader materials later through a helper.
 
 ---
 
@@ -11522,11 +11505,13 @@ created: 2026-11-17T14:09:41Z
 updated: 2026-11-20T06:33:14Z
 +++
 
-Small-scale shadows that conventional shadow maps miss. (Moved from SceneSprocketsAddOns #52.)
+There are no contact shadows: the small-scale shadows that shadow maps miss. (Moved from SceneSprocketsAddOns #52.)
 
-- `2026-11-22T17:27:51Z`: Autonomous run: punted for design. Contact shadows are a screen-space march from each pixel toward a light through scene depth (post targets; not in stereo, #382). Where the result goes is the open part: the ShadowMask post pass darkens finished color only for entries whose materials do not sample shadows themselves, while Blinn-Phong, PBR and shadow-sampling ShaderMaterials apply shadow maps per light in their own shaders, so for them contact shadows would have to be a per-light visibility texture computed before the scene pass (needs a depth pre-pass, like ambient occlusion's) and multiplied into Lighting::shadow. Cost also scales with the number of lights marched.
-- `2026-11-22T17:27:52Z`: Question 1 (design): Which lights get contact shadows: only the main directional light (one march per pixel, the common case), or every shadow-casting light? Recommended: The brightest directional light only, with a SceneGraph.Environment setting (length, thickness, strength)
-- `2026-11-22T17:27:52Z`: Question 2 (design): May contact shadows reuse the ambient-occlusion depth pre-pass and feed a contact-visibility texture into Lighting::shadow for every renderer (so in-shader shadow materials get them too), rather than only darkening in the shadow-mask post pass? Recommended: Yes: depth pre-pass, one compute march, a visibility texture bound like the AO texture and applied in Lighting::shadow
+A contact shadow is a screen-space march from each pixel toward a light through scene depth (not in stereo, #382). Blinn-Phong, PBR and shadow-sampling shader materials apply shadows in their own shaders, so the result must reach Lighting::shadow as a visibility texture computed before the scene pass, not just darken finished color in the shadow-mask pass. Cost scales with the number of lights marched.
+
+Decided (2026-11-23):
+- Which lights? Decision: the brightest directional light only, with an Environment setting (length, thickness, strength).
+- Reuse the ambient-occlusion depth pre-pass and bind a contact-visibility texture like the AO texture? Decision: yes.
 
 ---
 
@@ -11542,10 +11527,9 @@ created: 2026-11-17T14:09:41Z
 updated: 2026-11-20T06:33:14Z
 +++
 
-Stabilizes geometry, specular highlights, and fine detail. (Moved from SceneSprocketsAddOns #53.)
+There is no temporal anti-aliasing to stabilize geometry, specular highlights and fine detail; MSAA is the only anti-aliasing. (Moved from SceneSprocketsAddOns #53.)
 
-- `2026-11-22T17:44:54Z`: Autonomous run: TAA needs a sub-pixel jitter on every renderer's projection, per-pixel motion vectors for skinned, morphed, instanced and moving meshes (not produced today; that is #510), a history color target per view, and a resolve pass with neighborhood clamping. It works best on linear HDR color before tone mapping, which is the open float-target decision on #399. MSAA (sceneAntialiasing) is the only anti-aliasing now. Blocked on #510; not started.
-- `2026-11-22T17:44:54Z`: Question 1 (decision): Should #496 be marked blocked on #510 (motion vectors), with #510 done first? Recommended: Yes
+TAA needs a sub-pixel jitter on every renderer's projection, per-pixel motion vectors for skinned, morphed, instanced and moving meshes (#510), a history target per view, and a resolve pass with neighborhood clamping. It works best on linear HDR color before tone mapping (#399). Depends on #510.
 
 ---
 
@@ -11556,16 +11540,18 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:m, subtask, lighting
+milestone: Lighting-and-GI
 created: 2026-11-17T14:09:41Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:14:51Z
 +++
 
-Projected lighting patterns and realistic light distributions. (Moved from SceneSprocketsAddOns #57.)
+Lights cannot project patterns (cookies) or use measured distributions (IES profiles). (Moved from SceneSprocketsAddOns #57.)
 
-- `2026-11-17T17:51:39Z`: Related: #86 (IES lights).
-- `2026-11-22T17:28:05Z`: Autonomous run: punted for design. LightingLight (MetalSprocketsLightingTypes.h) has no texture slot; the only per-frame lighting texture every renderer binds is the shadow-map array. Cookies (a projected 2D pattern for spot and directional lights) and IES profiles (intensity by angle from a photometric file) both need a texture reaching Lighting::sample in Blinn-Phong, PBR and shader materials, so the binding design comes first. IES also needs a parser for the LM-63 text format, which overlaps #86 and the deferred glTF EXT_lights_ies (#557).
-- `2026-11-22T17:28:05Z`: Question 1 (design): How should light textures reach the shaders: one shared texture2d_array for all lights' cookies and IES profiles (each light stores a layer index, like shadow slices), bound alongside the shadow map in every renderer? Recommended: Yes: a 'lightTextures' 2D array (fixed size, e.g. 256x256, IES profiles resampled into it), LightingLight gets cookieLayer/iesLayer (-1 none), Light gets cookie: MTLTexture? and ies: IESProfile?
-- `2026-11-22T17:28:05Z`: Question 2 (decision): Should IES profiles be done here or under #86 (IES lights), with this issue covering only cookies? Recommended: Cookies here; IES under #86 using the same light-texture array
+LightingLight has no texture slot; the only lighting texture every renderer binds is the shadow-map array. Both features need a texture reaching Lighting::sample in Blinn-Phong, PBR and shader materials. IES also needs an LM-63 parser. Related: #86 (IES lights), #557 (glTF EXT_lights_ies).
+
+Decided (2026-11-23):
+- Binding? Decision: one shared 'lightTextures' 2D array (e.g. 256x256; IES profiles resampled into it); LightingLight gets cookieLayer and iesLayer (-1 for none); Light gets cookie and ies properties.
+- IES here or under #86? Decision: cookies here, IES under #86 using the same array.
 
 ---
 
@@ -11758,10 +11744,11 @@ created: 2026-11-17T14:09:41Z
 updated: 2026-11-20T06:32:25Z
 +++
 
-Sensible default illumination for any scene. Complexity: low. (Moved from SceneSprocketsAddOns #70.)
+Scenes need sensible default illumination. (Moved from SceneSprocketsAddOns #70.)
 
-- `2026-11-21T01:49:43Z`: Autonomous run: scoped, not changed. The description is one line, and some default lighting already exists. PBRMaterialRenderer falls back to LightingEnvironment.studio when the scene has no environment map. sceneDefaultLighting adds a directional light at the camera when the scene has no lights. Blinn-Phong has a fixed ambient color. One unbuilt meaning of 'automatic environment lighting': build the image-based light from the scene's visible background, such as a SkyGradient (LightingEnvironment can be made from equirectangularPixels), so PBR reflections and ambient light match the sky. Punting because the intended behavior is not clear from the issue.
-- `2026-11-21T01:49:43Z`: Question 1: What should automatic environment lighting do, given that PBR already falls back to the studio environment and sceneDefaultLighting adds a camera light? Recommended: When the scene has no environment map, build one from its background (SkyGradient, or a uniform color for .color backgrounds) so PBR image-based light matches the visible sky, and give Blinn-Phong an ambient term from the same source
+Already there: PBR falls back to LightingEnvironment.studio without an environment map, sceneDefaultLighting adds a camera light when there are no lights, and Blinn-Phong has a fixed ambient color. What is missing: the image-based light does not follow the visible background, so PBR reflections and ambient light do not match the sky.
+
+Open question: is that what this issue means? Proposed: without an environment map, build one from the background (SkyGradient, or a uniform color), and give Blinn-Phong an ambient term from the same source.
 
 ---
 
@@ -11791,17 +11778,19 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, lighting
+milestone: Lighting-and-GI
 created: 2026-11-17T14:09:42Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:14:51Z
 +++
 
-Softer, more natural illumination from large sources. Complexity: medium. (Moved from SceneSprocketsAddOns #77.)
+There are no area lights for softer, more natural light from large sources. (Moved from SceneSprocketsAddOns #77.) Related: #86.
 
-- `2026-11-17T17:51:39Z`: Related: #86 (area lights).
-- `2026-11-22T17:45:09Z`: Autonomous run: looked at adding an area light. Light.Kind has directional, point, spot and ambient; LightingLight (96 bytes) carries no size or shape. LTC needs: a new Light.Kind with width/height (rect) or radius (disk), LightingLight growing to carry it, the two 64x64 LTC lookup tables (Heitz et al. fits; not in the repo, need importing as textures or a header), a PBR shader path that integrates specular and diffuse over the polygon, an approximation for Blinn-Phong and shader materials, and archive support. Shadows from area lights (soft, sized by the light) are a separate problem; the current shadow maps assume a point or direction. Scope is not specified, so not started.
-- `2026-11-22T17:45:09Z`: Question 1 (decision): Which shapes for the first version: rectangle only, or rectangle and disk? Recommended: Rectangle only
-- `2026-11-22T17:45:09Z`: Question 2 (decision): May the LTC lookup tables from Heitz et al. (MIT-licensed reference data) be added to the repo as a generated header or texture resource? Recommended: Yes, as a generated Metal header
-- `2026-11-22T17:45:09Z`: Question 3 (decision): Is a first version without shadows (area lights light the scene but cast none) and with PBR only acceptable, leaving Blinn-Phong and shadows to follow-ups? Recommended: Yes
+LTC needs a new Light.Kind with a size (rectangle or disk), LightingLight carrying it, the two 64x64 LTC lookup tables (Heitz et al.), a PBR shader path integrating over the polygon, an approximation for Blinn-Phong and shader materials, and archive support. Soft shadows sized by the light are a separate problem.
+
+Decided (2026-11-23):
+- Shapes first? Decision: rectangle only.
+- Add the LTC tables (MIT-licensed reference data) as a generated Metal header? Decision: yes.
+- First version without shadows and PBR only? Decision: yes.
 
 ---
 
@@ -11817,12 +11806,14 @@ created: 2026-11-17T14:09:42Z
 updated: 2026-11-20T06:33:14Z
 +++
 
-Effects such as SSR, SSGI, motion blur, decals, and contact shadows need per-pixel normals, motion vectors, or other G-buffer data. The renderer does not produce or expose them. Needed by several SceneSprocketsAddOns issues.
+Effects such as SSR, SSGI, motion blur, decals and contact shadows need per-pixel normals, motion vectors or other G-buffer data. The renderer does not produce or expose them. Blocks #496 (TAA), #398 (SSR) and motion blur (#399).
 
-- `2026-11-22T17:45:20Z`: Autonomous run: looked at what this takes. The opaque pass writes one color target plus depth (depth is already copied for post passes and fog). Normals and velocity need extra color attachments in every renderer's opaque pipelines (Blinn-Phong, PBR, shader materials, particles, sky), so every fragment shader writes them or the pipelines must mask them. Velocity also needs each draw's previous-frame model matrix (and previous joint matrices and morph weights for skinned/morphed meshes) and the previous view-projection, kept per entity across frames. Not specified: which targets, whether they are always on or requested, and how post passes and apps get them. Not started. Blocks #496 (TAA) and motion blur (#399).
-- `2026-11-22T17:45:20Z`: Question 1 (decision): Which targets for the first version: view-space normals and screen-space velocity, or also roughness/albedo for a full G-buffer? Recommended: Normals and velocity only
-- `2026-11-22T17:45:20Z`: Question 2 (design): Should the extra targets be produced only when something asks for them (a post-processing effect or an app setting), so frames without them cost nothing extra? Recommended: Yes: requested per frame through the frame plan, off by default
-- `2026-11-22T17:45:20Z`: Question 3 (decision): May shader materials that do not write the new targets simply leave them unwritten (masked), rather than every custom shader having to output them? Recommended: Yes; a helper writes them for shaders that want correct values
+The opaque pass writes one color target plus depth. Normals and velocity need extra attachments in every renderer's opaque pipelines (Blinn-Phong, PBR, shader materials, particles, sky). Velocity also needs each draw's previous-frame model matrix (and joint matrices and morph weights) and the previous view-projection, kept across frames.
+
+Decided (2026-11-23):
+- Which targets first? Decision: view-space normals and screen-space velocity only.
+- Always on, or only when requested? Decision: requested per frame through the frame plan, off by default.
+- May shader materials leave the new targets unwritten? Decision: yes; a helper writes them for shaders that want correct values.
 
 ---
 
@@ -11838,11 +11829,12 @@ created: 2026-11-17T14:09:42Z
 updated: 2026-11-20T06:33:14Z
 +++
 
-Refraction, transmission, and screen-space effects need the opaque scene color as a texture. The renderer does not provide one.
+Refraction, transmission and screen-space effects need the opaque scene color as a texture. The renderer does not provide one. Opaque and transparent entries draw in one scene pass; the only scene-color texture is PBR's own transmission pre-pass.
 
-- `2026-11-22T16:39:44Z`: Autonomous run: punted. SceneGraphElement draws opaque and transparent entries in one scene render pass, and the only scene-color texture today is PBR's own transmission pre-pass (PBRTransmissionPass renders the opaque PBR scene into a separate texture before the main pass). A renderer-wide copy needs a choice: (a) split the scene pass after opaque draws (store color, copy or blit it, reload for transparent draws), which costs a store/load of the full color target in frames that need it, and does not work when the view target is multisampled without a resolve in between; or (b) generalize PBR's pre-pass so any renderer's opaque entries render once more into a texture. Also open: how a material asks for it (e.g. a SceneMaterial flag or ShaderMaterial parameter) so the copy only happens when something reads it, and whether PBR transmission should switch to it.
-- `2026-11-22T16:39:44Z`: Question 1 (design): Which way should the opaque scene color be provided: (a) split the scene pass after opaque draws and copy color (cheaper when transparent materials read it, one extra store/load), or (b) a pre-pass that renders opaque entries of all renderers into a texture, as PBR transmission does today? Recommended: (a) split the pass, only when some visible material declares it reads scene color; later move PBR transmission onto it
-- `2026-11-22T16:39:44Z`: Question 2 (design): How should a material request the scene color, and where does it receive it: a SceneMaterial property (e.g. readsSceneColor) plus RenderContext.sceneColor for renderers, and a 'sceneColor' texture parameter for ShaderMaterial? Recommended: Yes: SceneMaterial.readsSceneColor, RenderContext.sceneColor, and an automatic sceneColor parameter for ShaderMaterial
+Open questions:
+- How? (a) Split the scene pass after opaque draws and copy color (one extra store and load, a problem with multisampled targets), or (b) a pre-pass rendering every renderer's opaque entries into a texture, as PBR transmission does? Proposed: (a), only when a visible material reads scene color; move PBR transmission onto it later.
+
+Decided (2026-11-23): a material asks with SceneMaterial.readsSceneColor; renderers get RenderContext.sceneColor; ShaderMaterial gets an automatic sceneColor parameter.
 
 ---
 
@@ -11853,17 +11845,17 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, lighting
-milestone: Rendering-2
+milestone: Lighting-and-GI
 created: 2026-11-17T14:09:42Z
-updated: 2026-11-20T06:33:14Z
+updated: 2026-11-23T02:14:51Z
 +++
 
-Add-on packages cannot insert passes at defined stages (after opaque, before transparent, post-process) or contribute indirect lighting (probes, lightmaps) to built-in materials.
+Add-on packages cannot insert passes at defined stages (after opaque, before transparent, post-process) or contribute indirect lighting (probes, lightmaps) to built-in materials. Passes are ordered by SceneFramePlan; the only app hook is decorations, drawn with the scene.
 
-- `2026-11-22T17:45:36Z`: Autonomous run: looked at SceneGraphElement. Passes are ordered by SceneFramePlan (pre-passes such as GPU deformation, shadows, opaque, ambient occlusion, transparent, post passes, auto exposure). The only app hook is decorations (SceneView.sceneDecorations), drawn with the scene. Stage hooks for passes are feasible: a closure per stage taking the RenderContext and the post targets, returning an element, run at its point in the plan. Contributing lighting terms to built-in materials is a different change: Blinn-Phong and PBR shaders would need a hook (a function table, an extra texture/buffer the shaders add, or recompiled variants). Not started: the public API shape is not specified.
-- `2026-11-22T17:45:37Z`: Question 1 (decision): Should #512 be split into (a) render pass hooks at fixed stages and (b) lighting terms contributed to built-in materials, doing (a) first? Recommended: Yes
-- `2026-11-22T17:45:37Z`: Question 2 (design): For pass hooks, is this API acceptable: SceneGraphElement/SceneView take [RenderStage: (RenderContext, targets) -> AnyElement?] with stages afterOpaque, beforeTransparent, afterTransparent and postProcess? Recommended: Yes
-- `2026-11-22T17:45:37Z`: Question 3 (design): For lighting terms, should built-in materials add an indirect-light term from a context-provided source (e.g. an irradiance texture or SH buffer per draw), which probes (#532) and lightmaps would fill, rather than arbitrary injected shader code? Recommended: Yes: a fixed indirect-light input, not code injection
+Decided (2026-11-23):
+- Split into (a) pass hooks at fixed stages and (b) lighting terms for built-in materials, doing (a) first? Decision: yes.
+- Pass hook API? Decision: SceneGraphElement and SceneView take [RenderStage: (RenderContext, targets) -> AnyElement?] with afterOpaque, beforeTransparent, afterTransparent and postProcess.
+- Lighting terms? Decision: a fixed indirect-light input (an irradiance texture or SH buffer per draw) that probes (#532) and lightmaps fill, not shader code injection.
 
 ---
 
@@ -11874,8 +11866,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:xl
+milestone: GPU-Driven
 created: 2026-11-17T14:09:59Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:11:51Z
 +++
 
 The renderer is forward-only. There is no deferred path that writes a G-buffer (albedo, normal, roughness/metalness, depth) and shades in a separate pass. Related: #510.
@@ -11889,13 +11882,12 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:xl, subtask, lighting
+milestone: GPU-Driven
 created: 2026-11-17T14:09:59Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:11:51Z
 +++
 
-Lighting cost scales with lights × objects in the forward pass. Scenes with many local lights need deferred lighting (light volumes) or tiled/clustered light culling.
-
-- `2026-11-22T19:59:11Z`: Related: #611 (keynote slide).
+Lighting cost scales with lights × objects in the forward pass. Clustered light culling is done (#519, shown on the keynote's Many Lights slide, #611); deferred lighting with light volumes is not.
 
 ---
 
@@ -11942,14 +11934,14 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:xl
+milestone: GPU-Driven
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:11:51Z
 +++
 
 Draw selection, culling, and draw arguments are produced on the CPU. GPU-driven rendering would do this with compute and indirect commands.
 
-- `2026-11-17T17:51:39Z`: Umbrella-ish; related: #517, #518, #520, #521, #522, #523, #525.
-- `2026-11-17T19:14:03Z`: Related umbrella: #544 (indirect drawing), with MetalSprockets#575 and #576 as prerequisites.
+Related: #544 (indirect drawing umbrella), #517, #518, #520, #521, #522, #523, #525.
 
 ---
 
@@ -11960,9 +11952,9 @@ status: open
 priority: medium
 kind: feature
 labels: area:renderer, effort:l, subtask, indirect-drawing
-milestone: Rendering-2
+milestone: GPU-Driven
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T06:33:14Z
+updated: 2026-11-23T02:14:51Z
 +++
 
 Draw commands are encoded on the CPU each frame. Indirect command buffers would let them be encoded once, or on the GPU. Part of #544.
@@ -11972,10 +11964,11 @@ State:
 - MetalSprockets has indirect draws and indirect command buffers (MetalSprockets#575, #576, in 0.3.3).
 - Commands in one indirect command buffer cannot bind textures per draw, so a renderer needs bindless materials first. PBR has them; Blinn-Phong has argument-buffer materials since #546.
 - Merged geometry is not required, but whether PBR keeps it decides how commands get their vertex data (#545).
+- A workable shape: encode PBR's DrawList rows into an ICB once per structure revision and execute it each frame. ICB commands inherit cull mode and winding from the Draw, so rows split into one range per (cullMode, winding). Encoding into an ICB every frame would save nothing; DrawList is already 0.7 ms slower than merged sets on CarConcept (#583).
 
-- `2026-11-22T15:32:06Z`: Autonomous run: punted. Looked at PBR's DrawList path (PBRRenderer.drawList) and MetalSprockets' ICB support (MTLDevice ICB factory, Draw(indirectCommandBuffer:range:resources:), supportsIndirectCommandBuffers(), GPU-written ranges). A workable shape: encode DrawList rows into an ICB once per structure revision and execute it each frame; instance and material tables come from the pipeline's argument tables, which ICB commands inherit. Blockers are scope, not mechanics: ICB commands inherit cull mode and winding from the Draw, so rows split into one range per (cullMode, winding); whether the encoding belongs in MetalSprockets' DrawList (an option there, needing a MetalSprockets release) or in PBRRenderer; and what result counts as done, since DrawList is already 0.7 ms slower than merged sets on CarConcept (#583) and CPU encoding into an ICB every frame would save nothing.
-- `2026-11-22T15:32:06Z`: Question 1 (design): Should ICB encoding live in MetalSprockets' DrawList (e.g. a 'cache commands until rows change' option usable by any renderer, released as a new MetalSprockets version), or only inside SceneSprockets' PBRRenderer for now? Recommended: In DrawList, so Blinn-Phong and others get it too; PBR adopts it first
-- `2026-11-22T15:32:06Z`: Question 2 (decision): What finishes this issue: PBR opaque draws executed from a cached ICB with identical images (correctness only), or also a measured CPU win (e.g. CarConcept / Performance slide frame time below the merged-set path)? Recommended: Correctness plus a benchmark showing CPU encode time no worse than today; GPU-driven culling stays in #520
+Decided (2026-11-23):
+- Where does ICB encoding live? Decision: in MetalSprockets' DrawList (a 'cache commands until rows change' option, new release), adopted by PBR first.
+- What finishes this issue? Decision: identical images plus a benchmark showing CPU encode time no worse than today; GPU-driven culling stays in #520.
 
 ---
 
@@ -11986,14 +11979,12 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:xl
-milestone: Rendering-2
+milestone: GPU-Driven
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T06:33:14Z
+updated: 2026-11-23T02:14:51Z
 +++
 
-Object and mesh shaders are not used for geometry amplification, culling, or LOD.
-
-- `2026-11-17T19:14:03Z`: Related: #544 (indirect drawing). Mesh shading is separate, but GPU-written draw arguments would feed it too.
+Object and mesh shaders are not used for geometry amplification, culling, or LOD. Related: #544 (GPU-written draw arguments would feed it too).
 
 ---
 
@@ -12020,18 +12011,18 @@ Every lit fragment loops over every light in the frame; lights are not assigned 
 ## 520: No GPU-driven occlusion culling
 
 +++
-status: open
+status: blocked
 priority: low
 kind: feature
-labels: area:renderer, effort:l, subtask, bounds, indirect-drawing, blocked
+labels: area:renderer, effort:l, subtask, bounds, indirect-drawing
+milestone: GPU-Driven
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-22T18:03:19Z
+updated: 2026-11-23T02:25:52Z
 +++
 
 Hidden objects are still drawn: there is no depth pyramid (Hi-Z: a mip chain of the depth buffer, each level keeping the farthest depth of the level below) and compute pass to cull them. A GPU culling result only saves work if the GPU also issues the draws (indirect draws, #517); otherwise visibility would be read back to the CPU a frame late. PBR draws go through MetalSprockets DrawList (#582), so indirect drawing would replace those lists. Part of #543 and #544.
 
-- `2026-11-17T19:05:45Z`: Question 1 (decision): Wait for #517 indirect draws instead of an interim one-frame-late CPU readback of visibility? Recommended: Yes, wait for #517
-- `2026-11-20T06:00:32Z`: Answer 1: Yeah lets wait
+Decided: wait for #517 (indirect draws); no interim one-frame-late CPU readback.
 
 ---
 
@@ -12058,18 +12049,17 @@ Particle simulation and draw counts are not driven by compute and indirect draws
 ## 522: No GPU LOD selection
 
 +++
-status: open
+status: blocked
 priority: low
 kind: feature
-labels: area:renderer, effort:l, subtask, indirect-drawing, blocked
+labels: area:renderer, effort:l, subtask, indirect-drawing
+milestone: GPU-Driven
 depends: 545
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-22T18:03:35Z
+updated: 2026-11-23T02:25:52Z
 +++
 
-Mesh detail is chosen on the CPU (Node.levelsOfDetail, by camera distance), not on the GPU. Choosing it on the GPU only helps if the GPU also issues the draws (#517); how draws are fed depends on #545. Part of #544.
-
-- `2026-11-22T18:03:35Z`: Autonomous run: skipped. Depends on #545 (open) and only helps once the GPU issues draws (#517, open). Labelled blocked.
+Mesh detail is chosen on the CPU (Node.levelsOfDetail, by camera distance), not on the GPU. Choosing it on the GPU only helps if the GPU also issues the draws (#517); how draws are fed depends on #545. Part of #544. Blocked on #517 and #545.
 
 ---
 
@@ -12080,8 +12070,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:xl
+milestone: GPU-Driven
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:11:51Z
 +++
 
 There is no path that writes primitive IDs and evaluates materials afterwards with compute.
@@ -12095,8 +12086,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:xl
+milestone: GPU-Driven
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:11:51Z
 +++
 
 Lighting is not done in tile memory with imageblocks / tile shaders. Related: #513.
@@ -12110,8 +12102,9 @@ status: open
 priority: low
 kind: feature
 labels: area:renderer, effort:xl
+milestone: GPU-Driven
 created: 2026-11-17T14:12:10Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:11:51Z
 +++
 
 Workload scheduling and dependencies are not driven on the GPU with indirect dispatch and GPU synchronization.
@@ -12125,8 +12118,9 @@ status: open
 priority: low
 kind: feature
 labels: area:materials, effort:l
+milestone: Assets-and-Materials
 created: 2026-11-17T14:23:29Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:14:51Z
 +++
 
 Custom materials can't be written as composable Swift expressions that build a shader.
@@ -12136,12 +12130,13 @@ Prior art in ~/Projects:
 - Copy in MetalSprocketsExamples/.../ExamplesShaderGraph.
 - MetalSprocketsParticles stitched modules (Documentation/Modules.md).
 
-Related: ISSUES.md Materials list, "Shader modifiers / node-based material graph" (RealityKit Shader Graph, three.js TSL, Babylon Node Material).
+Related: #85 (shader modifiers), #527 (node editor). Prior art elsewhere: RealityKit Shader Graph, three.js TSL, Babylon Node Material.
 
-- `2026-11-22T18:03:45Z`: Autonomous run: looked at the prior art. MetalSprocketsShaderGraphSupport builds a typed Node<T> expression graph and stitches it into an MTLFunction (graph.makeFunction). Using it for scene materials needs: a dependency on that package (or moving the DSL here), a material type whose fragment function is the stitched graph, and a defined set of graph inputs (position, normal, UV, time, camera, lights) and outputs (just a color, or surface inputs such as base color/roughness/normal that a built-in lighting model shades). ShaderMaterial already takes hand-written Metal functions, so the graph could produce one. Scope and packaging are not specified; not started.
-- `2026-11-22T18:03:45Z`: Question 1 (decision): Should SceneSprockets depend on the MetalSprocketsShaderGraph package (published separately), rather than copying the DSL into this repo? Recommended: Depend on it, in a new SceneSprocketsShaderGraph target so the core does not
-- `2026-11-22T18:03:46Z`: Question 2 (design): Should a graph produce the final color (unlit, like ShaderMaterial today), or surface inputs (base color, roughness, metallic, normal, emission) that the PBR lighting model shades? Recommended: Surface inputs shaded by PBR, with an unlit color output as the simpler first step
-- `2026-11-22T18:03:53Z`: Path note: the package is at ~/Projects/MetalSprockets/MetalSprocketsShaderGraph/Packages/MetalSprocketsShaderGraphSupport (not ~/Projects/MetalSprocketsShaderGraph). Checked: Node<T> (Node.swift) and ShaderGraph.makeFunction(_:node:) returning an MTLFunction and library, as described.
+The package is at ~/Projects/MetalSprockets/MetalSprocketsShaderGraph/Packages/MetalSprocketsShaderGraphSupport: Node<T> and ShaderGraph.makeFunction(_:node:) returning an MTLFunction. Using it for scene materials needs a material whose fragment function is the stitched graph (ShaderMaterial could take it), and a defined set of graph inputs (position, normal, UV, time, camera, lights) and outputs.
+
+Decided (2026-11-23):
+- Depend on the ShaderGraph package or copy the DSL here? Decision: depend on it, in a new SceneSprocketsShaderGraph target so the core does not.
+- Final color or surface inputs? Decision: surface inputs (base color, roughness, metallic, normal, emission) shaded by PBR, with an unlit color output as the first step.
 
 ---
 
@@ -12152,9 +12147,10 @@ status: open
 priority: low
 kind: feature
 labels: area:materials, effort:xl
+milestone: Assets-and-Materials
 depends: 526
 created: 2026-11-17T14:23:29Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:14:51Z
 +++
 
 There is no visual node-based editor for building materials.
@@ -12163,7 +12159,7 @@ Prior art in ~/Projects:
 - MetalSprockets/MetalSprocketsShaderGraph: PoC app combining SwiftNodeEditor UI with the ShaderGraph stitching backend; node palette, graph editor, live preview.
 - Current/SwiftNodeEditor: node graph editor UI library.
 
-Related: ISSUES.md Materials list, "Shader modifiers / node-based material graph"; the ShaderGraph DSL issue.
+Related: #526 (ShaderGraph DSL), #85 (shader modifiers).
 
 ---
 
@@ -12214,18 +12210,19 @@ status: open
 priority: low
 kind: feature
 labels: effort:l, area:renderer
-milestone: Rendering-2
+milestone: Lighting-and-GI
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-20T06:33:14Z
+updated: 2026-11-23T02:14:51Z
 +++
 
-No local cubemap reflections with parallax correction and probe blending. (Moved from SceneSprocketsAddOns#49.)
+There are no local cubemap reflections with parallax correction and probe blending; specular image-based light is one global environment per scene. (Moved from SceneSprocketsAddOns#49.) Related: #532, #506.
 
-- `2026-11-17T17:59:21Z`: Related: #532, #506 (IBL).
-- `2026-11-22T18:08:28Z`: Autonomous run: looked at what reflection probes need. Specular image-based light today is one global LightingEnvironment (prefiltered cubemap) per scene. Local probes need: probe nodes with an influence box, capturing the scene into a cubemap at each probe (six renders from the probe; there is no render-to-texture camera path yet, the same gap as #531 and #532), prefiltering each capture with the existing LightingEnvironment code, and in the PBR shader a parallax-corrected lookup (ray against the probe box) blended across the probes covering a fragment. Not started: capture timing, probe count limits and the overlap with irradiance probes (#532) are open.
-- `2026-11-22T18:08:28Z`: Question 1 (decision): Should reflection probes (#530) and irradiance probes (#532) be one feature: a probe node that captures a cubemap once, used for both specular reflections and diffuse irradiance? Recommended: Yes: one probe node and capture path, both lighting terms from it
-- `2026-11-22T18:08:28Z`: Question 2 (design): When are probes captured: once on request (an explicit update call, e.g. after loading), or continuously every N frames? Recommended: On request only for the first version
-- `2026-11-22T18:08:28Z`: Question 3 (decision): Is per-object probe selection (each mesh uses the probe whose box contains its center, blending at most two) acceptable for the first version, instead of per-pixel blending? Recommended: Yes
+Needs probe nodes with an influence box, a cubemap capture per probe (there is no render-to-texture camera path yet, the same gap as #531 and #532), prefiltering with the existing LightingEnvironment code, and a parallax-corrected, blended lookup in the PBR shader.
+
+Decided (2026-11-23):
+- One probe feature for both reflections and irradiance (#532)? Decision: yes.
+- Capture on request or every N frames? Decision: on request at first.
+- Per-object probe selection (blending at most two) at first? Decision: yes.
 
 ---
 
@@ -12236,17 +12233,19 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, area:renderer
+milestone: Lighting-and-GI
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:14:51Z
 +++
 
-Mirrors, polished floors and water surfaces cannot show planar reflections. (Moved from SceneSprocketsAddOns#50.)
+Mirrors, polished floors and water surfaces cannot show planar reflections. (Moved from SceneSprocketsAddOns#50.) Related: #530.
 
-- `2026-11-17T17:59:21Z`: Related: #530.
-- `2026-11-22T17:43:33Z`: Looked at what planar reflections need here. There is no render-to-texture camera path in the renderer yet (only shadow maps and AO render offscreen). A reflection means: per reflective plane, render the scene again from the camera mirrored across the plane, with an oblique near plane so geometry behind the plane is clipped, into a texture; then the surface samples that texture in screen space, blended by its Fresnel/roughness. The issue does not say how a reflective surface is declared, which renderers must support it, or the cost budget (one extra full scene pass per plane per frame), so I did not start.
-- `2026-11-22T17:43:37Z`: Question 1 (design): How should a reflective plane be declared: a PlanarReflector node feature on a mesh node, or a reflective flag on materials? Recommended: A PlanarReflector node feature; the node's material samples the reflection
-- `2026-11-22T17:43:38Z`: Question 2 (decision): Which renderers must support planar reflections first: PBR only, or PBR plus Blinn-Phong and shader materials? Recommended: PBR only
-- `2026-11-22T17:43:38Z`: Question 3 (decision): Is one reflective plane per frame (the most visible, with a resolution scale) enough for the first version? Recommended: Yes
+There is no render-to-texture camera path yet. Each reflective plane means one more full scene pass per frame from the mirrored camera, with an oblique near plane, into a texture the surface samples in screen space, blended by Fresnel and roughness.
+
+Decided (2026-11-23):
+- How is a reflective plane declared? Decision: a PlanarReflector node feature; the node's material samples the reflection.
+- Which renderers first? Decision: PBR only.
+- One reflective plane per frame (the most visible, with a resolution scale) at first? Decision: yes.
 
 ---
 
@@ -12257,19 +12256,20 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, area:renderer
+milestone: Lighting-and-GI
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:14:51Z
 +++
 
-Objects do not receive indirect lighting appropriate to their location. (Moved from SceneSprocketsAddOns#71.)
+Objects do not receive indirect lighting appropriate to their location: indirect light is global (one image-based environment plus summed ambient light nodes, #602). (Moved from SceneSprocketsAddOns#71.) Related: #530, #533.
 
-- `2026-11-17T17:59:21Z`: Related: #533, #530.
-- `2026-11-22T13:04:15Z`: Related: #602 (ambient light as a scene node).
-- `2026-11-22T17:43:49Z`: Looked at what irradiance probes need. Today indirect light is global: one image-based environment (PBR) plus summed ambient light nodes (#602), the same everywhere. Location-dependent indirect light needs probes placed in the scene, a way to fill them (capture a cubemap per probe and project it to spherical harmonics, which needs the render-to-texture path #531 also lacks, or hand-authored values), and a per-object or per-pixel lookup that blends the nearest probes. The issue does not say how probes are placed or filled, or which renderers use them, so I did not start.
-- `2026-11-22T17:43:49Z`: Question 1 (design): Should probes be filled by capturing the scene at runtime (render a cubemap per probe, project to spherical harmonics), or authored/baked offline and stored in the archive? Recommended: Capture at runtime on demand (an explicit update call), store the resulting spherical harmonics in the archive
-- `2026-11-22T17:43:49Z`: Question 2 (design): Should probes be individual nodes the user places, or a regular grid volume (a node with bounds and a resolution)? Recommended: A grid volume node; individual probes later if needed
-- `2026-11-22T17:43:49Z`: Question 3 (decision): Is per-object lookup (blend the probes nearest each mesh's center) enough for the first version, rather than per-pixel? Recommended: Yes
-- `2026-11-22T17:43:49Z`: Question 4 (decision): Which renderers must use probes first: PBR only, or PBR and Blinn-Phong? Recommended: PBR and Blinn-Phong, through RenderContext like the ambient light from #602
+Needs probes placed in the scene, a way to fill them (capture a cubemap per probe and project to spherical harmonics, which needs the render-to-texture path #531 also lacks), and a lookup that blends the nearest probes.
+
+Decided (2026-11-23):
+- Fill probes how? Decision: capture at runtime on request; store the spherical harmonics in the archive.
+- Individual probe nodes or a grid volume? Decision: a grid volume node.
+- Per-object lookup at first? Decision: yes.
+- Which renderers? Decision: PBR and Blinn-Phong, through RenderContext like ambient light.
 
 ---
 
@@ -12280,31 +12280,30 @@ status: open
 priority: low
 kind: feature
 labels: effort:xl, area:renderer, subtask, lighting
+milestone: Lighting-and-GI
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:14:51Z
 +++
 
-No dynamic indirect lighting or color bleeding. (Moved from SceneSprocketsAddOns#72.)
-
-- `2026-11-17T17:59:21Z`: Related: #532.
+No dynamic indirect lighting or color bleeding. (Moved from SceneSprocketsAddOns#72.) Related: #532.
 
 ---
 
 ## 534: No screen-space global illumination
 
 +++
-status: open
+status: blocked
 priority: low
 kind: feature
-labels: effort:l, area:renderer, blocked
+labels: effort:l, area:renderer
+milestone: Lighting-and-GI
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-22T18:08:36Z
+updated: 2026-11-23T02:25:52Z
 +++
 
 No approximate bounced light from visible surfaces. (Moved from SceneSprocketsAddOns#73.)
 
-- `2026-11-17T17:59:21Z`: Related: #510 (needs normal/G-buffer).
-- `2026-11-22T18:08:35Z`: Autonomous run: skipped. SSGI samples the lit color and normals of nearby pixels, so it needs the normal target from #510 (open, questions pending) and ideally linear HDR color (#399 Q1, pending); without a temporal filter (#496, blocked on #510) it is too noisy at usable sample counts. Labelled blocked on #510.
+Blocked on #510: SSGI samples the lit color and normals of nearby pixels. It also wants linear HDR color (#399), and without a temporal filter (#496) it is too noisy.
 
 ---
 
@@ -12315,16 +12314,18 @@ status: open
 priority: low
 kind: feature
 labels: effort:l, area:renderer, subtask, lighting
+milestone: Lighting-and-GI
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:14:51Z
 +++
 
-Static scenes cannot use precomputed indirect lighting. (Moved from SceneSprocketsAddOns#74.)
+Static scenes cannot use precomputed indirect lighting (lightmaps). (Moved from SceneSprocketsAddOns#74.) Related: #536 (baking), #512 (indirect-light input).
 
-- `2026-11-17T17:59:20Z`: Related: #536 (baking produces lightmaps).
-- `2026-11-22T18:08:49Z`: Autonomous run: looked at using lightmaps (baking is #536). PBR meshes already carry a second UV set (texCoord1, glTF TEXCOORD_1); Blinn-Phong meshes do not. Using a lightmap means a texture sampled with the second UVs whose light replaces or adds to the environment's diffuse light, in PBR and Blinn-Phong. Where it attaches (material, like three.js lightMap, or mesh node) and how it combines with image-based light are the same choice as #512 Q3 (one indirect-light input that probes and lightmaps fill). Not started until that is decided.
-- `2026-11-22T18:08:49Z`: Question 1 (design): Should a lightmap be a material property sampled with the second UV set (like three.js lightMap with lightMapIntensity), or a per-node texture so many objects can share one material? Recommended: Per-node: lightmaps are unique per object while materials are shared
-- `2026-11-22T18:08:50Z`: Question 2 (decision): Should a lightmapped surface's lightmap replace the environment's diffuse light (with specular still from the environment), rather than add to it? Recommended: Replace
+PBR meshes carry a second UV set (glTF TEXCOORD_1); Blinn-Phong meshes do not. A lightmap is a texture sampled with the second UVs that replaces or adds to the environment's diffuse light.
+
+Decided (2026-11-23):
+- Material property or per-node texture? Decision: per-node, since lightmaps are unique per object while materials are shared.
+- Replace or add to the environment's diffuse light? Decision: replace; specular still comes from the environment.
 
 ---
 
@@ -12335,13 +12336,12 @@ status: open
 priority: low
 kind: feature
 labels: effort:xl, area:renderer, subtask, lighting
+milestone: Lighting-and-GI
 created: 2026-11-17T17:55:39Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:14:51Z
 +++
 
-Lighting for static environments cannot be generated automatically. (Moved from SceneSprocketsAddOns#75.)
-
-- `2026-11-17T17:59:21Z`: Related: #535.
+Lighting for static environments cannot be generated automatically. (Moved from SceneSprocketsAddOns#75.) Related: #535.
 
 ---
 
@@ -12370,15 +12370,18 @@ status: open
 priority: low
 kind: feature
 labels: effort:l, area:renderer
+milestone: Lighting-and-GI
 created: 2026-11-17T17:55:40Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:14:51Z
 +++
 
-Skin, wax, leaves and other translucent materials cannot scatter light below the surface. (Moved from SceneSprocketsAddOns#59.)
+Skin, wax, marble and other thick translucent materials cannot scatter light below the surface: lighting does not soften across the lit side. (Moved from SceneSprocketsAddOns#59.)
 
-- `2026-11-22T18:09:09Z`: Autonomous run: checked what exists. PBR already approximates translucency: KHR_materials_diffuse_transmission (light through thin surfaces such as leaves, with color and thickness/attenuation) and KHR_materials_volume_scatter (light scattered in the volume returns tinted by the multiscatter color, half on each side). Both are settable through PBRSceneMaterial.uniforms and archived. Missing: the softening of lighting across the lit side that skin and wax show (light entering at one point and leaving nearby). Options: a cheap per-light approximation in the shader (wrapped diffuse with a scatter color and radius), or screen-space diffusion of the diffuse lighting (a blur pass masked to scattering materials; needs a separate diffuse target, related to #510). Not started; scope not specified. Blinn-Phong has neither.
-- `2026-11-22T18:09:09Z`: Question 1 (decision): Is a shader-only approximation enough for skin and wax: wrapped diffuse lighting tinted by a subsurface color, with a strength and radius on PBR materials, rather than screen-space diffusion? Recommended: Yes, shader-only for PBR; screen-space diffusion later if needed
-- `2026-11-22T18:09:09Z`: Question 2 (decision): Should leaves and thin translucent surfaces count as covered by the existing diffuse transmission, so #538 is only about thick materials (skin, wax, marble)? Recommended: Yes
+PBR already has KHR_materials_diffuse_transmission (thin surfaces such as leaves) and KHR_materials_volume_scatter. Blinn-Phong has neither.
+
+Decided (2026-11-23):
+- Shader-only approximation (wrapped diffuse tinted by a subsurface color, with strength and radius on PBR materials) rather than screen-space diffusion? Decision: yes; screen-space later if needed.
+- Do thin surfaces count as covered by diffuse transmission, so this is only about thick materials? Decision: yes.
 
 ---
 
@@ -12389,17 +12392,19 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, area:renderer
+milestone: Rendering-2
 created: 2026-11-17T17:55:40Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:11:50Z
 +++
 
-Hair, foliage and dense overlapping transparent surfaces need order-independent transparency. (Moved from SceneSprocketsAddOns#61.)
+Hair, foliage and dense overlapping transparent surfaces need order-independent transparency; there is no stochastic transparency. (Moved from SceneSprocketsAddOns#61.) Related: #494 (weighted blended OIT, the other approach).
 
-- `2026-11-17T17:59:21Z`: Related: #494 (OIT).
-- `2026-11-22T17:44:12Z`: Looked at what exists. PBR mask materials already draw in the opaque pass with alpha to coverage under MSAA (#600), so stochastic transparency could reuse that: draw the transparent surface in the opaque pass, depth-written, with alpha turned into a hashed per-pixel sample coverage (or a hashed discard without MSAA). There is no temporal accumulation (TAA), so at 1x the result is visibly noisy and at 4x MSAA it quantizes alpha to 5 levels. The issue does not say how a material opts in, which renderers need it, or whether that noise is acceptable without TAA, so I did not start. Related: #494 (weighted blended OIT) solves the same problem differently.
-- `2026-11-22T17:44:12Z`: Question 1 (design): How should a material opt in: a new MaterialRenderState.BlendMode case (.stochastic) for Blinn-Phong and shader materials plus a PBRMaterial override, or one scene-wide setting that switches all transparent draws? Recommended: A per-material BlendMode.stochastic plus a PBRMaterial property
-- `2026-11-22T17:44:13Z`: Question 2 (decision): Is MSAA alpha-to-coverage with a hashed pattern (noisy at 1x, 5 alpha levels at 4x) acceptable without TAA, or should this wait for temporal accumulation? Recommended: Acceptable; document that it looks best with sceneAntialiasing(sampleCount: 4)
-- `2026-11-22T17:44:13Z`: Question 3 (decision): Should #539 wait for, or be done instead of, weighted blended OIT (#494)? Recommended: Do #539 first; it reuses the alpha-to-coverage path and is smaller
+PBR mask materials already draw in the opaque pass with alpha to coverage under MSAA (#600). Stochastic transparency could reuse it: depth-written, alpha turned into hashed sample coverage. Without TAA it is noisy at 1x and quantized to 5 levels at 4x MSAA.
+
+Decided (2026-11-23):
+- How does a material opt in? Decision: a per-material BlendMode.stochastic plus a PBRMaterial property.
+- Acceptable without TAA? Decision: yes; document that it looks best at 4x MSAA.
+- Do this before #494? Decision: yes; it is smaller.
 
 ---
 
@@ -12484,10 +12489,10 @@ status: open
 priority: medium
 kind: feature
 labels: umbrella, area:scenegraph, effort:xl, bounds
-milestone: Performance-2
+milestone: Big-World
 depends: 337, 505, 520, 383
 created: 2026-11-17T19:13:08Z
-updated: 2026-11-20T06:33:02Z
+updated: 2026-11-23T02:14:51Z
 +++
 
 SceneSprockets has no hierarchy of node bounds that follows scene changes. Every system that asks what a frustum, ray or region touches walks every node, and does its own bounds work:
@@ -12509,9 +12514,10 @@ status: open
 priority: medium
 kind: feature
 labels: umbrella, area:renderer, effort:xl, indirect-drawing
+milestone: GPU-Driven
 depends: 517, 520, 521, 522
 created: 2026-11-17T19:13:56Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:11:51Z
 +++
 
 Every SceneSprockets draw is chosen and encoded on the CPU each frame. No renderer issues indirect draws or uses indirect command buffers, so the GPU cannot decide what to draw, how many instances, or which level of detail.
@@ -12748,13 +12754,14 @@ status: open
 priority: low
 kind: feature
 labels: effort:l, area:extensions, deferred, gltf
+milestone: Assets-and-Materials
 created: 2026-11-19T02:12:55Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:14:51Z
 +++
 
-Primitives using KHR_draco_mesh_compression cannot be decoded; GLTFViewer lists glTF-Draco variants (about 20 sample models, none of them a default variant) as unsupported. Needs Google's Draco decoder (Apache-2.0, large C++), most likely in SwiftGLTF. Deferred: no default sample needs it. Meshopt split out to MetalSprocketsGLTF#104 (done).
+Primitives using KHR_draco_mesh_compression cannot be decoded; GLTFViewer lists the glTF-Draco variants of about 20 sample models (none a default variant) as unsupported. Meshopt compression is supported (MetalSprocketsGLTFMeshopt).
 
-State: meshopt compression is supported (MetalSprocketsGLTFMeshopt); Draco is not. Draco appears only in the glTF-Draco variants of about 20 sample models, and needs Google's decoder (Apache-2.0, large), which would belong in SwiftGLTF.
+Needs Google's Draco decoder (Apache-2.0, large C++), most likely in SwiftGLTF. Deferred: no default sample needs it.
 
 Was MetalSprocketsGLTF#8 (moved with the package, #552).
 
@@ -12792,18 +12799,14 @@ status: open
 priority: low
 kind: bug
 labels: area:performance, effort:s, deferred, gltf
-milestone: Performance-2
+milestone: Big-World
 created: 2026-11-19T02:12:55Z
-updated: 2026-11-20T06:33:02Z
+updated: 2026-11-23T02:14:51Z
 +++
 
-In GLTFViewer (Release, 120 Hz display) CarConcept runs at ~110 fps. Headless (ms-gltf-render --benchmark 60 --orbit, Release, M5 Max): ~3.8 ms CPU, <1 ms GPU per frame. 109 primitives, of which one has a transmissive material; that single material turns on the transmission pre-passes (opaque scene, back faces, mipmaps) for the whole scene. Likely the fixed cost of those passes; not yet profiled.
-
-State: the benchmark measures 3.4 ms CPU per frame (Release, M5 Max), within 120 Hz. Re-measure in the app before working on it.
+In GLTFViewer (Release, 120 Hz display) CarConcept runs at ~110 fps. Headless (ms-gltf-render --benchmark 60 --orbit, Release, M5 Max): ~3.8 ms CPU, <1 ms GPU per frame. 109 primitives, of which one has a transmissive material; that single material turns on the transmission pre-passes (opaque scene, back faces, mipmaps) for the whole scene. Likely the fixed cost of those passes; not yet profiled. The benchmark now measures 3.4 ms CPU per frame, within 120 Hz; re-measure in the app before working on it. Related: #583.
 
 Was MetalSprocketsGLTF#76 (moved with the package, #552).
-
-- `2026-11-20T05:54:42Z`: Related: #583 (also CarConcept frame time).
 
 ---
 
@@ -12814,8 +12817,9 @@ status: open
 priority: low
 kind: feature
 labels: area:extensions, effort:l, deferred, gltf
+milestone: Assets-and-Materials
 created: 2026-11-19T02:12:55Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:14:51Z
 +++
 
 Primitives using KHR_gaussian_splatting (point primitives with Gaussian splat attributes) are not drawn as splats. Supporting it means a separate splat renderer (sorting, splat rasterisation), not a material change.
@@ -12833,8 +12837,9 @@ status: open
 priority: low
 kind: feature
 labels: area:extensions, effort:m, deferred, gltf
+milestone: Assets-and-Materials
 created: 2026-11-19T02:12:55Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:14:51Z
 +++
 
 Photometric lights defined by EXT_lights_ies (IES light profiles) are ignored.
@@ -12880,9 +12885,9 @@ status: open
 priority: low
 kind: enhancement
 labels: effort:m, deferred, gltf, area:renderer
-milestone: VisionOS
+milestone: Rendering
 created: 2026-11-19T02:12:55Z
-updated: 2026-11-20T06:32:33Z
+updated: 2026-11-23T02:14:51Z
 +++
 
 In GLTFViewer's immersive space, edges show stair-stepping, more visible toward the edges of the view where foveation lowers resolution. MetalSprockets' ImmersiveLayerConfiguration does not request multisampling, and PBRImmersiveScene renders at one sample. Wanted: MSAA (or another antialiasing) in the immersive path, checking that CompositorServices layered targets and foveation (rasterization rate maps) support it, and the GPU cost on Vision Pro.
@@ -12900,9 +12905,9 @@ status: open
 priority: medium
 kind: task
 labels: effort:xs, deferred, gltf, area:renderer
-milestone: VisionOS
+milestone: Rendering
 created: 2026-11-19T02:12:56Z
-updated: 2026-11-20T06:32:33Z
+updated: 2026-11-23T02:14:51Z
 +++
 
 On Vision Pro, opening the model after the Showcase in the immersive space aborted with Metal validation: 'Only triangles may be drawn when using a rasterization rate map' (drawIndexedPrimitives). Fixed in e6f4bb6d: PBRImmersiveScene sets PBRRenderer.drawsTrianglesOnly, so point and line primitives are skipped in immersive (still drawn in windows); TrianglesOnlyTests covers it on macOS. To verify on device: open that model (and a points/lines sample such as MeshPrimitiveModes) in immersive with foveation on; no abort, triangles visible, lines and points absent.
@@ -13063,8 +13068,9 @@ status: open
 priority: low
 kind: feature
 labels: effort:m, deferred, pbr, area:materials
+milestone: Assets-and-Materials
 created: 2026-11-19T02:12:56Z
-updated: 2026-11-20T06:33:50Z
+updated: 2026-11-23T02:14:51Z
 +++
 
 RoboCloth (https://github.com/theialab/robocloth, local copy in ~/Projects/Vendor) has 500 captured cloth materials. They are released as neural BRDFs (a 16-channel latent texture plus a shared MLP) and as a Disney PBR fit.
@@ -13131,7 +13137,7 @@ Users of the scene graph have to know about and import both, and the names do no
 
 Merge them into one module. Trade-off: using the PBR renderer without the scene graph would then pull in SceneSprockets. Blinn-Phong is split the same way (shaders in SceneSprocketsShaders, renderer in SceneSprocketsBlinnPhong).
 
-\- `2026-11-19T02:58:01Z`: Merging only the two modules creates a dependency cycle: MetalSprocketsGLTF depends on MetalSprocketsPBR, and SceneSprocketsPBR depends on MetalSprocketsGLTF (GLTFSceneGraph.swift, GLTFSceneGraph+Export.swift and ModelFile.swift import it). One merged PBR module would need glTF, and glTF needs it.
+Merging only the two modules creates a dependency cycle: MetalSprocketsGLTF depends on MetalSprocketsPBR, and SceneSprocketsPBR depends on MetalSprocketsGLTF (GLTFSceneGraph.swift, GLTFSceneGraph+Export.swift and ModelFile.swift import it). One merged PBR module would need glTF, and glTF needs it.
 
 Ways out:
 1. Merge the two, and move the glTF and Model I/O scene loaders (GLTFSceneGraph*, ModelFile, ModelIOSceneGraph) into MetalSprocketsGLTF. PBR then has no glTF dependency. Smallest change that yields one PBR module.
@@ -13439,16 +13445,14 @@ status: open
 priority: low
 kind: bug
 labels: area:performance, effort:m, investigate, gltf
-milestone: Performance-2
+milestone: Rendering
 created: 2026-11-20T00:29:59Z
-updated: 2026-11-20T06:33:02Z
+updated: 2026-11-23T02:16:09Z
 +++
 
 After #582 (every batch through DrawList), ms-gltf-render bench CarConcept reports ~2.4 ms CPU per frame against ~1.67 ms for the merged path (56c82e9b), both on MetalSprockets main, Release, M5 Max. Sponza: 0.83 vs 0.69 ms. Reproduced over several runs.
 
-The bench's CPU figure is frame wall time minus GPU time. Time Profiler runs of 3000 frames of each show about the same CPU samples in measureFrames (4839 vs 4936), so the extra time is not CPU work; it is waiting somewhere in submission or completion. Cause not known.
-
-- `2026-11-20T05:54:42Z`: Related: #555 (also CarConcept frame time).
+The bench's CPU figure is frame wall time minus GPU time. Time Profiler runs of 3000 frames of each show about the same CPU samples in measureFrames (4839 vs 4936), so the extra time is not CPU work; it is waiting somewhere in submission or completion. Cause not known. Related: #555.
 
 ---
 
@@ -13728,10 +13732,11 @@ After #590, SceneGraphElement resolves deformation once for renderers that draw 
 - Shadows.prepare skins casters on the GPU with its own position and influence buffers, and uses CPU deformation for morphed casters.
 - The PBR primitive input (PBRSceneGraph.swift) keeps morph targets only when every target is valid, which differs from validMorphs.
 
-Found while working on #590.
+Found while working on #590. The PBR part is done (PBR now uses validMorphs); the shadow casters remain.
 
-- `2026-11-21T02:00:59Z`: Autonomous run: part 1 done in 'PBR uses MeshEntry.validMorphs…': the PBR primitive and pose now use validMorphs (test pbrKeepsValidMorphTargetsWhenOneIsInvalid). Part 2 (shadow casters) not changed. To share GPUDeformation, three things would change. (1) The deformation pass would have to run for every skinned or morphed caster, not only DrawsDeformedVertices materials, and before ShadowCasterDepthPass (today it runs after it). (2) Casters would draw the deformed mesh's own vertex buffers with its vertex layout, instead of the position-only Packed3 buffers that Shadows builds by reading positions on the CPU, because deformed GPU buffers are private and cannot be read back each frame. (3) The receiver mask and see-through (#541) caster pipelines change the same way. PBR skinned meshes would then be deformed once in compute for shadows while the PBR shader skins them again. That costs memory, but is cheaper than skinning in the caster vertex shader for each of a point light's six views, and removes CPU morphing for morphed casters. Punting part 2: it is a design trade-off.
-- `2026-11-21T02:00:59Z`: Question 1 (design): For shadow casters, should skinned and morphed meshes go through the shared GPUDeformation pass (run before the shadow pass, for every deformed caster, with casters drawing the deformed vertex buffers directly), at the cost of extra deformed-buffer memory for PBR meshes? Recommended: Yes: one deformation path; casters and the mask draw deformed buffers with the mesh's vertex layout; the shadow-specific skinning shaders and CPU morphing are removed
+Sharing GPUDeformation for casters means: run the deformation pass for every skinned or morphed caster, before the shadow pass (today it runs after); casters draw the deformed vertex buffers with the mesh's layout instead of CPU-built position buffers; the receiver mask and see-through (#541) caster pipelines change the same way. PBR skinned meshes would be deformed in compute for shadows and again in the PBR shader: more memory, but cheaper than skinning per point-light view, and no CPU morphing.
+
+Decided (2026-11-23): route shadow casters through the shared GPUDeformation pass? Decision: yes; remove the shadow-specific skinning shaders and CPU morphing.
 
 ---
 
@@ -13742,13 +13747,14 @@ status: new
 priority: low
 kind: enhancement
 labels: effort:s, area:scenegraph
+milestone: Physics-and-Scene
 created: 2026-11-20T05:56:30Z
-updated: 2026-11-22T13:04:14Z
+updated: 2026-11-23T02:11:51Z
 +++
 
-Super easy way to make a billboard (with various options to align the billboard to various things - e.g. camera, “tree style” etc)
+There is no easy way to make a billboard with alignment options (facing the camera, "tree style" upright, and so on). Constraint.billboard(freeAxes:) exists (freeAxes: .y is tree-style), but a billboard still takes a quad, a material and a constraint set up by hand. Related: #400.
 
-- `2026-11-22T13:04:15Z`: Question 1: SceneGraph.Constraint.billboard(freeAxes:) already exists (freeAxes: .y gives tree-style). Is the gap a one-call billboard node (quad + material + constraint) plus more alignment modes such as screen-aligned vs camera-position-facing? Recommended: Yes: add a convenience billboard node with screen-aligned, camera-facing and axis-locked modes
+Decided (2026-11-23): is the gap a one-call billboard node plus more alignment modes? Decision: yes: a convenience billboard node with screen-aligned, camera-facing and axis-locked modes.
 
 ---
 
@@ -13778,13 +13784,13 @@ Work that happens lazily on first use today:
 
 Sources/SceneSprockets has no public prepare API. The only prepare functions are per-frame internals (Shadows.prepare, GPUDeformation.prepare).
 
-Expected: an app can ask for a scene graph (or a subtree, or a set of materials) to be pre-warmed ahead of time, for example during loading, so that showing it later does not stall. Preferably async or with a completion. Whether it can be cancelled, like SceneKit's shouldAbortBlock, is still to be decided.
+Expected: an app can ask for a scene graph (or a subtree, or a set of materials) to be pre-warmed ahead of time, for example during loading, so that showing it later does not stall. Preferably async or with a completion.
 
-- `2026-11-20T06:04:47Z`: Could this be generalise to a pre-warming function that does all sorts of work before first frame? Is this a metalsprockets thing?
-- `2026-11-20T06:05:40Z`: Generalized from pipelines and PBR models to all first-frame work, per the question above. Pipeline compilation needs MetalSprockets#596.
-- `2026-11-20T06:31:14Z`: Autonomous run: scoped, not changed. MetalSprockets#596 (compiling pipelines ahead of time) is still New. Its checkout has no prepare or prewarm API, and pipeline compilation is the largest first-frame cost. The SceneSprockets-only parts could be done now: loading the static shader libraries and kernels, building PBR models, making CPU-readable and text meshes, and creating the BRDF LUT. But a public prepare API built without pipelines would probably change shape once #596 lands, because it needs the view configuration (pixel formats, sample count) to pick pipelines. Punting until that order is decided.
-- `2026-11-20T06:31:14Z`: Question 1 (decision): Should SceneSprockets ship a partial prepare API now (shader libraries, PBR models, meshes, LUTs; no pipelines), or wait until MetalSprockets#596 can compile pipelines ahead of time? Recommended: Wait for MetalSprockets#596, then build one prepare(sceneGraph:renderers:configuration:) async API that covers both
-- `2026-11-20T06:31:14Z`: Question 2 (design): Should prepare be cancellable, like SCNSceneRenderer.prepare's shouldAbortBlock? Recommended: Yes, through Swift Task cancellation on an async prepare, with no separate abort closure
+Pipeline compilation, the largest cost, needs MetalSprockets#596 (still new). A prepare API without pipelines would likely change shape once #596 lands, since picking pipelines needs the view configuration (pixel formats, sample count).
+
+Decided (2026-11-23):
+- Ship a partial prepare now, or wait for MetalSprockets#596? Decision: wait, then build one async prepare(sceneGraph:renderers:configuration:) covering both.
+- Cancellable? Decision: yes, through Task cancellation; no abort closure.
 
 ---
 
@@ -13795,8 +13801,9 @@ status: open
 priority: low
 kind: bug
 labels: area:build, effort:s
+milestone: Rendering
 created: 2026-11-20T06:26:17Z
-updated: 2026-11-22T13:04:15Z
+updated: 2026-11-23T02:14:51Z
 +++
 
 Changing Sources/MetalSprocketsLightingShaders/include/MetalSprocketsLightingTypes.h (kLightingMaxShadowSliceCount 8 -> 32) did not rebuild the metallibs of SceneSprocketsShaders and MetalSprocketsPBRShaders, which include it. Swift used the new struct layout and the shaders the old one, so every shadow test failed.
@@ -13808,11 +13815,11 @@ Repro:
 Expected: the shaders that include the header are recompiled.
 Actual: stale metallibs are used until a .metal file in each target is touched.
 
-Found while fixing #299.
+Found while fixing #299; seen again in #628, where the stale metallibs under .build/plugins/outputs/scenesprockets/ survived rebuilds and xcb clean. Workaround: delete those plugin output folders.
 
-- `2026-11-22T15:35:42Z`: Root cause in MetalCompilerPlugin: the build command's inputFiles were only the .metal sources, so no header edit (own target or dependency) invalidated the metallib. Fixed in MetalCompilerPlugin (local commit, not pushed): headers under the target, dependency include paths and include-paths are now inputs. Verified here with a temporary path dependency: appending to MetalSprocketsLightingTypes.h rebuilt the MetalSprocketsLighting, MetalSprocketsPBR and SceneSprockets shader libraries (before: none). Stays open until the plugin is released and SceneSprockets requires it.
-- `2026-11-22T15:35:42Z`: Question 1 (decision): May I push MetalCompilerPlugin's header-inputs fix, tag it 0.4.2, and bump SceneSprockets (and MetalSprockets, which also uses the plugin) to it? Recommended: Yes: push, tag 0.4.2, bump SceneSprockets to .upToNextMinor(from: "0.4.2") and close #598
-- `2026-11-23T01:01:21Z`: Seen again while fixing #628 (2026-11-22): after editing MetalSprocketsLighting.h, the SceneSprocketsShaders and MetalSprocketsPBRShaders metallibs under .build/plugins/outputs/scenesprockets/ kept their 16:27 timestamps through rebuilds and xcb clean, so tests ran the old shaders. Deleting those plugin output folders forced the rebuild.
+Root cause in MetalCompilerPlugin: the build command's inputs were only the .metal sources, so no header edit invalidated the metallib. Fixed in a local MetalCompilerPlugin commit (not pushed): headers under the target and include paths are now inputs; verified to rebuild all three shader libraries.
+
+To do: push the MetalCompilerPlugin fix, tag 0.4.2, and bump SceneSprockets and MetalSprockets to it.
 
 ---
 
@@ -13935,8 +13942,9 @@ status: open
 priority: low
 kind: enhancement
 labels: area:scenegraph, effort:l
+milestone: Rendering
 created: 2026-11-22T15:31:03Z
-updated: 2026-11-22T19:59:10Z
+updated: 2026-11-23T02:16:06Z
 +++
 
 Node.Content.instancedMesh (#135) removes the node, entity, traversal and world-transform cost of one node per copy, but the scene graph still expands it into one MeshEntry per copy and submesh. Each frame the renderers then cull every copy's entry on its own and gather one model matrix per copy before grouping the copies back into an instanced draw. For thousands of copies the CPU cost per frame still grows with the copy count, unlike SCNGeometry with an instance buffer or EXT_mesh_gpu_instancing, where one draw carries the whole instance buffer.
@@ -13946,7 +13954,7 @@ Related gaps in the first cut:
 - Physics bodies (convex hull, mesh shapes) and subdivision ignore instanced meshes.
 - No per-instance colors.
 
-- `2026-11-22T20:46:29Z`: Skipped in the autonomous run (2026-11-22) on the user's call. The fix changes MeshEntry for every renderer (BlinnPhong, PBR, Toon, ShaderMaterial, shadows, culling, hit testing, BVH): an instanced mesh would become one entry per submesh carrying all instance transforms, so meshEntries() would no longer return one entry per copy.
+A fix changes MeshEntry for every renderer (Blinn-Phong, PBR, Toon, ShaderMaterial, shadows, culling, hit testing, BVH): an instanced mesh would become one entry per submesh carrying all instance transforms, so meshEntries() would no longer return one entry per copy.
 
 ---
 
@@ -14237,13 +14245,14 @@ status: open
 priority: low
 kind: feature
 labels: area:materials, effort:l
+milestone: Assets-and-Materials
 created: 2026-11-22T20:53:29Z
-updated: 2026-11-23T00:50:54Z
+updated: 2026-11-23T02:14:51Z
 +++
 
 MaterialXDocument folds math nodes on constants and image-times-constant (#609), but nodes that need per-pixel evaluation still fall back to the shader input's default with a warning: procedural patterns (noise2d, noise3d, fractal3d, cellnoise, ramps), texcoord and texture-coordinate transforms (image uvtiling/uvoffset, place2d, texcoord), and math on images other than multiplying by a constant (mix of two images, add, swizzle/extract of an image). Images on inputs PBRSceneMaterial has no texture slot for (opacity, coat, sheen/fuzz, transmission, specular) are also ignored. Split from #609.
 
-- `2026-11-23T01:46:14Z`: Skipped in the autonomous run on 2026-11-22, on the user's call. The plan offered was: map image uvtiling/uvoffset and place2d to the PBR texture transforms, bake texcoord-only graphs (noise2d, cellnoise2d, ramps, math on images) into a texture on the CPU at load, and split 3D-position nodes into a new issue.
+Possible approach: map image uvtiling/uvoffset and place2d to the PBR texture transforms; bake texcoord-only graphs (noise2d, cellnoise2d, ramps, math on images) into a texture on the CPU at load; 3D-position nodes (noise3d, fractal3d) cannot be baked that way.
 
 ---
 
@@ -14452,22 +14461,21 @@ status: open
 priority: low
 kind: bug
 labels: area:demo, effort:s
+milestone: Demo
 created: 2026-11-23T00:48:41Z
-updated: 2026-11-23T00:50:54Z
+updated: 2026-11-23T02:11:51Z
 +++
 
-Several keynote slides now have code panels wider than the view, so the start and end of their lines are cut off at the window edges. Seen on the Many Lights slide (screenshot from 2026-11-22: the lines start left of the view and "range: 1.6))))" reaches the right edge); other slides added or changed recently have similarly long lines (for example Gizmos, More Physics, Paths, Fog, Performance).
+In the demo app the scene view extends under the sidebar and inspector, so every demo is framed for the full window width and the edges of the scene are hidden behind the panels. On the keynote this cuts off code panels and slide content (seen on the Many Lights slide, 2026-11-22). Hiding the sidebar and inspector shows the whole slide; at the keynote's own camera every code panel fits the view.
 
 Steps:
 1. Run the demo app (scenesprockets-demos) and open Introduction to SceneSprockets.
-2. Step through the slides at the default window size.
+2. Go to the Many Lights slide with the sidebar and inspector shown.
 
-Expected: every code panel fits inside the view.
-Actual: on several slides the code panel is wider than the view and its lines are cut off.
+Expected: the slide and its code panel fit the visible area between the panels.
+Actual: the slide is framed for the whole window; its edges and the ends of code lines are hidden under the panels.
 
-- `2026-11-23T01:21:50Z`: Investigated 2026-11-22. At the keynote's own camera (40-degree view) every code panel fits: the widest (Gizmos) is 11.7 units, and the view is about 13.8 units wide at the panel at a 1.65 aspect; offscreen renders at the screenshot's window size show the Many Lights panel fitting with margin. In the demo app the scene view extends under the sidebar and inspector, so slides are framed for the full window width and their edges are hidden behind the panels (confirmed by the user: hiding the panels shows the full slide). Punting: the fix is a layout decision for the demo app, not the code panels.
-- `2026-11-23T01:21:50Z`: Question 1 (decision): Should the demo app's scene view stop at the sidebar's and inspector's edges (for every demo), so slides are framed for the visible area? Recommended: Yes: the scene view fills only the area between the sidebar and inspector
-- `2026-11-23T01:47:03Z`: Related: #630 (show code samples in a text view instead of a scene plane).
+Open question: should the scene view stop at the sidebar's and inspector's edges, for every demo? Proposed: yes. Related: #630.
 
 ---
 
@@ -14478,8 +14486,9 @@ status: open
 priority: low
 kind: enhancement
 labels: area:demo, effort:m
+milestone: Demo
 created: 2026-11-23T01:46:29Z
-updated: 2026-11-23T01:47:03Z
+updated: 2026-11-23T02:11:51Z
 +++
 
 Each keynote slide's code sample is a SwiftUI snapshot rendered into a texture and shown on a plane in the scene (CodePanel, KeynoteDemo.addCode). Because it is scene geometry:
@@ -14488,9 +14497,39 @@ Each keynote slide's code sample is a SwiftUI snapshot rendered into a texture a
 - The text is a fixed-resolution image, so it is not selectable or copyable, and gets soft when the camera is close.
 
 ## Proposed fix (per schwa)
-Use a text view for the source code instead of a textured plane.
+Use a text view for the source code instead of a textured plane. Related: #629.
 
-- `2026-11-23T01:47:03Z`: Related: #629 (code panels hidden under the sidebar and inspector); a text view outside the scene would also avoid that.
+---
+
+## 631: Screen-space ambient occlusion is not blurred
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:renderer, effort:s
+milestone: Rendering-2
+created: 2026-11-23T02:28:04Z
+updated: 2026-11-23T02:28:07Z
++++
+
+SceneGraph.postProcessing's SSAO is unblurred, so the occlusion is noisy. A blur pass does not depend on the HDR path. Split from #45.
+
+---
+
+## 632: SCNText's chamfer, flatness, container frame and wrapping are missing
+
++++
+status: new
+priority: low
+kind: enhancement
+labels: area:scenegraph, effort:m
+milestone: Physics-and-Scene
+created: 2026-11-23T02:28:07Z
+updated: 2026-11-23T02:28:10Z
++++
+
+Text shapes (Shape.text) have no chamfer, flatness, container frame or wrapping, which SCNText has. Split from #80. See docs/SceneKitComparison.md.
 
 ---
 
@@ -14538,8 +14577,8 @@ New capabilities and missing API.
 +++
 status: closed
 created: 2026-11-16T20:12:42Z
-updated: 2026-11-20T06:33:54Z
-closed: 2026-11-20T06:33:54Z
+updated: 2026-11-23T02:14:13Z
+closed: 2026-11-23T02:14:13Z
 +++
 
 Out of sequence. Large or speculative work.
@@ -14549,9 +14588,10 @@ Out of sequence. Large or speculative work.
 ## Milestone M5: VisionOS
 
 +++
-status: open
+status: closed
 created: 2026-11-17T17:28:41Z
-updated: 2026-11-20T06:32:33Z
+updated: 2026-11-23T02:14:51Z
+closed: 2026-11-23T02:14:51Z
 +++
 
 ---
@@ -14561,10 +14601,10 @@ updated: 2026-11-20T06:32:33Z
 +++
 status: open
 created: 2026-11-17T18:01:46Z
-updated: 2026-11-20T06:32:40Z
+updated: 2026-11-23T02:14:51Z
 +++
 
-Very large worlds (solar-system scale): enough precision in transforms, time, depth, rendering and physics to make a KSP-style game doable.
+Scale and performance: very large worlds, precision, bounds hierarchy, instancing cost, large-scene speed.
 
 ---
 
@@ -14608,9 +14648,10 @@ Decide whether PBR keeps the merged-geometry path (#545), and fix the issues it 
 ## Milestone M10: Performance-2
 
 +++
-status: open
+status: closed
 created: 2026-11-20T06:00:25Z
-updated: 2026-11-20T06:33:02Z
+updated: 2026-11-23T02:14:51Z
+closed: 2026-11-23T02:14:51Z
 +++
 
 Frame time, CPU cost and scaling to large scenes, with benchmarks to measure them.
@@ -14620,9 +14661,10 @@ Frame time, CPU cost and scaling to large scenes, with benchmarks to measure the
 ## Milestone M11: Reliability
 
 +++
-status: open
+status: closed
 created: 2026-11-20T06:00:25Z
-updated: 2026-11-20T06:33:09Z
+updated: 2026-11-23T02:14:51Z
+closed: 2026-11-23T02:14:51Z
 +++
 
 Crashes, races and flaky tests: malformed input, threading and CI stability.
@@ -14634,9 +14676,80 @@ Crashes, races and flaky tests: malformed input, threading and CI stability.
 +++
 status: open
 created: 2026-11-20T06:01:40Z
-updated: 2026-11-20T06:33:14Z
+updated: 2026-11-23T02:14:51Z
 +++
 
-Advanced rendering: post effects, screen-space techniques, probes, render targets, extension points and GPU-driven draws.
+Post-processing and screen-space techniques: bloom, depth of field, TAA, SSR, decals, transparency, render targets.
+
+---
+
+## Milestone M13: GPU-Driven
+
++++
+status: open
+created: 2026-11-23T02:11:50Z
++++
+
+GPU-driven rendering: indirect draws, GPU culling and LOD, deferred, visibility-buffer and tiled shading, render graph.
+
+---
+
+## Milestone M14: Materials
+
++++
+status: closed
+created: 2026-11-23T02:11:50Z
+updated: 2026-11-23T02:14:51Z
+closed: 2026-11-23T02:14:51Z
++++
+
+Material authoring: ShaderGraph DSL and node editor, MaterialX per-pixel nodes, cloth materials.
+
+---
+
+## Milestone M15: Demo
+
++++
+status: open
+created: 2026-11-23T02:11:50Z
+updated: 2026-11-23T02:14:51Z
++++
+
+Demo app, keynote and SceneView UI.
+
+---
+
+## Milestone M16: glTF-Extensions
+
++++
+status: closed
+created: 2026-11-23T02:11:50Z
+updated: 2026-11-23T02:14:51Z
+closed: 2026-11-23T02:14:51Z
++++
+
+glTF extensions not yet supported: Draco, Gaussian splatting, IES lights.
+
+---
+
+## Milestone M17: Lighting-and-GI
+
++++
+status: open
+created: 2026-11-23T02:14:51Z
++++
+
+Lighting and global illumination: area lights, cookies, probes, lightmaps and baking, screen-space GI, subsurface scattering.
+
+---
+
+## Milestone M18: Assets-and-Materials
+
++++
+status: open
+created: 2026-11-23T02:14:51Z
++++
+
+Asset formats and material authoring: USD, glTF extensions, MaterialX, ShaderGraph, shader modifiers.
 
 ---
