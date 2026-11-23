@@ -57,7 +57,7 @@ public struct RenderContext {
     /// Set when a node with ``SceneGraph/Node/planarReflector`` is drawn this frame (#531).
     public internal(set) var planarReflection: PlanarReflectionContext?
     /// Set for the transparent entries drawn as weighted blended transparency (#494): renderers draw them with a
-    /// fragment shader that writes `Lighting::WeightedTransparencyOutput` and ``Element/weightedTransparencyState()``.
+    /// fragment shader that writes `Lighting::WeightedTransparencyOutput` and `Element.weightedTransparencyState()`.
     public internal(set) var drawsWeightedTransparency = false
     /// This frame's normals and velocity, when ``SceneGraphElement/gBuffer(_:)`` requested them and the pre-pass ran
     /// (#510). Drawn before the scene pass.

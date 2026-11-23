@@ -15125,8 +15125,25 @@ created: 2026-11-23T14:37:43Z
 
 The area-light code uses the bare abbreviation 'LTC' (Linearly Transformed Cosines, Heitz et al. 2016) in file and symbol names, e.g. `MetalSprocketsLightingLTC.h`, `kLightingLTC1`, `kLightingLTC2`. Readers without graphics-research background can't tell what these are from the name alone.
 
-- `2026-11-23T14:38:27Z`: ## Proposed fix (per user)
+\- `2026-11-23T14:38:27Z`: ## Proposed fix (per user)
 Name it after the inventors (Heitz et al.) instead of the acronym, so readers know it's a specific published technique they can look up rather than having to guess what 'LTC' stands for.
+
+---
+
+## 664: Use hypbr materials in SceneSprockets
+
++++
+status: new
+priority: low
+kind: none
+created: 2026-11-23T14:42:16Z
++++
+
+SceneSprockets has no source of realistic, seamless PBR materials for demos and lighting tests.
+
+hypbr (https://github.com/wrong-nebula/hypbr, MIT, cloned at ~/Projects/Vendor/hypbr) provides 500 tileable materials as glTF-style maps (albedo, OpenGL normal, ORM, height, plus anisotropy/curvature/etc.), with real-world tile sizes and projection hints in per-material JSON spec cards. Hosted maps are 512px WebP; higher resolutions come from its Python generator.
+
+Caveat: project is ~2 days old and changing quickly.
 
 ---
 

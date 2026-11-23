@@ -185,7 +185,7 @@ extension SceneGraph.Node {
 
     /// A grid of irradiance probes filling this node's unit box (-0.5...0.5 on each axis, placed by the node's
     /// transform), which gives each object inside indirect light from where it is (#532). Fill it with
-    /// ``SceneGraph/ProbeVolume/capture(sceneGraph:node:renderers:)``.
+    /// ``SceneGraph/ProbeVolume/capture(sceneGraph:node:renderers:faceSize:)``.
     public var probeVolume: SceneGraph.ProbeVolume? {
         get { getField(FieldKeyPaths.probeVolume, \.probeVolumeStorage) }
         set { setField(FieldKeyPaths.probeVolume, \.probeVolumeStorage, newValue) }
