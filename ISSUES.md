@@ -14214,11 +14214,12 @@ MaterialX loading (MaterialXDocument, #528) is not shown in the keynote. The dem
 ## 619: Path control points cannot be edited in the editor
 
 +++
-status: new
+status: open
 priority: low
 kind: enhancement
 labels: area:scenegraph, effort:m
 created: 2026-11-22T20:49:48Z
+updated: 2026-11-23T00:50:54Z
 +++
 
 EditorGizmos draws Node.path curves (#607) and clicking one selects its node, so the whole path can be moved with the transform gizmo. The individual control points cannot be selected or dragged, so a path's shape can only be changed in code. Split from #607.
@@ -14228,11 +14229,12 @@ EditorGizmos draws Node.path curves (#607) and clicking one selects its node, so
 ## 620: MaterialX nodes that need per-pixel evaluation are ignored
 
 +++
-status: new
+status: open
 priority: low
 kind: feature
 labels: area:materials, effort:l
 created: 2026-11-22T20:53:29Z
+updated: 2026-11-23T00:50:54Z
 +++
 
 MaterialXDocument folds math nodes on constants and image-times-constant (#609), but nodes that need per-pixel evaluation still fall back to the shader input's default with a warning: procedural patterns (noise2d, noise3d, fractal3d, cellnoise, ramps), texcoord and texture-coordinate transforms (image uvtiling/uvoffset, place2d, texcoord), and math on images other than multiplying by a constant (mix of two images, add, swizzle/extract of an image). Images on inputs PBRSceneMaterial has no texture slot for (opacity, coat, sheen/fuzz, transmission, specular) are also ignored. Split from #609.
@@ -14391,11 +14393,12 @@ Put one gizmo on each object (one per mode), shown at the same time, instead of 
 ## 627: Keynote Fog slide shows distance fog and volumetric fog together, which causes problems
 
 +++
-status: new
+status: open
 priority: low
 kind: task
 labels: area:demo, effort:s
 created: 2026-11-23T00:39:35Z
+updated: 2026-11-23T00:50:54Z
 +++
 
 Since #613, the keynote's Fog slide applies distance fog (Fog Start / Fog End) and volumetric fog (Fog.scattering, Volumetric Fog toggle and Fog Density) at the same time on the same pillars. The two together cause problems on the slide.
@@ -14408,12 +14411,12 @@ Show only volumetric fog on the Fog slide.
 ## 628: Many Lights keynote slide shows rectangular tiles where lighting cuts off
 
 +++
-status: new
+status: open
 priority: medium
 kind: bug
 labels: area:renderer, lighting, effort:s
 created: 2026-11-23T00:42:41Z
-updated: 2026-11-23T00:42:47Z
+updated: 2026-11-23T00:50:54Z
 +++
 
 On the keynote's Many Lights slide (#611), the lit floor and pillars show hard-edged rectangular blocks: inside a block the colored point lights are missing or different from the neighboring block, so lighting changes abruptly along straight screen-aligned edges. The pillars are cut across horizontally at the same edges. Screenshot from 2026-11-22 (macOS demo app, 120 fps).
@@ -14433,11 +14436,12 @@ Actual: rectangular tiles with missing or different lighting.
 ## 629: Keynote code panels run past the edges of the view on several slides
 
 +++
-status: new
+status: open
 priority: low
 kind: bug
 labels: area:demo, effort:s
 created: 2026-11-23T00:48:41Z
+updated: 2026-11-23T00:50:54Z
 +++
 
 Several keynote slides now have code panels wider than the view, so the start and end of their lines are cut off at the window edges. Seen on the Many Lights slide (screenshot from 2026-11-22: the lines start left of the view and "range: 1.6))))" reaches the right edge); other slides added or changed recently have similarly long lines (for example Gizmos, More Physics, Paths, Fog, Performance).
