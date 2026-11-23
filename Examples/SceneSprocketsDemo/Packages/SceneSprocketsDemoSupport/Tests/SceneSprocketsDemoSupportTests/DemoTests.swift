@@ -196,9 +196,9 @@ func fogSlideShowsVolumetricFog() throws {
     keynote.update(time: 0, deltaTime: 1.0 / 60)
     #expect(keynote.sceneGraph.fog?.scattering != nil)
     #expect(keynote.shadows != nil)
-    keynote[flag: "Volumetric Fog"] = false
-    keynote.update(time: 0, deltaTime: 1.0 / 60)
-    #expect(keynote.sceneGraph.fog != nil && keynote.sceneGraph.fog?.scattering == nil)
+    // #627: volumetric fog only; the distance fog's alpha is 0, so it adds nothing.
+    #expect(keynote.sceneGraph.fog?.color.w == 0)
+    #expect(keynote.sceneGraph.fog?.amount(atDistance: 1_000) == 0)
     keynote.show(slide: 0)
     keynote.update(time: 0, deltaTime: 1.0 / 60)
     #expect(keynote.sceneGraph.fog == nil)
@@ -440,19 +440,21 @@ func keynoteCameraHeightIsTheSameOnEverySlide() throws {
     #expect(heights.count == 1)
 }
 
-// #333: the fog fades in with the transition to the Fog slide instead of switching on at the end.
+// #333: the fog fades in with the transition to the Fog slide instead of switching on at the end. Since #627 it is
+// volumetric only, so its density eases in.
 @Test
 @MainActor
 func keynoteFogFadesInDuringTransition() throws {
     let keynote = try keynoteShowing("Shadows")
     try #require(keynote.actions.first { $0.name == "Next" }).perform()
     keynote.update(time: 0, deltaTime: 0.25)
-    let fog = try #require(keynote.sceneGraph.fog)
-    #expect(fog.endDistance > 34)
+    let density = try #require(keynote.sceneGraph.fog?.scattering?.density)
+    let full = keynote[value: "Fog Density"]
+    #expect(density > 0 && density < full)
     for _ in 0 ..< 10 {
         keynote.update(time: 0, deltaTime: 0.25)
     }
-    #expect(keynote.sceneGraph.fog?.endDistance == 34)
+    #expect(keynote.sceneGraph.fog?.scattering?.density == full)
 }
 
 // #328: tapping an object outside the Gizmos slide selects nothing, so no gizmo appears.

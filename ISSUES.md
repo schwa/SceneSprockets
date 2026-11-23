@@ -14394,18 +14394,21 @@ Put one gizmo on each object (one per mode), shown at the same time, instead of 
 ## 627: Keynote Fog slide shows distance fog and volumetric fog together, which causes problems
 
 +++
-status: open
+status: closed
 priority: low
 kind: task
 labels: area:demo, effort:s
 created: 2026-11-23T00:39:35Z
-updated: 2026-11-23T00:50:54Z
+updated: 2026-11-23T01:25:15Z
+closed: 2026-11-23T01:25:15Z
 +++
 
 Since #613, the keynote's Fog slide applies distance fog (Fog Start / Fog End) and volumetric fog (Fog.scattering, Volumetric Fog toggle and Fog Density) at the same time on the same pillars. The two together cause problems on the slide.
 
 ## Proposed fix (per schwa)
 Show only volumetric fog on the Fog slide.
+
+- `2026-11-23T01:25:15Z`: Fog slide is volumetric fog only: distance fog alpha 0, Fog Start/End and the Volumetric Fog toggle removed (Fog toggle and Fog Density remain); the density eases in with the transition. Notes and code panel updated. Tests: fogSlideShowsVolumetricFog (distance fog amount 0), keynoteFogFadesInDuringTransition now checks the density easing. The haze also covers the title and code panel, which are in the scene.
 
 ---
 

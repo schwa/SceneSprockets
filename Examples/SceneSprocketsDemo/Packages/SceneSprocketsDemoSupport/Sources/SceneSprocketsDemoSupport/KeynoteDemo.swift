@@ -306,10 +306,10 @@ public final class KeynoteDemo: DemoScene {
         • Turn them on in SceneView with Shadows; softness and intensity are settings.
         """,
         "Fog": """
-        • Distance fog: one property on the scene graph.
-        • The pillars fade into the fog between the start and end distances.
+        • Fog is one property on the scene graph: sceneGraph.fog.
         • Volumetric fog scatters the moonlight in the air; the pillars' shadows cut shafts through it.
         • It marches each pixel's ray through the shadow map, so it needs shadows on.
+        • Distance fog (start and end distances) is also available, alone or with it.
         """,
         "Opacity & Fades": """
         • Node opacity is inherited: fade a parent and its children fade too.
@@ -495,8 +495,7 @@ public final class KeynoteDemo: DemoScene {
             [.toggle("Cast Shadows", default: true), .slider("Sun Angle", -90...90, default: 0), .slider("Shadow Spin", 0...3, default: 1)]
         case "Fog":
             [
-                .toggle("Fog", default: true), .slider("Fog Start", 0...40, default: 12), .slider("Fog End", 5...80, default: 34),
-                .toggle("Volumetric Fog", default: true), .slider("Fog Density", 0...0.2, default: 0.06)
+                .toggle("Fog", default: true), .slider("Fog Density", 0...0.2, default: 0.06)
             ]
         case "Opacity & Fades":
             [.slider("Fade Speed", 0...3, default: 1)]
@@ -608,14 +607,11 @@ public final class KeynoteDemo: DemoScene {
             sceneGraph.fog = nil
             return
         }
-        // Pushes the fog out of sight as the amount drops.
-        let distance = (1 - fogAmount) * 300
-        let start = self[value: "Fog Start"]
-        let end = max(self[value: "Fog End"], start + 0.1)
-        // Volumetric fog (#540, #613): the moon's light scatters in the air, with shafts where the pillars shadow it.
-        // Its density eases with the distance fog.
-        let scattering = self[flag: "Volumetric Fog"] ? SceneGraph.Fog.Scattering(density: self[value: "Fog Density"] * fogAmount, intensity: 0.5, anisotropy: 0.6, stepCount: 48, maximumDistance: 30) : nil
-        sceneGraph.fog = SceneGraph.Fog(color: [0.05, 0.06, 0.1, 1], startDistance: start + distance, endDistance: end + distance, scattering: scattering)
+        // Volumetric fog only (#540, #613, #627): the moon's light scatters in the air, with shafts where the pillars
+        // shadow it. A zero alpha turns the distance fog off; the two together looked wrong. The density eases in and
+        // out with the transition.
+        let scattering = SceneGraph.Fog.Scattering(density: self[value: "Fog Density"] * fogAmount, intensity: 0.5, anisotropy: 0.6, stepCount: 48, maximumDistance: 30)
+        sceneGraph.fog = SceneGraph.Fog(color: [0.05, 0.06, 0.1, 0], scattering: scattering)
     }
 
     private func updateSlide(time: Float, deltaTime: Float) {
@@ -1386,8 +1382,8 @@ public final class KeynoteDemo: DemoScene {
         case "Fog":
             fogSlide(slide)
             addCode("""
-            sceneGraph.fog = SceneGraph.Fog(color: [0.05, 0.06, 0.1, 1],
-                                            startDistance: 12, endDistance: 34,
+            // Alpha 0: volumetric fog only, no distance fog.
+            sceneGraph.fog = SceneGraph.Fog(color: [0.05, 0.06, 0.1, 0],
                                             scattering: .init(density: 0.06, intensity: 0.5, anisotropy: 0.6))
             """, to: slide)
         case "Implicit Animation":
