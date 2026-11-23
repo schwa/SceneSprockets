@@ -211,7 +211,15 @@ public struct PBRRenderer: Element {
         let segments = DrawSegment.segments(group.draws)
         // visionOS shows our color only where depth is written. In stereo, blended surfaces write depth so glass over
         // passthrough stays visible (see PBRPipelineState). They draw back to front, so nearer ones still pass.
-        return try RenderPipeline(label: group.label, vertexShader: context.shaders.vertexShader(variant), fragmentShader: group.state.isWeighted ? context.shaders.weightedFragment : context.shaders.fragment) {
+        // Models with MaterialX materials (#666) draw with the shaders that call surface functions from a table.
+        let surfaceFunctions = model.surfaceFunctions.map(\.function)
+        let fragmentShader = switch (group.state.isWeighted, surfaceFunctions.isEmpty) {
+        case (false, true): context.shaders.fragment
+        case (true, true): context.shaders.weightedFragment
+        case (false, false): context.shaders.surfaceFragment
+        case (true, false): context.shaders.weightedSurfaceFragment
+        }
+        let pipeline = try RenderPipeline(label: group.label, vertexShader: context.shaders.vertexShader(variant), fragmentShader: fragmentShader) {
             let content = ForEach(segments) { segment in
                 if case let .list(_, geometry, draws) = segment {
                     drawList(draws, geometry: geometry, skinned: variant.skinned)
@@ -223,15 +231,30 @@ public struct PBRRenderer: Element {
             .parameter("materials", argumentBuffer: context.materials.resources)
             .parameter("instanceRecords", values: context.draws.records, else: model.instanceRecordBuffer)
             let clusterBinding = try LightingClusters.binding(context.bindings.lightClusters, shadingOrigin: context.bindings.lightClusterOrigin, device: model.device)
-            context.bindings.apply(to: tables(content, variant: variant, draws: context.draws), frameResources: context.frameResources)
+            let bound = context.bindings.apply(to: tables(content, variant: variant, draws: context.draws), frameResources: context.frameResources)
                 .parameter("lightClusterUniforms", functionType: .fragment, value: clusterBinding.uniforms)
                 .parameter("lightClusters", functionType: .fragment, buffer: clusterBinding.buffer)
+            if surfaceFunctions.isEmpty {
+                bound
+            } else {
+                bound.visibleFunctionTable("surfaceFunctions", functionType: .fragment, functions: surfaceFunctions)
+            }
         }
         .vertexDescriptor(variant.skinned ? PBRModel.skinnedVertexDescriptor : PBRModel.vertexDescriptor)
         .renderPipelineDescriptorTransformer { descriptor in
             group.state.apply(to: descriptor)
         }
         .depthStencilDescriptor(group.state.depthStencilDescriptor(function: depthFunction))
+        return linking(pipeline, surfaceFunctions: surfaceFunctions)
+    }
+
+    @ElementBuilder
+    private func linking(_ pipeline: some Element, surfaceFunctions: [VisibleFunction]) -> some Element {
+        if surfaceFunctions.isEmpty {
+            pipeline
+        } else {
+            pipeline.linkedFunctions(surfaceFunctions, functionType: .fragment)
+        }
     }
 
     // Skinned shaders read joints from the palette; the others read instances.
@@ -538,6 +561,9 @@ struct PBRShaders {
     var fragment: FragmentShader
     // Weighted blended transparency (#494).
     var weightedFragment: FragmentShader
+    // The two above, calling MaterialX surface functions (#666).
+    var surfaceFragment: FragmentShader
+    var weightedSurfaceFragment: FragmentShader
     var skinnedVertex: VertexShader
     var morphedVertex: VertexShader
     var skinnedMorphedVertex: VertexShader
@@ -640,6 +666,8 @@ struct PBRShaders {
             vertex: try pbr.vertex_main,
             fragment: try pbr.fragment_main,
             weightedFragment: try pbr.fragment_weighted,
+            surfaceFragment: try pbr.fragment_main_surface,
+            weightedSurfaceFragment: try pbr.fragment_weighted_surface,
             skinnedVertex: try pbr.vertex_skinned,
             morphedVertex: try pbr.vertex_main_morphed,
             skinnedMorphedVertex: try pbr.vertex_skinned_morphed,

@@ -232,6 +232,62 @@ namespace PBR {
         }
     }
 
+    // How shade gets a MaterialX surface function's inputs (#666). NoSurface has none, so shade reads only the material's
+    // uniforms and textures; PBR.metal's surface variants call the material's function from a visible function table.
+    struct NoSurface {
+        static constexpr constant bool enabled = false;
+        bool apply(thread const MXShadingContext &, thread MXSurfaceInputs &) const { return false; }
+    };
+
+    // The surface point as MaterialX nodes see it. There is no object space or clock here: object-space values are
+    // the world-space ones, and time and frame are 0.
+    inline MXShadingContext surfaceContext(Fragment in, float3 normal, float3 tangent, float3 bitangent, float3 view) {
+        MXShadingContext context;
+        context.objectToWorld = float4x4(1.0);
+        context.worldToObject = float4x4(1.0);
+        context.positionWorld = in.worldPosition;
+        context.positionObject = in.worldPosition;
+        context.normalWorld = normal;
+        context.normalObject = normal;
+        context.tangentWorld = tangent;
+        context.tangentObject = tangent;
+        context.bitangentWorld = bitangent;
+        context.bitangentObject = bitangent;
+        context.viewDirectionWorld = view;
+        context.viewDirectionObject = view;
+        context.texcoord[0] = in.texCoord0;
+        context.texcoord[1] = in.texCoord1;
+        context.vertexColor = in.color;
+        context.time = 0.0;
+        context.frame = 0.0;
+        return context;
+    }
+
+    // The material's factors as surface inputs, so a surface function that does not set a field leaves it as is.
+    inline MXSurfaceInputs surfaceDefaults(constant PBRMaterialUniforms &material, float3 normal) {
+        MXSurfaceInputs surface;
+        surface.baseColor = material.baseColorFactor.rgb;
+        surface.opacity = material.baseColorFactor.a;
+        surface.emissive = material.emissiveFactor * material.emissiveStrength;
+        surface.specularColor = material.specularColorFactor;
+        surface.sheenColor = material.sheenColorFactor;
+        surface.normal = normal;
+        surface.clearcoatNormal = normal;
+        surface.metallic = material.metallicFactor;
+        surface.roughness = material.roughnessFactor;
+        surface.occlusion = 1.0;
+        surface.specular = material.specularFactor;
+        surface.ior = material.ior;
+        surface.transmission = material.transmissionFactor;
+        surface.clearcoat = material.clearcoatFactor;
+        surface.clearcoatRoughness = material.clearcoatRoughnessFactor;
+        surface.sheenRoughness = material.sheenRoughnessFactor;
+        surface.iridescence = material.iridescenceFactor;
+        surface.iridescenceThickness = material.iridescenceThicknessMaximum;
+        return surface;
+    }
+
+    template <typename Surface = NoSurface>
     inline float4 shade(
         Fragment in,
         bool frontFacing,
@@ -252,8 +308,21 @@ namespace PBR {
         constant LightingClusterUniforms *lightClusterUniforms = nullptr,
         constant uint *lightClusters = nullptr,
         // Whether `in` carries probe light (#532): PBRRenderer's vertex stage fills it; other renderers do not.
-        bool readsIrradiance = false
+        bool readsIrradiance = false,
+        Surface surfaceFunction = Surface()
     ) {
+        // A MaterialX surface function (#666) replaces the material's factors and textures. It sees the interpolated
+        // normal and tangent, turned to face the viewer, not the derived ones below.
+        MXSurfaceInputs surface;
+        bool hasSurface = false;
+        if (Surface::enabled) {
+            const float3 surfaceNormal = normalize(in.normal) * (frontFacing ? 1.0 : -1.0);
+            const float3 surfaceTangent = normalize(in.tangent.xyz) * (frontFacing ? 1.0 : -1.0);
+            const float3 surfaceBitangent = cross(surfaceNormal, surfaceTangent) * in.tangent.w;
+            const float3 surfaceView = normalize(frame.cameraPositions[in.eye] - in.worldPosition);
+            surface = surfaceDefaults(material, surfaceNormal);
+            hasSurface = surfaceFunction.apply(surfaceContext(in, surfaceNormal, surfaceTangent, surfaceBitangent, surfaceView), surface);
+        }
         const float screenOcclusion = Lighting::screenOcclusion(ambientOcclusion, in.position, frame.ambientOcclusionStrength);
         // The material's textures come from one argument buffer, so a draw binds them all at once.
         const texture2d<float> baseColorTexture = materialResources.textures[kPBRTextureBaseColor];
@@ -298,7 +367,9 @@ namespace PBR {
         const sampler retroreflectionSampler = materialResources.samplers[kPBRTextureRetroreflection];
         // Base color
         float4 baseColor = material.baseColorFactor * in.color;
-        if (material.baseColor.enabled) {
+        if (hasSurface) {
+            baseColor = float4(surface.baseColor, surface.opacity) * in.color;
+        } else if (material.baseColor.enabled) {
             baseColor *= baseColorTexture.sample(baseColorSampler, slotUV(material.baseColor, in.texCoord0, in.texCoord1));
         }
 
@@ -370,7 +441,9 @@ namespace PBR {
         }
 
         float3 normal = geometricNormal;
-        if (material.normal.enabled) {
+        if (hasSurface) {
+            normal = normalize(surface.normal);
+        } else if (material.normal.enabled) {
             float3 tangentNormal = normalTexture.sample(normalSampler, normalUV).xyz * 2.0 - 1.0;
             tangentNormal.xy *= material.normalScale;
             normal = normalize(float3x3(tangent, bitangent, geometricNormal) * tangentNormal);
@@ -379,12 +452,15 @@ namespace PBR {
         // Metallic / roughness
         float metallic = material.metallicFactor;
         float perceptualRoughness = material.roughnessFactor;
-        if (material.metallicRoughness.enabled) {
+        if (hasSurface) {
+            metallic = surface.metallic;
+            perceptualRoughness = surface.roughness;
+        } else if (material.metallicRoughness.enabled) {
             const float4 sample = metallicRoughnessTexture.sample(metallicRoughnessSampler, slotUV(material.metallicRoughness, in.texCoord0, in.texCoord1));
             perceptualRoughness *= sample.g;
             metallic *= sample.b;
         }
-        if (material.specularGlossiness) {
+        if (material.specularGlossiness && !hasSurface) {
             // KHR_materials_pbrSpecularGlossiness: glossiness is in the specular texture's alpha.
             float glossiness = material.glossinessFactor;
             if (material.specularColor.enabled) {
@@ -423,15 +499,19 @@ namespace PBR {
         const float3 scatterColor = material.volumeScatter ? material.multiscatterColorFactor : float3(1.0);
         const float3 diffuseColor = mix(baseColor.rgb * scatterColor, float3(0.0), metallic);
         // Dielectric reflectance at normal incidence from the index of refraction (0.04 for the default 1.5).
-        const float ior = material.ior;
+        const float ior = hasSurface ? surface.ior : material.ior;
         const float dielectricF0 = ((ior - 1.0) / (ior + 1.0)) * ((ior - 1.0) / (ior + 1.0));
         // KHR_materials_specular: tint and strength of dielectric specular reflection (metals are unaffected).
         float3 specularColor = material.specularColorFactor;
-        if (material.specularColor.enabled) {
+        if (hasSurface) {
+            specularColor = surface.specularColor;
+        } else if (material.specularColor.enabled) {
             specularColor *= specularColorTexture.sample(specularColorSampler, slotUV(material.specularColor, in.texCoord0, in.texCoord1)).rgb;
         }
         float dielectricSpecularStrength = material.specularFactor;
-        if (material.specular.enabled) {
+        if (hasSurface) {
+            dielectricSpecularStrength = surface.specular;
+        } else if (material.specular.enabled) {
             dielectricSpecularStrength *= specularTexture.sample(specularSampler, slotUV(material.specular, in.texCoord0, in.texCoord1)).a;
         }
         const float specularStrength = mix(dielectricSpecularStrength, 1.0, metallic);
@@ -441,15 +521,15 @@ namespace PBR {
         const float NdotV = clamp(abs(dot(normal, view)), 1e-4, 1.0);
 
         // KHR_materials_iridescence: the film's view-dependent Fresnel replaces the surface's, by `iridescence`.
-        float iridescence = material.iridescenceFactor;
-        if (iridescence > 0.0 && material.iridescence.enabled) {
+        float iridescence = hasSurface ? surface.iridescence : material.iridescenceFactor;
+        if (iridescence > 0.0 && material.iridescence.enabled && !hasSurface) {
             iridescence *= iridescenceTexture.sample(iridescenceSampler, slotUV(material.iridescence, in.texCoord0, in.texCoord1)).r;
         }
         float3 iridescenceFresnel = float3(0.0);
         float3 iridescenceF0 = f0;
         if (iridescence > 0.0) {
-            float thickness = material.iridescenceThicknessMaximum;
-            if (material.iridescenceThickness.enabled) {
+            float thickness = hasSurface ? surface.iridescenceThickness : material.iridescenceThicknessMaximum;
+            if (material.iridescenceThickness.enabled && !hasSurface) {
                 const float blend = iridescenceThicknessTexture.sample(iridescenceThicknessSampler, slotUV(material.iridescenceThickness, in.texCoord0, in.texCoord1)).g;
                 thickness = mix(material.iridescenceThicknessMinimum, material.iridescenceThicknessMaximum, blend);
             }
@@ -461,8 +541,8 @@ namespace PBR {
 
         // KHR_materials_transmission / KHR_materials_volume. Transmitted light comes from the environment along the
         // refracted ray (the scene behind the surface is not visible), tinted by Beer-Lambert absorption.
-        float transmission = material.transmissionFactor;
-        if (material.transmission.enabled) {
+        float transmission = hasSurface ? surface.transmission : material.transmissionFactor;
+        if (material.transmission.enabled && !hasSurface) {
             transmission *= transmissionTexture.sample(transmissionSampler, slotUV(material.transmission, in.texCoord0, in.texCoord1)).r;
         }
         float3 transmittedRadiance = float3(0.0);
@@ -552,14 +632,14 @@ namespace PBR {
         const float3 diffuseTransmittedColor = diffuseTransmissionColor * (1.0 - metallic);
 
         // KHR_materials_sheen
-        float3 sheenColor = material.sheenColorFactor;
-        float sheenRoughness = material.sheenRoughnessFactor;
+        float3 sheenColor = hasSurface ? surface.sheenColor : material.sheenColorFactor;
+        float sheenRoughness = hasSurface ? surface.sheenRoughness : material.sheenRoughnessFactor;
         const bool hasSheen = any(sheenColor > 0.0);
         if (hasSheen) {
-            if (material.sheenColor.enabled) {
+            if (material.sheenColor.enabled && !hasSurface) {
                 sheenColor *= sheenColorTexture.sample(sheenColorSampler, slotUV(material.sheenColor, in.texCoord0, in.texCoord1)).rgb;
             }
-            if (material.sheenRoughness.enabled) {
+            if (material.sheenRoughness.enabled && !hasSurface) {
                 sheenRoughness *= sheenRoughnessTexture.sample(sheenRoughnessSampler, slotUV(material.sheenRoughness, in.texCoord0, in.texCoord1)).a;
             }
             sheenRoughness = clamp(sheenRoughness, 0.07, 1.0);
@@ -568,10 +648,13 @@ namespace PBR {
 
         // KHR_materials_clearcoat: a dielectric (F0 = 0.04) GGX layer with its own roughness and normal. Without a
         // clearcoat normal texture it uses the geometric normal, not the base normal map.
-        float clearcoat = material.clearcoatFactor;
-        float clearcoatRoughness = material.clearcoatRoughnessFactor;
-        float3 clearcoatNormal = geometricNormal;
-        if (clearcoat > 0.0) {
+        float clearcoat = hasSurface ? surface.clearcoat : material.clearcoatFactor;
+        float clearcoatRoughness = hasSurface ? surface.clearcoatRoughness : material.clearcoatRoughnessFactor;
+        float3 clearcoatNormal = hasSurface ? normalize(surface.clearcoatNormal) : geometricNormal;
+        if (clearcoat > 0.0 && hasSurface) {
+            clearcoat = saturate(clearcoat);
+            clearcoatRoughness = min(max(clearcoatRoughness, 0.0525) + geometryRoughness, 1.0);
+        } else if (clearcoat > 0.0) {
             if (material.clearcoat.enabled) {
                 clearcoat *= clearcoatTexture.sample(clearcoatSampler, slotUV(material.clearcoat, in.texCoord0, in.texCoord1)).r;
             }
@@ -754,7 +837,11 @@ namespace PBR {
             const float2 clearcoatBRDF = brdfLookup.sample(environmentSampler, float2(clearcoatNdotV, clearcoatRoughness)).rg;
             ambientClearcoat = clearcoatRadiance * (0.04 * clearcoatBRDF.x + clearcoatBRDF.y) * frame.environmentIntensity;
         }
-        if (material.occlusion.enabled) {
+        if (hasSurface) {
+            ambient *= surface.occlusion;
+            ambientSheen *= surface.occlusion;
+            ambientClearcoat *= surface.occlusion;
+        } else if (material.occlusion.enabled) {
             const float occlusion = occlusionTexture.sample(occlusionSampler, slotUV(material.occlusion, in.texCoord0, in.texCoord1)).r;
             const float occlusionFactor = 1.0 + material.occlusionStrength * (occlusion - 1.0);
             ambient *= occlusionFactor;
@@ -768,7 +855,9 @@ namespace PBR {
 
         // Emissive
         float3 emissive = material.emissiveFactor * material.emissiveStrength;
-        if (material.emissive.enabled) {
+        if (hasSurface) {
+            emissive = surface.emissive;
+        } else if (material.emissive.enabled) {
             emissive *= emissiveTexture.sample(emissiveSampler, slotUV(material.emissive, in.texCoord0, in.texCoord1)).rgb;
         }
         color += emissive;
@@ -795,6 +884,7 @@ namespace PBR {
         return float4(color, baseColor.a);
     }
 
+    template <typename Surface = NoSurface>
     inline float4 shade(
         Fragment in,
         bool frontFacing,
@@ -806,9 +896,10 @@ namespace PBR {
         constant LightingFrameResources &frameResources,
         constant LightingClusterUniforms *lightClusterUniforms = nullptr,
         constant uint *lightClusters = nullptr,
-        bool readsIrradiance = false
+        bool readsIrradiance = false,
+        Surface surfaceFunction = Surface()
     ) {
-        return shade(in, frontFacing, material, frame, lights, materialResources, frameResources.environmentIrradiance, frameResources.environmentSpecular, frameResources.brdfLookup, frameResources.transmissionScene, frameResources.environmentSampler, shadow, frameResources.shadowMap, frameResources.shadowSampler, frameResources.ambientOcclusion, lightClusterUniforms, lightClusters, readsIrradiance);
+        return shade(in, frontFacing, material, frame, lights, materialResources, frameResources.environmentIrradiance, frameResources.environmentSpecular, frameResources.brdfLookup, frameResources.transmissionScene, frameResources.environmentSampler, shadow, frameResources.shadowMap, frameResources.shadowSampler, frameResources.ambientOcclusion, lightClusterUniforms, lightClusters, readsIrradiance, surfaceFunction);
     }
 
 } // namespace PBR

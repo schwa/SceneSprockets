@@ -139,6 +139,17 @@ public final class PBRModel: @unchecked Sendable {
 
     /// Whether any material uses transmission, i.e. whether a transmission pass is worth running.
     public let hasTransmission: Bool
+    /// The materials' surface functions (#666), once each: the pipeline's function table. Empty draws with the
+    /// shaders that have no table.
+    let surfaceFunctions: [PBRMaterial.SurfaceFunction]
+
+    /// 1 + the index of `function` in ``surfaceFunctions``, as the shader reads it; 0 for none or one not in the model.
+    func surfaceFunctionIndex(_ function: PBRMaterial.SurfaceFunction?) -> UInt32 {
+        guard let function, let index = surfaceFunctions.firstIndex(where: { $0 === function }) else {
+            return 0
+        }
+        return UInt32(index + 1)
+    }
 
     public init(opaqueInstances: [Instance], blendedInstances: [Instance], opaqueBatches: [Batch], blendedBatches: [Batch], skins: [Skin], lights: [LightingLight], restPose: PBRPose, bounds: BoundingBox3D, resourceCollection: ResourceCollection, instanceBuffer: MTLBuffer, instanceRecordBuffer: MTLBuffer, jointOffsetBuffer: MTLBuffer) {
         self.opaqueInstances = opaqueInstances
@@ -146,6 +157,8 @@ public final class PBRModel: @unchecked Sendable {
         self.opaqueBatches = opaqueBatches
         self.blendedBatches = blendedBatches
         hasTransmission = (opaqueBatches + blendedBatches).contains { $0.material.uniforms.transmissionFactor > 0 }
+        var seen = Set<ObjectIdentifier>()
+        surfaceFunctions = (opaqueBatches + blendedBatches).compactMap(\.material.surfaceFunction).filter { seen.insert(ObjectIdentifier($0)).inserted }
         self.skins = skins
         self.lights = lights
         self.restPose = restPose

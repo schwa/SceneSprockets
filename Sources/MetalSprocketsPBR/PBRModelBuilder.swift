@@ -172,6 +172,10 @@ public struct PBRModelBuilder {
         var allocations: [any MTLAllocation] = []
         for material in materials {
             allocations += material.textureBindings.map(\.texture)
+            if let surface = material.surfaceFunction {
+                allocations += [surface.parameters, surface.textureTable] as [any MTLAllocation]
+                allocations += surface.textures as [any MTLAllocation]
+            }
         }
         for primitive in primitives {
             allocations += primitive.geometry.allocations

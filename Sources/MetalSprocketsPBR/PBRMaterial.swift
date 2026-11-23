@@ -95,8 +95,32 @@ public final class PBRMaterial: @unchecked Sendable {
         }
     }
 
+    /// A function that sets the material's shading inputs per pixel, such as a stitched MaterialX surface (#666):
+    ///
+    ///     void material(thread const MXShadingContext &, constant float4 *parameters, constant MXTexture *textures,
+    ///                   thread MXSurfaceInputs *surface)
+    ///
+    /// It starts from the material's factors; whatever it sets replaces them and the material's textures.
+    public final class SurfaceFunction: @unchecked Sendable {
+        public let function: VisibleFunction
+        /// Bound as `parameters`.
+        public let parameters: MTLBuffer
+        /// An `MXTexture` table, bound as `textures`.
+        public let textureTable: MTLBuffer
+        /// The textures the table refers to, made resident with the model.
+        public let textures: [MTLTexture]
+
+        public init(function: VisibleFunction, parameters: MTLBuffer, textureTable: MTLBuffer, textures: [MTLTexture] = []) {
+            self.function = function
+            self.parameters = parameters
+            self.textureTable = textureTable
+            self.textures = textures
+        }
+    }
+
     public let name: String?
     public let uniforms: PBRMaterialUniforms
+    public let surfaceFunction: SurfaceFunction?
     public let doubleSided: Bool
     /// Decides which batches merge and which are blended.
     public let renderState: PBRRenderState
@@ -137,13 +161,15 @@ public final class PBRMaterial: @unchecked Sendable {
         isBlended == other.isBlended && isTransmissive == other.isTransmissive && renderState.isDefault == other.renderState.isDefault
             && usesStochasticTransparency == other.usesStochasticTransparency
             && (uniforms.alphaMode == .mask) == (other.uniforms.alphaMode == .mask)
+            && surfaceFunction === other.surfaceFunction
     }
 
     /// `textureBindings` must have one binding per `PBRMaterialTextureIndex` (`kPBRMaterialTextureCount`); enable
     /// the matching `uniforms` slots for the ones that are real textures.
-    public init(name: String? = nil, uniforms: PBRMaterialUniforms, doubleSided: Bool = false, renderState: PBRRenderState = PBRRenderState(), textureTransforms: [String: TextureTransform] = [:], textureBindings: [Binding]) {
+    public init(name: String? = nil, uniforms: PBRMaterialUniforms, doubleSided: Bool = false, renderState: PBRRenderState = PBRRenderState(), textureTransforms: [String: TextureTransform] = [:], textureBindings: [Binding], surfaceFunction: SurfaceFunction? = nil) {
         precondition(textureBindings.count == Int(kPBRMaterialTextureCount.rawValue), "One texture binding per PBRMaterialTextureIndex")
         self.name = name
+        self.surfaceFunction = surfaceFunction
         self.uniforms = Self.marking(uniforms, renderState: renderState)
         self.doubleSided = doubleSided
         self.renderState = renderState
@@ -152,12 +178,13 @@ public final class PBRMaterial: @unchecked Sendable {
     }
 
     /// A material with every texture slot holding `placeholder` (disabled in the uniforms): factors only.
-    public convenience init(name: String? = nil, uniforms: PBRMaterialUniforms, doubleSided: Bool = false, renderState: PBRRenderState = PBRRenderState(), placeholder: Binding) {
-        self.init(name: name, uniforms: uniforms, doubleSided: doubleSided, renderState: renderState, textureBindings: Array(repeating: placeholder, count: Int(kPBRMaterialTextureCount.rawValue)))
+    public convenience init(name: String? = nil, uniforms: PBRMaterialUniforms, doubleSided: Bool = false, renderState: PBRRenderState = PBRRenderState(), placeholder: Binding, surfaceFunction: SurfaceFunction? = nil) {
+        self.init(name: name, uniforms: uniforms, doubleSided: doubleSided, renderState: renderState, textureBindings: Array(repeating: placeholder, count: Int(kPBRMaterialTextureCount.rawValue)), surfaceFunction: surfaceFunction)
     }
 
     private init(copying material: PBRMaterial, uniforms: PBRMaterialUniforms, renderState: PBRRenderState, textureTransforms: [String: TextureTransform]) {
         name = material.name
+        surfaceFunction = material.surfaceFunction
         self.uniforms = Self.marking(uniforms, renderState: renderState)
         doubleSided = material.doubleSided
         self.renderState = renderState

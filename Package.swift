@@ -88,7 +88,9 @@ let package = Package(
             name: "MetalSprocketsPBRShaders",
             dependencies: [
                 .product(name: "MetalSprocketsShaders", package: "MetalSprockets"),
-                "MetalSprocketsLightingShaders"
+                "MetalSprocketsLightingShaders",
+                // MXShadingContext.h, for MaterialX surface functions (#666).
+                .product(name: "MaterialXMetalShaders", package: "MetalSprocketsMaterialX")
             ],
             exclude: ["Metal"],
             plugins: [
@@ -115,7 +117,9 @@ let package = Package(
                 .product(name: "MetalSprockets", package: "MetalSprockets"),
                 .product(name: "SwiftMesh", package: "SwiftMesh"),
                 .product(name: "GeometryLite3D", package: "GeometryLite3D"),
-                .product(name: "GoldenImage", package: "GoldenImage")
+                .product(name: "GoldenImage", package: "GoldenImage"),
+                .product(name: "MaterialX", package: "MetalSprocketsMaterialX"),
+                .product(name: "MaterialXMetal", package: "MetalSprocketsMaterialX")
             ],
             resources: [
                 .copy("GoldenImages")

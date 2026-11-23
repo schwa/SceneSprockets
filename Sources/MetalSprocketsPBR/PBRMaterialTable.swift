@@ -38,6 +38,11 @@ final class PBRMaterialTable {
         }
         if old?.material != identifier {
             resources.setMaterialResources(draw.material.textureBindings, element: index)
+            if let surface = draw.material.surfaceFunction {
+                resources.set("surfaceParameters", buffer: surface.parameters, element: index)
+                resources.set("surfaceTextures", buffer: surface.textureTable, element: index)
+            }
+            resources.set("surfaceFunction", value: model.surfaceFunctionIndex(draw.material.surfaceFunction), element: index)
         }
         let uniforms = draw.uniforms
         if old.map({ !bitwiseEqual($0.uniforms, uniforms) }) ?? true {

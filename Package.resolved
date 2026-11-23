@@ -1,5 +1,5 @@
 {
-  "originHash" : "e524556a3b3627692a592463d1ecfa4c5a7d241199ac05077b476bffaed167d7",
+  "originHash" : "4af189d31f3efe9d6c8d74333abea088ee468e297c63baa69e1290bb6c310f8e",
   "pins" : [
     {
       "identity" : "basisuniversalmetal",
@@ -79,7 +79,7 @@
       "location" : "https://github.com/schwa/MetalSprocketsMaterialX",
       "state" : {
         "branch" : "main",
-        "revision" : "8d5cbe56f799017c0d51431a78f74a481263b5f2"
+        "revision" : "dfcb8197f7bab2568518ce093f8fc2bbfea89ec6"
       }
     },
     {

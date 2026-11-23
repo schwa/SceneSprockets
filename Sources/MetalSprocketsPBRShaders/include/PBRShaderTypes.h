@@ -3,6 +3,10 @@
 #import "MetalSprocketsShaders.h"
 #import "MetalSprocketsLightingTypes.h"
 #import <simd/simd.h>
+#ifdef __METAL_VERSION__
+// MaterialX surface functions (#666): MXShadingContext, MXSurfaceInputs and MXTexture.
+#import "MXShadingContext.h"
+#endif
 
 // Interleaved vertex stored in vertex buffer 0. Attribute indices match the order of fields.
 struct PBRVertex {
@@ -195,6 +199,17 @@ struct PBRMaterialResources {
     uint64_t textures[kPBRMaterialTextureCount];
     uint64_t samplers[kPBRMaterialTextureCount];
 #endif
+    // A MaterialX surface function's inputs (#666), read by the fragment_*_surface shaders only. On the CPU each is
+    // a buffer's gpuAddress.
+#ifdef __METAL_VERSION__
+    constant float4 *surfaceParameters;
+    constant MXTexture *surfaceTextures;
+#else
+    uint64_t surfaceParameters;
+    uint64_t surfaceTextures;
+#endif
+    // 1 + the index of the material's surface function in the pipeline's table; 0 for none.
+    uint32_t surfaceFunction;
 };
 
 /// What the PBR shader outputs: the lit color, or one of its inputs for debugging. Mirrored by the Swift PBRDebugView.

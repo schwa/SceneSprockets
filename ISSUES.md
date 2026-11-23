@@ -15174,16 +15174,20 @@ Note: MetalSprocketsMaterialX has no release tag yet; other dependencies use .up
 ## 666: PBR shaders have no hook for stitched MaterialX material functions
 
 +++
-status: new
+status: closed
 priority: high
 kind: feature
 labels: area:materials, effort:l
 created: 2026-11-23T17:40:29Z
+updated: 2026-11-23T18:00:31Z
+closed: 2026-11-23T18:00:31Z
 +++
 
 The PBR fragment shader reads material values only from PBRMaterialUniforms and textures. There is no visible-function call site where a MetalSprocketsMaterialX stitched graph (which fills MXSurfaceInputs from an MXShadingContext) can supply the material inputs at a surface point, so stitched graphs cannot drive the PBR renderer.
 
 Expected: a PBR material can optionally evaluate its inputs through a linked stitched function. Materials without one pay no cost (decided in MetalSprocketsMaterialX #35: function-constant gated). Lights and environment stay with MetalSprocketsLighting (MetalSprocketsMaterialX #37).
+
+- `2026-11-23T18:00:31Z`: PBR shaders call an optional MaterialX surface function (#666). PBRMaterial.surfaceFunction (VisibleFunction + parameter buffer + MXTexture table + textures). PBRModel collects them once; when any exist, PBRRenderer draws with fragment_main_surface / fragment_weighted_surface, which call the material's entry of a visible function table; other models use the unchanged shaders. Surface inputs start from the material's factors and replace factors and textures for base color/opacity, normal, metallic, roughness, specular, specular color, IOR, transmission, sheen, clearcoat (+ normal), iridescence, occlusion and emissive. Limits: object space = world space, time/frame = 0, the occlusion and emissive debug views still read the uniforms. MetalSprocketsPBRShaders now depends on the MaterialXMetalShaders product (added upstream). Test: SurfaceFunctionTests.
 
 ---
 

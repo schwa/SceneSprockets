@@ -214,4 +214,60 @@ namespace PBR {
         return Lighting::weightedTransparency(color, in.position);
     }
 
+    // MaterialX surface functions (#666): the material's `surfaceFunction` names an entry of the pipeline's table.
+    typedef void SurfaceFunction(thread const MXShadingContext &, constant float4 *, constant MXTexture *, thread MXSurfaceInputs *);
+
+    struct TableSurface {
+        static constexpr constant bool enabled = true;
+        visible_function_table<SurfaceFunction> table;
+        constant PBRMaterialResources *material;
+
+        bool apply(thread const MXShadingContext &context, thread MXSurfaceInputs &surface) const {
+            if (material->surfaceFunction == 0) {
+                return false;
+            }
+            table[material->surfaceFunction - 1](context, material->surfaceParameters, material->surfaceTextures, &surface);
+            return true;
+        }
+    };
+
+    // fragment_main for models with MaterialX materials.
+    [[fragment]] float4 fragment_main_surface(
+        Fragment in [[stage_in]],
+        bool frontFacing [[front_facing]],
+        float3 barycentric [[barycentric_coord]],
+        constant PBRMaterialResources *materials [[buffer(0)]],
+        constant PBRFrameUniforms &frame [[buffer(1)]],
+        constant LightingLight *lights [[buffer(2)]],
+        visible_function_table<SurfaceFunction> surfaceFunctions [[buffer(3)]],
+        constant LightingShadowUniforms &shadow [[buffer(4)]],
+        constant LightingFrameResources &frameResources [[buffer(5)]],
+        constant LightingClusterUniforms &lightClusterUniforms [[buffer(6)]],
+        constant uint *lightClusters [[buffer(7)]]
+    ) {
+        constant PBRMaterialResources &material = materials[in.record];
+        const TableSurface surface { surfaceFunctions, &material };
+        return withWireframe(shade(in, frontFacing, material.uniforms, frame, lights, material, shadow, frameResources, &lightClusterUniforms, lightClusters, true, surface), barycentric, frame, material.uniforms);
+    }
+
+    // fragment_weighted for models with MaterialX materials.
+    [[fragment]] Lighting::WeightedTransparencyOutput fragment_weighted_surface(
+        Fragment in [[stage_in]],
+        bool frontFacing [[front_facing]],
+        float3 barycentric [[barycentric_coord]],
+        constant PBRMaterialResources *materials [[buffer(0)]],
+        constant PBRFrameUniforms &frame [[buffer(1)]],
+        constant LightingLight *lights [[buffer(2)]],
+        visible_function_table<SurfaceFunction> surfaceFunctions [[buffer(3)]],
+        constant LightingShadowUniforms &shadow [[buffer(4)]],
+        constant LightingFrameResources &frameResources [[buffer(5)]],
+        constant LightingClusterUniforms &lightClusterUniforms [[buffer(6)]],
+        constant uint *lightClusters [[buffer(7)]]
+    ) {
+        constant PBRMaterialResources &material = materials[in.record];
+        const TableSurface surface { surfaceFunctions, &material };
+        const float4 color = withWireframe(shade(in, frontFacing, material.uniforms, frame, lights, material, shadow, frameResources, &lightClusterUniforms, lightClusters, true, surface), barycentric, frame, material.uniforms);
+        return Lighting::weightedTransparency(color, in.position);
+    }
+
 } // namespace PBR
