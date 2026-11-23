@@ -42,7 +42,8 @@ typedef struct LightingLight LightingLight;
 // Clustered light assignment (#519): the view frustum is cut into a grid of clusters (screen tiles times view-depth
 // slices), and a compute pass lists the lights that reach each one. Shaders then loop over their fragment's cluster
 // instead of every light. The list buffer holds, per cluster, a count followed by kLightingClusterMaxLights light
-// indices; lights past that are dropped from the cluster.
+// indices. When more lights reach a cluster, the count is larger than kLightingClusterMaxLights and shaders loop over
+// every light for it instead (#628).
 #define kLightingClusterMaxLights 63
 #define kLightingClusterStride (kLightingClusterMaxLights + 1)
 

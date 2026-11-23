@@ -45,8 +45,10 @@ namespace LightClusters {
             }
         }
         device uint *list = clusterLights + ((cluster.z * size.y + cluster.y) * size.x + cluster.x) * kLightingClusterStride;
+        // More lights than the list holds are counted but not listed: shading then falls back to every light for this
+        // cluster (Lighting::lightList), instead of dropping the extra lights (#628).
         uint count = 0;
-        for (int index = 0; index < uniforms.lightCount && count < kLightingClusterMaxLights; index++) {
+        for (int index = 0; index < uniforms.lightCount && count <= kLightingClusterMaxLights; index++) {
             const LightingLight light = lights[index];
             // Directional lights and lights without a range reach everywhere.
             if (light.type != kLightingLightTypeDirectional && light.range > 0.0) {
@@ -57,7 +59,9 @@ namespace LightClusters {
                     continue;
                 }
             }
-            list[1 + count] = uint(index);
+            if (count < kLightingClusterMaxLights) {
+                list[1 + count] = uint(index);
+            }
             count++;
         }
         list[0] = count;

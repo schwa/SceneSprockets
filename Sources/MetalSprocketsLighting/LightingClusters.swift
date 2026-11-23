@@ -24,7 +24,8 @@ public final class LightingClusters: @unchecked Sendable {
     public let lights: [LightingLight]
     /// The camera's world position; shading origins are measured from it.
     public let cameraPosition: SIMD3<Float>
-    /// Per cluster: a count, then up to `kLightingClusterMaxLights` light indices (`UInt32`).
+    /// Per cluster: a count, then up to `kLightingClusterMaxLights` light indices (`UInt32`). A count above
+    /// `kLightingClusterMaxLights` means the cluster overflowed and is shaded with every light.
     public let lightLists: MTLBuffer
     /// The tile corner rays the compute pass bounds clusters with.
     public let cornerRays: MTLBuffer

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Clustered lighting no longer drops lights when more than 63 reach one cluster (#628). The cluster is shaded with every light instead, so dense light fields no longer show rectangular tiles. `Lighting::lightList` returns the full light list for such clusters.
 - `CharacterController` climbs low steps at any walking speed (#625). Below about 2 units per second, the velocity into the step was cancelled as a steep slope, so the character stood at the step.
 - The statistics panel sums GPU passes with the same label into one row ("Simulate ×6"), keeps each row on one line, and its collapsed bar fits its contents instead of the view's width (#621). It redraws four times a second instead of every frame, so it no longer flickers, and the sparkline's scale steps between fixed frame-time ceilings (60, 30, 20, 10, 5 fps) instead of following the history's maximum, so the line no longer jumps when a slow frame enters or leaves it.
 - `EditorGizmos.shapes` and `element` take a `gridTransform` that places the grid and axes, which were fixed at the world origin (#617).

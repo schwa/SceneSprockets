@@ -65,7 +65,11 @@ namespace Lighting {
             return LightList { nullptr, uint(metal::max(lightCount, 0)) };
         }
         constant uint *cluster = clusterLights + clusterIndex(*clusters, position) * kLightingClusterStride;
-        return LightList { cluster + 1, metal::min(cluster[0], uint(kLightingClusterMaxLights)) };
+        // A count past the list's size means more lights reach the cluster than it holds: shade every light (#628).
+        if (cluster[0] > uint(kLightingClusterMaxLights)) {
+            return LightList { nullptr, uint(metal::max(lightCount, 0)) };
+        }
+        return LightList { cluster + 1, cluster[0] };
     }
 
     // The light arriving at a point, before shadows.

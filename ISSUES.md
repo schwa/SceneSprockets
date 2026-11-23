@@ -13812,6 +13812,7 @@ Found while fixing #299.
 
 - `2026-11-22T15:35:42Z`: Root cause in MetalCompilerPlugin: the build command's inputFiles were only the .metal sources, so no header edit (own target or dependency) invalidated the metallib. Fixed in MetalCompilerPlugin (local commit, not pushed): headers under the target, dependency include paths and include-paths are now inputs. Verified here with a temporary path dependency: appending to MetalSprocketsLightingTypes.h rebuilt the MetalSprocketsLighting, MetalSprocketsPBR and SceneSprockets shader libraries (before: none). Stays open until the plugin is released and SceneSprockets requires it.
 - `2026-11-22T15:35:42Z`: Question 1 (decision): May I push MetalCompilerPlugin's header-inputs fix, tag it 0.4.2, and bump SceneSprockets (and MetalSprockets, which also uses the plugin) to it? Recommended: Yes: push, tag 0.4.2, bump SceneSprockets to .upToNextMinor(from: "0.4.2") and close #598
+- `2026-11-23T01:01:21Z`: Seen again while fixing #628 (2026-11-22): after editing MetalSprocketsLighting.h, the SceneSprocketsShaders and MetalSprocketsPBRShaders metallibs under .build/plugins/outputs/scenesprockets/ kept their 16:27 timestamps through rebuilds and xcb clean, so tests ran the old shaders. Deleting those plugin output folders forced the rebuild.
 
 ---
 
@@ -14411,12 +14412,13 @@ Show only volumetric fog on the Fog slide.
 ## 628: Many Lights keynote slide shows rectangular tiles where lighting cuts off
 
 +++
-status: open
+status: closed
 priority: medium
 kind: bug
 labels: area:renderer, lighting, effort:s
 created: 2026-11-23T00:42:41Z
-updated: 2026-11-23T00:50:54Z
+updated: 2026-11-23T01:01:21Z
+closed: 2026-11-23T01:01:21Z
 +++
 
 On the keynote's Many Lights slide (#611), the lit floor and pillars show hard-edged rectangular blocks: inside a block the colored point lights are missing or different from the neighboring block, so lighting changes abruptly along straight screen-aligned edges. The pillars are cut across horizontally at the same edges. Screenshot from 2026-11-22 (macOS demo app, 120 fps).
@@ -14430,6 +14432,8 @@ Steps:
 
 Expected: smooth lighting with no visible tile edges, as with clustering off.
 Actual: rectangular tiles with missing or different lighting.
+
+- `2026-11-23T01:01:21Z`: Cause: a light cluster holds at most 63 lights; with ~300 short-range lights some clusters reached more and the rest were dropped, so whole screen tiles lost lights. Now the assignment pass records the true count and Lighting::lightList shades every light for an overfull cluster. Tests: overfullClustersStillShadeEveryLight (400/576 lights differed by 11/171 before, match after) and manyLightsSlideClusteringMatchesEveryLight (the keynote slide, clustered vs unclustered: max difference 0).
 
 ---
 

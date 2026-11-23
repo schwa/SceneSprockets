@@ -72,6 +72,26 @@ private func renderPixels(_ sceneGraph: SceneGraph, renderer: any MaterialRender
     return pixels
 }
 
+// #628: when more lights reach a cluster than its list holds, the cluster still shades every light that reaches it.
+// Before, the extra lights were dropped, so whole screen tiles lost lights and showed hard rectangular edges.
+@Test(.enabled(if: deviceSupportsMetal4), arguments: [20, 24])
+@MainActor
+func overfullClustersStillShadeEveryLight(side: Int) throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    // 400 or 576 short-range lights on a 10 x 10 floor: some clusters reach more than kLightingClusterMaxLights.
+    // Before the fix they differed from the reference by 11 and 171.
+    let scene = makeManyLightsScene(material: BlinnPhongSceneMaterial(color: [1, 1, 1]), device: device, lightsPerSide: side)
+    let renderer = BlinnPhongMaterialRenderer(ambientLightColor: .zero)
+    let reference = try renderPixels(scene, renderer: renderer, clustering: .off)
+    let clustered = try renderPixels(scene, renderer: renderer, clustering: .on)
+    let differences = zip(reference, clustered).map { pair in
+        let difference = SIMD4<Int>(truncatingIfNeeded: pair.0) &- SIMD4<Int>(truncatingIfNeeded: pair.1)
+        return max(abs(difference.x), abs(difference.y), abs(difference.z))
+    }
+    let largestDifference = differences.max() ?? 0
+    #expect(largestDifference <= 2, "side \(side): clustered image differs by \(largestDifference)")
+}
+
 @Test(.enabled(if: deviceSupportsMetal4))
 @MainActor
 func clusteredLightingMatchesEveryLight() throws {

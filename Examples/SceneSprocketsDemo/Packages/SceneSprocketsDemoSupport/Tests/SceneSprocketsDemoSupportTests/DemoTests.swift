@@ -228,6 +228,32 @@ func pathsSlideCarsFollowTheTrack() throws {
     #expect(simd_distance(positions[0], positions[29]) > 0.2, "the car did not move")
 }
 
+// #628: the Many Lights slide looks the same with clustered lighting as with every light; overfull clusters used to
+// drop lights and showed as rectangular tiles.
+@Test
+@MainActor
+func manyLightsSlideClusteringMatchesEveryLight() throws {
+    let keynote = try keynoteShowing("Many Lights")
+    keynote.update(time: 1, deltaTime: 1.0 / 60)
+    let cameraNode = keynote.usesSceneCamera ? keynote.sceneGraph.cameraNodes().first : nil
+    let cameraMatrix = cameraNode?.worldTransform ?? keynote.initialCameraMatrix
+    func render(_ clustering: LightClustering) throws -> [SIMD4<UInt8>] {
+        let element = SceneGraphElement(sceneGraph: keynote.sceneGraph, cameraMatrix: cameraMatrix, aspectRatio: 1.6, renderers: keynote.renderers).lightClustering(clustering)
+        let texture = try OffscreenRenderer(size: CGSize(width: 320, height: 200)).render(element).texture
+        var pixels = [SIMD4<UInt8>](repeating: .zero, count: 320 * 200)
+        texture.getBytes(&pixels, bytesPerRow: 320 * 4, from: MTLRegionMake2D(0, 0, 320, 200), mipmapLevel: 0)
+        return pixels
+    }
+    let off = try render(.off)
+    let on = try render(.on)
+    let differences = zip(off, on).map { pair in
+        let difference = SIMD4<Int>(truncatingIfNeeded: pair.0) &- SIMD4<Int>(truncatingIfNeeded: pair.1)
+        return max(abs(difference.x), abs(difference.y), abs(difference.z))
+    }
+    // Lights are summed in a different order, so a rounding step is allowed.
+    #expect((differences.max() ?? 0) <= 2, "clustered image differs by \(differences.max() ?? 0)")
+}
+
 // #611: the Many Lights slide shows enough lights to be clustered, and every one lights the whole slide, so its batches
 // keep the clusters (batches lit by only some of the frame's lights do not use them).
 @Test
