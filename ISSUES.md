@@ -14457,6 +14457,9 @@ Steps:
 Expected: every code panel fits inside the view.
 Actual: on several slides the code panel is wider than the view and its lines are cut off.
 
+- `2026-11-23T01:21:50Z`: Investigated 2026-11-22. At the keynote's own camera (40-degree view) every code panel fits: the widest (Gizmos) is 11.7 units, and the view is about 13.8 units wide at the panel at a 1.65 aspect; offscreen renders at the screenshot's window size show the Many Lights panel fitting with margin. In the demo app the scene view extends under the sidebar and inspector, so slides are framed for the full window width and their edges are hidden behind the panels (confirmed by the user: hiding the panels shows the full slide). Punting: the fix is a layout decision for the demo app, not the code panels.
+- `2026-11-23T01:21:50Z`: Question 1 (decision): Should the demo app's scene view stop at the sidebar's and inspector's edges (for every demo), so slides are framed for the visible area? Recommended: Yes: the scene view fills only the area between the sidebar and inspector
+
 ---
 
 ## Milestone M1: Correctness
