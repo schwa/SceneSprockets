@@ -85,6 +85,8 @@ public struct SceneView: View {
     private var manipulator: (any ViewManipulator)?
     private var decorations: (@MainActor (RenderContext, SIMD2<Float>) throws -> AnyElement?)?
     private var decorationsID: AnyHashable?
+    private var stageContent: [RenderStage: RenderStageContent] = [:]
+    private var stageContentIDs: [RenderStage: AnyHashable] = [:]
     private var defaultCamera: Camera = .default
     private var cameraOverride: Camera?
     private var cameraTarget: SIMD3<Float>?
@@ -171,6 +173,7 @@ public struct SceneView: View {
                     sampleCount: inputs.sampleCount,
                     autoExposure: inputs.autoExposure
                 )
+                .renderStages(inputs.stageContent)
                 if let overlay = inputs.overlay {
                     overlay
                 }
@@ -290,6 +293,7 @@ public struct SceneView: View {
             shadows: shadows,
             storesDepth: overlay != nil,
             decorations: decorationElement,
+            stageContent: stageContent,
             debugMode: debugMode,
             materialChannel: materialChannel,
             sampleCount: sampleCount,
@@ -499,6 +503,7 @@ final class SceneViewFrames: @unchecked Sendable {
         var shadows: Shadows?
         var storesDepth: Bool
         var decorations: AnyElement?
+        var stageContent: [RenderStage: RenderStageContent] = [:]
         var debugMode: DebugMode?
         var materialChannel: MaterialChannel?
         var sampleCount: Int
@@ -752,6 +757,16 @@ public extension SceneView {
         }
     }
 
+    /// Draws `content` at `stage` of every frame (#512), as ``SceneGraphElement/renderStage(_:_:)`` does. The closure
+    /// runs on the render thread: it must not read the live scene graph or other main-actor state. Pass an `id` that
+    /// changes when the closure does, so SwiftUI can skip unchanged views.
+    func sceneRenderStage(_ stage: RenderStage, id: AnyHashable? = nil, _ content: RenderStageContent?) -> Self {
+        with {
+            $0.stageContent[stage] = content
+            $0.stageContentIDs[stage] = id
+        }
+    }
+
     /// Keeps the drawable readable (framebufferOnly false) even without post passes, for example to inspect it in a
     /// GPU capture. Costs some bandwidth. Also on when `SS_DISABLES_FRAMEBUFFER_ONLY` is set.
     func sceneReadableDrawable(_ enabled: Bool = true) -> Self {
@@ -767,6 +782,9 @@ extension SceneView: @MainActor Equatable {
         isSameClosure(lhs.onTap == nil, lhs.onTapID, rhs.onTap == nil, rhs.onTapID)
             && isSameClosure(lhs.onTapAt == nil, lhs.onTapAtID, rhs.onTapAt == nil, rhs.onTapAtID)
             && isSameClosure(lhs.decorations == nil, lhs.decorationsID, rhs.decorations == nil, rhs.decorationsID)
+            && RenderStage.allCases.allSatisfy { stage in
+                isSameClosure(lhs.stageContent[stage] == nil, lhs.stageContentIDs[stage], rhs.stageContent[stage] == nil, rhs.stageContentIDs[stage])
+            }
             && isSameClosure(lhs.overlay == nil, lhs.overlayID, rhs.overlay == nil, rhs.overlayID)
             && isSameClosure(lhs.onFrameTiming == nil, lhs.onFrameTimingID, rhs.onFrameTiming == nil, rhs.onFrameTimingID)
             && lhs.sceneGraph === rhs.sceneGraph

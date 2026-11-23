@@ -11864,13 +11864,14 @@ Decided (2026-11-23): a material asks with SceneMaterial.readsSceneColor; render
 ## 512: No extension points for injecting render passes or lighting terms
 
 +++
-status: open
+status: closed
 priority: low
 kind: feature
 labels: area:renderer, effort:l, subtask, lighting
 milestone: Lighting-and-GI
 created: 2026-11-17T14:09:42Z
-updated: 2026-11-23T02:14:51Z
+updated: 2026-11-23T04:14:39Z
+closed: 2026-11-23T04:14:39Z
 +++
 
 Add-on packages cannot insert passes at defined stages (after opaque, before transparent, post-process) or contribute indirect lighting (probes, lightmaps) to built-in materials. Passes are ordered by SceneFramePlan; the only app hook is decorations, drawn with the scene.
@@ -11879,6 +11880,8 @@ Decided (2026-11-23):
 - Split into (a) pass hooks at fixed stages and (b) lighting terms for built-in materials, doing (a) first? Decision: yes.
 - Pass hook API? Decision: SceneGraphElement and SceneView take [RenderStage: (RenderContext, targets) -> AnyElement?] with afterOpaque, beforeTransparent, afterTransparent and postProcess.
 - Lighting terms? Decision: a fixed indirect-light input (an irradiance texture or SH buffer per draw) that probes (#532) and lightmaps fill, not shader code injection.
+
+- `2026-11-23T04:14:39Z`: Part (a), pass hooks, done. Part (b), lighting terms, split to #643.
 
 ---
 
@@ -14721,6 +14724,21 @@ created: 2026-11-23T03:45:46Z
 +++
 
 Part of #45. Cameras have no motion blur (SCNCamera motionBlurIntensity). Needs per-pixel velocity (#510) and the HDR target from #640.
+
+---
+
+## 643: Built-in materials have no indirect-light input for probes and lightmaps
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:renderer, effort:l, lighting
+created: 2026-11-23T04:11:32Z
+updated: 2026-11-23T04:14:39Z
++++
+
+Split from #512 (part b). Add-ons cannot contribute indirect lighting to Blinn-Phong and PBR. Decided in #512: a fixed indirect-light input (an irradiance texture or SH buffer per draw) that probes (#532) and lightmaps (#535) fill, not shader code injection.
 
 ---
 

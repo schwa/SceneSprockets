@@ -121,6 +121,8 @@ public struct SceneGraphElement: Element {
     var defaultLight: Light?
     var shadows: Shadows?
     var decorations: ((RenderContext) throws -> AnyElement?)?
+    // App content at fixed stages of the frame (#512).
+    var stageContent: [RenderStage: RenderStageContent] = [:]
     // Draws every mesh in this debug view instead of its material (#132).
     var debugMode: DebugMode?
     // Each renderer shows this material value instead of lighting (#195). Ignored while debugMode is set.
@@ -196,6 +198,24 @@ public struct SceneGraphElement: Element {
     }
 
     public var body: some Element {
+        get throws {
+            let frame = try frameElement
+            // App passes after everything else (#512).
+            guard let postProcess = stageContent[.postProcess],
+                  let context = makeRenderContext(presentation: presentation, cameraID: cameraID, cameraMatrix: cameraMatrix, aspectRatio: aspectRatio, defaultCamera: defaultCamera ?? (stereoViews == nil ? nil : Camera(projection: PerspectiveProjection())), cameraOverride: cameraOverride, defaultLight: defaultLight, stereoViews: stereoViews),
+                  let content = try postProcess(context, RenderStageTargets(color: renderPassDescriptor?.colorAttachments[0].texture, depth: renderPassDescriptor?.depthAttachment.texture))
+            else {
+                return frame
+            }
+            return try MetalSprockets.Group {
+                frame
+                content
+            }
+            .eraseToAnyElement()
+        }
+    }
+
+    private var frameElement: AnyElement {
         get throws {
             guard var context = makeRenderContext(presentation: presentation, cameraID: cameraID, cameraMatrix: cameraMatrix, aspectRatio: aspectRatio, defaultCamera: defaultCamera ?? (stereoViews == nil ? nil : Camera(projection: PerspectiveProjection())), cameraOverride: cameraOverride, defaultLight: defaultLight, stereoViews: stereoViews) else {
                 return EmptyElement().eraseToAnyElement()
@@ -293,7 +313,8 @@ public struct SceneGraphElement: Element {
                 // Only a multisampled view target blocks the soft particle pass. With `sampleCount`, the scene pass resolves
                 // color and depth into the view's single-sample targets, which the particle pass loads (#601).
                 resolvesMultisample: renderPassDescriptor?.colorAttachments[0].resolveTexture != nil,
-                storesDepthRequested: storesDepth,
+                // Post-process stage content may read the depth (#512).
+                storesDepthRequested: storesDepth || stageContent[.postProcess] != nil,
                 depthIsMemoryless: renderPassDescriptor?.depthAttachment.texture?.storageMode == .memoryless
             ))
             var ambientOcclusionApply: ApplyAmbientOcclusionPass?
@@ -525,12 +546,32 @@ public struct SceneGraphElement: Element {
 
     private func makeSceneElements(entries: [SceneGraph.MeshEntry], context: RenderContext, drawsText: Bool) throws -> [AnyElement] {
         var elements = try makeBackgroundElements(context: context)
+        let targets = RenderStageTargets(color: renderPassDescriptor?.colorAttachments[0].texture, depth: renderPassDescriptor?.depthAttachment.texture)
+        func stage(_ stage: RenderStage) throws -> AnyElement? {
+            try stageContent[stage]?(context, targets)
+        }
+        // App content between the opaque and transparent meshes (#512): before the first transparent batch.
+        var addedTransparentStages = false
+        func addTransparentStages() throws {
+            guard !addedTransparentStages else {
+                return
+            }
+            addedTransparentStages = true
+            elements += try [stage(.afterOpaque), stage(.beforeTransparent)].compactMap(\.self)
+        }
         // One batch per rendering order and set of affecting lights; each renderer draws its part of each batch.
         for batch in renderBatches(entries, context: context) {
+            if batch.entries.first?.isTransparent == true {
+                try addTransparentStages()
+            }
             let partitions = partitionMeshEntries(batch.entries, renderers: renderers)
             elements += try zip(renderers, partitions).compactMap { renderer, entries in
                 entries.isEmpty ? nil : try renderer.makeElement(entries: entries, context: batch.context)
             }
+        }
+        try addTransparentStages()
+        if let afterTransparent = try stage(.afterTransparent) {
+            elements.append(afterTransparent)
         }
         // Editor aids such as grids and axes: in the scene pass after the meshes, so they depth-test against them.
         if let decorations, let decoration = try decorations(context) {
