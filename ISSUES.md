@@ -8907,11 +8907,11 @@ There is no immersive entry point that takes a SceneSprockets scene and renders 
 status: open
 priority: low
 kind: feature
-labels: effort:m, area:renderer
+labels: effort:m, area:renderer, umbrella
 milestone: Rendering
 depends: 380
 created: 2026-11-12T19:17:30Z
-updated: 2026-11-23T02:14:51Z
+updated: 2026-11-23T03:12:53Z
 +++
 
 Screen-space passes are skipped in stereo (visionOS immersive). SceneGraphElement drops the post targets whenever stereoViews is set, so for both eyes there is no shadow mask (renderers that rely on it lose shadows), ambient occlusion, fog, color adjust, auto exposure or soft particles. SelectionOutline (JumpFlood/SilhouetteMask) has no stereo path.
@@ -8921,6 +8921,8 @@ Each pass needs texture2d_array targets (one slice per eye) and a per-eye view-p
 Decided (2026-11-23):
 - Split into one subtask per pass under this issue? Decision: yes.
 - Which pass first? Decision: shadow mask, then fog.
+
+- `2026-11-23T03:12:53Z`: Split into #634 (shadow mask, first), #635 (fog), #636 (ambient occlusion), #637 (color adjust, auto exposure), #638 (soft particles), #639 (selection outline).
 
 ---
 
@@ -14545,6 +14547,116 @@ updated: 2026-11-23T02:28:10Z
 +++
 
 Text shapes (Shape.text) have no chamfer, flatness, container frame or wrapping, which SCNText has. Split from #80. See docs/SceneKitComparison.md.
+
+---
+
+## 633: PBR element tree overflows Swift Testing's 512 KB stack in debug builds when frame structs grow
+
++++
+status: new
+priority: low
+kind: bug
+labels: area:renderer, effort:m
+created: 2026-11-23T03:12:31Z
++++
+
+While adding 512 bytes to LightingShadowUniforms (#88), MetalSprocketsGLTFMeshoptTests (and the GLTF and BasisU test bundles) crashed with EXC_BAD_ACCESS in ___chkstk_darwin, deep in MetalSprockets' TreeReconciler recursion through PBRRenderer.body (FrameDrawBuilder). Boxing PBRFrameBindings.shadow avoided it, but the recursion is close to the cooperative thread stack limit in debug builds, so any further growth of value types held along that path can crash tests again.
+
+---
+
+## 634: Shadow mask pass is skipped in stereo
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:renderer, effort:m, subtask
+milestone: Rendering
+created: 2026-11-23T03:12:45Z
+updated: 2026-11-23T03:12:48Z
++++
+
+Part of #382: in visionOS immersive (stereo) rendering this screen-space pass does not run for either eye. It needs texture2d_array targets (one slice per eye) and per-eye view-projections. Testable on macOS with layered offscreen targets, like StereoRenderTests.
+
+---
+
+## 635: Fog pass is skipped in stereo
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:renderer, effort:m, subtask
+milestone: Rendering
+created: 2026-11-23T03:12:45Z
+updated: 2026-11-23T03:12:48Z
++++
+
+Part of #382: in visionOS immersive (stereo) rendering this screen-space pass does not run for either eye. It needs texture2d_array targets (one slice per eye) and per-eye view-projections. Testable on macOS with layered offscreen targets, like StereoRenderTests.
+
+---
+
+## 636: Ambient occlusion is skipped in stereo
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:renderer, effort:m, subtask
+milestone: Rendering
+created: 2026-11-23T03:12:45Z
+updated: 2026-11-23T03:12:48Z
++++
+
+Part of #382: in visionOS immersive (stereo) rendering this screen-space pass does not run for either eye. It needs texture2d_array targets (one slice per eye) and per-eye view-projections. Testable on macOS with layered offscreen targets, like StereoRenderTests.
+
+---
+
+## 637: Color adjustment and auto exposure are skipped in stereo
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:renderer, effort:m, subtask
+milestone: Rendering
+created: 2026-11-23T03:12:45Z
+updated: 2026-11-23T03:12:48Z
++++
+
+Part of #382: in visionOS immersive (stereo) rendering this screen-space pass does not run for either eye. It needs texture2d_array targets (one slice per eye) and per-eye view-projections. Testable on macOS with layered offscreen targets, like StereoRenderTests.
+
+---
+
+## 638: Soft particles have no scene depth in stereo
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:renderer, effort:m, subtask
+milestone: Rendering
+created: 2026-11-23T03:12:45Z
+updated: 2026-11-23T03:12:48Z
++++
+
+Part of #382: in visionOS immersive (stereo) rendering this screen-space pass does not run for either eye. It needs texture2d_array targets (one slice per eye) and per-eye view-projections. Testable on macOS with layered offscreen targets, like StereoRenderTests.
+
+---
+
+## 639: Selection outline has no stereo path
+
++++
+status: open
+priority: low
+kind: feature
+labels: area:renderer, effort:m, subtask
+milestone: Rendering
+created: 2026-11-23T03:12:46Z
+updated: 2026-11-23T03:12:48Z
++++
+
+Part of #382: in visionOS immersive (stereo) rendering this screen-space pass does not run for either eye. It needs texture2d_array targets (one slice per eye) and per-eye view-projections. Testable on macOS with layered offscreen targets, like StereoRenderTests.
 
 ---
 
