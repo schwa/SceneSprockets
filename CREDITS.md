@@ -24,3 +24,7 @@ See `DiffuseTransmissionPlant-LICENSE.md` and `DiffuseTransmissionPlant-README.m
 ## Dark Wood texture (`Dice/DarkWood-*.jpg`)
 
 [Dark Wood](https://polyhaven.com/a/dark_wood) from Poly Haven, CC0 1.0. By Dimitrios Savva (photography), Dario Barresi (baking) and Rico Cilliers (tiling). Resized and repacked; see `Dice/README.md`.
+
+## MaterialX examples (`MaterialX/`)
+
+The brick, marble, wood and brass materials and their textures are from the [MaterialX](https://github.com/AcademySoftwareFoundation/MaterialX) repository's `resources/Materials/Examples/StandardSurface` and `resources/Images`, Apache-2.0, Copyright Contributors to the MaterialX Project. Textures resized to 1024×1024 and `fileprefix` attributes removed. See `MaterialX/LICENSE-MaterialX.txt`.

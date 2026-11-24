@@ -112,8 +112,13 @@ func materialXSlideShowsMaterialXMaterials() throws {
     func spheres(_ title: String) throws -> Int {
         try keynoteShowing(title).sceneGraph.meshEntries().filter { $0.node.label?.hasPrefix("MaterialX ") == true }.count
     }
-    #expect(try spheres("MaterialX") == 3)
+    // Plus a row of the MaterialX repository's examples, which load without warnings too.
+    #expect(try spheres("MaterialX") == 3 + KeynoteDemo.materialXExamples.count)
     #expect(try spheres("glTF & Model I/O") == 0)
+    for name in KeynoteDemo.materialXExamples {
+        let url = try #require(KeynoteDemo.materialXExampleURL(name))
+        #expect(try MaterialXDocument(url: url).warnings.isEmpty, "\(name)")
+    }
 }
 
 // #626: each Gizmos slide shape has its own gizmo mode; the selected one is draggable, the others are shown, and

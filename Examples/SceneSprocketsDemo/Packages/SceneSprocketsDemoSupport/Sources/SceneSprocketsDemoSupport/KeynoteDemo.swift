@@ -402,6 +402,8 @@ public final class KeynoteDemo: DemoScene {
         • Each material becomes a PBR material: gold is standard_surface, the car paint is open_pbr_surface,
           the jade is gltf_pbr.
         • The car paint's color comes from a small node graph; math on constants is worked out at load.
+        • Bottom row: examples from the MaterialX repository. Brick, marble and brass are node graphs with noise,
+          masks and tiled images, compiled to Metal with function stitching and run per pixel.
         """,
         "Actions": """
         • Actions are like SpriteKit and SceneKit actions: move, rotate, scale, fade, wait.
@@ -2666,19 +2668,36 @@ public final class KeynoteDemo: DemoScene {
         Bundle.module.url(forResource: "Materials", withExtension: "mtlx", subdirectory: "DemoAssets")
     }
 
-    // A row of spheres with the materials of a MaterialX file, one per shader kind (#618, #622).
+    // Examples from the MaterialX repository (DemoAssets/MaterialX, Apache-2.0): brick, marble and brass are node
+    // graphs that run per pixel; the wood loads on the CPU.
+    static let materialXExamples = ["brick_procedural", "marble_solid", "wood_tiled", "brass_tiled"]
+
+    static func materialXExampleURL(_ name: String) -> URL? {
+        Bundle.module.url(forResource: "standard_surface_\(name)", withExtension: "mtlx", subdirectory: "DemoAssets/MaterialX")
+    }
+
+    // The materials of a MaterialX file, one per shader kind (#618, #622), above a row of the MaterialX repository's
+    // textured and procedural examples.
     private func materialXSlide(_ slide: SceneGraph.Node) {
         addLight(to: slide, at: [0, 5, 6], intensity: 80)
         addLight(to: slide, at: [-6, 2, 4], color: [0.6, 0.7, 1], intensity: 30)
-        guard let url = Self.materialXURL,
-              let document = try? MaterialXDocument(url: url, device: demoDevice)
-        else {
-            return
-        }
         // Gold, car paint, jade, in the file's order.
-        for (index, material) in document.materials.enumerated() {
-            let position = SIMD3<Float>(Float(index) * 3 - Float(document.materials.count - 1) * 1.5, 1.4, 0)
-            let sphere = slide.addChild(SceneGraph.Node(label: "MaterialX \(material.name)", shape: .sphere(radius: 1), material: material.material, transform: .init(translation: position)))
+        if let url = Self.materialXURL, let document = try? MaterialXDocument(url: url, device: demoDevice) {
+            addMaterialXRow(document.materials.map(\.material), names: document.materials.map(\.name), to: slide, y: 2.6, spacing: 2.4)
+        }
+        let examples = Self.materialXExamples.compactMap { name -> MaterialXDocument.Material? in
+            guard let url = Self.materialXExampleURL(name) else {
+                return nil
+            }
+            return (try? MaterialXDocument(url: url, device: demoDevice))?.materials.first
+        }
+        addMaterialXRow(examples.map(\.material), names: examples.map(\.name), to: slide, y: 0.4, spacing: 2.4)
+    }
+
+    private func addMaterialXRow(_ materials: [PBRSceneMaterial], names: [String], to slide: SceneGraph.Node, y: Float, spacing: Float) {
+        for (index, material) in materials.enumerated() {
+            let position = SIMD3<Float>(Float(index) * spacing - Float(materials.count - 1) * spacing / 2, y, 0)
+            let sphere = slide.addChild(SceneGraph.Node(label: "MaterialX \(names[index])", shape: .sphere(radius: 0.9), material: material, transform: .init(translation: position)))
             sphere.run(.repeatForever(.rotate(by: .pi * 2, around: [0, 1, 0], duration: 9)))
         }
     }
