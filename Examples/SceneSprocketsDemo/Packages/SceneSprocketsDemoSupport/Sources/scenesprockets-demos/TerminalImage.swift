@@ -24,7 +24,7 @@ enum TerminalImage {
         // Clear the screen and hide the cursor; restore it on Ctrl-C.
         write("\u{1B}[2J\u{1B}[?25l")
         signal(SIGINT) { _ in
-            TerminalImage.end()
+            Self.end()
             exit(0)
         }
     }
@@ -46,7 +46,8 @@ enum TerminalImage {
             let more = next == nil ? 0 : 1
             // Image 1, placement 1 is replaced in place each frame; C=1 keeps the cursor still, q=2 silences replies.
             let control = first ? "a=T,f=100,i=1,p=1,q=2,C=1,m=\(more)" : "m=\(more)"
-            output += "\u{1B}_G\(control);\(String(decoding: chunk, as: UTF8.self))\u{1B}\\"
+            // Base64 is ASCII.
+            output += "\u{1B}_G\(control);\(String(bytes: chunk, encoding: .ascii) ?? "")\u{1B}\\"
             first = false
         }
         output += "\u{1B}[?2026l"
