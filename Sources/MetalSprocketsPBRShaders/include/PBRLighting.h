@@ -239,6 +239,52 @@ namespace PBR {
         bool apply(thread const MXShadingContext &, thread MXSurfaceInputs &) const { return false; }
     };
 
+    struct TangentFrame {
+        float3 normal;
+        float3 tangent;
+        float3 bitangent;
+    };
+
+    // The geometric normal and tangent frame, facing the viewer. Without vertex tangents, the tangent comes from
+    // screen-space derivatives of `uv`.
+    inline TangentFrame makeTangentFrame(Fragment in, bool frontFacing, constant PBRMaterialUniforms &material, constant PBRFrameUniforms &frame, float2 uv) {
+        float3 geometricNormal;
+        if (material.hasNormals) {
+            geometricNormal = normalize(in.normal);
+        } else {
+            // No NORMAL attribute: the triangle's flat normal, from how the world position changes across the pixel.
+            // It is turned to face the viewer, then given the winding's sign, so the back-face flip below behaves as
+            // it does for real normals.
+            float3 faceNormal = normalize(cross(dfdx(in.worldPosition), dfdy(in.worldPosition)));
+            if (dot(faceNormal, frame.cameraPositions[in.eye] - in.worldPosition) < 0.0) {
+                faceNormal = -faceNormal;
+            }
+            geometricNormal = frontFacing ? faceNormal : -faceNormal;
+        }
+        float3 tangent;
+        float3 bitangent;
+        if (material.hasTangents) {
+            tangent = normalize(in.tangent.xyz);
+            bitangent = cross(geometricNormal, tangent) * in.tangent.w;
+        } else {
+            const float2 uvDX = dfdx(uv);
+            const float2 uvDY = dfdy(uv);
+            const float3 positionDX = dfdx(in.worldPosition);
+            const float3 positionDY = dfdy(in.worldPosition);
+            const float determinant = uvDX.x * uvDY.y - uvDY.x * uvDX.y;
+            float3 t = (uvDY.y * positionDX - uvDX.y * positionDY) / (abs(determinant) > 1e-12 ? determinant : 1e-12);
+            t = t - geometricNormal * dot(geometricNormal, t);
+            tangent = length_squared(t) > 1e-12 ? normalize(t) : float3(1, 0, 0);
+            bitangent = cross(geometricNormal, tangent);
+        }
+        if (!frontFacing) {
+            geometricNormal = -geometricNormal;
+            tangent = -tangent;
+            bitangent = -bitangent;
+        }
+        return { geometricNormal, tangent, bitangent };
+    }
+
     // The surface point as MaterialX nodes see it. There is no object space or clock here: object-space values are
     // the world-space ones, and time and frame are 0.
     inline MXShadingContext surfaceContext(Fragment in, float3 normal, float3 tangent, float3 bitangent, float3 view) {
@@ -311,17 +357,15 @@ namespace PBR {
         bool readsIrradiance = false,
         Surface surfaceFunction = Surface()
     ) {
-        // A MaterialX surface function (#666) replaces the material's factors and textures. It sees the interpolated
-        // normal and tangent, turned to face the viewer, not the derived ones below.
+        // A MaterialX surface function (#666) replaces the material's factors and textures.
         MXSurfaceInputs surface;
         bool hasSurface = false;
         if (Surface::enabled) {
-            const float3 surfaceNormal = normalize(in.normal) * (frontFacing ? 1.0 : -1.0);
-            const float3 surfaceTangent = normalize(in.tangent.xyz) * (frontFacing ? 1.0 : -1.0);
-            const float3 surfaceBitangent = cross(surfaceNormal, surfaceTangent) * in.tangent.w;
+            // The same frame as the material path: meshes without normals or tangents get derived ones, not NaNs.
+            const TangentFrame surfaceFrame = makeTangentFrame(in, frontFacing, material, frame, in.texCoord0);
             const float3 surfaceView = normalize(frame.cameraPositions[in.eye] - in.worldPosition);
-            surface = surfaceDefaults(material, surfaceNormal);
-            hasSurface = surfaceFunction.apply(surfaceContext(in, surfaceNormal, surfaceTangent, surfaceBitangent, surfaceView), surface);
+            surface = surfaceDefaults(material, surfaceFrame.normal);
+            hasSurface = surfaceFunction.apply(surfaceContext(in, surfaceFrame.normal, surfaceFrame.tangent, surfaceFrame.bitangent, surfaceView), surface);
         }
         const float screenOcclusion = Lighting::screenOcclusion(ambientOcclusion, in.position, frame.ambientOcclusionStrength);
         // The material's textures come from one argument buffer, so a draw binds them all at once.
@@ -403,42 +447,11 @@ namespace PBR {
             return float4(frame.linearOutput ? baseColor.rgb : toneMap(baseColor.rgb * frame.exposure, frame.toneMapping), baseColor.a);
         }
 
-        // Tangent frame. Without vertex tangents, derive one from screen-space derivatives.
         const float2 normalUV = slotUV(material.normal, in.texCoord0, in.texCoord1);
-        float3 geometricNormal;
-        if (material.hasNormals) {
-            geometricNormal = normalize(in.normal);
-        } else {
-            // No NORMAL attribute: the triangle's flat normal, from how the world position changes across the pixel.
-            // It is turned to face the viewer, then given the winding's sign, so the back-face flip below behaves as
-            // it does for real normals.
-            float3 faceNormal = normalize(cross(dfdx(in.worldPosition), dfdy(in.worldPosition)));
-            if (dot(faceNormal, frame.cameraPositions[in.eye] - in.worldPosition) < 0.0) {
-                faceNormal = -faceNormal;
-            }
-            geometricNormal = frontFacing ? faceNormal : -faceNormal;
-        }
-        float3 tangent;
-        float3 bitangent;
-        if (material.hasTangents) {
-            tangent = normalize(in.tangent.xyz);
-            bitangent = cross(geometricNormal, tangent) * in.tangent.w;
-        } else {
-            const float2 uvDX = dfdx(normalUV);
-            const float2 uvDY = dfdy(normalUV);
-            const float3 positionDX = dfdx(in.worldPosition);
-            const float3 positionDY = dfdy(in.worldPosition);
-            const float determinant = uvDX.x * uvDY.y - uvDY.x * uvDX.y;
-            float3 t = (uvDY.y * positionDX - uvDX.y * positionDY) / (abs(determinant) > 1e-12 ? determinant : 1e-12);
-            t = t - geometricNormal * dot(geometricNormal, t);
-            tangent = length_squared(t) > 1e-12 ? normalize(t) : float3(1, 0, 0);
-            bitangent = cross(geometricNormal, tangent);
-        }
-        if (!frontFacing) {
-            geometricNormal = -geometricNormal;
-            tangent = -tangent;
-            bitangent = -bitangent;
-        }
+        const TangentFrame tangentFrame = makeTangentFrame(in, frontFacing, material, frame, normalUV);
+        const float3 geometricNormal = tangentFrame.normal;
+        const float3 tangent = tangentFrame.tangent;
+        const float3 bitangent = tangentFrame.bitangent;
 
         float3 normal = geometricNormal;
         if (hasSurface) {
